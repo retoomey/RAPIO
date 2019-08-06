@@ -1,0 +1,1353 @@
+#include "rRAPIOAlgorithm.h"
+
+#include "rError.h"
+#include "rTime.h"
+#include "rStrings.h"
+#include "rColorTerm.h"
+#include "rOS.h"
+
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fstream>
+#include <iomanip>
+#include <algorithm>
+
+using namespace rapio;
+using namespace std;
+
+unsigned int RAPIOOptions::max_arg_width  = 5;
+unsigned int RAPIOOptions::max_name_width = 10;
+
+// The default sort is alphabetical
+bool
+RAPIOOptions::option::operator < (const option& rhs) const
+{
+  // We want lowercase i before uppercase I, but always before o, O
+  const std::string tmpl = Strings::makeLower(this->opt);
+  const std::string tmpr = Strings::makeLower(rhs.opt);
+
+  if (tmpl == tmpr) { // So 'i' == 'I' here, let lowercase win
+    return (this->opt > rhs.opt);
+  }
+  // Else based on lowercase spelling
+  return (tmpl < tmpr);
+}
+
+namespace rapio {
+class FilterBadSuboption :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    bool bad_suboption = false;
+
+    if (opt.suboptions.size() > 0) {
+      size_t found = 0;
+
+      // If we have suboptions, it better match one.
+      // Required should already be checked to 'exist', so here we just
+      // need to look at defaultValue or parsedValue
+      std::string value;
+
+      if (opt.parsed) {
+        value = opt.parsedValue;
+      } else { value = opt.defaultValue; }
+
+      // The choice passed in may be a collection of suboptions such as "A B C
+      // D',
+      // In this case we have to check each value
+      // Note we allow "" to pass the test...
+      std::vector<string> allChoices;
+      size_t count = Strings::split(value, ' ', &allChoices);
+
+      for (auto& i: opt.suboptions) {
+        // Go through each substring passed
+        for (auto& j: allChoices) {
+          if (i.opt == j) {
+            found++; // found a match in list
+            // break; // Allow dups by not breaking.
+          }
+        }
+      }
+
+      // Ok, we should have a 'hit' for each one...or bad string passed in.
+      if (!(found == count)) { bad_suboption = true; }
+    }
+    return (bad_suboption);
+  } // show
+};
+
+
+class FilterMissingRequired :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    return (opt.required && (!opt.parsed || opt.parsedValue.empty()));
+  }
+};
+
+class FilterRequired :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    return (opt.required && !opt.system);
+  }
+};
+
+class FilterOptional :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    return (!opt.required && !opt.system);
+  }
+};
+
+class FilterSystem :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    return (opt.system);
+  }
+};
+
+class FilterName :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  FilterName(const std::string& name)
+  {
+    myName = name;
+  }
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    return (opt.opt == myName);
+  }
+
+protected:
+
+  std::string myName;
+};
+
+class FilterGroup :  public RAPIOOptions::ArgumentFilter {
+public:
+
+  FilterGroup(const std::string& group)
+  {
+    myGroup = group;
+  }
+
+  bool
+  show(const RAPIOOptions::option& opt)
+  {
+    const size_t s = opt.groups.size();
+
+    // For blank, get all options _without_ any group
+    if (myGroup == "") {
+      if (s == 0) {
+        return (true);
+      }
+    }
+
+    // Hunt for group string in list
+    for (auto& i: opt.groups) {
+      if (i == myGroup) {
+        return (true);
+      }
+    }
+    return (false);
+  }
+
+protected:
+
+  std::string myGroup;
+};
+} // in class namespace rapio
+
+RAPIOOptions::RAPIOOptions()
+{
+  RAPIOOptions::option * o;
+
+  // The logging group options
+  o = optional("verbose",
+      "info",
+      "Error log verbosity levels.  Increasing level prints more stuff:");
+  addSuboption("verbose", "severe", "Level 0");
+  addSuboption("verbose", "unanticipated", "Level 1");
+  addSuboption("verbose", "harmless", "Level 2");
+  addSuboption("verbose", "important", "Level 3");
+  addSuboption("verbose", "info", "Level 4");
+  addSuboption("verbose", "debug", "Level 5");
+  o->groups.push_back("LOGGING");
+  o = optional("logSize", "10000", "Maximum error log size in bytes.");
+  o->groups.push_back("LOGGING");
+  o = optional("flushInterval",
+      "900",
+      "Error log flush (force write) timer set in seconds.");
+  o->groups.push_back("LOGGING");
+
+  // The config group for file read/write options
+  o = optional("configFile",
+      "",
+      "Input URL to read an XML configuration file. Command line overrides.");
+  o->groups.push_back("CONFIG");
+  o = optional("xml",
+      "",
+      "Output URL to write a full XML configuration file, using args passed in from all sources.  Blank will dump to terminal.");
+  o->groups.push_back("CONFIG");
+
+  // The help group
+  o = boolean("help",
+      "Print out parameter help information. Can also just type the program without arguments.");
+  o->groups.push_back("HELP");
+  o = boolean("nf", "No ASCII formatting/colors in help output.");
+  o->groups.push_back("HELP");
+}
+
+std::string
+RAPIOOptions::replaceMacros(const std::string& original)
+{
+  std::string newString = original;
+
+  std::string PWD = OS::getCurrentDirectory();
+  Strings::replace(newString, "{PWD}", PWD);
+  return (newString);
+}
+
+RAPIOOptions::option *
+RAPIOOptions::makeOption(
+  bool             required,
+  bool             boolean,
+  bool             system,
+  const std::string& opt,
+  const std::string& name,
+  const std::string& usage,
+  const std::string& extraIn
+)
+{
+  RAPIOOptions::option * have = getOption(opt);
+
+  if (have) {
+    std::cout << "WARNING: Code error: Option '" << opt
+              << "' is already declared in RAPIOOptions.\n";
+    std::cout
+      << "Maybe it is a SYSTEM reserved option?  Or you declared it twice in your w2algcreator xml?\n";
+    exit(1);
+  }
+  RAPIOOptions::option o; // on stack..humm damn Java, lol
+  o.required = required;
+  o.boolean  = boolean;
+  o.system   = system;
+  o.opt      = opt;
+  o.name     = name;
+
+  if (o.name.length() > 0) {
+    o.name[0] = toupper(o.name[0]);
+  }
+  o.usage = replaceMacros(usage);
+
+  // Clean up usage.  Capitol the first letter always...
+  if (o.usage.length() > 0) {
+    o.usage[0] = toupper(o.usage[0]);
+    o.usage    = "--" + o.usage;
+  }
+  std::string extra = replaceMacros(extraIn);
+
+  // Maybe this field could be shared..?
+  if (required) {
+    if (extra == "") {
+      o.example = "???";
+    } else {
+      o.example = extra; // Required have an example given
+    }
+  } else {
+    o.defaultValue = extra; // Optionals always have a default value
+  }
+  o.parsedValue  = "";
+  o.parsed       = false;
+  o.suboptionmax = 0;
+
+  optionMap[opt] = o;
+
+  if (opt.length() > max_arg_width) {
+    max_arg_width = opt.length();
+  }
+
+  if (name.length() > max_name_width) {
+    max_name_width = name.length();
+  }
+  return (&optionMap[opt]);
+} // RAPIOOptions::makeOption
+
+/** Declare a required algorithm variable */
+RAPIOOptions::option *
+RAPIOOptions::require(const std::string& opt,
+  const std::string& exampleArg, const std::string& usage)
+{
+  return (makeOption(true, false, false, opt, "", usage, exampleArg));
+}
+
+void
+RAPIOOptions::setName(const std::string& n)
+{
+  myName = n;
+}
+
+void
+RAPIOOptions::setDescription(const std::string& d)
+{
+  myDescription = d;
+}
+
+void
+RAPIOOptions::setAuthors(const std::string& a)
+{
+  myAuthors = a;
+}
+
+void
+RAPIOOptions::setHeader(const std::string& a)
+{
+  myHeader = a;
+
+  /** Default WDSS2 weather algorithms which are copyrighted by
+   * the University of Oklahoma and designed implemented at the
+   * National Severe Storms Laboratory. */
+  if (myHeader == "WDSS2") {
+    Time now              = Time::CurrentTime();
+    std::string year      = std::to_string(now.getYear());
+    std::string copyright = ColorTerm::fBold + "WDSS2/MRMS Algorithm using RAPIO "
+      + ColorTerm::fNormal
+      + "(c) 2001-" + year + " University of Oklahoma. ";
+    copyright += "All rights reserved. See " + ColorTerm::fUnderline
+      + "http://www.wdssii.org/" + ColorTerm::fNormal;
+    myHeader = copyright;
+  }
+}
+
+/** Declare an optional algorithm variable */
+RAPIOOptions::option *
+RAPIOOptions::optional(const std::string& opt,
+  const std::string                     & defaultValue,
+  const std::string                     & usage)
+{
+  return (makeOption(false, false, false, opt, "", usage, defaultValue));
+}
+
+/** Declare a boolean algorithm variable */
+RAPIOOptions::option *
+RAPIOOptions::boolean(const std::string& opt,
+  const std::string                    & usage)
+{
+  return (makeOption(false, true, false, opt, "", usage, "false"));
+}
+
+/** Declare a 2D grid option */
+RAPIOOptions::option *
+RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue,
+  const std::string& usage)
+{
+  // For the moment, just make an optional grid...FIXME: check the default value
+  // for valid
+  RAPIOOptions::option * o = optional(opt, defaultValue, usage);
+  addGroup(opt, "SPACE");
+  return (o);
+}
+
+LLH
+RAPIOOptions::getLocation(
+  const std::string& data,
+  const std::string& gridname,
+  const std::string& part,
+  const bool       is3D)
+{
+  std::vector<std::string> pieces;
+  Strings::split(data, ',', &pieces);
+  size_t expected = is3D ? 3 : 2;
+
+  if (pieces.size() != expected) {
+    std::cout << "Error in specifying the " + part + " of grid '" + gridname
+      + "', expected " << expected << " pieces.\n";
+    exit(1);
+  }
+  const float heightKMs = is3D ? atof(pieces[2].c_str()) : 10.0f;
+  LLH loc(atof(pieces[0].c_str()),
+    atof(pieces[1].c_str()),
+    // Length::Kilometers(heightKMs));
+    heightKMs);
+  return (loc);
+}
+
+namespace {
+std::string
+getMapString(
+  std::map<std::string, std::string>& lookup, const std::string& name)
+{
+  std::map<std::string, std::string>::iterator iter;
+  std::string s = "";
+  iter = lookup.find(name);
+
+  if (iter != lookup.end()) {
+    s = iter->second;
+  }
+  return (s);
+}
+}
+
+void
+RAPIOOptions::getGrid(const std::string& name,
+  LLH                                  & location,
+  Time                                 & time,
+  float                                & lat_spacing,
+  float                                & lon_spacing,
+  int                                  & lat_dim,
+  int                                  & lon_dim)
+{
+  std::string grid = getString(name);
+
+  // -----------------------------------------------------------
+  // Filter a grid string to our grid 'language'
+  // FIXME: I'll want the value given by user to override
+  // values from the default...
+
+  // Allow spaces in input only after a ')'. Thus something like
+  // "nw ( 5, 3)    se(40,4,  40)" becomes "nw(5,3) se(40,4,40)"
+  std::string cgrid = "";
+  bool space        = false;
+
+  for (size_t i = 0; i < grid.size(); i++) {
+    char c = tolower(grid[i]);
+
+    switch (c) {
+        case ' ': continue;
+
+        case ')':
+          space = true; // Force single space after ')'
+
+        // break; fall though add character
+        default:
+          cgrid += c;
+
+          if (space) {
+            if (i != grid.size() - 1) {
+              cgrid += ' ';
+              space  = false;
+            }
+          }
+          break;
+    }
+  }
+  grid = cgrid;
+
+  // Now break up the f(v) pairs into f --> v
+  std::map<std::string, std::string> lookup;
+  std::vector<std::string> fields;
+  Strings::split(grid, ' ', &fields);
+
+  for (size_t i = 0; i < fields.size(); i++) {
+    // std::cout << "Grid setting  " << i << " is '"<<fields[i]<<"'\n";
+
+    // Looking for name(value)....
+    std::string name, value;
+    bool invalue = false;
+
+    for (size_t j = 0; j < fields[i].size(); j++) {
+      char c = fields[i][j];
+
+      switch (c) {
+          case '(': { invalue = true;
+                      continue;
+          }
+
+          case ')': { break;
+          }
+
+          default:
+            invalue ? value += c : name += c;
+            break;
+      }
+    }
+
+    // ALIAS
+    if (name == "t") { name = "nw"; }
+    if (name == "b") { name = "se"; } lookup[name] = value;
+  }
+
+  std::string top     = getMapString(lookup, "nw");
+  std::string bot     = getMapString(lookup, "se");
+  std::string spacing = getMapString(lookup, "s");
+
+  std::cout << "GRID IS " << top << "**" << bot << "**" << spacing << "\n";
+
+  // Now convert them...
+  LLH nwc = getLocation(top, "grid", "top corner", false);
+  LLH sec = getLocation(bot, "grid", "bottom corner", false);
+
+  // Ahhh wait this is for a 2D grid right?
+  //   sec.setHeight( nwc.getHeight() ); // set them to same height ...
+
+  std::vector<std::string> pieces2;
+  Strings::split(spacing, ',', &pieces2);
+
+  if (pieces2.size() < 2) {
+    std::cout << "Error in specifying grid '" << name << "' spacing.'\n";
+    exit(1);
+  }
+  const float latf = atof(pieces2[0].c_str());
+  const float lonf = atof(pieces2[1].c_str());
+
+  // This would be for 3D grids...
+  // Length htsp = Length::Kilometers( atof(pieces[2].c_str()) );
+
+  // Standard grid stuff.  This can be used to create a LatLonGrid
+  if ((latf > 0.0) && (lonf > 0.0)) {
+    double latsp = latf;
+    double lonsp = lonf;
+    lat_dim = int(0.5 + (nwc.getLatitudeDeg() - sec.getLatitudeDeg()) / latsp);
+    lon_dim = int(0.5 + (sec.getLongitudeDeg() - nwc.getLongitudeDeg()) / lonsp);
+
+    if ((lat_dim < 1) || (lon_dim < 1)) {
+      std::cout << "Error in specifying grid '" << name << "' dimensions ("
+                << lat_dim << " * " << lon_dim << ")\n";
+      exit(1);
+    }
+
+    lat_spacing = latsp;
+    lon_spacing = lonsp;
+    location    = nwc; // copy
+    time.set(0, 0);
+  } else {
+    std::cout << "Error in specifying grid '" << name << "' spacing ("
+              << latf << "," << lonf << ") must both be greater than zero.\n";
+    exit(1);
+  }
+} // RAPIOOptions::getGrid
+
+/** Print a list of arguments with a given filter */
+void
+RAPIOOptions::dumpArgs(std::vector<RAPIOOptions::option>& options,
+  ArgumentFilter                                        & a,
+  bool                                                  postParse,
+  bool                                                  advancedHelp)
+{
+  auto& s = std::cout;
+
+  for (auto& o: options) {
+    // Output the option
+    if (a.show(o)) {
+      size_t c1 = max_arg_width + 2 + 2;
+
+      // size_t c2 = max_name_width+1;
+
+      // Calculate the option output
+      std::string opt;
+
+      if (o.required) {
+        s << ColorTerm::fRed << ColorTerm::fBold;
+        opt = " " + o.opt;
+      } else {
+        s << ColorTerm::fRed << ColorTerm::fBold;
+        opt = " [" + o.opt + "]";
+      }
+
+      // Always output the first two columns, regardless of terminal width...
+      s << setw(c1) << left << opt << ColorTerm::fNormal;
+
+      // s << fBold << setw(c2) << left << o.name << fBoldOff;
+
+      // Create the status string
+      std::string status;
+
+      if (postParse) {
+        status = "(valueof=" + o.parsedValue + ")";
+      } else {
+        if (o.required) {
+          // status = "(required)";
+          status = "(example=" + o.example + ")";
+        } else {
+          status = "(default=" + o.defaultValue + ")";
+        }
+      }
+      s << ColorTerm::fBlue;
+      ColorTerm::wrapWithIndent(c1, c1, status);
+      s << ColorTerm::fNormal;
+
+      // Usage, using our width wrapping output
+      if (o.usage != "") {
+        // s << fGreen;
+        s << setw(c1 + 2) << left << ""; // Indent 1 column
+        ColorTerm::wrapWithIndent(c1 + 2, c1 + 4, o.usage);
+
+        // s << fNormal;
+      }
+
+      // Choices for suboptions....
+      if (o.suboptions.size() > 0) {
+        for (auto& i: o.suboptions) {
+          s << setw(c1 + 4) << left << ""; // Indent 1 column
+          std::string optpad = i.opt;
+          size_t max         = o.suboptionmax;
+
+          while (optpad.length() < max) {
+            optpad += " ";
+          }
+          std::string out = ColorTerm::fBold + ColorTerm::fBlue
+            + optpad + ColorTerm::fNormal + " --" + i.description;
+          ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
+        }
+      }
+
+      if (advancedHelp && (o.advancedHelp != "")) {
+        // s << fGreen;
+        // s << setw(c1+2) << left << ""; // Indent 1 column
+        int d = 5;
+        s << ColorTerm::fBold << "DETAILED HELP:\n" << ColorTerm::fBoldOff;
+        s << setw(d) << left << ""; // Indent 1 column
+        ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
+        s << "\n";
+
+        // s << fNormal;
+      }
+    }
+  }
+} // RAPIOOptions::dumpArgs
+
+bool
+RAPIOOptions::verifyRequired()
+{
+  bool good = true;
+
+  // Copy missing
+  FilterMissingRequired r;
+
+  std::vector<option> allOptions;
+  sortOptions(allOptions, r);
+
+  if (allOptions.size() > 0) {
+    std::cout << "Missing " << ColorTerm::fBold << "(" << allOptions.size() << ")"
+              << ColorTerm::fBoldOff << " REQUIRED arguments: \n";
+    ArgumentFilter all;
+    dumpArgs(allOptions, all); // already filtered..but should work
+    good = false;
+  }
+  return (good);
+}
+
+bool
+RAPIOOptions::verifySuboptions()
+{
+  bool good = true;
+
+  // Copy arguments with bad suboptions...
+  FilterBadSuboption r;
+
+  std::vector<option> allOptions;
+  sortOptions(allOptions, r);
+
+  if (allOptions.size() > 0) {
+    std::cout << "BAD option choice for " << ColorTerm::fBold << "(" << allOptions.size() << ")"
+              << ColorTerm::fBoldOff << " arguments:\n";
+    ArgumentFilter all;
+    dumpArgs(allOptions, all, true); // already filtered..but should work
+    good = false;
+  }
+
+  return (good);
+}
+
+/** The default dump of all arguments available */
+void
+RAPIOOptions::dumpArgs()
+{
+  ArgumentFilter all;
+
+  std::vector<option> allOptions;
+  sortOptions(allOptions, all);
+
+  // Dump description, if given..
+  size_t d = 5;
+
+  if (!myDescription.empty()) {
+    std::cout << ColorTerm::fBold << "DESCRIPTION:\n" << ColorTerm::fBoldOff;
+    std::cout << setw(d) << left << ""; // Indent 1 column
+    ColorTerm::wrapWithIndent(d, 0, myDescription);
+  }
+
+  // Dump authors, if given..
+  if (!myAuthors.empty()) {
+    std::cout << ColorTerm::fBold << "AUTHOR(S):\n" << ColorTerm::fBoldOff;
+    std::cout << setw(d) << left << ""; // Indent 1 column
+    ColorTerm::wrapWithIndent(d, 0, myAuthors);
+  }
+
+  // Dump a generated 'Example' statement...this uses the 'examples' from the
+  // required options
+  // We'll have to column format this stuff eventually...
+  std::cout << ColorTerm::fBold << "EXAMPLE:\n" << ColorTerm::fBoldOff;
+  std::cout << setw(d) << left << ""; // Indent 1 column
+  std::cout << myName << " ";
+  std::string outputRequired;
+  size_t commandLength = d + myName.length() + 1;
+  FilterRequired r;
+
+  for (unsigned int z = 0; z < allOptions.size(); z++) {
+    // Output the option
+    if (r.show(allOptions[z])) {
+      outputRequired +=
+        ("-" + ColorTerm::fBold + allOptions[z].opt + ColorTerm::fBoldOff + " " + ColorTerm::fUnderline
+        + allOptions[z].example + ColorTerm::fUnderlineOff + " ");
+
+      // std::cout << "-" << allOptions[z].opt << " " << allOptions[z].example
+      // << " ";
+    }
+  }
+  outputRequired += (ColorTerm::fBold + "--verbose" + ColorTerm::fBoldOff);
+  ColorTerm::wrapWithIndent(commandLength, commandLength, outputRequired);
+
+  // std::cout << "--verbose\n";
+
+  FilterGroup lio("I/O");
+  std::cout << ColorTerm::fBold << "I/O:\n" << ColorTerm::fBoldOff;
+  dumpArgs(allOptions, lio);
+
+  std::cout << ColorTerm::fBold << "OPTIONS:\n" << ColorTerm::fBoldOff;
+  FilterGroup la("");
+  dumpArgs(allOptions, la);
+
+  // Get all groups not matching our stuff
+  std::vector<std::string> otherGroups;
+
+  for (size_t i = 0; i < allOptions.size(); i++) {
+    const RAPIOOptions::option& o = allOptions[i];
+
+    // For each group in option...
+    for (size_t j = 0; j < o.groups.size(); j++) {
+      // FIXME: Maybe a map here is better
+      std::string group = o.groups[j];
+
+      // Add to total group list if not found...
+      bool found = false;
+
+      if (group == "I/O") { found = true; }
+
+      if (group == "CONFIG") { found = true; }
+
+      if (group == "LOGGING") { found = true; }
+
+      if (group == "HELP") { found = true; }
+
+      for (size_t k = 0; k < otherGroups.size(); k++) {
+        const std::string g = otherGroups[k];
+
+        if (g == group) { found = true; break; }
+      }
+
+      if (!found) {
+        otherGroups.push_back(group);
+      }
+    }
+  }
+
+  // Print out user registered groups...
+  std::sort(otherGroups.begin(), otherGroups.end());
+
+  for (size_t i = 0; i < otherGroups.size(); i++) {
+    std::cout << ColorTerm::fBold << otherGroups[i]
+              << " OPTIONS:\n" << ColorTerm::fBoldOff;
+    FilterGroup og(otherGroups[i]);
+    dumpArgs(allOptions, og);
+  }
+
+  FilterGroup ll("LOGGING");
+  std::cout << ColorTerm::fBold << "LOGGING:\n" << ColorTerm::fBoldOff;
+  dumpArgs(allOptions, ll);
+
+  FilterGroup lc("CONFIG");
+  std::cout << ColorTerm::fBold << "CONFIG:\n" << ColorTerm::fBoldOff;
+  dumpArgs(allOptions, lc);
+
+  FilterGroup lh("HELP");
+  std::cout << ColorTerm::fBold << "HELP:\n" << ColorTerm::fBoldOff;
+  dumpArgs(allOptions, lh);
+
+  /*
+   * std::cout << fBold << "REQUIRED:\n" << fBoldOff;
+   * dumpArgs(allOptions, r);
+   *
+   * std::cout << fBold << "OPTIONAL:\n" << fBoldOff;
+   * dumpArgs(allOptions, p);
+   *
+   * std::cout << fBold << "SYSTEM:\n" << fBoldOff;
+   * dumpArgs(allOptions, s);
+   */
+} // RAPIOOptions::dumpArgs
+
+RAPIOOptions::option *
+RAPIOOptions::getOption(const std::string& opt)
+{
+  std::map<std::string, RAPIOOptions::option>::iterator i;
+  i = optionMap.find(opt);
+  std::string s = "";
+
+  if (i != optionMap.end()) {
+    return (&i->second);
+  }
+  return (NULL);
+}
+
+/** Process and remove a single argument from a vector of strings.  Either 1 or
+ * 2 spots are removed,
+ * depending on -arg=stuff or -arg stuff being processed.
+ */
+unsigned int
+RAPIOOptions::processArg(std::vector<std::string>& args, unsigned int j,
+  std::string& arg, std::string& value)
+{
+  unsigned int count = 0;
+
+  std::string c = "";
+  std::string v = "";
+
+  if (j < args.size()) {
+    c = args[j];
+
+    bool haveOpt = false;
+
+    if (c.substr(0, 2) == "--") { // Double slash options are of the form
+                                  // --option=something
+                                  // or the form --option (with implied =
+                                  // "")
+      c       = c.substr(2);
+      haveOpt = true;
+    } else if (c.substr(0, 1) == "-") { // Single slash options are of the form
+                                        // -option something
+                                        // or can also be -option=something
+      c       = c.substr(1);
+      haveOpt = true;
+    } else {
+      // What to do with non-slashed argument?
+    }
+
+    if (haveOpt) {
+      count = 1;
+
+      // Try to split it by the "="  We'll assume single arg in all cases
+      std::vector<std::string> twoargs;
+      Strings::splitOnFirst(c, '=', &twoargs);
+
+      if (twoargs.size() > 1) {
+        // std::cout << "DEBUG:: Arg broke into " << twoargs[0] << " and " <<
+        // twoargs[1] << "\n";
+        c = twoargs[0];
+        v = twoargs[1];
+      } else {
+        // If we don't split and next is not a new option, we use that as value
+        if (j + 1 < args.size()) {
+          std::string c2 = args[j + 1];
+
+          if (c2.substr(0, 1) != "-") {
+            v     = c2;
+            count = 2;
+          }
+        }
+      }
+    }
+    arg   = c;
+    value = v;
+  }
+
+  // Erase the argument so we can dump the unprocessed stuff later
+  if (count == 0) { // String where we don't expect it...move j forward..
+    j++;
+  }
+
+  if (count == 1) { // Single arg like "K=stuff"  Delete item, leave J alone
+    args.erase(args.begin() + j);
+    j = j;
+  }
+
+  if (count == 2) { // Double arg like "-K stuff" Delete two items, leave J
+                    // alone
+    args.erase(args.begin() + j);
+    args.erase(args.begin() + j);
+    j = j;
+  }
+  return (j);
+} // RAPIOOptions::processArg
+
+void
+RAPIOOptions::storeParsedArg(const std::string& arg, const std::string& value)
+{
+  // Store the option...
+  RAPIOOptions::option * o = getOption(arg);
+
+  if (o) {
+    // If already parsed what to do...
+    // If from configFile, we just ignore, because we override the setting..
+    // If duplicated from command line, maybe we want to warn...
+    if (!o->parsed) {
+      o->parsed = true;
+
+      if (o->boolean) {
+        o->parsedValue = "true"; // Because it is there...ignore any value not
+                                 // "false"
+
+        if (value == "false") {
+          o->parsedValue = "false";
+        } else {
+          o->parsedValue = "true";
+        }
+      } else {
+        o->parsedValue = value;
+      }
+    } else {
+      // Humm...keep track here?
+    }
+  } else {
+    // We were giving an option we don't know about...
+    // FIXME: Hide the internals of option, right?
+    option o;
+    o.opt                = arg;
+    o.parsedValue        = value;
+    o.parsed             = true;
+    unusedOptionMap[arg] = o;
+  }
+} // RAPIOOptions::storeParsedArg
+
+/** Read a configuration XML file into our arguments.  Any arguments on the
+ * command
+ * line override the settings in the XML file */
+void
+RAPIOOptions::readConfigFile(const std::string& filename)
+{
+  // Process and store all arguments from a configuration file
+  // Note, in RAPIO this could be stored on a webpage
+  std::shared_ptr<XMLDocument> configDoc =
+    IOXML::readXMLDocument(filename);
+
+  if (configDoc != nullptr) {
+    XMLElement config;
+    config = configDoc->getRootElement();
+    XMLElementList options;
+    config.getChildren("option", &options);
+
+    for (size_t i = 0; i < options.size(); ++i) {
+      const XMLElement& thisOpt  = *(options[i]);
+      const std::string & letter = thisOpt.attribute("letter");
+      std::string value = thisOpt.attribute("value");
+      storeParsedArg(letter, value);
+    }
+  }
+}
+
+/** Write a configuration XML that contains all the final processed command line
+ * arguments, including any imported XML settings */
+void
+RAPIOOptions::writeConfigFile(const std::string& filename)
+{
+  std::shared_ptr<XMLElement> root(new XMLElement("w2algxml"));
+  XMLDocument output(root);
+  root->setAttribute("program", myName);
+
+  // std::map<std::string, RAPIOOptions::option>::iterator i;
+  // for (i = optionMap.begin(); i != optionMap.end(); ++i)
+  for (auto& i: optionMap) {
+    // Doesn't make sense to write out configFile or xml tags in the xml...
+    if (!((i.second.opt == "configFile") || (i.second.opt == "xml"))) {
+      std::shared_ptr<XMLElement> element(new XMLElement("option"));
+      element->setAttribute("letter", i.second.opt);
+
+      if (i.second.parsed) {
+        element->setAttribute("value", i.second.parsedValue);
+      } else {
+        element->setAttribute("value", i.second.defaultValue);
+      }
+      root->addChild(element);
+    }
+  }
+
+  if (filename.empty()) {
+    IOXML::write(std::cout, output);
+  } else {
+    ofstream myfile;
+    myfile.open(filename.c_str());
+
+    if (myfile.fail()) {
+      std::cout << "Couldn't write XML to " << filename << " for some reason\n";
+    } else {
+      IOXML::write(myfile, output);
+      myfile.close();
+      std::cout << "Successfully wrote parameter XML to " << filename << "\n";
+    }
+  }
+} // RAPIOOptions::writeConfigFile
+
+void
+RAPIOOptions::sortOptions(std::vector<RAPIOOptions::option>& allOptions,
+  ArgumentFilter                                           & a)
+{
+  // Filter and Sort options how we want to display.
+  for (auto& i:optionMap) {
+    if (a.show(i.second)) {
+      allOptions.push_back(i.second);
+    }
+  }
+  std::sort(allOptions.begin(), allOptions.end());
+}
+
+/** Process a command line argument list */
+bool
+RAPIOOptions::processArgs(int& argc, char **& argv)
+{
+  // Get the console width in linux
+  myOutputWidth = ColorTerm::getOutputWidth();
+
+  // Just make args a string vector, less C more C++, not as efficient
+  // but a whole lot easier to work with.
+  // Create a vector string copy of all args except program name
+  std::vector<std::string> args;
+
+  for (int k = 1; k < argc; k++) {
+    std::string stringArg((argv[k]));
+    args.push_back(stringArg);
+  }
+
+  // Grab the name from the main program argument
+  std::vector<std::string> pathbreaks;
+  Strings::split(std::string(argv[0]), '/', &pathbreaks);
+
+  if (pathbreaks.size() > 0) {
+    myName = pathbreaks[pathbreaks.size() - 1];
+  } else {
+    myName = argv[0];
+  }
+
+  // Find each option one after the other
+  unsigned int j = 0;
+  std::string arg;
+  std::string value;
+
+  while (j < args.size()) {
+    arg   = "";
+    value = "";
+    j     = processArg(args, j, arg, value);
+
+    if (arg.empty()) { // Empty could be overriding a default, right?
+      // Just text we ignore by default. We 'could' add the ability to handle
+      // text without option markers
+    } else {
+      storeParsedArg(arg, value);
+    }
+  }
+
+  // Parse any configFile options not already parsed (command line overrides)
+  RAPIOOptions::option * o = getOption("configFile");
+
+  if (o) {
+    if (o->parsed) { // Don't see us having a default, but maybe...
+      std::string fileName = o->parsedValue;
+      readConfigFile(fileName);
+    }
+  }
+
+  // Turn off color formatting if we have a nf format tag
+  bool useFormatting = ColorTerm::haveColorSupport();
+  bool haveNF        = false;
+  o = getOption("nf");
+
+  if (o) {
+    if (o->parsed) {
+      haveNF        = true;
+      useFormatting = false;
+    }
+  }
+
+  // Set if we want color output or not...
+  ColorTerm::setColors(useFormatting);
+
+  bool haveHelp = false;
+  o = getOption("help");
+
+  if (o) {
+    if (o->parsed) {
+      haveHelp = true;
+    }
+  }
+
+  // Start outputting now...
+  //
+  std::string header = "";
+
+  for (size_t i = 0; i < myOutputWidth; i++) {
+    header += "-";
+  }
+  std::cout << header << "\n";
+  ColorTerm::wrapWithIndent(0, 0, myHeader);
+
+  // std::string built = fBold+"Binary Built:"+fNormal+std::string(__DATE__) + "
+  // " + __TIME__;
+  // wrapWithIndent(0, 0, built);
+
+  // Just dump options if no args or if just "-nf" passed. "nf" is special, it
+  // just removes
+  // formatting
+  if (haveHelp || (argc < 2) || ((argc < 3) && haveNF)) {
+    // Here we handle help something, where we filter groups and then variables
+    // to
+    // show just the help for those.  It's useful for algorithms with lots of
+    // options
+    //
+    if (args.size() > 1) { // help is one of them...
+      // Ok if 'help' is the first argument, make
+      // it dynamic based on what else is left on line
+      for (size_t i = 0; i < args.size(); i++) {
+        if (args[i] == "help") { continue; }
+        const std::string what = args[i];
+
+        // Try to find a group matching argument...
+        // and filter help for it
+        ArgumentFilter all;
+        std::string group;
+        std::transform(what.begin(), what.end(), std::back_inserter(
+            group), ::toupper);
+
+        if (group == "OPTIONS") { group = ""; } FilterGroup g(group);
+        std::vector<RAPIOOptions::option> allOptions;
+        sortOptions(allOptions, g);
+
+        if (allOptions.size() > 0) {
+          std::cout << ColorTerm::fBold << group << ":\n" << ColorTerm::fBoldOff;
+          dumpArgs(allOptions, all, false, true);
+          std::exit(1);
+        } else {
+          // Try to find a variable matching argument...
+          FilterName aName(what);
+          std::vector<RAPIOOptions::option> names;
+          sortOptions(names, aName);
+
+          if (names.size() > 0) {
+            std::cout << ColorTerm::fBold << group << ":\n" << ColorTerm::fBoldOff;
+            dumpArgs(names, all, false, true);
+            std::exit(1);
+          } else {
+            dumpArgs();
+            std::exit(1);
+          }
+        }
+
+        break;
+      }
+    } else {
+      dumpArgs();
+    }
+
+    //
+    // FIXME: keep track of output length? That would be interesting...
+    // std::cout << "-->Recommend " << myName << " | less -R \n";
+    std::exit(1);
+  }
+
+  // Couple of error cases can occur in the arguments
+  // One: actually non-processed stuff in the arguments (bad format)
+  // Two: processed but not defined (good format, but not used)
+  // We have stuff left not processed...
+  if (args.size() > 0) {
+    // if (args[0] == "help"){
+    // std::cout << "Oh yeah, a help command system..woo hoo\n";
+    // FIXME: We'll pass on to the help parser system here.
+    // }
+    std::cout
+      << "This part of your command line was unrecognized and ignored.  Maybe a typo?\n>>";
+
+    for (unsigned int k = 0; k < args.size(); k++) {
+      std::cout << args[k] << " ";
+    }
+    std::cout << "\n";
+  }
+
+  // Ok, so on unrecognized options we need to exit
+  if (unusedOptionMap.size() > 0) {
+    std::map<std::string, RAPIOOptions::option>::iterator i;
+    std::vector<RAPIOOptions::option> unused;
+
+    for (i = unusedOptionMap.begin(); i != unusedOptionMap.end(); ++i) {
+      // Might have to modify some other parts...
+      unused.push_back(i->second);
+    }
+    std::cout
+      << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
+    std::cout << ColorTerm::fBold << "UNRECOGNIZED:\n" << ColorTerm::fBoldOff;
+    ArgumentFilter ff;
+    dumpArgs(unused, ff, true);
+    exit(1);
+  }
+
+  // Check for missing required arguments and complain
+  if (!verifyRequired()) { exit(1); }
+
+  // Check for invalid suboption in arguments and complain
+  if (!verifySuboptions()) { exit(1); }
+
+  // We can use the pull methods now...
+  isProcessed = true;
+
+  // Check for XML and write out an xml file now...
+  o = getOption("xml");
+
+  if (o) {
+    if (o->parsed) {
+      std::string fileName = o->parsedValue;
+      writeConfigFile(fileName);
+      exit(1);
+    }
+  }
+
+  // About to run..set each of the runtime things...
+  // Let these crash if missing, since they should always be there
+  // Log settings
+  int flushInterval = getInteger("flushInterval");
+  int logSize       = getInteger("logSize");
+  std::string v     = getString("verbose");
+
+  if (v == "") {
+    v = "info"; // Why doesn't default string do this?  FIXME?
+  }
+  Log::setLogSettings(v, flushInterval, logSize);
+
+  return (false);
+} // RAPIOOptions::processArgs
+
+std::string
+RAPIOOptions::getString(const std::string& opt)
+{
+  if (!isProcessed) {
+    LogSevere(
+      "Have to call processArgs before calling getString. This is a code error\n");
+    exit(1);
+  }
+  std::map<std::string, RAPIOOptions::option>::iterator i;
+  i = optionMap.find(opt);
+  std::string s = "";
+
+  if (i != optionMap.end()) {
+    if (i->second.parsed) {
+      s = i->second.parsedValue;
+    } else {
+      s = i->second.defaultValue;
+    }
+  } else {
+    LogSevere(
+      "WARNING - Trying to read uninitialized parameter \"" << opt << "\"\n");
+  }
+  return (s);
+}
+
+bool
+RAPIOOptions::getBoolean(const std::string& opt)
+{
+  const std::string s = getString(opt);
+
+  return (s != "false");
+}
+
+float
+RAPIOOptions::getFloat(const std::string& opt)
+{
+  const std::string s = getString(opt);
+
+  return (atof(s.c_str()));
+}
+
+int
+RAPIOOptions::getInteger(const std::string& opt)
+{
+  const std::string s = getString(opt);
+
+  return (atoi(s.c_str()));
+}
+
+void
+RAPIOOptions::addSuboption(const std::string& sourceopt, const std::string& opt,
+  const std::string& description)
+{
+  RAPIOOptions::option * have = getOption(sourceopt);
+
+  if (have) {
+    suboption s;
+    s.opt = opt; // FIXME: Should check for already existing and exit, we're
+                 // overwriting right now...
+
+    if (have->suboptionmax < opt.length()) {
+      have->suboptionmax = opt.length();
+
+      if (have->suboptionmax > 50) {
+        have->suboptionmax = 50; // I mean, really?
+      }
+    }
+    s.description = description;
+    have->suboptions.push_back(s);
+  } else {
+    std::cout << "WARNING: Code error: Trying to add suboption " << opt
+              << " to missing option '" << opt << "'\n";
+    std::cout
+      << "You must add the option first with boolean, required or optional\n";
+    exit(1);
+  }
+}
+
+void
+RAPIOOptions::addGroup(const std::string& sourceopt, const std::string& group)
+{
+  RAPIOOptions::option * have = getOption(sourceopt);
+
+  if (have) {
+    bool found = false;
+    std::string ugroup;
+    std::transform(group.begin(), group.end(), std::back_inserter(
+        ugroup), ::toupper);
+
+    for (size_t i = 0; i < have->groups.size(); i++) {
+      if (have->groups[i] == ugroup) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      have->groups.push_back(ugroup);
+    }
+  } else {
+    std::cout << "WARNING: Code error: Trying to add group " << group
+              << " to missing option '" << sourceopt << "'\n";
+    std::cout
+      << "You must add the option first with boolean, required or optional\n";
+    exit(1);
+  }
+}
+
+void
+RAPIOOptions::addAdvancedHelp(const std::string& sourceopt,
+  const std::string                            & help)
+{
+  RAPIOOptions::option * have = getOption(sourceopt);
+
+  if (have) {
+    have->advancedHelp = help;
+  } else {
+    std::cout
+      << "WARNING: Code error: Trying to add detailed help to missing option '"
+      << sourceopt << "'\n";
+    std::cout
+      << "You must add the option first with boolean, required or optional\n";
+    exit(1);
+  }
+}

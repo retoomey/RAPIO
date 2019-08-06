@@ -1,0 +1,331 @@
+#include "rRecord.h"
+
+#include "rIODataType.h"
+#include "rOS.h"
+#include "rXMLIndex.h"
+#include "rStrings.h"
+#include "rRecordQueue.h"
+
+#include <cassert>
+#include <algorithm>
+
+using namespace rapio;
+
+std::string rapio::Record::theProcessName;
+
+std::shared_ptr<RecordFilter> rapio::Record::theRecordFilter;
+
+std::shared_ptr<RecordQueue> rapio::Record::theRecordQueue;
+
+namespace {
+std::string
+getNextEventNumber()
+{
+  static unsigned long eventNumber = 0;
+  char temp[100];
+
+  std::sprintf(temp, "%lu", eventNumber++);
+  return (temp);
+}
+}
+
+Record::Record(const std::vector<std::string> & params,
+  const std::vector<std::string>              & selects,
+  const rapio::Time                           & productTime)
+  : myParams(params),
+  mySelections(selects),
+  myTime(productTime)
+{
+  myIndexCount    = 0;
+  mySelections[0] = myTime.getRecordTimeString();
+}
+
+namespace {
+std::string
+add_colon(const std::vector<std::string>& sel)
+{
+  std::string result = sel[1];
+  result += ':';
+  result += sel[2];
+  return (result);
+}
+}
+
+bool
+Record::matches(const std::string& spec) const
+{
+  if ((getDataType() == spec) ||
+    ((mySelections.size() > 2) && (add_colon(mySelections) == spec)))
+  {
+    return (true);
+  }
+  return (false);
+}
+
+std::ostream&
+rapio::operator << (std::ostream& os, const rapio::Record& rec)
+{
+  rec.constructXMLString(os, "");
+  return (os);
+}
+
+const std::string&
+Record::getDataSourceType() const
+{
+  return (this->getBuilderParams()[0]);
+}
+
+const std::string&
+Record::getDataType() const
+{
+  if (getSelections().size() > 1) { return (this->getSelections()[1]); }
+
+  Log::get(Log::Logical)
+    << "Record does not have a data type set in the mySelections ... \n";
+  static std::string Unknown("Unknown");
+  return (Unknown);
+}
+
+const std::string&
+Record::getEventType() const
+{
+  return (this->getDataType());
+}
+
+namespace rapio {
+bool
+operator < (const Record& a, const Record& b)
+{
+  // Use the product time to decide if they belong to different times
+  if (a.myTime != b.myTime) {
+    return (a.myTime < b.myTime);
+  }
+
+  // Use index count iff sorting larger collections of records...
+  if (a.myIndexCount != b.myIndexCount) {
+    return (a.myIndexCount < b.myIndexCount);
+  }
+
+  // same time ... events go before non-events
+  const bool a_isevt = a.isEvent();
+  const bool b_isevt = b.isEvent();
+
+  if (a_isevt != b_isevt) {
+    return (a_isevt);
+  }
+
+  // sort events by event number
+  if (a_isevt) {
+    const int ano = atoi(a.getBuilderParams()[1].c_str());
+    const int bno = atoi(b.getBuilderParams()[1].c_str());
+    return (ano < bno);
+  }
+
+  // two data records ... If you have Reflectivity:01.50 and Velocity:00.50
+  // the Velocity should come first if they have the same time
+  std::string a_st, b_st;
+
+  if (a.getSelections().size() > 2) {
+    a_st = a.getSelections()[2];
+  }
+
+  if (b.getSelections().size() > 2) {
+    b_st = b.getSelections()[2];
+  }
+
+  if (a_st != b_st) {
+    return (a_st < b_st);
+  }
+
+  const std::string& a_dt = a.getSelections()[1];
+  const std::string& b_dt = b.getSelections()[1];
+  return (a_dt < b_dt);
+} // <
+}
+
+std::shared_ptr<DataType>
+Record::createObject(size_t i) const
+{
+  // make sure we have enough params to get a data type
+  auto params(getBuilderParams(i));
+
+  if (params.empty()) {
+    LogSevere("No data type specified!\n");
+    return (0);
+  }
+
+  // pop the data type off the params list...
+  const std::string dataSourceType(params.front());
+  params.erase(params.begin());
+
+  // get the builder associated with the data type...
+  std::shared_ptr<IODataType> builder = IODataType::getIODataType(dataSourceType);
+  if (builder == nullptr) {
+    LogSevere("No builder corresponding to " << dataSourceType << '\n');
+    return (0);
+  }
+
+  std::shared_ptr<DataType> dt = builder->createObject(params);
+
+  if (dt != nullptr) {
+    // set sub-type
+    if (this->getSelections().size() > 2) {
+      dt->setDataAttributeValue("SubType", this->getSelections()[2]);
+    }
+
+    /** RAPIO TOOMEY: Preprocess remapping lat lon grids, etc I think
+     * to the size needed.  We'll rewrite this
+     *  static AutoPreprocess autopreproc;
+     *  std::shared_ptr<DataType> ret = autopreproc.processIfNeeded(*dt);
+     *  if (ret != nullptr){
+     *    return ret;
+     *  }
+     */
+  } else {
+    LogSevere("Failed to create new datatype\n");
+  }
+  return (dt);
+} // Record::createObject
+
+bool
+Record::getSubtype(std::string& out)
+{
+  if (isValid()) {
+    const std::vector<std::string>& temp = getSelections();
+
+    if (temp.size() > 2) {
+      out = temp.back();
+    }
+    return (true);
+  }
+  return (false);
+}
+
+void
+Record::readParams(const XMLElement & e,
+  std::vector<std::string>          & v,
+  const std::string                 & indexPath)
+{
+  // does it have a change attribute?
+  const std::string& changeAttr = e.attribute("changes");
+
+  if (!changeAttr.empty()) {
+    LogSevere("Can't handle a param change index at moment.  We can implement if you need this\n");
+    return;
+  }
+
+  // Split text into vector
+  Strings::split(e.getText(), &v);
+
+  if (v.empty()) {
+    LogSevere("Record has empty parameter tag: " << e.getText() << '\n');
+    return;
+  }
+
+  // Replace first {IndexLocation} with index location
+  auto it = std::find(v.begin(), v.end(), Constants::IndexPathReplace);
+  if (it != v.end()) {
+    *it = indexPath; // quicker if only one
+  } else {
+    // This is special logic for WebIndex to allow relative and absolute
+    // paths to be sent to the w2server, but still being backward compatable.
+    // Basically when reading xml for a webindex, we force even absolute paths
+    // to be 'http'-ed.  This means always appending the INDEXPATH somehow to
+    // the params
+    if (Strings::beginsWith(indexPath, "http:")) {
+      if (v[0] == "Event") { } else {
+        // For each param
+        for (auto& s:v) {
+          // The first / becomes ABS for http
+          if ((s.length() > 0) && (s[0] == '/')) {
+            s = indexPath + "/{ABS}" + s;
+            break;
+          }
+        }
+      }
+    }
+  }
+} // Record::readParams
+
+bool
+Record::readXML(const XMLElement& itemNode,
+  const std::string             & indexPath,
+  size_t                        indexLabel) // Not sure these should be passed
+{
+  // FIXME: debating this being a constructor.  Want the bool return though
+  const XMLElementList& itemDescr = itemNode.getChildren();
+
+  for (auto& i: itemDescr) {
+    const XMLElement& e = *(i);
+    const std::string& tag(e.getTagName());
+
+    if (tag == "time") {
+      myTime = Time::SecondsSinceEpoch(atol(e.getText().c_str()),
+          atof(e.getAttributeValue("fractional", "0.0").c_str()));
+    } else if (tag == "params") {
+      readParams(e, myParams, indexPath);
+    } else if (tag == "selections") {
+      Strings::split(e.getText(), &mySelections);
+    }
+  }
+
+  if (myParams.empty() || mySelections.empty()) {
+    LogSevere("Ill-formed XML record. Lacks tags for params and/or mySelections \n");
+    return false;
+  }
+
+  // Make sure time matches actual time object...
+  mySelections[0] = myTime.getRecordTimeString();
+  myIndexCount    = indexLabel;
+
+  /** Abort record if not wanted */
+  if (theRecordFilter != nullptr) {
+    if (!theRecordFilter->wanted(*this)) { return false; }
+  }
+  return true;
+} // Record::readXML
+
+void
+Record::constructXMLMeta(std::ostream& ss) const
+{
+  // Note: <meta> is generated by caller
+  // Write metadata.  This should be stuff written once per created file
+  // since all of our code is running in its own process
+  if (getProcessName().empty()) {
+    // host + process location for tracking purposed
+    const std::string& hostname = OS::getHostName();
+    setProcessName("file://" + hostname + OS::getProcessName());
+  }
+  ss << "<process>" << getProcessName() << "</process>\n";
+}
+
+void
+Record::constructXMLString(std::ostream& ss, const std::string& indexPath) const
+{
+  // Note: <item> is generated by caller
+
+  // Time tag ---------------------------------------------------------
+  const auto t = getTime();
+
+  ss << " <time fractional=\"" << t.getFractional()
+     << "\"> " << t.getSecondsSinceEpoch() << " </time>\n";
+
+  // Params tag -------------------------------------------------------
+  ss << " <params>";
+  for (auto& p:getBuilderParams(0)) {
+    // Replace actual index path with a marker
+    if (p == indexPath) {
+      ss << Constants::IndexPathReplace << Constants::RecordXMLSeparator;
+    } else {
+      ss << p << Constants::RecordXMLSeparator;
+    }
+  }
+  ss << "</params>\n";
+
+  // Selections tag ---------------------------------------------------
+  ss << " <selections>";
+  for (auto& iter: getSelections()) {
+    ss << iter << Constants::RecordXMLSeparator;
+  }
+  ss << "</selections>\n";
+}
