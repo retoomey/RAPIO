@@ -36,7 +36,7 @@ AlgConfigFile::getConfigFileForURL(const URL& path)
   auto lastdot     = name.find_last_of(".");
   if (lastdot == std::string::npos) {
     LogSevere("Configuration type for " << path << " unknown. Trying '" << type << "'\n");
-  } else  {
+  } else {
     type = name.substr(lastdot + 1, name.size());
     Strings::toLower(type);
   }
@@ -114,20 +114,20 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
 
   if (path.empty()) {
     IOXML::write(std::cout, output); // std::cout for capturing, no log here
-  } else  {
+  } else {
     if (path.isLocal()) {
       std::string filename = path.toString();
       std::ofstream myfile;
       myfile.open(filename.c_str());
       if (myfile.fail()) {
         LogSevere("Couldn't write XML to " << filename << " for some reason\n");
-      } else  {
+      } else {
         IOXML::write(myfile, output);
         myfile.close();
         LogInfo("Successfully wrote parameter XML to " << filename << "\n");
         return true;
       }
-    } else  {
+    } else {
       LogSevere("Can't write to a remote URL at " << path << "\n");
     }
   }
@@ -189,7 +189,7 @@ AlgFLATConfigFile::writeConfigURL(const URL& path,
 
   if (path.empty()) {
     buf = std::cout.rdbuf();
-  } else  {
+  } else {
     if (path.isLocal()) {
       close = true;
       std::string filename = path.toString();
@@ -200,7 +200,7 @@ AlgFLATConfigFile::writeConfigURL(const URL& path,
         return false;
       }
       buf = of.rdbuf();
-    } else  {
+    } else {
       LogSevere("Can't write to a remote URL at " << path << "\n");
       return false;
     }

@@ -3,11 +3,64 @@
 #include <rUtility.h>
 
 #include <iosfwd>
-#include <sstream> // for ostringstream
-#include <map>
+#include <sstream>
+#include <vector>
 #include <memory>
 
 namespace rapio {
+/**
+ *  Streams to log to.
+ *  This class allows multiple references to the same stream,
+ *  removing a stream only when the last reference to it vanishes.
+ */
+class Streams : public Utility
+{
+private:
+
+  /** Vector of streams */
+  std::vector<std::ostream *> myStreams;
+
+public:
+  /** The default constructor, private to permit use only by Log */
+  Streams();
+
+  /** Add a stream. Returns the number of references to it
+   *  after the addition. */
+  size_t
+  addStream(std::ostream * os);
+
+  /** remove a stream. Returns the number of references to it
+   *  after the deletion. */
+  void
+  removeStream(std::ostream * os);
+
+  /** cycle any stream if the cycle size has been exceeded. */
+  void
+  cycle(size_t myCycleSize);
+
+  /** flush any stream. */
+  void
+  flush();
+
+  /** Print to all added streams */
+  template <class T>
+  Streams&
+  operator << (const T& obj)
+  {
+    for (auto& i:myStreams) { *i << obj; }
+    return (*this);
+  }
+
+  /** Print to all added streams */
+  Streams&
+  operator << (std::ostream& eg_endl)
+  {
+    for (auto& i:myStreams) { *i << eg_endl.rdbuf(); }
+    return (*this);
+  }
+}
+;
+
 /**
  * A singleton error logger class. This class will be used by all libraries.
  * Typical usage of this class is as follows:
@@ -31,85 +84,17 @@ public:
     return (mySingleton.get());
   }
 
+  /** Severity levels in decreasing order of printing */
   enum Severity {
     /** Debugging Messages, high volume */
-    Debug          = 1,
+    Debug  = 1,
 
     /** Just for information. */
-    Info           = 10,
+    Info   = 10,
 
-    /** Information that provides program flow */
-    ImpInfo        = 11,
-
-    /** Environment problem, can slide. */
-    NotSevere      = 20,
-
-    /** Software Bug, needs programmer attention. */
-    NotAnticipated = 21,
-
-    /** Environment problem, needs user attention. */
-    Severe         = 22,
-
-    /** Software Bug, needs programmer attention. */
-    Logical        = 23,
+    /** Major problem */
+    Severe = 20
   };
-
-  /**
-   *  Streams to log to.
-   *  This class allows multiple references to the same stream,
-   *  removing a stream only when the last reference to it vanishes.
-   */
-  class Streams : public Utility {
-    typedef std::map<std::ostream *, int> StreamSet;
-    StreamSet myStreams;
-
-private:
-
-    friend class Log;
-
-    /** The default constructor, private to permit use only by Log */
-    Streams();
-
-    /** Add a stream. Returns the number of references to it
-     *  after the addition. */
-    size_t
-    addStream(std::ostream * os);
-
-    /** remove a stream. Returns the number of references to it
-     *  after the deletion. */
-    size_t
-    removeStream(std::ostream * os);
-
-    /** cycle any stream if the cycle size has been exceeded. */
-    void
-    cycle(size_t myCycleSize);
-
-public:
-
-    /** flush any stream. */
-    void
-    flush();
-
-public:
-
-    template <class T>
-    Streams&
-    operator << (const T& obj)
-    {
-      for (StreamSet::iterator iter = myStreams.begin();
-        iter != myStreams.end(); ++iter) { (*(iter->first)) << obj; }
-      return (*this);
-    }
-
-    Streams&
-    operator << (std::ostream& eg_endl)
-    {
-      for (StreamSet::iterator iter = myStreams.begin();
-        iter != myStreams.end(); ++iter) { (*(iter->first)) << eg_endl.rdbuf(); }
-      return (*this);
-    }
-  }
-  ;
 
   /**
    * The logger starts logging to the passed in stream.
@@ -153,8 +138,6 @@ public:
   static Streams&
   get(Severity req_level);
 
-public:
-
   /** Change the severity threshold. By default, it is at ImpInfo */
   static void
   setSeverityThreshold(Severity new_level)
@@ -169,6 +152,7 @@ public:
     return (desired_level >= instance()->myCurrentLevel);
   }
 
+  /** Set the verbose level based on known strings */
   static void
   setVerbose(const std::string& in);
 
@@ -210,57 +194,8 @@ private:
   Log();
 }
 ;
-
-/** A single error message is denoted by Error.  */
-class Error : public Utility {
-public:
-
-  /**
-   * Starts logging here on out to the stream passed in.
-   * Usually, you would want to log to a strstream.
-   * @param s  the stream to log into.
-   */
-  Error(std::ostream * s) : err_stream(s)
-  {
-    Log::startLogging(err_stream);
-  }
-
-  /**
-   * Starts logging here on out to the stream passed in.
-   * Usually, you would want to log to a strstream.
-   * @param s  the stream to log into.
-   */
-  Error(std::ostream& s) : err_stream(&s)
-  {
-    Log::startLogging(err_stream);
-  }
-
-  /**
-   * From the moment of construction to the point of destruction
-   * defines a single message. All errors by CODE components in the
-   * meantime are shoved in the stream passed in.
-   */
-  ~Error()
-  {
-    Log::stopLogging(err_stream);
-  }
-
-protected:
-
-  std::ostream * err_stream;
-}
-;
 }
 
-/* define __func__ for non-ANSI compilers... */
-// #if __STDC_VERSION__ < 199901L
-// # if __GNUC__ >= 2
-// #  define __func__ __FUNCTION__
-// # else // if __GNUC__ >= 2
-// #  define __func__ "<unknown>"
-// # endif // if __GNUC__ >= 2
-// #endif // if __STDC_VERSION__ < 199901L
-// #define LINE_ID __FILE__ << ':' << __LINE__ << ' ' << __func__
 #define LINE_ID __FILE__ << ':' << __LINE__
 
 /**
@@ -275,7 +210,6 @@ protected:
                                                                      << LINE_ID << ") " << x; }             \
   } while (0) /* (no trailing ; ) */
 
-#define LogDebug(x)   LogAtSeverity(rapio::Log::Debug, x)
-#define LogInfo(x)    LogAtSeverity(rapio::Log::Info, x)
-#define LogImpInfo(x) LogAtSeverity(rapio::Log::ImpInfo, x)
-#define LogSevere(x)  LogAtSeverity(rapio::Log::Severe, x)
+#define LogDebug(x)  LogAtSeverity(rapio::Log::Debug, x)
+#define LogInfo(x)   LogAtSeverity(rapio::Log::Info, x)
+#define LogSevere(x) LogAtSeverity(rapio::Log::Severe, x)

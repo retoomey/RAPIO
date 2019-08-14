@@ -437,7 +437,7 @@ Compression::compressGZ(const Buffer& uncompr, float factor,
   // errors ...
   if (ret_code == Z_BUF_ERROR) {
     if (factor < maxfactor) {
-      LogImpInfo
+      LogDebug
         ("Insufficient compression, using 10% more memory.\n");
       return (compressGZ(uncompr, factor * 1.1, maxfactor));
     }
@@ -472,7 +472,7 @@ Compression::compressBZ2(const Buffer& uncompr, float factor,
   // errors ...
   if (ret_code == BZ_OUTBUFF_FULL) {
     if (factor < maxfactor) {
-      LogImpInfo
+      LogDebug
         ("Insufficient compression, using 10% more memory.\n");
       return (compressBZ2(uncompr, factor * 1.1, maxfactor));
     }

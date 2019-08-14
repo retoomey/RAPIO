@@ -177,42 +177,45 @@ protected:
 
 RAPIOOptions::RAPIOOptions()
 {
-  RAPIOOptions::option * o;
+  optional("verbose",
+    "info",
+    "Error log verbosity levels.  Increasing level prints more stuff:");
+  addSuboption("verbose", "severe", "Print only the most severe errors");
+  // addSuboption("verbose", "unanticipated", "Level 1");
+  //  addSuboption("verbose", "harmless", "Level 2");
+  //  addSuboption("verbose", "important", "Level 3");
+  addSuboption("verbose", "info", "Print general information as well as errors");
+  addSuboption("verbose", "debug", "Print everything, also turn on signal stacktraces");
+  addGroup("verbose", "LOGGING");
 
-  // The logging group options
-  o = optional("verbose",
-      "info",
-      "Error log verbosity levels.  Increasing level prints more stuff:");
-  addSuboption("verbose", "severe", "Level 0");
-  addSuboption("verbose", "unanticipated", "Level 1");
-  addSuboption("verbose", "harmless", "Level 2");
-  addSuboption("verbose", "important", "Level 3");
-  addSuboption("verbose", "info", "Level 4");
-  addSuboption("verbose", "debug", "Level 5");
-  o->groups.push_back("LOGGING");
-  o = optional("logSize", "10000", "Maximum error log size in bytes.");
-  o->groups.push_back("LOGGING");
-  o = optional("flushInterval",
-      "900",
-      "Error log flush (force write) timer set in seconds.");
-  o->groups.push_back("LOGGING");
+  optional("logSize", "10000", "Maximum error log size in bytes.");
+  addGroup("logSize", "LOGGING");
 
-  // The config group for file read/write options
-  o = optional("iconfig",
-      "",
-      "Input URL to read a configuration file. Command line overrides. Can end with .xml for WDSS2 file, .config for HMET file.");
-  o->groups.push_back("CONFIG");
-  o = optional("oconfig",
-      "",
-      "Output URL to write a configuration file, using args passed in from all sources.  Can end with .xml for WDSS2 file, .config for HMET file.");
-  o->groups.push_back("CONFIG");
+  optional("logFlush",
+    "900",
+    "Error log flush (force write) timer set in seconds.");
+  addGroup("logFlush", "LOGGING");
+
+  optional("iconfig",
+    "",
+    "Input URL to read a configuration file. Command line overrides.");
+  addGroup("iconfig", "CONFIG");
+  addAdvancedHelp("iconfig",
+    "Can end with .xml for WDSS2 file, .config for HMET file. This parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
+
+  optional("oconfig",
+    "",
+    "Output URL to write a configuration file, using parameters from all sources.");
+  addGroup("oconfig", "CONFIG");
+  addAdvancedHelp("oconfig",
+    "Can end with .xml for WDSS2 file, .config for HMET file. This will all parameters if any from iconfig, override with command line arguments, then generate a new output file.  You can convert from one style to another as well.");
 
   // The help group
-  o = boolean("help",
-      "Print out parameter help information. Can also just type the program without arguments.");
-  o->groups.push_back("HELP");
-  o = boolean("nf", "No ASCII formatting/colors in help output.");
-  o->groups.push_back("HELP");
+  boolean("help",
+    "Print out parameter help information. Can also just type the program without arguments.");
+  addGroup("help", "HELP");
+  boolean("nf", "No ASCII formatting/colors in help output.");
+  addGroup("nf", "HELP");
 }
 
 std::string
@@ -964,11 +967,11 @@ RAPIOOptions::readConfigFile(const std::string& string)
       if (allowInConfig(options[i])) {
         // LogDebug("STORING " << options[i] << " == " << values[i] << "\n");
         storeParsedArg(options[i], values[i]);
-      } else  {
+      } else {
         // LogDebug("**IGNORING*** " << options[i] << " == " << values[i] << "\n");
       }
     }
-  } else  {
+  } else {
     // Reader should complain already
     // LogSevere("Couldn't read configuration file at " << aURL << "\n");
     exit(1);
@@ -994,7 +997,7 @@ RAPIOOptions::writeConfigFile(const std::string& string)
       options.push_back(i.second.opt);
       if (i.second.parsed) {
         values.push_back(i.second.parsedValue);
-      } else  {
+      } else {
         values.push_back(i.second.defaultValue);
       }
     }
@@ -1066,13 +1069,27 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     }
   }
 
+  RAPIOOptions::option * o;
+
+  // Help first incase of help iconfig
+  bool haveHelp = false;
+  o = getOption("help");
+
+  if (o) {
+    if (o->parsed) {
+      haveHelp = true;
+    }
+  }
   // Parse any configFile options not already parsed (command line overrides)
-  RAPIOOptions::option * o = getOption("iconfig");
+  // if (getParsed("iconfig", value)){}
+  o = getOption("iconfig");
 
   if (o) {
     if (o->parsed) { // Don't see us having a default, but maybe...
       std::string fileName = o->parsedValue;
-      readConfigFile(fileName);
+      if (!haveHelp) {
+        readConfigFile(fileName);
+      }
     }
   }
 
@@ -1090,15 +1107,6 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
 
   // Set if we want color output or not...
   ColorTerm::setColors(useFormatting);
-
-  bool haveHelp = false;
-  o = getOption("help");
-
-  if (o) {
-    if (o->parsed) {
-      haveHelp = true;
-    }
-  }
 
   // Start outputting now...
   //
@@ -1232,14 +1240,14 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   // About to run..set each of the runtime things...
   // Let these crash if missing, since they should always be there
   // Log settings
-  int flushInterval = getInteger("flushInterval");
-  int logSize       = getInteger("logSize");
-  std::string v     = getString("verbose");
+  int logFlush  = getInteger("logFlush");
+  int logSize   = getInteger("logSize");
+  std::string v = getString("verbose");
 
   if (v == "") {
     v = "info"; // Why doesn't default string do this?  FIXME?
   }
-  Log::setLogSettings(v, flushInterval, logSize);
+  Log::setLogSettings(v, logFlush, logSize);
 
   return (false);
 } // RAPIOOptions::processArgs
@@ -1360,6 +1368,7 @@ RAPIOOptions::addAdvancedHelp(const std::string& sourceopt,
 
   if (have) {
     have->advancedHelp = help;
+    have->usage        = have->usage + " (See help " + have->opt + ")";
   } else {
     std::cout
       << "WARNING: Code error: Trying to add detailed help to missing option '"

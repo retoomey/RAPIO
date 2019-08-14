@@ -2,15 +2,10 @@
 
 #include "rStrings.h" // for toLower()
 #include "rEventLoop.h"
-#include "rRAPIOAlgorithm.h"
 #include "rEventTimer.h"
 
-#include <cassert>
-#include <cstdio>
-#include <ctime>
-#include <fstream>
+#include <algorithm>
 #include <iostream>
-#include <string>
 
 using namespace rapio;
 using namespace std;
@@ -60,7 +55,7 @@ Log::Log()
 Log::~Log()
 { }
 
-Log::Streams&
+Streams&
 Log::get(Log::Severity req_level)
 {
   Log * log = instance();
@@ -113,24 +108,15 @@ Log::setVerbose(const std::string& in)
   std::string s = in;
   Strings::toLower(s);
 
-  // FIXME: enum class?
   if (s == "severe") {
     severity = Severe;
-  } else if (s == "unanticipated") {
-    severity = NotAnticipated;
-  } else if (s == "harmless") {
-    severity = NotSevere;
-  } else if (s == "important") {
-    severity = ImpInfo;
   } else if (s == "info") {
     severity = Info;
   } else if (s == "debug") {
     severity = Debug;
   } else {
     severity = Severe;
-    LogSevere("Unknown verbosity level \"" << s << "\".  Use \"severe\", "
-                                           << "\"unanticipated\", \"harmless\", \"important\", \"info\", \"debug\", "
-                                           << "\n");
+    LogSevere("Unknown verbosity level \"" << s << "\".  Use \"severe\", \"info\", \"debug\"\n");
   }
   setSeverityThreshold(severity);
 }
@@ -151,64 +137,48 @@ Log::setLogSettings(const std::string& level, int flush, int logSize)
                     << "Cycle: " << instance()->myCycleSize << " bytes.\n");
 }
 
-Log::Streams::Streams()
+Streams::Streams()
 { }
 
 size_t
-Log::Streams::addStream(std::ostream * os)
+Streams::addStream(std::ostream * os)
 {
-  // the [] operator inserts a zero if os isn't there already.
-  int number = (++myStreams[os]);
-
-  assert(number > 0);
-  return (number);
-}
-
-size_t
-Log::Streams::removeStream(std::ostream * os)
-{
-  int number = 0;
-
-  StreamSet::iterator iter = myStreams.find(os);
-
-  if (iter ==
-    myStreams.end())
-  {
-    std::cerr
-      << "WARNING! Trying to remove non-existent stream!\n";
-  } else {
-    number = --(iter->second);
-    assert(number >= 0);
-
-    if (number == 0) { myStreams.erase(iter); }
+  for (auto& i:myStreams) {
+    if (i == os) {
+      return 1;
+    }
   }
-  return (number);
+  myStreams.push_back(os);
+  return 1;
 }
 
 void
-Log::Streams::cycle(size_t myCycleSize)
+Streams::removeStream(std::ostream * os)
 {
-  for (auto& i:myStreams) {
-    std::ostream * this_stream = i.first;
+  myStreams.erase(std::remove(myStreams.begin(), myStreams.end(), os), myStreams.end());
+}
 
-    if (this_stream->tellp() > (int) myCycleSize) {
+void
+Streams::cycle(size_t myCycleSize)
+{
+  for (auto& s:myStreams) {
+    if (s->tellp() > (int) myCycleSize) {
       // gotta cycle now
-      time_t now = time(0);
-      (*(this_stream)) << "\n\n\nLOG cycled. Rest of info is OLD.\n";
-      this_stream->flush();
-      this_stream->seekp(ios::beg);
-      (*(this_stream)) << "LOG cycled at "
-                       << ctime(&now)
-                       << "\n";
+      // time_t now = time(0);
+      // (*(s)) << "\n\n\nLOG cycled. Rest of info is OLD.\n";
+      s->flush();
+      s->seekp(ios::beg);
+      // (*(s)) << "LOG cycled at "
+      //       << ctime(&now)
+      //       << "\n";
     }
   }
 }
 
 void
-Log::Streams::flush()
+Streams::flush()
 {
-  for (auto& i:myStreams) {
-    std::ostream * this_stream = i.first;
-    this_stream->flush();
+  for (auto& s:myStreams) {
+    s->flush();
   }
 }

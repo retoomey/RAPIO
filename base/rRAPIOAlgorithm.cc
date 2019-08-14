@@ -96,12 +96,12 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
   // These are the standard generic 'input' parameters we support
   o.require("i",
     "/data/radar/KTLX/code_index.xml",
-    "The input sources (see help i)");
+    "The input sources");
   o.addGroup("i", "I/O");
   o.addAdvancedHelp("i",
     "Use quotes and spaces to have multiple sources.  For example, -i \"//vmrms-sr20/KTLX /data/radar/code_index.xml\" means connect to two input sources, where the first is a web index, the second a xml index.");
 
-  o.optional("I", "*", "The input type filter patterns (see help I)");
+  o.optional("I", "*", "The input type filter patterns");
   o.addGroup("I", "I/O");
   o.addAdvancedHelp("I",
     "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
@@ -137,14 +137,16 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
   o.addGroup("o", "I/O");
   o.optional("O",
     "*",
-    "The output types patterns, controlling product names and writing (see help O)");
+    "The output types patterns, controlling product names and writing");
   o.addGroup("O", "I/O");
   o.addAdvancedHelp("O",
     "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
-  o.optional("l",
+  o.optional("n",
     "",
-    "The output notifier for realtime/fam, etc. If blank, this is typically set to {OutputDir}/code_index.fam  If == 'disable' then all notification is turned off which could speed up processing an archive, for instance.");
-  o.addGroup("l", "I/O");
+    "The notifier for newly created files/records.");
+  o.addGroup("n", "I/O");
+  o.addAdvancedHelp("n",
+    "If blank, this is typically set to {OutputDir}/code_index.fam  If == 'disable' then all notification is turned off which could speed up processing an archive, for instance.");
 }
 
 void
@@ -155,7 +157,7 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   addOutputProducts(param);
 
   // Gather output directory and link notifier.
-  myNotifierPath = o.getString("l");
+  myNotifierPath = o.getString("n");
   myOutputDir    = o.getString("o");
 }
 

@@ -80,8 +80,7 @@ Record::getDataType() const
 {
   if (getSelections().size() > 1) { return (this->getSelections()[1]); }
 
-  Log::get(Log::Logical)
-    << "Record does not have a data type set in the mySelections ... \n";
+  LogDebug("Record does not have a data type set in the mySelections ... \n");
   static std::string Unknown("Unknown");
   return (Unknown);
 }

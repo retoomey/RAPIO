@@ -55,7 +55,7 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
     ret = testMe;
     LogInfo(">>>Read:" << testMe.path << "\n");
   } else {
-    LogImpInfo("WARNING! " << relativePath << " was not found.\n");
+    LogDebug("WARNING! " << relativePath << " was not found.\n");
   }
 
   return (ret);
