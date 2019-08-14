@@ -18,6 +18,7 @@
 #include "rIndexType.h"
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
+#include "rAlgConfigFile.h"
 
 #include <iostream>
 #include <map>
@@ -256,6 +257,8 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
                             // arguments...
 
     // 2. Parse step
+    // Algorithm special read/write of options support, processing args
+    AlgConfigFile::introduceSelf();
     o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 
     // 2.5 setup signals, etc..some stuff based upon arguments

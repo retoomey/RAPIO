@@ -1,12 +1,15 @@
-# Ignore stuff in all our folders
+# RAPIO gitignore some of the generated stuff in linux
+# Since we probably don't want to check that in
+# Ignore any libraries we make...
 *.lo
 *.o
 **/.deps
 **/.libs
 **/Makefile
 **/Makefile.in
+**/*.la
+rexample/rsimplealg
 aclocal.m4
-base/librapio.la
 ltmain.sh
 install-sh
 missing

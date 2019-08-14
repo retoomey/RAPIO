@@ -17,9 +17,17 @@ private:
 
 public:
 
-  /** Every character of string is a number part */
-  static bool
-  isNumeric(const std::string& s);
+  /** Modify a string to remove left white space */
+  static std::string&
+  ltrim(std::string& s);
+
+  /** Modify a string to remove right white space */
+  static std::string&
+  rtrim(std::string& s);
+
+  /** Modify a string to remove left and right white space */
+  static std::string&
+  trim(std::string& s);
 
   /** Do two strings start with same part? */
   static bool

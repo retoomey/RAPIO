@@ -5,6 +5,8 @@
 #include "rStrings.h"
 #include "rColorTerm.h"
 #include "rOS.h"
+#include "rAlgConfigFile.h"
+#include "rIOURL.h"
 
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -196,13 +198,13 @@ RAPIOOptions::RAPIOOptions()
   o->groups.push_back("LOGGING");
 
   // The config group for file read/write options
-  o = optional("configFile",
+  o = optional("iconfig",
       "",
-      "Input URL to read an XML configuration file. Command line overrides.");
+      "Input URL to read a configuration file. Command line overrides. Can end with .xml for WDSS2 file, .config for HMET file.");
   o->groups.push_back("CONFIG");
-  o = optional("xml",
+  o = optional("oconfig",
       "",
-      "Output URL to write a full XML configuration file, using args passed in from all sources.  Blank will dump to terminal.");
+      "Output URL to write a configuration file, using args passed in from all sources.  Can end with .xml for WDSS2 file, .config for HMET file.");
   o->groups.push_back("CONFIG");
 
   // The help group
@@ -892,7 +894,7 @@ RAPIOOptions::storeParsedArg(const std::string& arg, const std::string& value)
 
   if (o) {
     // If already parsed what to do...
-    // If from configFile, we just ignore, because we override the setting..
+    // If from iconfig, we just ignore, because we override the setting..
     // If duplicated from command line, maybe we want to warn...
     if (!o->parsed) {
       o->parsed = true;
@@ -923,73 +925,88 @@ RAPIOOptions::storeParsedArg(const std::string& arg, const std::string& value)
   }
 } // RAPIOOptions::storeParsedArg
 
-/** Read a configuration XML file into our arguments.  Any arguments on the
- * command
- * line override the settings in the XML file */
-void
-RAPIOOptions::readConfigFile(const std::string& filename)
+namespace {
+/** Is this allowed in config file, if not ignore.  Some options
+ * will mess with our processing */
+bool
+allowInConfig(const std::string& o)
 {
-  // Process and store all arguments from a configuration file
-  // Note, in RAPIO this could be stored on a webpage
-  std::shared_ptr<XMLDocument> configDoc =
-    IOXML::readXMLDocument(filename);
+  if (o == "iconfig") { return false; }
+  if (o == "oconfig") { return false; }
+  if (o == "help") { return false; } // Don't let config file dump help lol
+  if (o == "nf") { return false; }   // nf right now only part of help
+  return true;
+}
+}
 
-  if (configDoc != nullptr) {
-    XMLElement config;
-    config = configDoc->getRootElement();
-    XMLElementList options;
-    config.getChildren("option", &options);
+/** Read a configuration file into our arguments.  Any arguments on the
+ * command
+ * line override the settings in the config file */
+void
+RAPIOOptions::readConfigFile(const std::string& string)
+{
+  // Get config file reader for given option string
+  URL aURL(string);
+  auto config = AlgConfigFile::getConfigFileForURL(aURL);
 
-    for (size_t i = 0; i < options.size(); ++i) {
-      const XMLElement& thisOpt  = *(options[i]);
-      const std::string & letter = thisOpt.attribute("letter");
-      std::string value = thisOpt.attribute("value");
-      storeParsedArg(letter, value);
+  if (config == nullptr) { exit(1); } // Bad parameter, no reader for it
+
+  // Get the option/value pairs from the configuration file...
+  std::vector<std::string> options;
+  std::vector<std::string> values;
+  if (config->readConfigURL(aURL, options, values)) {
+    if (options.size() != values.size()) {
+      LogSevere("Bad configuration file reader, options not equal to values\n");
+      exit(1);
     }
+    // ... and store them in our options.
+    for (size_t i = 0; i < options.size(); ++i) {
+      if (allowInConfig(options[i])) {
+        // LogDebug("STORING " << options[i] << " == " << values[i] << "\n");
+        storeParsedArg(options[i], values[i]);
+      } else  {
+        // LogDebug("**IGNORING*** " << options[i] << " == " << values[i] << "\n");
+      }
+    }
+  } else  {
+    // Reader should complain already
+    // LogSevere("Couldn't read configuration file at " << aURL << "\n");
+    exit(1);
   }
 }
 
-/** Write a configuration XML that contains all the final processed command line
- * arguments, including any imported XML settings */
+/** Write a configuration that contains all the final processed command line
+ * arguments, including any imported command line settings */
 void
-RAPIOOptions::writeConfigFile(const std::string& filename)
+RAPIOOptions::writeConfigFile(const std::string& string)
 {
-  std::shared_ptr<XMLElement> root(new XMLElement("w2algxml"));
-  XMLDocument output(root);
-  root->setAttribute("program", myName);
+  // Get config file reader for given option string
+  URL aURL(string);
+  auto config = AlgConfigFile::getConfigFileForURL(aURL);
 
-  // std::map<std::string, RAPIOOptions::option>::iterator i;
-  // for (i = optionMap.begin(); i != optionMap.end(); ++i)
+  if (config == nullptr) { exit(1); } // Bad parameter, no reader for it
+
+  // Create a list of option/value pairs for configuration writer
+  std::vector<std::string> options;
+  std::vector<std::string> values;
   for (auto& i: optionMap) {
-    // Doesn't make sense to write out configFile or xml tags in the xml...
-    if (!((i.second.opt == "configFile") || (i.second.opt == "xml"))) {
-      std::shared_ptr<XMLElement> element(new XMLElement("option"));
-      element->setAttribute("letter", i.second.opt);
-
+    if (allowInConfig(i.second.opt)) {
+      options.push_back(i.second.opt);
       if (i.second.parsed) {
-        element->setAttribute("value", i.second.parsedValue);
-      } else {
-        element->setAttribute("value", i.second.defaultValue);
+        values.push_back(i.second.parsedValue);
+      } else  {
+        values.push_back(i.second.defaultValue);
       }
-      root->addChild(element);
     }
   }
 
-  if (filename.empty()) {
-    IOXML::write(std::cout, output);
-  } else {
-    ofstream myfile;
-    myfile.open(filename.c_str());
-
-    if (myfile.fail()) {
-      std::cout << "Couldn't write XML to " << filename << " for some reason\n";
-    } else {
-      IOXML::write(myfile, output);
-      myfile.close();
-      std::cout << "Successfully wrote parameter XML to " << filename << "\n";
-    }
+  // Send to the writer
+  if (config->writeConfigURL(aURL, myName, options, values)) {
+    // We're exiting...
+    std::cout << "Successfully generated configuration file " << aURL << "\n";
   }
-} // RAPIOOptions::writeConfigFile
+  ;
+}
 
 void
 RAPIOOptions::sortOptions(std::vector<RAPIOOptions::option>& allOptions,
@@ -1050,7 +1067,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   }
 
   // Parse any configFile options not already parsed (command line overrides)
-  RAPIOOptions::option * o = getOption("configFile");
+  RAPIOOptions::option * o = getOption("iconfig");
 
   if (o) {
     if (o->parsed) { // Don't see us having a default, but maybe...
@@ -1191,6 +1208,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     exit(1);
   }
 
+
   // Check for missing required arguments and complain
   if (!verifyRequired()) { exit(1); }
 
@@ -1200,8 +1218,8 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   // We can use the pull methods now...
   isProcessed = true;
 
-  // Check for XML and write out an xml file now...
-  o = getOption("xml");
+  // Check for configuration output and write out now...
+  o = getOption("oconfig");
 
   if (o) {
     if (o->parsed) {

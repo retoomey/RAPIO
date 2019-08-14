@@ -68,15 +68,6 @@ doSplit(const std::string    & s,
 }
 
 bool
-Strings::isNumeric(const std::string& s)
-{
-  // ignore trailing/leading whitespace...
-  const std::string temp(rapio::Strings::trimText(s));
-
-  return (temp.find_first_not_of("0123456789.+-e") == std::string::npos);
-}
-
-bool
 Strings::samePrefix(const std::string& a,
   const std::string                  & b,
   char                               delim)
@@ -251,6 +242,14 @@ main(void)
 
 #endif // if 0
 
+// We have isspace in c++11
+// 0x20 space (SPC)
+// 0x09 horizontal tab (TAB) -- old
+// 0x0a newline (LF)  -- old
+// 0x0b vertical tab (VT)
+// 0x0c feed (FF)
+// 0x0d carriage return (CR) -- old
+//
 const bool Strings::myWhitespaceTable[] = {
   /* 000 - 009 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 
@@ -327,6 +326,31 @@ Strings::replace(std::string & in,
     }
   }
   in = out;
+}
+
+std::string&
+Strings::ltrim(std::string& s)
+{
+  s.erase(s.begin(), find_if_not(s.begin(), s.end(), [](int c){
+    return isspace(c);
+  }));
+  return s;
+}
+
+std::string&
+Strings::rtrim(std::string& s)
+{
+  s.erase(find_if_not(s.rbegin(), s.rend(), [](int c){
+    return isspace(c);
+  }).base(), s.end());
+  return s;
+}
+
+std::string&
+Strings::trim(std::string& s)
+{
+  //  string t=s;
+  return ltrim(rtrim(s));
 }
 
 std::string

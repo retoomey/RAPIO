@@ -7,7 +7,7 @@
 using namespace rapio;
 
 /** Default header for RAPIO */
-const std::string Constants::RAPIOHeader = "Realtime Algorithm Parameter and IO (RAMP) ";
+const std::string Constants::RAPIOHeader = "Realtime Algorithm Parameter and IO (RAPIO) ";
 
 /** Type of Reader, Writer that uses flat files */
 const std::string Constants::FlatFile = "FlatFile";
