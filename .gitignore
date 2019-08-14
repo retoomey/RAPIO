@@ -1,0 +1,21 @@
+# Ignore stuff in all our folders
+*.lo
+*.o
+**/.deps
+**/.libs
+**/Makefile
+**/Makefile.in
+aclocal.m4
+base/librapio.la
+ltmain.sh
+install-sh
+missing
+depcomp
+libtool
+autom4te.cache
+config.guess
+config.log
+config.status
+config.sub
+configure
+m4
