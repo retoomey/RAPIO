@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rAlgorithm.h>
+#include <rOption.h>
 #include <rLLH.h>
 #include <rTime.h>
 
@@ -16,63 +17,11 @@ namespace rapio {
 class RAPIOOptions : public Algorithm {
 public:
 
-  // Once you add a suboption to an option, only one of those settings is
-  // allowed
-  class suboption : public Algorithm {
-public:
-
-    /** The option text */
-    std::string opt;
-
-    /** The description of this suboption */
-    std::string description;
-  };
-
-  /** Class storing all information for a single parameter option */
-  class option : public Algorithm {
-public:
-
-    bool required;                     // Required option or not.  Will not run
-                                       // if missing and required
-    bool boolean;                      // Is this a boolean option true/false?
-                                       //  "-r" for example
-    bool system;                       // Is this a system argument for all
-                                       // algorithms such as verbose?
-    std::string opt;                   // The option text
-    std::string name;                  // The full name of the option
-    std::string usage;                 // The full help string for the option
-    std::string example;               // Example for required
-    std::string defaultValue;          // Default value given for optional string
-    std::string parsedValue;           // Parsed value found for this option
-    std::string advancedHelp;          // Lots of detail to show with the "help
-                                       // option" ability
-    bool parsed;                       // Was this found and parsed?
-    std::vector<suboption> suboptions; // Only allowed settings if size > 0
-    size_t suboptionmax;               // Max width of added suboptions (for
-                                       // formatting)
-    std::vector<std::string> groups;   // groups this option belongs too.
-
-    bool
-    operator < (const option& rhs) const;
-  };
-
-  class ArgumentFilter : public Algorithm {
-public:
-
-    virtual bool
-    show(const option& opt)
-    {
-      return (true);
-    }
-  };
-
-public:
-
   RAPIOOptions();
   ~RAPIOOptions(){ }
 
-  std::map<std::string, RAPIOOptions::option> optionMap;
-  std::map<std::string, RAPIOOptions::option> unusedOptionMap;
+  std::map<std::string, Option> optionMap;
+  std::map<std::string, Option> unusedOptionMap;
 
   static unsigned int max_arg_width;
   static unsigned int max_name_width;
@@ -95,35 +44,35 @@ public:
 
   /** Output arguments that match a given filter */
   void
-  dumpArgs(std::vector<RAPIOOptions::option>& options,
-    ArgumentFilter                          & a,
-    bool                                    postParse = false,
-    bool                                    advancedHelp = false);
+  dumpArgs(std::vector<Option>& options,
+    OptionFilter              & a,
+    bool                      postParse = false,
+    bool                      advancedHelp = false);
 
   /** Do the standard dump of help when nothing passed in */
   void
   dumpArgs();
 
   /** Create a boolean argument */
-  RAPIOOptions::option *
+  Option *
   boolean(const std::string& opt,
     const std::string      & usage);
 
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for
    * clipping or determining bounds. */
-  RAPIOOptions::option *
+  Option *
   grid2D(const std::string& opt,
     const std::string     & name,
     const std::string     & usage);
 
   /** Create a required argument */
-  RAPIOOptions::option *
+  Option *
   require(const std::string& opt,
     const std::string      & exampleArg,
     const std::string      & usage);
 
   /** Create an optional argument.  Optional have default values */
-  RAPIOOptions::option *
+  Option *
   optional(const std::string& opt,
     const std::string       & defaultValue,
     const std::string       & usage);
@@ -171,8 +120,8 @@ public:
 
   /** Return sorted options */
   void
-  sortOptions(std::vector<RAPIOOptions::option>&,
-    ArgumentFilter& a);
+  sortOptions(std::vector<Option>&,
+    OptionFilter& a);
 
   /** Process command line arguments */
   bool
@@ -224,7 +173,7 @@ private:
   replaceMacros(const std::string& original);
 
   /** Make an option */
-  RAPIOOptions::option *
+  Option *
   makeOption(bool    required,
     bool             boolean,
     bool             system,
@@ -233,7 +182,7 @@ private:
     const std::string& usage,
     const std::string& extra);
 
-  RAPIOOptions::option *
+  Option *
   getOption(const std::string& opt);
 
 protected:

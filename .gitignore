@@ -22,3 +22,6 @@ config.status
 config.sub
 configure
 m4
+# Ignore doxygen if it was ran locally
+html
+latex
