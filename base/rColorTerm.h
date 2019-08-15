@@ -44,6 +44,14 @@ public:
   static size_t
   getOutputWidth();
 
+  /** Simple quick bold string wrapper */
+  static std::string
+  bold(const std::string& in);
+
+  /** Simple quick underline string wrapper */
+  static std::string
+  underline(const std::string& in);
+
 private:
 
   /** The width of all our command line output */

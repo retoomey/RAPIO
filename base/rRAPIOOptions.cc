@@ -201,7 +201,7 @@ RAPIOOptions::RAPIOOptions()
     "Input URL to read a configuration file. Command line overrides.");
   addGroup("iconfig", "CONFIG");
   addAdvancedHelp("iconfig",
-    "Can end with .xml for WDSS2 file, .config for HMET file. This parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
+    "Can end with .xml for WDSS2 file, .config for HMET file. This will parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
 
   optional("oconfig",
     "",
@@ -328,13 +328,13 @@ RAPIOOptions::setHeader(const std::string& a)
    * the University of Oklahoma and designed implemented at the
    * National Severe Storms Laboratory. */
   if (myHeader == "WDSS2") {
-    Time now              = Time::CurrentTime();
+    Time now = Time::CurrentTime();
     std::string year      = std::to_string(now.getYear());
-    std::string copyright = ColorTerm::fBold + "WDSS2/MRMS Algorithm using RAPIO "
-      + ColorTerm::fNormal
+    std::string copyright =
+      ColorTerm::bold("WDSS2/MRMS Algorithm using RAPIO ")
       + "(c) 2001-" + year + " University of Oklahoma. ";
-    copyright += "All rights reserved. See " + ColorTerm::fUnderline
-      + "http://www.wdssii.org/" + ColorTerm::fNormal;
+    copyright += "All rights reserved. See "
+      + ColorTerm::underline("http://www.wdssii.org/");
     myHeader = copyright;
   }
 }
@@ -387,7 +387,6 @@ RAPIOOptions::getLocation(
   const float heightKMs = is3D ? atof(pieces[2].c_str()) : 10.0f;
   LLH loc(atof(pieces[0].c_str()),
     atof(pieces[1].c_str()),
-    // Length::Kilometers(heightKMs));
     heightKMs);
   return (loc);
 }
@@ -557,17 +556,14 @@ RAPIOOptions::dumpArgs(std::vector<RAPIOOptions::option>& options,
       std::string opt;
 
       if (o.required) {
-        s << ColorTerm::fRed << ColorTerm::fBold;
         opt = " " + o.opt;
       } else {
-        s << ColorTerm::fRed << ColorTerm::fBold;
         opt = " [" + o.opt + "]";
       }
 
       // Always output the first two columns, regardless of terminal width...
+      s << ColorTerm::fRed << ColorTerm::fBold;
       s << setw(c1) << left << opt << ColorTerm::fNormal;
-
-      // s << fBold << setw(c2) << left << o.name << fBoldOff;
 
       // Create the status string
       std::string status;
@@ -605,8 +601,8 @@ RAPIOOptions::dumpArgs(std::vector<RAPIOOptions::option>& options,
           while (optpad.length() < max) {
             optpad += " ";
           }
-          std::string out = ColorTerm::fBold + ColorTerm::fBlue
-            + optpad + ColorTerm::fNormal + " --" + i.description;
+          std::string out = ColorTerm::fBlue + ColorTerm::bold(optpad)
+            + " --" + i.description;
           ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
         }
       }
@@ -615,7 +611,7 @@ RAPIOOptions::dumpArgs(std::vector<RAPIOOptions::option>& options,
         // s << fGreen;
         // s << setw(c1+2) << left << ""; // Indent 1 column
         int d = 5;
-        s << ColorTerm::fBold << "DETAILED HELP:\n" << ColorTerm::fBoldOff;
+        s << ColorTerm::bold("DETAILED HELP:\n");
         s << setw(d) << left << ""; // Indent 1 column
         ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
         s << "\n";
@@ -638,8 +634,8 @@ RAPIOOptions::verifyRequired()
   sortOptions(allOptions, r);
 
   if (allOptions.size() > 0) {
-    std::cout << "Missing " << ColorTerm::fBold << "(" << allOptions.size() << ")"
-              << ColorTerm::fBoldOff << " REQUIRED arguments: \n";
+    std::cout << "Missing " << ColorTerm::bold("(" + std::to_string(allOptions.size()) + ")")
+              << " REQUIRED arguments: \n";
     ArgumentFilter all;
     dumpArgs(allOptions, all); // already filtered..but should work
     good = false;
@@ -659,8 +655,8 @@ RAPIOOptions::verifySuboptions()
   sortOptions(allOptions, r);
 
   if (allOptions.size() > 0) {
-    std::cout << "BAD option choice for " << ColorTerm::fBold << "(" << allOptions.size() << ")"
-              << ColorTerm::fBoldOff << " arguments:\n";
+    std::cout << "BAD option choice for " << ColorTerm::bold("(" + std::to_string(allOptions.size()) + ")")
+              << " arguments:\n";
     ArgumentFilter all;
     dumpArgs(allOptions, all, true); // already filtered..but should work
     good = false;
@@ -682,14 +678,14 @@ RAPIOOptions::dumpArgs()
   size_t d = 5;
 
   if (!myDescription.empty()) {
-    std::cout << ColorTerm::fBold << "DESCRIPTION:\n" << ColorTerm::fBoldOff;
+    std::cout << ColorTerm::bold("DESCRIPTION:\n");
     std::cout << setw(d) << left << ""; // Indent 1 column
     ColorTerm::wrapWithIndent(d, 0, myDescription);
   }
 
   // Dump authors, if given..
   if (!myAuthors.empty()) {
-    std::cout << ColorTerm::fBold << "AUTHOR(S):\n" << ColorTerm::fBoldOff;
+    std::cout << ColorTerm::bold("AUTHOR(S):\n");
     std::cout << setw(d) << left << ""; // Indent 1 column
     ColorTerm::wrapWithIndent(d, 0, myAuthors);
   }
@@ -697,7 +693,7 @@ RAPIOOptions::dumpArgs()
   // Dump a generated 'Example' statement...this uses the 'examples' from the
   // required options
   // We'll have to column format this stuff eventually...
-  std::cout << ColorTerm::fBold << "EXAMPLE:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("EXAMPLE:\n");
   std::cout << setw(d) << left << ""; // Indent 1 column
   std::cout << myName << " ";
   std::string outputRequired;
@@ -708,23 +704,17 @@ RAPIOOptions::dumpArgs()
     // Output the option
     if (r.show(allOptions[z])) {
       outputRequired +=
-        ("-" + ColorTerm::fBold + allOptions[z].opt + ColorTerm::fBoldOff + " " + ColorTerm::fUnderline
-        + allOptions[z].example + ColorTerm::fUnderlineOff + " ");
-
-      // std::cout << "-" << allOptions[z].opt << " " << allOptions[z].example
-      // << " ";
+        ("-" + ColorTerm::bold(allOptions[z].opt) + " " + ColorTerm::underline(allOptions[z].example) + " ");
     }
   }
-  outputRequired += (ColorTerm::fBold + "--verbose" + ColorTerm::fBoldOff);
+  outputRequired += ColorTerm::bold("--verbose");
   ColorTerm::wrapWithIndent(commandLength, commandLength, outputRequired);
 
-  // std::cout << "--verbose\n";
-
   FilterGroup lio("I/O");
-  std::cout << ColorTerm::fBold << "I/O:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("I/O:\n");
   dumpArgs(allOptions, lio);
 
-  std::cout << ColorTerm::fBold << "OPTIONS:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("OPTIONS:\n");
   FilterGroup la("");
   dumpArgs(allOptions, la);
 
@@ -766,32 +756,31 @@ RAPIOOptions::dumpArgs()
   std::sort(otherGroups.begin(), otherGroups.end());
 
   for (size_t i = 0; i < otherGroups.size(); i++) {
-    std::cout << ColorTerm::fBold << otherGroups[i]
-              << " OPTIONS:\n" << ColorTerm::fBoldOff;
+    std::cout << ColorTerm::bold(otherGroups[i] + " OPTIONS:\n");
     FilterGroup og(otherGroups[i]);
     dumpArgs(allOptions, og);
   }
 
   FilterGroup ll("LOGGING");
-  std::cout << ColorTerm::fBold << "LOGGING:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("LOGGING:\n");
   dumpArgs(allOptions, ll);
 
   FilterGroup lc("CONFIG");
-  std::cout << ColorTerm::fBold << "CONFIG:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("CONFIG:\n");
   dumpArgs(allOptions, lc);
 
   FilterGroup lh("HELP");
-  std::cout << ColorTerm::fBold << "HELP:\n" << ColorTerm::fBoldOff;
+  std::cout << ColorTerm::bold("HELP:\n");
   dumpArgs(allOptions, lh);
 
   /*
-   * std::cout << fBold << "REQUIRED:\n" << fBoldOff;
+   * std::cout << ColorTerm::bold("REQUIRED:\n");
    * dumpArgs(allOptions, r);
    *
-   * std::cout << fBold << "OPTIONAL:\n" << fBoldOff;
+   * std::cout << ColorTerm::bold("OPTIONAL:\n");
    * dumpArgs(allOptions, p);
    *
-   * std::cout << fBold << "SYSTEM:\n" << fBoldOff;
+   * std::cout << ColorTerm::bold("SYSTEM:\n");
    * dumpArgs(allOptions, s);
    */
 } // RAPIOOptions::dumpArgs
@@ -921,7 +910,7 @@ RAPIOOptions::storeParsedArg(const std::string& arg, const std::string& value)
     // We were giving an option we don't know about...
     // FIXME: Hide the internals of option, right?
     option o;
-    o.opt                = arg;
+    o.opt = arg;
     o.parsedValue        = value;
     o.parsed             = true;
     unusedOptionMap[arg] = o;
@@ -1118,7 +1107,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   std::cout << header << "\n";
   ColorTerm::wrapWithIndent(0, 0, myHeader);
 
-  // std::string built = fBold+"Binary Built:"+fNormal+std::string(__DATE__) + "
+  // std::string built = ColorTerm::bold("Binary Built:"+std::string(__DATE__) + "
   // " + __TIME__;
   // wrapWithIndent(0, 0, built);
 
@@ -1150,7 +1139,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
         sortOptions(allOptions, g);
 
         if (allOptions.size() > 0) {
-          std::cout << ColorTerm::fBold << group << ":\n" << ColorTerm::fBoldOff;
+          std::cout << ColorTerm::bold(group + ":\n");
           dumpArgs(allOptions, all, false, true);
           std::exit(1);
         } else {
@@ -1160,7 +1149,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
           sortOptions(names, aName);
 
           if (names.size() > 0) {
-            std::cout << ColorTerm::fBold << group << ":\n" << ColorTerm::fBoldOff;
+            std::cout << ColorTerm::bold(group + ":\n");
             dumpArgs(names, all, false, true);
             std::exit(1);
           } else {
@@ -1210,7 +1199,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     }
     std::cout
       << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
-    std::cout << ColorTerm::fBold << "UNRECOGNIZED:\n" << ColorTerm::fBoldOff;
+    std::cout << ColorTerm::bold("UNRECOGNIZED:\n");
     ArgumentFilter ff;
     dumpArgs(unused, ff, true);
     exit(1);

@@ -133,3 +133,19 @@ ColorTerm::getOutputWidth()
   if (console_width > 200) { console_width = 200; }
   return (console_width);
 }
+
+std::string
+ColorTerm::bold(const std::string& text)
+{
+  // Bold off seems to fail on some terminals.
+  // So we use normal.
+  return fBold + text + fNormal;
+}
+
+std::string
+ColorTerm::underline(const std::string& text)
+{
+  // Underline off seems to fail on some terminals.
+  // So we use normal.
+  return fUnderline + text + fNormal;
+}
