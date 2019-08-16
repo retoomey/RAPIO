@@ -5,6 +5,61 @@
 using namespace rapio;
 using namespace std;
 
+void
+Option::addGroup(const std::string& group)
+{
+  bool found = false;
+
+  std::string ugroup = Strings::makeUpper(group);
+
+  for (auto& i:groups) {
+    if (i == ugroup) {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    groups.push_back(ugroup);
+  }
+}
+
+void
+Option::addSuboption(const std::string& opt, const std::string& description)
+{
+  // Basically keep track of maximum suboption length for formatting purposes
+  if (suboptionmax < opt.length()) {
+    suboptionmax = opt.length();
+
+    if (suboptionmax > 50) {
+      suboptionmax = 50; // I mean, really?
+    }
+  }
+
+  // FIXME: Should check for already existing and returning, we're duplicating
+  Suboption s;
+  s.opt         = opt;
+  s.description = description;
+  suboptions.push_back(s);
+}
+
+bool
+Option::isInSuboptions()
+{
+  // This happens a LOT.  Subroutine?
+  std::string value;
+
+  if (parsed) {
+    value = parsedValue;
+  } else { value = defaultValue; }
+  // ^^^
+
+  for (auto&i:suboptions) {
+    if (i.opt == value) { return true; }
+  }
+  return false;
+}
+
 // The default sort is alphabetical
 bool
 Option::operator < (const Option& rhs) const
@@ -26,9 +81,9 @@ FilterBadSuboption::show(const Option& opt)
   bool bad_suboption = false;
 
   if (opt.suboptions.size() > 0) {
-    size_t found = 0;
+    // If we have suboptions, it better match one unless not enforced
+    if (!opt.enforceSuboptions) { return false; }
 
-    // If we have suboptions, it better match one.
     // Required should already be checked to 'exist', so here we just
     // need to look at defaultValue or parsedValue
     std::string value;
@@ -44,6 +99,7 @@ FilterBadSuboption::show(const Option& opt)
     std::vector<string> allChoices;
     size_t count = Strings::split(value, ' ', &allChoices);
 
+    size_t found = 0;
     for (auto& i: opt.suboptions) {
       // Go through each substring passed
       for (auto& j: allChoices) {

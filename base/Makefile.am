@@ -55,6 +55,7 @@ librapio_la_SOURCES =\
   rNetcdfLatLonGrid.cc\
   rNetcdfUtil.cc\
   rOption.cc\
+  rOptionList.cc\
   rAlgConfigFile.cc\
   rTest.cc\
   rTestTime.cc\
@@ -120,6 +121,7 @@ pkginclude_HEADERS =\
   rNetcdfLatLonGrid.h\
   rNetcdfUtil.h\
   rOption.h\
+  rOptionList.h\
   rSentinelDouble.h\
   rRecord.h\
   rRecordQueue.h\

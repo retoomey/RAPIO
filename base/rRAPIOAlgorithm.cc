@@ -264,7 +264,12 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 
     // 2.5 setup signals, etc..some stuff based upon arguments
-    const std::string verbose   = o.getString("verbose");
+    const std::string verbose = o.getString("verbose");
+    if (!o.isInSuboptions("verbose")) {
+      // FIXME: Will be the file logging..
+      LogSevere("Unimplemented verbose.  We will check for URL here later\n");
+      exit(1);
+    }
     const bool enableStackTrace = (verbose == "debug");
     const bool wantCoreDumps    = (verbose == "debug");
     initializeBaseline(enableStackTrace, wantCoreDumps);

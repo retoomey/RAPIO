@@ -1,4 +1,4 @@
-#include "rRAPIOAlgorithm.h"
+#include "rRAPIOOptions.h"
 
 #include "rError.h"
 #include "rTime.h"
@@ -13,12 +13,10 @@
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
+#include <iostream>
 
 using namespace rapio;
 using namespace std;
-
-unsigned int RAPIOOptions::max_arg_width  = 5;
-unsigned int RAPIOOptions::max_name_width = 10;
 
 RAPIOOptions::RAPIOOptions()
 {
@@ -28,7 +26,10 @@ RAPIOOptions::RAPIOOptions()
   addSuboption("verbose", "severe", "Print only the most severe errors");
   addSuboption("verbose", "info", "Print general information as well as errors");
   addSuboption("verbose", "debug", "Print everything, also turn on signal stacktraces");
+  setEnforcedSuboptions("verbose", false);
   addGroup("verbose", "LOGGING");
+
+  // grid2D("GridTest", "nw(34.5, 91.5) se(20.2, 109.5)", "Testing grid 2d");
 
   optional("logSize", "10000", "Maximum error log size in bytes.");
   addGroup("logSize", "LOGGING");
@@ -58,87 +59,6 @@ RAPIOOptions::RAPIOOptions()
   addGroup("help", "HELP");
   boolean("nf", "No ASCII formatting/colors in help output.");
   addGroup("nf", "HELP");
-}
-
-std::string
-RAPIOOptions::replaceMacros(const std::string& original)
-{
-  std::string newString = original;
-
-  std::string PWD = OS::getCurrentDirectory();
-  Strings::replace(newString, "{PWD}", PWD);
-  return (newString);
-}
-
-Option *
-RAPIOOptions::makeOption(
-  bool             required,
-  bool             boolean,
-  bool             system,
-  const std::string& opt,
-  const std::string& name,
-  const std::string& usage,
-  const std::string& extraIn
-)
-{
-  Option * have = getOption(opt);
-
-  if (have) {
-    std::cout << "WARNING: Code error: Option '" << opt
-              << "' is already declared in RAPIOOptions.\n";
-    exit(1);
-  }
-  Option o; // on stack..humm damn Java, lol
-  o.required = required;
-  o.boolean  = boolean;
-  o.system   = system;
-  o.opt      = opt;
-  o.name     = name;
-
-  if (o.name.length() > 0) {
-    o.name[0] = toupper(o.name[0]);
-  }
-  o.usage = replaceMacros(usage);
-
-  // Clean up usage.  Capitol the first letter always...
-  if (o.usage.length() > 0) {
-    o.usage[0] = toupper(o.usage[0]);
-    o.usage    = "--" + o.usage;
-  }
-  std::string extra = replaceMacros(extraIn);
-
-  // Maybe this field could be shared..?
-  if (required) {
-    if (extra == "") {
-      o.example = "???";
-    } else {
-      o.example = extra; // Required have an example given
-    }
-  } else {
-    o.defaultValue = extra; // Optionals always have a default value
-  }
-  o.parsedValue  = "";
-  o.parsed       = false;
-  o.suboptionmax = 0;
-
-  optionMap[opt] = o;
-
-  if (opt.length() > max_arg_width) {
-    max_arg_width = opt.length();
-  }
-
-  if (name.length() > max_name_width) {
-    max_name_width = name.length();
-  }
-  return (&optionMap[opt]);
-} // RAPIOOptions::makeOption
-
-/** Declare a required algorithm variable */
-Option *
-RAPIOOptions::require(const std::string& opt,
-  const std::string& exampleArg, const std::string& usage)
-{
-  return (makeOption(true, false, false, opt, "", usage, exampleArg));
 }
 
 void
@@ -179,24 +99,6 @@ RAPIOOptions::setHeader(const std::string& a)
   }
 }
 
-/** Declare an optional algorithm variable */
-Option *
-RAPIOOptions::optional(const std::string& opt,
-  const std::string                     & defaultValue,
-  const std::string                     & usage)
-{
-  return (makeOption(false, false, false, opt, "", usage, defaultValue));
-}
-
-/** Declare a boolean algorithm variable */
-Option *
-RAPIOOptions::boolean(const std::string& opt,
-  const std::string                    & usage)
-{
-  return (makeOption(false, true, false, opt, "", usage, "false"));
-}
-
-/** Declare a 2D grid option */
 Option *
 RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue,
   const std::string& usage)
@@ -251,7 +153,6 @@ getMapString(
 void
 RAPIOOptions::getGrid(const std::string& name,
   LLH                                  & location,
-  Time                                 & time,
   float                                & lat_spacing,
   float                                & lon_spacing,
   int                                  & lat_dim,
@@ -369,7 +270,6 @@ RAPIOOptions::getGrid(const std::string& name,
     lat_spacing = latsp;
     lon_spacing = lonsp;
     location    = nwc; // copy
-    time.set(0, 0);
   } else {
     std::cout << "Error in specifying grid '" << name << "' spacing ("
               << latf << "," << lonf << ") must both be greater than zero.\n";
@@ -615,19 +515,6 @@ RAPIOOptions::dumpArgs()
   dumpArgs(allOptions, lh);
 } // RAPIOOptions::dumpArgs
 
-Option *
-RAPIOOptions::getOption(const std::string& opt)
-{
-  std::map<std::string, Option>::iterator i;
-  i = optionMap.find(opt);
-  std::string s = "";
-
-  if (i != optionMap.end()) {
-    return (&i->second);
-  }
-  return (NULL);
-}
-
 /** Process and remove a single argument from a vector of strings.  Either 1 or
  * 2 spots are removed,
  * depending on -arg=stuff or -arg stuff being processed.
@@ -707,45 +594,6 @@ RAPIOOptions::processArg(std::vector<std::string>& args, unsigned int j,
   }
   return (j);
 } // RAPIOOptions::processArg
-
-void
-RAPIOOptions::storeParsedArg(const std::string& arg, const std::string& value)
-{
-  // Store the option...
-  Option * o = getOption(arg);
-
-  if (o) {
-    // If already parsed what to do...
-    // If from iconfig, we just ignore, because we override the setting..
-    // If duplicated from command line, maybe we want to warn...
-    if (!o->parsed) {
-      o->parsed = true;
-
-      if (o->boolean) {
-        o->parsedValue = "true"; // Because it is there...ignore any value not
-                                 // "false"
-
-        if (value == "false") {
-          o->parsedValue = "false";
-        } else {
-          o->parsedValue = "true";
-        }
-      } else {
-        o->parsedValue = value;
-      }
-    } else {
-      // Humm...keep track here?
-    }
-  } else {
-    // We were giving an option we don't know about...
-    // FIXME: Hide the internals of option, right?
-    Option o;
-    o.opt                = arg;
-    o.parsedValue        = value;
-    o.parsed             = true;
-    unusedOptionMap[arg] = o;
-  }
-} // RAPIOOptions::storeParsedArg
 
 namespace {
 /** Is this allowed in config file, if not ignore.  Some options
@@ -830,19 +678,6 @@ RAPIOOptions::writeConfigFile(const std::string& string)
   ;
 }
 
-void
-RAPIOOptions::sortOptions(std::vector<Option>& allOptions,
-  OptionFilter                               & a)
-{
-  // Filter and Sort options how we want to display.
-  for (auto& i:optionMap) {
-    if (a.show(i.second)) {
-      allOptions.push_back(i.second);
-    }
-  }
-  std::sort(allOptions.begin(), allOptions.end());
-}
-
 /** Process a command line argument list */
 bool
 RAPIOOptions::processArgs(int& argc, char **& argv)
@@ -888,47 +723,34 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     }
   }
 
-  Option * o;
+  // We can use the pull methods now...note we have yet to verify
+  // we have all required/etc..
+  setIsProcessed();
 
   // Help first incase of help iconfig
   bool haveHelp = false;
-  o = getOption("help");
-
-  if (o) {
-    if (o->parsed) {
-      haveHelp = true;
-    }
+  if (isParsed("help")) {
+    haveHelp = true;
   }
-  // Parse any configFile options not already parsed (command line overrides)
-  // if (getParsed("iconfig", value)){}
-  o = getOption("iconfig");
 
-  if (o) {
-    if (o->parsed) { // Don't see us having a default, but maybe...
-      std::string fileName = o->parsedValue;
-      if (!haveHelp) {
-        readConfigFile(fileName);
-      }
-    }
+  // Read in given configuration file, if any
+  std::string fileName = getString("iconfig");
+  if ((!haveHelp) && (!fileName.empty())) {
+    readConfigFile(fileName);
   }
 
   // Turn off color formatting if we have a nf format tag
   bool useFormatting = ColorTerm::haveColorSupport();
   bool haveNF        = false;
-  o = getOption("nf");
-
-  if (o) {
-    if (o->parsed) {
-      haveNF        = true;
-      useFormatting = false;
-    }
+  if (isParsed("nf")) {
+    haveNF        = true;
+    useFormatting = false;
   }
 
   // Set if we want color output or not...
   ColorTerm::setColors(useFormatting);
 
   // Start outputting now...
-  //
   std::string header = "";
 
   for (size_t i = 0; i < myOutputWidth; i++) {
@@ -994,9 +816,6 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
       dumpArgs();
     }
 
-    //
-    // FIXME: keep track of output length? That would be interesting...
-    // std::cout << "-->Recommend " << myName << " | less -R \n";
     std::exit(1);
   }
 
@@ -1005,10 +824,6 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   // Two: processed but not defined (good format, but not used)
   // We have stuff left not processed...
   if (args.size() > 0) {
-    // if (args[0] == "help"){
-    // std::cout << "Oh yeah, a help command system..woo hoo\n";
-    // FIXME: We'll pass on to the help parser system here.
-    // }
     std::cout
       << "This part of your command line was unrecognized and ignored.  Maybe a typo?\n>>";
 
@@ -1035,25 +850,17 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     exit(1);
   }
 
-
   // Check for missing required arguments and complain
   if (!verifyRequired()) { exit(1); }
 
   // Check for invalid suboption in arguments and complain
   if (!verifySuboptions()) { exit(1); }
 
-  // We can use the pull methods now...
-  isProcessed = true;
-
   // Check for configuration output and write out now...
-  o = getOption("oconfig");
-
-  if (o) {
-    if (o->parsed) {
-      std::string fileName = o->parsedValue;
-      writeConfigFile(fileName);
-      exit(1);
-    }
+  std::string ofileName = getString("oconfig");
+  if (!ofileName.empty()) { // help already processed now
+    writeConfigFile(fileName);
+    exit(1);
   }
 
   // About to run..set each of the runtime things...
@@ -1065,135 +872,10 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
 
   if (v == "") {
     v = "info"; // Why doesn't default string do this?  FIXME?
+    // FIXME: because --verbose is empty --> "" is allow for optional lists of values
+    // Humm how to fix this properly?
   }
   Log::setLogSettings(v, logFlush, logSize);
 
   return (false);
 } // RAPIOOptions::processArgs
-
-std::string
-RAPIOOptions::getString(const std::string& opt)
-{
-  if (!isProcessed) {
-    LogSevere(
-      "Have to call processArgs before calling getString. This is a code error\n");
-    exit(1);
-  }
-  std::map<std::string, Option>::iterator i;
-  i = optionMap.find(opt);
-  std::string s = "";
-
-  if (i != optionMap.end()) {
-    if (i->second.parsed) {
-      s = i->second.parsedValue;
-    } else {
-      s = i->second.defaultValue;
-    }
-  } else {
-    LogSevere(
-      "WARNING - Trying to read uninitialized parameter \"" << opt << "\"\n");
-  }
-  return (s);
-}
-
-bool
-RAPIOOptions::getBoolean(const std::string& opt)
-{
-  const std::string s = getString(opt);
-
-  return (s != "false");
-}
-
-float
-RAPIOOptions::getFloat(const std::string& opt)
-{
-  const std::string s = getString(opt);
-
-  return (atof(s.c_str()));
-}
-
-int
-RAPIOOptions::getInteger(const std::string& opt)
-{
-  const std::string s = getString(opt);
-
-  return (atoi(s.c_str()));
-}
-
-void
-RAPIOOptions::addSuboption(const std::string& sourceopt, const std::string& opt,
-  const std::string& description)
-{
-  Option * have = getOption(sourceopt);
-
-  if (have) {
-    Suboption s;
-    s.opt = opt; // FIXME: Should check for already existing and exit, we're
-                 // overwriting right now...
-
-    if (have->suboptionmax < opt.length()) {
-      have->suboptionmax = opt.length();
-
-      if (have->suboptionmax > 50) {
-        have->suboptionmax = 50; // I mean, really?
-      }
-    }
-    s.description = description;
-    have->suboptions.push_back(s);
-  } else {
-    std::cout << "WARNING: Code error: Trying to add suboption " << opt
-              << " to missing option '" << opt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
-  }
-}
-
-void
-RAPIOOptions::addGroup(const std::string& sourceopt, const std::string& group)
-{
-  Option * have = getOption(sourceopt);
-
-  if (have) {
-    bool found = false;
-    std::string ugroup;
-    std::transform(group.begin(), group.end(), std::back_inserter(
-        ugroup), ::toupper);
-
-    for (size_t i = 0; i < have->groups.size(); i++) {
-      if (have->groups[i] == ugroup) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      have->groups.push_back(ugroup);
-    }
-  } else {
-    std::cout << "WARNING: Code error: Trying to add group " << group
-              << " to missing option '" << sourceopt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
-  }
-}
-
-void
-RAPIOOptions::addAdvancedHelp(const std::string& sourceopt,
-  const std::string                            & help)
-{
-  Option * have = getOption(sourceopt);
-
-  if (have) {
-    have->advancedHelp = help;
-    have->usage        = have->usage + " (See help " + have->opt + ")";
-  } else {
-    std::cout
-      << "WARNING: Code error: Trying to add detailed help to missing option '"
-      << sourceopt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
-  }
-}

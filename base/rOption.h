@@ -46,9 +46,30 @@ public:
                                      ///< option" ability
   bool parsed;                       ///< Was this found and parsed?
   std::vector<Suboption> suboptions; ///< Only allowed settings if size > 0
+  bool enforceSuboptions;            ///< User MUST choose a registered suboption
   size_t suboptionmax;               ///< Max width of added suboptions (for
                                      ///< formatting)
   std::vector<std::string> groups;   ///< groups this option belongs too.
+
+  /** Add a group for this option.  Used for grouping in parameter printout */
+  void
+  addGroup(const std::string& group);
+
+  // Suboptions
+
+  /** Add a suboption to this option. */
+  void
+  addSuboption(const std::string& opt, const std::string& description);
+
+  /** Set enforced suboptions or not.  Enforced means the passed parameter must
+   * match an added suboption, or blank which becomes the default suboption */
+  void
+  setEnforcedSuboptions(bool flag){ enforceSuboptions = flag; }
+
+  /** Return true iff our found value matches one of our added suboptions.  This is
+   * always true if suboptions are enforced */
+  bool
+  isInSuboptions();
 
   bool
   operator < (const Option& rhs) const;

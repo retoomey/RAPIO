@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rAlgorithm.h>
+#include <rOptionList.h>
 #include <rOption.h>
 #include <rLLH.h>
 #include <rTime.h>
@@ -10,21 +10,19 @@
 #include <map>
 
 namespace rapio {
-/* RAPIOOptions handles the information for parameters in/out of the stock
- * algorithm.
+/* RAPIOOptions handles parsing the information from a command line
+ * for parameters in/out of the stock algorithm, and printing them
+ * to command line.
  * @author Robert Toomey
  */
-class RAPIOOptions : public Algorithm {
+class RAPIOOptions : public OptionList {
 public:
 
   RAPIOOptions();
   ~RAPIOOptions(){ }
 
-  std::map<std::string, Option> optionMap;
-  std::map<std::string, Option> unusedOptionMap;
-
-  static unsigned int max_arg_width;
-  static unsigned int max_name_width;
+  // We support iconfig and oconfig options for loading/saving parameters
+  // FIXME: Should this in the OptionList generically?
 
   /** Read an xml configuration file into the options */
   void
@@ -53,10 +51,8 @@ public:
   void
   dumpArgs();
 
-  /** Create a boolean argument */
-  Option *
-  boolean(const std::string& opt,
-    const std::string      & usage);
+  // FIXME: Grid stuff experimental.  Need to work on this/clean up
+  // These three functions might have better locations
 
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for
    * clipping or determining bounds. */
@@ -64,18 +60,6 @@ public:
   grid2D(const std::string& opt,
     const std::string     & name,
     const std::string     & usage);
-
-  /** Create a required argument */
-  Option *
-  require(const std::string& opt,
-    const std::string      & exampleArg,
-    const std::string      & usage);
-
-  /** Create an optional argument.  Optional have default values */
-  Option *
-  optional(const std::string& opt,
-    const std::string       & defaultValue,
-    const std::string       & usage);
 
   /** Convenience get a 2D or 3D location from a string part */
   LLH
@@ -88,11 +72,12 @@ public:
   void
   getGrid(const std::string& name,
     LLH                    & location,
-    Time                   & time,
     float                  & lat_spacing,
     float                  & lon_spacing,
     int                    & lat_dim,
     int                    & lon_dim);
+
+  // ^^^ End experimental grid stuff. I'll revisit it
 
   /** Set the module name or program name */
   void
@@ -118,72 +103,10 @@ public:
     std::string                      & arg,
     std::string                      & value);
 
-  /** Return sorted options */
-  void
-  sortOptions(std::vector<Option>&,
-    OptionFilter& a);
-
   /** Process command line arguments */
   bool
   processArgs(int & argc,
     char **       & argv);
-
-  /** Fetch an option as a string */
-  std::string
-  getString(const std::string& opt);
-
-  /** Fetch an option as a boolean */
-  bool
-  getBoolean(const std::string& opt);
-
-  /** Fetch an option as a float, or 0 if invalid */
-  float
-  getFloat(const std::string& opt);
-
-  /** Fetch an option as an integer, or 0 if invalid */
-  int
-  getInteger(const std::string& opt);
-
-  /** Add a suboption.  Once added, ONLY these values are allowed to be passed
-   * in.  */
-  void
-  addSuboption(const std::string& sourceopt,
-    const std::string           & opt,
-    const std::string           & description);
-
-  /** Add a group to option.  */
-  void
-  addGroup(const std::string& sourceopt,
-    const std::string       & group);
-
-  /** Add advanced help to an option.  */
-  void
-  addAdvancedHelp(const std::string& sourceopt,
-    const std::string              & help);
-
-private:
-
-  /** Store a parsed argument value, from XML or command line */
-  void
-  storeParsedArg(const std::string& name,
-    const std::string             & value);
-
-  /** Replace all macros within a string */
-  std::string
-  replaceMacros(const std::string& original);
-
-  /** Make an option */
-  Option *
-  makeOption(bool    required,
-    bool             boolean,
-    bool             system,
-    const std::string& opt,
-    const std::string& name,
-    const std::string& usage,
-    const std::string& extra);
-
-  Option *
-  getOption(const std::string& opt);
 
 protected:
 
@@ -201,8 +124,5 @@ protected:
 
   /** The width of all our command line output */
   size_t myOutputWidth;
-
-  /** Have arguments been sucessfully processed? */
-  bool isProcessed;
 };
 }
