@@ -196,7 +196,7 @@ RAPIOAlgorithm::getMaximumHistory()
 }
 
 void
-RAPIOAlgorithm::initializeBaseline(bool enableStackTrace, bool wantCoreDumps)
+RAPIOAlgorithm::initializeBaseline()
 {
   // Typically algorithms are run in realtime for operations and
   // core dumping will fill up disks and cause more issues.
@@ -204,7 +204,7 @@ RAPIOAlgorithm::initializeBaseline(bool enableStackTrace, bool wantCoreDumps)
   // FIXME: make configurable...more work here
   // Either allow alg options to tweak how this work, a config file
   // that defines it or something
-  Signals::initialize(enableStackTrace, wantCoreDumps);
+  // Signals::initialize(enableStackTrace, wantCoreDumps);
 
   Config::introduceSelf();
 
@@ -264,15 +264,19 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 
     // 2.5 setup signals, etc..some stuff based upon arguments
+    const int logFlush        = o.getInteger("logFlush");
+    const int logSize         = o.getInteger("logSize");
     const std::string verbose = o.getString("verbose");
-    if (!o.isInSuboptions("verbose")) {
-      // FIXME: Will be the file logging..
-      LogSevere("Unimplemented verbose.  We will check for URL here later\n");
-      exit(1);
-    }
-    const bool enableStackTrace = (verbose == "debug");
-    const bool wantCoreDumps    = (verbose == "debug");
-    initializeBaseline(enableStackTrace, wantCoreDumps);
+    Log::instance()->setInitialLogSettings(verbose, logFlush, logSize);
+
+    // if (!o.isInSuboptions("verbose")) {
+    // FIXME: Will be the file logging..
+    //  LogSevere("Unimplemented verbose.  We will check for URL here later\n");
+    //  exit(1);
+    // }
+    // const bool enableStackTrace = (verbose == "debug");
+    // const bool wantCoreDumps    = (verbose == "debug");
+    initializeBaseline();
 
     // 3. Process options, inputs, outputs that were successfully parsed
     processOptions(o);      // Process generic options declared above
@@ -537,7 +541,7 @@ RAPIOAlgorithm::setUpRecordNotifier()
 {
   // Set notification for new records..will all algorithms have this?
   myNotifier = RecordNotifier::getNotifier(myNotifierPath, myOutputDir, "fml");
-  if (myNotifier == 0) {
+  if (myNotifier == nullptr) {
     LogSevere("Notifier is not created.\n");
   } else {
     myNotifierPath = myNotifier->getURL().path;

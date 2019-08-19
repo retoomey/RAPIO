@@ -114,14 +114,30 @@ Config::introduceSelf()
   introduce("dataformat", df);
 }
 
+namespace {
+// Simple add / to directory if not there
+std::string
+enforceLastSlash(const std::string& str)
+{
+  auto out = str;
+
+  if (str.length() > 0) {
+    if (str.back() != '/') {
+      out.push_back('/');
+    }
+  }
+  return out;
+}
+}
+
 void
 Config::initialize()
 {
   // Look for global configuration file folder.
 
   // First priority is environment variables
-  const std::string rapio = getEnvVar("RAPIO_CONFIG_LOCATION");
-  const std::string w2    = getEnvVar("W2_CONFIG_LOCATION");
+  const std::string rapio = enforceLastSlash(getEnvVar("RAPIO_CONFIG_LOCATION"));
+  const std::string w2    = enforceLastSlash(getEnvVar("W2_CONFIG_LOCATION"));
 
   addSearchFromString(rapio);
   addSearchFromString(w2);

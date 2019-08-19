@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!--
+  Unit additions for WDSSII
+  Toomey April 2017
+
+  Basically alias everything from our old udunits.dat
+  or at least as much as I could figure out...
+  ...some of it might not be needed. The most important is
+  the dBZ and word aliases such as MetersPerSecond that we
+  use in color maps...
+
+  You can run the udunits2 tool with the -r option to check
+  valid syntax of the file if you change it.  Set your
+  UDUNITS2_XML_PATH to the folder this is in.  
+-->
+<unit-system>
+
+ <unit><def>count</def>
+    <aliases> 
+      <symbol>dimensionless</symbol> 
+      <symbol>text</symbol> 
+      <symbol>Dimensionless</symbol> 
+      <symbol>brightness</symbol> 
+      <symbol>dBZ</symbol> 
+      <symbol>dB</symbol> 
+      <symbol>flashes</symbol>
+      <symbol>NotKnown</symbol> 
+    </aliases>
+ </unit>
+ <unit><def>1e-3 dB</def>
+      <symbol>dBm</symbol> 
+ </unit>
+ 
+ <!-- MASS PER UNIT LENGTH defined-->
+ <!-- MASS PER UNIT AREA -->
+ <unit><def>kilogram/meter2</def>
+    <aliases> 
+      <symbol>kilogramspersquaremeter</symbol> 
+      <symbol>KilogramsPerSquareMeter</symbol> 
+    </aliases>
+ </unit>
+ <!-- MASS PER UNIT TIME defined-->
+ <!-- Power looks good-->
+ <!-- Pressure all but cmHg and cmH20-->
+ <!-- All defined expect foot_H20 and ftH20 which didn't work for some reason -->
+
+
+ <!--Pressure-->
+ <unit>
+   <def>1e-3 bar</def>
+   <symbol>millibar</symbol>
+   <aliases>
+     <symbol>mb</symbol>
+   </aliases>
+ </unit>
+
+<!--Acceleration-->
+<unit>
+  <def>meter/second2</def>
+  <aliases>
+    <symbol>meterpersquaresecond</symbol>
+    <symbol>MeterPerSquareSecond</symbol>
+    <symbol>meterspersquaresecond</symbol>
+    <symbol>MetersPerSquareSecond</symbol>
+  </aliases>
+</unit>
+
+ <!-- Pressure Tendency -->
+ <unit><def>pascal/second</def> 
+   <aliases>
+    <symbol>PascalPerSecond</symbol>
+   </aliases>
+</unit>
+<unit><def>millibar/second</def> <aliases> <symbol>MillibarPerSecond</symbol> </aliases> </unit>
+
+ <!-- Radiation units -->
+ <unit><def>rad</def> 
+   <aliases>
+     <symbol>rd</symbol>
+   </aliases>
+ </unit>
+ <unit><def>watt/meter2</def> 
+   <aliases>
+     <symbol>srad</symbol>
+     <symbol>SolarRadiation</symbol>
+   </aliases>
+ </unit>
+ <!-- Velocity (includes speed) -->
+
+ <unit><def>2.997925e+8 m/s</def>    <symbol>c</symbol> </unit>
+ <unit><def>international_mile/hour</def> 
+   <symbol>milesperhour</symbol> 
+   <aliases>
+     <symbol>MilesPerHour</symbol>
+   </aliases>
+ </unit>
+
+ <!--knot_international, international_knot, kt already defined-->
+
+ <unit><def>1000 m/s</def>    <symbol>KilometersPerSecond</symbol> </unit>
+ <unit><def>0.277778 m/s</def>    <symbol>KilometersPerHour</symbol> </unit>
+ <unit><def>m/s</def>    <symbol>MetersPerSecond</symbol> 
+                         <aliases>
+                                  <symbol>MeterPerSecond</symbol>
+                                  <symbol>meterpersecond</symbol>
+                                  <symbol>meterspersecond</symbol>>
+                         </aliases>
+ </unit>
+
+ <!--need secondsSinceEpoch for WDSSII's XML Data Decoder-->
+ <!--if not in, icons will not be drawn-->
+ <unit>
+  <def>second</def>
+  <aliases>
+    <symbol>secondsSinceEpoch</symbol>
+  </aliases>
+ </unit>
+
+ <!-- VISCOSITY -->
+ <unit><def>meter2/second2</def>       <aliases><symbol>SquareMetersPerSquareSecond</symbol></aliases> </unit>
+ <unit><def>0.264653086 meter2/second2</def>       <aliases><symbol>SquareKnots</symbol></aliases> </unit>
+
+ <!-- Computers and communication already defined-->
+
+ <!-- MISC.  All are already defined-->
+ <!-- kayser already defined -->
+ <!-- rps already defined as 6.28319 hertz which is not the same-->
+ <!-- geopotential already defined as 9.80665 meter-second^-2 -->
+ <!-- work_year already defined as 7401600 second -->
+ <!-- work_month already defined as 616800 second -->
+
+ <!-- SHEAR (modified)-->
+ <unit><def>MetersPerSecond/Kilometer</def>       <symbol>MetersPerSecondPerKilometer</symbol> </unit>
+
+ <!-- Mixing Ratio (not sure how to fix these two)-->
+ <unit><def>1000 count</def>       <aliases><symbol>GramsPerKilogram</symbol></aliases> </unit>
+
+ <!-- Moisture Convergence -->
+ <unit><def>GramsPerKilogram/hour</def>       <aliases><symbol>GramsPerKilogramPerHour</symbol></aliases> </unit>
+
+ <!-- Vorticity -->
+ <unit><def>1/s</def>       <aliases><symbol>s-1</symbol></aliases> </unit>
+
+ <!-- Units of length -->
+ <unit><def>meter</def>       <aliases><symbol>gpm</symbol></aliases> </unit>
+
+ <!-- Lapse Rate -->
+ <unit><def>degree_Celsius/kilometer</def>       <symbol>DegreeCPerKilometer</symbol> </unit>
+
+ <unit><def>radian/meter</def>       <symbol>RadianPerMeter</symbol> </unit>
+ <unit><def>degree/meter</def>       <symbol>DegreePerMeter</symbol> </unit>
+ <unit><def>degree/kilometer</def>   <symbol>DegreePerKilometer</symbol> 
+                                     <aliases><symbol>DegreePerKm</symbol></aliases>
+ </unit>
+</unit-system>

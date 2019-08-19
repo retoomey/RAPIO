@@ -69,18 +69,17 @@ Signals::handleSignal(int signum)
 void
 Signals::initialize(bool enableStackTrace, bool wantCoreDumps)
 {
-  // Try the gdb backtrace on signal
-  if (enableStackTrace) { // on-off maybe not enough level of control
-    // Also we can get multiple signals and stack dumps.  I think
-    // that is ok though.  We'll probably just turn on in the
-    // verbose="debug" mode
-    signal(SIGTERM, handleSignal);
-    signal(SIGSEGV, handleSignal);
-    signal(SIGINT, handleSignal);
-    signal(SIGILL, handleSignal);
-    signal(SIGABRT, handleSignal);
-    signal(SIGFPE, handleSignal);
-  }
+  auto aSignal = SIG_DFL;
+
+  if (enableStackTrace) { aSignal = handleSignal; }
+
+  // Set or remove signal handling depending on flags
+  signal(SIGTERM, aSignal);
+  signal(SIGSEGV, aSignal);
+  signal(SIGINT, aSignal);
+  signal(SIGILL, aSignal);
+  signal(SIGABRT, aSignal);
+  signal(SIGFPE, aSignal);
 
   // Disable core dumps by setting to zero size
   setupCoreDumps(wantCoreDumps);

@@ -28,7 +28,9 @@ RecordNotifier::getNotifier(const URL& notifyLoc, const URL& dataLoc, const std:
   // We only have one use of each notifier.  FmlRecordNotifier keeps the
   // path as internal variable.  Would need to change that for multiple paths...
   std::shared_ptr<RecordNotifier> d = Factory<RecordNotifier>::get(type);
-  d->setURL(notifyLoc, dataLoc);
+  if (d != nullptr) {
+    d->setURL(notifyLoc, dataLoc);
+  }
   return (d);
 }
 

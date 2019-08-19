@@ -89,7 +89,7 @@ public:
 
   /** Initialize system wide setup */
   virtual void
-  initializeBaseline(bool enableStackTrace, bool wantCoreDumps);
+  initializeBaseline();
 
   /** Initialize algorithm from c arguments and execute.  Used if algorithm is
    * standalone

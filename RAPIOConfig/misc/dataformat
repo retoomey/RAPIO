@@ -1,0 +1,18 @@
+<!--
+   Settings for data reader/writers
+     format: one of
+       netcdf - The WDSS-II netcdf4Classic format (supported types: all products except DataTable)
+       netcdf3 - The WDSS-II netcdf3 legacy format (supported types: all products except DataTable)
+       xml    - The WDSS-II XML format (supported types: DataTable
+       awips  - The AWIPS netcdf format (supported types: LatLonGrid)
+     compression : Turn on or off gzip compression (default=true)
+     compressionlevel : Level setting for gzip (default=6)
+     subdirs     : Turn on or off writing into sub-directories (default=true)
+     sparsegrid  : Specify when to use run-length encoding: never/always/xxx where xxx is the expected saving in storage space realized. ****This is used only by the netcdf3 encoder.****
+     cdmcompliance:  Normally, the netcdf encoder does not write the latitude/longitude of the grid points.  Turning this option on will make it write those out. This option also implies sparsegrid=never
+     faacompliance:  Normally, the netcdf encoder does not write the latitude/longitude of the grid points.  Turning this option on will make it write those out. This option also implies sparsegrid=never.  Implies CDM compliance and will also contains whatever tweaks the FAA requires for it's readers.
+-->
+
+<dataformat>
+    <setting datatype="default"    format="netcdf" compression="true" compressionlevel="6" subdirs="true" sparsegrid="never"  cdmcompliance="false" faacompliance="false"/>
+</dataformat>

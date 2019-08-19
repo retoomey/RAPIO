@@ -3,6 +3,9 @@
 #include "rStrings.h" // for toLower()
 #include "rEventLoop.h"
 #include "rEventTimer.h"
+#include "rBuffer.h"
+#include "rIOURL.h"
+#include "rSignals.h"
 
 #include <algorithm>
 #include <iostream>
@@ -42,7 +45,7 @@ Log::flush()
 
 Log::Log()
   :
-  myCurrentLevel(Severe),
+  myCurrentLevel(Severity::SEVERE),
   myPausedLevel(0),
   myCycleSize(-1)
 {
@@ -84,58 +87,153 @@ Log::setLogSize(int newSize)
   instance()->myCycleSize = newSize;
 }
 
-namespace rapio {
-class LogFlusher : public rapio::EventTimer {
-public:
-
-  LogFlusher(size_t milliseconds) : EventTimer(milliseconds, "Log flusher")
-  { }
-
-  virtual void
-  action() override
-  {
-    // LogSevere("Flushing log...\n");
-    Log::flush();
-  }
-};
+void
+LogFlusher::action()
+{
+  // LogSevere("Flushing log...\n");
+  Log::flush();
 }
 
 void
-Log::setVerbose(const std::string& in)
+LogSettingURLWatcher::action()
 {
-  Severity severity(Severe);
+  if (Log::instance()->setFromURL(myURL)) { } else {
+    LogSevere("Can't set log level from  \"" << myURL << "\"\n, using severe.\n");
+  }
+}
 
-  std::string s = in;
+namespace {
+bool
+stringToSeverity(const std::string& level, Log::Severity& severity)
+{
+  std::string s = level;
   Strings::toLower(s);
+  if (s == "") { s = "info"; }
 
+  // Log::Severity severity = Log::Severity::SEVERE;
+  // severity = Log::Severity::SEVERE;
   if (s == "severe") {
-    severity = Severe;
+    severity = Log::Severity::SEVERE;
   } else if (s == "info") {
-    severity = Info;
+    severity = Log::Severity::INFO;
   } else if (s == "debug") {
-    severity = Debug;
+    severity = Log::Severity::DEBUG;
   } else {
-    severity = Severe;
-    LogSevere("Unknown verbosity level \"" << s << "\".  Use \"severe\", \"info\", \"debug\"\n");
+    // LogSevere("Unknown string '"<<s<<"', using log level severe\n");
+    // severity = Log::Severity::SEVERE;
+    return false;
   }
-  setSeverityThreshold(severity);
+  return true;
+}
+
+std::string
+severityToString(Log::Severity s)
+{
+  switch (s) {
+      case Log::Severity::SEVERE: return "severe";
+
+      case Log::Severity::INFO: return "info";
+
+      case Log::Severity::DEBUG: return "debug";
+        // We want compile fail so no default
+  }
+  return ""; // Make compiler happy
+}
+}
+
+bool
+Log::setFromURL(const URL& aURL)
+{
+  bool found = false;
+  Buffer buf;
+
+  if (IOURL::read(aURL, buf) > 0) {
+    // LogSevere("Found log setting information at \"" << aURL << "\"\n");
+
+    // For first attempt, we just find the first line of text that matches
+    // a logging level and use it.  Granted we could modify lots of stuff
+    buf.data().push_back('\0');
+    std::istringstream is(&buf.data().front());
+    std::string s;
+    Log::Severity severity = Log::Severity::SEVERE;
+    while (getline(is, s, '\n')) {
+      Strings::trim(s);
+      // LogSevere("Candidate string " << s << "\n");
+      if (stringToSeverity(s, severity)) {
+        // LogSevere("Found log setting from URL: " << severityToString(severity) << "\n");
+        found = true;
+        // FIXME: maybe develop the setting file more powerfully...
+        // FIXME: Actually think doing a HMET style file would be good here
+        int logSize = myCycleSize;
+        int flush   = myLogFlusher->getTimerMilliseconds();
+        setLogSettings(severity, flush, logSize);
+        break;
+      }
+    }
+  }
+  return found;
 }
 
 void
-Log::setLogSettings(const std::string& level, int flush, int logSize)
+Log::setLogSettings(Log::Severity severity, int flush, int logSize)
 {
-  /** Set level first so future log messages show */
-  setVerbose(level);
-  instance()->setLogSize(logSize);
+  // Update severity level to given
+  if (severity != myCurrentLevel) {
+    myCurrentLevel = severity;
+    const bool enableStackTrace = (severity == Severity::DEBUG);
+    const bool wantCoreDumps    = (severity == Severity::DEBUG);
+    Signals::initialize(enableStackTrace, wantCoreDumps);
+  }
 
-  /** Set up a timer to auto flush logs */
+  // Update the log size before flush
+  setLogSize(logSize);
+
+  // Update flush timer
+  myLogFlusher->setTimerMilliseconds(flush);
+}
+
+void
+Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
+{
+  // Set the log size
+  setLogSize(logSize);
+
+  // Set up a timer to auto flush logs
   std::shared_ptr<LogFlusher> flusher(new LogFlusher(flush));
   EventLoop::addTimer(flusher);
+  myLogFlusher = flusher;
 
-  LogInfo("Level: " << level << " "
-                    << "Flush: " << flush << " seconds. "
-                    << "Cycle: " << instance()->myCycleSize << " bytes.\n");
-}
+  // Set up a timer to auto try the possible URL every so often.
+  // NOTE: initial action on watcher here requires above work done first
+  Severity severity = Severity::SEVERE;
+  if (stringToSeverity(level, severity)) { // parsed ok
+    LogSevere("Log setting parsed ok " << severityToString(severity) << "\n");
+  } else {
+    // Set up a timer to auto try the possible URL every so often.
+    // FIXME: No way to configure timer at moment.  We need to balance
+    // between hammering OS and taking too long to update.  For now change every 30 seconds
+    std::shared_ptr<LogSettingURLWatcher> watcher(new LogSettingURLWatcher(level, 30000));
+    EventLoop::addTimer(watcher);
+    myLogURLWatcher = watcher;
+    watcher->action(); // Do initial set.
+  }
+  // FORCED first time
+  myCurrentLevel = severity;
+  const bool enableStackTrace = (severity == Severity::DEBUG);
+  const bool wantCoreDumps    = (severity == Severity::DEBUG);
+  Signals::initialize(enableStackTrace, wantCoreDumps);
+
+  // Get what was actually set...
+  std::string realLevel;
+  if (myLogURLWatcher != nullptr) {
+    realLevel = myLogURLWatcher->getURL().toString();
+  } else {
+    realLevel = severityToString(myCurrentLevel);
+  }
+  LogInfo("Level: " << realLevel << " "
+                    << "Flush: " << myLogFlusher->getTimerMilliseconds() << " milliseconds. "
+                    << "Cycle: " << myCycleSize << " bytes.\n");
+} // Log::setInitialLogSettings
 
 Streams::Streams()
 { }

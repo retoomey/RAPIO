@@ -209,7 +209,12 @@ Record::readParams(const XMLElement & e,
   const std::string& changeAttr = e.attribute("changes");
 
   if (!changeAttr.empty()) {
-    LogSevere("Can't handle a param change index at moment.  We can implement if you need this\n");
+    // FIXME: Ancient indexes have this.  Might need to implement it
+    static bool once = true;
+    if (once) {
+      LogSevere("Can't handle a param change index at moment.  We can implement if you need this\n");
+      once = false;
+    }
     return;
   }
 

@@ -23,6 +23,12 @@ EventTimer::EventTimer(size_t milliseconds, const std::string& name)
 }
 
 void
+EventTimer::setTimerMilliseconds(size_t m)
+{
+  myDelayMS = m;
+}
+
+void
 EventTimer::action()
 {
   LogSevere("Timer empty action " << (void *) (this) << " " << myName << "\n");

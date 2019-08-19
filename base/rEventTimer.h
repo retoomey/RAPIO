@@ -10,12 +10,23 @@ namespace rapio {
 class EventCallback;
 
 
-/** Event timer class for firing close to given ms */
+/** Event timer class for firing close to given ms.
+ * These are added to the main event loop to do/check some action
+ * on a timer action.  Note the timer is fuzzy here.
+ * @author Robert Toomey */
 class EventTimer : public Event {
 public:
 
   /** Millisecond accuracy timer.  Probably good enough */
   EventTimer(size_t milliseconds, const std::string& name);
+
+  /** Get the current timer in milliseconds */
+  size_t
+  getTimerMilliseconds(){ return myDelayMS; }
+
+  /** Change delay time, will effect next run */
+  void
+  setTimerMilliseconds(size_t m);
 
   /** Action to take on timer pulse */
   virtual void
@@ -31,7 +42,6 @@ public:
     std::chrono::time_point<std::chrono::high_resolution_clock> at);
 
 public:
-  // private:
 
   /** Time we want to fire at (calculated from myDelayMS) */
   std::chrono::time_point<std::chrono::high_resolution_clock> myFire;
@@ -42,15 +52,4 @@ public:
   /** Name of the timer for debugging, etc. */
   std::string myName;
 };
-
-/** Thing that gives us events to process @see EventLoop */
-
-/*
- * class EventHandler : public EventTimer {
- * public:
- *
- * EventHandler():EventTimer(0) { }
- * virtual void addCallbacks(std::vector<EventCallback *>&) = 0;
- * };
- */
 }

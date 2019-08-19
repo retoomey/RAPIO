@@ -863,19 +863,5 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     exit(1);
   }
 
-  // About to run..set each of the runtime things...
-  // Let these crash if missing, since they should always be there
-  // Log settings
-  int logFlush  = getInteger("logFlush");
-  int logSize   = getInteger("logSize");
-  std::string v = getString("verbose");
-
-  if (v == "") {
-    v = "info"; // Why doesn't default string do this?  FIXME?
-    // FIXME: because --verbose is empty --> "" is allow for optional lists of values
-    // Humm how to fix this properly?
-  }
-  Log::setLogSettings(v, logFlush, logSize);
-
   return (false);
 } // RAPIOOptions::processArgs

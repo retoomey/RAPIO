@@ -1,0 +1,9 @@
+<!--
+   Used by rConfigDirectoryMapping and rIOIndex
+
+   Substitution tweaks for index URL paths.
+-->
+
+<directoryMapping>
+  <mapping from="localhost:" to=""/>
+</directoryMapping>

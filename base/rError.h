@@ -1,6 +1,8 @@
 #pragma once
 
 #include <rUtility.h>
+#include <rURL.h>
+#include <rEventTimer.h>
 
 #include <iosfwd>
 #include <sstream>
@@ -8,6 +10,40 @@
 #include <memory>
 
 namespace rapio {
+/** Flushes the log on a timer in main event loop */
+class LogFlusher : public EventTimer {
+public:
+
+  LogFlusher(size_t milliseconds) : EventTimer(milliseconds, "Log flusher")
+  { }
+
+  /** Fire the action of checking/flushing the log */
+  virtual void
+  action() override;
+};
+
+/** Watches a setting URL for changes and updates log severity on the fly */
+class LogSettingURLWatcher : public EventTimer {
+public:
+
+  LogSettingURLWatcher(URL aURL, size_t milliseconds) : EventTimer(milliseconds, "Log Setting URL Watcher"),
+    myURL(aURL)
+  { }
+
+  /** Get the URL we're watching */
+  URL
+  getURL(){ return myURL; }
+
+  /** Fire the action of checking/updating log settings */
+  virtual void
+  action() override;
+
+protected:
+
+  /** The URL that we are watching and getting log settings from */
+  URL myURL;
+};
+
 /**
  *  Streams to log to.
  *  This class allows multiple references to the same stream,
@@ -85,15 +121,15 @@ public:
   }
 
   /** Severity levels in decreasing order of printing */
-  enum Severity {
+  enum class Severity {
     /** Debugging Messages, high volume */
-    Debug  = 1,
+    DEBUG  = 1,
 
     /** Just for information. */
-    Info   = 10,
+    INFO   = 10,
 
     /** Major problem */
-    Severe = 20
+    SEVERE = 20
   };
 
   /**
@@ -138,13 +174,6 @@ public:
   static Streams&
   get(Severity req_level);
 
-  /** Change the severity threshold. By default, it is at ImpInfo */
-  static void
-  setSeverityThreshold(Severity new_level)
-  {
-    instance()->myCurrentLevel = new_level;
-  }
-
   /** Is above level? */
   inline static bool
   shouldLog(Severity desired_level)
@@ -152,22 +181,29 @@ public:
     return (desired_level >= instance()->myCurrentLevel);
   }
 
-  /** Set the verbose level based on known strings */
-  static void
-  setVerbose(const std::string& in);
+  /** Change the log settings from a log configuration watcher */
+  void
+  setInitialLogSettings(const std::string& levelOrURL,
+    int                                  flush,
+    int                                  logSize);
 
-  /** Set the log settings for application.  Typically called once on startup */
-  static void
-  setLogSettings(const std::string& level,
-    int                           flush,
-    int                           logSize);
+  /** Change the log settings from a log configuration watcher */
+  void
+  setLogSettings(Log::Severity severe,
+    int                        flush,
+    int                        logSize);
 
   /**
    * Set a size beyond which the log file should not grow. The log
    * file will be cycled through at this point.
    */
-  static void
+  void
   setLogSize(int newSize);
+
+  /** Set log settings from a given URL location.  Called only from
+   * the log url watcher.  You should be doing this from command line.*/
+  bool
+  setFromURL(const URL& aURL);
 
   /** Not virtual since you are not meant to derive from Log. */
   ~Log();
@@ -190,6 +226,12 @@ private:
   /** What is the maximum log file size? We'll cycle at this time. */
   int myCycleSize;
 
+  /** Current Log flush timer, if any */
+  std::shared_ptr<LogFlusher> myLogFlusher;
+
+  /** Current URL watcher, if any */
+  std::shared_ptr<LogSettingURLWatcher> myLogURLWatcher;
+
   /** A singleton; not meant to be instantiated by anyone else. */
   Log();
 }
@@ -210,6 +252,6 @@ private:
                                                                      << LINE_ID << ") " << x; }             \
   } while (0) /* (no trailing ; ) */
 
-#define LogDebug(x)  LogAtSeverity(rapio::Log::Debug, x)
-#define LogInfo(x)   LogAtSeverity(rapio::Log::Info, x)
-#define LogSevere(x) LogAtSeverity(rapio::Log::Severe, x)
+#define LogDebug(x)  LogAtSeverity(rapio::Log::Severity::DEBUG, x)
+#define LogInfo(x)   LogAtSeverity(rapio::Log::Severity::INFO, x)
+#define LogSevere(x) LogAtSeverity(rapio::Log::Severity::SEVERE, x)
