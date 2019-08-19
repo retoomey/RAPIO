@@ -200,8 +200,7 @@ public:
   void
   appendChild(const XMLElement& e)
   {
-    // children.push_back( new Element(e) );
-    std::shared_ptr<XMLElement> newOne(new XMLElement(e));
+    std::shared_ptr<XMLElement> newOne = std::make_shared<XMLElement>(e);
     children.push_back(newOne);
   }
 

@@ -57,14 +57,14 @@ AlgConfigFile::getConfigFile(const std::string& type)
 void
 AlgXMLConfigFile::introduceSelf()
 {
-  std::shared_ptr<AlgXMLConfigFile> newOne(new AlgXMLConfigFile());
+  std::shared_ptr<AlgXMLConfigFile> newOne = std::make_shared<AlgXMLConfigFile>();
   Factory<AlgConfigFile>::introduce("xml", newOne);
 }
 
 void
 AlgFLATConfigFile::introduceSelf()
 {
-  std::shared_ptr<AlgFLATConfigFile> newOne(new AlgFLATConfigFile());
+  std::shared_ptr<AlgFLATConfigFile> newOne = std::make_shared<AlgFLATConfigFile>();
   Factory<AlgConfigFile>::introduce("config", newOne);
 }
 
@@ -100,13 +100,13 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   std::vector<std::string>                & valuelist)
 {
   // Set meta information
-  std::shared_ptr<XMLElement> root(new XMLElement("w2algxml"));
+  std::shared_ptr<XMLElement> root = std::make_shared<XMLElement>("w2algxml");
   XMLDocument output(root);
   root->setAttribute("program", program);
 
   // Store each option value in XML
   for (size_t i = 0; i < optionlist.size(); ++i) {
-    std::shared_ptr<XMLElement> element(new XMLElement("option"));
+    std::shared_ptr<XMLElement> element = std::make_shared<XMLElement>("option");
     element->setAttribute("letter", optionlist[i]);
     element->setAttribute("value", valuelist[i]);
     root->addChild(element);

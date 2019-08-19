@@ -199,7 +199,7 @@ Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
   setLogSize(logSize);
 
   // Set up a timer to auto flush logs
-  std::shared_ptr<LogFlusher> flusher(new LogFlusher(flush));
+  std::shared_ptr<LogFlusher> flusher = make_shared<LogFlusher>(flush);
   EventLoop::addTimer(flusher);
   myLogFlusher = flusher;
 
@@ -212,7 +212,7 @@ Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
     // Set up a timer to auto try the possible URL every so often.
     // FIXME: No way to configure timer at moment.  We need to balance
     // between hammering OS and taking too long to update.  For now change every 30 seconds
-    std::shared_ptr<LogSettingURLWatcher> watcher(new LogSettingURLWatcher(level, 30000));
+    std::shared_ptr<LogSettingURLWatcher> watcher = std::make_shared<LogSettingURLWatcher>(level, 30000);
     EventLoop::addTimer(watcher);
     myLogURLWatcher = watcher;
     watcher->action(); // Do initial set.

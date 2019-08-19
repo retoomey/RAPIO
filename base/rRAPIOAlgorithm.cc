@@ -552,7 +552,7 @@ RAPIOAlgorithm::setUpRecordNotifier()
 void
 RAPIOAlgorithm::setUpRecordFilter()
 {
-  std::shared_ptr<AlgRecordFilter> f(new AlgRecordFilter());
+  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
   Record::theRecordFilter = f;
   f->setAlg(this);
 }
@@ -564,7 +564,7 @@ RAPIOAlgorithm::execute()
   myHeartbeatSecs = 1;
 
   if (myHeartbeatSecs > 0) { }
-  std::shared_ptr<AlgorithmHeartbeat> flusher(new AlgorithmHeartbeat(5000));
+  std::shared_ptr<AlgorithmHeartbeat> flusher = std::make_shared<AlgorithmHeartbeat>(5000);
   EventLoop::addTimer(flusher);
 
   LogInfo("Output Directory is set to " << myOutputDir << "\n");
@@ -573,7 +573,7 @@ RAPIOAlgorithm::execute()
 
   // Create a single listener to connect to all required indexes.
   std::vector<std::shared_ptr<IndexListener> > llist;
-  std::shared_ptr<StockInputListener> l(new StockInputListener(this));
+  std::shared_ptr<StockInputListener> l = std::make_shared<StockInputListener>(this);
   l->setListening(false);
   llist.push_back(l);
 
@@ -585,7 +585,7 @@ RAPIOAlgorithm::execute()
   size_t wanted = myIndexInputInfo.size();
 
   // Create record queue
-  std::shared_ptr<RecordQueue> q(new RecordQueue(this, myRealtime));
+  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this, myRealtime);
   Record::theRecordQueue = q;
 
   // Try to create an index for each source we want data from

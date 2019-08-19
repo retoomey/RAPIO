@@ -47,7 +47,7 @@ NetcdfBinaryTable::~NetcdfBinaryTable()
 void
 NetcdfBinaryTable::introduceSelf()
 {
-  std::shared_ptr<NetcdfBinaryTable> newOne(new NetcdfBinaryTable());
+  std::shared_ptr<NetcdfBinaryTable> newOne = std::make_shared<NetcdfBinaryTable>();
   IONetcdf::introduce("BinaryTable", newOne);
 }
 
@@ -58,8 +58,7 @@ NetcdfBinaryTable::read(const int ncid,
 {
   LogSevere("Unimplemented raw table, returning empty table\n");
 
-  // return new BinaryTable();
-  std::shared_ptr<BinaryTable> newOne(new BinaryTable());
+  std::shared_ptr<BinaryTable> newOne = std::make_shared<BinaryTable>();
   return (newOne);
 }
 

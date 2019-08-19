@@ -305,7 +305,7 @@ IONetcdf::encode(const rapio::DataType& dt,
 void
 IONetcdf::introduceSelf()
 {
-  std::shared_ptr<IONetcdf> newOne(new IONetcdf());
+  std::shared_ptr<IONetcdf> newOne = std::make_shared<IONetcdf>();
 
   // Read can read netcdf.  Can we read netcdf3?  humm
   // Factory<DataReader>::introduce("netcdf", newOne);

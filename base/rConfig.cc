@@ -108,9 +108,9 @@ Config::introduceSelf()
   // Add our configuration subclasses
   // for the moment hard-coded.  I'll probably let algorithms
   // declare new XML configuration classes pre-startup
-  std::shared_ptr<ConfigType> cdm(new ConfigDirectoryMapping());
+  std::shared_ptr<ConfigType> cdm = std::make_shared<ConfigDirectoryMapping>();
   introduce("directorymap", cdm);
-  std::shared_ptr<ConfigType> df(new ConfigDataFormat);
+  std::shared_ptr<ConfigType> df = std::make_shared<ConfigDataFormat>();
   introduce("dataformat", df);
 }
 

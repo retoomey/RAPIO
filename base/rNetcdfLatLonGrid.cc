@@ -14,7 +14,7 @@ NetcdfLatLonGrid::~NetcdfLatLonGrid()
 void
 NetcdfLatLonGrid::introduceSelf()
 {
-  std::shared_ptr<NetcdfType> io(new NetcdfLatLonGrid());
+  std::shared_ptr<NetcdfType> io = std::make_shared<NetcdfLatLonGrid>();
   IONetcdf::introduce("LatLonGrid", io);
   IONetcdf::introduce("SparseLatLonGrid", io);
 }
@@ -64,12 +64,12 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       "Lon", &lon_dim, &num_lons);
 
     // Create a new lat lon grid object
-    std::shared_ptr<LatLonGrid> LatLonGridSP(new LatLonGrid(
+    std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>(
 
-        // stref,
-        location, time,
-        lat_spacing,
-        lon_spacing));
+      // stref,
+      location, time,
+      lat_spacing,
+      lon_spacing);
 
     LatLonGrid& llgrid = *LatLonGridSP;
     llgrid.setTypeName(aTypeName);
@@ -372,10 +372,10 @@ NetcdfLatLonGrid::getTestObject(
   float lat_spacing     = .05;
   float lon_spacing     = .05;
 
-  std::shared_ptr<LatLonGrid> llgridsp(new LatLonGrid(
-      location, time,
-      lat_spacing,
-      lon_spacing));
+  std::shared_ptr<LatLonGrid> llgridsp = std::make_shared<LatLonGrid>(
+    location, time,
+    lat_spacing,
+    lon_spacing);
   LatLonGrid& llgrid = *llgridsp;
 
   llgrid.resize(num_lats, num_lons, 7.0f);

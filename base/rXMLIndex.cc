@@ -28,7 +28,7 @@ XMLIndex::~XMLIndex()
 void
 XMLIndex::introduceSelf()
 {
-  std::shared_ptr<IndexType> newOne(new XMLIndex());
+  std::shared_ptr<IndexType> newOne = std::make_shared<XMLIndex>();
   IOIndex::introduce("xml", newOne);
 }
 
@@ -38,9 +38,9 @@ XMLIndex::createIndexType(
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<XMLIndex> result(new XMLIndex(location,
-    listeners,
-    maximumHistory));
+  std::shared_ptr<XMLIndex> result = std::make_shared<XMLIndex>(location,
+      listeners,
+      maximumHistory);
   return (result);
 }
 

@@ -55,7 +55,7 @@ FMLRecordNotifier::~FMLRecordNotifier()
 void
 FMLRecordNotifier::introduceSelf()
 {
-  std::shared_ptr<FMLRecordNotifier> newOne(new FMLRecordNotifier());
+  std::shared_ptr<FMLRecordNotifier> newOne = std::make_shared<FMLRecordNotifier>();
   Factory<RecordNotifier>::introduce("fml", newOne);
 }
 

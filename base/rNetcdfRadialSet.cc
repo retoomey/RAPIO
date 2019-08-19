@@ -18,7 +18,7 @@ NetcdfRadialSet::~NetcdfRadialSet()
 void
 NetcdfRadialSet::introduceSelf()
 {
-  std::shared_ptr<NetcdfType> io(new NetcdfRadialSet());
+  std::shared_ptr<NetcdfType> io = std::make_shared<NetcdfRadialSet>();
 
   // NOTE: We read in polar grids and turn them into full radialsets
   IONetcdf::introduce("RadialSet", io);
@@ -112,8 +112,8 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
     // Create a new radial set object
     // LogSevere("Create radialset with " << rangeToFirstGate << " range...\n");
-    std::shared_ptr<RadialSet> radialSetSP(new RadialSet(location, time,
-      rangeToFirstGate));
+    std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time,
+        rangeToFirstGate);
 
     // RadialSet radialSet(stref.location, rangeToFirstGate);
     RadialSet& radialSet = *radialSetSP;
@@ -571,7 +571,7 @@ NetcdfRadialSet::getTestObject(
 
   std::string nyq_unit("MetersPerSecond");
 
-  std::shared_ptr<RadialSet> radialSetSP(new RadialSet(location, time, Length()));
+  std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time, Length());
   RadialSet& radialSet = *radialSetSP;
 
   radialSet.setTypeName("Reflectivity");

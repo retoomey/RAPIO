@@ -8,6 +8,10 @@
 **/Makefile
 **/Makefile.in
 **/*.la
+# ignore -save-temps assembly files when I make then
+# to look for optimization
+**/*.ii
+**/*.s
 rexample/rsimplealg
 aclocal.m4
 ltmain.sh

@@ -58,6 +58,6 @@ WebIndexWatcher::detach(IOListener * l)
 void
 WebIndexWatcher::introduceSelf()
 {
-  std::shared_ptr<WebIndexWatcher> io(new WebIndexWatcher());
+  std::shared_ptr<WebIndexWatcher> io = std::make_shared<WebIndexWatcher>();
   IOWatcher::introduce("web", io);
 }

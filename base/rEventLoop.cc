@@ -36,8 +36,8 @@ EventLoop::doEventLoop()
   // exit(1);
 
   /** Make sure event queue size is initialized */
-  //  std::shared_ptr<EventTimer> aTimer(new EventTimer(10000));
-  //  std::shared_ptr<EventTimer> bTimer(new EventTimer(500));
+  //  std::shared_ptr<EventTimer> aTimer = std::make_shared<EventTimer>(10000);
+  //  std::shared_ptr<EventTimer> bTimer = std::make_shared<EventTimer>(500);
   //  myTimers.push_back(aTimer);
   //  myTimers.push_back(bTimer);
 

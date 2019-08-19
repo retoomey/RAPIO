@@ -415,12 +415,12 @@ XMLReader::createElement(const std::string& s)
   if (!Strings::findNextWord(s, namePos, nameLen)) { return (false); }
 
   // build an element and parent it properly...
-  std::shared_ptr<XMLElement> e(new XMLElement(s.substr(namePos, nameLen)));
+  std::shared_ptr<XMLElement> e = std::make_shared<XMLElement>(s.substr(namePos, nameLen));
 
   if (parseStack.empty()) {
     // These tags in doc don't have parent tags
     if (doc == nullptr) {
-      std::shared_ptr<XMLDocument> newOne(new XMLDocument(e));
+      std::shared_ptr<XMLDocument> newOne = std::make_shared<XMLDocument>(e);
       doc = newOne;
     } else {
       doc->addChild(e);

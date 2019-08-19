@@ -42,9 +42,9 @@ Test::doTests()
 {
   // FIXME: need to be able to add tests from others
   // so separate introduction from running
-  std::shared_ptr<Test> t(new TestTime());
+  std::shared_ptr<Test> t = std::make_shared<TestTime>();
   introduce(t->name(), t);
-  std::shared_ptr<Test> t2(new TestIndex());
+  std::shared_ptr<Test> t2 = std::make_shared<TestIndex>();
   introduce(t2->name(), t2);
 
   // Run all tests all children, for now

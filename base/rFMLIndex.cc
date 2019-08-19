@@ -157,7 +157,7 @@ void
 FMLIndex::introduceSelf()
 {
   // input FAM ingestor
-  std::shared_ptr<IndexType> newOne(new FMLIndex());
+  std::shared_ptr<IndexType> newOne = std::make_shared<FMLIndex>();
   IOIndex::introduce("fml", newOne);
 }
 
@@ -167,8 +167,8 @@ FMLIndex::createIndexType(
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<FMLIndex> result(new FMLIndex(location,
-    listeners,
-    maximumHistory));
+  std::shared_ptr<FMLIndex> result = std::make_shared<FMLIndex>(location,
+      listeners,
+      maximumHistory);
   return (result); // Factory handles isValid now...
 }

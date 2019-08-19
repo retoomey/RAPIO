@@ -50,7 +50,7 @@ ConfigDataFormat::readInSettings()
 
     if (setting.prototype != nullptr) {
       mySettings[datatype] =
-        std::shared_ptr<DataFormatSetting>(new DataFormatSetting(setting));
+        std::make_shared<DataFormatSetting>(setting);
     } else {
       LogDebug("Prototype is null for " << datatype << "\n");
     }

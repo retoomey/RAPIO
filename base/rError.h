@@ -115,6 +115,7 @@ public:
     static std::shared_ptr<Log> mySingleton;
 
     if (mySingleton == 0) {
+      // Not using make_shared here since Log() is private.
       mySingleton = std::shared_ptr<Log>(new Log());
     }
     return (mySingleton.get());

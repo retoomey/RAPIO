@@ -12,7 +12,7 @@ using namespace rapio;
 void
 WebIndex::introduceSelf()
 {
-  std::shared_ptr<IndexType> newOne(new WebIndex());
+  std::shared_ptr<IndexType> newOne = std::make_shared<WebIndex>();
   IOIndex::introduce("webindex", newOne);
 }
 
@@ -167,8 +167,8 @@ WebIndex::createIndexType(
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<WebIndex> result(new WebIndex(location,
-    listeners,
-    maximumHistory));
+  std::shared_ptr<WebIndex> result = std::make_shared<WebIndex>(location,
+      listeners,
+      maximumHistory);
   return (result);
 }
