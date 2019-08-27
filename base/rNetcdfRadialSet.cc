@@ -80,10 +80,35 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       "Gate", &gate_dim, &num_gates,
       "Azimuth", &az_dim, &num_radials);
 
-    // LogSevere("DIMS: Gate(" << num_gates << "), Azimuth(" << num_radials <<
-    // ")\n");
-
     // Required variables
+
+    /*
+     * // --------------------------------------------
+     * //ALPHA new way. Pull the list
+     * //
+     * // How to read list without object?
+     * // "Azimuth", "BeamWidth", "AzimuthalSpacing", "GateWidth", "Nyquist"
+     * // also what if strings in there
+     * // So basically there are 'known' fields such as Azimuth...but what
+     * // if there's a field of something added?
+     * // 1. Read list of names
+     * // 2. Remove 'known' ones
+     * // 3. What's left, check dimension and add to 1d or 2d ?
+     * // 4. Difficult right
+     * int ndimsp, nvarsp, nattsp, unlimdimidp;
+     * nc_inq(ncid, &ndimsp, &nvarsp, &nattsp , &unlimdimidp);
+     * LogSevere("--->VAR COUNT:  "<<nvarsp<<"\n");
+     * char name[1000];
+     * nc_type xtypep;
+     * int ndimsp2, dimidsp, nattsp2;
+     * for(int i=0; i < nvarsp; ++i){
+     * nc_inq_var(ncid, i, name, &xtypep, &ndimsp2, &dimidsp, &nattsp2);
+     * LogSevere(">>>" << name << " " << ndimsp2 << " ," << dimidsp <<"\n");
+     * }
+     * LogSevere("The typename is " << aTypeName.c_str() << "\n");
+     * exit(1);
+     * // --------------------------------------------
+     */
 
     // Azimuth variable
     int az_var;
@@ -111,127 +136,72 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     nc_inq_varid(ncid, "DataQuality", &quality_var);
 
     // Create a new radial set object
-    // LogSevere("Create radialset with " << rangeToFirstGate << " range...\n");
     std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time,
         rangeToFirstGate);
 
-    // RadialSet radialSet(stref.location, rangeToFirstGate);
     RadialSet& radialSet = *radialSetSP;
 
+    // FIXME: maybe constructor?
     radialSet.setTypeName(aTypeName);
     radialSet.setElevation(elev_angle);
-
-    // Preallocate memory in object
-    //  radialSet.data().reserve (num_radials);
+    radialSet.setNyquistVelocityUnit(nyq_unit);
+    radialSet.reserveRadials(num_gates, num_radials);
 
     // ---------------------------------------------------------
     // var1 calls are slow as snails.  Use memory buffer to read all at once
-    std::vector<float> az_vals(num_radials);
-    NETCDF(nc_get_var_float(ncid, az_var, &az_vals[0]));
 
-    std::vector<float> bw_vals(num_radials, 1.0f);
+    // FIXME: What is vector not in the RadialSet?  We could add it now
+    auto azvector = radialSet.getAzimuthVector();
+    NETCDF(nc_get_var_float(ncid, az_var, &(*azvector)[0]));
 
     if (bw_var > -1) {
-      NETCDF(nc_get_var_float(ncid, bw_var, &bw_vals[0]));
+      auto bwvector = radialSet.getBeamWidthVector();
+      NETCDF(nc_get_var_float(ncid, bw_var, &(*bwvector)[0]));
     }
 
-    std::vector<float> azspace_vals(num_radials, 1.0f);
-
     if (azspacing_var > -1) {
-      NETCDF(nc_get_var_float(ncid, azspacing_var, &azspace_vals[0]));
+      auto azsvector = radialSet.getAzimuthSpacingVector();
+      NETCDF(nc_get_var_float(ncid, azspacing_var, &(*azsvector)[0]));
     } else {
       // Azimuth spacing defaults to beamwidth if not there
       // and beamwidth is...
       if (bw_var > -1) {
-        NETCDF(nc_get_var_float(ncid, bw_var, &azspace_vals[0]));
+        auto azsvector = radialSet.getAzimuthSpacingVector();
+        NETCDF(nc_get_var_float(ncid, bw_var, &(*azsvector)[0]));
       }
     }
 
-    std::vector<float> gate_width_vals(num_radials, 1000.0f);
-
     if (gw_var > -1) {
-      NETCDF(nc_get_var_float(ncid, gw_var, &gate_width_vals[0]));
+      auto gwvector = radialSet.getGateWidthVector();
+      NETCDF(nc_get_var_float(ncid, gw_var, &(*gwvector)[0]));
     }
-
-    std::vector<float> radial_time_vals(num_radials, 0.0f);
 
     if (radialtime_var > -1) {
-      NETCDF(nc_get_var_float(ncid, radialtime_var, &radial_time_vals[0]));
+      auto rtvector = radialSet.getRadialTimeVector();
+      NETCDF(nc_get_var_int(ncid, radialtime_var, &(*rtvector)[0]));
+    } else {
+      // Ok, What are we trying to be done with these times?
+
+      /* FIXME: what do we want?
+       * Time tempRT(time); // Start time of radial
+       * for (size_t i = 0; i < num_radials; ++i) {
+       * // radialtime
+       * float& radial_time = radial_time_vals[i];
+       * tempRT += rapio::TimeDuration(radial_time / 1000.0); // RadialTime is in
+       *                                                    // milliseconds
+       * }
+       */
     }
 
-    std::vector<float> nyquist_vals(num_radials);
-
     if (nyq_var > -1) {
-      NETCDF(nc_get_var_float(ncid, nyq_var, &nyquist_vals[0]));
+      auto nqvector = radialSet.getNyquistVector();
+      NETCDF(nc_get_var_float(ncid, radialtime_var, &(*nqvector)[0]));
+    } else {
+      // FIXME: Fill with default.  Humm if stored in attributes shouldn't need
+      // a giant vector of it right?
     }
 
     // ---------------------------------------------------------
-
-    for (size_t i = 0; i < num_radials; ++i) {
-      // azimuth
-      // float start_az;
-      // NETCDF(nc_get_var1_float(ncid, az_var, &i, &start_az));
-      float& start_az = az_vals[i];
-
-      // beamwidth
-      // float beam_width = 1.0f;
-      // if (bw_var > -1){
-      // NETCDF(nc_get_var1_float(ncid, bw_var, &i, &beam_width));
-      // }
-      float& beam_width = bw_vals[i];
-
-      // azspacing
-      // float azspacing = beam_width;
-      // if (azspacing_var > -1){
-      // NETCDF(nc_get_var1_float(ncid, azspacing_var, &i, &azspacing));
-      // }
-      float& azspacing = azspace_vals[i];
-
-      // gatewidth
-      // float gate_width = 1000.0f;
-      // if (gw_var > -1){
-      // NETCDF(nc_get_var1_float(ncid, gw_var, &i, &gate_width));
-      // }
-      float& gate_width = gate_width_vals[i];
-
-      // radialtime
-      float& radial_time = radial_time_vals[i];
-
-      // float radial_time = 0; // no RadialTime, use start time of scan
-      // if (radialtime_var > -1){
-      // NETCDF(nc_get_var1_float(ncid, radialtime_var, &i, &radial_time));
-      // }
-
-      // Now create radial using gathering information
-      double startAz = start_az;
-
-      Time tempRT(time); // Start time of
-      // radial.
-      tempRT += rapio::TimeDuration(radial_time / 1000.0); // RadialTime is in
-                                                           // milliseconds
-      Radial radial(startAz,
-        azspacing,
-        elev_angle,
-        location,
-        tempRT,
-        Length::Meters(gate_width),
-        beam_width
-      );
-
-      // Nyquist velocity
-      if (nyq_var > -1) {
-        // float nyquist;
-        // NETCDF(nc_get_var1_float(ncid, nyq_var, &i, &nyquist));
-        float& nyquist = nyquist_vals[i];
-
-        // radial.setAttributeValue("NyquistVelocity",nyquist, nyq_unit );
-        radial.setNyquistVelocity(nyquist, nyq_unit);
-      }
-
-      // radialSet.data().push_back( radial );
-      radial.setGateCount(num_gates);
-      radialSet.addRadial(radial); // copies FIXME: Use pointers
-    }
 
     // Check dimensions of the data array.  Either it's 2D for azimuth/range
     // or it's 1D for sparse array
@@ -241,34 +211,15 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       NetcdfUtil::readSparse2D(ncid, data_var, num_radials, num_gates,
         FILE_MISSING_DATA, FILE_RANGE_FOLDED, radialSet);
     } else {
-      // I'll just write from my own read function here...
-      // ...it's pretty simple and easier to understand I think compared to old
-      // one.
-      const size_t count[] = { 1, num_gates }; // We're gonna read num_gates of
-                                               // floats
-
-      for (size_t i = 0; i < num_radials; ++i) {
-        // Read the ENTIRE radial i (read size = 1*num_gates)
-        const size_t start[] = { i, 0 }; // Start at az_var i, rn_var 0...
-        // NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-        // &radialSet[i][0]));
-        NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          radialSet.getRadialVector(i)));
-
-        // Replace any missing/range using the file version to our internal.
-        for (size_t j = 0; j < num_gates; j++) {
-          //  float& v = radialSet[i][j];
-          // if (v == FILE_MISSING_DATA){ v = Constants::MissingData; }
-          // else if (v == FILE_RANGE_FOLDED){ v = Constants::RangeFolded; }
-          float * v = radialSet.getRadialVector(i, j);
-
-          if (*v == FILE_MISSING_DATA) {
-            *v = Constants::MissingData;
-          } else if (*v == FILE_RANGE_FOLDED) {
-            *v = Constants::RangeFolded;
-          }
-        }
-      }
+      /** We use a grid per moment */
+      const size_t start2[] = { 0, 0 };
+      const size_t count2[] = { num_radials, num_gates };
+      auto data = radialSet.getFloat2D("primary");
+      NETCDF(nc_get_vara_float(ncid, data_var, start2, count2,
+        // radialSet.getDataVector()));
+        &(*data)[0]));
+      // Do we need this?
+      radialSet.replaceMissing(FILE_MISSING_DATA, FILE_RANGE_FOLDED);
     }
 
     NetcdfUtil::readUnitValueList(ncid, radialSet); // Can read now with value
@@ -278,7 +229,6 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     LogSevere("Netcdf read error with radial set: " << ex.getNetcdfStr() << "\n");
     return (0);
   }
-
   return (0);
 } // NetcdfRadialSet::read
 
@@ -421,33 +371,8 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
   try {
     int retval;
 
-    // RadialSet is a sparse 2D field which we'll pad for writing.
-    size_t num_gates = 0;
-
-    // const size_t num_radials = radialSet.data().size();
-    const size_t num_radials = radialSet.size_d();
-
-    for (size_t i = 0; i < num_radials; ++i) {
-      // if ( radialSet[i].data().size() > num_gates ){
-      //  num_gates = radialSet[i].data().size();
-      // }
-      if (radialSet.size_d(i) > num_gates) {
-        num_gates = radialSet.size_d(i);
-      }
-    }
-
-    // Make the radial set equal-dimensioned.
-    if (num_gates > 0) {
-      for (size_t i = 0; i < num_radials; ++i) {
-        // while ( radialSet[i].data().size() != num_gates ){
-        //  radialSet[i].data().push_back( missing );
-        // }
-        while (radialSet.size_d(i) != num_gates) {
-          // radialSet[i].data().push_back( missing );
-          radialSet.addGate(i, missing);
-        }
-      }
-    }
+    const size_t num_radials = radialSet.getNumRadials();
+    const size_t num_gates   = radialSet.getNumGates();
 
     // Nyquist
     float default_nyquist = Constants::MissingData;
@@ -496,55 +421,52 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     // that would have to copy it...
     rapio::Time baseTime = radialSet.getTime();
 
-    for (size_t i = 0; i < num_radials; ++i) {
-      const Radial& r = radialSet.getRadial(i);
+    // We can write all of them at once now. FIXME: Why not loop generic sets?
+    auto azvector = radialSet.getAzimuthVector();
+    auto bwvector = radialSet.getBeamWidthVector();
+    auto asvector = radialSet.getAzimuthSpacingVector();
+    auto gwvector = radialSet.getGateWidthVector();
+    auto rtvector = radialSet.getRadialTimeVector();
+    NETCDF(nc_put_var_float(ncid, azvar, &(*azvector)[0]));
+    NETCDF(nc_put_var_float(ncid, bwvar, &(*bwvector)[0]));
+    NETCDF(nc_put_var_float(ncid, azspacingvar, &(*asvector)[0]));
+    NETCDF(nc_put_var_float(ncid, gwvar, &(*gwvector)[0]));
+    NETCDF(nc_put_var_int(ncid, radialtimevar, &(*rtvector)[0]));
 
-      // azimuth
-      const float angle = r.getAzimuth();
-      NETCDF(nc_put_var1_float(ncid, azvar, &i, &angle));
+    // FIXME: Nyquist not right yet.  Works for raw copy, not if units changed...
 
-      // beamwidth
-      const float beam_width = r.getPhysicalBeamWidth();
-      NETCDF(nc_put_var1_float(ncid, bwvar, &i, &beam_width));
-
-      // azspacing
-      const float azspacing = r.getAzimuthalSpacing();
-      NETCDF(nc_put_var1_float(ncid, azspacingvar, &i, &azspacing));
-
-      // gatewidth
-      const float gate_width = r.getGateWidth().meters();
-      NETCDF(nc_put_var1_float(ncid, gwvar, &i, &gate_width));
-
-      // radialtime
-      // const TimeDuration time_delta = r.getStartPoint().time - baseTime;
-      const TimeDuration time_delta = r.getStartTime() - baseTime;
-      const int radial_time         = static_cast<int>(time_delta.milliseconds());
-      NETCDF(nc_put_var1_int(ncid, radialtimevar, &i, &radial_time));
-
-      // Nyquist velocity attribute
-      string nyq_unit;
-      float nyquist_val;
-
-      if (r.getNyquestVelocity(nyquist_val, nyq_unit)) {
-        nyquist_val = Unit::value(nyq_unit, "MetersPerSecond",
-            nyquist_val);
-      } else {
-        nyquist_val = default_nyquist;
-      }
-      NETCDF(nc_put_var1_float(ncid, nyquistvar, &i, &nyquist_val));
-
-      // Write out current radial from data...
-      const size_t start[] = { i, 0 };         // az_var, rn_var...
-      const size_t count[] = { 1, num_gates }; // 1 az, n gates
-      NETCDF(nc_put_vara_float(ncid, datavar, start, count, r.getDataVector()));
-
-      // Write out current radial from any quality...
-      if (haveQuality) {
-        const Radial& q = (*quality).getRadial(i);
-        NETCDF(nc_put_vara_float(ncid, qualityvar, start, count,
-          q.getDataVector()));
-      }
+    /*if (radialSet.getNyquestVelocity(nyquist_val, nyq_unit)) {
+     * nyquist_val = Unit::value(nyq_unit, "MetersPerSecond",
+     *    nyquist_val);
+     * } else {
+     * nyquist_val = default_nyquist;
+     * }
+     */
+    std::string unit = radialSet.getNyquistVelocityUnit();
+    if (unit == "") { // No nyquest was ever set
+    } else {
+      auto nvector = radialSet.getFloat1D("Nyquist");
+      nvector->fill(default_nyquist);
+      NETCDF(nc_put_var_float(ncid, nyquistvar, &(*nvector)[0]));
     }
+
+    /** Does it go in correctly? lol */
+    const size_t start2[] = { 0, 0 };                   // lat, lon
+    const size_t count2[] = { num_radials, num_gates }; // lat_count, lon_count
+    // NETCDF(nc_put_vara_float(ncid, datavar, start2, count2,
+    //   radialSet.getDataVector()));
+    auto data = radialSet.getFloat2D("primary");
+    NETCDF(nc_put_vara_float(ncid, datavar, start2, count2,
+      &(*data)[0]));
+
+    /*  FIXME: disabling quality.  We _really_ want multiband
+     *    // Write out current radial from any quality...
+     *    if (haveQuality) {
+     *      const Radial& q = (*quality).getRadial(i);
+     *      NETCDF(nc_put_vara_float(ncid, qualityvar, start, count,
+     *        q.getDataVector()));
+     *    }
+     */
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with RadialSet: " << ex.getNetcdfStr() << "\n");
     return (false);
@@ -565,8 +487,8 @@ NetcdfRadialSet::getTestObject(
   const double elev_angle  = elev;
   const float gate_width   = 1;
   const float beam_width   = 2;
-  float radial_time        = 1000.0; // Add a second to radial time for each
-                                     // radial...
+  // float radial_time        = 1000.0; // Add a second to radial time for each
+  //                                   // radial...
   float azspacing = 1.0;
 
   std::string nyq_unit("MetersPerSecond");
@@ -577,41 +499,27 @@ NetcdfRadialSet::getTestObject(
   radialSet.setTypeName("Reflectivity");
   radialSet.setElevation(elev_angle);
 
-  // radialSet.data().reserve (num_radials);
+  // Allow in-line vector storage to work and not crash
+  radialSet.reserveRadials(num_gates, num_radials);
+  radialSet.setNyquistVelocityUnit(nyq_unit);
+
+  auto azimuths   = radialSet.getFloat1D("Azimuth");
+  auto beamwidths = radialSet.getFloat1D("BeamWidth");
+  auto azspacings = radialSet.getFloat1D("AzimuthalSpacing");
+  auto gatewidths = radialSet.getFloat1D("GateWidth");
+
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree
-    // Now create radial using gathering information
-    double startAz = start_az;
 
-    Time tempRT(time); // Start time of
-    // radial.
-    tempRT += rapio::TimeDuration(radial_time / 1000.0); // RadialTime is in
-                                                         // milliseconds
-
-    Radial radial(startAz,
-      azspacing,
-      elev_angle,
-      location,
-      tempRT,
-      Length::Meters(gate_width),
-      beam_width
-    );
-
-    radial.setNyquistVelocity(0.6, nyq_unit);
-    radialSet.addRadial(radial);
-
+    azimuths[i]   = start_az;
+    beamwidths[i] = beam_width;
+    azspacings[i] = azspacing;
+    gatewidths[i] = gate_width;
     for (size_t j = 0; j < num_gates; ++j) {
-      radialSet.addGate(i, j);
+      radialSet.set(i, j, i);
     }
   }
 
-  /* for (size_t i=0; i < num_radials; ++i){
-   * for (size_t j=0; j < num_gates; ++j){
-   *   float& v = radialSet[i][j];
-   *   v = j;
-   * }
-   * }
-   */
   radialSet.setDataAttributeValue("Unit", "dimensionless", "MetersPerSecond");
   return (radialSetSP);
 } // NetcdfRadialSet::getTestObject

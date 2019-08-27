@@ -13,6 +13,8 @@
 using namespace rapio;
 using namespace std;
 
+long Log::bytecounter = 0;
+
 void
 Log::startLogging(std::ostream * s)
 {

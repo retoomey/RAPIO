@@ -2,7 +2,6 @@
 
 #include "rError.h"
 #include "rUnit.h"
-// #include "rDisplacement.h"
 #include "rIJK.h"
 #include "rLLH.h"
 
@@ -61,9 +60,14 @@ RadialSet::getDistanceToFirstGate() const
   }
 
   // Calculate a first distance based on center and start location
-  assert(myRadials.size() > 0); // at least one radial present?
-  const LLH& first_gate = myRadials[0].getStartLocation();
+  // I think this was ALWAYS zero.  Start locations of radials were the center, lol
+  //  assert(myRadials.size() > 0); // at least one radial present?
+  //  const LLH& first_gate = myRadials[0].getStartLocation();
+  // const LLH& first_gate = myRadials[0].getStartLocation();
+  // const LLH& first_gate = myCenter; // Where is first gate start information?
+
   // IJK displacement_km = (first_gate - myCenter).getVector_ECCC();
-  IJK displacement_km = (first_gate - myCenter);
-  return (Length::Kilometers(displacement_km.norm()));
+  // IJK displacement_km = (first_gate - myCenter);
+  // return (Length::Kilometers(displacement_km.norm()));
+  return (Length::Kilometers(0));
 }

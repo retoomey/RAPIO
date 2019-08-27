@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rDataType.h>
+#include <rDataGrid.h>
 #include <rLLH.h>
 #include <rTime.h>
 
@@ -9,8 +9,10 @@
 namespace rapio {
 /** Store an area of double data on a uniform 2-D grid of latitude and
  *  longitude at a constant height above the surface of the earth.
+ *
+ *  @author Robert Toomey
  */
-class LatLonGrid : public DataType {
+class LatLonGrid : public DataGrid {
 public:
 
   /** Create a lat lon grid object */
@@ -36,9 +38,11 @@ public:
   void
   resize(size_t rows, size_t cols, const float fill = 0)
   {
-    myNumLats = rows;
-    myNumLons = cols;
-    myData.resize(rows * cols, fill);
+    //  myNumLats = rows;
+    //  myNumLons = cols;
+    // myData.resize(rows * cols, fill);
+    // FIXME: Unavailable default?
+    myFloat2DData[0].resize(cols, rows, fill);
   }
 
   // ------------------------------------------------------
@@ -70,54 +74,29 @@ public:
   // ------------------------------------------------------
   // Getting the 'data' of the 2d array...
 
-  /** Return pointer to start of data for read/write */
-  float *
-  getDataVector()
-  {
-    return (&myData[0]);
-  }
-
-  // size_d()
   size_t
   getNumLats()
   {
-    return (myNumLats);
+    return myFloat2DData[0].getY();
   }
 
-  // size_d(0);
   size_t
   getNumLons()
   {
-    return (myNumLons);
-  }
-
-  /** Index for grid */
-  inline size_t
-  index(size_t i, size_t j)
-  {
-    // i = row, j = col.
-    return ((i * myNumLons) + j);
+    return myFloat2DData[0].getX();
   }
 
   /** Sparse2D template wants this method (read) */
   void
   set(size_t i, size_t j, const float& v) override
   {
-    myData[index(i, j)] = v;
+    myFloat2DData[0].set(i, j, v);
   }
-
-  /** Get value at a i, j location, need at some point */
-
-  // float get(size_t i, size_t j) {
-  //   return myData[index(i, j)]; // copying
-  // }
 
   void
   fill(const float& value) override
   {
-    std::fill(myData.begin(), myData.end(), value);
-
-    // myData.resize(myNumLats*myNumLons, value);
+    std::fill(myFloat2DData[0].begin(), myFloat2DData[0].end(), value);
   }
 
   virtual std::string
@@ -137,16 +116,5 @@ protected:
   Time myTime;
   float myLatSpacing;
   float myLonSpacing;
-
-  // This is data information
-  size_t myNumLats; // Also could be rows/cols or dimensions
-  size_t myNumLons;
-
-  // This is the data array.  It's stored in netcdf grid order for
-  // convenience for reading/writing
-  // FIXME: Should we allocate our own memory?  It would avoid C++
-  // blocking extra space since in general we _know_ the exact size
-  // we want
-  std::vector<float> myData;
 };
 }

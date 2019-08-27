@@ -108,6 +108,8 @@ public:
 class Log : public Utility {
 public:
 
+  static long bytecounter;
+
   /** returns the singleton instance. */
   inline static Log *
   instance()

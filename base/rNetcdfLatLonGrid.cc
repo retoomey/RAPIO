@@ -98,17 +98,20 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       if (retval != NC_NOERR) { retval = nc_inq_dimid(ncid, "Time", &time_dim); }
       bool haveTimeDim = (retval == NC_NOERR);
 
+      auto data = llgrid.getFloat2D("primary");
       if (haveTimeDim) {
         const size_t start[] = { 0, 0, 0 };               // time, lat, lon
         const size_t count[] = { 1, num_lats, num_lons }; // 1 time, lat_count,
                                                           // lon_count
         NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          llgrid.getDataVector()));
+          &(*data)[0]));
+        // llgrid.getDataVector()));
       } else {
         const size_t start[] = { 0, 0 };               // lat, lon
         const size_t count[] = { num_lats, num_lons }; // lat_count, lon_count
         NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          llgrid.getDataVector()));
+          &(*data)[0]));
+        // llgrid.getDataVector()));
       }
     }
 
@@ -337,6 +340,7 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
     // time dimension, but then
     // we don't store in it..I matched/compared old and new netcdf but I'm not
     // liking this.
+    auto data = llgrid.getFloat2D("primary");
     if (faa_compliance) {
       // Or if we HAVE A time dimension basically.  I think this is bugged in
       // old code
@@ -344,12 +348,13 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
       const size_t count[] = { 1, lat_size, lon_size }; // 1 time, lat_count,
                                                         // lon_count
       NETCDF(nc_put_vara_float(ncid, data_var, start, count,
-        llgrid.getDataVector()));
+        &(*data)[0]));
     } else {
       const size_t start[] = { 0, 0 };               // lat, lon
       const size_t count[] = { lat_size, lon_size }; // lat_count, lon_count
       NETCDF(nc_put_vara_float(ncid, data_var, start, count,
-        llgrid.getDataVector()));
+        &(*data)[0]));
+      // llgrid.getDataVector()));
     }
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with LatLonGrid: " << ex.getNetcdfStr()

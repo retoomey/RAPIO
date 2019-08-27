@@ -6,185 +6,18 @@
 #include <rLLH.h>
 #include <rDataType.h>
 #include <rTime.h>
+#include <rDataStore2D.h>
+#include <rDataGrid.h>
 
 #include <vector>
 
 namespace rapio {
-class Radial : public Data {
-public:
-
-  Radial(
-    const double & starting_azimuth,
-    const double & azimuthal_spacing,
-    const double & elevation_of_sweep,
-    const LLH    & location_of_first_gate,
-    const Time   & time_of_first_gate,
-    const Length & width_of_gate,
-    const double & physical_beamwidth
-  ) :
-    gate_width(width_of_gate),
-    az(starting_azimuth),
-    beam_width(physical_beamwidth),
-    az_spacing(azimuthal_spacing),
-    elev_angle(elevation_of_sweep),
-    start_location(location_of_first_gate),
-    start_time(time_of_first_gate)
-  { }
-
-  void
-  fill(const float& val)
-  {
-    for (float& i:values) {
-      i = val;
-    }
-  }
-
-  /** The average width of a gate within this radial. */
-  const Length&
-  getGateWidth() const
-  {
-    return (gate_width);
-  }
-
-  /** The constant (starting) azimuth of this radial. */
-  const double&
-  getAzimuth() const
-  {
-    return (az);
-  }
-
-  /** The constant beamwidth of this radial. Not necessarily
-   *  the azimuthal spacing ... */
-  const double&
-  getPhysicalBeamWidth() const
-  {
-    return (beam_width);
-  }
-
-  /** The azimuthal spacing */
-  const double&
-  getAzimuthalSpacing() const
-  {
-    return (az_spacing);
-  }
-
-  /** The elevation (of the sweep) containing this radial. */
-  const double&
-  getElevation() const
-  {
-    return (elev_angle);
-  }
-
-  /** The starting location and time of this radial. */
-  const LLH&
-  getStartLocation() const
-  {
-    return (start_location);
-  }
-
-  /** The starting location and time of this radial. */
-  const Time&
-  getStartTime() const
-  {
-    return (start_time);
-  }
-
-  /** The average width of a gate within this radial. */
-  void
-  setGateWidth(const Length& len)
-  {
-    gate_width = len;
-  }
-
-  /** The constant (starting) azimuth of this radial. */
-  void
-  setAzimuth(const double& ang)
-  {
-    az = ang;
-  }
-
-  /** The constant beamwidth of this radial. */
-  void
-  setPhysicalBeamWidth(const double& ang)
-  {
-    beam_width = ang;
-  }
-
-  /** The constant beamwidth of this radial. */
-  void
-  setAzimuthalSpacing(const double& ang)
-  {
-    az_spacing = ang;
-  }
-
-  /** The elevation (of the sweep) containing this radial. */
-  void
-  setElevation(const double& ang)
-  {
-    elev_angle = ang;
-  }
-
-  /** The starting location and time of this radial. */
-  void
-  setStartLocation(const LLH& l)
-  {
-    start_location = l;
-  }
-
-  /** The starting location and time of this radial. */
-  void
-  setStartTime(const Time& t)
-  {
-    start_time = t;
-  }
-
-  void
-  setNyquistVelocity(float nyquist, const std::string& unit)
-  {
-    myNyquist     = nyquist; // store per radial????
-    myNyquistUnit = unit;    // Units could be at radial set level at least
-  }
-
-  bool
-  getNyquestVelocity(float& nyquist, std::string& unit) const
-  {
-    nyquist = myNyquist;
-    unit    = myNyquistUnit;
-    return (unit != "");
-  }
-
-protected:
-
-  Length gate_width; // getGateWidth()
-  double az;         // getAzimuth()
-  double beam_width; // getBeamWidth()
-  double az_spacing; // getAzimuthalSpacing()
-  double elev_angle; // getElevation()
-  LLH start_location;
-  Time start_time;
-  float myNyquist;           // store per radial????
-  std::string myNyquistUnit; // Units could be at radial set level at least
-
-public:
-
-  std::vector<float> values;
-
-  // return &(myRadials[i].values[0]);
-  const float *
-  getDataVector() const
-  {
-    return (&(values[0]));
-  }
-
-  /** Used by direct writers to preset vector size */
-  void
-  setGateCount(size_t s)
-  {
-    values.resize(s);
-  }
-};
-
-class RadialSet : public DataType {
+/** A Radial set is a collection of radials containing gates.  This makes
+ * it a 2D data structure.  It stores 1D information for each radials.
+ * It can store multiple bands of 2D data.
+ *
+ * @author Robert Toomey */
+class RadialSet : public DataGrid {
 public:
 
   virtual LLH
@@ -203,22 +36,40 @@ public:
   {
     // Lookup for read/write factories
     myDataType = "RadialSet";
+
+    /** Push back primary band.  This is the primary moment
+     * of the Radial set */
+    addFloat2D("primary", 0, 0); // Force add zero for moment...
   }
 
   /** Sparse2D template wants this method (read) */
   void
   set(size_t i, size_t j, const float& value) final override
   {
-    myRadials[i].values[j] = value;
+    myFloat2DData[0].set(i, j, value); // FIXME: API?
   }
 
-  /** Sparse2D template wants this method */
+  /** Replace a custom missing/range with our constants */
   void
-  fill(const float& val) final override
+  replaceMissing(const float missing, const float range)
   {
-    for (Radial& i: myRadials) {
-      i.fill(val);
+    for (auto& i:myFloat2DData[0]) {
+      float * v = &i;
+      if (*v == missing) {
+        *v = Constants::MissingData;
+      } else if (*v == range) {
+        *v = Constants::RangeFolded;
+      }
     }
+  }
+
+  /** Sparse2D template wants this method.
+   * FIXME: not we currently pass data type, but we're
+   * in the middle of changing from IS to HAS */
+  void
+  fill(const float& value) final override
+  {
+    std::fill(myFloat2DData[0].begin(), myFloat2DData[0].end(), value);
   }
 
   /** Return the location of the radar. */
@@ -236,74 +87,111 @@ public:
   void
   setElevation(const double& targetElev);
 
-  // Unimplmented ....
-
-  /** Normalize the RadialSet to have a constant number
-   * or gates per radial. */
+  /** Storage for radials as 2D and 1D vectors  */
   void
-  normalizeGateNumber(){ }
-
-  /** Clip radial set into a 360 degree one.  BROKEN */
-  void
-  makeLogical360(bool strictly_under_360 = false){ }
-
-  void
-  addRadial(Radial r)
+  reserveRadials(size_t num_gates, size_t num_radials)
   {
-    myRadials.push_back(r);
-  }
+    /** As a grid of data */
+    myFloat2DData[0].resize(num_gates, num_radials, Constants::DataUnavailable);
+    const size_t ydim = myFloat2DData[0].getY();
 
+    /** Azimuth per radial */
+    addFloat1D("Azimuth", ydim);
+
+    /** Beamwidth per radial */
+    addFloat1D("BeamWidth", ydim, 1.0f);
+
+    /** Azimuth spaceing per radial */
+    addFloat1D("AzimuthalSpacing", ydim, 1.0f);
+
+    /** Gate width per radial */
+    addFloat1D("GateWidth", ydim, 1000.0f);
+
+    /** Radial time per radial */
+    addInt1D("RadialTime", ydim, 0);
+
+    /** Nyquist per radial */
+    addFloat1D("Nyquist", ydim, Constants::MissingData);
+  } // reserveRadials
+
+  // -----------------------
+  // Vector access
+
+  /** Allow reader/writer access to full vector */
+  DataStore<float> *
+  getAzimuthVector(){ return getFloat1D("Azimuth"); }
+
+  /** Allow reader/writer access to full vector */
+  DataStore<float> *
+  getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
+
+  /** Allow reader/writer access to full vector */
+  DataStore<float> *
+  getAzimuthSpacingVector(){ return getFloat1D("AzimuthalSpacing"); }
+
+  /** Allow reader/writer access to full vector */
+  DataStore<float> *
+  getGateWidthVector(){ return getFloat1D("GateWidth"); }
+
+  /** Allow reader/writer access to full vector */
+  DataStore<int> *
+  getRadialTimeVector(){ return getInt1D("RadialTime"); }
+
+  /** Allow reader/writer access to full vector */
+  DataStore<float> *
+  getNyquistVector(){ return getFloat1D("Nyquist"); }
+
+  /** Get number of gates for radial set */
   size_t
-  size_d()
+  getNumGates()
   {
-    return (myRadials.size());
+    return myFloat2DData[0].getX();
   }
 
+  /** Get number of radials for radial set */
   size_t
-  size_d(size_t i)
+  getNumRadials()
   {
-    return (myRadials[i].values.size());
+    return myFloat2DData[0].getY();
   }
 
-  void
-  addGate(size_t i, float v)
-  {
-    myRadials[i].values.push_back(v);
-  }
-
-  const Radial&
-  getRadial(size_t i)
-  {
-    return (myRadials[i]);
-  }
-
-  float *
-  getRadialVector(size_t i)
-  {
-    return (myRadials[i].values.data());
-  }
-
-  float *
-  getRadialVector(size_t i, size_t j)
-  {
-    return (&(myRadials[i].values[j]));
-  }
-
+  /** Distance from radar center to the first gate */
   Length
   getDistanceToFirstGate() const;
 
   virtual std::string
   getGeneratedSubtype() const;
 
-protected:
+  /** Set the units used for nyquist, if any */
+  void
+  setNyquistVelocityUnit(const std::string& unit)
+  {
+    myNyquistUnit = unit;
+  }
 
+  /** Get the units used for nyquist, if any */
+  std::string
+  getNyquistVelocityUnit()
+  {
+    return myNyquistUnit;
+  }
+
+protected:
+  // I think these could be considered projection information
+
+  /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
 
+  /** Center of Radial set */
   LLH myCenter;
+
+  /** Time of this radial set */
   Time myTime;
+
+  /** Distance to the first gate */
   Length myFirst;
 
-  /** Store radials for radial set */
-  std::vector<Radial> myRadials;
+  /** Units for Nyquist values, if any */
+  std::string myNyquistUnit;
 };
 }

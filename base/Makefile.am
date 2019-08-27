@@ -42,6 +42,7 @@ librapio_la_SOURCES =\
   rLLH.cc\
   rStrings.cc\
   rBinaryTable.cc\
+  rDataGrid.cc\
   rLatLonGrid.cc\
   rRadialSet.cc\
   rDataType.cc\
@@ -107,7 +108,10 @@ pkginclude_HEADERS =\
   rBinaryIO.h\
   rLength.h\
   rTime.h\
+  rDataStore.h\
+  rDataStore2D.h\
   rDataType.h\
+  rDataGrid.h\
   rBinaryTable.h\
   rRadialSet.h\
   rLatLonGrid.h\

@@ -28,12 +28,9 @@ LatLonGrid::LatLonGrid(
 
   init(location, time, lat_spacing, lon_spacing);
 
-  // lol so easy
-  myNumLats = rows;
-  myNumLons = cols;
-
-  // FIXME: Better memory checks on fail
-  myData.resize(rows * cols, value);
+  /** Push back primary band.  This is the primary moment
+   * of the LatLonGrid set */
+  addFloat2D("primary", cols, rows, value);
 }
 
 /** Set what defines the lat lon grid in spacetime */
