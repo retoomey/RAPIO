@@ -13,6 +13,7 @@ namespace rapio {
  * Buffer is implemented as holding a smart pointer to a std::vector of
  * characters.
  *
+ * FIXME: This is the same as a DataStore<char>
  */
 class Buffer : public IO {
 public:

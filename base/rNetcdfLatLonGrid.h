@@ -11,8 +11,10 @@ public:
 
   /** Write DataType from given ncid */
   virtual bool
-  write(int       ncid,
-    const DataType& dt) override;
+  write(int                            ncid,
+    const DataType                     & dt,
+    std::shared_ptr<DataFormatSetting> dfs)
+  override;
 
   /** The way to obtain the object.
    *  @params ncfile An open NetcdfFile object.

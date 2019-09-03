@@ -352,7 +352,8 @@ NetcdfRadialSet::writePolarHeader(int ncid, DataType& data,
 } // NetcdfRadialSet::writePolarHeader
 
 bool
-NetcdfRadialSet::write(int ncid, const DataType& dt)
+NetcdfRadialSet::write(int ncid, const DataType& dt,
+  std::shared_ptr<DataFormatSetting> dfs)
 {
   // FIXME: Maybe just pass a shared_ptr down the tree
   const RadialSet& cradialSet = dynamic_cast<const RadialSet&>(dt);

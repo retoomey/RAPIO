@@ -4,11 +4,17 @@ AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-50 -finline-functions -ggdb 
 lib_LTLIBRARIES =\
   librapio.la
 
+# MRMS builder makes a lib folder one up from us with all the extra libraries
+# we use.
+librapio_la_LIBADD =\
+   -L@prefix@/lib -lg2c_v1.6.0
+
 librapio_la_SOURCES =\
   rRAPIOAlgorithm.cc\
   rRAPIOOptions.cc\
   rRAPIOData.cc\
   rColorTerm.cc\
+  rCurlConnection.cc\
   rEventTimer.cc\
   rEventLoop.cc\
   rCompression.cc\
@@ -46,11 +52,14 @@ librapio_la_SOURCES =\
   rLatLonGrid.cc\
   rRadialSet.cc\
   rDataType.cc\
+  rGribDataType.cc\
+  rNetcdfDataType.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
   rIOWatcher.cc\
   rFAMWatcher.cc\
   rIONetcdf.cc\
+  rIOGrib.cc\
   rNetcdfBinaryTable.cc\
   rNetcdfRadialSet.cc\
   rNetcdfLatLonGrid.cc\
@@ -69,6 +78,7 @@ pkginclude_HEADERS =\
   rRAPIOOptions.h\
   rRAPIOData.h\
   rColorTerm.h\
+  rCurlConnection.h\
   rTest.h\
   rData.h\
   rAlgorithm.h\
@@ -111,6 +121,8 @@ pkginclude_HEADERS =\
   rDataStore.h\
   rDataStore2D.h\
   rDataType.h\
+  rGribDataType.h\
+  rNetcdfDataType.h\
   rDataGrid.h\
   rBinaryTable.h\
   rRadialSet.h\
@@ -120,6 +132,7 @@ pkginclude_HEADERS =\
   rIOWatcher.h\
   rFAMWatcher.h\
   rIONetcdf.h\
+  rIOGrib.h\
   rNetcdfBinaryTable.h\
   rNetcdfRadialSet.h\
   rNetcdfLatLonGrid.h\

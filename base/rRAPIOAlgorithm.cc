@@ -36,6 +36,7 @@
 // extension loading ability or something?
 #include "rSignals.h"
 #include "rIONetcdf.h"
+#include "rIOGrib.h"
 
 using namespace rapio;
 using namespace std;
@@ -223,6 +224,7 @@ RAPIOAlgorithm::initializeBaseline()
   // -------------------------------------------------------------------
   // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
   IONetcdf::introduceSelf();
+  IOGrib::introduceSelf();
 
   // Everything should be registered, try initial start up
   Config::initialize();
@@ -817,7 +819,11 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
                         << "'\n");
     std::string typeName = outputData.getTypeName(); // Old one...
     outputData.setTypeName(newProductName);
-    IODataType::writeData(outputData, myOutputDir, myNotifier.get());
+    std::vector<Record> records;
+    IODataType::writeData(outputData, myOutputDir, records);
+    if (myNotifier != nullptr) {
+      myNotifier->writeRecords(records);
+    }
     outputData.setTypeName(typeName); // Restore old type name
                                       // not overriden.  Probably
                                       // doesn't matter.

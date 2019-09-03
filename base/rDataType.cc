@@ -187,3 +187,22 @@ DataType::getUnits()
 
   if (typeName == "DEM") { return ("Meters"); } return ("SI");
 }
+
+bool
+DataType::getSubType(std::string& result) const
+{
+  // FIXME: Should this be separate from the generated subtype?
+  // I'm not why we would override RadialSet elevation with the
+  // give attribute.  If elevation changes we want the new one right?
+  std::string subtype = getDataAttributeString("SubType");
+
+  if (!subtype.empty()) {
+    if (subtype != "NoPRI") { // Special case
+      result = subtype;
+      return (true);
+    }
+  }
+
+  result = getGeneratedSubtype();
+  return (false);
+}

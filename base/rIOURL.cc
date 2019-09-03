@@ -11,106 +11,7 @@ using namespace std;
 
 bool IOURL::TRY_CURL  = true;
 bool IOURL::GOOD_CURL = false;
-
-namespace {
-// Start curl stuff for remote access...
-size_t
-processData(void * ptr, size_t sz, size_t n, void * obj)
-{
-  std::vector<char> * data = (std::vector<char> *)obj;
-  char * start = (char *) ptr;
-  char * end   = start + sz * n;
-  data->insert(data->end(), start, end);
-  return (end - start);
-}
-
-// FIXME: Probably should be in own class for global use
-class CurlConnection {
-public:
-
-  CurlConnection()
-  {
-    curl     = 0;
-    _inited  = false;
-    curlCode = curl_global_init(CURL_GLOBAL_ALL);
-
-    bool success = (curlCode != 0);
-
-    if (success) {
-      LogSevere("Unable to initialize libcurl properly \n");
-    } else {
-      curl = curl_easy_init();
-    }
-  } // end of CurlConnection
-
-  ~CurlConnection()
-  {
-    if (curl != 0) {
-      curl_easy_cleanup(curl);
-    }
-
-    if (isValid()) {
-      curl_global_cleanup();
-    }
-  }
-
-  bool
-  isValid()
-  {
-    return (curlCode == 0);
-  }
-
-  bool
-  isInit()
-  {
-    return (_inited);
-  }
-
-  CURL *
-  connection()
-  {
-    return (curl);
-  }
-
-  bool
-  lazyInit()
-  {
-    bool ok = (curlCode == 0);
-
-    if (!ok) {
-      LogSevere("Unable to initialize libcurl properly \n");
-      return (false);
-    }
-
-    // ok = ok && curl_easy_setopt(curl, CURLOPT_VERBOSE, 10) == 0;
-    ok = ok &&
-      curl_easy_setopt(connection(), CURLOPT_WRITEFUNCTION, processData) == 0;
-    ok = ok && curl_easy_setopt(connection(), CURLOPT_NOSIGNAL, 1) == 0;
-    ok = ok && curl_easy_setopt(connection(), CURLOPT_TIMEOUT, 30) == 0; // 30
-                                                                         // seconds
-    ok = ok && curl_easy_setopt(connection(), CURLOPT_CONNECTTIMEOUT, 30) == 0;
-
-    if (!ok) {
-      LogSevere("Unable to initialize libcurl library.\n");
-      curl_easy_cleanup(connection());
-      return (false);
-    }
-
-    _inited = true;
-    return (true);
-  } // end of lazyInit()
-
-private:
-
-  CURLcode curlCode;
-  CURL * curl; // saves connections
-  bool _inited;
-}; // end of private class CurlConnection
-
-static CurlConnection curlConnection;
-
-// End curl stuff
-}
+std::shared_ptr<CurlConnection> IOURL::myCurlConnection;
 
 int
 IOURL::read(const URL& url, Buffer& buf)
@@ -158,10 +59,10 @@ IOURL::readRaw(const URL& url, Buffer& buf)
     if (!GOOD_CURL) { // 99.999% skip
       // Try to set up curl if we haven't tried
       if (TRY_CURL) {
-        if (!(curlConnection.isValid() && curlConnection.isInit())) {
+        if (!(myCurlConnection->isValid() && myCurlConnection->isInit())) {
           LogInfo("Remote URL.  Initializing curl for remote request ability...\n");
 
-          if (curlConnection.lazyInit()) {
+          if (myCurlConnection->lazyInit()) {
             LogInfo("...curl initialized\n");
             GOOD_CURL = true;
           }
@@ -178,15 +79,15 @@ IOURL::readRaw(const URL& url, Buffer& buf)
     // Read file with curl
     std::string urls = url.toString();
     CURLcode ret     = curl_easy_setopt(
-      curlConnection.connection(), CURLOPT_URL, urls.c_str());
+      myCurlConnection->connection(), CURLOPT_URL, urls.c_str());
 
     if (ret != 0) {
       LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
       return (-1);
     }
     std::vector<char> result; // FIXME: Do we need to copy?
-    curl_easy_setopt(curlConnection.connection(), CURLOPT_WRITEDATA, &(result));
-    ret = curl_easy_perform(curlConnection.connection());
+    curl_easy_setopt(myCurlConnection->connection(), CURLOPT_WRITEDATA, &(result));
+    ret = curl_easy_perform(myCurlConnection->connection());
 
     if (ret != 0) {
       LogSevere("Reading " << url << " failed with err=" << ret << "\n");

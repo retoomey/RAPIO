@@ -79,6 +79,10 @@ public:
     myDataType = d;
   }
 
+  /** Get subtype for writing */
+  bool
+  getSubType(std::string& result) const;
+
   /** Return the TypeName of this DataType. */
   const std::string &
   getTypeName() const;

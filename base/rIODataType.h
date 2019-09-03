@@ -2,7 +2,7 @@
 
 #include <rIO.h>
 #include <rRecord.h>
-#include <rRecordNotifier.h>
+#include <rConfigDataFormat.h>
 
 #include <string>
 #include <vector>
@@ -19,6 +19,7 @@ class ConfigDataFormat;
  * We group reader and writer ability into a single object since typically
  * the libraries, headers, initialization are common for a third party library.
  *
+ * @author Robert Toomey
  */
 class IODataType : public IO {
 public:
@@ -41,10 +42,25 @@ public:
   virtual std::shared_ptr<DataType>
   createObject(const std::vector<std::string>& params) = 0;
 
+  /** Standard get filename from param list */
+  static URL
+  getFileName(const std::vector<std::string>& params);
+
   // ------------------------------------------------------------------------------------
   // Writer stuff
 
 public:
+
+  /** Generate information from datatype for the output URL location and
+   * the specials strings used to generate notification records.
+   * FIXME: still feel this could be cleaner. */
+  static URL
+  generateOutputInfo(const DataType    & dt,
+    const std::string                  & directory,
+    std::shared_ptr<DataFormatSetting> dfs,
+    const std::string                  & suffix,
+    std::vector<std::string>           & params,
+    std::vector<std::string>           & selections);
 
   /**
    *  Chooses the correct data encoder for the particular data type,
@@ -57,81 +73,25 @@ public:
     const std::string      & outputDir,
     std::vector<Record>    & records);
 
-  /**
-   *  Chooses the correct data encoder for the particular data type,
-   *  writes out the product, and appends the records to the given
-   *  vector. The records all have the specified sub-type.
-   *  @return filename (empty if error)
-   */
-  static std::string
-  writeData(const DataType & dt,
-    const std::string      & outputDir,
-    const std::string      & subtype,
-    std::vector<Record>    & records);
-
-  /**
-   *  Chooses the correct data encoder for the particular data type,
-   *  writes out the product, and notifies about the resulting record(s)
-   *  @return filename (empty if error)
-   */
-  static std::string
-  writeData(const DataType & dt,
-    const std::string      & outputDir,
-    RecordNotifier *       notifier);
-
-  /**
-   *  Chooses the correct data encoder for the particular data type,
-   *  writes out the product, and notifies about the resulting record(s)
-   *  @return filename (empty if error)
-   */
-  static std::string
-  writeData(const DataType & dt,
-    const std::string      & outputDir,
-    const std::string      & subtype,
-    RecordNotifier *       notifier);
 protected:
 
   /** Write out this product and append the Record(s) for it
-   *  into the resulting vector. No record will be appended if
-   *  there was a problem. @return filename (empty if error) */
-  virtual std::string
-  encode(const rapio::DataType& dt,
-    const std::string         & directory,
-    bool                      useSubDirs,
-    std::vector<Record>       & records) = 0;
-
-  /** Write out this product and append the Record(s) for it
-   *   (but use the specified subtype string)
    *   into the resulting vector. No record will be appended if
    *   there was a problem. @return filename (empty if error) */
   virtual std::string
-  encode(const rapio::DataType& dt,
-    const std::string         & subtype,
-    const std::string         & directory,
-    bool                      useSubDirs,
-    std::vector<Record>       & records) = 0;
-
-  /** Forward any extra settings specific to encoder from XML file. */
-  virtual void
-  applySettings(const std::map<std::string,
-    std::string>& settings){ }
-
-private:
-
-  static std::shared_ptr<IODataType>
-  getDataWriter(const DataType & dt,
-    const std::string          & outputDir);
-
-  static bool
-  getSubType(const DataType& dt,
-    std::string            & subtype);
+  encode(const rapio::DataType         & dt,
+    const std::string                  & directory,
+    std::shared_ptr<DataFormatSetting> dfs,
+    std::vector<Record>                & records) = 0;
 
 public:
 
+  /** Destroy a IO DataType */
   virtual ~IODataType(){ }
 
 protected:
 
+  /** Create a IO DataType */
   IODataType(){ }
 };
 }

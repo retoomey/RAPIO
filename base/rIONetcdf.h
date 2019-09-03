@@ -19,8 +19,9 @@ public:
 
   /** Write DataType from given ncid (subclasses) */
   virtual bool
-  write(int       ncid,
-    const DataType& dt) = 0;
+  write(int                            ncid,
+    const DataType                     & dt,
+    std::shared_ptr<DataFormatSetting> dfs) = 0;
 
   /** Read a DataType from given ncid */
   virtual std::shared_ptr<DataType>
@@ -35,14 +36,11 @@ public:
  *
  */
 
-// class IONetcdf : public DataWriter, public DataReader {
 class IONetcdf : public IODataType {
 public:
 
   static float MISSING_DATA;
   static float RANGE_FOLDED;
-  static bool CDM_COMPLIANCE;
-  static bool FAA_COMPLIANCE;
 
   // Registering of classes ---------------------------------------------
 
@@ -70,18 +68,6 @@ public:
   virtual std::shared_ptr<DataType>
   createObject(const std::vector<std::string>&) override;
 
-  /** Get filename from param list */
-  static URL
-  getFileName(const std::vector<std::string>& params,
-    size_t                                  startOfFile);
-
-  static URL
-  getFileName(const std::vector<std::string>& params)
-  {
-    // First is 'netcdf', second is filename
-    return (getFileName(params, 1));
-  }
-
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
   readNetcdfDataType(const std::vector<std::string>& args);
@@ -89,27 +75,20 @@ public:
   // WRITING ------------------------------------------------------------
 
   // Virtual functions for DataWriter calls....
+
+  /** Encode a DataType for writing */
   std::string
-  encode(const rapio::DataType& dt,
-    const std::string         & directory,
-    bool                      useSubDirs,
-    std::vector<Record>       & records) override;
+  encode(const rapio::DataType         & dt,
+    const std::string                  & directory,
+    std::shared_ptr<DataFormatSetting> dfs,
+    std::vector<Record>                & records) override;
 
-  std::string
-  encode(const rapio::DataType& dt,
-    const std::string         & subtype,
-    const std::string         & directory,
-    bool                      useSubDirs,
-    std::vector<Record>       & records) override;
-
-  // End DataWriter
-
+  /** Encode a DataType for writing */
   static std::string
-  encodeStatic(const rapio::DataType& dt,
-    const std::string               & subtype,
-    const std::string               & dir,
-    bool                            usesubdirs,
-    std::vector<Record>             & records);
+  writeNetcdfDataType(const rapio::DataType& dt,
+    const std::string                      & dir,
+    std::shared_ptr<DataFormatSetting>     dfs,
+    std::vector<Record>                    & records);
 
   virtual
   ~IONetcdf();

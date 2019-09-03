@@ -209,13 +209,14 @@ NetcdfLatLonGrid::writeLatLonValues(
 }
 
 bool
-NetcdfLatLonGrid::write(int ncid, const DataType& dt)
+NetcdfLatLonGrid::write(int ncid, const DataType& dt,
+  std::shared_ptr<DataFormatSetting> dfs)
 {
   const LatLonGrid& llgc = dynamic_cast<const LatLonGrid&>(dt);
   LatLonGrid& llgrid     = const_cast<LatLonGrid&>(llgc);
 
   return (write(ncid, llgrid, IONetcdf::MISSING_DATA, IONetcdf::RANGE_FOLDED,
-         IONetcdf::CDM_COMPLIANCE, IONetcdf::FAA_COMPLIANCE));
+         dfs->cdmcompliance, dfs->faacompliance));
 }
 
 /** Write routine using c library */
@@ -332,7 +333,7 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
       times[0] = timestamp; // old code is clipping..should we change this?
                             //  double = int
       NETCDF(nc_put_var_double(ncid, timevar, &times[0]));
-    } // end of if ( (CDM_COMPLIANCE) || (FAA_COMPLIANCE) )
+    }
 
     // Start putting data in
     // datavar.writeData( llgrid );

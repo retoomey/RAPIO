@@ -15,10 +15,17 @@ class IndexType;
 /** Class storing lookup settings for a particular data format */
 class DataFormatSetting : public IO {
 public:
-  bool compress;
-  bool subdirs;
+  /** Datatype key these write settings are for */
   std::string datatype;
-  std::shared_ptr<IODataType> prototype;
+
+  bool compress; // Wondering if these can just be 'general'
+  bool subdirs;
+  bool cdmcompliance;
+  bool faacompliance;
+  /** Factory key for IODataType reader/writer */
+  std::string format;
+
+  /** Other general attributes */
   std::map<std::string, std::string> attributes;
 };
 
@@ -36,11 +43,15 @@ private: // Config called
   virtual bool
   readConfig(){ return readInSettings(); }
 
+  /** Add a failsafe default writer configuration for any error */
+  static void
+  addFailsafe();
+
   /** Read in all settings */
   static bool
   readInSettings();
 
   /** Store collection of configurations for different data formats */
-  static std::map<std::string, std::shared_ptr<DataFormatSetting> > mySettings;
+  static std::vector<std::shared_ptr<DataFormatSetting> > mySettings;
 };
 }

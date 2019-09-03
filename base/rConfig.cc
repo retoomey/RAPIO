@@ -191,9 +191,7 @@ Config::getEnvVar(const std::string& name)
 void
 Config::setEnvVar(const std::string& envVarName, const std::string& value)
 {
-  const std::string out(envVarName + "=" + value);
-
-  putenv(const_cast<char *>(out.c_str()));
+  setenv(envVarName.c_str(), value.c_str(), 1);
   LogInfo("Set environment: " << envVarName << " = " << value << "\n");
 }
 

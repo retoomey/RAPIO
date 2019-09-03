@@ -63,7 +63,8 @@ NetcdfBinaryTable::read(const int ncid,
 }
 
 bool
-NetcdfBinaryTable::write(int ncid, const DataType& dt)
+NetcdfBinaryTable::write(int ncid, const DataType& dt,
+  std::shared_ptr<DataFormatSetting> dfs)
 {
   const BinaryTable& btc   = dynamic_cast<const BinaryTable&>(dt);
   BinaryTable& binaryTable = const_cast<BinaryTable&>(btc);

@@ -2,7 +2,7 @@
 
 #include <rIO.h>
 #include <rURL.h>
-// #include <rIOXML.h>
+#include <rCurlConnection.h>
 
 #include <string>
 #include <rBuffer.h>
@@ -55,5 +55,8 @@ protected:
 
   /** Set to true when curl initialization is successfull */
   static bool GOOD_CURL;
+
+  /** Keep a pointer to a Curl connection for remote URL access */
+  static std::shared_ptr<CurlConnection> myCurlConnection;
 };
 }

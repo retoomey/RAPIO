@@ -17,22 +17,78 @@ IODataType::getIODataType(const std::string& sourceType)
   return (Factory<IODataType>::get(sourceType, "IODataType source"));
 }
 
+URL
+IODataType::getFileName(const std::vector<std::string>& params)
+{
+  URL loc;
+
+  const size_t tot_parts(params.size());
+
+  if (tot_parts < 1) {
+    LogSevere("Params missing filename.\n");
+    return (loc);
+  }
+
+  loc = params[0];
+
+  for (size_t j = 1; j < tot_parts; ++j) {
+    loc.path += "/" + params[j];
+  }
+
+  return (loc);
+}
+
 // -----------------------------------------------------------------------------------------
 // Writer stuff
 //
 
 // static
-std::shared_ptr<IODataType>
-IODataType::getDataWriter(const DataType & dt,
-  const std::string                      & outputDir)
+URL
+IODataType::generateOutputInfo(const DataType& dt,
+  const std::string                          & directory,
+  std::shared_ptr<DataFormatSetting>         dfs,
+  const std::string                          & suffix,
+  std::vector<std::string>                   & params,
+  std::vector<std::string>                   & selections)
 {
-  std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt.getDataType());
+  const rapio::Time rsTime      = dt.getTime();
+  const std::string time_string = rsTime.getFileNameString();
+  const std::string dataType    = dt.getTypeName();
 
-  if (dfs != nullptr) {
-    return (dfs->prototype);
+  std::string spec;
+  dt.getSubType(spec);
+
+  // Filename typical example:
+  // dirName/Reflectivity/00.50/TIME.netcdf
+  // dirName/TIME_Reflectivity_00.50.netcdf
+  std::stringstream fs;
+  if (!dfs->subdirs) {
+    // Without subdirs, name files with time first followed by details
+    fs << time_string << "_" << dataType;
+    if (!spec.empty()) { fs << "_" << spec; }
+  } else {
+    // With subdirs, name files datatype first in folders
+    fs << dataType;
+    if (!spec.empty()) { fs << "/" << spec; }
+    fs << "/" << time_string;
   }
-  return (0);
-}
+  fs << "." << suffix;
+  const auto filepath = fs.str();
+
+  // Create record params
+  params.push_back(suffix);
+  params.push_back(directory);
+  Strings::splitWithoutEnds(filepath, '/', &params);
+
+  // Create record selections
+  selections.push_back(time_string);
+  selections.push_back(dataType);
+  if (!spec.empty()) {
+    selections.push_back(spec);
+  }
+
+  return URL(directory + "/" + filepath);
+} // IODataType::generateOutputInfo
 
 // static
 std::string
@@ -40,82 +96,16 @@ IODataType::writeData(const DataType & dt,
   const std::string                  & outputDir,
   std::vector<Record>                & records)
 {
-  std::string subtype;
-
-  if (getSubType(dt, subtype)) {
-    return (writeData(dt, outputDir, subtype, records));
+  // Settings are per datatype, so we need the unique settings for it right now
+  std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt.getDataType());
+  if (dfs != nullptr) {
+    std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(dfs->format,
+        "IODataType writer");
+    if (encoder != nullptr) {
+      return (encoder->encode(dt, outputDir, dfs, records));
+    } else {
+      LogSevere("No IODataType for '" << dfs->format << "', I can't write the data\n");
+    }
   }
-
-  std::shared_ptr<IODataType> encoder = getDataWriter(dt, outputDir);
-
-  if (encoder != nullptr) {
-    const bool useSubDirs = true;
-    std::string result    = encoder->encode(dt, outputDir, useSubDirs, records);
-    return (result);
-  }
-  return (std::string());
-}
-
-std::string
-IODataType::writeData(const DataType & dt,
-  const std::string                  & outputDir,
-  const std::string                  & subtype,
-  std::vector<Record>                & records)
-{
-  std::shared_ptr<IODataType> encoder = getDataWriter(dt, outputDir);
-
-  if (encoder != nullptr) {
-    const bool useSubDirs = true;
-    std::string result    = encoder->encode(dt, subtype,
-        outputDir, useSubDirs, records);
-    return (result);
-  }
-  return (std::string());
-}
-
-std::string
-IODataType::writeData(const DataType & dt,
-  const std::string                  & outputDir,
-  RecordNotifier *                   notifier)
-{
-  std::vector<Record> records;
-  std::string result = writeData(dt, outputDir, records);
-
-  // LogDebug("\tDEBUG! call notifier.writeRecords() " << LINE_ID << "\n");
-  if (notifier != nullptr) {
-    notifier->writeRecords(records);
-  }
-  return (result);
-}
-
-std::string
-IODataType::writeData(const DataType & dt,
-  const std::string                  & outputDir,
-  const std::string                  & subtype,
-  RecordNotifier *                   notifier)
-{
-  std::vector<Record> records;
-  std::string result = writeData(dt, outputDir, subtype, records);
-
-  // LogDebug("\tDEBUG! call notifier.writeRecords() " << LINE_ID << "\n");
-  if (notifier != nullptr) {
-    notifier->writeRecords(records);
-  }
-  return (result);
-}
-
-bool
-IODataType::getSubType(const DataType& dt, std::string& result)
-{
-  std::string subtype = dt.getDataAttributeString("SubType");
-
-  if (subtype == "NoPRI") {
-    return (false);
-  }
-
-  if (!subtype.empty()) {
-    result = subtype;
-    return (true);
-  }
-  return (false);
+  return ("");
 }

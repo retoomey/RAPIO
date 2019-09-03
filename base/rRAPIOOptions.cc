@@ -22,7 +22,7 @@ RAPIOOptions::RAPIOOptions()
 {
   optional("verbose",
     "info",
-    "Error log verbosity levels.  Increasing level prints more stuff:");
+    "Error log verbosity levels.  Increasing level prints more stuff: A given file path will read this value from a file periodically and update.");
   addSuboption("verbose", "severe", "Print only the most severe errors");
   addSuboption("verbose", "info", "Print general information as well as errors");
   addSuboption("verbose", "debug", "Print everything, also turn on signal stacktraces");

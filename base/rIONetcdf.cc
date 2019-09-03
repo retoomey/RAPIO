@@ -9,6 +9,7 @@
 #include "rProcessTimer.h"
 
 // Default built in DataType support
+#include "rNetcdfDataType.h"
 #include "rNetcdfRadialSet.h"
 #include "rNetcdfLatLonGrid.h"
 #include "rNetcdfBinaryTable.h"
@@ -21,10 +22,8 @@
 using namespace rapio;
 using namespace std;
 
-float IONetcdf::MISSING_DATA  = Constants::MissingData;
-float IONetcdf::RANGE_FOLDED  = Constants::RangeFolded;
-bool IONetcdf::CDM_COMPLIANCE = false;
-bool IONetcdf::FAA_COMPLIANCE = false;
+float IONetcdf::MISSING_DATA = Constants::MissingData;
+float IONetcdf::RANGE_FOLDED = Constants::RangeFolded;
 
 void
 IONetcdf::introduce(const std::string & name,
@@ -42,159 +41,131 @@ IONetcdf::getIONetcdf(const std::string& name)
 IONetcdf::~IONetcdf()
 { }
 
-URL
-IONetcdf::getFileName(const std::vector<std::string>& params, size_t start)
-{
-  URL loc;
-
-  const size_t tot_parts(params.size());
-
-  if (tot_parts == start) {
-    LogSevere("IONetcdf: Params missing filename.\n");
-    return (loc);
-  }
-
-  loc = params[start];
-
-  for (size_t j = 1 + start; j < tot_parts; ++j) {
-    loc.path += "/" + params[j];
-  }
-
-  return (loc);
-}
-
 std::shared_ptr<DataType>
 IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
 {
-  // check the argument count
-  if (args.size() < 1) {
-    LogSevere("Not enough arguments to create the object!\n");
-    return (0);
-  }
+  std::shared_ptr<DataType> datatype = nullptr;
 
   // Note, in RAPIO we can read a netcdf file remotely too
-  const URL url(getFileName(args, 0));
-
+  const URL url = getFileName(args);
   Buffer buf;
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
     // Open netcdf directly from buffer memory
     int retval, ncid;
-    retval = nc_open_mem("test", 0, buf.size(), &buf[0], &ncid);
+    const auto name = url.toString();
+    retval = nc_open_mem(name.c_str(), 0, buf.size(), &buf[0], &ncid);
 
-    if (retval != NC_NOERR) {
-      LogSevere("Error reading netcdf " << nc_strerror(retval) << "\n");
-      nc_close(ncid);
-      return (0);
+    if (retval == NC_NOERR) {
+      // This is delegation, if successful we lose our netcdf-ness and become
+      // a general data object.
+      // FIXME: Maybe poll all the objects instead.  This could be slower
+      // though.
+      // Get the datatype from netcdf (How we determine subobject handling)
+      std::string type;
+      //  retval = NetcdfUtil::getAtt(ncid, "MAKEITBREAK", type);
+      retval = NetcdfUtil::getAtt(ncid, Constants::sDataType, type);
+      if (retval == NC_NOERR) { // found
+        std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+        if (fmt != nullptr) {
+          datatype = fmt->read(ncid, url, args);
+        }
+      } else {
+        // FIXME: this might not actually be an error..
+        LogSevere("The 'DataType' netcdf attribute is not in netcdf file\n");
+        // Create generic netcdf object.  Up to algorithm to open/close it
+        datatype = std::make_shared<NetcdfDataType>(buf);
+        datatype->setTypeName("NetcdfData");
+      }
+    } else {
+      LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
     }
 
-    // Get the datatype from netcdf
-    std::string type;
-    NETCDF(NetcdfUtil::getAtt(ncid, Constants::sDataType, type));
-
-    if (type.empty()) {
-      LogSevere("The 'DataType' netcdf attribute is not in netcdf file.\n");
-      return (0);
-    }
-
-    // Get object creator from the datatype
-    std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
-
-    if (fmt == 0) {
-      LogSevere("Can't create IO reader for " << type << "\n");
-      return (0);
-    }
-
-    // std::shared_ptr<DataType> dt = fmt->createObject(ncid, url, args);
-    std::shared_ptr<DataType> dt = fmt->read(ncid, url, args);
     nc_close(ncid);
-
-    return (dt);
+    return (datatype);
+  } else {
+    LogSevere("Unable to pull data from " << url << "\n");
   }
-  return (0);
+  return (datatype);
 } // IONetcdf::readNetcdfDataType
 
+/*
+ * URL
+ * generateOutputInfo(const DataType& dt,
+ * const std::string                         & directory,
+ * std::shared_ptr<DataFormatSetting> dfs,
+ * const std::string                         & suffix,
+ * std::vector<std::string>& params,
+ * std::vector<std::string>& selections)
+ * {
+ * const rapio::Time rsTime = dt.getTime();
+ * const std::string time_string = rsTime.getFileNameString();
+ * const std::string dataType    = dt.getTypeName();
+ * std::string spec;
+ * dt.getSubType(spec);
+ *
+ * // Filename typical example:
+ * // dirName/Reflectivity/00.50/TIME.netcdf
+ * // dirName/TIME_Reflectivity_00.50.netcdf
+ * std::stringstream fs;
+ * if (!dfs->subdirs){
+ *  // Without subdirs, name files with time first followed by details
+ *  fs << time_string << "_" << dataType;
+ *  if (!spec.empty()){ fs  << "_" << spec; }
+ * }else{
+ *  // With subdirs, name files datatype first in folders
+ *  fs << dataType;
+ *  if (!spec.empty()){ fs  << "/" << spec; }
+ *  fs << "/" << time_string;
+ * }
+ * fs << "." << suffix;
+ * const auto filepath = fs.str();
+ *
+ * // Create record params
+ * params.push_back(suffix);
+ * params.push_back(directory);
+ * Strings::splitWithoutEnds(filepath, '/', &params);
+ *
+ * // Create record selections
+ * selections.push_back(time_string);
+ * selections.push_back(dataType);
+ * if (!spec.empty()) {
+ *  selections.push_back(spec);
+ * }
+ *
+ * return URL(directory+"/"+filepath);
+ * }
+ */
+
 std::string
-IONetcdf::encodeStatic(const rapio::DataType& dt,
-  const std::string                         & subtype,
-  const std::string                         & myDirectory,
-  bool                                      myUseSubDirs,
-  std::vector<Record>                       & records)
+IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
+  const std::string                                & myDirectory,
+  std::shared_ptr<DataFormatSetting>               dfs,
+  std::vector<Record>                              & records)
 {
   /** So myLookup "RadialSet" writer for example from the data type.
    * This allows algs etc to replace our IONetcdf with a custom if needed. */
   const std::string type = dt.getDataType();
 
-  // Get object creator from the datatype
   std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
 
-  if (fmt == 0) {
-    LogSevere("Can't create IO reader for " << type << "\n");
+  if (fmt == nullptr) {
+    LogSevere("Can't create IO writer for " << type << "\n");
     return ("");
   }
 
-  // std::stringstream ss;
-  // ss << "Writing new " << type << " netcdf took...\n";
-  // ProcessTimerInfo test(ss.str());
-  rapio::Time rsTime = dt.getTime();
-
-  // check if need to use FilenameDateTime.
-  // This seems to be legacy, but maybe some ancient datasets have this?
-  // rapio::Date filenameDateTime = dt.getFilenameDateTime();
-  // Time filenameDateTime = dt.getFilenameDateTime();
-
-  // if (filenameDateTime.isValid()) {
-  // rsTime = filenameDateTime.getTime();
-  // rsTime = filenameDateTime;
-  // }
-
-  // Filename, example:  dirName/Reflectivity/data_90820212023.netcdf
-  // This means that dirName should encode the location somehow, example
-  // via radar name
-  // std::string time_string = Date(rsTime).get String(false);
-  std::string time_string = rsTime.getFileNameString();
-  std::string dataType    = dt.getTypeName();
-  string fileName         = myDirectory + "/" + dataType;
-  std::string spec        = subtype;
-
-  // LogSevere("FILENAME DATETIME " << filenameDateTime << "\n");
-  // LogSevere("FILENAME RSTIME " << rsTime << "\n");
-  // LogSevere("FILENAME TIMESTRING " << time_string << "\n");
-
-  if (spec == "-1") { spec = dt.getGeneratedSubtype(); }
-
-  if (!spec.empty()) {
-    // fileName += getSeparatorBetweenDataTypeAndSubtype() + spec;
-    if (myUseSubDirs) { fileName += "/"; } else {
-      fileName += "_";
-    } fileName += spec;
-  }
-
-  // fileName += getSeparatorToTimeString() + time_string;
-  if (myUseSubDirs) { fileName += "/"; } else { fileName += "_"; }
-  fileName += time_string;
-
-  // fileName += add;
-  fileName += ".netcdf";
-
-  // set up the selections (for record generation)
+  // Generate the filepath/notification info for this datatype.
+  // Static encoded for now.  Could make it virtual in the formatter
   std::vector<std::string> selections;
-  selections.clear();
-  selections.push_back(time_string);
-  selections.push_back(dataType);
+  std::vector<std::string> params;
+  URL aURL = generateOutputInfo(dt, myDirectory, dfs, "netcdf", params, selections);
 
-  if (spec.size() > 0) {
-    selections.push_back(spec);
-  }
-
-  // ensure the directory exists
-  const URL fileName_url(fileName);
-  const std::string dir(fileName_url.getDirName());
-
+  // Ensure full path to output file exists
+  const std::string dir(aURL.getDirName());
   if (!OS::testFile(dir, OS::FILE_IS_DIRECTORY) && !OS::mkdirp(dir)) {
     LogSevere("Unable to create " << dir << "\n");
-    return (0);
+    return ("");
   }
 
   // Open netcdf file
@@ -203,11 +174,11 @@ IONetcdf::encodeStatic(const rapio::DataType& dt,
 
   // FIXME: should speed test this...
   try {
-    NETCDF(nc_create(fileName_url.path.c_str(), NC_NETCDF4, &ncid));
+    NETCDF(nc_create(aURL.path.c_str(), NC_NETCDF4, &ncid));
   } catch (NetcdfException& ex) {
     nc_close(ncid);
     LogSevere("Netcdf create error: "
-      << fileName_url.path << " " << ex.getNetcdfStr() << "\n");
+      << aURL.path << " " << ex.getNetcdfStr() << "\n");
     return ("");
   }
 
@@ -216,7 +187,7 @@ IONetcdf::encodeStatic(const rapio::DataType& dt,
   bool successful = false;
 
   try {
-    successful = fmt->write(ncid, dt);
+    successful = fmt->write(ncid, dt, dfs);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");
@@ -260,24 +231,10 @@ IONetcdf::encodeStatic(const rapio::DataType& dt,
   // -------------------------------------------------------------
   // Update records to match our written stuff...
   if (successful) {
-    Record rec;
-    std::vector<std::string> params;
-
-    // params.push_back(getFormatName());
-    params.push_back("netcdf");
-    params.push_back(myDirectory);
-    std::string filename(fileName);
-    assert(filename.substr(0, myDirectory.size()) == myDirectory);
-    filename = filename.substr(myDirectory.size(),
-        filename.size() - myDirectory.size());
-
-    // split without ends because empty strings are pointless
-    Strings::splitWithoutEnds(filename, '/', &params); // will add to list
-    rec = Record(params, selections, rsTime);
+    const rapio::Time rsTime = dt.getTime();
+    Record rec(params, selections, rsTime);
     records.push_back(rec);
-
-    // -------------------------------------------------------------
-    return (fileName);
+    return (aURL.path);
   }
   return ("");
 } // IONetcdf::encodeStatic
@@ -285,21 +242,11 @@ IONetcdf::encodeStatic(const rapio::DataType& dt,
 std::string
 IONetcdf::encode(const rapio::DataType& dt,
   const std::string                   & directory,
-  bool                                useSubDirs,
+  std::shared_ptr<DataFormatSetting>  dfs,
   std::vector<Record>                 & records)
 {
-  return (encode(dt, "-1", directory, useSubDirs, records));
-}
-
-std::string
-IONetcdf::encode(const rapio::DataType& dt,
-  const std::string                   & subtype,
-  const std::string                   & directory,
-  bool                                useSubDirs,
-  std::vector<Record>                 & records)
-{
-  // static.. ahhahhrghahg
-  return (IONetcdf::encodeStatic(dt, subtype, directory, useSubDirs, records));
+  // FIXME: Do we need this to be static?
+  return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
 }
 
 void
