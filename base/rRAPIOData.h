@@ -3,6 +3,7 @@
 #include <rAlgorithm.h>
 #include <rRecord.h>
 
+#include <rGribDataType.h>
 #include <string>
 #include <memory>
 
@@ -19,14 +20,15 @@ public:
   Record
   record();
 
-  /** Get datatype as smart ptr of particular type */
+  /** Get datatype as shared_ptr of particular type */
   template <class T> std::shared_ptr<T>
   datatype()
   {
     if (dt == 0) {
       dt = rec.createObject(); // cache it
     }
-    return (dt);
+    std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
+    return (dr);
   }
 
   int

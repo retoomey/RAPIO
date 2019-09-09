@@ -35,8 +35,8 @@ public:
   {
     // Sneaky call deleted resize
     static_cast<DataStore<T> *>(this)->resize(x * y, fill);
-    myX = x;
-    myY = y;
+    myX = x; // ROWS
+    myY = y; // COLS
   }
 
   /** We want extra information on a resize, make it difficult
@@ -68,14 +68,17 @@ public:
 
   /** Set data directly two dimension (Row-major order) */
   inline void
-  set(size_t i, size_t j, T v){ this->d[(i * myX) + j] = v; }
+  set(size_t i, size_t j, T v)
+  {
+    this->d[(i * myY) + j] = v;
+  }
 
   /** Get data directly two dimension (Row-major order)
    * @param i row number
    * @param j col number
    */
   inline T
-  get(size_t i, size_t j) const { return this->d[(i * myX) + j]; }
+  get(size_t i, size_t j) const { return this->d[(i * myY) + j]; }
 
 private:
 

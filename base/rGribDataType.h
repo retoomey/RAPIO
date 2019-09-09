@@ -2,8 +2,10 @@
 
 #include <rDataType.h>
 #include <rBuffer.h>
+#include <rDataStore2D.h>
 #include <rTime.h>
 #include <rLLH.h>
+#include <rIOGrib.h>
 
 #include <memory>
 
@@ -30,7 +32,15 @@ public:
   virtual Time
   getTime() const override;
 
-  // get2DData(values )
+  /** Print the catalog for thie GribDataType.
+   * FIXME: better to be able to get a catalog I think */
+  void
+  printCatalog();
+
+  /** One way to get 2D data, using key and level string like our HMET library */
+  std::shared_ptr<DataStore2D<float> >
+  get2DData(const std::string& key, const std::string& levelstr);
+
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */
   Buffer myBuf;

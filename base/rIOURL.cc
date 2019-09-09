@@ -59,6 +59,9 @@ IOURL::readRaw(const URL& url, Buffer& buf)
     if (!GOOD_CURL) { // 99.999% skip
       // Try to set up curl if we haven't tried
       if (TRY_CURL) {
+        if (myCurlConnection == nullptr) {
+          myCurlConnection = std::make_shared<CurlConnection>();
+        }
         if (!(myCurlConnection->isValid() && myCurlConnection->isInit())) {
           LogInfo("Remote URL.  Initializing curl for remote request ability...\n");
 

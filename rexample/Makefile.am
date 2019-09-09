@@ -5,5 +5,4 @@ bin_PROGRAMS =\
 
 rsimplealg_SOURCES = rsimplealg.cc rSimpleAlg.cc
 rsimplealg_LDADD = \
-   -L../base/ -L../../lib -lrapio -lcurl -lnetcdf -ludunits2 -lbz2 -lgrib2c -ljasper -lpng
-   #-L../base/ -L../../lib -lrapio -lcurl -ludunits2 -lgrib2
+   -L../base/ -L../../lib -lrapio -lcurl -lnetcdf -ludunits2 -lbz2 -ljasper -lpng
