@@ -31,9 +31,6 @@ RAPIOOptions::RAPIOOptions()
 
   // grid2D("GridTest", "nw(34.5, 91.5) se(20.2, 109.5)", "Testing grid 2d");
 
-  optional("logSize", "10000", "Maximum error log size in bytes.");
-  addGroup("logSize", "LOGGING");
-
   optional("logFlush",
     "900",
     "Error log flush (force write) timer set in seconds.");

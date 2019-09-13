@@ -28,7 +28,8 @@ std::string ColorTerm::fBlue = "";
 void
 ColorTerm::wrapWithIndent(size_t currentIndent,
   size_t                         indent,
-  const std::string              & input)
+  const std::string              & input,
+  std::ostream                   & ss)
 {
   size_t myOutputWidth = getOutputWidth();
 
@@ -49,25 +50,25 @@ ColorTerm::wrapWithIndent(size_t currentIndent,
     std::string noansii = Strings::removeANSII(output[0]);
 
     if (noansii.length() <= leftover) {
-      std::cout << output[0] << "\n";
+      ss << output[0] << "\n";
     } else {
-      std::cout << "\n";
+      ss << "\n";
 
       if (indent > 0) {
-        std::cout << setw(indent) << left << ""; // Indent 1 column
+        ss << setw(indent) << left << ""; // Indent 1 column
       }
-      std::cout << output[0] << "\n";
+      ss << output[0] << "\n";
     }
 
     // Dump rest of lines...
     for (size_t i = 1; i < c; i++) {
       if (indent > 0) {
-        std::cout << setw(indent) << left << ""; // Indent 1 column
+        ss << setw(indent) << left << ""; // Indent 1 column
       }
-      std::cout << output[i] << "\n";
+      ss << output[i] << "\n";
     }
   } else {
-    std::cout << input << "\n";
+    ss << input << "\n";
   }
 } // ColorTerm::wrapWithIndent
 

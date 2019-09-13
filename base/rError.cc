@@ -10,22 +10,21 @@
 #include <algorithm>
 #include <iostream>
 
+#include <rColorTerm.h>
+
+#include <boost/log/expressions.hpp>
+#include <boost/format.hpp>
+
 using namespace rapio;
 using namespace std;
 
+namespace logging = boost::log;
+namespace src     = boost::log::sources;
+namespace expr    = boost::log::expressions;
+namespace sinks   = boost::log::sinks;
+
 long Log::bytecounter = 0;
-
-void
-Log::startLogging(std::ostream * s)
-{
-  instance()->myLogStream.addStream(s);
-}
-
-void
-Log::stopLogging(std::ostream * s)
-{
-  instance()->myLogStream.removeStream(s);
-}
+boost::log::sources::severity_logger<boost::log::trivial::severity_level> Log::mySevLog;
 
 void
 Log::pauseLogging()
@@ -39,55 +38,87 @@ Log::restartLogging()
   --(instance()->myPausedLevel);
 }
 
+bool
+Log::isPaused()
+{
+  return (instance()->myPausedLevel > 0);
+}
+
 void
 Log::flush()
 {
-  instance()->myLogStream.flush();
+  instance()->mySink->locked_backend()->flush();
+}
+
+void
+my_formatter(logging::record_view const& rec, logging::formatting_ostream& strm)
+{
+  // Allow pausing of logging in levels
+  if (Log::instance()->isPaused()) { return; }
+
+  // Get the LineID attribute value and put it into the stream
+  // strm << logging::extract< unsigned int >("LineID", rec)  << ":";
+
+
+  // Severity level.
+  // strm << "\033[32m" << boost::format("%6s") % rec[logging::trivial::severity] << ":";
+  strm << rec[logging::trivial::severity] << ":";
+  // strm << "\033[32m" << "<" << rec[logging::trivial::severity] << "> ";
+
+  // __FILE__ attribute
+  logging::value_ref<std::string> fullpath = logging::extract<std::string>("File", rec);
+  // strm << boost::filesystem::path(fullpath.get()).filename().string() << ":";
+  strm << boost::format("%10s") % boost::filesystem::path(fullpath.get()).filename().string() << ":";
+
+  // strm << "\033[0m";
+
+  // __LINE__ attribute
+  strm << logging::extract<int>("Line", rec) << ": ";
+
+  // Finally, put the record message to the stream
+  strm << rec[expr::smessage];
+}
+
+/** Hack around boost missing class? */
+namespace boost
+{
+BOOST_LOG_OPEN_NAMESPACE
+struct empty_deleter {
+  typedef void result_type;
+  void
+  operator () (const volatile void *) const { }
+};
+
+BOOST_LOG_CLOSE_NAMESPACE
 }
 
 Log::Log()
   :
   myCurrentLevel(Severity::SEVERE),
-  myPausedLevel(0),
-  myCycleSize(-1)
+  myPausedLevel(0)
 {
-  // Set the time for future use.
-  myLogStream.addStream(&std::cout);
+  // init sink
+  mySink = boost::make_shared<text_sink>();
 
-  // the null stream is empty so the loop in << will not be executed
+  // We could do files and autorotation all with boost if wanted...
+  // ..but we use our runner scripting
+  // sink->locked_backend()->add_stream(
+  //    boost::make_shared< std::ofstream >("sample.log"));
+
+  // We have to provide an empty deleter to avoid destroying the global stream object
+  boost::shared_ptr<std::ostream> stream(&std::clog, boost::log::v2_mt_posix::empty_deleter());
+  mySink->locked_backend()->add_stream(stream);
+
+  // We flush on a timer
+  mySink->locked_backend()->auto_flush(false);
+  mySink->set_formatter(&my_formatter);
+  logging::core::get()->add_sink(mySink);
+
+  logging::add_common_attributes();
 }
 
 Log::~Log()
 { }
-
-Streams&
-Log::get(Log::Severity req_level)
-{
-  Log * log = instance();
-
-  // should we cycle?
-  if (log->myCycleSize > 0) {
-    log->myLogStream.cycle(log->myCycleSize);
-  }
-
-  // is it severe enough?
-  if (req_level < log->myCurrentLevel) {
-    return (log->myNullStream);
-  }
-
-  // are we myPausedLevel?
-  if (log->myPausedLevel > 0) {
-    return (log->myNullStream);
-  }
-
-  return (log->myLogStream);
-}
-
-void
-Log::setLogSize(int newSize)
-{
-  instance()->myCycleSize = newSize;
-}
 
 void
 LogFlusher::action()
@@ -166,9 +197,8 @@ Log::setFromURL(const URL& aURL)
         found = true;
         // FIXME: maybe develop the setting file more powerfully...
         // FIXME: Actually think doing a HMET style file would be good here
-        int logSize = myCycleSize;
-        int flush   = myLogFlusher->getTimerMilliseconds();
-        setLogSettings(severity, flush, logSize);
+        int flush = myLogFlusher->getTimerMilliseconds();
+        setLogSettings(severity, flush);
         break;
       }
     }
@@ -177,29 +207,40 @@ Log::setFromURL(const URL& aURL)
 }
 
 void
-Log::setLogSettings(Log::Severity severity, int flush, int logSize)
+Log::setLogSettings(Log::Severity severity, int flush)
 {
   // Update severity level to given
   if (severity != myCurrentLevel) {
     myCurrentLevel = severity;
+
+    // BOOST ONLY
+    switch (myCurrentLevel) {
+        case Log::Severity::SEVERE:
+          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::error);
+          break;
+
+        case Log::Severity::INFO:
+          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
+          break;
+
+        case Log::Severity::DEBUG:
+          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
+          break;
+          // We want compile fail so no default
+    }
+
     const bool enableStackTrace = (severity == Severity::DEBUG);
     const bool wantCoreDumps    = (severity == Severity::DEBUG);
     Signals::initialize(enableStackTrace, wantCoreDumps);
   }
-
-  // Update the log size before flush
-  setLogSize(logSize);
 
   // Update flush timer
   myLogFlusher->setTimerMilliseconds(flush);
 }
 
 void
-Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
+Log::setInitialLogSettings(const std::string& level, int flush)
 {
-  // Set the log size
-  setLogSize(logSize);
-
   // Set up a timer to auto flush logs
   std::shared_ptr<LogFlusher> flusher = make_shared<LogFlusher>(flush);
   EventLoop::addTimer(flusher);
@@ -221,6 +262,21 @@ Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
   }
   // FORCED first time
   myCurrentLevel = severity;
+  // BOOST ONLY
+  switch (myCurrentLevel) {
+      case Log::Severity::SEVERE:
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::error);
+        break;
+
+      case Log::Severity::INFO:
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
+        break;
+
+      case Log::Severity::DEBUG:
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
+        break;
+        // We want compile fail so no default
+  }
   const bool enableStackTrace = (severity == Severity::DEBUG);
   const bool wantCoreDumps    = (severity == Severity::DEBUG);
   Signals::initialize(enableStackTrace, wantCoreDumps);
@@ -233,52 +289,5 @@ Log::setInitialLogSettings(const std::string& level, int flush, int logSize)
     realLevel = severityToString(myCurrentLevel);
   }
   LogInfo("Level: " << realLevel << " "
-                    << "Flush: " << myLogFlusher->getTimerMilliseconds() << " milliseconds. "
-                    << "Cycle: " << myCycleSize << " bytes.\n");
+                    << "Flush: " << myLogFlusher->getTimerMilliseconds() << " milliseconds. \n");
 } // Log::setInitialLogSettings
-
-Streams::Streams()
-{ }
-
-size_t
-Streams::addStream(std::ostream * os)
-{
-  for (auto& i:myStreams) {
-    if (i == os) {
-      return 1;
-    }
-  }
-  myStreams.push_back(os);
-  return 1;
-}
-
-void
-Streams::removeStream(std::ostream * os)
-{
-  myStreams.erase(std::remove(myStreams.begin(), myStreams.end(), os), myStreams.end());
-}
-
-void
-Streams::cycle(size_t myCycleSize)
-{
-  for (auto& s:myStreams) {
-    if (s->tellp() > (int) myCycleSize) {
-      // gotta cycle now
-      // time_t now = time(0);
-      // (*(s)) << "\n\n\nLOG cycled. Rest of info is OLD.\n";
-      s->flush();
-      s->seekp(ios::beg);
-      // (*(s)) << "LOG cycled at "
-      //       << ctime(&now)
-      //       << "\n";
-    }
-  }
-}
-
-void
-Streams::flush()
-{
-  for (auto& s:myStreams) {
-    s->flush();
-  }
-}

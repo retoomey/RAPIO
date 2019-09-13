@@ -267,9 +267,8 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 
     // 2.5 setup signals, etc..some stuff based upon arguments
     const int logFlush        = o.getInteger("logFlush");
-    const int logSize         = o.getInteger("logSize");
     const std::string verbose = o.getString("verbose");
-    Log::instance()->setInitialLogSettings(verbose, logFlush, logSize);
+    Log::instance()->setInitialLogSettings(verbose, logFlush);
 
     // if (!o.isInSuboptions("verbose")) {
     // FIXME: Will be the file logging..

@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I@prefix@/include
-AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-50 -finline-functions -ggdb -g3
+AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-50 -finline-functions -ggdb -g3 -DBOOST_LOG_DYN_LINK
 
 lib_LTLIBRARIES =\
   librapio.la

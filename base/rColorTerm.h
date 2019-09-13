@@ -2,6 +2,8 @@
 
 #include <rUtility.h>
 
+#include <iostream>
+
 namespace rapio {
 /** Handles colors and terminal pretty printing abilities for terminal.
  * Used by algorithm to do the pretty printing of algorithm help, etc.
@@ -30,7 +32,8 @@ public:
   static void
   wrapWithIndent(size_t currentIndent,
     size_t              indent,
-    const std::string   & input);
+    const std::string   & input,
+    std::ostream        & z = std::cout);
 
   /** Turn on/off color output */
   static void
