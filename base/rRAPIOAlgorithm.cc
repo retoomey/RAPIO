@@ -14,7 +14,6 @@
 #include "rIOXML.h"
 #include "rDataType.h"
 #include "rIODataType.h"
-#include "rRadialSet.h"
 #include "rIndexType.h"
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"

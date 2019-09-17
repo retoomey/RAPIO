@@ -10,6 +10,24 @@
 using namespace rapio;
 using namespace std;
 
+RadialSet::RadialSet(const LLH& location,
+  const Time                  & time,
+  const Length                & dist_to_first_gate)
+  :
+  myCenter(location),
+  myTime(time),
+  myFirst(dist_to_first_gate)
+{
+  // Lookup for read/write factories
+  myDataType = "RadialSet";
+}
+
+const LLH&
+RadialSet::getRadarLocation() const
+{
+  return (myCenter);
+}
+
 std::string
 RadialSet::getGeneratedSubtype() const
 {
@@ -20,6 +38,44 @@ double
 RadialSet::getElevation() const
 {
   return (myElevAngleDegs);
+}
+
+void
+RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
+{
+  /** As a grid of data */
+  resizeFloat2D("primary", num_radials, num_gates, fill);
+  const size_t gates = getNumRadials(); // Y dim here
+
+  /** Azimuth per radial */
+  resizeFloat1D("Azimuth", gates, 0.0f);
+
+  /** Beamwidth per radial */
+  resizeFloat1D("BeamWidth", gates, 1.0f);
+
+  /** Azimuth spaceing per radial */
+  resizeFloat1D("AzimuthalSpacing", gates, 1.0f);
+
+  /** Gate width per radial */
+  resizeFloat1D("GateWidth", gates, 1000.0f);
+
+  /** Radial time per radial */
+  resizeInt1D("RadialTime", gates, 0);
+
+  /** Nyquist per radial */
+  resizeFloat1D("Nyquist", gates, Constants::MissingData);
+} // reserveRadials
+
+size_t
+RadialSet::getNumGates()
+{
+  return getX();
+}
+
+size_t
+RadialSet::getNumRadials()
+{
+  return getY();
 }
 
 void

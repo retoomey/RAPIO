@@ -9,6 +9,8 @@
 
 #include <netcdf.h>
 
+#include <rDataGrid.h> // macros
+
 using namespace rapio;
 using namespace std;
 
@@ -145,40 +147,40 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     radialSet.setTypeName(aTypeName);
     radialSet.setElevation(elev_angle);
     radialSet.setNyquistVelocityUnit(nyq_unit);
-    radialSet.reserveRadials(num_gates, num_radials);
+    radialSet.resize(num_radials, num_gates);
 
     // ---------------------------------------------------------
     // var1 calls are slow as snails.  Use memory buffer to read all at once
 
     // FIXME: What is vector not in the RadialSet?  We could add it now
     auto azvector = radialSet.getAzimuthVector();
-    NETCDF(nc_get_var_float(ncid, az_var, &(*azvector)[0]));
+    NETCDF(nc_get_var_float(ncid, az_var, azvector->data()));
 
     if (bw_var > -1) {
       auto bwvector = radialSet.getBeamWidthVector();
-      NETCDF(nc_get_var_float(ncid, bw_var, &(*bwvector)[0]));
+      NETCDF(nc_get_var_float(ncid, bw_var, bwvector->data()));
     }
 
     if (azspacing_var > -1) {
       auto azsvector = radialSet.getAzimuthSpacingVector();
-      NETCDF(nc_get_var_float(ncid, azspacing_var, &(*azsvector)[0]));
+      NETCDF(nc_get_var_float(ncid, azspacing_var, azsvector->data()));
     } else {
       // Azimuth spacing defaults to beamwidth if not there
       // and beamwidth is...
       if (bw_var > -1) {
         auto azsvector = radialSet.getAzimuthSpacingVector();
-        NETCDF(nc_get_var_float(ncid, bw_var, &(*azsvector)[0]));
+        NETCDF(nc_get_var_float(ncid, bw_var, azsvector->data()));
       }
     }
 
     if (gw_var > -1) {
       auto gwvector = radialSet.getGateWidthVector();
-      NETCDF(nc_get_var_float(ncid, gw_var, &(*gwvector)[0]));
+      NETCDF(nc_get_var_float(ncid, gw_var, gwvector->data()));
     }
 
     if (radialtime_var > -1) {
       auto rtvector = radialSet.getRadialTimeVector();
-      NETCDF(nc_get_var_int(ncid, radialtime_var, &(*rtvector)[0]));
+      NETCDF(nc_get_var_int(ncid, radialtime_var, rtvector->data()));
     } else {
       // Ok, What are we trying to be done with these times?
 
@@ -195,7 +197,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
     if (nyq_var > -1) {
       auto nqvector = radialSet.getNyquistVector();
-      NETCDF(nc_get_var_float(ncid, radialtime_var, &(*nqvector)[0]));
+      NETCDF(nc_get_var_float(ncid, radialtime_var, nqvector->data()));
     } else {
       // FIXME: Fill with default.  Humm if stored in attributes shouldn't need
       // a giant vector of it right?
@@ -216,8 +218,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       const size_t count2[] = { num_radials, num_gates };
       auto data = radialSet.getFloat2D("primary");
       NETCDF(nc_get_vara_float(ncid, data_var, start2, count2,
-        // radialSet.getDataVector()));
-        &(*data)[0]));
+        data->data()));
       // Do we need this?
       radialSet.replaceMissing(FILE_MISSING_DATA, FILE_RANGE_FOLDED);
     }
@@ -428,11 +429,11 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     auto asvector = radialSet.getAzimuthSpacingVector();
     auto gwvector = radialSet.getGateWidthVector();
     auto rtvector = radialSet.getRadialTimeVector();
-    NETCDF(nc_put_var_float(ncid, azvar, &(*azvector)[0]));
-    NETCDF(nc_put_var_float(ncid, bwvar, &(*bwvector)[0]));
-    NETCDF(nc_put_var_float(ncid, azspacingvar, &(*asvector)[0]));
-    NETCDF(nc_put_var_float(ncid, gwvar, &(*gwvector)[0]));
-    NETCDF(nc_put_var_int(ncid, radialtimevar, &(*rtvector)[0]));
+    NETCDF(nc_put_var_float(ncid, azvar, azvector->data()));
+    NETCDF(nc_put_var_float(ncid, bwvar, bwvector->data()));
+    NETCDF(nc_put_var_float(ncid, azspacingvar, asvector->data()));
+    NETCDF(nc_put_var_float(ncid, gwvar, gwvector->data()));
+    NETCDF(nc_put_var_int(ncid, radialtimevar, rtvector->data()));
 
     // FIXME: Nyquist not right yet.  Works for raw copy, not if units changed...
 
@@ -447,8 +448,12 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     if (unit == "") { // No nyquest was ever set
     } else {
       auto nvector = radialSet.getFloat1D("Nyquist");
+      #ifdef BOOST_ARRAY
+      std::fill(nvector->begin(), nvector->end(), default_nyquist);
+      #else
       nvector->fill(default_nyquist);
-      NETCDF(nc_put_var_float(ncid, nyquistvar, &(*nvector)[0]));
+      #endif
+      NETCDF(nc_put_var_float(ncid, nyquistvar, nvector->data()));
     }
 
     /** Does it go in correctly? lol */
@@ -458,7 +463,7 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     //   radialSet.getDataVector()));
     auto data = radialSet.getFloat2D("primary");
     NETCDF(nc_put_vara_float(ncid, datavar, start2, count2,
-      &(*data)[0]));
+      data->data()));
 
     /*  FIXME: disabling quality.  We _really_ want multiband
      *    // Write out current radial from any quality...
@@ -501,7 +506,7 @@ NetcdfRadialSet::getTestObject(
   radialSet.setElevation(elev_angle);
 
   // Allow in-line vector storage to work and not crash
-  radialSet.reserveRadials(num_gates, num_radials);
+  radialSet.resize(num_radials, num_gates);
   radialSet.setNyquistVelocityUnit(nyq_unit);
 
   auto azimuths   = radialSet.getFloat1D("Azimuth");
@@ -512,10 +517,17 @@ NetcdfRadialSet::getTestObject(
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree
 
+    #ifdef BOOST_ARRAY
+    (*azimuths)[i]   = start_az; // different?
+    (*beamwidths)[i] = beam_width;
+    (*azspacings)[i] = azspacing;
+    (*gatewidths)[i] = gate_width;
+    #else
     azimuths[i]   = start_az;
     beamwidths[i] = beam_width;
     azspacings[i] = azspacing;
     gatewidths[i] = gate_width;
+    #endif
     for (size_t j = 0; j < num_gates; ++j) {
       radialSet.set(i, j, i);
     }

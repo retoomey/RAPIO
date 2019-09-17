@@ -26,58 +26,14 @@ public:
   virtual Time
   getTime() const override;
 
+  /** Construct a radial set */
   RadialSet(const LLH& location,
     const Time       & time,
-    const Length     & dist_to_first_gate)
-    :
-    myCenter(location),
-    myTime(time),
-    myFirst(dist_to_first_gate)
-  {
-    // Lookup for read/write factories
-    myDataType = "RadialSet";
-
-    /** Push back primary band.  This is the primary moment
-     * of the Radial set */
-    addFloat2D("primary", 0, 0); // Force add zero for moment...
-  }
-
-  /** Sparse2D template wants this method (read) */
-  void
-  set(size_t i, size_t j, const float& value) final override
-  {
-    myFloat2DData[0].set(i, j, value); // FIXME: API?
-  }
-
-  /** Replace a custom missing/range with our constants */
-  void
-  replaceMissing(const float missing, const float range)
-  {
-    for (auto& i:myFloat2DData[0]) {
-      float * v = &i;
-      if (*v == missing) {
-        *v = Constants::MissingData;
-      } else if (*v == range) {
-        *v = Constants::RangeFolded;
-      }
-    }
-  }
-
-  /** Sparse2D template wants this method.
-   * FIXME: not we currently pass data type, but we're
-   * in the middle of changing from IS to HAS */
-  void
-  fill(const float& value) final override
-  {
-    std::fill(myFloat2DData[0].begin(), myFloat2DData[0].end(), value);
-  }
+    const Length     & dist_to_first_gate);
 
   /** Return the location of the radar. */
   const LLH&
-  getRadarLocation() const
-  {
-    return (myCenter);
-  }
+  getRadarLocation() const;
 
   /** Elevation of radial set */
   double
@@ -87,73 +43,40 @@ public:
   void
   setElevation(const double& targetElev);
 
-  /** Storage for radials as 2D and 1D vectors  */
-  void
-  reserveRadials(size_t num_gates, size_t num_radials)
-  {
-    /** As a grid of data */
-    myFloat2DData[0].resize(num_gates, num_radials, Constants::DataUnavailable);
-    const size_t ydim = myFloat2DData[0].getY();
-
-    /** Azimuth per radial */
-    addFloat1D("Azimuth", ydim);
-
-    /** Beamwidth per radial */
-    addFloat1D("BeamWidth", ydim, 1.0f);
-
-    /** Azimuth spaceing per radial */
-    addFloat1D("AzimuthalSpacing", ydim, 1.0f);
-
-    /** Gate width per radial */
-    addFloat1D("GateWidth", ydim, 1000.0f);
-
-    /** Radial time per radial */
-    addInt1D("RadialTime", ydim, 0);
-
-    /** Nyquist per radial */
-    addFloat1D("Nyquist", ydim, Constants::MissingData);
-  } // reserveRadials
-
   // -----------------------
   // Vector access
 
   /** Allow reader/writer access to full vector */
-  DataStore<float> *
+  RAPIO_1DF *
   getAzimuthVector(){ return getFloat1D("Azimuth"); }
 
   /** Allow reader/writer access to full vector */
-  DataStore<float> *
+  RAPIO_1DF *
   getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
 
   /** Allow reader/writer access to full vector */
-  DataStore<float> *
+  RAPIO_1DF *
   getAzimuthSpacingVector(){ return getFloat1D("AzimuthalSpacing"); }
 
   /** Allow reader/writer access to full vector */
-  DataStore<float> *
+  RAPIO_1DF *
   getGateWidthVector(){ return getFloat1D("GateWidth"); }
 
   /** Allow reader/writer access to full vector */
-  DataStore<int> *
+  RAPIO_1DI *
   getRadialTimeVector(){ return getInt1D("RadialTime"); }
 
   /** Allow reader/writer access to full vector */
-  DataStore<float> *
+  RAPIO_1DF *
   getNyquistVector(){ return getFloat1D("Nyquist"); }
 
   /** Get number of gates for radial set */
   size_t
-  getNumGates()
-  {
-    return myFloat2DData[0].getX();
-  }
+  getNumGates();
 
   /** Get number of radials for radial set */
   size_t
-  getNumRadials()
-  {
-    return myFloat2DData[0].getY();
-  }
+  getNumRadials();
 
   /** Distance from radar center to the first gate */
   Length
@@ -175,6 +98,10 @@ public:
   {
     return myNyquistUnit;
   }
+
+  /** Resize the data structure */
+  virtual void
+  resize(size_t rows, size_t cols, const float fill = 0) override;
 
 protected:
   // I think these could be considered projection information

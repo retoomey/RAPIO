@@ -134,6 +134,13 @@ public:
     return &d[0];
   }
 
+  /** Same as begin, match with boost multi-array */
+  T *
+  data()
+  {
+    return &d[0];
+  }
+
   /** Simple end points to the last element in memory block */
   T *
   end()
@@ -155,6 +162,9 @@ public:
       #endif
       memcpy(d, o.d, sizeof(T) * o.s);
       s = o.s;
+    } else {
+      d = 0;
+      s = 0;
     }
     #ifdef MEM_CHECK
     LogSevere("D ALLOCATE COPY (" << s << ") --> " << d

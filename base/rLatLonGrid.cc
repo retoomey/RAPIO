@@ -27,10 +27,6 @@ LatLonGrid::LatLonGrid(
   myDataType = "LatLonGrid";
 
   init(location, time, lat_spacing, lon_spacing);
-
-  /** Push back primary band.  This is the primary moment
-   * of the LatLonGrid set */
-  addFloat2D("primary", cols, rows, value);
 }
 
 /** Set what defines the lat lon grid in spacetime */

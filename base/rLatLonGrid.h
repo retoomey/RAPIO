@@ -34,17 +34,6 @@ public:
     const float lat_spacing,
     const float lon_spacing);
 
-  /** resizes to a ROW x COL grid and sets each cell to `value' */
-  void
-  resize(size_t rows, size_t cols, const float fill = 0)
-  {
-    //  myNumLats = rows;
-    //  myNumLons = cols;
-    // myData.resize(rows * cols, fill);
-    // FIXME: Unavailable default?
-    myFloat2DData[0].resize(cols, rows, fill);
-  }
-
   // ------------------------------------------------------
   // Getting the 'metadata' on the 2d array
   virtual LLH
@@ -77,26 +66,13 @@ public:
   size_t
   getNumLats()
   {
-    return myFloat2DData[0].getY();
+    return getY();
   }
 
   size_t
   getNumLons()
   {
-    return myFloat2DData[0].getX();
-  }
-
-  /** Sparse2D template wants this method (read) */
-  void
-  set(size_t i, size_t j, const float& v) override
-  {
-    myFloat2DData[0].set(i, j, v);
-  }
-
-  void
-  fill(const float& value) override
-  {
-    std::fill(myFloat2DData[0].begin(), myFloat2DData[0].end(), value);
+    return getX();
   }
 
   virtual std::string

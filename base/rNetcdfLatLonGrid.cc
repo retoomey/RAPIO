@@ -104,14 +104,12 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
         const size_t count[] = { 1, num_lats, num_lons }; // 1 time, lat_count,
                                                           // lon_count
         NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          &(*data)[0]));
-        // llgrid.getDataVector()));
+          data->data()));
       } else {
         const size_t start[] = { 0, 0 };               // lat, lon
         const size_t count[] = { num_lats, num_lons }; // lat_count, lon_count
         NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          &(*data)[0]));
-        // llgrid.getDataVector()));
+          data->data()));
       }
     }
 
@@ -349,13 +347,12 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
       const size_t count[] = { 1, lat_size, lon_size }; // 1 time, lat_count,
                                                         // lon_count
       NETCDF(nc_put_vara_float(ncid, data_var, start, count,
-        &(*data)[0]));
+        data->data()));
     } else {
       const size_t start[] = { 0, 0 };               // lat, lon
       const size_t count[] = { lat_size, lon_size }; // lat_count, lon_count
       NETCDF(nc_put_vara_float(ncid, data_var, start, count,
-        &(*data)[0]));
-      // llgrid.getDataVector()));
+        data->data()));
     }
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with LatLonGrid: " << ex.getNetcdfStr()

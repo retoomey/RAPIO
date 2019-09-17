@@ -5,8 +5,71 @@
 
 #include <vector>
 
+#include <boost/multi_array.hpp>
+
 namespace rapio {
-/** DataGrid stores command access abilities for doing grided data.
+// Bunch of macros to allow plug and play here
+// This uses boost over my DataStore.  It's a bit
+// slower but the API is cleaner and expands to dimensions better
+// I'm keeping DataStore for now
+#define BOOST_ARRAY
+
+#ifdef BOOST_ARRAY
+
+# define RAPIO_1DF boost::multi_array<float, 1>
+# define RAPIO_1DI boost::multi_array<int, 1>
+
+# define RAPIO_2DF boost::multi_array<float, 2>
+
+#else
+
+# define RAPIO_1DF DataStore<float>
+# define RAPIO_1DI DataStore<int>
+# define RAPIO_2DF DataStore2D<float>
+
+#endif // ifdef BOOST_ARRAY
+
+/*
+ * Class for storing names to data array objects
+ * @author Robert Toomey
+ */
+template <typename T>
+class DataNameLookup : public Data
+{
+  /** Store names for data */
+  std::vector<std::string> myNames;
+
+  /** Store data for names */
+  std::vector<T> myNamedData;
+
+public:
+
+  /** Get data for this key */
+  T *
+  get(const std::string& name)
+  {
+    size_t count = 0;
+
+    for (auto i:myNames) {
+      if (i == name) {
+        return (&(myNamedData[count]));
+      }
+      count++;
+    }
+    return nullptr;
+  }
+
+  /** Get data with a given key */
+  void
+  add(const std::string& name, T aT)
+  {
+    // FIXME: duplicate check/replace?
+    myNamedData.push_back(aT);
+    myNames.push_back(name);
+  }
+};
+
+/** DataGrid acts as a name to storage database.
  * This has common access/memory storage for multiband RadialSets
  * and LatLonGrids, etc.
  *
@@ -16,131 +79,96 @@ namespace rapio {
 class DataGrid : public DataType {
 public:
 
-  // For the moment, we support int and float only
+  // 1D stuff ----------------------------------------------------------
 
   /** Get back object so can call methods on it */
-  DataStore<float> *
-  getFloat1D(const std::string& name)
-  {
-    // Hunt names for float vector
-    size_t count = 0;
-
-    for (auto i:myFloat1DNames) {
-      if (i == name) {
-        return (&(myFloat1DData[count]));
-      }
-      count++;
-    }
-    return nullptr;
-  }
+  RAPIO_1DF *
+  getFloat1D(const std::string& name);
 
   /** Add named float data with initial size and value */
   void
-  addFloat1D(const std::string& name, size_t size, float value)
-  {
-    // FIXME: check existance.
-    myFloat1DData.push_back(DataStore<float>(size, value));
-    myFloat1DNames.push_back(name);
-  }
+  addFloat1D(const std::string& name, size_t size, float value);
 
   /** Add named float data with initial size and value (uninitialized) */
   void
-  addFloat1D(const std::string& name, size_t size)
-  {
-    myFloat1DData.push_back(DataStore<float>(size));
-    myFloat1DNames.push_back(name);
-  }
+  addFloat1D(const std::string& name, size_t size);
+
+  /** Resize a float data */
+  void
+  resizeFloat1D(const std::string& name, size_t size, float value);
 
   /** Get a pointer data for quick transversing */
-  DataStore<int> *
-  getInt1D(const std::string& name)
-  {
-    // Hunt names for int vector
-    size_t count = 0;
-
-    for (auto i:myInt1DNames) {
-      if (i == name) {
-        // return (&(myInt1DData[count][0]));
-        return (&myInt1DData[count]);
-      }
-      count++;
-    }
-    return nullptr;
-  }
+  RAPIO_1DI *
+  getInt1D(const std::string& name);
 
   /** Add named int data with initial size and value */
   void
-  addInt1D(const std::string& name, size_t size, int value)
-  {
-    myInt1DData.push_back(DataStore<int>(size, value));
-    myInt1DNames.push_back(name);
-  }
+  addInt1D(const std::string& name, size_t size, int value);
 
   /** Add named int data with initial size and value (uninitialized) */
   void
-  addInt1D(const std::string& name, size_t size)
-  {
-    myInt1DData.push_back(DataStore<int>(size));
-    myInt1DNames.push_back(name);
-  }
+  addInt1D(const std::string& name, size_t size);
+
+  /** Resize a float data */
+  void
+  resizeInt1D(const std::string& name, size_t size, int value);
+
+  // 2D stuff ----------------------------------------------------------
+
+  /** Get back object so can call methods on it */
+  RAPIO_2DF *
+  getFloat2D(const std::string& name);
 
   /** Add named 2D float data with initial size and value */
   void
-  addFloat2D(const std::string& name, size_t numx, size_t numy, float value)
-  {
-    // FIXME: check existance.
-    myFloat2DData.push_back(DataStore2D<float>(numx, numy));
-    myFloat2DNames.push_back(name);
-  }
+  addFloat2D(const std::string& name, size_t numx, size_t numy, float value);
 
   /** Add named float data with initial size and value */
   void
-  addFloat2D(const std::string& name, size_t numx, size_t numy)
-  {
-    // FIXME: check existance.
-    myFloat2DData.push_back(DataStore2D<float>(numx, numy));
-    myFloat2DNames.push_back(name);
-  }
+  addFloat2D(const std::string& name, size_t numx, size_t numy);
 
-  /** Get back object so can call methods on it */
-  DataStore<float> *
-  getFloat2D(const std::string& name)
-  {
-    // Hunt names for float vector
-    size_t count = 0;
+  /** Resize a 2D float data */
+  void
+  resizeFloat2D(const std::string& name, size_t rows, size_t cols, float value);
 
-    for (auto i:myFloat2DNames) {
-      if (i == name) {
-        return (&(myFloat2DData[count]));
-      }
-      count++;
-    }
-    return nullptr;
-  }
+  // ----------------------------------------------------------------------
+  // Access of the 'root' 2d data grid
+  // FIXME: Only some things have this, not sure its place is here
+
+  /** Sparse2D template wants this method (read) */
+  void
+  set(size_t i, size_t j, const float& v) override;
+
+  /** Sparse2D template wants this to fill the default data 2d grid */
+  void
+  fill(const float& value) override;
+
+  /** Get the number of Y for primary 2D data grid */
+  size_t
+  getY();
+
+  /** Get the number of X for primary 2D data grid */
+  size_t
+  getX();
+
+  /** Replace missing/range in the primary 2D data grid */
+  void
+  replaceMissing(const float missing, const float range);
+
+  /** Resizes primary 2D grid to a ROW x COL grid and sets each cell to `value' */
+  virtual void
+  resize(size_t rows, size_t cols, const float fill = 0);
+  // ----------------------------------------------------------------------
 
 protected:
 
-  // Database of vectors.  Vectors work well with netcdf for
-  // reading/writing quickly.  We 'could' use more metadata/wrapper class
-  // and maybe group these better.  We intend this to be fast and hidden
-  // so I'm ok with duplication here at moment.
+  /** Float 1D name to lookup */
+  DataNameLookup<RAPIO_1DF> myFloat1D;
 
-  /** Store 1D vectors of float data with various sizes */
-  std::vector<DataStore<float> > myFloat1DData;
+  /** Int 1D name to lookup */
+  DataNameLookup<RAPIO_1DI> myInt1D;
 
-  /** Store 1D vector names */
-  std::vector<std::string> myFloat1DNames;
-
-  /** Store 1D vectors of integer data with various sizes */
-  std::vector<DataStore<int> > myInt1DData;
-
-  /** Store 1D vector names */
-  std::vector<std::string> myInt1DNames;
-
-  /** Store 2D raster vector names */
-  std::vector<std::string> myFloat2DNames;
-
-  /** The raster bands of 2D raster data  */
-  std::vector<DataStore2D<float> > myFloat2DData;
+  /** Float 2D name to lookup */
+  DataNameLookup<RAPIO_2DF> myFloat2D;
 };
 }
