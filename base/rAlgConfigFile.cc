@@ -4,10 +4,6 @@
 #include "rStrings.h"
 #include "rIOXML.h"
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-
 using namespace rapio;
 using namespace std;
 
@@ -73,22 +69,25 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>               & optionlist,
   std::vector<std::string>               & valuelist)
 {
-  // Get WDSS2 XML document at the URL
-  std::shared_ptr<XMLDocument> configDoc =
-    IOXML::readXMLDocument(path);
+  auto conf = IOXML::readURL(path);
 
-  if (configDoc != nullptr) {
-    XMLElement config;
-    config = configDoc->getRootElement();
-    XMLElementList options;
-    config.getChildren("option", &options);
-
-    // Grab all the pairs for configuration
-    for (auto i:options) {
-      optionlist.push_back(i->attribute("letter"));
-      valuelist.push_back(i->attribute("value"));
+  try{
+    if (conf != nullptr) {
+      for (auto r: conf->get_child("w2algxml")) {
+        if (r.first == "option") {
+          const auto option = r.second.get("<xmlattr>.letter", "");
+          const auto value  = r.second.get("<xmlattr>.value", "");
+          if (!option.empty()) {
+            optionlist.push_back(option);
+            valuelist.push_back(value);
+          }
+        }
+      }
+      return true;
     }
-    return true;
+  }catch (std::exception e) {
+    LogSevere("Error parsing XML from " << path << "\n");
+    return false;
   }
   return false;
 }
@@ -99,40 +98,18 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   std::vector<std::string>                & optionlist,
   std::vector<std::string>                & valuelist)
 {
-  // Set meta information
-  std::shared_ptr<XMLElement> root = std::make_shared<XMLElement>("w2algxml");
-  XMLDocument output(root);
-  root->setAttribute("program", program);
-
-  // Store each option value in XML
+  // Create document tree
+  boost::property_tree::ptree tree;
+  tree.put("w2algxml.<xmlattr>.program", program);
   for (size_t i = 0; i < optionlist.size(); ++i) {
-    std::shared_ptr<XMLElement> element = std::make_shared<XMLElement>("option");
-    element->setAttribute("letter", optionlist[i]);
-    element->setAttribute("value", valuelist[i]);
-    root->addChild(element);
+    boost::property_tree::ptree option;
+    option.add("<xmlattr>.letter", optionlist[i]);
+    option.add("<xmlattr>.value", valuelist[i]);
+    tree.add_child("w2algxml.option", option);
   }
 
-  if (path.empty()) {
-    IOXML::write(std::cout, output); // std::cout for capturing, no log here
-  } else {
-    if (path.isLocal()) {
-      std::string filename = path.toString();
-      std::ofstream myfile;
-      myfile.open(filename.c_str());
-      if (myfile.fail()) {
-        LogSevere("Couldn't write XML to " << filename << " for some reason\n");
-      } else {
-        IOXML::write(myfile, output);
-        myfile.close();
-        LogInfo("Successfully wrote parameter XML to " << filename << "\n");
-        return true;
-      }
-    } else {
-      LogSevere("Can't write to a remote URL at " << path << "\n");
-    }
-  }
-
-  return false;
+  // Write document tree
+  return (IOXML::writeURL(path, tree, true));
 } // AlgXMLConfigFile::writeConfigURL
 
 bool
@@ -187,7 +164,11 @@ AlgFLATConfigFile::writeConfigURL(const URL& path,
   std::ofstream of;
   bool close = false;
 
-  if (path.empty()) {
+  std::string base = path.getBaseName();
+  Strings::toLower(base);
+  bool console = base == ".config";
+
+  if (console) {
     buf = std::cout.rdbuf();
   } else {
     if (path.isLocal()) {

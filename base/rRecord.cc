@@ -201,13 +201,12 @@ Record::getSubtype(std::string& out)
 }
 
 void
-Record::readParams(const XMLElement & e,
-  std::vector<std::string>          & v,
-  const std::string                 & indexPath)
+Record::readParams(const std::string & params,
+  const std::string                  & changeAttr,
+  std::vector<std::string>           & v,
+  const std::string                  & indexPath)
 {
   // does it have a change attribute?
-  const std::string& changeAttr = e.attribute("changes");
-
   if (!changeAttr.empty()) {
     // FIXME: Ancient indexes have this.  Might need to implement it
     static bool once = true;
@@ -219,10 +218,10 @@ Record::readParams(const XMLElement & e,
   }
 
   // Split text into vector
-  Strings::split(e.getText(), &v);
+  Strings::split(params, &v);
 
   if (v.empty()) {
-    LogSevere("Record has empty parameter tag: " << e.getText() << '\n');
+    LogSevere("Record has empty parameter tag: " << params << '\n');
     return;
   }
 
@@ -252,26 +251,25 @@ Record::readParams(const XMLElement & e,
 } // Record::readParams
 
 bool
-Record::readXML(const XMLElement& itemNode,
-  const std::string             & indexPath,
-  size_t                        indexLabel) // Not sure these should be passed
+Record::readXML(const boost::property_tree::ptree& itemNode,
+  const std::string                              & indexPath,
+  size_t                                         indexLabel) // Not sure these should be passed
 {
   // FIXME: debating this being a constructor.  Want the bool return though
-  const XMLElementList& itemDescr = itemNode.getChildren();
 
-  for (auto& i: itemDescr) {
-    const XMLElement& e = *(i);
-    const std::string& tag(e.getTagName());
+  // Well boost makes this easier...
+  const auto fractional = itemNode.get("time.<xmlattr>.fractional", 0.0f); // what's quickest?
+  const auto timelong   = itemNode.get("time", 0l);
 
-    if (tag == "time") {
-      myTime = Time::SecondsSinceEpoch(atol(e.getText().c_str()),
-          atof(e.getAttributeValue("fractional", "0.0").c_str()));
-    } else if (tag == "params") {
-      readParams(e, myParams, indexPath);
-    } else if (tag == "selections") {
-      Strings::split(e.getText(), &mySelections);
-    }
-  }
+  myTime = Time::SecondsSinceEpoch(timelong, fractional);
+
+  const auto params     = itemNode.get("params", "");
+  const auto changeAttr = itemNode.get("params.<xmlattr>.changes", "");
+  // Might be faster just to inline here
+  readParams(params, changeAttr, myParams, indexPath);
+
+  const auto selections = itemNode.get("selections", ""); // what's quickest?
+  Strings::split(selections, &mySelections);
 
   if (myParams.empty() || mySelections.empty()) {
     LogSevere("Ill-formed XML record. Lacks tags for params and/or mySelections \n");
@@ -282,7 +280,7 @@ Record::readXML(const XMLElement& itemNode,
   mySelections[0] = myTime.getRecordTimeString();
   myIndexCount    = indexLabel;
 
-  /** Abort record if not wanted */
+  // Abort record if not wanted
   if (theRecordFilter != nullptr) {
     if (!theRecordFilter->wanted(*this)) { return false; }
   }

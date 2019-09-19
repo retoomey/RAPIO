@@ -4,6 +4,7 @@
 #include "rError.h"
 #include "rConstants.h"
 #include "rNetcdfUtil.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 using namespace std;
@@ -210,6 +211,8 @@ bool
 NetcdfLatLonGrid::write(int ncid, const DataType& dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
+  ProcessTimer("Writing LatLonGrid");
+
   const LatLonGrid& llgc = dynamic_cast<const LatLonGrid&>(dt);
   LatLonGrid& llgrid     = const_cast<LatLonGrid&>(llgc);
 

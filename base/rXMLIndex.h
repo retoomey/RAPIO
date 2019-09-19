@@ -55,13 +55,6 @@ public:
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory);
 
-  /** Convenience routine to handle a collection of xml elements */
-  static void
-  handleElements(const std::string & indexPath,
-    const XMLElementList           & elements,
-    //  std::vector<Record>   & out,
-    size_t                         indexLabel);
-
   /** Handle realtime vs. archive mode stuff */
   virtual bool
   initialRead(bool realtime) override;
@@ -74,13 +67,6 @@ public:
   {
     return (readok);
   }
-
-  /** extracts records from an XML element; can handle both
-   *  item and itemlist tags. */
-  //  static void extractRecords(const XMLElement & itemNode,
-  //                             const std::string  & indexPath,
-  //                             std::vector<Record>& rec,
-  //                             size_t indexLabel);
 
 public:
 

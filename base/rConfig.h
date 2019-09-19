@@ -70,8 +70,8 @@ public:
   getAbsoluteForRelative(const std::string& relativePath);
 
   /* Read from a string, hunt in config */
-  static std::shared_ptr<XMLDocument>
-  huntXMLDocument(const std::string& pathname);
+  static std::shared_ptr<boost::property_tree::ptree>
+  huntXML(const std::string& pathname);
 
   /** Use this to introduce new subclasses. */
   static void

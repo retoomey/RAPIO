@@ -856,7 +856,7 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   // Check for configuration output and write out now...
   std::string ofileName = getString("oconfig");
   if (!ofileName.empty()) { // help already processed now
-    writeConfigFile(fileName);
+    writeConfigFile(ofileName);
     exit(1);
   }
 

@@ -195,15 +195,15 @@ Config::setEnvVar(const std::string& envVarName, const std::string& value)
   LogInfo("Set environment: " << envVarName << " = " << value << "\n");
 }
 
-std::shared_ptr<XMLDocument>
-Config::huntXMLDocument(const std::string& pathName)
+std::shared_ptr<boost::property_tree::ptree>
+Config::huntXML(const std::string& pathName)
 {
   // FIXME: assuming always relative path?  Should
   // we just hide it all from caller?
   const URL loc(getAbsoluteForRelative(pathName));
 
   if (!loc.empty()) {
-    return (IOXML::readXMLDocument(loc));
+    return (IOXML::readURL(loc));
   }
   return (nullptr);
 }

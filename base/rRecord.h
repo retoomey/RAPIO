@@ -130,15 +130,16 @@ public:
 
   /** Read param tag of record. */
   virtual void
-  readParams(const XMLElement & e,
-    std::vector<std::string>  & params,
-    const std::string         & indexPath);
+  readParams(const std::string & params,
+    const std::string          & changes,
+    std::vector<std::string>   & v,
+    const std::string          & indexPath);
 
   /** Record can read contents of (typically) an <item> tag and fill itself */
   virtual bool
-  readXML(const XMLElement& itemNode,
-    const std::string     &indexPath,
-    size_t                indexLabel);
+  readXML(const boost::property_tree::ptree& itemNode,
+    const std::string                      &indexPath,
+    size_t                                 indexLabel);
 
   /** Record can generate file level meta data. Typically these go inside
    *  <meta> xml tags. */

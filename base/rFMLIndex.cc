@@ -113,21 +113,19 @@ FMLIndex::initialRead(bool realtime)
 bool
 FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 {
-  std::shared_ptr<XMLDocument> doc(IOXML::readXMLDocument(filename));
+  auto doc = IOXML::readURL(filename);
 
-  if (doc == nullptr) {
-    LogSevere("Failed to parse .fml file " << filename << "\n");
-    return false;
-  } else {
-    const XMLElementList& elements = doc->getChildren();
-    for (auto i:elements) {
-      if (i->getTagName() == "item") {
-        return (rec.readXML(*i, indexPath, getIndexLabel()));
-      } else if (i->getTagName() == "meta") {
-        // FIXME: we aren't using it.  Probably should
-        // meta = read it. Still not set on meta design...
-      }
-    }
+  /*
+   * auto meta = doc->get_child_optional("meta");
+   * if (meta != boost::none){
+   *  // FIXME: use meta data?
+   * }
+   */
+
+  auto item = doc->get_child_optional("item");
+
+  if (item != boost::none) {
+    return (rec.readXML(item.get(), indexPath, getIndexLabel()));
   }
   return false;
 }

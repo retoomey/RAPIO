@@ -233,6 +233,12 @@ RAPIOAlgorithm::initializeBaseline()
 void
 RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 {
+  // Make sure initial logging setup
+  // FIXME: chicken-egg problem.  We want configured logging from config,
+  // but things print to log before config read, etc.
+  // Need more work on ordering
+  Log::instance();
+
   // Since this is called by a main function
   // wrap to catch any uncaught exception.
   try  {
@@ -269,13 +275,6 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     const std::string verbose = o.getString("verbose");
     Log::instance()->setInitialLogSettings(verbose, logFlush);
 
-    // if (!o.isInSuboptions("verbose")) {
-    // FIXME: Will be the file logging..
-    //  LogSevere("Unimplemented verbose.  We will check for URL here later\n");
-    //  exit(1);
-    // }
-    // const bool enableStackTrace = (verbose == "debug");
-    // const bool wantCoreDumps    = (verbose == "debug");
     initializeBaseline();
 
     // 3. Process options, inputs, outputs that were successfully parsed

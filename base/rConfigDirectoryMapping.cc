@@ -2,6 +2,7 @@
 
 #include "rStrings.h"
 #include "rIOXML.h"
+#include "rError.h"
 
 #include <memory>
 
@@ -12,16 +13,20 @@ std::map<std::string, std::string> ConfigDirectoryMapping::myMappings;
 bool
 ConfigDirectoryMapping::readInSettings()
 {
-  std::shared_ptr<XMLDocument> doc = Config::huntXMLDocument("misc/directoryMapping.xml");
+  auto doc = Config::huntXML("misc/directoryMapping.xml");
 
-  if (doc != nullptr) {
-    const XMLElementList& mappings = doc->getRootElement().getChildren();
-
-    for (auto& i:mappings) {
-      const std::string& from(i->getAttribute("from"));
-      const std::string& to(i->getAttribute("to"));
-      myMappings[from] = to;
+  try{
+    if (doc != nullptr) {
+      for (const auto r: doc->get_child("directoryMapping")) {
+        // Snag attributes
+        const auto l = r.second.get_child("<xmlattr>");
+        // const auto from = r.second.get("<xmlattr>.from", "");
+        const auto from = l.get("from", "");
+        const auto to   = l.get("to", "");
+      }
     }
+  }catch (std::exception e) {
+    LogSevere("Error parsing XML from misc/directoryMapping.xml\n");
   }
   // We can work without any mappings at all
   return true;

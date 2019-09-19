@@ -6,9 +6,6 @@
 #include "rOS.h"
 #include "rRecordQueue.h"
 
-#include "rConfig.h"
-#include "rConfigDirectoryMapping.h"
-
 #include <iostream>
 
 using namespace rapio;
@@ -44,77 +41,33 @@ XMLIndex::createIndexType(
   return (result);
 }
 
-/*
- * XMLIndex::extractRecords(const XMLElement & item,
- *                       const std::string  & indexPath,
- *                       std::vector<Record>& records,
- *                       size_t indexLabel)
- * {
- * if (item.getTagName() == "item") {
- *  const size_t at = records.size();
- *  records.resize(at+1);
- *  if (!records[at].readXML(item, indexPath, indexLabel)){
- *    records.pop_back();
- *  }
- * }
- * }
- */
-
-
-void
-XMLIndex::handleElements(
-  const std::string   & indexPath,
-  const XMLElementList& elements,
-  // std::vector<Record>   & out, // FIXME: for subclass we'd need pointers...
-  size_t              indexLabel)
-{
-  // We're adding to the passed in out vector
-  //  const size_t startSize = out.size();
-  //  out.reserve(startSize + elements.size());
-
-  // Grab all the records...
-  for (auto i:elements) {
-    //  extractRecords(*i, indexPath, out, indexLabel);
-    //
-    if (i->getTagName() == "item") {
-      /*
-       *  const size_t at = out.size();
-       *  out.resize(at+1);
-       *  if (!out[at].readXML(*i, indexPath, indexLabel)){
-       *    out.pop_back();
-       *  }
-       */
-      Record rec;
-      if (rec.readXML(*i, indexPath, indexLabel)) {
-        Record::theRecordQueue->addRecord(rec);
-      }
-    }
-  }
-}
-
 /** Called by RAPIOAlgorithm to gather initial records from source */
 bool
 XMLIndex::initialRead(bool realtime)
 {
-  // FIXME: realtime has no meaning to xml archive...do we turn
-  // off reading in realtime mode?  We need _more_ modes.
+  auto doc2 = IOXML::readURL(myURL);
 
-  // For an XML file, currently already read all records on 'start'
-  // Don't sort or add..RAPIOAlgorithm will handle it
-  // Preread can get pretty big.  Pulling by item could be nice
-  std::shared_ptr<XMLDocument> doc(IOXML::readXMLDocument(myURL));
+  if (doc2 != nullptr) {
+    const auto indexPath  = IOIndex::getIndexPath(myURL);
+    const auto indexLabel = getIndexLabel();
 
-  if (doc != nullptr) {
-    // add all the immediate children of the top-level node.
-    // These correspond to the items in the XML document.
-    const XMLElement& docElem      = doc->getRootElement();
-    const XMLElementList& elements = docElem.getChildren();
-    const std::string indexPath    = IOIndex::getIndexPath(myURL);
-
-    // handleElements(indexPath, elements, out, getIndexLabel());
-    handleElements(indexPath, elements, getIndexLabel());
-    readok = true;
+    try{
+      // Each child of the full ptree
+      for (auto r: doc2->get_child("codeindex")) { // Can boost get first child?
+        if (r.first == "item") {                   // do we need to check? Safest but slower
+          // Note priority queue time sorts all initial indexes
+          Record rec;
+          if (rec.readXML(r.second, indexPath, indexLabel)) {
+            Record::theRecordQueue->addRecord(rec);
+          }
+        }
+      }
+    }catch (std::exception e) {
+      LogSevere("Error parsing codeindex XML\n");
+      return (false);
+    }
+    return (true);
   }
 
-  return (readok);
+  return (false);
 }

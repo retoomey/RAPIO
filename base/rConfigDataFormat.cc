@@ -45,45 +45,39 @@ bool
 ConfigDataFormat::readInSettings()
 {
   // go ahead and read the XML file
-  std::shared_ptr<XMLDocument> doc =
-    Config::huntXMLDocument("misc/dataformat");
+  auto doc = Config::huntXML("misc/dataformat");
 
   if (doc == nullptr) {
     LogDebug("No dataformat file found or readable, using built in defaults.\n");
     addFailsafe();
     return true;
   }
-
-  std::vector<std::shared_ptr<XMLElement> > setting_elements;
-  doc->getRootElement().getChildren("setting", &setting_elements);
-
   bool haveDefault = false;
-  for (auto& i: setting_elements) {
-    DataFormatSetting setting;
-    const std::string& datatype = i->getAttribute("datatype");
-    setting.datatype = datatype;
 
-    LogDebug("Reading dataformat settings..." << datatype << "\n");
-    setting.compress = true;
-    i->readValidAttribute("compression", setting.compress);
+  try{
+    if (doc != nullptr) {
+      for (const auto r: doc->get_child("dataformat")) {
+        if (r.first == "setting") {
+          DataFormatSetting setting;
 
-    setting.subdirs = true;
-    i->readValidAttribute("subdirs", setting.subdirs);
+          // Snag attributes
+          const auto l = r.second.get_child("<xmlattr>");
+          setting.datatype      = l.get("datatype", "");
+          setting.format        = l.get("format", "");
+          setting.compress      = l.get("compression", true);
+          setting.subdirs       = l.get("subdirs", true);
+          setting.cdmcompliance = l.get("cdmcompliance", false);
+          setting.faacompliance = l.get("faacompliance", false);
 
-    setting.cdmcompliance = false;
-    i->readValidAttribute("cdmcompliance", setting.cdmcompliance);
-
-    setting.faacompliance = false;
-    i->readValidAttribute("faacompliance", setting.faacompliance);
-
-    std::string format = i->getAttributeValue("format",
-        "netcdf");
-    setting.format = format;
-
-    setting.attributes = i->getAttributes();
-
-    mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
-    if (datatype == "default") { haveDefault = true; }
+          // Store all attributes generally.  This includes the specials above
+          for (auto r: l) {
+            setting.attributes[r.first.data()] = r.second.data();
+          }
+        }
+      }
+    }
+  }catch (std::exception e) {
+    LogSevere("Error parsing XML from misc/dataformat\n");
   }
 
   if (!haveDefault) {

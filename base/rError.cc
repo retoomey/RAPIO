@@ -250,7 +250,7 @@ Log::setInitialLogSettings(const std::string& level, int flush)
   // NOTE: initial action on watcher here requires above work done first
   Severity severity = Severity::SEVERE;
   if (stringToSeverity(level, severity)) { // parsed ok
-    LogSevere("Log setting parsed ok " << severityToString(severity) << "\n");
+    // LogSevere("Log setting parsed ok " << severityToString(severity) << "\n");
   } else {
     // Set up a timer to auto try the possible URL every so often.
     // FIXME: No way to configure timer at moment.  We need to balance

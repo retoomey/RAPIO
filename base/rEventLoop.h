@@ -7,28 +7,12 @@
 
 namespace rapio {
 class EventTimer;
-// class EventHandler;
 
-/**
- * Callbacks for main loop to process
+/** Main event loop of the running application,
+ * which polls registered synchronous timers to do all our work.
  *
- * @see EventLoop
+ * @author Robert Toomey
  */
-
-/*
- * class EventCallback : public Event {
- * public:
- *
- ** This is the function that will be invoked when the event happens.  *
- **virtual void actionPerformed() = 0;
- **
- ** Meant to be subclassed. *
- **virtual ~EventCallback() {}
- **};
- */
-
-
-/** Event loop of the running application */
 class EventLoop : public Event {
 public:
 
@@ -40,30 +24,17 @@ public:
     myTimers.push_back(t);
   }
 
-  /** Add event generator to the main loop */
-  // static void addEventHandler(std::shared_ptr<EventHandler>c) {
-  //   myEventHandlers.push_back(c);
-  // }
-
   /** Start the application main loop */
   static void
   doEventLoop();
 
+  /** Create an event loop */
+  EventLoop(){ }
+
+  /** Destroy an event loop */
   virtual ~EventLoop(){ }
 
 private:
-
-  /** The set of all the event callbacks */
-  // static std::vector<EventCallback *>allEventActions;
-
-  /** The amount of time that we sleep when there are no callbacks. */
-  static size_t LOOP_IDLE_MS;
-
-  /** Max numbe of call backs we can handle at once */
-  static size_t MAX_CALLBACKS;
-
-  /** Things that generate events */
-  // static std::vector<std::shared_ptr<EventHandler> >myEventHandlers;
 
   /** Timer/heartbeats in main loop */
   static std::vector<std::shared_ptr<EventTimer> > myTimers;

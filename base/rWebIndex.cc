@@ -102,15 +102,23 @@ WebIndex::readRemoteRecords()
   // XMLIndex's ctor, plus a new "lastRead" attribute in the toplevel.
   // The lastRead needs to be kept for next time to give the server a
   // point of reference of what "new" means for us.
-  std::shared_ptr<XMLDocument> doc(IOXML::readXMLDocument(tmpURL));
+  auto doc = IOXML::readURL(tmpURL);
 
-  // myReadOK = doc.is_ptr_valid();
-  myReadOK = (doc != 0);
+  myReadOK = (doc != nullptr);
 
   if (myReadOK) {
-    const XMLElement& docElem(doc->getRootElement());
-    const std::string & lastReadStr(docElem.getAttribute("lastRead"));
-    const std::string & lastReadNSStr(docElem.getAttribute("lastReadNS"));
+    // FIXME: test somewhere with w2server access make sure the XML
+    // ported properly
+    auto rectest = doc->get_child_optional("records");
+    if (rectest == boost::none) {
+      LogSevere("Couldn't read records tag from webindex xml return\n");
+      return false;
+    }
+
+    auto recs          = rectest.get();
+    auto lastReadStr   = recs.get("lastRead", "");
+    auto lastReadNSStr = recs.get("lastReadNS", "");
+
     const long long lastRead(lastReadStr.empty() ? -1 : atoll(
         lastReadStr.c_str()));
     const long lastReadNS(lastReadNSStr.empty() ? 0 : atol(lastReadNSStr.c_str()));
@@ -137,12 +145,20 @@ WebIndex::readRemoteRecords()
       }
 
       if (myFoundNew) {
-        const XMLElementList& elements(docElem.getChildren());
-        const std::string indexPath = indexDataPath.toString(); // (IOIndex ::
-                                                                // getIndexPath
-                                                                // ( myURL ));
-        XMLIndex::handleElements(indexPath, elements, getIndexLabel());
-        LogDebug("Polled: " << tmpURL << " New:(" << elements.size()
+        const std::string indexPath = indexDataPath.toString();
+        size_t count = 0;
+        for (auto r: recs) {       // Can boost get first child?
+          if (r.first == "item") { // do we need to check? Safest but slower
+            // Note priority queue time sorts all initial indexes
+            Record rec;
+            if (rec.readXML(r.second, indexPath, getIndexLabel())) {
+              Record::theRecordQueue->addRecord(rec);
+            }
+            count++;
+          }
+        }
+
+        LogDebug("Polled: " << tmpURL << " New:(" << count
                             << ")\n");
       } else {
         LogDebug("Polled: " << tmpURL << "\n");
