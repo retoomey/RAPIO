@@ -25,15 +25,18 @@ ConfigDataFormat::addFailsafe()
   // Defaults for a netcdf output writer.
   // Note, each of the writers can have whatever they want
   // FIXME: probably don't need special flag fields
+  // Also need a constructor
   s.compress = true;
   s.subdirs  = true;
   s.datatype = "default";
   s.attributes["datatype"]         = "default";
   s.attributes["compression"]      = "true";
   s.attributes["compressionlevel"] = "6";
-  s.attributes["subdirs"]       = "true";
-  s.attributes["sparsegrid"]    = "never";
+  s.attributes["subdirs"]    = "true";
+  s.attributes["sparsegrid"] = "never";
+  s.cdmcompliance = false;
   s.attributes["cdmcompliance"] = "false";
+  s.faacompliance = false;
   s.attributes["faacompliance"] = "false";
 
   mySettings.push_back(std::make_shared<DataFormatSetting>(s));
@@ -62,7 +65,10 @@ ConfigDataFormat::readInSettings()
 
           // Snag attributes
           const auto l = r.second.get_child("<xmlattr>");
-          setting.datatype      = l.get("datatype", "");
+          setting.datatype = l.get("datatype", "");
+          if (setting.datatype == "default") {
+            haveDefault = true;
+          }
           setting.format        = l.get("format", "");
           setting.compress      = l.get("compression", true);
           setting.subdirs       = l.get("subdirs", true);
@@ -73,6 +79,7 @@ ConfigDataFormat::readInSettings()
           for (auto r: l) {
             setting.attributes[r.first.data()] = r.second.data();
           }
+          mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
         }
       }
     }

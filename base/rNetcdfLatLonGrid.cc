@@ -3,7 +3,6 @@
 #include "rLatLonGrid.h"
 #include "rError.h"
 #include "rConstants.h"
-#include "rNetcdfUtil.h"
 #include "rProcessTimer.h"
 
 using namespace rapio;
@@ -31,15 +30,13 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc,
 std::shared_ptr<DataType>
 NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
 {
-  int retval;
-
   try {
     // Stock global attributes
     LLH location;
     Time time;
     std::vector<std::string> all_attr;
     SentinelDouble FILE_MISSING_DATA, FILE_RANGE_FOLDED;
-    NetcdfUtil::getGlobalAttr(ncid,
+    IONetcdf::getGlobalAttr(ncid,
       all_attr,
       &location,
       &time,
@@ -51,15 +48,15 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
     const std::string aDataType = all_attr[IONetcdf::ncDataType];
 
     // Some other global attributes that are here
-    float lat_spacing, lon_spacing;                                   //
-    NETCDF(NetcdfUtil::getAtt(ncid, "LatGridSpacing", &lat_spacing)); // diff
-    NETCDF(NetcdfUtil::getAtt(ncid, "LonGridSpacing", &lon_spacing)); // diff
+    float lat_spacing, lon_spacing;                                 //
+    NETCDF(IONetcdf::getAtt(ncid, "LatGridSpacing", &lat_spacing)); // diff
+    NETCDF(IONetcdf::getAtt(ncid, "LonGridSpacing", &lon_spacing)); // diff
 
     // Read our first two dimensions and sizes (sparse will have three)
     int data_var, data_num_dims, lat_dim, lon_dim;
     size_t num_lats, num_lons;
 
-    NetcdfUtil::readDimensionInfo(ncid,
+    IONetcdf::readDimensionInfo(ncid,
       aTypeName.c_str(), &data_var, &data_num_dims,
       "Lat", &lat_dim, &num_lats,
       "Lon", &lon_dim, &num_lons);
@@ -86,7 +83,7 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
 
     if (sparse) {
       // LogSevere("LAT LON GRID IS SPARSE!!!\n");
-      NetcdfUtil::readSparse2D(ncid, data_var, num_lats, num_lons,
+      IONetcdf::readSparse2D(ncid, data_var, num_lats, num_lons,
         FILE_MISSING_DATA, FILE_RANGE_FOLDED, llgrid);
     } else {
       // LogSevere("LAT LON GRID IS ___NOT___ SPARSE!!!\n");
@@ -94,7 +91,7 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       // See if we have the compliance stuff unlimited time var...changes how we
       // read in the grid...
       int time_dim;
-      retval = nc_inq_dimid(ncid, "time", &time_dim);
+      int retval = nc_inq_dimid(ncid, "time", &time_dim);
 
       if (retval != NC_NOERR) { retval = nc_inq_dimid(ncid, "Time", &time_dim); }
       bool haveTimeDim = (retval == NC_NOERR);
@@ -114,8 +111,8 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       }
     }
 
-    NetcdfUtil::readUnitValueList(ncid, llgrid); // Can read now with value
-                                                 // object...
+    IONetcdf::readUnitValueList(ncid, llgrid); // Can read now with value
+                                               // object...
 
     return (LatLonGridSP);
   } catch (NetcdfException& ex) {
@@ -137,44 +134,42 @@ NetcdfLatLonGrid::writeCFHeader(
   int * time_var  // New time variable
 )
 {
-  int retval;
-
   // Add an extra dimension of time iff when in compliance.
   NETCDF(nc_def_dim(ncid, "time", 1, time_dim));
 
   // ### Set up the Dimension Variables and add them to the ncfile ###
-  NETCDF(NetcdfUtil::addVar1D(ncid, "Lat", "degrees_north", NC_FLOAT, lat_dim,
+  NETCDF(IONetcdf::addVar1D(ncid, "Lat", "degrees_north", NC_FLOAT, lat_dim,
     latvar));
-  NETCDF(NetcdfUtil::addAtt(ncid, "long_name", "latitude", *latvar));
-  NETCDF(NetcdfUtil::addAtt(ncid, "standard_name", "latitude", *latvar));
+  NETCDF(IONetcdf::addAtt(ncid, "long_name", "latitude", *latvar));
+  NETCDF(IONetcdf::addAtt(ncid, "standard_name", "latitude", *latvar));
 
   // FIXME :: should call name of dim (broken in old code too)
   // latvar->add_att("_CoordinateAxisType", lat_dim->name() );
   // latvar->add_att("_CoordinateAxisType", "Lat");
-  NETCDF(NetcdfUtil::addVar1D(ncid, "Lon", "degrees_east", NC_FLOAT, lon_dim,
+  NETCDF(IONetcdf::addVar1D(ncid, "Lon", "degrees_east", NC_FLOAT, lon_dim,
     lonvar));
-  NETCDF(NetcdfUtil::addAtt(ncid, "long_name", "longitude", *lonvar));
-  NETCDF(NetcdfUtil::addAtt(ncid, "standard_name", "longitude", *lonvar));
+  NETCDF(IONetcdf::addAtt(ncid, "long_name", "longitude", *lonvar));
+  NETCDF(IONetcdf::addAtt(ncid, "standard_name", "longitude", *lonvar));
 
   // FIXME :: should call name of dim (broken in old code too)
   // lonvar->add_att("_CoordinateAxisType", "Lon");
-  NETCDF(NetcdfUtil::addVar1D(ncid, "time", "seconds since 1970-1-1 0:0:0",
+  NETCDF(IONetcdf::addVar1D(ncid, "time", "seconds since 1970-1-1 0:0:0",
     NC_DOUBLE, *time_dim, time_var));
-  NETCDF(NetcdfUtil::addAtt(ncid, "long_name", "time", *time_var));
-  NETCDF(NetcdfUtil::addAtt(ncid, "calendar", "standard", *time_var));
+  NETCDF(IONetcdf::addAtt(ncid, "long_name", "time", *time_var));
+  NETCDF(IONetcdf::addAtt(ncid, "calendar", "standard", *time_var));
 
   // FIXME :: should call name of dim
-  NETCDF(NetcdfUtil::addAtt(ncid, "_CoordinateAxisType", "Time", *time_var));
+  NETCDF(IONetcdf::addAtt(ncid, "_CoordinateAxisType", "Time", *time_var));
 
   // ### Add Conventions Global Attribute :: needed for compliance ###
-  NETCDF(NetcdfUtil::addAtt(ncid, "title", "NMQ Product"));
-  NETCDF(NetcdfUtil::addAtt(ncid, "institution", "NSSL"));
-  NETCDF(NetcdfUtil::addAtt(ncid, "source", "MRMS/WDSS2"));
+  NETCDF(IONetcdf::addAtt(ncid, "title", "NMQ Product"));
+  NETCDF(IONetcdf::addAtt(ncid, "institution", "NSSL"));
+  NETCDF(IONetcdf::addAtt(ncid, "source", "MRMS/WDSS2"));
 
-  // NETCDF(NetcdfUtil::addAtt(ncid, "history", "..."));
-  // NETCDF(NetcdfUtil::addAtt(ncid, "references", "..."));
-  // NETCDF(NetcdfUtil::addAtt(ncid, "comment", "..."));
-  NETCDF(NetcdfUtil::addAtt(ncid, "Conventions", "CF-1.4"));
+  // NETCDF(IONetcdf::addAtt(ncid, "history", "..."));
+  // NETCDF(IONetcdf::addAtt(ncid, "references", "..."));
+  // NETCDF(IONetcdf::addAtt(ncid, "comment", "..."));
+  NETCDF(IONetcdf::addAtt(ncid, "Conventions", "CF-1.4"));
 } // NetcdfLatLonGrid::writeCFHeader
 
 void
@@ -190,8 +185,6 @@ NetcdfLatLonGrid::writeLatLonValues(
   const size_t lon_size  // Lon count
 )
 {
-  int retval;
-
   float cLat = oLatDegs;
 
   for (size_t i = 0; i < lat_size; ++i) {
@@ -228,8 +221,6 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
   const bool cdm_compliance,
   const bool faa_compliance)
 {
-  int retval;
-
   try {
     // LatLonGrid is a 2D field, so 2 dimensions
     const size_t lon_size = llgrid.getNumLons();
@@ -269,43 +260,43 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
     std::string type  = llgrid.getTypeName();
 
     if (faa_compliance) {
-      NETCDF(NetcdfUtil::addVar3D(ncid, type.c_str(), units.c_str(), NC_FLOAT,
+      NETCDF(IONetcdf::addVar3D(ncid, type.c_str(), units.c_str(), NC_FLOAT,
         time_dim, lat_dim, lon_dim, &data_var));
     } else {
-      NETCDF(NetcdfUtil::addVar2D(ncid, type.c_str(), units.c_str(), NC_FLOAT,
+      NETCDF(IONetcdf::addVar2D(ncid, type.c_str(), units.c_str(), NC_FLOAT,
         lat_dim, lon_dim, &data_var));
     }
 
     if ((cdm_compliance) || (faa_compliance)) {
-      NETCDF(NetcdfUtil::addAtt(ncid, "long_name", llgrid.getTypeName().c_str(),
+      NETCDF(IONetcdf::addAtt(ncid, "long_name", llgrid.getTypeName().c_str(),
         data_var));
-      NETCDF(NetcdfUtil::addAtt(ncid, "_FillValue", (float) Constants::MissingData,
+      NETCDF(IONetcdf::addAtt(ncid, "_FillValue", (float) Constants::MissingData,
         data_var));
     }
 
     // old code always adds this..probably not needed but we will keep to match
     // for now
-    NETCDF(NetcdfUtil::addAtt(ncid, "NumValidRuns", -1, data_var));
+    NETCDF(IONetcdf::addAtt(ncid, "NumValidRuns", -1, data_var));
 
     // End constructor NetcdfDataVariable
 
     // All the attributes of this file are added here
-    if (!NetcdfUtil::addGlobalAttr(ncid, llgrid, "LatLonGrid")) {
+    if (!IONetcdf::addGlobalAttr(ncid, llgrid, "LatLonGrid")) {
       return (false);
     }
 
     const float latgrid_spacing = llgrid.getLatSpacing();
-    NETCDF(NetcdfUtil::addAtt(ncid, "LatGridSpacing", (double) latgrid_spacing));
+    NETCDF(IONetcdf::addAtt(ncid, "LatGridSpacing", (double) latgrid_spacing));
 
     // ^^^^^ Noticed old code writes as a double even with float precision
 
     // const float longrid_spacing = llgrid.getGridSpacing().second;
     const float longrid_spacing = llgrid.getLonSpacing();
-    NETCDF(NetcdfUtil::addAtt(ncid, "LonGridSpacing", (double) longrid_spacing));
+    NETCDF(IONetcdf::addAtt(ncid, "LonGridSpacing", (double) longrid_spacing));
 
-    NETCDF(NetcdfUtil::addAtt(ncid, "MissingData", missing));
+    NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
 
-    NETCDF(NetcdfUtil::addAtt(ncid, "RangeFolded", rangeFolded));
+    NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
 
     // Non netcdf-4/hdf5 require separation between define and data...
     // netcdf-4 doesn't care though

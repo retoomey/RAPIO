@@ -63,7 +63,6 @@ librapio_la_SOURCES =\
   rNetcdfBinaryTable.cc\
   rNetcdfRadialSet.cc\
   rNetcdfLatLonGrid.cc\
-  rNetcdfUtil.cc\
   rOption.cc\
   rOptionList.cc\
   rAlgConfigFile.cc\
@@ -136,7 +135,6 @@ pkginclude_HEADERS =\
   rNetcdfBinaryTable.h\
   rNetcdfRadialSet.h\
   rNetcdfLatLonGrid.h\
-  rNetcdfUtil.h\
   rOption.h\
   rOptionList.h\
   rSentinelDouble.h\

@@ -4,7 +4,6 @@
 #include "rError.h"
 #include "rUnit.h"
 #include "rConstants.h"
-#include "rNetcdfUtil.h"
 #include "rProcessTimer.h"
 
 #include <netcdf.h>
@@ -34,14 +33,12 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
   const vector<string>& params)
 {
   try {
-    int retval;
-
     // Stock global attributes
     LLH location;
     Time time;
     std::vector<std::string> all_attr;
     SentinelDouble FILE_MISSING_DATA, FILE_RANGE_FOLDED;
-    NetcdfUtil::getGlobalAttr(ncid,
+    IONetcdf::getGlobalAttr(ncid,
       all_attr,
       &location,
       &time,
@@ -55,13 +52,13 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     // Some other global attributes that are here
     // Get Elevation of the RadialSet
     float elev;
-    NETCDF(NetcdfUtil::getAtt(ncid, "Elevation", &elev));
+    NETCDF(IONetcdf::getAtt(ncid, "Elevation", &elev));
     const double elev_angle = elev;
 
     // Use global range to first gate if we have it
     Length rangeToFirstGate = Length();
     float tempFloat;
-    retval = NetcdfUtil::getAtt(ncid, "RangeToFirstGate", &tempFloat);
+    int retval = IONetcdf::getAtt(ncid, "RangeToFirstGate", &tempFloat);
 
     if (retval == NC_NOERR) {
       if ((!isinff(tempFloat)) && (!isnanf(tempFloat))) {
@@ -77,7 +74,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     int data_var, data_num_dims, gate_dim, az_dim;
     size_t num_gates, num_radials;
 
-    NetcdfUtil::readDimensionInfo(ncid,
+    IONetcdf::readDimensionInfo(ncid,
       aTypeName.c_str(), &data_var, &data_num_dims,
       "Gate", &gate_dim, &num_gates,
       "Azimuth", &az_dim, &num_radials);
@@ -132,7 +129,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
     if (nyq_var > -1) {
       // Ok to fail.  Old code bug: We were looking at "Units" not "units".
-      retval = NetcdfUtil::getAtt(ncid, Constants::Units, nyq_unit, nyq_var);
+      retval = IONetcdf::getAtt(ncid, Constants::Units, nyq_unit, nyq_var);
     }
     int quality_var = -1;
     nc_inq_varid(ncid, "DataQuality", &quality_var);
@@ -210,7 +207,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     const bool sparse = (data_num_dims < 2);
 
     if (sparse) {
-      NetcdfUtil::readSparse2D(ncid, data_var, num_radials, num_gates,
+      IONetcdf::readSparse2D(ncid, data_var, num_radials, num_gates,
         FILE_MISSING_DATA, FILE_RANGE_FOLDED, radialSet);
     } else {
       /** We use a grid per moment */
@@ -223,8 +220,8 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       radialSet.replaceMissing(FILE_MISSING_DATA, FILE_RANGE_FOLDED);
     }
 
-    NetcdfUtil::readUnitValueList(ncid, radialSet); // Can read now with value
-                                                    // object...
+    IONetcdf::readUnitValueList(ncid, radialSet); // Can read now with value
+                                                  // object...
     return (radialSetSP);
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf read error with radial set: " << ex.getNetcdfStr() << "\n");
@@ -271,8 +268,6 @@ NetcdfRadialSet::writePolarHeader(int ncid, DataType& data,
   int * radialtimevar
 )
 {
-  int retval;
-
   const std::string typeName = data.getTypeName();
 
   if (num_gates == 0) {
@@ -291,35 +286,35 @@ NetcdfRadialSet::writePolarHeader(int ncid, DataType& data,
   // ------------------------------------------------------------
   // VARIABLES
   //
-  NETCDF(NetcdfUtil::addVar2D(ncid, typeName.c_str(),
+  NETCDF(IONetcdf::addVar2D(ncid, typeName.c_str(),
     // Constants::getCODEUnits(data).c_str(),
     data.getUnits().c_str(),
     NC_FLOAT, *az_dim, *rn_dim, datavar));
 
   if (wantQuality) {
-    NETCDF(NetcdfUtil::addVar2D(ncid, "DataQuality", "dimensionless",
+    NETCDF(IONetcdf::addVar2D(ncid, "DataQuality", "dimensionless",
       NC_FLOAT, *az_dim, *rn_dim, qualityvar))
   }
-  NETCDF(NetcdfUtil::addVar1D(ncid,
+  NETCDF(IONetcdf::addVar1D(ncid,
     "Azimuth",
     "Degrees",
     NC_FLOAT,
     *az_dim,
     azvar));
-  NETCDF(NetcdfUtil::addVar1D(ncid, "BeamWidth", "Degrees", NC_FLOAT, *az_dim,
+  NETCDF(IONetcdf::addVar1D(ncid, "BeamWidth", "Degrees", NC_FLOAT, *az_dim,
     bwvar));
-  NETCDF(NetcdfUtil::addVar1D(ncid, "AzimuthalSpacing", "Degrees", NC_FLOAT,
+  NETCDF(IONetcdf::addVar1D(ncid, "AzimuthalSpacing", "Degrees", NC_FLOAT,
     *az_dim, azspacingvar));
-  NETCDF(NetcdfUtil::addVar1D(ncid, "GateWidth", "Meters", NC_FLOAT, *az_dim,
+  NETCDF(IONetcdf::addVar1D(ncid, "GateWidth", "Meters", NC_FLOAT, *az_dim,
     gwvar));
 
   if (wantRadialTime) {
-    NETCDF(NetcdfUtil::addVar1D(ncid, "RadialTime", "Milliseconds", NC_INT,
+    NETCDF(IONetcdf::addVar1D(ncid, "RadialTime", "Milliseconds", NC_INT,
       *az_dim, radialtimevar));
   }
 
   if (wantNyquist) {
-    NETCDF(NetcdfUtil::addVar1D(ncid, "NyquistVelocity", "MetersPerSecond",
+    NETCDF(IONetcdf::addVar1D(ncid, "NyquistVelocity", "MetersPerSecond",
       NC_FLOAT, *az_dim, nyquistvar));
   }
 
@@ -329,25 +324,25 @@ NetcdfRadialSet::writePolarHeader(int ncid, DataType& data,
   const std::string dataType = "RadialSet"; // Code as RadialSet.  It doesn't
                                             // matter we read in as one
 
-  if (!NetcdfUtil::addGlobalAttr(ncid, data, dataType)) {
+  if (!IONetcdf::addGlobalAttr(ncid, data, dataType)) {
     return (false);
   }
 
-  NETCDF(NetcdfUtil::addAtt(
+  NETCDF(IONetcdf::addAtt(
       ncid,
       "Elevation",
       elevDegrees));
-  NETCDF(NetcdfUtil::addAtt(ncid, "ElevationUnits", "Degrees"));
-  NETCDF(NetcdfUtil::addAtt(ncid, "RangeToFirstGate", firstGateM));
-  NETCDF(NetcdfUtil::addAtt(ncid, "RangeToFirstGateUnits", "Meters"));
-  NETCDF(NetcdfUtil::addAtt(ncid, "MissingData", missing));
-  NETCDF(NetcdfUtil::addAtt(ncid, "RangeFolded", rangeFolded));
+  NETCDF(IONetcdf::addAtt(ncid, "ElevationUnits", "Degrees"));
+  NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGate", firstGateM));
+  NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGateUnits", "Meters"));
+  NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
+  NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
 
   // old netcdf write always added this, I don't think we need it but I'll add
   // for now
   // FIXME: remove this if not used.  PolarGrid never used it.  Extra field
   // doesn't hurt.
-  NETCDF(NetcdfUtil::addAtt(ncid, "NumValidRuns", (int) (-1), *datavar));
+  NETCDF(IONetcdf::addAtt(ncid, "NumValidRuns", (int) (-1), *datavar));
 
   return (true);
 } // NetcdfRadialSet::writePolarHeader
@@ -371,8 +366,6 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
   ProcessTimer("Writing RadialSet");
 
   try {
-    int retval;
-
     const size_t num_radials = radialSet.getNumRadials();
     const size_t num_gates   = radialSet.getNumGates();
 

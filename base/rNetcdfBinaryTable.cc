@@ -3,7 +3,6 @@
 #include "rBinaryTable.h"
 #include "rConstants.h"
 #include "rStrings.h"
-#include "rNetcdfUtil.h"
 #include "rError.h"
 #include "rConstants.h"
 
@@ -137,7 +136,7 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
           // int shuffle = NC_SHUFFLE; needs chunk size array in var_chunking..
           const int shuffle       = NC_CONTIGUOUS;
           const int deflate       = 1;
-          const int deflate_level = NetcdfUtil::getGZLevel();
+          const int deflate_level = IONetcdf::getGZLevel();
 
           // New var.  Use '1' here because we create a vector variable
           NETCDF(nc_def_var(ncid, name.c_str(), aNcType, 1, &dims[i], &varid));
@@ -241,13 +240,13 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
     }
 
     // Add globals...
-    if (!NetcdfUtil::addGlobalAttr(ncid, binaryTable,
+    if (!IONetcdf::addGlobalAttr(ncid, binaryTable,
       "BinaryTable")) { return (false); }
 
     // float MISSING_DATA( Constants::MissingData );
     // float RANGE_FOLDED( Constants::RangeFolded );
-    NETCDF(NetcdfUtil::addAtt(ncid, "MissingData", missing));
-    NETCDF(NetcdfUtil::addAtt(ncid, "RangeFolded", rangeFolded));
+    NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
+    NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with BinaryTable: " << ex.getNetcdfStr()
                                                       << "\n");
