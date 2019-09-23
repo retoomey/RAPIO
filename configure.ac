@@ -15,7 +15,7 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 AC_DISABLE_STATIC
 
 if test "x$CXXFLAGS" = "x"; then
-    CXXFLAGS="-Wall -O2 -ftemplate-depth-50 -finline-functions"
+    CXXFLAGS="-Wall -O2 -ftemplate-depth-1024 -finline-functions"
 fi
 
 # These allow us to use same netcdf and other third party as the severe build

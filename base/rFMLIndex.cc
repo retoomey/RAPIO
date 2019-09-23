@@ -83,7 +83,7 @@ FMLIndex::initialRead(bool realtime)
       if (wantFile(dp->d_name)) {
         const std::string full = loc + "/" + dp->d_name;
 
-        if (!OS::testFile(full, OS::FILE_IS_DIRECTORY)) {
+        if (!OS::isDirectory(full)) {
           // Add record to queue
           Record r;
           if (fileToRecord(full, r)) {

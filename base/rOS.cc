@@ -2,24 +2,14 @@
 
 #include "rError.h"
 
-#include <cstring> // memset()
-#include <cerrno>  // errno, EEXIST
 #include <string>
-#include <fstream>
 #include <iostream>
 
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <sys/utsname.h> // uname
-
-#include "rProcessTimer.h"
+#include <boost/asio.hpp>
+#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace rapio;
-
-#ifndef PATH_MAX
-# define PATH_MAX 4096
-#endif // ifndef PATH_MAX
 
 const std::string&
 OS::getHostName()
@@ -28,14 +18,10 @@ OS::getHostName()
   static std::string hostname;
 
   if (first) {
-    struct utsname name2;
-    if (uname(&name2) == -1) {
-      LogSevere("Uname lookup failure for localhost.\n");
-      hostname = "localhost";
-    } else {
-      hostname = std::string(name2.nodename);
-    }
-    first = false;
+    boost::asio::io_service io_service;
+    boost::asio::ip::tcp::resolver resolver(io_service);
+    hostname = boost::asio::ip::host_name();
+    first    = false;
   }
   return hostname;
 }
@@ -43,194 +29,68 @@ OS::getHostName()
 std::string
 OS::getProcessName()
 {
-  std::string name;
-  char buf[PATH_MAX];
-  memset(buf, 0, sizeof(buf));
+  static bool first = true;
+  static std::string process;
 
-  struct stat sbuf;
-
-  if ((::stat("/proc/self/exe", &sbuf) == 0) &&
-    ::readlink("/proc/self/exe", buf, sizeof(buf) - 1))
-  {
-    buf[sizeof(buf) - 1] = '\0';
-    name = buf;
+  if (first) {
+    process = boost::dll::program_location().string();
+    first   = false;
   }
-  return (name);
-}
-
-namespace {
-int
-my_mkdir(const char * path)
-{
-  int retval;
-
-  retval = mkdir(path, 0777);
-
-  if (errno == EEXIST) {
-    retval = 0;
-  }
-  LogDebug("my_mkdir [" << path << "] returns [" << retval << "]\n");
-  return (retval);
-}
+  return process;
 }
 
 std::string
 OS::getCurrentDirectory()
 {
-  /*char buf[PATH_MAX];
-   *
-   * memset(buf, 0, sizeof(buf));
-   * getcwd(buf, sizeof(buf));
-   * return (buf);
-   */
-  // Get the current working directory
-  std::string PWD = "/";
-  char cwd[PATH_MAX];
-
-  if (getcwd(cwd, sizeof(cwd)) != NULL) {
-    PWD = std::string(cwd);
-  }
-  return (PWD);
+  boost::filesystem::path boostpath(boost::filesystem::current_path());
+  std::string fullcwd = boostpath.string();
+  return fullcwd;
 }
 
-const unsigned int OS::FILE_IS_REGULAR(1 << 0);
-const unsigned int OS::FILE_IS_SYMLINK(1 << 1);
-const unsigned int OS::FILE_IS_DIRECTORY(1 << 2);
-const unsigned int OS::FILE_IS_EXECUTABLE(1 << 3);
-const unsigned int OS::FILE_EXIST(1 << 4);
-
-unsigned int
-OS::testFile(const std::string& file, unsigned int test)
+bool
+OS::isDirectory(const std::string& path)
 {
-  unsigned int result = 0;
+  bool isDir = false;
 
-  const bool exists(access(file.c_str(), F_OK) == 0);
-
-  if (test & FILE_EXIST) {
-    if (exists) {
-      result |= FILE_EXIST;
-    }
-    test &= ~FILE_EXIST;
+  try {
+    boost::filesystem::file_status s = boost::filesystem::status(path);
+    isDir = boost::filesystem::is_directory(s);
   }
-
-  if ((test & FILE_IS_EXECUTABLE) && (access(file.c_str(), X_OK) == 0)) {
-    if (getuid() != 0) {
-      result |= FILE_IS_EXECUTABLE;
-      test   &= ~FILE_IS_EXECUTABLE;
-    }
-
-    // For root, on some POSIX systems, access (file.c_str(), X_OK)
-    // will succeed even if no executable bits are set on the
-    // file. We fall through to a stat test to avoid that.
-  } else {
-    test &= ~FILE_IS_EXECUTABLE;
-  }
-
-  if (test & FILE_IS_SYMLINK) {
-    struct stat s;
-    const bool symlink(!lstat(file.c_str(), &s) && S_ISLNK(s.st_mode));
-
-    if (symlink) {
-      result |= FILE_IS_SYMLINK;
-    }
-    test &= ~FILE_IS_SYMLINK;
-  }
-
-  if (test & (FILE_IS_REGULAR
-    | FILE_IS_DIRECTORY
-    | FILE_IS_EXECUTABLE))
+  catch (boost::filesystem::filesystem_error &e)
   {
-    // In case it's a directory with a slash at the end.
-    // stat won't work on windows unless we remove the slash.
-    std::string tfile(file);
-
-    if ((tfile.size() > 0) && (tfile[tfile.size() - 1] == '/')) {
-      tfile = tfile.substr(0, tfile.size() - 1);
-    }
-
-    struct stat s;
-
-    if (stat(tfile.c_str(), &s) == 0) {
-      if (test & FILE_IS_REGULAR) {
-        const bool regular(S_ISREG(s.st_mode));
-
-        if (regular) {
-          result |= FILE_IS_REGULAR;
-        }
-        test &= ~FILE_IS_REGULAR;
-      }
-
-      if (test & FILE_IS_DIRECTORY) {
-        const bool dir(S_ISDIR(s.st_mode) != 0);
-
-        if (dir) {
-          result |= FILE_IS_DIRECTORY;
-        }
-        test &= ~FILE_IS_DIRECTORY;
-      }
-
-      if (test & FILE_IS_EXECUTABLE) {
-        // The extra test for root when access (file, X_OK) success.
-        if ((s.st_mode & S_IXOTH) ||
-          (s.st_mode & S_IXUSR) ||
-          (s.st_mode & S_IXGRP))
-        {
-          result |= FILE_IS_EXECUTABLE;
-        }
-        test &= ~FILE_IS_EXECUTABLE;
-      }
-    }
+    // Just assume it's not a directory then
   }
-
-  return (result);
-} // OS::testFile
+  return isDir;
+}
 
 bool
 OS::mkdirp(const std::string& path)
 {
-  if (path.empty()) { return (false); }
+  bool haveIt = false;
 
-  if (testFile(path, OS::FILE_IS_DIRECTORY) != 0) {
-    LogDebug("mkdirp [" << path << "] already exists.\n");
-    return (true);
-  }
-
-  LogDebug("mkdirp [" << path << "]\n");
-  const char * in = &*path.begin();
-  std::string tmp;
-  tmp += *in++;
-
-  for (;;) {
-    if ((*in == '\0') || (*in == '/')) {
-      if (my_mkdir(tmp.c_str())) { return (false); }
+  try {
+    boost::filesystem::file_status s = boost::filesystem::status(path);
+    const bool isDir = boost::filesystem::is_directory(s);
+    if (isDir) { // boost create is true only if directories were newly created
+      haveIt = true;
+    } else {
+      haveIt = boost::filesystem::create_directories(path);
     }
-
-    tmp += *in;
-
-    if (!*in) { break; }
-    ++in;
   }
-
-  LogDebug("mkdir [" << path << "] returns true\n");
-  return (true);
-}
-
-namespace {
-const char * const fallback_tmp_dir = "/tmp";
+  catch (boost::filesystem::filesystem_error &e) {
+    haveIt = false;
+  }
+  return haveIt;
 }
 
 std::string
 OS::getUniqueTemporaryFile(const std::string& base_in)
 {
-  // We actually touch file then return name, this makes sure it already
-  // exists before being used by caller.  Avoids conflicts with other
-  // instances of us
-  std::string temp("/tmp/" + base_in + "XXXXXX");
-  char fname[PATH_MAX];
-  strcpy(fname, temp.c_str());
-  int fd = mkstemp(fname);
-  LogSevere("FILE IS " << std::string(fname) << "\n");
-  close(fd);
-  exit(1);
-  return std::string(fname);
+  // FIXME: what's the best way to do this in boost?
+  // The '/' here is platform dependent
+  auto UNIQUE = boost::filesystem::unique_path();
+  auto TMP    = boost::filesystem::temp_directory_path();
+  auto full   = TMP.native() + "/" + base_in + UNIQUE.native();
+
+  return full;
 }

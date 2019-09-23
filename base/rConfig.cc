@@ -65,7 +65,7 @@ bool
 Config::addSearchPath(const URL& absolutePath)
 {
   const bool exists = absolutePath.isLocal() &&
-    OS::testFile(absolutePath.path, OS::FILE_IS_DIRECTORY);
+    OS::isDirectory(absolutePath.path);
 
   // Make sure there's a '/' on the end of every URL, for when we add relatives.
   std::string p = absolutePath.toString();
@@ -145,7 +145,8 @@ Config::initialize()
   // Fall back to home directory
   if (mySearchPaths.size() < 1) {
     const std::string home(getEnvVar("HOME"));
-    if (OS::testFile(home, OS::FILE_IS_DIRECTORY)) {
+    // if (OS::testFile(home, OS::FILE_IS_DIRECTORY)) {
+    if (OS::isDirectory(home)) {
       addSearchFromString(home);
     }
   }

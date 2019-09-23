@@ -163,7 +163,7 @@ IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
 
   // Ensure full path to output file exists
   const std::string dir(aURL.getDirName());
-  if (!OS::testFile(dir, OS::FILE_IS_DIRECTORY) && !OS::mkdirp(dir)) {
+  if (!OS::isDirectory(dir) && !OS::mkdirp(dir)) {
     LogSevere("Unable to create " << dir << "\n");
     return ("");
   }
