@@ -991,14 +991,22 @@ IONetcdf::readSparse2D(int ncid,
   int                      num_y,
   float                    fileMissing,
   float                    fileRangeFolded,
-  DataType                 & data)
+  RAPIO_2DF                & data)
 {
   // Background fill for value....
   // since sparse not all points touched..have to prefill.
   float backgroundValue;
 
   readSparseBackground(ncid, data_var, backgroundValue);
-  data.fill(backgroundValue); // fill should be in datatype or something
+  // data.fill(backgroundValue); // fill should be in datatype or something
+  // FIXME: maybe static in DataGrid?
+  #ifdef BOOST_ARRAY
+  // Just view as 1D to fill it...
+  boost::multi_array_ref<float, 1> a_ref(data.data(), boost::extents[data.num_elements()]);
+  std::fill(a_ref.begin(), a_ref.end(), backgroundValue);
+  #else
+  std::fill(data.begin(), data.end(), backgroundValue);
+  #endif
 
   // We should have a pixel dimension for sparse data...
   int pixel_dim;
@@ -1107,8 +1115,11 @@ IONetcdf::readSparse2D(int ncid,
           v = Constants::RangeFolded;
         }
 
-        //   data.set_val (x, y, v);
+        #ifdef BOOST_ARRAY
+        data[x][y] = v;
+        #else
         data.set(x, y, v);
+        #endif
 
         // Non memory way: Runlength of the current pixel length
         // if (pixel_count_var > -1){
@@ -1143,8 +1154,11 @@ IONetcdf::readSparse2D(int ncid,
               ++x;
             }
 
-            // data.set_val (x, y, v);
+            #ifdef BOOST_ARRAY
+            data[x][y] = v;
+            #else
             data.set(x, y, v);
+            #endif
           }
         }
       } else {

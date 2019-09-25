@@ -224,14 +224,6 @@ public:
 
   // END QUALITY STUFF ---------------------------------------------------------
 
-  /** 2D write function.  Do we subclass 2D datatypes? */
-  virtual void
-  set(size_t i, size_t j, const float& v){ }
-
-  /** Fill datatype up with a value. */
-  virtual void
-  fill(const float& val){ }
-
 protected:
 
   /** String used for writer/reader factory, such as 'RadialSet' */

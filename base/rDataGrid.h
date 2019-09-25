@@ -12,7 +12,7 @@ namespace rapio {
 // This uses boost over my DataStore.  It's a bit
 // slower but the API is cleaner and expands to dimensions better
 // I'm keeping DataStore for now
-#define BOOST_ARRAY
+//#define BOOST_ARRAY
 
 #ifdef BOOST_ARRAY
 
@@ -132,16 +132,8 @@ public:
   resizeFloat2D(const std::string& name, size_t numx, size_t numy, float value);
 
   // ----------------------------------------------------------------------
-  // Access of the 'root' 2d data grid
-  // FIXME: Only some things have this, not sure its place is here
-
-  /** Sparse2D template wants this method (read) */
-  void
-  set(size_t i, size_t j, const float& v) override;
-
-  /** Sparse2D template wants this to fill the default data 2d grid */
-  void
-  fill(const float& value) override;
+  // Access dimension stats.  Currently we have a main 'primary' 2D and
+  // sub fields.  Still need to generalize this more
 
   /** Get the number of Y for primary 2D data grid */
   size_t

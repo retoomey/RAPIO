@@ -206,14 +206,14 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     // or it's 1D for sparse array
     const bool sparse = (data_num_dims < 2);
 
+    auto data = radialSet.getFloat2D("primary");
     if (sparse) {
       IONetcdf::readSparse2D(ncid, data_var, num_radials, num_gates,
-        FILE_MISSING_DATA, FILE_RANGE_FOLDED, radialSet);
+        FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data);
     } else {
       /** We use a grid per moment */
       const size_t start2[] = { 0, 0 };
       const size_t count2[] = { num_radials, num_gates };
-      auto data = radialSet.getFloat2D("primary");
       NETCDF(nc_get_vara_float(ncid, data_var, start2, count2,
         data->data()));
       // Do we need this?
@@ -507,6 +507,7 @@ NetcdfRadialSet::getTestObject(
   auto azspacings = radialSet.getFloat1D("AzimuthalSpacing");
   auto gatewidths = radialSet.getFloat1D("GateWidth");
 
+  auto data = *(radialSet.getFloat2D("primary"));
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree
 
@@ -522,7 +523,11 @@ NetcdfRadialSet::getTestObject(
     gatewidths[i] = gate_width;
     #endif
     for (size_t j = 0; j < num_gates; ++j) {
-      radialSet.set(i, j, i);
+      #ifdef BOOST_ARRAY
+      data[i][j] = i;
+      #else
+      data.set(i, j, i);
+      #endif
     }
   }
 

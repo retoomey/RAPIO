@@ -44,7 +44,7 @@ DataGrid::resizeFloat1D(const std::string& name, size_t size, float value)
   if (f != nullptr) {
     #ifdef BOOST_ARRAY
     f->resize(boost::extents[size]);
-    fill(value);
+    std::fill(f->begin(), f->end(), value);
     #else
     f->resize(size, value);
     #endif
@@ -92,7 +92,7 @@ DataGrid::resizeInt1D(const std::string& name, size_t size, int value)
   if (f != nullptr) {
     #ifdef BOOST_ARRAY
     f->resize(boost::extents[size]);
-    fill(value);
+    std::fill(f->begin(), f->end(), value);
     #else
     f->resize(size, value);
     #endif
@@ -144,50 +144,53 @@ DataGrid::resizeFloat2D(const std::string& name, size_t numx, size_t numy, float
   if (f != nullptr) {
     #ifdef BOOST_ARRAY
     f->resize(boost::extents[numx][numy]);
-    fill(value);
+    boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
+    std::fill(a_ref.begin(), a_ref.end(), value);
     #else
-    f->resize(numx, numy, value); // BACKWARDS STILL
+    f->resize(numx, numy, value);
     #endif
   } else {
     addFloat2D(name, numx, numy, value);
   }
 }
 
-void
-DataGrid::set(size_t i, size_t j, const float& v)
-{
-  // Note resize should have called once
-  auto * f = myFloat2D.get("primary");
-
-  if (f == nullptr) {
-    LogSevere("Set called null pointer\n");
-    return;
-  }
-  #ifdef BOOST_ARRAY
-  (*f)[i][j] = v;
-  #else
-  (*f).set(i, j, v);
-  #endif
-}
-
-void
-DataGrid::fill(const float& value)
-{
-  // Note resize should have called once
-  auto * f = myFloat2D.get("primary");
-
-  if (f == nullptr) {
-    LogSevere("Set called null pointer\n");
-    return;
-  }
-  #ifdef BOOST_ARRAY
-  // Just view as 1D to fill it...
-  boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
-  std::fill(a_ref.begin(), a_ref.end(), value);
-  #else
-  std::fill(f->begin(), f->end(), value);
-  #endif
-}
+/*
+ * void
+ * DataGrid::set(size_t i, size_t j, const float& v)
+ * {
+ * // Note resize should have called once
+ * auto * f = myFloat2D.get("primary");
+ *
+ * if (f == nullptr) {
+ *  LogSevere("Set called null pointer\n");
+ *  return;
+ * }
+ #ifdef BOOST_ARRAY
+ * (*f)[i][j] = v;
+ #else
+ * (*f).set(i, j, v);
+ #endif
+ * }
+ *
+ * void
+ * DataGrid::fill(const float& value)
+ * {
+ * // Note resize should have called once
+ * auto * f = myFloat2D.get("primary");
+ *
+ * if (f == nullptr) {
+ *  LogSevere("Set called null pointer\n");
+ *  return;
+ * }
+ #ifdef BOOST_ARRAY
+ * // Just view as 1D to fill it...
+ * boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
+ * std::fill(a_ref.begin(), a_ref.end(), value);
+ #else
+ * std::fill(f->begin(), f->end(), value);
+ #endif
+ * }
+ */
 
 size_t
 DataGrid::getY()

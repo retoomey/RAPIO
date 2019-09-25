@@ -4,6 +4,7 @@
 #include <rDataType.h>
 #include <rConstants.h> // for SentinelDouble
 #include <rIODataType.h>
+#include <rDataGrid.h>
 
 #include <vector>
 #include <string>
@@ -353,7 +354,7 @@ public:
     int            num_y,
     float          fileMissing,
     float          fileRangeFolded,
-    DataType       & dt);
+    RAPIO_2DF      & dt);
 
   // static bool readSparse3D(int   ncid,
   //                                           int   data_var,

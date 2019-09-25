@@ -44,7 +44,7 @@ void
 RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
 {
   /** As a grid of data */
-  resizeFloat2D("primary", num_gates, num_radials, fill);
+  resizeFloat2D("primary", num_radials, num_gates, fill);
   const size_t gates = getNumRadials(); // Y dim here
 
   /** Azimuth per radial */
@@ -69,13 +69,13 @@ RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
 size_t
 RadialSet::getNumGates()
 {
-  return getX();
+  return getY();
 }
 
 size_t
 RadialSet::getNumRadials()
 {
-  return getY();
+  return getX();
 }
 
 void

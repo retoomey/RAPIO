@@ -81,10 +81,11 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
     // or it's 1D for sparse array
     const bool sparse = (data_num_dims < 2);
 
+    auto data = llgrid.getFloat2D("primary");
     if (sparse) {
       // LogSevere("LAT LON GRID IS SPARSE!!!\n");
       IONetcdf::readSparse2D(ncid, data_var, num_lats, num_lons,
-        FILE_MISSING_DATA, FILE_RANGE_FOLDED, llgrid);
+        FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data);
     } else {
       // LogSevere("LAT LON GRID IS ___NOT___ SPARSE!!!\n");
 
@@ -96,7 +97,6 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       if (retval != NC_NOERR) { retval = nc_inq_dimid(ncid, "Time", &time_dim); }
       bool haveTimeDim = (retval == NC_NOERR);
 
-      auto data = llgrid.getFloat2D("primary");
       if (haveTimeDim) {
         const size_t start[] = { 0, 0, 0 };               // time, lat, lon
         const size_t count[] = { 1, num_lats, num_lons }; // 1 time, lat_count,
