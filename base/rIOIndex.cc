@@ -115,24 +115,6 @@ IOIndex::createIndex(const URL            & url,
   return (newindex);
 } // IOIndex::createIndex
 
-std::shared_ptr<IndexType>
-IOIndex::createIndex(const URL   & url,
-  std::shared_ptr<IndexListener> listener,
-  const TimeDuration             & maximumHistory
-)
-{
-  vector<std::shared_ptr<IndexListener> > listeners(1, listener);
-  return (createIndex(url, listeners, maximumHistory));
-}
-
-std::shared_ptr<IndexType>
-IOIndex::createIndex(const URL & url,
-  const TimeDuration           & maximumHistory)
-{
-  vector<std::shared_ptr<IndexListener> > listeners;
-  return (createIndex(url, listeners, maximumHistory));
-}
-
 /**
  * getIndexPath goes through the following steps to convert lbName to an
  * indexPath:

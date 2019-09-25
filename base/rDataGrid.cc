@@ -137,19 +137,19 @@ DataGrid::addFloat2D(const std::string& name, size_t numx, size_t numy)
 }
 
 void
-DataGrid::resizeFloat2D(const std::string& name, size_t rows, size_t cols, float value)
+DataGrid::resizeFloat2D(const std::string& name, size_t numx, size_t numy, float value)
 {
   auto * f = myFloat2D.get(name);
 
   if (f != nullptr) {
     #ifdef BOOST_ARRAY
-    f->resize(boost::extents[cols][rows]);
+    f->resize(boost::extents[numx][numy]);
     fill(value);
     #else
-    f->resize(cols, rows, value); // BACKWARDS STILL
+    f->resize(numx, numy, value); // BACKWARDS STILL
     #endif
   } else {
-    addFloat2D(name, cols, rows, value);
+    addFloat2D(name, numx, numy, value);
   }
 }
 
@@ -164,9 +164,9 @@ DataGrid::set(size_t i, size_t j, const float& v)
     return;
   }
   #ifdef BOOST_ARRAY
-  f[0][i][j] = v;
+  (*f)[i][j] = v;
   #else
-  f[0].set(i, j, v);
+  (*f).set(i, j, v);
   #endif
 }
 
@@ -252,7 +252,7 @@ DataGrid::replaceMissing(const float missing, const float range)
 }
 
 void
-DataGrid::resize(size_t rows, size_t cols, const float fill)
+DataGrid::resize(size_t numx, size_t numy, const float fill)
 {
-  resizeFloat2D("primary", rows, cols, fill);
+  resizeFloat2D("primary", numx, numy, fill);
 }

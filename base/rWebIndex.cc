@@ -115,13 +115,9 @@ WebIndex::readRemoteRecords()
       return false;
     }
 
-    auto recs          = rectest.get();
-    auto lastReadStr   = recs.get("lastRead", "");
-    auto lastReadNSStr = recs.get("lastReadNS", "");
-
-    const long long lastRead(lastReadStr.empty() ? -1 : atoll(
-        lastReadStr.c_str()));
-    const long lastReadNS(lastReadNSStr.empty() ? 0 : atol(lastReadNSStr.c_str()));
+    auto recs = rectest.get();
+    const long long lastRead = recs.get("<xmlattr>.lastRead", (long long) (-1));
+    const long lastReadNS    = recs.get("<xmlattr>.lastReadNS", (long) (0));
 
     if (lastRead >= 0) {
       // W2Server returns AT the time or greater...so when no new data comes

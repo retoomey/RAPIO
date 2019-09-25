@@ -14,19 +14,6 @@ public:
   /**
    * Pass in a complete url, with the protocol used.
    *
-   * Constructs a regular, real-time or entire-archive Index.
-   * Any event notification (through addActionListener) happens only
-   * for new records that are subsequently created, and this happens
-   * in real-time.
-   */
-  static std::shared_ptr<IndexType>
-  createIndex(const URL & url,
-    const TimeDuration  & maximumHistory = TimeDuration()
-  );
-
-  /**
-   * Pass in a complete url, with the protocol used.
-   *
    * By providing ActionListeners at construction, you can
    * create an index for which the event notification happens
    * even for the initial records.
@@ -38,13 +25,7 @@ public:
     const TimeDuration                           & maximumHistory =
     TimeDuration());
 
-  /** Convenience method for the other createIndex when you have only
-   *  one IndexListener */
-  static std::shared_ptr<IndexType>
-  createIndex(const URL            & url,
-    std::shared_ptr<IndexListener> listener,
-    const TimeDuration             & maximumHistory = TimeDuration());
-
+  /** Destroy an index */
   virtual
   ~IOIndex();
 

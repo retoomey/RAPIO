@@ -129,7 +129,7 @@ public:
 
   /** Resize a 2D float data */
   void
-  resizeFloat2D(const std::string& name, size_t rows, size_t cols, float value);
+  resizeFloat2D(const std::string& name, size_t numx, size_t numy, float value);
 
   // ----------------------------------------------------------------------
   // Access of the 'root' 2d data grid
@@ -157,7 +157,7 @@ public:
 
   /** Resizes primary 2D grid to a ROW x COL grid and sets each cell to `value' */
   virtual void
-  resize(size_t rows, size_t cols, const float fill = 0);
+  resize(size_t numx, size_t numy, const float fill = 0);
   // ----------------------------------------------------------------------
 
 protected:
