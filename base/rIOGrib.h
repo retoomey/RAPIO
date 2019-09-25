@@ -136,7 +136,7 @@ public:
 
   /** Get grib2 error into string. */
   static bool
-  scanGribData(Buffer& b, GribAction * a);
+  scanGribData(std::vector<char>& b, GribAction * a);
 
   // READING ------------------------------------------------------------
   //
@@ -147,7 +147,7 @@ public:
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<DataStore2D<float> >
-  get2DData(Buffer& b, size_t at, size_t fieldNumber);
+  get2DData(std::vector<char>& b, size_t at, size_t fieldNumber);
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>

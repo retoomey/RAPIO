@@ -24,8 +24,9 @@ public:
    * @return the number of bytes read, or a negative number on error.
    */
   static int
-  read(const URL& url,
-    Buffer      & buffer);
+  read(const URL      & url,
+    // Buffer      & buffer);
+    std::vector<char> & buffer);
 
   /**
    * Identical to read() except except it doesn't uncompress files.
@@ -33,17 +34,9 @@ public:
    * decompress / recompress steps.
    */
   static int
-  readRaw(const URL& url,
-    Buffer         & b);
-
-  /**
-   * Identical to read(const URL&,Buffer&,long,size_t) except it takes a string
-   * instead of a buffer.
-   */
-  static int
-  read(const URL & url,
-    std::string  & s);
-
+  readRaw(const URL   & url,
+    // Buffer         & b);
+    std::vector<char> & buffer);
 
   /** Destroy a reader */
   virtual ~IOURL(){ }

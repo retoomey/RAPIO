@@ -120,11 +120,11 @@ AlgFLATConfigFile::readConfigURL(const URL& path,
   // HMET flat configuration file reader
   // 1. Anything after a // is a comment
   // 2. Each non empty line has a option:value pair, spaces optional around them
-  Buffer buf;
+  std::vector<char> buf;
 
   if (IOURL::read(path, buf) > 0) {
-    buf.data().push_back('\0');
-    std::istringstream is(&buf.data().front());
+    buf.push_back('\0');
+    std::istringstream is(&buf.front());
     std::string s;
     while (getline(is, s, '\n')) {
       /** Kill anything at comment or later and remove left/right spaces */

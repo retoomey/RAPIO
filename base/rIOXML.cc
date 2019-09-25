@@ -1,7 +1,6 @@
 #include "rIOXML.h"
 
 #include "rStrings.h"
-#include "rBuffer.h"
 #include "rError.h"
 #include "rIOURL.h"
 
@@ -38,11 +37,11 @@ IOXML::writeURL(
 std::shared_ptr<boost::property_tree::ptree>
 IOXML::readURL(const URL& url)
 {
-  Buffer buf;
+  std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {
-    buf.data().push_back('\0');
-    std::istringstream is(&buf.data().front());
+    buf.push_back('\0');
+    std::istringstream is(&buf.front());
 
     std::shared_ptr<boost::property_tree::ptree> pt = std::make_shared<boost::property_tree::ptree>();
     try{

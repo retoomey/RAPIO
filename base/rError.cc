@@ -3,7 +3,6 @@
 #include "rStrings.h" // for toLower()
 #include "rEventLoop.h"
 #include "rEventTimer.h"
-#include "rBuffer.h"
 #include "rIOURL.h"
 #include "rSignals.h"
 
@@ -178,15 +177,16 @@ bool
 Log::setFromURL(const URL& aURL)
 {
   bool found = false;
-  Buffer buf;
+
+  std::vector<char> buf;
 
   if (IOURL::read(aURL, buf) > 0) {
     // LogSevere("Found log setting information at \"" << aURL << "\"\n");
 
     // For first attempt, we just find the first line of text that matches
     // a logging level and use it.  Granted we could modify lots of stuff
-    buf.data().push_back('\0');
-    std::istringstream is(&buf.data().front());
+    buf.push_back('\0');
+    std::istringstream is(&buf.front());
     std::string s;
     Log::Severity severity = Log::Severity::SEVERE;
     while (getline(is, s, '\n')) {

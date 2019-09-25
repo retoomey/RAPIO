@@ -3,7 +3,6 @@
 #include <rDataType.h>
 #include <rIONetcdf.h>
 
-#include <rBuffer.h>
 #include <rTime.h>
 #include <rLLH.h>
 
@@ -18,7 +17,7 @@ namespace rapio {
  * @author Robert Toomey */
 class NetcdfDataType : public DataType {
 public:
-  NetcdfDataType(Buffer buf) : myBuf(buf)
+  NetcdfDataType(std::vector<char> buf) : myBuf(buf) // copy or move?
   {
     myDataType = "NetcdfData";
   }
@@ -33,6 +32,6 @@ public:
 
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */
-  Buffer myBuf;
+  std::vector<char> myBuf;
 };
 }

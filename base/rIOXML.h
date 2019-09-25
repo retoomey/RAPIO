@@ -2,17 +2,11 @@
 
 #include <rIO.h>
 #include <rData.h>
-// #include <iosfwd>
-// #include <string>
-// #include <map>
-// #include <vector>
-// #include <stack>
 #include <memory>
 
 #include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
-class Buffer;
 class URL;
 
 /** Simple routines for reading/writing XML documents */

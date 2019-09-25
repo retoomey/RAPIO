@@ -2,6 +2,7 @@
 
 #include "rFactory.h"
 #include "rCompression.h"
+#include "rError.h"
 
 #include <curl/curl.h>
 #include <fstream>
@@ -14,45 +15,46 @@ bool IOURL::GOOD_CURL = false;
 std::shared_ptr<CurlConnection> IOURL::myCurlConnection;
 
 int
-IOURL::read(const URL& url, Buffer& buf)
+IOURL::read(const URL& url, std::vector<char>& buf)
 {
-  if (readRaw(url, buf) == -1) {
+  // FIXME: Maybe a suffix 'loop' for processing nested formats
+
+  // Pull raw data into rawData buffer
+  std::vector<char> rawData;
+  if (readRaw(url, rawData) == -1) {
     return (-1);
   }
 
-  // Compressed data
   //  ------------------------------------------------------------
-  // After pulling data, uncompress if wanted
+  // Choose a decompressor
   const std::string suffix(url.getSuffixLC());
-
+  bool (* decompress)(std::vector<char>& in, std::vector<char>& out) = nullptr;
   if (suffix == "gz") {
-    buf = Compression::uncompressGZ(buf);
+    decompress = Compression::uncompressGzip;
   } else if (suffix == "bz2") {
-    buf = Compression::uncompressBZ2(buf);
+    decompress = Compression::uncompressBzip2;
+  } else if (suffix == "lzma") {
+    decompress = Compression::uncompressLzma;
   } else if (suffix == "z") {
-    LogSevere("Z data unsupported\n");
-    return (-1);
-
-    /*  Probably can make this work but I don't like copying too much
-     * Buffer buf;
-     *
-     * source->read(buf);
-     * const std::string filename(getUniqueTemporaryFile("zfile"));
-     * const std::string zfilename(filename + ".Z");
-     * FILE *fp = fopen(zfilename.c_str(), "w+");
-     * fwrite(&buf.data().front(), 1, buf.size(), fp);
-     * fclose(fp);
-     * std::string command("gunzip " + zfilename);
-     * ::system(command.c_str());
-     * IOURL::read(filename, myBuf);
-     * unlink(filename.c_str());
-     */
+    decompress = Compression::uncompressZlib;
   }
-  return (buf.getLength());
-}
+
+  // No compression known, move rawData to output.
+  if (decompress == nullptr) {
+    buf = std::move(rawData);
+  } else {
+    // Try to decompress with the choosen decompressor
+    std::vector<char> output;
+    if (!(*decompress)(rawData, output)) {
+      return -1;
+    }
+    buf = std::move(output);
+  }
+  return (buf.size());
+} // IOURL::read
 
 int
-IOURL::readRaw(const URL& url, Buffer& buf)
+IOURL::readRaw(const URL& url, std::vector<char>& buf)
 {
   // Web ingest ------------------------------------------------------------
   if (url.isLocal() == false) {
@@ -88,19 +90,17 @@ IOURL::readRaw(const URL& url, Buffer& buf)
       LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
       return (-1);
     }
-    std::vector<char> result; // FIXME: Do we need to copy?
-    curl_easy_setopt(myCurlConnection->connection(), CURLOPT_WRITEDATA, &(result));
+    curl_easy_setopt(myCurlConnection->connection(), CURLOPT_WRITEDATA, &(buf));
     ret = curl_easy_perform(myCurlConnection->connection());
 
     if (ret != 0) {
       LogSevere("Reading " << url << " failed with err=" << ret << "\n");
       return (-1);
     }
-    buf = Buffer(result);
   } else {
     // Local file ingest
     // ------------------------------------------------------------
-    std::vector<char>& c = buf.data();
+    // std::vector<char>& c = buf.data();
     std::ifstream file(url.path);
 
     if (file) {
@@ -109,23 +109,12 @@ IOURL::readRaw(const URL& url, Buffer& buf)
       std::streampos length = file.tellg();
       file.seekg(0, std::ios::beg);
 
-      c.resize(length);
-      file.read(&c[0], length);
+      // c.resize(length);
+      buf.resize(length);
+      file.read(&buf[0], length);
     } else {
       LogSevere("FAILED local file read " << url << "\n");
     }
   }
-  return (buf.getLength());
+  return (buf.size());
 } // IOURL::readRaw
-
-int
-IOURL::read(const URL& url, std::string& s)
-{
-  s.clear();
-
-  Buffer b;
-  read(url, b);
-  s.insert(s.end(), b.data().begin(), b.data().end());
-
-  return (s.size());
-}

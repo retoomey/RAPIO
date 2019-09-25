@@ -1,7 +1,6 @@
 #include "rIOGrib.h"
 
 #include "rFactory.h"
-#include "rBuffer.h"
 #include "rIOURL.h"
 #include "rDataStore2D.h"
 #include "rStrings.h"
@@ -524,7 +523,7 @@ IOGrib::toCatalog(gribfield * gfld,
 }
 
 std::shared_ptr<DataStore2D<float> >
-IOGrib::get2DData(Buffer& b, size_t at, size_t fieldNumber)
+IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
 {
   // size_t aSize       = b.size();
   unsigned char * bu = (unsigned char *) (&b[0]);
@@ -664,7 +663,7 @@ GribMatcher::getMatch(size_t& at, size_t& fieldNumber)
 }
 
 bool
-IOGrib::scanGribData(Buffer& b, GribAction * a)
+IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
 {
   size_t aSize       = b.size();
   unsigned char * bu = (unsigned char *) (&b[0]);
@@ -818,7 +817,7 @@ readGribDatabase()
     LogSevere("Grib2 reader requires a gribtab.dat file in your configuration\n");
     exit(1);
   }
-  Buffer buf;
+  std::vector<char> buf;
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -936,8 +935,7 @@ IOGrib::readGribDataType(const std::vector<std::string>& args)
 
   // Note, in RAPIO we can read a grib file remotely too
   const URL url = getFileName(args);
-  Buffer buf;
-
+  std::vector<char> buf;
   IOURL::read(url, buf);
 
   if (!buf.empty()) {

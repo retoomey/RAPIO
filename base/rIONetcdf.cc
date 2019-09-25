@@ -1,7 +1,6 @@
 #include "rIONetcdf.h"
 
 #include "rFactory.h"
-#include "rBuffer.h"
 #include "rIOURL.h"
 #include "rOS.h"
 #include "rStrings.h"
@@ -48,7 +47,7 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
 
   // Note, in RAPIO we can read a netcdf file remotely too
   const URL url = getFileName(args);
-  Buffer buf;
+  std::vector<char> buf;
   IOURL::read(url, buf);
 
   if (!buf.empty()) {

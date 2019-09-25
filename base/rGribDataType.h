@@ -1,7 +1,6 @@
 #pragma once
 
 #include <rDataType.h>
-#include <rBuffer.h>
 #include <rDataStore2D.h>
 #include <rTime.h>
 #include <rLLH.h>
@@ -17,7 +16,7 @@ namespace rapio {
  * @author Robert Toomey */
 class GribDataType : public DataType {
 public:
-  GribDataType(Buffer buf) : myBuf(buf)
+  GribDataType(std::vector<char> buf) : myBuf(buf)
   {
     myDataType = "GribData";
   }
@@ -43,6 +42,6 @@ public:
 
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */
-  Buffer myBuf;
+  std::vector<char> myBuf;
 };
 }
