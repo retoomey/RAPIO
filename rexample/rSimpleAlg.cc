@@ -122,7 +122,17 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
     // Look for a radial set
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
-      // LogInfo("This is a radial set, do radial set stuff\n");
+      /*
+       *    // LogInfo("This is a radial set, do radial set stuff\n");
+       *    size_t radials = radialSet->getNumRadials(); //x
+       *    size_t gates = radialSet->getNumGates(); // y
+       *    auto data = radialSet->get("primary"); // ??
+       *    for(size_t g=0; g<gates; ++g){
+       *      for(size_t r=0; r<radials; ++r){
+       *         data[r][g] = 12;
+       *      }
+       *    }
+       */
     }
 
     // Standard echo of data to output.  Note it's the same data out as in here

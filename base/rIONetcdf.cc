@@ -89,54 +89,6 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
   return (datatype);
 } // IONetcdf::readNetcdfDataType
 
-/*
- * URL
- * generateOutputInfo(const DataType& dt,
- * const std::string                         & directory,
- * std::shared_ptr<DataFormatSetting> dfs,
- * const std::string                         & suffix,
- * std::vector<std::string>& params,
- * std::vector<std::string>& selections)
- * {
- * const rapio::Time rsTime = dt.getTime();
- * const std::string time_string = rsTime.getFileNameString();
- * const std::string dataType    = dt.getTypeName();
- * std::string spec;
- * dt.getSubType(spec);
- *
- * // Filename typical example:
- * // dirName/Reflectivity/00.50/TIME.netcdf
- * // dirName/TIME_Reflectivity_00.50.netcdf
- * std::stringstream fs;
- * if (!dfs->subdirs){
- *  // Without subdirs, name files with time first followed by details
- *  fs << time_string << "_" << dataType;
- *  if (!spec.empty()){ fs  << "_" << spec; }
- * }else{
- *  // With subdirs, name files datatype first in folders
- *  fs << dataType;
- *  if (!spec.empty()){ fs  << "/" << spec; }
- *  fs << "/" << time_string;
- * }
- * fs << "." << suffix;
- * const auto filepath = fs.str();
- *
- * // Create record params
- * params.push_back(suffix);
- * params.push_back(directory);
- * Strings::splitWithoutEnds(filepath, '/', &params);
- *
- * // Create record selections
- * selections.push_back(time_string);
- * selections.push_back(dataType);
- * if (!spec.empty()) {
- *  selections.push_back(spec);
- * }
- *
- * return URL(directory+"/"+filepath);
- * }
- */
-
 std::string
 IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
   const std::string                                & myDirectory,
@@ -344,51 +296,6 @@ IONetcdf::compressVar(int ncid, int datavar)
   return (retval);
 }
 
-/** Add multiple dimension variable and assign a units to it */
-
-/*int
- * IONetcdf::addVar(
- * int          ncid,
- * const char * name,
- * const char * units,
- * nc_type      xtype,
- * int          ndims,
- * const int    dimids[],
- * int *        varid)
- * {
- * int retval;
- *
- * // Define variable dimensions...
- * retval = nc_def_var(ncid, name, xtype, ndims, dimids, varid);
- *
- * if (retval == NC_NOERR) {
- *  // Assign units string
- *  if (units != 0) {
- *    retval = addAtt(ncid, Constants::Units, std::string(units), *varid);
- *  }
- *
- *  // Compress variable...
- *  if (retval == NC_NOERR) {
- *    //  retval = compressVar(ncid, *varid);
- *    const int shuffle = NC_CONTIGUOUS;
- *    const int deflate = 1;              // if non-zero, turn on the
- *                                        // deflate-level
- *    const int deflate_level = IONetcdf::GZ_LEVEL; // Set the compression level
- *    // Compression for variable
- *    //   NETCDF(nc_def_var_chunking(ncid, datavar, 0, 0)); Probably will never
- *    // need this
- *    // shuffle == control the HDF5 shuffle filter
- *    // default == turn on deflate for variable
- *    // deflate_level 0 no compression and 9 (max compression)
- *    // Don't care if fails..maybe warn or something...
- *    nc_def_var_deflate(ncid, *varid, shuffle, deflate, deflate_level);
- *  }
- * }
- * return (retval);
- * }
- */
-
-/** Convenience for a 1 dimensional array */
 int
 IONetcdf::addVar1D(
   int          ncid,
@@ -401,7 +308,6 @@ IONetcdf::addVar1D(
   return (addVar(ncid, name, units, xtype, 1, &dim, varid));
 }
 
-/** Convenience for 2D array */
 int
 IONetcdf::addVar2D(
   int          ncid,
@@ -420,7 +326,6 @@ IONetcdf::addVar2D(
   return (addVar(ncid, name, units, xtype, 2, dims, varid));
 }
 
-/** Convenience for 3D array */
 int
 IONetcdf::addVar3D(
   int          ncid,
@@ -441,7 +346,6 @@ IONetcdf::addVar3D(
   return (addVar(ncid, name, units, xtype, 3, dims, varid));
 }
 
-/** Convenience for 4D array */
 int
 IONetcdf::addVar4D(
   int          ncid,
@@ -706,12 +610,6 @@ IONetcdf::getGlobalAttr(
 
   // Space-time-ref: Latitude, Longitude, Height, Time and FractionalTime
   float lat_degrees, lon_degrees, ht_meters;
-
-  // unsigned int time_int;
-  // FIXME: time_t should be long long  This is actually safest.  Noticed we
-  // _write_ time_t as an
-  // int though..that should be changed at some point. Maybe as soon as this
-  // code all works.
   unsigned long long aTimeSecs;
   double aTimeFrac = 0;
   NETCDF(getAtt(ncid, Constants::Latitude, &lat_degrees));
@@ -721,31 +619,9 @@ IONetcdf::getGlobalAttr(
   getAtt(ncid, Constants::FractionalTime, &aTimeFrac); // ok to fail here
 
   // Now create a space time ref
-  // location = LLH(lat_degrees, lon_degrees,
-  //                           Length::Meters(ht_meters));
   location->set(lat_degrees, lon_degrees, ht_meters / 1000.0);
 
-  // LogSevere("Setting time to " << aTimeSecs << ", " << aTimeFrac << "\n");
-  // time = Time::SecondsSinceEpoch(aTimeSecs, aTimeFrac);
   time->set(aTimeSecs, aTimeFrac);
-
-  // FIXME: Check that none of the values are empty strings
-  // Don't think we need this...
-  // Don't think we need this either.  Maybe for Datatype and Typename...
-
-  /*for ( vector<string>::const_iterator iter = all_attr->begin();
-   *    iter != all_attr->end(); ++iter ){
-   * if ( iter->empty() ){
-   *  all_attr->clear();
-   *  cout <<" Check that none of the values are empty strings "<<endl;
-   *  return -1;
-   * }
-   * }
-   */
-
-  // FIXME: This seems product dependent..think the products should read these
-  // since we don't write it in addGlobalAttr..Think they are hacked here due
-  // to them not being strings and fitting into the -unit -value framework
 
   // missing and rangefolded ...
   if (FILE_MISSING_DATA) {
@@ -793,9 +669,6 @@ IONetcdf::writeUnitValueList(int ncid, const rapio::DataType& dt)
   return (true);
 }
 
-/** Attributes that are assigned to an already created data type.
- * The getGlobalAttr is usually called BEFORE creation of a datatype
- */
 bool
 IONetcdf::readUnitValueList(int ncid, rapio::DataType& dt)
 {
@@ -953,37 +826,6 @@ IONetcdf::readDimensionInfo(int ncid,
   }
 }
 
-// Garbage overcomplicated data_object library needs a template.  Multiple
-// datatype classes have
-// uninherited set_val and fill functions.  Really needs a rewrite, we don't
-// need a 747 of
-// abstract code for some 2D/3D arrays of floats, lol
-// T requires:
-//
-//    set_val(x,y,value) to be implemented
-//    fill(value) to be implemented
-//
-#include <rRadialSet.h>
-#include <rLatLonGrid.h>
-
-/*
- * template bool IONetcdf::readSparse2D(int,
- *                                     int,
- *                                     int,
- *                                     int,
- *                                     float,
- *                                     float,
- *                                     RadialSet& data);
- * template bool IONetcdf::readSparse2D(int,
- *                                     int,
- *                                     int,
- *                                     int,
- *                                     float,
- *                                     float,
- *                                     LatLonGrid& data);
- */
-
-// template<class T>
 bool
 IONetcdf::readSparse2D(int ncid,
   int                      data_var,
@@ -1179,10 +1021,6 @@ IONetcdf::readSparse2D(int ncid,
 } // IONetcdf::readSparse2D
 
 /*
- #include <rLatLonHeightGrid.h>
- * template bool IONetcdf::readSparse3D(int, int, int, int, int, float, float,
- *    LatLonHeightGrid& data);
- * template<class T>
  * bool IONetcdf::readSparse3D(int ncid, int data_var,
  *   int num_x, int num_y, int num_z, float fileMissing, float fileRangeFolded,
  *      T& data)

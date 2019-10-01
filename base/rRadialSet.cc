@@ -20,6 +20,7 @@ RadialSet::RadialSet(const LLH& location,
 {
   // Lookup for read/write factories
   myDataType = "RadialSet";
+  init(0, 0);
 }
 
 const LLH&
@@ -41,41 +42,49 @@ RadialSet::getElevation() const
 }
 
 void
-RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
+RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
 {
   /** As a grid of data */
-  resizeFloat2D("primary", num_radials, num_gates, fill);
-  const size_t gates = getNumRadials(); // Y dim here
+  addFloat2D("primary", "Dimensionless", num_radials, num_gates, fill);
+
+  // These are the only ones we force...
 
   /** Azimuth per radial */
-  resizeFloat1D("Azimuth", gates, 0.0f);
+  addFloat1D("Azimuth", "Degrees", num_radials, 0.0f);
 
   /** Beamwidth per radial */
-  resizeFloat1D("BeamWidth", gates, 1.0f);
-
-  /** Azimuth spaceing per radial */
-  resizeFloat1D("AzimuthalSpacing", gates, 1.0f);
+  addFloat1D("BeamWidth", "Degrees", num_radials, 1.0f);
 
   /** Gate width per radial */
-  resizeFloat1D("GateWidth", gates, 1000.0f);
+  addFloat1D("GateWidth", "Meters", num_radials, 1000.0f);
+}
 
-  /** Radial time per radial */
-  resizeInt1D("RadialTime", gates, 0);
+void
+RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
+{
+  auto list = getArrays();
 
-  /** Nyquist per radial */
-  resizeFloat1D("Nyquist", gates, Constants::MissingData);
-} // reserveRadials
+  for (auto l:list) {
+    // FIXME: Feel this could be more generic
+    const int size = l->getDims().size();
+    if (size == 1) {
+      resizeFloat1D(l->getName(), num_radials, 0.0f);
+    } else if (size == 2) {
+      resizeFloat2D(l->getName(), num_radials, num_gates, fill);
+    }
+  }
+}
 
 size_t
 RadialSet::getNumGates()
 {
-  return getY();
+  return getY(getFloat2D("primary"));
 }
 
 size_t
 RadialSet::getNumRadials()
 {
-  return getX();
+  return getX(getFloat2D("primary"));
 }
 
 void

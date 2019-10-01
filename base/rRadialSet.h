@@ -47,28 +47,16 @@ public:
   // Vector access
 
   /** Allow reader/writer access to full vector */
-  RAPIO_1DF *
+  std::shared_ptr<RAPIO_1DF>
   getAzimuthVector(){ return getFloat1D("Azimuth"); }
 
   /** Allow reader/writer access to full vector */
-  RAPIO_1DF *
+  std::shared_ptr<RAPIO_1DF>
   getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
 
   /** Allow reader/writer access to full vector */
-  RAPIO_1DF *
-  getAzimuthSpacingVector(){ return getFloat1D("AzimuthalSpacing"); }
-
-  /** Allow reader/writer access to full vector */
-  RAPIO_1DF *
+  std::shared_ptr<RAPIO_1DF>
   getGateWidthVector(){ return getFloat1D("GateWidth"); }
-
-  /** Allow reader/writer access to full vector */
-  RAPIO_1DI *
-  getRadialTimeVector(){ return getInt1D("RadialTime"); }
-
-  /** Allow reader/writer access to full vector */
-  RAPIO_1DF *
-  getNyquistVector(){ return getFloat1D("Nyquist"); }
 
   /** Get number of gates for radial set */
   size_t
@@ -98,6 +86,10 @@ public:
   {
     return myNyquistUnit;
   }
+
+  /** Resize the data structure */
+  void
+  init(size_t rows, size_t cols, const float fill = 0);
 
   /** Resize the data structure */
   virtual void

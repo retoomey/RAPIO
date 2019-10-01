@@ -195,35 +195,6 @@ public:
   /** Call descendant's destructor. */
   virtual ~DataType(){ }
 
-  // QUALITY STUFF -------------------------------------------------------------
-  // FIXME: This is just a hack for multi-band.  We're gonna add that to our
-  // datatypes
-  bool
-  hasQuality() const
-  {
-    return (myQuality != 0);
-  }
-
-  const DataType&
-  getQuality() const
-  {
-    return (*myQuality);
-  }
-
-  const std::shared_ptr<DataType>
-  getQualityPtr() const
-  {
-    return (myQuality);
-  }
-
-  void
-  setQuality(std::shared_ptr<DataType> dt)
-  {
-    myQuality = dt;
-  }
-
-  // END QUALITY STUFF ---------------------------------------------------------
-
 protected:
 
   /** String used for writer/reader factory, such as 'RadialSet' */
@@ -234,8 +205,5 @@ protected:
 
   /** Attribute storage */
   DataAttributes myAttributes2;
-
-  /** Old hack I think.  We need to remove or rethink this design */
-  std::shared_ptr<DataType> myQuality;
 };
 }

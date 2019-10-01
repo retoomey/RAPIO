@@ -79,147 +79,109 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       "Gate", &gate_dim, &num_gates,
       "Azimuth", &az_dim, &num_radials);
 
-    // Required variables
-
-    /*
-     * // --------------------------------------------
-     * //ALPHA new way. Pull the list
-     * //
-     * // How to read list without object?
-     * // "Azimuth", "BeamWidth", "AzimuthalSpacing", "GateWidth", "Nyquist"
-     * // also what if strings in there
-     * // So basically there are 'known' fields such as Azimuth...but what
-     * // if there's a field of something added?
-     * // 1. Read list of names
-     * // 2. Remove 'known' ones
-     * // 3. What's left, check dimension and add to 1d or 2d ?
-     * // 4. Difficult right
-     * int ndimsp, nvarsp, nattsp, unlimdimidp;
-     * nc_inq(ncid, &ndimsp, &nvarsp, &nattsp , &unlimdimidp);
-     * LogSevere("--->VAR COUNT:  "<<nvarsp<<"\n");
-     * char name[1000];
-     * nc_type xtypep;
-     * int ndimsp2, dimidsp, nattsp2;
-     * for(int i=0; i < nvarsp; ++i){
-     * nc_inq_var(ncid, i, name, &xtypep, &ndimsp2, &dimidsp, &nattsp2);
-     * LogSevere(">>>" << name << " " << ndimsp2 << " ," << dimidsp <<"\n");
-     * }
-     * LogSevere("The typename is " << aTypeName.c_str() << "\n");
-     * exit(1);
-     * // --------------------------------------------
-     */
-
-    // Azimuth variable
-    int az_var;
-    NETCDF(nc_inq_varid(ncid, "Azimuth", &az_var));
-
-    // Optional variables
-    int bw_var = -1;
-    nc_inq_varid(ncid, "BeamWidth", &bw_var);
-    int azspacing_var = -1;
-    nc_inq_varid(ncid, "AzimuthalSpacing", &azspacing_var);
-    int gw_var = -1;
-    nc_inq_varid(ncid, "GateWidth", &gw_var);
-    int radialtime_var = -1;
-    nc_inq_varid(ncid, "RadialTime", &radialtime_var);
-
-    int nyq_var = -1;
-    nc_inq_varid(ncid, "NyquistVelocity", &nyq_var);
-    std::string nyq_unit("MetersPerSecond");
-
-    if (nyq_var > -1) {
-      // Ok to fail.  Old code bug: We were looking at "Units" not "units".
-      retval = IONetcdf::getAtt(ncid, Constants::Units, nyq_unit, nyq_var);
-    }
-    int quality_var = -1;
-    nc_inq_varid(ncid, "DataQuality", &quality_var);
-
+    // -----------------------------------------------------------------------
     // Create a new radial set object
     std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time,
         rangeToFirstGate);
-
     RadialSet& radialSet = *radialSetSP;
-
-    // FIXME: maybe constructor?
+    radialSet.resize(num_radials, num_gates); // All added will use dimension size now
     radialSet.setTypeName(aTypeName);
     radialSet.setElevation(elev_angle);
-    radialSet.setNyquistVelocityUnit(nyq_unit);
-    radialSet.resize(num_radials, num_gates);
 
-    // ---------------------------------------------------------
-    // var1 calls are slow as snails.  Use memory buffer to read all at once
+    // -----------------------------------------------------------------------
+    // Gather the variable info
+    int ndimsp, nvarsp, nattsp, unlimdimidp;
+    NETCDF(nc_inq(ncid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp));
 
-    // FIXME: What is vector not in the RadialSet?  We could add it now
-    auto azvector = radialSet.getAzimuthVector();
-    NETCDF(nc_get_var_float(ncid, az_var, azvector->data()));
+    char cname[1000];
+    nc_type xtypep;
+    int ndimsp2, dimidsp, nattsp2;
 
-    if (bw_var > -1) {
-      auto bwvector = radialSet.getBeamWidthVector();
-      NETCDF(nc_get_var_float(ncid, bw_var, bwvector->data()));
-    }
+    // For each variable in the netcdf file...
+    for (int i = 0; i < nvarsp; ++i) {
+      // Get variable info
+      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, &dimidsp, &nattsp2));
+      std::string name = std::string(cname);
 
-    if (azspacing_var > -1) {
-      auto azsvector = radialSet.getAzimuthSpacingVector();
-      NETCDF(nc_get_var_float(ncid, azspacing_var, azsvector->data()));
-    } else {
-      // Azimuth spacing defaults to beamwidth if not there
-      // and beamwidth is...
-      if (bw_var > -1) {
-        auto azsvector = radialSet.getAzimuthSpacingVector();
-        NETCDF(nc_get_var_float(ncid, bw_var, azsvector->data()));
+      // Hunting each supported grid type
+      int data_var1 = -1;
+      NETCDF(nc_inq_varid(ncid, name.c_str(), &data_var1));
+
+      // Read units
+      std::string units = "Dimensionless";
+      int retval        = IONetcdf::getAtt(ncid, "Units", units, data_var1);
+      if (retval != NC_NOERR) {
+        retval = IONetcdf::getAtt(ncid, "units", units, data_var1);
+      }
+
+      if (ndimsp2 == 1) { // 1D float
+        if (xtypep == NC_FLOAT) {
+          // Create if not already there (FIXME: method cleanup )
+          auto data1DF = radialSet.getFloat1D(name);
+          if (data1DF == nullptr) {
+            radialSet.addFloat1D(name, units, num_radials);
+          } else {
+            auto data1DFNode = radialSet.getFloat2DNode(name);
+            data1DFNode->setUnits(units);
+          }
+          // ^^^^ End section to clean up
+          data1DF = radialSet.getFloat1D(name);
+
+          // Read data into array
+          NETCDF(nc_get_var_float(ncid, data_var1, data1DF->data()));
+        } else if (xtypep == NC_INT) {
+          // Create if not already there (FIXME: method cleanup )
+          auto data1DI = radialSet.getInt1D(name);
+          if (data1DI == nullptr) {
+            radialSet.addInt1D(name, units, num_radials);
+          } else {
+            auto data1DINode = radialSet.getFloat2DNode(name);
+            data1DINode->setUnits(units);
+          }
+          // ^^^^ End section to clean up
+          data1DI = radialSet.getInt1D(name);
+
+          // Read data into array
+          NETCDF(nc_get_var_int(ncid, data_var1, data1DI->data()));
+        }
+      } else if (ndimsp2 == 2) { // 2D stuff
+        if (xtypep == NC_FLOAT) {
+          // FIXME: actually this primary thing silly I think, since
+          // user will pull by typename anyway, right?
+          // Maybe instead setPrimary(typeName);
+          bool primary = false;
+          if (aTypeName == name) { // Typename matches primary grid
+            name    = "primary";
+            primary = true;
+          }
+          // Create if not already there (FIXME: method cleanup )
+          auto data2DF = radialSet.getFloat2D(name);
+          if (data2DF == nullptr) {
+            radialSet.addFloat2D(name, units, num_radials, num_gates);
+          } else {
+            auto data2DFNode = radialSet.getFloat2DNode(name);
+            data2DFNode->setUnits(units);
+          }
+          // ^^^^ End section to clean up
+
+          const bool sparse = (data_num_dims < 2);
+          if (sparse && primary) { // Only allow primary to be old sparse format.
+            IONetcdf::readSparse2D(ncid, data_var1, num_radials, num_gates,
+              FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data2DF);
+          } else {
+            // We use a grid per moment
+            const size_t start2[] = { 0, 0 };
+            const size_t count2[] = { num_radials, num_gates };
+
+            NETCDF(nc_get_vara_float(ncid, data_var1, start2, count2,
+              data2DF->data()));
+            // Do we need this?  FIXME: should take any grid right?
+            radialSet.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
+          }
+        }
       }
     }
-
-    if (gw_var > -1) {
-      auto gwvector = radialSet.getGateWidthVector();
-      NETCDF(nc_get_var_float(ncid, gw_var, gwvector->data()));
-    }
-
-    if (radialtime_var > -1) {
-      auto rtvector = radialSet.getRadialTimeVector();
-      NETCDF(nc_get_var_int(ncid, radialtime_var, rtvector->data()));
-    } else {
-      // Ok, What are we trying to be done with these times?
-
-      /* FIXME: what do we want?
-       * Time tempRT(time); // Start time of radial
-       * for (size_t i = 0; i < num_radials; ++i) {
-       * // radialtime
-       * float& radial_time = radial_time_vals[i];
-       * tempRT += rapio::TimeDuration(radial_time / 1000.0); // RadialTime is in
-       *                                                    // milliseconds
-       * }
-       */
-    }
-
-    if (nyq_var > -1) {
-      auto nqvector = radialSet.getNyquistVector();
-      NETCDF(nc_get_var_float(ncid, radialtime_var, nqvector->data()));
-    } else {
-      // FIXME: Fill with default.  Humm if stored in attributes shouldn't need
-      // a giant vector of it right?
-    }
-
-    // ---------------------------------------------------------
-
-    // Check dimensions of the data array.  Either it's 2D for azimuth/range
-    // or it's 1D for sparse array
-    const bool sparse = (data_num_dims < 2);
-
-    auto data = radialSet.getFloat2D("primary");
-    if (sparse) {
-      IONetcdf::readSparse2D(ncid, data_var, num_radials, num_gates,
-        FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data);
-    } else {
-      /** We use a grid per moment */
-      const size_t start2[] = { 0, 0 };
-      const size_t count2[] = { num_radials, num_gates };
-      NETCDF(nc_get_vara_float(ncid, data_var, start2, count2,
-        data->data()));
-      // Do we need this?
-      radialSet.replaceMissing(FILE_MISSING_DATA, FILE_RANGE_FOLDED);
-    }
-
+    // -----------------------------------------------------------------------
     IONetcdf::readUnitValueList(ncid, radialSet); // Can read now with value
                                                   // object...
     return (radialSetSP);
@@ -229,123 +191,6 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
   }
   return (0);
 } // NetcdfRadialSet::read
-
-// Shared common write code for PolarGrid and RadialSet.
-// This is a bit messy, but it's better to have one copy of code to reduce
-// chance of bugs.
-// PolarGrid: Full 2D grid in RAM written out..well as 2D grid
-// RadialSet: Range length vectors of Radials in RAM and editable.
-//     RadialSets are 'padded' when writing to turn them into PolarGrids pretty
-// much...
-// We always read in and convert to RadialSets...this is so algorithms don't
-// have to care
-// about PolarGrids unless they explicitly want to store one.  Bleh should be
-// subclassed
-bool
-NetcdfRadialSet::writePolarHeader(int ncid, DataType& data,
-
-  // Inputs
-  const size_t num_radials,
-  const size_t num_gates,
-  const double elevDegrees,
-  const double firstGateM,
-  const bool wantQuality,
-  const bool wantNyquist,
-  const bool wantRadialTime,
-  const float missing,
-  const float rangeFolded,
-
-  // Outputs
-  int * az_dim,
-  int * rn_dim,
-  int * datavar,
-  int * qualityvar,
-  int * azvar,
-  int * bwvar,
-  int * azspacingvar,
-  int * gwvar,
-  int * nyquistvar,
-  int * radialtimevar
-)
-{
-  const std::string typeName = data.getTypeName();
-
-  if (num_gates == 0) {
-    LogSevere
-    (
-      "NetcdfEncoder: There are no gates to write in this radialset/polargrid dataset.\n");
-    return (false);
-  }
-
-  // ------------------------------------------------------------
-  // DIMENSIONS
-  //
-  NETCDF(nc_def_dim(ncid, "Azimuth", num_radials, az_dim));
-  NETCDF(nc_def_dim(ncid, "Gate", num_gates, rn_dim));
-
-  // ------------------------------------------------------------
-  // VARIABLES
-  //
-  NETCDF(IONetcdf::addVar2D(ncid, typeName.c_str(),
-    // Constants::getCODEUnits(data).c_str(),
-    data.getUnits().c_str(),
-    NC_FLOAT, *az_dim, *rn_dim, datavar));
-
-  if (wantQuality) {
-    NETCDF(IONetcdf::addVar2D(ncid, "DataQuality", "dimensionless",
-      NC_FLOAT, *az_dim, *rn_dim, qualityvar))
-  }
-  NETCDF(IONetcdf::addVar1D(ncid,
-    "Azimuth",
-    "Degrees",
-    NC_FLOAT,
-    *az_dim,
-    azvar));
-  NETCDF(IONetcdf::addVar1D(ncid, "BeamWidth", "Degrees", NC_FLOAT, *az_dim,
-    bwvar));
-  NETCDF(IONetcdf::addVar1D(ncid, "AzimuthalSpacing", "Degrees", NC_FLOAT,
-    *az_dim, azspacingvar));
-  NETCDF(IONetcdf::addVar1D(ncid, "GateWidth", "Meters", NC_FLOAT, *az_dim,
-    gwvar));
-
-  if (wantRadialTime) {
-    NETCDF(IONetcdf::addVar1D(ncid, "RadialTime", "Milliseconds", NC_INT,
-      *az_dim, radialtimevar));
-  }
-
-  if (wantNyquist) {
-    NETCDF(IONetcdf::addVar1D(ncid, "NyquistVelocity", "MetersPerSecond",
-      NC_FLOAT, *az_dim, nyquistvar));
-  }
-
-  // ------------------------------------------------------------
-  // GLOBAL ATTRIBUTES
-  //
-  const std::string dataType = "RadialSet"; // Code as RadialSet.  It doesn't
-                                            // matter we read in as one
-
-  if (!IONetcdf::addGlobalAttr(ncid, data, dataType)) {
-    return (false);
-  }
-
-  NETCDF(IONetcdf::addAtt(
-      ncid,
-      "Elevation",
-      elevDegrees));
-  NETCDF(IONetcdf::addAtt(ncid, "ElevationUnits", "Degrees"));
-  NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGate", firstGateM));
-  NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGateUnits", "Meters"));
-  NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
-  NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
-
-  // old netcdf write always added this, I don't think we need it but I'll add
-  // for now
-  // FIXME: remove this if not used.  PolarGrid never used it.  Extra field
-  // doesn't hurt.
-  NETCDF(IONetcdf::addAtt(ncid, "NumValidRuns", (int) (-1), *datavar));
-
-  return (true);
-} // NetcdfRadialSet::writePolarHeader
 
 bool
 NetcdfRadialSet::write(int ncid, const DataType& dt,
@@ -366,106 +211,102 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
   ProcessTimer("Writing RadialSet");
 
   try {
+    // Typename of primary 2D float grid
+    const std::string typeName = radialSet.getTypeName();
+
+    // ------------------------------------------------------------
+    // DIMENSIONS
+    //
     const size_t num_radials = radialSet.getNumRadials();
-    const size_t num_gates   = radialSet.getNumGates();
+    const size_t num_gates = radialSet.getNumGates();
+    int az_dim, rn_dim;
+    NETCDF(nc_def_dim(ncid, "Azimuth", num_radials, &az_dim));
+    NETCDF(nc_def_dim(ncid, "Gate", num_gates, &rn_dim));
+
+    // ------------------------------------------------------------
+    // VARIABLES
+    //
+    DataGrid& grid = dynamic_cast<DataGrid&>(radialSet);
+    auto list      = grid.getArrays();
+
+    // gotta be careful to write in same order as declare...
+    std::vector<int> datavars;
+    for (auto l:list) {
+      auto theType  = l->getName();
+      auto theUnits = l->getUnits();
+      // Primary data is the data type of the file
+      if (theType == "primary") {
+        theType = typeName;
+      }
+      int var        = -1;
+      const size_t s = l->getDims().size();
+
+      // FIXME: more general method, pass dimensions/type?
+      // Also we're writing int as float here..no type yet
+      if (s == 2) {
+        NETCDF(IONetcdf::addVar2D(ncid, theType.c_str(),
+          theUnits.c_str(),
+          NC_FLOAT, az_dim, rn_dim, &var));
+      } else if (s == 1) {
+        NETCDF(IONetcdf::addVar1D(ncid, theType.c_str(),
+          theUnits.c_str(),
+          NC_FLOAT, az_dim, &var));
+      }
+
+      datavars.push_back(var);
+    }
+    // Declare 1D int variables
+    //  int  radialtimevar;
+    //  NETCDF(IONetcdf::addVar1D(ncid, "RadialTime", "Milliseconds", NC_INT,
+    //    az_dim, &radialtimevar));
+
+    // ------------------------------------------------------------
+    // GLOBAL ATTRIBUTES
+    //
+    const std::string dataType = "RadialSet";
+    if (!IONetcdf::addGlobalAttr(ncid, radialSet, dataType)) {
+      return (false);
+    }
 
     // Nyquist
     float default_nyquist = Constants::MissingData;
-
     radialSet.getDataAttributeFloat("Nyquist_Vel",
       default_nyquist,
       "MetersPerSecond");
 
-    // Quality
-    bool haveQuality    = radialSet.hasQuality();
-    RadialSet * quality = 0;
-
-    if (haveQuality) {
-      // quality = dynamic_cast<RadialSet*>(radialSet.getQualityPtr().ptr);
-      quality     = (RadialSet *) (radialSet.getQualityPtr().get());
-      haveQuality = (quality != nullptr);
-    }
-
-    int az_dim, rn_dim;
-    int datavar, qualityvar, azvar, bwvar, azspacingvar, gwvar, nyquistvar,
-      radialtimevar;
-    writePolarHeader(ncid, radialSet,
-      num_radials, num_gates,
-      radialSet.getElevation(),
-      radialSet.getDistanceToFirstGate().meters(),
-      haveQuality,
-      true, // Nyquist array
-      true, // Radial time array
-      missing,
-      rangeFolded,
-
-      &az_dim, &rn_dim,
-
-      &datavar, &qualityvar,
-      &azvar, &bwvar, &azspacingvar, &gwvar,
-      &nyquistvar,
-      &radialtimevar
-    );
+    const double elevDegrees = radialSet.getElevation();
+    const double firstGateM  = radialSet.getDistanceToFirstGate().meters();
+    NETCDF(IONetcdf::addAtt(
+        ncid,
+        "Elevation",
+        elevDegrees));
+    NETCDF(IONetcdf::addAtt(ncid, "ElevationUnits", "Degrees"));
+    NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGate", firstGateM));
+    NETCDF(IONetcdf::addAtt(ncid, "RangeToFirstGateUnits", "Meters"));
+    NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
+    NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
 
     // Non netcdf-4/hdf5 require separation between define and data...
     // netcdf-4 doesn't care though
     NETCDF(nc_enddef(ncid));
 
-    // put the data in to the variables
-    // This might be faster to pull as a full array from radialset..though
-    // that would have to copy it...
-    rapio::Time baseTime = radialSet.getTime();
+    // Write pass using datavars
+    const size_t start2[] = { 0, 0 };
+    const size_t count2[] = { num_radials, num_gates };
+    size_t count = 0;
+    for (auto l:list) {
+      const size_t s = l->getDims().size();
 
-    // We can write all of them at once now. FIXME: Why not loop generic sets?
-    auto azvector = radialSet.getAzimuthVector();
-    auto bwvector = radialSet.getBeamWidthVector();
-    auto asvector = radialSet.getAzimuthSpacingVector();
-    auto gwvector = radialSet.getGateWidthVector();
-    auto rtvector = radialSet.getRadialTimeVector();
-    NETCDF(nc_put_var_float(ncid, azvar, azvector->data()));
-    NETCDF(nc_put_var_float(ncid, bwvar, bwvector->data()));
-    NETCDF(nc_put_var_float(ncid, azspacingvar, asvector->data()));
-    NETCDF(nc_put_var_float(ncid, gwvar, gwvector->data()));
-    NETCDF(nc_put_var_int(ncid, radialtimevar, rtvector->data()));
-
-    // FIXME: Nyquist not right yet.  Works for raw copy, not if units changed...
-
-    /*if (radialSet.getNyquestVelocity(nyquist_val, nyq_unit)) {
-     * nyquist_val = Unit::value(nyq_unit, "MetersPerSecond",
-     *    nyquist_val);
-     * } else {
-     * nyquist_val = default_nyquist;
-     * }
-     */
-    std::string unit = radialSet.getNyquistVelocityUnit();
-    if (unit == "") { // No nyquest was ever set
-    } else {
-      auto nvector = radialSet.getFloat1D("Nyquist");
-      #ifdef BOOST_ARRAY
-      std::fill(nvector->begin(), nvector->end(), default_nyquist);
-      #else
-      nvector->fill(default_nyquist);
-      #endif
-      NETCDF(nc_put_var_float(ncid, nyquistvar, nvector->data()));
+      if (s == 2) {
+        auto theData = l->get<RAPIO_2DF>();
+        NETCDF(nc_put_vara_float(ncid, datavars[count], start2, count2,
+          theData->data()));
+      } else if (s == 1) {
+        auto theData = l->get<RAPIO_1DF>();
+        NETCDF(nc_put_var_float(ncid, datavars[count], theData->data()));
+      }
+      count++;
     }
-
-    /** Does it go in correctly? lol */
-    const size_t start2[] = { 0, 0 };                   // lat, lon
-    const size_t count2[] = { num_radials, num_gates }; // lat_count, lon_count
-    // NETCDF(nc_put_vara_float(ncid, datavar, start2, count2,
-    //   radialSet.getDataVector()));
-    auto data = radialSet.getFloat2D("primary");
-    NETCDF(nc_put_vara_float(ncid, datavar, start2, count2,
-      data->data()));
-
-    /*  FIXME: disabling quality.  We _really_ want multiband
-     *    // Write out current radial from any quality...
-     *    if (haveQuality) {
-     *      const Radial& q = (*quality).getRadial(i);
-     *      NETCDF(nc_put_vara_float(ncid, qualityvar, start, count,
-     *        q.getDataVector()));
-     *    }
-     */
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with RadialSet: " << ex.getNetcdfStr() << "\n");
     return (false);
@@ -486,9 +327,9 @@ NetcdfRadialSet::getTestObject(
   const double elev_angle  = elev;
   const float gate_width   = 1;
   const float beam_width   = 2;
+
   // float radial_time        = 1000.0; // Add a second to radial time for each
   //                                   // radial...
-  float azspacing = 1.0;
 
   std::string nyq_unit("MetersPerSecond");
 
@@ -504,29 +345,19 @@ NetcdfRadialSet::getTestObject(
 
   auto azimuths   = radialSet.getFloat1D("Azimuth");
   auto beamwidths = radialSet.getFloat1D("BeamWidth");
-  auto azspacings = radialSet.getFloat1D("AzimuthalSpacing");
   auto gatewidths = radialSet.getFloat1D("GateWidth");
 
-  auto data = *(radialSet.getFloat2D("primary"));
+  auto data = radialSet.getFloat2D("primary");
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree
-
-    #ifdef BOOST_ARRAY
-    (*azimuths)[i]   = start_az; // different?
+    (*azimuths)[i]   = start_az;
     (*beamwidths)[i] = beam_width;
-    (*azspacings)[i] = azspacing;
     (*gatewidths)[i] = gate_width;
-    #else
-    azimuths[i]   = start_az;
-    beamwidths[i] = beam_width;
-    azspacings[i] = azspacing;
-    gatewidths[i] = gate_width;
-    #endif
     for (size_t j = 0; j < num_gates; ++j) {
       #ifdef BOOST_ARRAY
-      data[i][j] = i;
+      (*data)[i][j] = i;
       #else
-      data.set(i, j, i);
+      (*data).set(i, j, i);
       #endif
     }
   }

@@ -38,30 +38,6 @@ public:
   read(const int                  ncid,
     const std::vector<std::string>& params);
 
-  /** Common stuff with RadialSet and PolarGrid */
-  static bool
-  writePolarHeader(int ncid,
-    DataType           & data,
-    const size_t       num_radials,
-    const size_t       num_gates,
-    const double       elevDegrees,
-    const double       firstGateM,
-    const bool         wantQuality,
-    const bool         wantNyquist,
-    const bool         wantRadialTime,
-    const float        missing,
-    const float        rangeFolded,
-    int *              az_dim,
-    int *              rn_dim,
-    int *              datavar,
-    int *              qualityvar,
-    int *              azvar,
-    int *              bwvar,
-    int *              azspacingvar,
-    int *              gwvar,
-    int *              nyquistvar,
-    int *              radialtimevar);
-
   /** C write out a RadialSet to ncid. */
   static bool
   write(int     ncid,
