@@ -16,7 +16,7 @@ namespace rapio {
  * @author Robert Toomey */
 class GribDataType : public DataType {
 public:
-  GribDataType(std::vector<char> buf) : myBuf(buf)
+  GribDataType(const std::vector<char>& buf) : myBuf(buf)
   {
     myDataType = "GribData";
   }

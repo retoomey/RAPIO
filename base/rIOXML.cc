@@ -47,7 +47,7 @@ IOXML::readURL(const URL& url)
     try{
       boost::property_tree::read_xml(is, *pt);
       return pt;
-    }catch (std::exception e) { // pt::xml_parser::xml_parser_error
+    }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
       // We catch all to recover
       LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
       return nullptr;

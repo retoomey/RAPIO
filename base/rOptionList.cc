@@ -187,9 +187,15 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value)
     // We were giving an option we don't know about...
     // FIXME: Hide the internals of option, right?
     Option o;
-    o.opt                = arg;
-    o.parsedValue        = value;
-    o.parsed             = true;
+    o.opt         = arg;
+    o.parsedValue = value;
+    o.parsed      = true;
+    // Just set them, not used in unused
+    o.required = false;
+    o.boolean  = false;
+    o.system   = false;
+    o.enforceSuboptions  = false;
+    o.suboptionmax       = 0;
     unusedOptionMap[arg] = o;
   }
 } // OptionList::storeParsedArg

@@ -10,9 +10,9 @@
 
 using namespace rapio;
 
-XMLIndex::XMLIndex(const URL                   & xmlURL,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory)
+XMLIndex::XMLIndex(const URL                        & xmlURL,
+  const std::vector<std::shared_ptr<IndexListener> >& listeners,
+  const TimeDuration                                & maximumHistory)
   : IndexType(listeners, maximumHistory),
   readok(false)
 {
@@ -62,7 +62,7 @@ XMLIndex::initialRead(bool realtime)
           }
         }
       }
-    }catch (std::exception e) {
+    }catch (std::exception& e) {
       LogSevere("Error parsing codeindex XML\n");
       return (false);
     }

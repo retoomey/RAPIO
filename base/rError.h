@@ -31,7 +31,7 @@ public:
 class LogSettingURLWatcher : public EventTimer {
 public:
 
-  LogSettingURLWatcher(URL aURL, size_t milliseconds) : EventTimer(milliseconds, "Log Setting URL Watcher"),
+  LogSettingURLWatcher(const URL& aURL, size_t milliseconds) : EventTimer(milliseconds, "Log Setting URL Watcher"),
     myURL(aURL)
   { }
 

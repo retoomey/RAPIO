@@ -24,9 +24,9 @@ FMLIndex::~FMLIndex()
    */
 }
 
-FMLIndex::FMLIndex(const URL                   & url,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory) :
+FMLIndex::FMLIndex(const URL                        & url,
+  const std::vector<std::shared_ptr<IndexListener> >& listeners,
+  const TimeDuration                                & maximumHistory) :
   IndexType(listeners, maximumHistory),
   indexPath(IOIndex::getIndexPath(url)),
   is_valid(false)

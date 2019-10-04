@@ -22,11 +22,11 @@ IJK::IJK(
   const LLH& b
 )
 {
-  IJK z = XYZ(b) - XYZ(a);
+  IJK v = XYZ(b) - XYZ(a);
 
-  x = z.x;
-  y = z.y;
-  z = z.z;
+  x = v.x;
+  y = v.y;
+  z = v.z;
 }
 
 IJK::IJK(

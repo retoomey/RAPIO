@@ -64,14 +64,14 @@ public:
   virtual bool
   readConfigURL(const URL   & path,
     std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values);
+    std::vector<std::string>& values) override;
 
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
     const std::string       & program,
     std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values);
+    std::vector<std::string>& values) override;
 };
 
 /** Can read write a flat config file.  This matches the oldstyle
@@ -87,13 +87,13 @@ public:
   virtual bool
   readConfigURL(const URL   & path,
     std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values);
+    std::vector<std::string>& values) override;
 
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
     const std::string       & program,
     std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values);
+    std::vector<std::string>& values) override;
 };
 }

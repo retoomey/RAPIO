@@ -16,9 +16,9 @@ WebIndex::introduceSelf()
   IOIndex::introduce("webindex", newOne);
 }
 
-WebIndex::WebIndex(const URL                   & url,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory) :
+WebIndex::WebIndex(const URL                        & url,
+  const std::vector<std::shared_ptr<IndexListener> >& listeners,
+  const TimeDuration                                & maximumHistory) :
   IndexType(listeners, maximumHistory),
   myURL(url),
   myLastRead(0),

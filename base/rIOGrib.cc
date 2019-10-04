@@ -178,7 +178,7 @@ class GribLookup : public IO
 public:
   GribLookup(int d, int m, int c, int l, int pc, int pn,
     const std::string& k, const std::string& des,
-    const std::string u) : disc(d), mtab(m), cntr(c), ltab(l),
+    const std::string& u) : disc(d), mtab(m), cntr(c), ltab(l),
     pcat(pc), pnum(pn), key(k), description(des), units(u)
   { }
 
@@ -749,7 +749,7 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
               gribfield * gfld = 0; // output
               g2int unpack     = 0; // 0 do not unpack
               g2int expand     = 0; // 1 expand the data?
-              int ierr         = g2_getfld(&bu[k], f, unpack, expand, &gfld);
+              ierr = g2_getfld(&bu[k], f, unpack, expand, &gfld);
 
               if (ierr > 0) {
                 LogSevere(getGrib2Error(ierr));

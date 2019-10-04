@@ -71,7 +71,7 @@ public:
   getDistanceToFirstGate() const;
 
   virtual std::string
-  getGeneratedSubtype() const;
+  getGeneratedSubtype() const override;
 
   /** Set the units used for nyquist, if any */
   void

@@ -109,7 +109,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
       // Read units
       std::string units = "Dimensionless";
-      int retval        = IONetcdf::getAtt(ncid, "Units", units, data_var1);
+      retval = IONetcdf::getAtt(ncid, "Units", units, data_var1);
       if (retval != NC_NOERR) {
         retval = IONetcdf::getAtt(ncid, "units", units, data_var1);
       }

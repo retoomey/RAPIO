@@ -17,7 +17,7 @@ namespace rapio {
  * @author Robert Toomey */
 class NetcdfDataType : public DataType {
 public:
-  NetcdfDataType(std::vector<char> buf) : myBuf(buf) // copy or move?
+  NetcdfDataType(const std::vector<char>& buf) : myBuf(buf) // copy or move?
   {
     myDataType = "NetcdfData";
   }

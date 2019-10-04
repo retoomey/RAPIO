@@ -32,9 +32,9 @@ public:
    *  http://venus.protect.nssl:8080/?source=KABR
    *  We'll add webIndex/WebIndexServlet etc. as required.
    */
-  WebIndex(const URL                             & website,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory);
+  WebIndex(const URL                                  & website,
+    const std::vector<std::shared_ptr<IndexListener> >& listeners,
+    const TimeDuration                                & maximumHistory);
 
   // Index methods ------------------------------------------
   /** Handle realtime vs. archive mode stuff */
@@ -43,7 +43,7 @@ public:
 
   // IOListener methods ---------------------------------------
   virtual bool
-  handlePoll();
+  handlePoll() override;
 
   /** Read all xml records from a remote changing URL */
   virtual bool

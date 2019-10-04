@@ -16,11 +16,8 @@ using namespace rapio;
 using namespace std;
 using namespace std::chrono;
 
-EventTimer::EventTimer(size_t milliseconds, const std::string& name)
-{
-  myDelayMS = milliseconds;
-  myName    = name;
-}
+EventTimer::EventTimer(size_t milliseconds, const std::string& name) : myDelayMS(milliseconds), myName(name)
+{ }
 
 void
 EventTimer::setTimerMilliseconds(size_t m)

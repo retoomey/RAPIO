@@ -18,7 +18,7 @@ public:
 private: // Config read
 
   virtual bool
-  readConfig(){ return readInSettings(); }
+  readConfig() override { return readInSettings(); }
 
   static bool
   readInSettings();

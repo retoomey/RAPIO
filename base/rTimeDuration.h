@@ -18,13 +18,10 @@ class TimeDuration : public Data {
 public:
 
   /// The default interval has zero length.
-  TimeDuration(double s = 0) // : sec(s)
-  {
-    // not sure this is rounding correctly
-    long m = s * 1000.0;
-
-    myMSeconds = std::chrono::milliseconds(m);
-  }
+  // not sure s*1000.0 is rounding correctly
+  TimeDuration(double s = 0)
+    : myMSeconds(std::chrono::milliseconds((long)(s * 1000.0)))
+  { }
 
   /// Return a TimeDuration explicitly defined in sec.
   static TimeDuration

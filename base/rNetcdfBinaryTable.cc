@@ -77,8 +77,6 @@ bool
 NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
   const float missing, const float rangeFolded)
 {
-  int retval;
-
   try {
     // Generically write a binary table's stuff to netcdf.  This uses an API
     // within the binary table to avoid coupling and to allow dynamic expansion
@@ -201,7 +199,7 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
             const char ** vc2 = const_cast<const char **>(&vc[0]);
 
             // Now write the character array
-            retval = nc_put_var_string(ncid, varid, vc2);
+            int retval = nc_put_var_string(ncid, varid, vc2);
 
             // Clean up c strings
             for (size_t i = 0; i < vc.size(); i++) {

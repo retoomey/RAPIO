@@ -61,7 +61,7 @@ public:
   }
 
   void
-  notifyNewRecordEvent(const Record& item)
+  notifyNewRecordEvent(const Record& item) override
   {
     if (myOn) {
       myAlg->handleRecordEvent(item);
@@ -69,7 +69,7 @@ public:
   }
 
   void
-  notifyEndDatasetEvent(const Record& item)
+  notifyEndDatasetEvent(const Record& item) override
   {
     if (myOn) {
       myAlg->handleEndDatasetEvent();
@@ -518,7 +518,7 @@ public:
   setAlg(RAPIOAlgorithm * m){ myAlg = m; }
 
   virtual bool
-  wanted(const Record& rec)
+  wanted(const Record& rec) override
   {
     // FIXME: We also want to time filter in the time window,
     // expecially on startup reading..

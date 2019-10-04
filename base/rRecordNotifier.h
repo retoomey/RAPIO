@@ -32,7 +32,7 @@ public:
 
   /** Set the URL output location of this record notifier */
   virtual void
-  setURL(URL aURL, URL datalocation = "")
+  setURL(URL aURL, URL datalocation)
   {
     myURL = aURL;
   }

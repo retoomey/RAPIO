@@ -46,16 +46,16 @@ Strings::makeLower(const std::string& in)
 }
 
 size_t
-Strings::split(const std::string& s, std::vector<std::string> * setme)
+Strings::split(const std::string& in, std::vector<std::string> * setme)
 {
   // Split greedy on space here
-  std::string s3 = boost::algorithm::trim_copy(s);
+  std::string s3 = boost::algorithm::trim_copy(in);
   boost::split(*setme, s3, boost::is_any_of(" "), boost::token_compress_on);
   return setme->size();
 }
 
 size_t
-Strings::splitWithoutEnds(const std::string & s2,
+Strings::splitWithoutEnds(const std::string & in,
   char                                      delimiter,
   std::vector<std::string> *                setme)
 {
@@ -63,32 +63,32 @@ Strings::splitWithoutEnds(const std::string & s2,
       return (c == delimiter);
     };
 
-  std::string s3 = boost::algorithm::trim_copy_if(s2, test);
+  std::string s3 = boost::algorithm::trim_copy_if(in, test);
   boost::split(*setme, s3, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
   return setme->size();
 }
 
 size_t
-Strings::split(const std::string & s,
+Strings::split(const std::string & in,
   char                           delimiter,
   std::vector<std::string> *     setme)
 {
-  if (s.empty()) { return (0); } // Not sure this is needed
-  boost::split(*setme, s, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
+  if (in.empty()) { return (0); } // Not sure this is needed
+  boost::split(*setme, in, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
   return (setme->size());
 }
 
 size_t
-Strings::splitOnFirst(const std::string & s,
+Strings::splitOnFirst(const std::string & in,
   char                                  delimiter,
   std::vector<std::string> *            setme)
 {
   size_t n_tokens = 0;
-  const std::string::size_type pos(s.find(delimiter));
+  const std::string::size_type pos(in.find(delimiter));
 
   if (pos != std::string::npos) {
-    setme->push_back(s.substr(0, pos));
-    setme->push_back(s.substr(pos + 1, s.size() - (pos + 1)));
+    setme->push_back(in.substr(0, pos));
+    setme->push_back(in.substr(pos + 1, in.size() - (pos + 1)));
     n_tokens = 2;
   }
 
@@ -121,43 +121,45 @@ Strings::trim(std::string& s)
   boost::algorithm::trim(s);
 }
 
-bool
-Strings::matches(const std::string& pattern, const std::string& tocheck)
-{
-  // FIXME: We can just use boost.regex here probably...
-
-  // *bl?h.* matches Goopblah.jpg for example...
-  const char * wild = pattern.c_str();
-  const char * s    = tocheck.c_str();
-
-  while ((*s) && (*wild != '*')) {
-    if ((tolower(*wild) != tolower(*s)) && (*wild != '?')) {
-      return (false);
-    }
-    wild++;
-    s++;
-  }
-
-  const char * cp = 0, * mp = 0;
-
-  while (*s) {
-    if (*wild == '*') {
-      if (!*++wild) { return (true); } mp = wild;
-      cp = s + 1;
-    } else if ((tolower(*wild) == tolower(*s)) || (*wild == '?')) {
-      wild++;
-      s++;
-    } else {
-      wild = mp;
-      s    = cp++;
-    }
-  }
-
-  while (*wild == '*') {
-    wild++;
-  }
-  return (!*wild != 0);
-} // Strings::matches
+/*
+ * bool
+ * Strings::matches(const std::string& pattern, const std::string& tocheck)
+ * {
+ * // FIXME: We can just use boost.regex here probably...
+ *
+ * // *bl?h.* matches Goopblah.jpg for example...
+ * const char * wild = pattern.c_str();
+ * const char * s    = tocheck.c_str();
+ *
+ * while ((*s) && (*wild != '*')) {
+ *  if ((tolower(*wild) != tolower(*s)) && (*wild != '?')) {
+ *    return (false);
+ *  }
+ *  wild++;
+ *  s++;
+ * }
+ *
+ * const char * cp = 0, * mp = 0;
+ *
+ * while (*s) {
+ *  if (*wild == '*') {
+ *    if (!*++wild) { return (true); } mp = wild;
+ *    cp = s + 1;
+ *  } else if ((tolower(*wild) == tolower(*s)) || (*wild == '?')) {
+ *    wild++;
+ *    s++;
+ *  } else {
+ *    wild = mp;
+ *    s    = cp++;
+ *  }
+ * }
+ *
+ * while (*wild == '*') {
+ *  wild++;
+ * }
+ * return (!*wild != 0);
+ * } // Strings::matches
+ */
 
 std::string
 Strings::removeANSII(const std::string& input)

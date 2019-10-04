@@ -76,14 +76,14 @@ ConfigDataFormat::readInSettings()
           setting.faacompliance = l.get("faacompliance", false);
 
           // Store all attributes generally.  This includes the specials above
-          for (auto r: l) {
-            setting.attributes[r.first.data()] = r.second.data();
+          for (auto att: l) {
+            setting.attributes[att.first.data()] = att.second.data();
           }
           mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
         }
       }
     }
-  }catch (std::exception e) {
+  }catch (std::exception& e) {
     LogSevere("Error parsing XML from misc/dataformat\n");
   }
 

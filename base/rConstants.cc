@@ -46,14 +46,6 @@ const double Constants::RAD_PER_DEGREE   = Constants::RadiansPerDegree;
 const double Constants::DegreesPerRadian = 180.0 / M_PI;
 const double Constants::DEGREE_PER_RAD   = Constants::DegreesPerRadian;
 
-const double&
-Constants::Pi()
-{
-  static double result = ((M_PI) * 180.0 / M_PI);
-
-  return (result);
-}
-
 const time_t Constants::SecondsPerDay = 86400;
 
 // Datatype constants

@@ -39,7 +39,7 @@ public:
 
   /** Get a new upper case string  */
   static std::string
-  makeUpper(const std::string& s);
+  makeUpper(const std::string& in);
 
   /** Convert to lower case. */
   static void
@@ -47,7 +47,7 @@ public:
 
   /** Get a new lower case string  */
   static std::string
-  makeLower(const std::string& s);
+  makeLower(const std::string& in);
 
   /**
    * Split a string on whitespace and put the pieces into a vector.
@@ -56,7 +56,7 @@ public:
    * @return number of strings added to `setme'
    */
   static size_t
-  split(const std::string      & splitme,
+  split(const std::string      & in,
     std::vector<std::string> * setme);
 
   /** Split a string on a character and put the pieces into a vector.
@@ -72,7 +72,7 @@ public:
    *  @see split
    */
   static size_t
-  splitWithoutEnds(const std::string & splitme,
+  splitWithoutEnds(const std::string & in,
     char                             delimiter,
     std::vector<std::string> *       setme);
 
@@ -89,7 +89,7 @@ public:
    *  @see splitWithoutEnds to avoid getting these empty strings
    */
   static size_t
-  split(const std::string      & splitme,
+  split(const std::string      & in,
     char                       delimiter,
     std::vector<std::string> * setme);
 
@@ -110,20 +110,20 @@ public:
    *  @return number of fields
    */
   static size_t
-  splitOnFirst(const std::string & splitme,
+  splitOnFirst(const std::string & in,
     char                         delimiter,
     std::vector<std::string> *   setme);
 
   /** Replace all occurences of `from' with `to' in string `s'. */
   static void
-  replace(std::string & s,
+  replace(std::string & in,
     const std::string & from,
     const std::string & to);
 
   /**  *bl?h.* matches Goopblah.jpg for example... */
-  static bool
-  matches(const std::string& pattern,
-    const std::string      & test);
+  // static bool
+  // matches(const std::string& pattern,
+  //  const std::string      & test);
 
   /** Remove ANSII formatting from a string */
   static std::string
@@ -131,9 +131,9 @@ public:
 
   /** Split a string based on a width into words */
   static size_t
-  wrap(const std::string       & input,
+  wrap(const std::string       & inputin,
     std::vector<std::string> * setme,
-    size_t                     width,
+    size_t                     restwidth,
     size_t                     firstwidth = 0);
 };
 }

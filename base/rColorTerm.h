@@ -33,7 +33,7 @@ public:
   wrapWithIndent(size_t currentIndent,
     size_t              indent,
     const std::string   & input,
-    std::ostream        & z = std::cout);
+    std::ostream        & ss = std::cout);
 
   /** Turn on/off color output */
   static void
@@ -49,11 +49,11 @@ public:
 
   /** Simple quick bold string wrapper */
   static std::string
-  bold(const std::string& in);
+  bold(const std::string& text);
 
   /** Simple quick underline string wrapper */
   static std::string
-  underline(const std::string& in);
+  underline(const std::string& text);
 
 private:
 

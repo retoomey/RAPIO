@@ -51,9 +51,9 @@ public:
    * @param xmlFile the file to parse
    * @param baseClass (optional) -- use for simulations, etc.
    */
-  XMLIndex(const URL                             & xmlFile,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory);
+  XMLIndex(const URL                                  & xmlFile,
+    const std::vector<std::shared_ptr<IndexListener> >& listeners,
+    const TimeDuration                                & maximumHistory);
 
   /** Handle realtime vs. archive mode stuff */
   virtual bool

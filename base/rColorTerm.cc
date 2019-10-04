@@ -47,7 +47,7 @@ ColorTerm::wrapWithIndent(size_t currentIndent,
     // Dump first line out.  If it's now less than the remaining
     // space...otherwise new line iff
     // the indent is < currentIndent.  Still might not fit, but we'll try...
-    std::string noansii = Strings::removeANSII(output[0]);
+    noansii = Strings::removeANSII(output[0]);
 
     if (noansii.length() <= leftover) {
       ss << output[0] << "\n";

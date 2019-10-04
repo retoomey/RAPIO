@@ -41,7 +41,7 @@ private: // Config called
 
   /** Called by config during startup */
   virtual bool
-  readConfig(){ return readInSettings(); }
+  readConfig() override { return readInSettings(); }
 
   /** Add a failsafe default writer configuration for any error */
   static void

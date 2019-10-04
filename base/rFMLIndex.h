@@ -24,9 +24,9 @@ public:
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
 
-  FMLIndex(const URL                             & index_directory_name,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory);
+  FMLIndex(const URL                                  & index_directory_name,
+    const std::vector<std::shared_ptr<IndexListener> >& listeners,
+    const TimeDuration                                & maximumHistory);
 
   virtual
   ~FMLIndex();

@@ -99,7 +99,7 @@ private:
 
   /** Parse a collection of paths separated by : */
   static void
-  addSearchFromString(const std::string& paths);
+  addSearchFromString(const std::string& pathgroup);
 
   /** the order of search. The first match wins. */
   static std::vector<URL> mySearchPaths;

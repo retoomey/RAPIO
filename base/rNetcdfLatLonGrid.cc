@@ -233,7 +233,7 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
 
     // DEFINE ----------------------------------------------------------
     // Declare our dimensions
-    int lat_dim, lon_dim, time_dim;
+    int lat_dim, lon_dim, time_dim = -1;
     const size_t lat_size = llgrid.getNumLats(); // used again later
     NETCDF(nc_def_dim(ncid, "Lat", lat_size, &lat_dim));
     NETCDF(nc_def_dim(ncid, "Lon", lon_size, &lon_dim));
