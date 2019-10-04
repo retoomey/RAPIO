@@ -11,28 +11,38 @@ DataGrid::getFloat1D(const std::string& name)
   return myData.get<RAPIO_1DF>(name);
 }
 
-void
+std::shared_ptr<RAPIO_1DF>
 DataGrid::addFloat1D(const std::string& name,
   const std::string& units, size_t size, float value)
 {
-  #ifdef BOOST_ARRAY
-  auto a = myData.add<RAPIO_1DF>(name, units, boost::multi_array<float, 1>(boost::extents[size]));
-  boost::multi_array_ref<float, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
-  std::fill(a_ref.begin(), a_ref.end(), value);
-  #else
-  myData.add<RAPIO_1DF>(name, units, DataStore<float>(size, value));
-  #endif
+  auto a = myData.get<RAPIO_1DF>(name);
+
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_1DF>(name, units, boost::multi_array<float, 1>(boost::extents[size]));
+    boost::multi_array_ref<float, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
+    std::fill(a_ref.begin(), a_ref.end(), value);
+    #else
+    a = myData.add<RAPIO_1DF>(name, units, DataStore<float>(size, value));
+    #endif
+  }
+  return a;
 }
 
-void
+std::shared_ptr<RAPIO_1DF>
 DataGrid::addFloat1D(const std::string& name,
   const std::string& units, size_t size)
 {
-  #ifdef BOOST_ARRAY
-  myData.add<RAPIO_1DF>(name, units, boost::multi_array<float, 1>(boost::extents[size]));
-  #else
-  myData.add<RAPIO_1DF>(name, units, DataStore<float>(size));
-  #endif
+  auto a = myData.get<RAPIO_1DF>(name);
+
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_1DF>(name, units, boost::multi_array<float, 1>(boost::extents[size]));
+    #else
+    a = myData.add<RAPIO_1DF>(name, units, DataStore<float>(size));
+    #endif
+  }
+  return a;
 }
 
 void
@@ -73,27 +83,37 @@ DataGrid::getInt1D(const std::string& name)
   return myData.get<RAPIO_1DI>(name);
 }
 
-void
+std::shared_ptr<RAPIO_1DI>
 DataGrid::addInt1D(const std::string& name, const std::string& units, size_t size, int value)
 {
-  #ifdef BOOST_ARRAY
-  auto a = myData.add<RAPIO_1DI>(name, units, boost::multi_array<int, 1>(boost::extents[size]));
-  boost::multi_array_ref<int, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
-  std::fill(a_ref.begin(), a_ref.end(), value);
-  #else
-  myData.add<RAPIO_1DI>(name, units, DataStore<int>(size, value));
-  #endif
+  auto a = myData.get<RAPIO_1DI>(name);
+
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_1DI>(name, units, boost::multi_array<int, 1>(boost::extents[size]));
+    boost::multi_array_ref<int, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
+    std::fill(a_ref.begin(), a_ref.end(), value);
+    #else
+    a = myData.add<RAPIO_1DI>(name, units, DataStore<int>(size, value));
+    #endif
+  }
+  return a;
 }
 
-void
+std::shared_ptr<RAPIO_1DI>
 DataGrid::addInt1D(const std::string& name,
   const std::string& units, size_t size)
 {
-  #ifdef BOOST_ARRAY
-  myData.add<RAPIO_1DI>(name, units, boost::multi_array<int, 1>(boost::extents[size]));
-  #else
-  myData.add<RAPIO_1DI>(name, units, DataStore<int>(size));
-  #endif
+  auto a = myData.get<RAPIO_1DI>(name);
+
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_1DI>(name, units, boost::multi_array<int, 1>(boost::extents[size]));
+    #else
+    a = myData.add<RAPIO_1DI>(name, units, DataStore<int>(size));
+    #endif
+  }
+  return a;
 }
 
 void
@@ -117,7 +137,7 @@ DataGrid::resizeInt1D(const std::string& name, size_t size, int value)
 //
 
 std::shared_ptr<DataNode>
-DataGrid::getFloat2DNode(const std::string& name)
+DataGrid::getDataNode(const std::string& name)
 {
   return myData.getNode(name);
 }
@@ -128,30 +148,40 @@ DataGrid::getFloat2D(const std::string& name)
   return myData.get<RAPIO_2DF>(name);
 }
 
-void
+std::shared_ptr<RAPIO_2DF>
 DataGrid::addFloat2D(const std::string& name,
   const std::string& units, size_t numx, size_t numy, float value)
 {
-  #ifdef BOOST_ARRAY
-  auto a = myData.add<RAPIO_2DF>(name, units, boost::multi_array<float, 2>(boost::extents[numx][numy]), 0, 1);
-  boost::multi_array_ref<float, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
-  std::fill(a_ref.begin(), a_ref.end(), value);
+  auto a = myData.get<RAPIO_2DF>(name);
 
-  #else
-  auto a = myData.add<RAPIO_2DF>(name, units, DataStore2D<float>(0, 0), 0, 1);
-  a->resize(numx, numy, value);
-  #endif
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_2DF>(name, units, boost::multi_array<float, 2>(boost::extents[numx][numy]), 0, 1);
+    boost::multi_array_ref<float, 1> a_ref(a->data(), boost::extents[a->num_elements()]);
+    std::fill(a_ref.begin(), a_ref.end(), value);
+
+    #else
+    a = myData.add<RAPIO_2DF>(name, units, DataStore2D<float>(0, 0), 0, 1);
+    a->resize(numx, numy, value);
+    #endif
+  }
+  return a;
 }
 
-void
+std::shared_ptr<RAPIO_2DF>
 DataGrid::addFloat2D(const std::string& name,
   const std::string& units, size_t numx, size_t numy)
 {
-  #ifdef BOOST_ARRAY
-  myData.add<RAPIO_2DF>(name, units, boost::multi_array<float, 2>(boost::extents[numx][numy]), 0, 1);
-  #else
-  myData.add<RAPIO_2DF>(name, units, DataStore2D<float>(numx, numy), 0, 1);
-  #endif
+  auto a = myData.get<RAPIO_2DF>(name);
+
+  if (a == nullptr) {
+    #ifdef BOOST_ARRAY
+    a = myData.add<RAPIO_2DF>(name, units, boost::multi_array<float, 2>(boost::extents[numx][numy]), 0, 1);
+    #else
+    a = myData.add<RAPIO_2DF>(name, units, DataStore2D<float>(numx, numy), 0, 1);
+    #endif
+  }
+  return a;
 }
 
 void

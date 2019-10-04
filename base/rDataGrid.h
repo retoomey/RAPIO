@@ -181,11 +181,11 @@ public:
   getFloat1D(const std::string& name);
 
   /** Add named float data with initial size and value */
-  void
+  std::shared_ptr<RAPIO_1DF>
   addFloat1D(const std::string& name, const std::string& units, size_t size, float value);
 
   /** Add named float data with initial size and value (uninitialized) */
-  void
+  std::shared_ptr<RAPIO_1DF>
   addFloat1D(const std::string& name, const std::string& units, size_t size);
 
   /** Resize a float data */
@@ -201,11 +201,11 @@ public:
   getInt1D(const std::string& name);
 
   /** Add named int data with initial size and value */
-  void
+  std::shared_ptr<RAPIO_1DI>
   addInt1D(const std::string& name, const std::string& units, size_t size, int value);
 
   /** Add named int data with initial size and value (uninitialized) */
-  void
+  std::shared_ptr<RAPIO_1DI>
   addInt1D(const std::string& name, const std::string& units, size_t size);
 
   /** Resize a float data */
@@ -216,18 +216,18 @@ public:
 
   /** Get back node so can call methods on it */
   std::shared_ptr<DataNode>
-  getFloat2DNode(const std::string& name);
+  getDataNode(const std::string& name);
 
   /** Get back object so can call methods on it */
   std::shared_ptr<RAPIO_2DF>
   getFloat2D(const std::string& name);
 
   /** Add named 2D float data with initial size and value */
-  void
+  std::shared_ptr<RAPIO_2DF>
   addFloat2D(const std::string& name, const std::string& units, size_t numx, size_t numy, float value);
 
   /** Add named float data with initial size and value */
-  void
+  std::shared_ptr<RAPIO_2DF>
   addFloat2D(const std::string& name, const std::string& units, size_t numx, size_t numy);
 
   /** Resize a 2D float data */

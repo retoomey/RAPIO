@@ -116,53 +116,20 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
       if (ndimsp2 == 1) { // 1D float
         if (xtypep == NC_FLOAT) {
-          // Create if not already there (FIXME: method cleanup )
-          auto data1DF = radialSet.getFloat1D(name);
-          if (data1DF == nullptr) {
-            radialSet.addFloat1D(name, units, num_radials);
-          } else {
-            auto data1DFNode = radialSet.getFloat2DNode(name);
-            data1DFNode->setUnits(units);
-          }
-          // ^^^^ End section to clean up
-          data1DF = radialSet.getFloat1D(name);
-
-          // Read data into array
+          auto data1DF = radialSet.addFloat1D(name, units, num_radials);
           NETCDF(nc_get_var_float(ncid, data_var1, data1DF->data()));
         } else if (xtypep == NC_INT) {
-          // Create if not already there (FIXME: method cleanup )
-          auto data1DI = radialSet.getInt1D(name);
-          if (data1DI == nullptr) {
-            radialSet.addInt1D(name, units, num_radials);
-          } else {
-            auto data1DINode = radialSet.getFloat2DNode(name);
-            data1DINode->setUnits(units);
-          }
-          // ^^^^ End section to clean up
-          data1DI = radialSet.getInt1D(name);
-
-          // Read data into array
+          auto data1DI = radialSet.addInt1D(name, units, num_radials);
           NETCDF(nc_get_var_int(ncid, data_var1, data1DI->data()));
         }
       } else if (ndimsp2 == 2) { // 2D stuff
         if (xtypep == NC_FLOAT) {
-          // FIXME: actually this primary thing silly I think, since
-          // user will pull by typename anyway, right?
-          // Maybe instead setPrimary(typeName);
           bool primary = false;
           if (aTypeName == name) { // Typename matches primary grid
             name    = "primary";
             primary = true;
           }
-          // Create if not already there (FIXME: method cleanup )
-          auto data2DF = radialSet.getFloat2D(name);
-          if (data2DF == nullptr) {
-            radialSet.addFloat2D(name, units, num_radials, num_gates);
-          } else {
-            auto data2DFNode = radialSet.getFloat2DNode(name);
-            data2DFNode->setUnits(units);
-          }
-          // ^^^^ End section to clean up
+          auto data2DF = radialSet.addFloat2D(name, units, num_radials, num_gates);
 
           const bool sparse = (data_num_dims < 2);
           if (sparse && primary) { // Only allow primary to be old sparse format.
