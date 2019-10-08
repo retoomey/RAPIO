@@ -372,6 +372,12 @@ public:
   virtual
   ~IONetcdf();
 
+  /** Convenience for declaring DataGrid variables */
+  static
+  std::vector<int>
+  declareGridVars(DataGrid& grid, const std::string& typeName,
+    const std::vector<int>& ncdims, int ncid);
+
 protected:
 
 public:

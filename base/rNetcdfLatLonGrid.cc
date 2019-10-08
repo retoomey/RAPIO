@@ -30,6 +30,7 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc,
 std::shared_ptr<DataType>
 NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
 {
+  // FIXME: Tons of shared code now with rNetcdfRadialSet
   try {
     // Stock global attributes
     LLH location;
@@ -48,9 +49,11 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
     const std::string aDataType = all_attr[IONetcdf::ncDataType];
 
     // Some other global attributes that are here
+    // LatLonGrid only ------------------------------------------------
     float lat_spacing, lon_spacing;                                 //
     NETCDF(IONetcdf::getAtt(ncid, "LatGridSpacing", &lat_spacing)); // diff
     NETCDF(IONetcdf::getAtt(ncid, "LonGridSpacing", &lon_spacing)); // diff
+    // End LatLonGrid only ------------------------------------------------
 
     // Read our first two dimensions and sizes (sparse will have three)
     int data_var, data_num_dims, lat_dim, lon_dim;
@@ -61,56 +64,102 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       "Lat", &lat_dim, &num_lats,
       "Lon", &lon_dim, &num_lons);
 
+    // -----------------------------------------------------------------------
     // Create a new lat lon grid object
     std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>(
-
-      // stref,
       location, time,
       lat_spacing,
       lon_spacing);
-
     LatLonGrid& llgrid = *LatLonGridSP;
+    llgrid.declareDims({ num_lats, num_lons });
     llgrid.setTypeName(aTypeName);
 
-    // Preallocate memory in object
-    // FIXME: Humm this fills in the memory.  Maybe the reserve(rows, cols)
-    // would work...TEST
-    llgrid.resize(num_lats, num_lons, 0.0f);
+    // -----------------------------------------------------------------------
+    // Gather the variable info
+    int ndimsp, nvarsp, nattsp, unlimdimidp;
+    NETCDF(nc_inq(ncid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp));
 
-    // Check dimensions of the data array.  Either it's 2D for azimuth/range
-    // or it's 1D for sparse array
-    const bool sparse = (data_num_dims < 2);
+    char cname[1000];
+    nc_type xtypep;
+    int ndimsp2, dimidsp, nattsp2;
 
-    auto data = llgrid.getFloat2D("primary");
-    if (sparse) {
-      // LogSevere("LAT LON GRID IS SPARSE!!!\n");
-      IONetcdf::readSparse2D(ncid, data_var, num_lats, num_lons,
-        FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data);
-    } else {
-      // LogSevere("LAT LON GRID IS ___NOT___ SPARSE!!!\n");
+    // 2D grid stuff for netcdf
+    const size_t start2[] = { 0, 0 };
+    const size_t count2[] = { num_lats, num_lons };
+    // Time variable
+    const size_t start[] = { 0, 0, 0 };               // time, lat, lon
+    const size_t count[] = { 1, num_lats, num_lons }; // 1 time, lat_count,
+    // lon_count
+    // Extra Lat lon grid time variable
+    // See if we have the compliance stuff unlimited time var...changes how we
+    // read in the grid...
+    int time_dim;
+    int retval = nc_inq_dimid(ncid, "time", &time_dim);
+    if (retval != NC_NOERR) { retval = nc_inq_dimid(ncid, "Time", &time_dim); }
+    bool haveTimeDim = (retval == NC_NOERR);
+    // ---- end Lat lon grid time variable
 
-      // See if we have the compliance stuff unlimited time var...changes how we
-      // read in the grid...
-      int time_dim;
-      int retval = nc_inq_dimid(ncid, "time", &time_dim);
+    // For each variable in the netcdf file...
+    for (int i = 0; i < nvarsp; ++i) {
+      // Get variable info
+      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, &dimidsp, &nattsp2));
+      std::string name = std::string(cname);
 
-      if (retval != NC_NOERR) { retval = nc_inq_dimid(ncid, "Time", &time_dim); }
-      bool haveTimeDim = (retval == NC_NOERR);
+      // Hunting each supported grid type
+      int data_var1 = -1;
+      NETCDF(nc_inq_varid(ncid, name.c_str(), &data_var1));
 
-      if (haveTimeDim) {
-        const size_t start[] = { 0, 0, 0 };               // time, lat, lon
-        const size_t count[] = { 1, num_lats, num_lons }; // 1 time, lat_count,
-                                                          // lon_count
-        NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          data->data()));
-      } else {
-        const size_t start[] = { 0, 0 };               // lat, lon
-        const size_t count[] = { num_lats, num_lons }; // lat_count, lon_count
-        NETCDF(nc_get_vara_float(ncid, data_var, start, count,
-          data->data()));
+      // Read units
+      std::string units = "Dimensionless";
+      retval = IONetcdf::getAtt(ncid, "Units", units, data_var1);
+      if (retval != NC_NOERR) {
+        retval = IONetcdf::getAtt(ncid, "units", units, data_var1);
+      }
+      // We store data type as primary, not sure we need to do this...
+      bool primary = false;
+      if (aTypeName == name) {
+        name    = "primary";
+        primary = true;
+      }
+
+      if (ndimsp2 == 1) { // 1D float
+        if (xtypep == NC_FLOAT) {
+          // If it's the primary grid and ONE dimension, this means
+          // we have the old sparse data which is wrapped around pixel dimension
+          if (primary) {
+            // Expand it to 2D float array from sparse...
+            auto data2DF = llgrid.addFloat2D(name, units, { 0, 1 });
+            IONetcdf::readSparse2D(ncid, data_var1, num_lats, num_lons,
+              FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data2DF);
+          } else {
+            auto data1DF = llgrid.addFloat1D(name, units, { 0 });
+            NETCDF(nc_get_var_float(ncid, data_var1, data1DF->data()));
+          }
+        } else if (xtypep == NC_INT) {
+          // FIXME: we're gonna crash on anything using different dimension than
+          // what we're forcing.  Need to handle dimension storage I think.
+          if (name == "pixel_count") { // Sparse has it's own dimension
+          } else {
+            auto data1DI = llgrid.addInt1D(name, units, { 0 });
+            NETCDF(nc_get_var_int(ncid, data_var1, data1DI->data()));
+          }
+        }
+      } else if (ndimsp2 == 2) { // 2D stuff
+        if (xtypep == NC_FLOAT) {
+          auto data2DF = llgrid.addFloat2D(name, units, { 0, 1 });
+          if (haveTimeDim) {
+            NETCDF(nc_get_vara_float(ncid, data_var, start, count, data2DF->data()));
+          } else {
+            NETCDF(nc_get_vara_float(ncid, data_var1, start2, count2,
+              data2DF->data()));
+          }
+          // Do we need this?  FIXME: should take any grid right?
+          llgrid.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
+        }
       }
     }
 
+    // -----------------------------------------------------------------------
     IONetcdf::readUnitValueList(ncid, llgrid); // Can read now with value
                                                // object...
 
@@ -204,8 +253,6 @@ bool
 NetcdfLatLonGrid::write(int ncid, const DataType& dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
-  ProcessTimer("Writing LatLonGrid");
-
   const LatLonGrid& llgc = dynamic_cast<const LatLonGrid&>(dt);
   LatLonGrid& llgrid     = const_cast<LatLonGrid&>(llgc);
 
@@ -221,22 +268,25 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
   const bool cdm_compliance,
   const bool faa_compliance)
 {
+  ProcessTimer("Writing LatLonGrid");
+
   try {
-    // LatLonGrid is a 2D field, so 2 dimensions
-    const size_t lon_size = llgrid.getNumLons();
+    // Typename of primary 2D float grid
+    std::string type = llgrid.getTypeName();
 
-    if (lon_size == 0) {
-      LogSevere
-        ("NetcdfEncoder: There are no points in this lat-lon-grid.\n");
-      return (false);
-    }
-
-    // DEFINE ----------------------------------------------------------
-    // Declare our dimensions
-    int lat_dim, lon_dim, time_dim = -1;
+    // ------------------------------------------------------------
+    // DIMENSIONS
+    //
     const size_t lat_size = llgrid.getNumLats(); // used again later
+    const size_t lon_size = llgrid.getNumLons();
+    int lat_dim, lon_dim, time_dim = -1;
     NETCDF(nc_def_dim(ncid, "Lat", lat_size, &lat_dim));
     NETCDF(nc_def_dim(ncid, "Lon", lon_size, &lon_dim));
+
+    // ------------------------------------------------------------
+    // VARIABLES
+    //
+    // DataGrid& grid = dynamic_cast<DataGrid&>(llgrid);
 
     int latvar, lonvar, timevar;
 
@@ -257,7 +307,6 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
     // dimensions depending on compliance
     int data_var;
     std::string units = llgrid.getUnits();
-    std::string type  = llgrid.getTypeName();
 
     if (faa_compliance) {
       NETCDF(IONetcdf::addVar3D(ncid, type.c_str(), units.c_str(), NC_FLOAT,
@@ -276,7 +325,7 @@ NetcdfLatLonGrid::write(int ncid, LatLonGrid& llgrid,
 
     // old code always adds this..probably not needed but we will keep to match
     // for now
-    NETCDF(IONetcdf::addAtt(ncid, "NumValidRuns", -1, data_var));
+    // NETCDF(IONetcdf::addAtt(ncid, "NumValidRuns", -1, data_var));
 
     // End constructor NetcdfDataVariable
 
@@ -375,7 +424,8 @@ NetcdfLatLonGrid::getTestObject(
     lon_spacing);
   LatLonGrid& llgrid = *llgridsp;
 
-  llgrid.resize(num_lats, num_lons, 7.0f);
+  // llgrid.resize(num_lats, num_lons, 7.0f);
+  llgrid.declareDims({ num_lats, num_lons });
 
   llgrid.setTypeName("MergedReflectivityQC");
 

@@ -1201,3 +1201,48 @@ IONetcdf::readSparse2D(int ncid,
  * return true;
  * }
  */
+
+// Maybe part of a NetcdfDataGrid class?
+std::vector<int>
+IONetcdf::declareGridVars(
+  DataGrid& grid, const std::string& typeName, const std::vector<int>& ncdims, int ncid)
+{
+  auto list = grid.getArrays();
+
+  // gotta be careful to write in same order as declare...
+  std::vector<int> datavars;
+  for (auto l:list) {
+    auto theName  = l->getName();
+    auto theUnits = l->getUnits();
+    // Primary data is the data type of the file
+    if (theName == "primary") {
+      theName = typeName;
+    }
+
+    // Determine netcdf data output type from data grid type
+    auto theType  = l->getStorageType();
+    nc_type xtype = NC_FLOAT;
+    if (theType == FLOAT) {
+      xtype = NC_FLOAT;
+    } else if (theType == INT) {
+      xtype = NC_INT;
+    } else {
+      LogSevere("Declaring unknown netcdf variable type for " << theName << "\n");
+    }
+
+    // Translate the indexes into the matching netcdf dimension
+    auto ddims     = l->getDims();
+    const size_t s = ddims.size();
+    int dims[s];
+    for (size_t i = 0; i < s; ++i) {
+      dims[i] = ncdims[ddims[i]];
+    }
+
+    // Add the variable
+    int var = -1;
+    NETCDF(addVar(ncid, theName.c_str(), theUnits.c_str(), xtype, s, dims, &var));
+
+    datavars.push_back(var);
+  }
+  return datavars;
+} // IONetcdf::declareGridVars

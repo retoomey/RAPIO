@@ -32,6 +32,7 @@ std::shared_ptr<DataType>
 NetcdfRadialSet::read(const int ncid, const URL& loc,
   const vector<string>& params)
 {
+  // FIXME: Tons of shared code now with rNetcdfLatLonGrid
   try {
     // Stock global attributes
     LLH location;
@@ -50,6 +51,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     const std::string aDataType = all_attr[IONetcdf::ncDataType];
 
     // Some other global attributes that are here
+    // RadialSet only ------------------------------------------------
     // Get Elevation of the RadialSet
     float elev;
     NETCDF(IONetcdf::getAtt(ncid, "Elevation", &elev));
@@ -69,6 +71,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     } else {
       LogInfo("Missing RangeToFirstGate attribute. \n");
     }
+    // End RadialSet only ------------------------------------------------
 
     // Read our first two dimensions and sizes (sparse will have three)
     int data_var, data_num_dims, gate_dim, az_dim;
@@ -84,9 +87,10 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time,
         rangeToFirstGate);
     RadialSet& radialSet = *radialSetSP;
-    radialSet.resize(num_radials, num_gates); // All added will use dimension size now
+    radialSet.declareDims({ num_radials, num_gates }); // All added will use dimension size now
     radialSet.setTypeName(aTypeName);
-    radialSet.setElevation(elev_angle);
+
+    radialSet.setElevation(elev_angle); // RadialSet only
 
     // -----------------------------------------------------------------------
     // Gather the variable info
@@ -96,6 +100,10 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     char cname[1000];
     nc_type xtypep;
     int ndimsp2, dimidsp, nattsp2;
+
+    // 2D grid stuff for netcdf
+    const size_t start2[] = { 0, 0 };
+    const size_t count2[] = { num_radials, num_gates };
 
     // For each variable in the netcdf file...
     for (int i = 0; i < nvarsp; ++i) {
@@ -113,38 +121,43 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
       if (retval != NC_NOERR) {
         retval = IONetcdf::getAtt(ncid, "units", units, data_var1);
       }
+      // We store data type as primary, not sure we need to do this...
+      bool primary = false;
+      if (aTypeName == name) {
+        name    = "primary";
+        primary = true;
+      }
 
       if (ndimsp2 == 1) { // 1D float
         if (xtypep == NC_FLOAT) {
-          auto data1DF = radialSet.addFloat1D(name, units, num_radials);
-          NETCDF(nc_get_var_float(ncid, data_var1, data1DF->data()));
-        } else if (xtypep == NC_INT) {
-          auto data1DI = radialSet.addInt1D(name, units, num_radials);
-          NETCDF(nc_get_var_int(ncid, data_var1, data1DI->data()));
-        }
-      } else if (ndimsp2 == 2) { // 2D stuff
-        if (xtypep == NC_FLOAT) {
-          bool primary = false;
-          if (aTypeName == name) { // Typename matches primary grid
-            name    = "primary";
-            primary = true;
-          }
-          auto data2DF = radialSet.addFloat2D(name, units, num_radials, num_gates);
-
-          const bool sparse = (data_num_dims < 2);
-          if (sparse && primary) { // Only allow primary to be old sparse format.
+          // If it's the primary grid and ONE dimension, this means
+          // we have the old sparse data which is wrapped around pixel dimension
+          if (primary) {
+            // Expand it to 2D float array from sparse...
+            auto data2DF = radialSet.addFloat2D(name, units, { 0, 1 });
             IONetcdf::readSparse2D(ncid, data_var1, num_radials, num_gates,
               FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data2DF);
           } else {
-            // We use a grid per moment
-            const size_t start2[] = { 0, 0 };
-            const size_t count2[] = { num_radials, num_gates };
-
-            NETCDF(nc_get_vara_float(ncid, data_var1, start2, count2,
-              data2DF->data()));
-            // Do we need this?  FIXME: should take any grid right?
-            radialSet.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
+            auto data1DF = radialSet.addFloat1D(name, units, { 0 });
+            NETCDF(nc_get_var_float(ncid, data_var1, data1DF->data()));
           }
+        } else if (xtypep == NC_INT) {
+          // FIXME: we're gonna crash on anything using different dimension than
+          // what we're forcing.  Need to handle dimension storage I think.
+          if (name == "pixel_count") { // Sparse has it's own dimension
+          } else {
+            auto data1DI = radialSet.addInt1D(name, units, { 0 });
+            NETCDF(nc_get_var_int(ncid, data_var1, data1DI->data()));
+          }
+        }
+      } else if (ndimsp2 == 2) { // 2D stuff
+        if (xtypep == NC_FLOAT) {
+          auto data2DF = radialSet.addFloat2D(name, units, { 0, 1 });
+
+          NETCDF(nc_get_vara_float(ncid, data_var1, start2, count2,
+            data2DF->data()));
+          // Do we need this?  FIXME: should take any grid right?
+          radialSet.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
         }
       }
     }
@@ -163,7 +176,6 @@ bool
 NetcdfRadialSet::write(int ncid, const DataType& dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
-  // FIXME: Maybe just pass a shared_ptr down the tree
   const RadialSet& cradialSet = dynamic_cast<const RadialSet&>(dt);
   RadialSet& radialSet        = const_cast<RadialSet&>(cradialSet);
 
@@ -194,38 +206,11 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     // VARIABLES
     //
     DataGrid& grid = dynamic_cast<DataGrid&>(radialSet);
-    auto list      = grid.getArrays();
 
-    // gotta be careful to write in same order as declare...
-    std::vector<int> datavars;
-    for (auto l:list) {
-      auto theType  = l->getName();
-      auto theUnits = l->getUnits();
-      // Primary data is the data type of the file
-      if (theType == "primary") {
-        theType = typeName;
-      }
-      int var        = -1;
-      const size_t s = l->getDims().size();
-
-      // FIXME: more general method, pass dimensions/type?
-      // Also we're writing int as float here..no type yet
-      if (s == 2) {
-        NETCDF(IONetcdf::addVar2D(ncid, theType.c_str(),
-          theUnits.c_str(),
-          NC_FLOAT, az_dim, rn_dim, &var));
-      } else if (s == 1) {
-        NETCDF(IONetcdf::addVar1D(ncid, theType.c_str(),
-          theUnits.c_str(),
-          NC_FLOAT, az_dim, &var));
-      }
-
-      datavars.push_back(var);
-    }
-    // Declare 1D int variables
-    //  int  radialtimevar;
-    //  NETCDF(IONetcdf::addVar1D(ncid, "RadialTime", "Milliseconds", NC_INT,
-    //    az_dim, &radialtimevar));
+    std::vector<int> ncdims;
+    ncdims.push_back(az_dim);
+    ncdims.push_back(rn_dim);
+    std::vector<int> datavars = IONetcdf::declareGridVars(grid, typeName, ncdims, ncid);
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -261,6 +246,8 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
     const size_t start2[] = { 0, 0 };
     const size_t count2[] = { num_radials, num_gates };
     size_t count = 0;
+
+    auto list = grid.getArrays();
     for (auto l:list) {
       const size_t s = l->getDims().size();
 
@@ -268,9 +255,14 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
         auto theData = l->get<RAPIO_2DF>();
         NETCDF(nc_put_vara_float(ncid, datavars[count], start2, count2,
           theData->data()));
-      } else if (s == 1) {
+      } else if (s == 1) { // Bleh
         auto theData = l->get<RAPIO_1DF>();
-        NETCDF(nc_put_var_float(ncid, datavars[count], theData->data()));
+        if (theData == nullptr) {
+          auto theDataI = l->get<RAPIO_1DI>();
+          NETCDF(nc_put_var_int(ncid, datavars[count], theDataI->data()));
+        } else {
+          NETCDF(nc_put_var_float(ncid, datavars[count], theData->data()));
+        }
       }
       count++;
     }
@@ -307,7 +299,8 @@ NetcdfRadialSet::getTestObject(
   radialSet.setElevation(elev_angle);
 
   // Allow in-line vector storage to work and not crash
-  radialSet.resize(num_radials, num_gates);
+  // radialSet.resize(num_radials, num_gates);
+  radialSet.declareDims({ num_radials, num_gates });
   radialSet.setNyquistVelocityUnit(nyq_unit);
 
   auto azimuths   = radialSet.getFloat1D("Azimuth");

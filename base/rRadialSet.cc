@@ -44,36 +44,38 @@ RadialSet::getElevation() const
 void
 RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
 {
+  /** Declare/update the dimensions */
+  declareDims({ num_radials, num_gates });
+
+  // Fill values are meaningless since we start off 0,0 for now...
+  // FIXME: On a resize maybe fill in the default arrays?
+
   /** As a grid of data */
-  addFloat2D("primary", "Dimensionless", num_radials, num_gates, fill);
+  // addFloat2D("primary", "Dimensionless", {0,1}, fill);
+  addFloat2D("primary", "Dimensionless", { 0, 1 });
 
   // These are the only ones we force...
 
   /** Azimuth per radial */
-  addFloat1D("Azimuth", "Degrees", num_radials, 0.0f);
+  // addFloat1D("Azimuth", "Degrees", {0}, 0.0f);
+  addFloat1D("Azimuth", "Degrees", { 0 });
 
   /** Beamwidth per radial */
-  addFloat1D("BeamWidth", "Degrees", num_radials, 1.0f);
+  // addFloat1D("BeamWidth", "Degrees", {0}, 1.0f);
+  addFloat1D("BeamWidth", "Degrees", { 0 });
 
   /** Gate width per radial */
-  addFloat1D("GateWidth", "Meters", num_radials, 1000.0f);
+  // addFloat1D("GateWidth", "Meters", {0}, 1000.0f);
+  addFloat1D("GateWidth", "Meters", { 0 });
 }
 
-void
-RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
-{
-  auto list = getArrays();
-
-  for (auto l:list) {
-    // FIXME: Feel this could be more generic
-    const int size = l->getDims().size();
-    if (size == 1) {
-      resizeFloat1D(l->getName(), num_radials, 0.0f);
-    } else if (size == 2) {
-      resizeFloat2D(l->getName(), num_radials, num_gates, fill);
-    }
-  }
-}
+/*
+ * void
+ * RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
+ * {
+ * declareDims({num_radials, num_gates});
+ * }
+ */
 
 size_t
 RadialSet::getNumGates()

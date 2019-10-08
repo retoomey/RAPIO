@@ -92,8 +92,8 @@ public:
   init(size_t rows, size_t cols, const float fill = 0);
 
   /** Resize the data structure */
-  virtual void
-  resize(size_t rows, size_t cols, const float fill = 0) override;
+  // virtual void
+  // resize(size_t rows, size_t cols, const float fill = 0) override;
 
 protected:
   // I think these could be considered projection information
