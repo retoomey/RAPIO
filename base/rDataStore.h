@@ -282,6 +282,13 @@ public:
   inline size_t
   size() const { return s; }
 
+  /** Get dimensions */
+  std::vector<size_t>
+  shape()
+  {
+    return { s };
+  }
+
 protected:
 
   /** Pointer to data storage. */

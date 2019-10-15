@@ -1,7 +1,7 @@
 #pragma once
 
 #include <rDataType.h>
-#include <rDataStore2D.h>
+#include <rDataGrid.h>
 #include <rTime.h>
 #include <rLLH.h>
 #include <rIOGrib.h>
@@ -37,8 +37,8 @@ public:
   printCatalog();
 
   /** One way to get 2D data, using key and level string like our HMET library */
-  std::shared_ptr<DataStore2D<float> >
-  get2DData(const std::string& key, const std::string& levelstr);
+  std::shared_ptr<RAPIO_2DF>
+  getFloat2D(const std::string& key, const std::string& levelstr);
 
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */

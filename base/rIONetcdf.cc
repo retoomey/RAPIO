@@ -957,11 +957,7 @@ IONetcdf::readSparse2D(int ncid,
           v = Constants::RangeFolded;
         }
 
-        #ifdef BOOST_ARRAY
         data[x][y] = v;
-        #else
-        data.set(x, y, v);
-        #endif
 
         // Non memory way: Runlength of the current pixel length
         // if (pixel_count_var > -1){
@@ -996,11 +992,7 @@ IONetcdf::readSparse2D(int ncid,
               ++x;
             }
 
-            #ifdef BOOST_ARRAY
             data[x][y] = v;
-            #else
-            data.set(x, y, v);
-            #endif
           }
         }
       } else {
@@ -1231,7 +1223,7 @@ IONetcdf::declareGridVars(
     }
 
     // Translate the indexes into the matching netcdf dimension
-    auto ddims     = l->getDims();
+    auto ddims     = l->getDimIndexes();
     const size_t s = ddims.size();
     int dims[s];
     for (size_t i = 0; i < s; ++i) {

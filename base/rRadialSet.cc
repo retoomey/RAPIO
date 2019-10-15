@@ -80,13 +80,13 @@ RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
 size_t
 RadialSet::getNumGates()
 {
-  return getY(getFloat2D("primary"));
+  return myDims[1];
 }
 
 size_t
 RadialSet::getNumRadials()
 {
-  return getX(getFloat2D("primary"));
+  return myDims[0];
 }
 
 void

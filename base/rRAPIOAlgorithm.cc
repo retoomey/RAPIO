@@ -8,7 +8,6 @@
 #include "rIOWatcher.h"
 #include "rTime.h"
 #include "rStrings.h"
-#include "rArith.h"
 #include "rConfig.h"
 #include "rUnit.h"
 #include "rIOXML.h"

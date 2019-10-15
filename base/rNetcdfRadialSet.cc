@@ -249,20 +249,50 @@ NetcdfRadialSet::write(int ncid, RadialSet& radialSet,
 
     auto list = grid.getArrays();
     for (auto l:list) {
-      const size_t s = l->getDims().size();
+      const size_t s = l->getDimIndexes().size();
+      // const auto type = l->getStorageType();
 
+      // Not sure we can get away from type/size checking, since the netcdf
+      // c routines are unique per type/size
+      void * data = l->getRawDataPointer();
       if (s == 2) {
-        auto theData = l->get<RAPIO_2DF>();
-        NETCDF(nc_put_vara_float(ncid, datavars[count], start2, count2,
-          theData->data()));
-      } else if (s == 1) { // Bleh
-        auto theData = l->get<RAPIO_1DF>();
-        if (theData == nullptr) {
-          auto theDataI = l->get<RAPIO_1DI>();
-          NETCDF(nc_put_var_int(ncid, datavars[count], theDataI->data()));
+        //  auto theData = l->get<RAPIO_2DF>(); // named node
+        // NETCDF(nc_put_vara_float(ncid, datavars[count], start2, count2,
+        //  theData->data()));
+        // NETCDF(nc_put_vara(ncid, datavars[count], start2, count2,
+        //   theData->data()));
+        NETCDF(nc_put_vara(ncid, datavars[count], start2, count2, data));
+      } else if (s == 1) {
+        // Couldn't we have a raw pointer function at array level maybe?
+        // FIXME: yes I think so
+
+        /*
+         *      auto theData = l->get<RAPIO_1DF>();
+         *      void * data = 0;
+         *      if (theData == nullptr) {
+         *        auto theDataI = l->get<RAPIO_1DI>();
+         *        data = theDataI->data();
+         *      }else{
+         *        data = theData->data();
+         *      }
+         *      // ^^^^ make routine for all array types...
+         */
+
+        if (data != nullptr) {
+          NETCDF(nc_put_var(ncid, datavars[count], data));
         } else {
-          NETCDF(nc_put_var_float(ncid, datavars[count], theData->data()));
+          LogSevere("Can't write variable " << l->getName() << " because data is empty!\n");
         }
+
+        /*
+         *      auto theData = l->get<RAPIO_1DF>();
+         *      if (theData == nullptr) {
+         *        auto theDataI = l->get<RAPIO_1DI>();
+         *        NETCDF(nc_put_var_int(ncid, datavars[count], theDataI->data()));
+         *      } else {
+         *        NETCDF(nc_put_var_float(ncid, datavars[count], theData->data()));
+         *      }
+         */
       }
       count++;
     }
@@ -314,11 +344,7 @@ NetcdfRadialSet::getTestObject(
     (*beamwidths)[i] = beam_width;
     (*gatewidths)[i] = gate_width;
     for (size_t j = 0; j < num_gates; ++j) {
-      #ifdef BOOST_ARRAY
       (*data)[i][j] = i;
-      #else
-      (*data).set(i, j, i);
-      #endif
     }
   }
 

@@ -100,15 +100,18 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
       // LogInfo("Reading dewpoint temperature from GRIB2...\n");
       // auto dpt_sfc_ext = grib2->get2DData("DPT", "2 m above ground");
       LogInfo("Reading upward longwave radiation product from GRIB2...\n");
-      auto uplwav_ext = grib2->get2DData("ULWRF", "surface");
+      auto uplwav_ext = grib2->getFloat2D("ULWRF", "surface");
 
       if (uplwav_ext != nullptr) {
+        auto& ref = *uplwav_ext;
         LogInfo("First 10x10 values\n");
         LogInfo("----------------------------------------------------\n");
         // Dump grid.. Log needs a way to dump multiline
         for (size_t x = 0; x < 10; ++x) {
           for (size_t y = 0; y < 10; ++y) {
-            std::cout << uplwav_ext->get(x, y) << ",  ";
+            // std::cout << uplwav_ext->get(x, y) << ",  ";
+            std::cout << ref[x][y] << ",  ";
+            // std::cout << ref.get(x,y) << ",  ";
           }
           std::cout << "\n";
         }
@@ -120,20 +123,22 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
     }
 
     // Look for a radial set
-    auto radialSet = d.datatype<rapio::RadialSet>();
-    if (radialSet != nullptr) {
-      /*
-       *    // LogInfo("This is a radial set, do radial set stuff\n");
-       *    size_t radials = radialSet->getNumRadials(); //x
-       *    size_t gates = radialSet->getNumGates(); // y
-       *    auto data = radialSet->get("primary"); // ??
-       *    for(size_t g=0; g<gates; ++g){
-       *      for(size_t r=0; r<radials; ++r){
-       *         data[r][g] = 12;
-       *      }
-       *    }
-       */
-    }
+
+    /*
+     *  auto radialSet = d.datatype<rapio::RadialSet>();
+     *  if (radialSet != nullptr) {
+     *       LogInfo("This is a radial set, do radial set stuff\n");
+     *       size_t radials = radialSet->getNumRadials(); //x
+     *       size_t gates = radialSet->getNumGates(); // y
+     *       auto dataptr = radialSet->getFloat2D("primary"); // FIXME: API needs to be better
+     *       auto& data = *dataptr;
+     *       for(size_t r=0; r<radials; ++r){
+     *         for(size_t g=0; g<gates; ++g){
+     *            data[r][g] = 5.0;  // Replace every gate with 5 dbz
+     *         }
+     *       }
+     *  }
+     */
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");

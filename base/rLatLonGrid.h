@@ -66,13 +66,13 @@ public:
   size_t
   getNumLats()
   {
-    return getX(getFloat2D("primary"));
+    return myDims[0];
   }
 
   size_t
   getNumLons()
   {
-    return getY(getFloat2D("primary"));
+    return myDims[1];
   }
 
   virtual std::string

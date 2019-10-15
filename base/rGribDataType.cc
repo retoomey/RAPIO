@@ -24,8 +24,8 @@ GribDataType::printCatalog()
   IOGrib::scanGribData(myBuf, &test);
 }
 
-std::shared_ptr<DataStore2D<float> >
-GribDataType::get2DData(const std::string& key, const std::string& levelstr)
+std::shared_ptr<RAPIO_2DF>
+GribDataType::getFloat2D(const std::string& key, const std::string& levelstr)
 {
   // Humm has vs is...a better way?
   GribMatcher test(key, levelstr);

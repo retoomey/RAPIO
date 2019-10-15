@@ -5,224 +5,142 @@
 using namespace rapio;
 using namespace std;
 
-std::shared_ptr<RAPIO_1DF>
-DataGrid::getFloat1D(const std::string& name)
+void *
+DataArray::getRawDataPointer()
 {
-  return myData.get<RAPIO_1DF>(name);
+  // Bypass all type safety for reader/writer convenience
+  // Returning pointer to any of possible stored array types
+  // Sadly boost etc doesn't seem to have a common superclass,
+  // maybe we could rework this.
+  // FIXME: maybe keep a weak ref copy of the pointer on creation
+  const size_t size = myDimIndexes.size();
+
+  if (myStorageType == FLOAT) {
+    if (size == 2) {
+      return (get<RAPIO_2DF>()->data());
+    }
+    if (size == 1) {
+      return (get<RAPIO_1DF>()->data());
+    }
+  }
+  if (myStorageType == INT) {
+    if (size == 1) {
+      return (get<RAPIO_1DF>()->data());
+    }
+  }
+
+  return nullptr;
+}
+
+std::shared_ptr<DataArray>
+DataGrid::getDataArray(const std::string& name)
+{
+  return getNode(name);
 }
 
 void
 DataGrid::declareDims(const std::vector<size_t>& dims)
 {
-  myData.declareDims(dims);
+  myDims = dims;
 
   // Resize all arrays to given dimensions....
-  auto list = getArrays();
-  for (auto l:list) {
-    auto i    = l->getDims();
+  for (auto l:myNodes) {
+    auto i    = l->getDimIndexes();
     auto name = l->getName();
     auto type = l->getStorageType();
     auto size = i.size();
 
-    // Messy resize.
-    // FIXME: Can we generialze this more?
-    // Could template it more, but I kinda want
-    // students/users to get a defined array type back
+    // From each index into dimension, get actual sizes
+    // i ==> 0, 1 or say 1, 0 if flipped
+    // to --> 50, 100 size for example 0--> 50, 1 --> 100
+    std::vector<size_t> sizes(size);
+    for (size_t d = 0; d < size; ++d) {
+      sizes[d] = dims[i[d]];
+    }
+
+    // Since we want convenience classes and well boost
+    // arrays don't have a common superclass, some
+    // type checking here.  FIXME: better way?
     if (size == 1) {
       if (type == FLOAT) {
         auto f = l->get<RAPIO_1DF>();
         if (f != nullptr) {
-          const size_t size = dims[i[0]];
-          #ifdef BOOST_ARRAY
-          f->resize(boost::extents[size]);
-          #else
-          f->resize(size);
-          #endif
+          f->resize(RAPIO_DIM1(sizes[0]));
         }
       } else if (type == INT) {
         auto f = l->get<RAPIO_1DI>();
         if (f != nullptr) {
-          const size_t size = dims[i[0]];
-          #ifdef BOOST_ARRAY
-          f->resize(boost::extents[size]);
-          #else
-          f->resize(size);
-          #endif
+          f->resize(RAPIO_DIM1(sizes[0]));
         }
       }
     } else if (size == 2) {
       auto f = l->get<RAPIO_2DF>();
       if (f != nullptr) {
-        const size_t numx = dims[i[0]];
-        const size_t numy = dims[i[1]];
-        #ifdef BOOST_ARRAY
-        f->resize(boost::extents[numx][numy]);
-        //   boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
-        //   std::fill(a_ref.begin(), a_ref.end(), value);
-        #else
-        f->resize(numx, numy);
-        #endif
+        f->resize(RAPIO_DIM2(sizes[0], sizes[1]));
       }
     }
   }
 } // DataGrid::declareDims
 
-std::shared_ptr<RAPIO_1DF>
-DataGrid::addFloat1D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dims)
-{
-  auto a = myData.get<RAPIO_1DF>(name);
+// 1D stuff ----------------------------------------------------------
+//
 
-  if (a == nullptr) {
-    auto d    = myData.getDims(); // Dimensions with sizes...
-    auto size = d[dims[0]];       // So basically dims is the index into dimensions
-    #ifdef BOOST_ARRAY
-    a = myData.add<RAPIO_1DF>(name, units, boost::multi_array<float, 1>(boost::extents[size]), FLOAT);
-    #else
-    a = myData.add<RAPIO_1DF>(name, units, DataStore<float>(size), FLOAT);
-    #endif
-  }
-  return a;
+std::shared_ptr<RAPIO_1DF>
+DataGrid::getFloat1D(const std::string& name)
+{
+  return get<RAPIO_1DF>(name);
 }
 
-/*
- * void
- * DataGrid::copyFloat1D(const std::string& from, const std::string& to)
- * {
- * auto f = myData.get<RAPIO_1DF>(from);
- *
- * if (f != nullptr) {
- *  size_t aSize = f->size(); // FIXME: I know this can be done better
- *  resizeFloat1D(to, aSize, 0);
- *  auto t = myData.get<RAPIO_1DF>(from);
- *  for (size_t i = 0; i < aSize; ++i) {
- *    (*t)[i] = (*f)[i];
- *  }
- * }
- * }
- */
+std::shared_ptr<RAPIO_1DF>
+DataGrid::addFloat1D(const std::string& name,
+  const std::string& units, const std::vector<size_t>& dimindexes)
+{
+  // Map index to dimension sizes
+  const auto size = myDims[dimindexes[0]];
+  auto a = add<RAPIO_1DF>(name, units, RAPIO_1DF(RAPIO_DIM1(size)), FLOAT);
+
+  return a;
+}
 
 std::shared_ptr<RAPIO_1DI>
 DataGrid::getInt1D(const std::string& name)
 {
-  return myData.get<RAPIO_1DI>(name);
+  return get<RAPIO_1DI>(name);
 }
 
 std::shared_ptr<RAPIO_1DI>
 DataGrid::addInt1D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dims)
+  const std::string& units, const std::vector<size_t>& dimindexes)
 {
-  auto a = myData.get<RAPIO_1DI>(name);
+  // Map index to dimension sizes
+  const auto size = myDims[dimindexes[0]];
+  auto a = add<RAPIO_1DI>(name, units, RAPIO_1DI(RAPIO_DIM1(size)), INT);
 
-  if (a == nullptr) {
-    auto d    = myData.getDims(); // Dimensions with sizes...
-    auto size = d[dims[0]];       // So basically dims is the index into dimensions
-    #ifdef BOOST_ARRAY
-    a = myData.add<RAPIO_1DI>(name, units, boost::multi_array<int, 1>(boost::extents[size]), INT);
-    #else
-    a = myData.add<RAPIO_1DI>(name, units, DataStore<int>(size), INT);
-    #endif
-  }
   return a;
 }
-
-/*
- * void
- * DataGrid::resizeInt1D(const std::string& name, size_t size)
- * {
- * auto f = getInt1D(name);
- *
- * if (f != nullptr) {
- #ifdef BOOST_ARRAY
- *  f->resize(boost::extents[size]);
- * //    std::fill(f->begin(), f->end(), value);
- #else
- *  //f->resize(size, value);
- *  f->resize(size);
- #endif
- * } else {
- *  //addInt1D(name, "Dimensionless", {0}, value);
- *  addInt1D(name, "Dimensionless", {0});
- * }
- * }
- */
 
 // 2D stuff ----------------------------------------------------------
 //
 
-std::shared_ptr<DataNode>
-DataGrid::getDataNode(const std::string& name)
-{
-  return myData.getNode(name);
-}
-
 std::shared_ptr<RAPIO_2DF>
 DataGrid::getFloat2D(const std::string& name)
 {
-  return myData.get<RAPIO_2DF>(name);
+  return get<RAPIO_2DF>(name);
 }
 
 std::shared_ptr<RAPIO_2DF>
 DataGrid::addFloat2D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dims)
+  const std::string& units, const std::vector<size_t>& dimindexes)
 {
-  auto a = myData.get<RAPIO_2DF>(name);
+  // Map index to dimension sizes
+  const auto x = myDims[dimindexes[0]];
+  const auto y = myDims[dimindexes[1]];
 
-  if (a == nullptr) {
-    auto d    = myData.getDims(); // Dimensions with sizes...
-    auto numx = d[dims[0]];       // So basically dims is the index into dimensions
-    auto numy = d[dims[1]];
+  // We always add/replace since index order could change or it could be different
+  // type, etc.  Maybe possibly faster by updating over replacing
+  auto a = add<RAPIO_2DF>(name, units, RAPIO_2DF(RAPIO_DIM2(x, y)), FLOAT, dimindexes);
 
-    #ifdef BOOST_ARRAY
-    a = myData.add<RAPIO_2DF>(name, units, boost::multi_array<float, 2>(boost::extents[numx][numy]), FLOAT, { 0, 1 });
-
-    // std::fill(a_ref.begin(), a_ref.end(), value);
-
-
-    #else
-    a = myData.add<RAPIO_2DF>(name, units, DataStore2D<float>(numx, numy), FLOAT, { 0, 1 });
-    #endif
-  } else {
-    // Might have already been added..update the fields.  FIXME: check conflict?
-    // Well crap...double fetchin not liking design.  Step by step
-    std::shared_ptr<DataNode> n = myData.getNode(name);
-    n->setUnits(units);
-    n->setDims({ 0, 1 }); // Always in dim order at least for now.
-    n->setStorageType(FLOAT);
-  }
   return a;
-}
-
-size_t
-DataGrid::getY(std::shared_ptr<RAPIO_2DF> f)
-{
-  if (f != nullptr) {
-    #ifdef BOOST_ARRAY
-    return f->shape()[1];
-
-    #else
-    return f->getY(); // Could implement shape
-
-    #endif
-  } else {
-    return 0;
-  }
-}
-
-size_t
-DataGrid::getX(std::shared_ptr<RAPIO_2DF> f)
-{
-  if (f != nullptr) {
-    #ifdef BOOST_ARRAY
-    return f->shape()[0];
-
-    #else
-    return f->getX();
-
-    #endif
-  } else {
-    return 0;
-  }
 }
 
 void
@@ -248,11 +166,3 @@ DataGrid::replaceMissing(std::shared_ptr<RAPIO_2DF> f, const float missing, cons
     }
   }
 }
-
-/*
- * void
- * DataGrid::resize(size_t numx, size_t numy, const float fill)
- * {
- * resizeFloat2D("primary", numx, numy, fill);
- * }
- */

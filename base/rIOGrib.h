@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rIODataType.h"
-#include "rDataStore2D.h"
+#include "rDataGrid.h"
 #include "rIO.h"
 
 extern "C" {
@@ -146,7 +146,7 @@ public:
   createObject(const std::vector<std::string>&) override;
 
   /** Do a buffer read of a 2D field */
-  static std::shared_ptr<DataStore2D<float> >
+  static std::shared_ptr<RAPIO_2DF>
   get2DData(std::vector<char>& b, size_t at, size_t fieldNumber);
 
   /** Do a full read from a param list */

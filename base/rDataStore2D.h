@@ -62,15 +62,30 @@ public:
   inline size_t
   getY() const { return myY; }
 
-  // Debated [][] access, but this requires a recursively defined
-  // proxy object for multiple operator [] override and the overhead
-  // of it.  And we can just have a stupid simple set function instead.
+  /** Proxy class for implementing [][] */
+  template <typename S>
+  class DataStoreDim {
+public:
+    DataStoreDim(DataStore2D<S>& x, int iin, size_t yin) : parent(x), i(iin), y(yin){ }
 
-  /** Set data directly two dimension (Row-major order) */
-  inline void
-  set(size_t i, size_t j, T v)
+    /** [][] j operator */
+    S&
+    operator [] (int j)
+    {
+      return parent.d[(i * y) + j];
+    }
+
+private:
+    DataStore2D<S>& parent;
+    int i;
+    size_t y;
+  };
+
+  /** First [] of the 2D operator[][] */
+  DataStoreDim<T>
+  operator [] (int i)
   {
-    this->d[(i * myY) + j] = v;
+    return DataStoreDim<T>(*this, i, myY);
   }
 
   /** Get data directly two dimension (Row-major order)
@@ -79,6 +94,13 @@ public:
    */
   inline T
   get(size_t i, size_t j) const { return this->d[(i * myY) + j]; }
+
+  /** Get dimensions */
+  std::vector<size_t>
+  shape()
+  {
+    return { myX, myY };
+  }
 
 private:
 

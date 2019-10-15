@@ -2,7 +2,6 @@
 
 #include "rFactory.h"
 #include "rIOURL.h"
-#include "rDataStore2D.h"
 #include "rStrings.h"
 
 #include "rGribDataType.h"
@@ -522,7 +521,7 @@ IOGrib::toCatalog(gribfield * gfld,
   levelName   = getLevelName(gfld);
 }
 
-std::shared_ptr<DataStore2D<float> >
+std::shared_ptr<RAPIO_2DF>
 IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
 {
   // size_t aSize       = b.size();
@@ -543,18 +542,17 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
   LogSevere("Grid size is " << numX << " * " << numY << "\n");
   g2float * g2grid = gfld->fld;
 
-  std::shared_ptr<DataStore2D<float> > newOne = std::make_shared<DataStore2D<float> >(numX, numY);
-  // DataStore2D<float> holder(numX, numY);
-  // FIXME: Depending on order might be able to copy in faster
-  DataStore2D<float>& data = *newOne.get();
+  std::shared_ptr<RAPIO_2DF> newOne = std::make_shared<RAPIO_2DF>(RAPIO_DIM2(numX, numY));
+  auto& data = *newOne;
+
   for (size_t x = 0; x < numX; ++x) {
     for (size_t y = 0; y < numY; ++y) {
-      data.set(x, y, g2grid[y * numX + x]);
+      data[x][y] = (float) (g2grid[y * numX + x]);
     }
   }
+
   g2_free(gfld);
-  // FIXME: We're not holding this so could be unique pointer
-  // std::shared_ptr<DataStore2D<float> > newOne = std::make_shared<DataStore2D<float>(holder);
+
   return newOne;
 } // IOGrib::get2DData
 
