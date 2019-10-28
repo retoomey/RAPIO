@@ -45,7 +45,7 @@ void
 RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
 {
   /** Declare/update the dimensions */
-  declareDims({ num_radials, num_gates });
+  declareDims({ num_radials, num_gates }, { "Azimuth", "Gate" });
 
   // Fill values are meaningless since we start off 0,0 for now...
   // FIXME: On a resize maybe fill in the default arrays?
@@ -80,13 +80,13 @@ RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
 size_t
 RadialSet::getNumGates()
 {
-  return myDims[1];
+  return myDims[1].size();
 }
 
 size_t
 RadialSet::getNumRadials()
 {
-  return myDims[0];
+  return myDims[0].size();
 }
 
 void

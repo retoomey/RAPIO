@@ -8,6 +8,7 @@
 #include <boost/multi_array.hpp>
 #include <boost/variant.hpp>
 #include <boost/any.hpp>
+#include <boost/optional.hpp>
 
 namespace rapio {
 // Bunch of macros to allow plug and play here
@@ -39,62 +40,6 @@ namespace rapio {
 
 #endif // ifdef BOOST_ARRAY
 
-/** Store a name to std::shared_ptr of anything pair */
-class NamedAny : public Data
-{
-public:
-  /** Create a named object */
-  NamedAny(const std::string& name) : myName(name)
-  { }
-
-  /** Get the name of this data array */
-  const std::string&
-  getName(){ return myName; }
-
-  /** Set the name of this data array */
-  void
-  setName(const std::string& s){ myName = s; }
-
-  /** Get data we store */
-  template <typename T>
-  std::shared_ptr<T>
-  get()
-  {
-    // the cheese of wrapping vector around shared_ptr
-    try{
-      auto back = boost::any_cast<std::shared_ptr<T> >(myData);
-      return back;
-    }catch (boost::bad_any_cast) {
-      return nullptr;
-    }
-  }
-
-  /** Is this data this type? */
-  template <typename T>
-  bool
-  is()
-  {
-    auto stuff = myData;
-
-    return (myData.type() == typeid(std::shared_ptr<T> ));
-  }
-
-  /** Set the data we store */
-  void
-  set(boost::any&& in)
-  {
-    myData = std::move(in);
-  }
-
-protected:
-
-  /** Name of this data */
-  std::string myName;
-
-  /** We can store ANYTHING!!!!! */
-  boost::any myData;
-};
-
 /** Type marker of data to help out reader/writers */
 enum DataArrayType {
   UNKNOWN,
@@ -114,15 +59,9 @@ public:
   DataArray(const std::string& name, const std::string& units,
     const DataArrayType& type, const std::vector<size_t>& dimindexes)
     : NamedAny(name), myUnits(units), myStorageType(type), myDimIndexes(dimindexes)
-  { }
-
-  /** Get the units of this data array */
-  const std::string&
-  getUnits(){ return myUnits; }
-
-  /** Set the units of this data array */
-  void
-  setUnits(const std::string& s){ myUnits = s; }
+  {
+    myAttributes.put<std::string>("units", units);
+  }
 
   /** Get the DataArrayType of this data array */
   const DataArrayType&
@@ -141,11 +80,37 @@ public:
   setDimIndexes(const std::vector<size_t>& vin){ myDimIndexes = vin; }
 
   /** Get a raw void pointer to array data. Used by reader/writers.
-   * You probably don't want this, see the example algorithm. */
+   * You probably don't want this, see the example algorithm.
+   * FIXME: Maybe better as an optional */
   void *
   getRawDataPointer();
 
+  /** Get a raw pointer to the attributes list.  Used by reader/writers.
+   * You probably don't want this, see the example algorithm.
+   * FIXME: Maybe better as an optional */
+  DataAttributeList *
+  getRawAttributePointer();
+
+  /** Get attribute */
+  template <typename T>
+  boost::optional<T>
+  getAttribute(const std::string& name)
+  {
+    return myAttributes.get<T>(name);
+  }
+
+  /** Put attribute */
+  template <typename T>
+  void
+  putAttribute(const std::string& name, const T& value)
+  {
+    myAttributes.put<T>(name, value);
+  }
+
 protected:
+
+  /** The data attribute list for this data */
+  DataAttributeList myAttributes;
 
   /** The units of the data */
   std::string myUnits;
@@ -155,6 +120,24 @@ protected:
 
   /** The index number of dimensions of the data */
   std::vector<size_t> myDimIndexes;
+};
+
+/** Stores a dimension of the grid space,
+ * curiously like a netcdf dimension.
+ * Use this or just two vectors.  Still debating...*/
+class DataGridDimension : public Data {
+public:
+  DataGridDimension(const std::string& name, size_t aSize) : myName(name), mySize(aSize){ }
+
+  size_t
+  size(){ return mySize; }
+
+  std::string
+  name(){ return myName; }
+
+protected:
+  std::string myName;
+  size_t mySize;
 };
 
 /** DataGrid acts as a name to storage database.
@@ -167,9 +150,17 @@ protected:
 class DataGrid : public DataType {
 public:
 
+  // FIXME: woh can become attributes right?
+  virtual LLH
+  getLocation() const override;
+
+  virtual Time
+  getTime() const override;
+
   /** Resize the dimensions of array objects */
   void
-  declareDims(const std::vector<size_t>& dims);
+  declareDims(const std::vector<size_t>& dimsizes,
+    const std::vector<std::string>     & dimnames);
 
   /** Get back node so can call methods on it */
   std::shared_ptr<DataArray>
@@ -211,7 +202,7 @@ public:
 public:
 
   /** Return dimensions */
-  std::vector<size_t>
+  std::vector<DataGridDimension>
   getDims(){ return myDims; }
 
   /** Return nodes */
@@ -252,7 +243,7 @@ public:
 
     for (auto i:myNodes) {
       if (i->getName() == name) {
-        return i->get<T>();
+        return i->getSP<T>();
       }
       count++;
     }
@@ -265,7 +256,7 @@ public:
   {
     size_t count = 0;
 
-    for (auto i:myNodes) {
+    for (auto& i:myNodes) {
       if (i->getName() == name) {
         return i;
       }
@@ -289,12 +280,17 @@ public:
     return -1;
   }
 
+  /** Return attribute pointer for readers/writers */
+  DataAttributeList *
+  getRawAttributePointer(
+    const std::string& name);
+
 protected:
+
+  /** Keep the dimensions */
+  std::vector<DataGridDimension> myDims;
 
   /** Nodes of generic array data */
   std::vector<std::shared_ptr<DataArray> > myNodes;
-
-  /** Keeps the size and count of our dimensions */
-  std::vector<size_t> myDims;
 };
 }

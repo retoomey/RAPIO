@@ -66,13 +66,13 @@ public:
   size_t
   getNumLats()
   {
-    return myDims[0];
+    return myDims[0].size();
   }
 
   size_t
   getNumLons()
   {
-    return myDims[1];
+    return myDims[1].size();
   }
 
   virtual std::string

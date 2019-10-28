@@ -7,6 +7,7 @@
 #include "rProcessTimer.h"
 
 // Default built in DataType support
+#include "rNetcdfDataGrid.h"
 #include "rNetcdfDataType.h"
 #include "rNetcdfRadialSet.h"
 #include "rNetcdfLatLonGrid.h"
@@ -59,23 +60,23 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
     if (retval == NC_NOERR) {
       // This is delegation, if successful we lose our netcdf-ness and become
       // a general data object.
-      // FIXME: Maybe poll all the objects instead.  This could be slower
-      // though.
-      // Get the datatype from netcdf (How we determine subobject handling)
       std::string type;
-      //  retval = IONetcdf::getAtt(ncid, "MAKEITBREAK", type);
       retval = getAtt(ncid, Constants::sDataType, type);
-      if (retval == NC_NOERR) { // found
-        std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
-        if (fmt != nullptr) {
-          datatype = fmt->read(ncid, url, args);
-        }
-      } else {
-        // FIXME: this might not actually be an error..
-        LogSevere("The 'DataType' netcdf attribute is not in netcdf file\n");
+      if (retval != NC_NOERR) {
+        LogSevere("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader\n");
+        type = "DataGrid";
         // Create generic netcdf object.  Up to algorithm to open/close it
-        datatype = std::make_shared<NetcdfDataType>(buf);
-        datatype->setTypeName("NetcdfData");
+        // datatype = std::make_shared<NetcdfDataType>(buf);
+        // datatype->setTypeName("NetcdfData");
+      }
+
+      std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+      if (fmt == nullptr) {
+        LogSevere("No netcdf reader for DataType '" << type << "', using generic reader\n");
+        fmt = IONetcdf::getIONetcdf("DataGrid");
+      }
+      if (fmt != nullptr) {
+        datatype = fmt->read(ncid, url, args);
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
@@ -100,6 +101,9 @@ IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
   const std::string type = dt.getDataType();
 
   std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+  if (fmt == nullptr) {
+    fmt = IONetcdf::getIONetcdf("DataGrid");
+  }
 
   if (fmt == nullptr) {
     LogSevere("Can't create IO writer for " << type << "\n");
@@ -221,6 +225,8 @@ IONetcdf::introduceSelf()
   NetcdfRadialSet::introduceSelf();
   NetcdfLatLonGrid::introduceSelf();
   NetcdfBinaryTable::introduceSelf();
+  // Generic netcdf reader class
+  NetcdfDataGrid::introduceSelf();
 }
 
 /** Read call */
@@ -647,10 +653,9 @@ IONetcdf::getGlobalAttr(
 bool
 IONetcdf::writeUnitValueList(int ncid, const rapio::DataType& dt)
 {
-  // all other attributes
-  // const DataType::AttrMap attr = dt.getAttributes();
   const DataType::DataAttributes attr = dt.getAttributes2();
 
+  // List of attributes used by NSSL/netcdf
   std::string attrnames;
 
   for (auto& iter: attr) {
@@ -718,8 +723,8 @@ IONetcdf::dumpVars(int ncid)
   NETCDF(nc_inq_natts(ncid, &globalcount)); // Hey can we do this for a
                                             // non-global var???
 
-  LogSevere("----> There are " << globalcount << " global attributes\n");
-  char name_in[NC_MAX_NAME];
+  std::cout << "----> There are " << globalcount << " global attributes\n";
+  char name_in[NC_MAX_NAME + 1];
 
   for (int i = 0; i < globalcount; i++) {
     // retval = nc_inq_att(ncid, NC_GLOBAL, Constants::TypeName.c_str(),
@@ -766,9 +771,9 @@ IONetcdf::dumpVars(int ncid)
           t = ("Unknown " + ss.str());
         }
     }
-    LogSevere(
-      i << ": '" << name << "' (" << t << ") == '" << output << "', Length = " << vr_len
-        << "\n");
+    std::cout
+      << i << ": '" << name << "' (" << t << ") == '" << output << "', Length = " << vr_len
+      << "\n";
   }
   return (true);
 } // IONetcdf::dumpVars
@@ -1204,8 +1209,16 @@ IONetcdf::declareGridVars(
   // gotta be careful to write in same order as declare...
   std::vector<int> datavars;
   for (auto l:list) {
-    auto theName  = l->getName();
-    auto theUnits = l->getUnits();
+    auto theName = l->getName();
+    // auto theUnits = l->getUnits();
+    auto theUnitAttr = l->getAttribute<std::string>("units");
+    std::string theUnits;
+    if (theUnitAttr) {
+      theUnits = *theUnitAttr;
+    } else {
+      theUnits = "Dimensionless";
+    }
+
     // Primary data is the data type of the file
     if (theName == "primary") {
       theName = typeName;
@@ -1238,3 +1251,122 @@ IONetcdf::declareGridVars(
   }
   return datavars;
 } // IONetcdf::declareGridVars
+
+size_t
+IONetcdf::getDimensions(int ncid,
+  std::vector<int>          & dimids,
+  std::vector<std::string>  & dimnames,
+  std::vector<size_t>       & dimsizes)
+{
+  int ndimsp = -1;
+
+  // Find the number of dimension ids
+  NETCDF(nc_inq_ndims(ncid, &ndimsp));
+  size_t numdims = ndimsp < 0 ? 0 : (size_t) (ndimsp);
+  // LogSevere("Number of dimensions: " << ndimsp << "\n");
+
+  // Find the dimension ids
+  // std::vector<int> dimids;
+  dimids.resize(ndimsp);
+  NETCDF(nc_inq_dimids(ncid, 0, &dimids[0], 0));
+
+  // Find the number of unlimited dimensions.  FIXME: Can't handle this yet
+  // FIXME: Hey if we use a class hint hint we can store more stuff right?
+  // NETCDF(nc_inq_unlimdims(ncid, &nunlim, NULL));
+  // std::vector<int> unlimids; unlimids.resize(numlim);
+  // Netcdf(nc_inq_unlimdims(ncid, &numlim, &unlimids[0]));
+  // if (nunlim > 0){ LogSevere("Can't handle unlimited netcdf data fields at moment...\n");}
+
+  // For each dimension, get the name and size
+  dimsizes.resize(numdims);
+  dimnames.resize(numdims);
+  char name[NC_MAX_NAME + 1];
+  for (size_t d = 0; d < numdims; ++d) {
+    // LogSevere("For dim " << d << " value is " << dimids[d] << "\n");
+    // NETCDF(nc_inq_dim(ncid, dimids[d], name, &length));      // id from name
+    NETCDF(nc_inq_dim(ncid, dimids[d], name, &dimsizes[d])); // id from name
+    dimnames[d] = std::string(name);
+    // LogSevere("--> '"<<dimnames[d]<<"' " << dimsizes[d] << "\n");
+  }
+  return numdims;
+} // IONetcdf::getDimensions
+
+size_t
+IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
+{
+  char name_in[NC_MAX_NAME + 1];
+
+  // Number of attributes...
+  // If varid == NC_GLOBAL here, seems to work also
+  // so maybe we could always use varnatts...
+  int nattsp = -1;
+
+  if (varid == NC_GLOBAL) {
+    NETCDF(nc_inq_natts(ncid, &nattsp));
+  } else {
+    NETCDF(nc_inq_varnatts(ncid, varid, &nattsp));
+  }
+
+  // For each attribute...
+  size_t nattsp2 = nattsp < 0 ? 0 : nattsp;
+  for (size_t v = 0; v < nattsp2; ++v) {
+    NETCDF(nc_inq_attname(ncid, varid, v, name_in));
+    std::string attname = std::string(name_in);
+
+    // Can do all in one right?  Well need name from above though
+    // ...and get the type and length.
+    size_t lenp;
+    nc_type type_in;
+    NETCDF(nc_inq_att(ncid, varid, name_in, &type_in, &lenp));
+
+    /** Handle some/all the netcdf types, remap to ours.
+     * FIXME: add more support */
+    if (list != nullptr) {
+      switch (type_in) {
+          case NC_BYTE:
+            LogSevere("Unhandled NETCDF type NC_BYTE for " << name_in << ", ignoring read of it.\n");
+            break;
+          case NC_UBYTE:
+            LogSevere("Unhandled NETCDF type NC_UBYTE for " << name_in << ", ignoring read of it.\n");
+            break;
+          case NC_CHAR: {
+            std::string aString;
+            getAtt(ncid, name_in, aString, varid);
+            list->put<std::string>(attname, aString);
+          }
+          break;
+          case NC_SHORT:
+            LogSevere("Unhandled NETCDF type NC_SHORT for " << name_in << ", ignoring read of it.\n");
+            break;
+          case NC_USHORT:
+            LogSevere("Unhandled NETCDF type NC_USHORT for " << name_in << ", ignoring read of it.\n");
+            break;
+          case NC_LONG:
+            LogSevere("Unhandled NETCDF type NC_LONG for " << name_in << ", ignoring read of it.\n");
+            break; // or NC_INT
+          case NC_UINT:
+            LogSevere("Unhandled NETCDF type NC_UINT for " << name_in << ", ignoring read of it.\n");
+            break;
+          case NC_FLOAT: {
+            float aFloat;
+            getAtt(ncid, name_in, &aFloat, varid);
+            list->put<float>(attname, aFloat);
+          }
+          break;
+          case NC_DOUBLE: {
+            double aDouble;
+            getAtt(ncid, name_in, &aDouble);
+            list->put<double>(attname, aDouble);
+          }
+          break;
+          case NC_STRING:
+            LogSevere("Unhandled NETCDF type NC_STRING for " << name_in << ", ignoring read of it.\n");
+            break;
+          default:
+            break;
+      }
+    }
+  }
+
+  return 0;
+} // IONetcdf::getAttributes

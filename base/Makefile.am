@@ -60,6 +60,7 @@ librapio_la_SOURCES =\
   rFAMWatcher.cc\
   rIONetcdf.cc\
   rIOGrib.cc\
+  rNetcdfDataGrid.cc\
   rNetcdfBinaryTable.cc\
   rNetcdfRadialSet.cc\
   rNetcdfLatLonGrid.cc\
@@ -132,6 +133,7 @@ pkginclude_HEADERS =\
   rFAMWatcher.h\
   rIONetcdf.h\
   rIOGrib.h\
+  rNetcdfDataGrid.h\
   rNetcdfBinaryTable.h\
   rNetcdfRadialSet.h\
   rNetcdfLatLonGrid.h\

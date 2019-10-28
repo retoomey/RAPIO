@@ -1,12 +1,13 @@
 #pragma once
 
 #include <rIONetcdf.h>
+#include <rNetcdfDataGrid.h>
 
 namespace rapio {
 class LatLonGrid;
 
 /** Handles the reading/writing of LatLonGrid DataType from a netcdf file.  */
-class NetcdfLatLonGrid : public NetcdfType {
+class NetcdfLatLonGrid : public NetcdfDataGrid {
 public:
 
   /** Write DataType from given ncid */
@@ -39,11 +40,6 @@ public:
     LLH    location,
     Time   time,
     size_t objectNumber);
-
-  /** C based creation method */
-  static std::shared_ptr<DataType>
-  read(const int                  ncid,
-    const std::vector<std::string>& params);
 
   /*** C write to create a CF header */
   static void

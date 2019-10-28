@@ -23,13 +23,6 @@ std::shared_ptr<DataType>
 NetcdfLatLonGrid::read(const int ncid, const URL& loc,
   const vector<string>& params)
 {
-  std::shared_ptr<DataType> newWay = read(ncid, params);
-  return (newWay);
-}
-
-std::shared_ptr<DataType>
-NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
-{
   // FIXME: Tons of shared code now with rNetcdfRadialSet
   try {
     // Stock global attributes
@@ -65,19 +58,28 @@ NetcdfLatLonGrid::read(const int ncid, const vector<string>& params)
       "Lon", &lon_dim, &num_lons);
 
     // -----------------------------------------------------------------------
+    // Gather the variable info
+    int ndimsp, nvarsp, nattsp, unlimdimidp;
+    NETCDF(nc_inq(ncid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp));
+
+    std::vector<int> dimids;
+    std::vector<size_t> dimsizes;
+    std::vector<std::string> dimnames;
+    ndimsp = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+
+    // -----------------------------------------------------------------------
     // Create a new lat lon grid object
     std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>(
       location, time,
       lat_spacing,
       lon_spacing);
     LatLonGrid& llgrid = *LatLonGridSP;
-    llgrid.declareDims({ num_lats, num_lons });
-    llgrid.setTypeName(aTypeName);
+    DataGrid& dataGrid = *LatLonGridSP;
 
-    // -----------------------------------------------------------------------
-    // Gather the variable info
-    int ndimsp, nvarsp, nattsp, unlimdimidp;
-    NETCDF(nc_inq(ncid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp));
+    // Data Grid generic?
+    // dataGrid.declareDims({ num_lats, num_lons });
+    dataGrid.declareDims(dimsizes, dimnames); // Gotta get rid of pixel I think
+    dataGrid.setTypeName(aTypeName);
 
     char cname[1000];
     nc_type xtypep;
@@ -425,7 +427,7 @@ NetcdfLatLonGrid::getTestObject(
   LatLonGrid& llgrid = *llgridsp;
 
   // llgrid.resize(num_lats, num_lons, 7.0f);
-  llgrid.declareDims({ num_lats, num_lons });
+  llgrid.declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
 
   llgrid.setTypeName("MergedReflectivityQC");
 

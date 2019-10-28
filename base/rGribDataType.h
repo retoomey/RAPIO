@@ -9,9 +9,7 @@
 #include <memory>
 
 namespace rapio {
-/** DataType for the data of a Netcdf file before any possible
- * delegation.  Note, on delegation the delegated data type
- * might not be a direct subclass.
+/** DataType for holding Grib data
  *
  * @author Robert Toomey */
 class GribDataType : public DataType {

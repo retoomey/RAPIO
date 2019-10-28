@@ -1,9 +1,23 @@
 #include "rDataGrid.h"
+#include "rTime.h"
+#include "rLLH.h"
 
 #include "rError.h"
 
 using namespace rapio;
 using namespace std;
+
+LLH
+DataGrid::getLocation() const
+{
+  return LLH();
+}
+
+Time
+DataGrid::getTime() const
+{
+  return Time();
+}
 
 void *
 DataArray::getRawDataPointer()
@@ -17,18 +31,36 @@ DataArray::getRawDataPointer()
 
   if (myStorageType == FLOAT) {
     if (size == 2) {
-      return (get<RAPIO_2DF>()->data());
+      return (getSP<RAPIO_2DF>()->data());
     }
     if (size == 1) {
-      return (get<RAPIO_1DF>()->data());
+      return (getSP<RAPIO_1DF>()->data());
     }
   }
   if (myStorageType == INT) {
     if (size == 1) {
-      return (get<RAPIO_1DF>()->data());
+      return (getSP<RAPIO_1DF>()->data());
     }
   }
 
+  return nullptr;
+}
+
+DataAttributeList *
+DataArray::getRawAttributePointer()
+{
+  return &myAttributes;
+}
+
+DataAttributeList *
+DataGrid::getRawAttributePointer(
+  const std::string& name)
+{
+  auto node = getNode(name);
+
+  if (node != nullptr) {
+    return node->getRawAttributePointer();
+  }
   return nullptr;
 }
 
@@ -39,9 +71,14 @@ DataGrid::getDataArray(const std::string& name)
 }
 
 void
-DataGrid::declareDims(const std::vector<size_t>& dims)
+DataGrid::declareDims(const std::vector<size_t>& dimsizes,
+  const std::vector<std::string>               & dimnames)
 {
-  myDims = dims;
+  // Store updated dimension info
+  myDims.clear();
+  for (size_t zz = 0; zz < dimsizes.size(); ++zz) {
+    myDims.push_back(DataGridDimension(dimnames[zz], dimsizes[zz]));
+  }
 
   // Resize all arrays to given dimensions....
   for (auto l:myNodes) {
@@ -55,7 +92,7 @@ DataGrid::declareDims(const std::vector<size_t>& dims)
     // to --> 50, 100 size for example 0--> 50, 1 --> 100
     std::vector<size_t> sizes(size);
     for (size_t d = 0; d < size; ++d) {
-      sizes[d] = dims[i[d]];
+      sizes[d] = dimsizes[i[d]];
     }
 
     // Since we want convenience classes and well boost
@@ -63,18 +100,18 @@ DataGrid::declareDims(const std::vector<size_t>& dims)
     // type checking here.  FIXME: better way?
     if (size == 1) {
       if (type == FLOAT) {
-        auto f = l->get<RAPIO_1DF>();
+        auto f = l->getSP<RAPIO_1DF>();
         if (f != nullptr) {
           f->resize(RAPIO_DIM1(sizes[0]));
         }
       } else if (type == INT) {
-        auto f = l->get<RAPIO_1DI>();
+        auto f = l->getSP<RAPIO_1DI>();
         if (f != nullptr) {
           f->resize(RAPIO_DIM1(sizes[0]));
         }
       }
     } else if (size == 2) {
-      auto f = l->get<RAPIO_2DF>();
+      auto f = l->getSP<RAPIO_2DF>();
       if (f != nullptr) {
         f->resize(RAPIO_DIM2(sizes[0], sizes[1]));
       }
@@ -96,8 +133,8 @@ DataGrid::addFloat1D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
   // Map index to dimension sizes
-  const auto size = myDims[dimindexes[0]];
-  auto a = add<RAPIO_1DF>(name, units, RAPIO_1DF(RAPIO_DIM1(size)), FLOAT);
+  const auto size = myDims[dimindexes[0]].size();
+  auto a = add<RAPIO_1DF>(name, units, RAPIO_1DF(RAPIO_DIM1(size)), FLOAT, dimindexes);
 
   return a;
 }
@@ -113,8 +150,8 @@ DataGrid::addInt1D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
   // Map index to dimension sizes
-  const auto size = myDims[dimindexes[0]];
-  auto a = add<RAPIO_1DI>(name, units, RAPIO_1DI(RAPIO_DIM1(size)), INT);
+  const auto size = myDims[dimindexes[0]].size();
+  auto a = add<RAPIO_1DI>(name, units, RAPIO_1DI(RAPIO_DIM1(size)), INT, dimindexes);
 
   return a;
 }
@@ -133,8 +170,8 @@ DataGrid::addFloat2D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
   // Map index to dimension sizes
-  const auto x = myDims[dimindexes[0]];
-  const auto y = myDims[dimindexes[1]];
+  const auto x = myDims[dimindexes[0]].size();
+  const auto y = myDims[dimindexes[1]].size();
 
   // We always add/replace since index order could change or it could be different
   // type, etc.  Maybe possibly faster by updating over replacing

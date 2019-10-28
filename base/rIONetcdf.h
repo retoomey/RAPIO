@@ -378,6 +378,24 @@ public:
   declareGridVars(DataGrid& grid, const std::string& typeName,
     const std::vector<int>& ncdims, int ncid);
 
+  /** Convenience for gathering dimension information.
+   * FIXME: Make object for dimension information? */
+  static
+  size_t
+  getDimensions(int ncid, std::vector<int>& dimids,
+    std::vector<std::string>& dimnames, std::vector<size_t>& dimsizes);
+
+  /** Convenience for gathering attributes.*/
+  static
+  size_t
+  getAttributes(int ncid, int varid, DataAttributeList * list = nullptr);
+
+  /** Convenience for gathering global attributes.*/
+  // static
+  // size_t
+  // getGlobalAttributes(int ncid );
+
+
 protected:
 
 public:
