@@ -958,19 +958,19 @@ IOGrib::createObject(const std::vector<std::string>& args)
 }
 
 std::string
-IOGrib::writeGribDataType(const rapio::DataType& dt,
-  const std::string                            & myDirectory,
-  std::shared_ptr<DataFormatSetting>           dfs,
-  std::vector<Record>                          & records)
+IOGrib::writeGribDataType(std::shared_ptr<DataType> dt,
+  const std::string                                 & myDirectory,
+  std::shared_ptr<DataFormatSetting>                dfs,
+  std::vector<Record>                               & records)
 {
   return "";
 }
 
 std::string
-IOGrib::encode(const rapio::DataType & dt,
-  const std::string                  & directory,
-  std::shared_ptr<DataFormatSetting> dfs,
-  std::vector<Record>                & records)
+IOGrib::encode(std::shared_ptr<DataType> dt,
+  const std::string                      & directory,
+  std::shared_ptr<DataFormatSetting>     dfs,
+  std::vector<Record>                    & records)
 {
   return (IOGrib::writeGribDataType(dt, directory, dfs, records));
 }

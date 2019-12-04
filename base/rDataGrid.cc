@@ -39,7 +39,7 @@ DataArray::getRawDataPointer()
   }
   if (myStorageType == INT) {
     if (size == 1) {
-      return (getSP<RAPIO_1DF>()->data());
+      return (getSP<RAPIO_1DI>()->data());
     }
   }
 

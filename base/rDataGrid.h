@@ -256,7 +256,7 @@ public:
   {
     size_t count = 0;
 
-    for (auto& i:myNodes) {
+    for (auto i:myNodes) {
       if (i->getName() == name) {
         return i;
       }

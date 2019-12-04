@@ -66,7 +66,7 @@ public:
   /** Write DataType from given ncid (subclasses) */
   virtual bool
   write(int                            ncid,
-    const DataType                     & dt,
+    std::shared_ptr<DataType>          dt,
     std::shared_ptr<DataFormatSetting> dfs) = 0;
 
   /** Read a DataType from given ncid */
@@ -124,17 +124,17 @@ public:
 
   /** Encode a DataType for writing */
   std::string
-  encode(const rapio::DataType         & dt,
+  encode(std::shared_ptr<DataType>     dt,
     const std::string                  & directory,
     std::shared_ptr<DataFormatSetting> dfs,
     std::vector<Record>                & records) override;
 
   /** Encode a DataType for writing */
   static std::string
-  writeNetcdfDataType(const rapio::DataType& dt,
-    const std::string                      & dir,
-    std::shared_ptr<DataFormatSetting>     dfs,
-    std::vector<Record>                    & records);
+  writeNetcdfDataType(std::shared_ptr<DataType> dt,
+    const std::string                           & dir,
+    std::shared_ptr<DataFormatSetting>          dfs,
+    std::vector<Record>                         & records);
 
   /** Current compression level of netcdf files */
   static void

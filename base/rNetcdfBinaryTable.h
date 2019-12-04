@@ -16,7 +16,7 @@ public:
   /** Write DataType from given ncid */
   virtual bool
   write(int                            ncid,
-    const DataType                     & dt,
+    std::shared_ptr<DataType>          dt,
     std::shared_ptr<DataFormatSetting> dfs)
   override;
 

@@ -81,9 +81,7 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
     }
-
     nc_close(ncid);
-    return (datatype);
   } else {
     LogSevere("Unable to pull data from " << url << "\n");
   }
@@ -91,14 +89,14 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
 } // IONetcdf::readNetcdfDataType
 
 std::string
-IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
-  const std::string                                & myDirectory,
-  std::shared_ptr<DataFormatSetting>               dfs,
-  std::vector<Record>                              & records)
+IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
+  const std::string                                     & myDirectory,
+  std::shared_ptr<DataFormatSetting>                    dfs,
+  std::vector<Record>                                   & records)
 {
   /** So myLookup "RadialSet" writer for example from the data type.
    * This allows algs etc to replace our IONetcdf with a custom if needed. */
-  const std::string type = dt.getDataType();
+  const std::string type = dt->getDataType();
 
   std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
   if (fmt == nullptr) {
@@ -114,7 +112,7 @@ IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
   // Static encoded for now.  Could make it virtual in the formatter
   std::vector<std::string> selections;
   std::vector<std::string> params;
-  URL aURL = generateOutputInfo(dt, myDirectory, dfs, "netcdf", params, selections);
+  URL aURL = generateOutputInfo(*dt, myDirectory, dfs, "netcdf", params, selections);
 
   // Ensure full path to output file exists
   const std::string dir(aURL.getDirName());
@@ -185,7 +183,7 @@ IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
   // -------------------------------------------------------------
   // Update records to match our written stuff...
   if (successful) {
-    const rapio::Time rsTime = dt.getTime();
+    const rapio::Time rsTime = dt->getTime();
     Record rec(params, selections, rsTime);
     records.push_back(rec);
     return (aURL.path);
@@ -194,10 +192,10 @@ IONetcdf::writeNetcdfDataType(const rapio::DataType& dt,
 } // IONetcdf::encodeStatic
 
 std::string
-IONetcdf::encode(const rapio::DataType& dt,
-  const std::string                   & directory,
-  std::shared_ptr<DataFormatSetting>  dfs,
-  std::vector<Record>                 & records)
+IONetcdf::encode(std::shared_ptr<DataType> dt,
+  const std::string                        & directory,
+  std::shared_ptr<DataFormatSetting>       dfs,
+  std::vector<Record>                      & records)
 {
   // FIXME: Do we need this to be static?
   return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
@@ -1331,7 +1329,7 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
             break;
           case NC_CHAR: {
             std::string aString;
-            getAtt(ncid, name_in, aString, varid);
+            getAtt(ncid, attname, aString, varid);
             list->put<std::string>(attname, aString);
           }
           break;
@@ -1349,13 +1347,13 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
             break;
           case NC_FLOAT: {
             float aFloat;
-            getAtt(ncid, name_in, &aFloat, varid);
+            getAtt(ncid, attname, &aFloat, varid);
             list->put<float>(attname, aFloat);
           }
           break;
           case NC_DOUBLE: {
             double aDouble;
-            getAtt(ncid, name_in, &aDouble);
+            getAtt(ncid, attname, &aDouble);
             list->put<double>(attname, aDouble);
           }
           break;

@@ -157,14 +157,14 @@ public:
 
   /** Encode a DataType for writing */
   static std::string
-  writeGribDataType(const rapio::DataType& dt,
-    const std::string                    & dir,
-    std::shared_ptr<DataFormatSetting>   dfs,
-    std::vector<Record>                  & records);
+  writeGribDataType(std::shared_ptr<DataType> dt,
+    const std::string                         & dir,
+    std::shared_ptr<DataFormatSetting>        dfs,
+    std::vector<Record>                       & records);
 
   // Virtual functions for DataWriter calls....
   std::string
-  encode(const rapio::DataType         & dt,
+  encode(std::shared_ptr<DataType>     dt,
     const std::string                  & directory,
     std::shared_ptr<DataFormatSetting> dfs,
     std::vector<Record>                & records) override;

@@ -142,6 +142,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");
-    writeOutputProduct(r->getTypeName(), *r); // Typename will be replaced by -O filters
+    writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
+    LogInfo("--->Finished " << r->getTypeName() << " product to output\n");
   }
 } // W2SimpleAlg::processNewData

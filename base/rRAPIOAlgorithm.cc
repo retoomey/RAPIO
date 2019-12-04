@@ -806,23 +806,23 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
 // using this class
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
-  DataType                                          & outputData)
+  std::shared_ptr<DataType>                         outputData)
 {
   std::string newProductName = "";
 
   if (productMatch(key, newProductName)) {
     LogInfo("Writing '" << key << "' as product name '" << newProductName
                         << "'\n");
-    std::string typeName = outputData.getTypeName(); // Old one...
-    outputData.setTypeName(newProductName);
+    std::string typeName = outputData->getTypeName(); // Old one...
+    outputData->setTypeName(newProductName);
     std::vector<Record> records;
     IODataType::writeData(outputData, myOutputDir, records);
     if (myNotifier != nullptr) {
       myNotifier->writeRecords(records);
     }
-    outputData.setTypeName(typeName); // Restore old type name
-                                      // not overriden.  Probably
-                                      // doesn't matter.
+    outputData->setTypeName(typeName); // Restore old type name
+                                       // not overriden.  Probably
+                                       // doesn't matter.
   } else {
     LogInfo("DID NOT FIND a match for  product key " << key << "\n");
   }

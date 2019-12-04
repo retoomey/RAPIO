@@ -92,12 +92,12 @@ IODataType::generateOutputInfo(const DataType& dt,
 
 // static
 std::string
-IODataType::writeData(const DataType & dt,
-  const std::string                  & outputDir,
-  std::vector<Record>                & records)
+IODataType::writeData(std::shared_ptr<DataType> dt,
+  const std::string                             & outputDir,
+  std::vector<Record>                           & records)
 {
   // Settings are per datatype, so we need the unique settings for it right now
-  std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt.getDataType());
+  std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt->getDataType());
   if (dfs != nullptr) {
     std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(dfs->format,
         "IODataType writer");

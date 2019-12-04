@@ -62,13 +62,12 @@ NetcdfBinaryTable::read(const int ncid,
 }
 
 bool
-NetcdfBinaryTable::write(int ncid, const DataType& dt,
+NetcdfBinaryTable::write(int ncid, std::shared_ptr<DataType> dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
-  const BinaryTable& btc   = dynamic_cast<const BinaryTable&>(dt);
-  BinaryTable& binaryTable = const_cast<BinaryTable&>(btc);
+  std::shared_ptr<BinaryTable> binaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
 
-  return (write(ncid, binaryTable, IONetcdf::MISSING_DATA,
+  return (write(ncid, *binaryTable, IONetcdf::MISSING_DATA,
          IONetcdf::RANGE_FOLDED));
 }
 

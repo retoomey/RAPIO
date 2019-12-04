@@ -109,7 +109,8 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 
     char cname[1000];
     nc_type xtypep;
-    int ndimsp2, dimidsp, nattsp2;
+    int ndimsp2, nattsp2;
+    int dimidsp[NC_MAX_VAR_DIMS];
 
     // 2D grid stuff for netcdf
     const size_t start2[] = { 0, 0 };
@@ -119,7 +120,7 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
     // For each variable in the netcdf file...
     for (int i = 0; i < nvarsp; ++i) {
       // Get variable info
-      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, &dimidsp, &nattsp2));
+      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, dimidsp, &nattsp2));
       std::string name = std::string(cname);
 
       // Hunting each supported grid type
@@ -197,15 +198,15 @@ NetcdfRadialSet::read(const int ncid, const URL& loc,
 } // NetcdfRadialSet::read
 
 bool
-NetcdfRadialSet::write(int ncid, const DataType& dt,
+NetcdfRadialSet::write(int ncid, std::shared_ptr<DataType> dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
   ProcessTimer("Writing RadialSet");
 
-  const RadialSet& cradialSet = dynamic_cast<const RadialSet&>(dt);
-  RadialSet& radialSet        = const_cast<RadialSet&>(cradialSet);
-  const float missing         = IONetcdf::MISSING_DATA;
-  const float rangeFolded     = IONetcdf::RANGE_FOLDED;
+  std::shared_ptr<RadialSet> radialSetSP = std::dynamic_pointer_cast<RadialSet>(dt);
+  RadialSet& radialSet    = *radialSetSP;
+  const float missing     = IONetcdf::MISSING_DATA;
+  const float rangeFolded = IONetcdf::RANGE_FOLDED;
 
   try {
     // Typename of primary 2D float grid
@@ -283,11 +284,11 @@ NetcdfRadialSet::write(int ncid, const DataType& dt,
       // The generic attributes
       DataAttributeList * raw = l->getRawAttributePointer();
       if (raw != nullptr) {
-        LogSevere("FOR " << l->getName() << "\n");
+        // LogSevere("FOR " << l->getName() << "\n");
         for (auto i:*raw) {
           auto field = i.get<std::string>();
           if (field) {
-            LogSevere("RADIAL GENERIC ATTRIBUTE: " << i.getName() << " == " << *field << "\n");
+            //    LogSevere("RADIAL GENERIC ATTRIBUTE: " << i.getName() << " == " << *field << "\n");
           }
         }
       }

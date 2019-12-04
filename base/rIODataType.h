@@ -69,9 +69,9 @@ public:
    *  @return filename (empty if error)
    */
   static std::string
-  writeData(const DataType & dt,
-    const std::string      & outputDir,
-    std::vector<Record>    & records);
+  writeData(std::shared_ptr<DataType> dt,
+    const std::string                 & outputDir,
+    std::vector<Record>               & records);
 
 protected:
 
@@ -79,7 +79,7 @@ protected:
    *   into the resulting vector. No record will be appended if
    *   there was a problem. @return filename (empty if error) */
   virtual std::string
-  encode(const rapio::DataType         & dt,
+  encode(std::shared_ptr<DataType>     dt,
     const std::string                  & directory,
     std::shared_ptr<DataFormatSetting> dfs,
     std::vector<Record>                & records) = 0;

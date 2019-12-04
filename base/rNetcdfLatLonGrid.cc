@@ -83,7 +83,8 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc,
 
     char cname[1000];
     nc_type xtypep;
-    int ndimsp2, dimidsp, nattsp2;
+    int ndimsp2, nattsp2;
+    int dimidsp[NC_MAX_VAR_DIMS];
 
     // 2D grid stuff for netcdf
     const size_t start2[] = { 0, 0 };
@@ -104,7 +105,7 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc,
     // For each variable in the netcdf file...
     for (int i = 0; i < nvarsp; ++i) {
       // Get variable info
-      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, &dimidsp, &nattsp2));
+      NETCDF(nc_inq_var(ncid, i, cname, &xtypep, &ndimsp2, dimidsp, &nattsp2));
       std::string name = std::string(cname);
 
       // Hunting each supported grid type
@@ -252,13 +253,12 @@ NetcdfLatLonGrid::writeLatLonValues(
 }
 
 bool
-NetcdfLatLonGrid::write(int ncid, const DataType& dt,
+NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
-  const LatLonGrid& llgc = dynamic_cast<const LatLonGrid&>(dt);
-  LatLonGrid& llgrid     = const_cast<LatLonGrid&>(llgc);
+  std::shared_ptr<LatLonGrid> llgridSP = std::dynamic_pointer_cast<LatLonGrid>(dt);
 
-  return (write(ncid, llgrid, IONetcdf::MISSING_DATA, IONetcdf::RANGE_FOLDED,
+  return (write(ncid, *llgridSP, IONetcdf::MISSING_DATA, IONetcdf::RANGE_FOLDED,
          dfs->cdmcompliance, dfs->faacompliance));
 }
 

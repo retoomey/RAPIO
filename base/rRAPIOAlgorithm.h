@@ -207,7 +207,7 @@ public:
    * addOutputProduct */
   virtual void
   writeOutputProduct(const std::string& key,
-    DataType                          & outputData);
+    std::shared_ptr<DataType>         outputData);
 
   /** Get the maximum history specified by user */
   TimeDuration

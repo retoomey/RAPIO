@@ -164,6 +164,13 @@ public:
     return boost::none;
   }
 
+  /** Get the size of the attributes */
+  size_t
+  size()
+  {
+    return myAttributes.size();
+  }
+
 protected:
 
   /** Stored attributes */
