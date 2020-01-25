@@ -11,3 +11,7 @@
 // Allow access to standard objects
 #include <rRadialSet.h>
 #include <rLatLonGrid.h>
+
+// Experimental AWS calls..
+#include <rAWS.h>
+// #include <rCurlConnection.h>

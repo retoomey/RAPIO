@@ -270,7 +270,7 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 
     // 2.5 setup signals, etc..some stuff based upon arguments
-    const int logFlush        = o.getInteger("logFlush");
+    const int logFlush        = o.getInteger("flush");
     const std::string verbose = o.getString("verbose");
     Log::instance()->setInitialLogSettings(verbose, logFlush);
 

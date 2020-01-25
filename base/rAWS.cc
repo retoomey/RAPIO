@@ -1,0 +1,230 @@
+#include "rAWS.h"
+
+#include "rError.h"
+#include "rTime.h"
+#include "rCurlConnection.h"
+
+#include <iostream>
+#include <iomanip>
+
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
+
+using namespace rapio;
+
+std::string
+AWS::sign(const std::string& key, const std::string& message)
+{
+  std::string out;
+  #ifdef EVP_MAX_MD_SIZE
+  // LogInfo("HMAC_SHA256 algorithm recursively applied for AWS4\n");
+  unsigned int result_len = -1;
+  unsigned char result[EVP_MAX_MD_SIZE];
+  // FIXME: Seems to be handling utf8 conversion...python did this
+  // explicitly.  How to check?
+  HMAC(EVP_sha256(),
+    key.c_str(), key.size(),
+    (const unsigned char *) message.c_str(), message.size(),
+    result, &result_len);
+
+  //  out = std::string(result);
+
+  for (size_t i = 0; i < result_len; i++) {
+    out += result[i];
+  }
+  // LogInfo("OUT:"<< out.size() << ", result: " << result_len << "\n");
+  // LogInfo("OUT:"<< out << std::endl);
+  #else // ifdef EVP_MAX_MD_SIZE
+  // FIXME: Complain?
+  #endif // ifdef EVP_MAX_MD_SIZE
+  return out;
+}
+
+std::string
+AWS::getSignatureKey(
+  const std::string& key,
+  const std::string& dateStamp,
+  const std::string& regionName,
+  const std::string& serviceName)
+{
+  // FIXME: utf8 enforce?
+  const std::string kDate    = sign("AWS4" + key, dateStamp);
+  const std::string kRegion  = sign(kDate, regionName);
+  const std::string kService = sign(kRegion, serviceName);
+  const std::string kSigning = sign(kService, "aws4_request");
+
+  return kSigning;
+}
+
+std::string
+AWS::hexdigest(const std::string bytes)
+{
+  std::stringstream ss;
+  for (size_t i = 0; i < bytes.length(); i++) {
+    // Clip to unsigned char, this is why should be utf-8
+    unsigned char x = bytes[i] & 0xFF;
+    // ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned char)bytes[i];
+    ss << std::hex << std::setw(2) << std::setfill('0') << (int) x;
+  }
+  return ss.str();
+}
+
+std::string
+AWS::sha256(const std::string str)
+{
+  unsigned char hash[SHA256_DIGEST_LENGTH];
+  SHA256_CTX sha256;
+
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, str.c_str(), str.size());
+  SHA256_Final(hash, &sha256);
+  std::stringstream ss;
+
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    // ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    ss << hash[i];
+  }
+  return ss.str();
+}
+
+void
+AWS::test_REST_API_Get(
+  const std::string& access_key,
+  const std::string& secret_key)
+{
+  LogInfo("Ok here in get REST test\n");
+
+  std::string method   = "GET";
+  std::string service  = "ec2";
+  std::string host     = "ec2.amazonaws.com";
+  std::string region   = "us-east-1";
+  std::string endpoint = "https://ec2.amazonaws.com";
+  std::string request_parameters = "Action=DescribeRegions&Version=2013-10-15";
+
+  // for(size_t i=0; i< 100000; i++){
+
+  // Create a data for headers and the credential string
+  rapio::Time aTime(Time::CurrentTime());
+  const std::string amzdate = aTime.getString("%Y%m%dT%H%M%SZ");
+  // const std::string amzdate = aTime.getString("%Y%m%dT%H%MZ"); For match testing with python
+  const std::string datestamp = aTime.getString("%Y%m%d");
+
+  // ************* TASK 1: CREATE A CANONICAL REQUEST *************
+  // http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
+
+  // Step 1 is to define the verb (GET, POST, etc.)--already done.
+
+  // Step 2: Create canonical URI--the part of the URI from domain to query
+  // string (use '/' if no path)
+  std::string canonical_uri = "/";
+
+  // Step 3: Create the canonical query string. In this example (a GET request),
+  // request parameters are in the query string. Query string values must
+  // be URL-encoded (space=%20). The parameters must be sorted by name.
+  // For this example, the query string is pre-formatted in the request_parameters variable.
+  std::string canonical_querystring = request_parameters;
+
+  // Step 4: Create the canonical headers and signed headers. Header names
+  // must be trimmed and lowercase, and sorted in code point order from
+  // low to high. Note that there is a trailing \n.
+  std::string canonical_headers = "host:" + host + "\n" + "x-amz-date:" + amzdate + "\n";
+
+  // Step 5: Create the list of signed headers. This lists the headers
+  // in the canonical_headers list, delimited with ";" and in alpha order.
+  // Note: The request can include any headers; canonical_headers and
+  // signed_headers lists those that you want to be included in the
+  // hash of the request. "Host" and "x-amz-date" are always required.
+  std::string signed_headers = "host;x-amz-date";
+
+  // Step 6: Create payload hash (hash of the request body content). For GET
+  // requests, the payload is an empty string ("").
+
+  // std::string payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
+  const std::string payload_hash = hexdigest(sha256("")); // guessing here
+  LogInfo("Payload_hash: " << payload_hash << "\n");
+
+  // Step 7: Combine elements to create canonical request
+  std::string canonical_request = method + "\n" + canonical_uri + "\n" + canonical_querystring + "\n"
+    + canonical_headers + "\n" + signed_headers + "\n" + payload_hash;
+
+  // ************* TASK 2: CREATE THE STRING TO SIGN*************
+  // Match the algorithm to the hashing algorithm you use, either SHA-1 or
+  // SHA-256 (recommended)
+  std::string algorithm        = "AWS4-HMAC-SHA256";
+  std::string credential_scope = datestamp + "/" + region + "/" + service + "/" + "aws4_request";
+  LogInfo("SCOPE:" << credential_scope << "\n");
+  LogInfo("ALGORITHM:" << algorithm << "\n");
+  LogInfo("AMZDATE:" << amzdate << "\n");
+  std::string string_to_sign = algorithm + "\n" + amzdate + "\n"
+    + credential_scope + "\n" + hexdigest(sha256(canonical_request));
+  std::string testcan = hexdigest(sha256(canonical_request));
+  LogInfo("CAN:" << testcan << "\n");
+
+  // ************* TASK 3: CALCULATE THE SIGNATURE *************
+  // Create the signing key using the function defined above.
+
+  // std::string payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
+  // const std::string payload_hash = sha256(""); // guessing here
+
+  //   const std::string testing = aTime.getString("%8Y%m%d-%H%M%S.%/ms", true);
+  // LogInfo("Got this thing: " << amzdate << " " << datestamp << "\n");
+  //   LogInfo("Got this thing: " << testing << "\n");
+  // }
+  std::string signing_key = getSignatureKey(secret_key, datestamp, region, service);
+  for (size_t i = 0; i < signing_key.length(); i++) {
+    std::cout << (int) (signing_key[i]) << ",";
+  }
+  std::cout << "\n";
+
+  // Sign the string_to_sign using the signing_key
+  // signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'), hashlib.sha256).hexdigest()
+  std::string signature = hexdigest(sign(signing_key, string_to_sign));
+  LogInfo("SIGN:" << signature << "\n");
+
+  // ************* TASK 4: ADD SIGNING INFORMATION TO THE REQUEST *************
+  // The signing information can be either in a query string value or in
+  // a header named Authorization. This code shows how to use a header.
+  // Create authorization header and add to request headers
+  std::string authorization_header = algorithm + " " + "Credential=" + access_key + "/" + credential_scope + ", "
+    + "SignedHeaders=" + signed_headers + ", " + "Signature=" + signature;
+
+  LogInfo("AUTH:" << authorization_header << "\n");
+
+  std::vector<std::string> headers;
+  headers.push_back("x-amz-date: " + amzdate);
+  headers.push_back("Authorization: " + authorization_header);
+
+  std::string request_url = endpoint + '?' + canonical_querystring;
+
+  std::vector<char> buf;
+  int ret = rapio::CurlConnection::get1(request_url, headers, buf);
+
+  if (ret < 0) {
+    LogInfo("Failed looks like\n");
+  } else {
+    for (auto c:buf) {
+      std::cout << c;
+    }
+    std::cout << "\n";
+  }
+
+  // ramp::CurlConnection::read1(
+  // headers = {'x-amz-date':amzdate, 'Authorization':authorization_header}
+
+  /*
+   * BYTE digest[20];
+   * CHMAC_SHA1 hmac_sha1;
+   * hmac_sha1.HMAC_SHA1((BYTE*)request.c_str(), request.size(),(BYTE*)m_privateKey.c_str(),m_privateKey.size(),digest);
+   * std::string signature(base64_encode((unsigned char*)digest,20));
+   */
+
+  /*std::string signature = "*";
+   * for(size_t i=0; i<20; i++){
+   * signature += digest[i];
+   * }
+   */
+  //  signature += "*";
+  //  LogInfo(signature);
+  //  */
+  // LogInfo(fred);
+} // AWS::test_REST_API_Get

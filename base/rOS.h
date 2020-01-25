@@ -52,5 +52,11 @@ public:
    */
   static std::string
   getUniqueTemporaryFile(const std::string& base = "wdssii");
+
+  /**
+   * Run a OS process
+   */
+  static std::vector<std::string>
+  runProcess(const std::string& command);
 };
 }

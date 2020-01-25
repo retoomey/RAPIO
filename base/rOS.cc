@@ -8,6 +8,7 @@
 #include <boost/asio.hpp>
 #include <boost/dll.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/process.hpp>
 
 using namespace rapio;
 
@@ -94,3 +95,39 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 
   return full;
 }
+
+std::vector<std::string>
+OS::runProcess(const std::string& command)
+{
+  std::vector<std::string> data;
+
+  try{
+    namespace p = boost::process;
+    p::ipstream is;
+    // p::child c("gcc --version", p::std_out > pipe_stream);
+    p::child c(command, p::std_out > is);
+
+    std::string line;
+
+    // while (pipe_stream && std::getline(pipe_stream, line) && !line.empty()){
+    while (c.running() && std::getline(is, line) && !line.empty()) {
+      //  std::cerr << line << std::endl;
+      // line += "\n";
+      // LogSevere(line);
+      data.push_back(line);
+    }
+
+    c.wait();
+
+    LogInfo("Success running command '" << command << "'\n");
+    return data;
+  }catch (std::exception e)
+  // Catch ALL exceptions deliberately and recover
+  // since we want our algorithms to continue running
+  {
+    // std::cerr << "Error caught " << e.what() << "\n";
+  }
+  // Failure
+  LogSevere("Failure running command '" << command << "'\n");
+  return std::vector<std::string>();
+} // OS::runProcess

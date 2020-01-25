@@ -7,12 +7,16 @@
 #include <sys/time.h> // gettimeofday
 #include <rError.h>
 #include <rSignals.h>
+#include <rStrings.h>
 
 using namespace rapio;
 
-std::string Time::FILE_TIMESTAMP   = "%04d%02d%02d-%02d%02d%02d";
-std::string Time::RECORD_TIMESTAMP = "%04d%02d%02d-%02d%02d%02d.%03d";
-std::string Time::LOG_TIMESTAMP    = "[%04d %02d/%02d %02d:%02d:%02d UTC]";
+// std::string Time::FILE_TIMESTAMP   = "%04d%02d%02d-%02d%02d%02d";
+// std::string Time::RECORD_TIMESTAMP = "%04d%02d%02d-%02d%02d%02d.%03d";
+// std::string Time::LOG_TIMESTAMP    = "[%04d %02d/%02d %02d:%02d:%02d UTC]";
+std::string Time::FILE_TIMESTAMP   = "%Y%m%d-%H%M%S";
+std::string Time::RECORD_TIMESTAMP = "%Y%m%d-%H%M%S.%/ms";
+std::string Time::LOG_TIMESTAMP    = "[%Y %m/%d %H:%M:%S UTC]";
 
 std::chrono::system_clock::time_point
 Time::toTimepoint(timeval& src)
@@ -176,31 +180,30 @@ Time::CurrentTime()
 std::string
 Time::getString(const std::string& pattern, bool milli) const
 {
-  char buf[80];
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
   tm a = *gmtime(&t);
 
+  char buf [80];
+
+  buf[0] = 0; // just to be safe
+  strftime(buf, 80, pattern.c_str(), &a);
+  std::string output = std::string(buf);
+
+  // We use %/ms for our special legacy 3 millisecond number
+  // NOTE: since we do this last here, make sure % symbol isn't in
+  // strftime, think / is safe from any implementation.
   if (milli) {
-    int millisec = (int) (1000.0 * getFractional() + 0.5);
-    if (millisec == 1000) { millisec = 999; } // possible???
-    std::snprintf(buf, sizeof(buf), pattern.c_str(),
-      a.tm_year + 1900,
-      a.tm_mon + 1,
-      a.tm_mday,
-      a.tm_hour,
-      a.tm_min,
-      a.tm_sec,
-      millisec);
-  } else {
-    std::snprintf(buf, sizeof(buf), pattern.c_str(),
-      a.tm_year + 1900,
-      a.tm_mon + 1,
-      a.tm_mday,
-      a.tm_hour,
-      a.tm_min,
-      a.tm_sec);
+    std::string newoutput = output;
+    Strings::replace(newoutput, "%/ms", "%03d");
+    if (newoutput != output) { // Only if found to prevent snprintf error
+      int millisec = (int) (1000.0 * getFractional() + 0.5);
+      if (millisec == 1000) { millisec = 999; } // possible???
+      std::snprintf(buf, sizeof(buf), newoutput.c_str(), millisec);
+      output = std::string(buf);
+    }
   }
-  return (buf);
+
+  return output;
 }
 
 std::ostream&

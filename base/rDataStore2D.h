@@ -64,7 +64,7 @@ public:
 
   /** Proxy class for implementing [][] */
   template <typename S>
-  class DataStoreDim {
+  class DataStoreDim : public Data {
 public:
     DataStoreDim(DataStore2D<S>& x, int iin, size_t yin) : parent(x), i(iin), y(yin){ }
 

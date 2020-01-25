@@ -67,6 +67,7 @@ librapio_la_SOURCES =\
   rOption.cc\
   rOptionList.cc\
   rAlgConfigFile.cc\
+  rAWS.cc\
   rTest.cc\
   rTestTime.cc\
   rTestIndex.cc
@@ -145,6 +146,7 @@ pkginclude_HEADERS =\
   rRecordNotifier.h\
   rUtility.h\
   rAlgConfigFile.h\
+  rAWS.h\
   rTestTime.h\
   rTestIndex.h
 

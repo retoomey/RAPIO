@@ -2,6 +2,9 @@
 
 #include <rIO.h>
 
+#include <string>
+#include <vector>
+
 #include <curl/curl.h>
 
 namespace rapio {
@@ -34,6 +37,21 @@ public:
   /** Lazy initialize curl on first use */
   bool
   lazyInit();
+
+  /** Static read once if able, return -1 on fail or size of buffer */
+  static int
+  read1(const std::string& url, std::vector<char>& buf);
+
+  /** Static get once if able, return -1 on fail or size of buffer */
+  static int
+  get1(const std::string& url, const std::vector<std::string>& headers,
+    std::vector<char>& buf);
+
+  /** Static put once if able, return -1 on fail or size of buffer */
+  static int
+  put1(const std::string& url, const std::vector<std::string>& headers,
+    const std::vector<std::string>& body);
+
 
 private:
 

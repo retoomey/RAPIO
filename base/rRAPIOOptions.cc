@@ -31,10 +31,10 @@ RAPIOOptions::RAPIOOptions()
 
   // grid2D("GridTest", "nw(34.5, 91.5) se(20.2, 109.5)", "Testing grid 2d");
 
-  optional("logFlush",
+  optional("flush",
     "900",
     "Error log flush (force write) timer set in seconds.");
-  addGroup("logFlush", "LOGGING");
+  addGroup("flush", "LOGGING");
 
   optional("iconfig",
     "",
