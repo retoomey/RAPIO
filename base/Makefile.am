@@ -35,6 +35,7 @@ librapio_la_SOURCES =\
   rOS.cc\
   rWebIndex.cc\
   rWebIndexWatcher.cc\
+  rDirWatcher.cc\
   rProcessTimer.cc\
   rXMLIndex.cc\
   rXYZ.cc\
@@ -95,6 +96,7 @@ pkginclude_HEADERS =\
   rProcessTimer.h\
   rWebIndex.h\
   rWebIndexWatcher.h\
+  rDirWatcher.h\
   rSignals.h\
   rIOIndex.h\
   rIOURL.h\

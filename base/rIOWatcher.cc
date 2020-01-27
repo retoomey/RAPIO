@@ -1,10 +1,12 @@
 #include "rIOWatcher.h"
 
-// Built in subclasses
+#include "rEventLoop.h"
 #include "rFactory.h"
+
+// Built in subclasses
 #include "rFAMWatcher.h"
 #include "rWebIndexWatcher.h"
-#include "rEventLoop.h"
+#include "rDirWatcher.h"
 
 #include <string>
 #include <memory>
@@ -25,7 +27,7 @@ IOWatcher::introduceSelf()
 {
   FAMWatcher::introduceSelf();
   WebIndexWatcher::introduceSelf();
-  // FIXME: a simple directory time based poll watcher...
+  DirWatcher::introduceSelf();
 }
 
 std::shared_ptr<WatcherType>

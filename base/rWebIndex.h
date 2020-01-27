@@ -9,7 +9,7 @@ namespace rapio {
  * A index type which pulls from a changing web server.
  *
  */
-class WebIndex : public IndexType, public IOListener {
+class WebIndex : public IndexType {
 public:
 
   WebIndex(){ }

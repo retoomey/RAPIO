@@ -89,7 +89,8 @@ FAMWatcher::attach(const std::string &dirname,
     return (false);
   }
 
-  myWatches.push_back(FAMInfo(l, dirname, watchID));
+  std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, watchID);
+  myFAMWatches.push_back(newWatch);
   LogDebug(dirname << " being monitored ... \n");
   return true;
 } // FAMWatcher::attach
@@ -97,26 +98,55 @@ FAMWatcher::attach(const std::string &dirname,
 void
 FAMWatcher::detach(IOListener * d)
 {
-  for (auto& w:myWatches) {
+  for (auto& w:myFAMWatches) {
     // If listener at i matches us...
-    if (w.myListener == d) {
-      int ret = inotify_rm_watch(theFAMID, w.myWatchID);
+    if (w->myListener == d) {
+      int ret = inotify_rm_watch(theFAMID, w->myWatchID);
       if (ret < 0) {
         std::string errMessage(strerror(errno));
-        LogInfo("inotify_rm_watch on " << w.myDirectory << " Error: " << errMessage << "\n");
+        LogInfo("inotify_rm_watch on " << w->myDirectory << " Error: " << errMessage << "\n");
       }
     }
-    LogDebug(w.myDirectory << " no longer being monitored ... \n");
-    w.myListener = nullptr;
+    LogDebug(w->myDirectory << " no longer being monitored ... \n");
+    w->myListener = nullptr;
   }
 
   // Lamba erase all zeroed listeners
-  myWatches.erase(
-    std::remove_if(myWatches.begin(), myWatches.end(),
-    [](const FAMInfo &w){
-    return (w.myListener == nullptr);
+  myFAMWatches.erase(
+    std::remove_if(myFAMWatches.begin(), myFAMWatches.end(),
+    [](const std::shared_ptr<FAMInfo> &w){
+    return (w->myListener == nullptr);
   }),
-    myWatches.end());
+    myFAMWatches.end());
+}
+
+void
+FAMWatcher::FAMEvent::handleEvent()
+{
+  // These should pass to the listener to decide maybe...
+  // Handling this
+  if (myMask & IN_IGNORED) { // Ignore deletions...
+    // LogSevere("...deletion?\n");
+    return;
+  }
+  // IOListener class should decide.  Maybe it doesn't care...
+  if (myMask & IN_UNMOUNT) { // End on an unmount and hope restart will get
+                             // path again
+    myListener->handleUnmount(myDirectory);
+    return;
+  }
+
+  if (myMask & IN_ISDIR) {
+    // Are create and move the same?
+    if ((myMask & IN_CREATE) || (myMask & IN_MOVE)) {
+      myListener->handleNewDirectory(myDirectory);
+    }
+  } else {
+    // Are create and move the same?
+    if ((myMask & IN_CLOSE_WRITE) || (myMask & IN_MOVE)) {
+      myListener->handleNewFile(myDirectory + '/' + myShortFile);
+    }
+  }
 }
 
 void
@@ -132,43 +162,9 @@ FAMWatcher::action()
   // Do a _single_ action and don't hog the system.
   // Don't worry, event loop will give us as much time as is possible.
   if (!theEvents.empty()) {
-    LogSevere("Pop a single one...\n");
     auto e = theEvents.front();
     theEvents.pop();
-
-    // These should pass to the listener to decide maybe...
-    // Handling this
-    if (e.mask & IN_IGNORED) { // Ignore deletions...
-      LogSevere("...deletion?\n");
-      return;
-    }
-    // IOListener class should decide.  Maybe it doesn't care...
-    if (e.mask & IN_UNMOUNT) { // End on an unmount and hope restart will get
-                               // path again
-      const std::string dir = e.getDirectory();
-      e.myListener->handleUnmount(dir);
-      return;
-    }
-
-    // Subclass should handle or not?
-    if (shouldIgnore(e.name)) {
-      LogSevere("...should ignore?\n");
-      return; // Not a system . dir
-    }
-
-    if (e.mask & IN_ISDIR) {
-      // Are create and move the same?
-      if ((e.mask & IN_CREATE) || (e.mask & IN_MOVE)) {
-        const std::string dir = e.getDirectory();
-        e.myListener->handleNewDirectory(dir);
-      }
-    } else {
-      // Are create and move the same?
-      if ((e.mask & IN_CLOSE_WRITE) || (e.mask & IN_MOVE)) {
-        const std::string full = e.getFullName();
-        e.myListener->handleNewFile(full);
-      }
-    }
+    e.handleEvent();
   }
 } // FAMWatcher::action
 
@@ -177,16 +173,16 @@ FAMWatcher::getEvents()
 {
   // Let watches do stuff too..however with FAM they will wait for the traditional
   // file events from us.
-  for (auto&w:myWatches) {
-    w.myListener->handlePoll();
+  for (auto&w:myFAMWatches) {
+    w->myListener->handlePoll();
+  }
+
+  if (myFAMWatches.size() == 0) {
+    return;
   }
 
   size_t MAX_QUEUE_SIZE = 1000;
   bool WAIT_WHEN_FULL   = true;
-
-  if (myWatches.size() == 0) {
-    return;
-  }
 
   // If queue is full do we wait or drop oldest...wait when full
   // we don't poll for events.
@@ -198,7 +194,7 @@ FAMWatcher::getEvents()
   }
 
   // initial guess: 5 new files per directory being watched?
-  static std::vector<char> buf((5 * myWatches.size() + 10) * sizeof(inotify_event));
+  static std::vector<char> buf((5 * myFAMWatches.size() + 10) * sizeof(inotify_event));
   size_t startSize;
 
   do {
@@ -234,10 +230,21 @@ FAMWatcher::getEvents()
       const int wd = event->wd;
 
       // This is O(n) but ends up being faster than std::map in practice
-      for (auto& w:myWatches) {
-        if (w.myWatchID == wd) {
-          FAMEvent e(w.myListener, w.myDirectory, event->name, event->mask);
-          theEvents.push(e);
+      for (auto& w:myFAMWatches) {
+        if (w->myWatchID == wd) {
+          // Pre filter out events before even adding...
+          bool want = true;
+          if (event->mask & IN_IGNORED) { // Ignore deletions...
+            want = false;
+          } else if (event->mask & IN_UNMOUNT) {
+            want = true;
+          } else if (shouldIgnore(event->name)) {
+            want = false;
+          }
+          if (want) {
+            FAMEvent e(w->myListener, w->myDirectory, event->name, event->mask);
+            theEvents.push(e);
+          }
           break;
         }
       }

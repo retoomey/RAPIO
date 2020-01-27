@@ -13,50 +13,56 @@ namespace rapio {
 /**
  * Event handler that monitors file creation using the inotify device.
  *
+ * @author Robert Toomey
  */
 class FAMWatcher : public WatcherType {
 public:
 
   FAMWatcher() : WatcherType(0, "FAM Watcher"){ }
 
+  /** Introduce this to the global factory */
   static void
   introduceSelf();
 
-  /** Store the watch */
-  class FAMInfo : public IO {
+  /** Store the watch for a particular directory */
+  class FAMInfo : public WatchInfo {
 public:
-    IOListener * myListener;
     std::string myDirectory;
     int myWatchID;
 
     FAMInfo(IOListener * l, const std::string& dir, int wd)
-      : myListener(l), myDirectory(dir), myWatchID(wd){ }
+      : myDirectory(dir), myWatchID(wd)
+    {
+      myListener = l;
+    }
   };
 
   /** We store a vector of events */
   class FAMEvent : public IO {
 public:
 
+    /** Create a FAM Event for notifying listeners */
     FAMEvent(IOListener * l,
       const std::string& d, const std::string& n, const uint32_t amask)
-      : myListener(l), myDirectory(d), name(n), mask(amask){ }
+      : myListener(l), myDirectory(d), myShortFile(n), myMask(amask){ }
 
-    std::string
-    getFullName() const
-    {
-      return (myDirectory + '/' + name);
-    }
+    /** Handle the event action */
+    void
+    handleEvent();
 
-    std::string
-    getDirectory() const
-    {
-      return myDirectory;
-    }
+private:
 
+    /** Listener to handle the event */
     IOListener * myListener;
+
+    /** Directory of file */
     std::string myDirectory;
-    std::string name;
-    uint32_t mask;
+
+    /** Short file name */
+    std::string myShortFile;
+
+    /** FAM mask of event */
+    uint32_t myMask;
   };
 
   /** Attach a FAM listener to us */
@@ -74,7 +80,7 @@ public:
 protected:
 
   /** The list of watches we currently have */
-  std::vector<FAMInfo> myWatches;
+  std::vector<std::shared_ptr<FAMInfo> > myFAMWatches;
 
 private:
 

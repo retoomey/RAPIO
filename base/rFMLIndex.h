@@ -9,7 +9,7 @@ namespace rapio {
  * This relies on an index directory that is monitored by libfam.
  *
  */
-class FMLIndex : public IndexType, public IOListener {
+class FMLIndex : public IndexType {
 public:
 
   // Factory

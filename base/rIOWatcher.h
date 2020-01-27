@@ -17,6 +17,8 @@ namespace rapio {
  *
  * @author Robert Toomey
  */
+class WatchInfo;
+
 class IOListener : public IO {
 public:
   /** Handle a new file event for your watch */
@@ -48,6 +50,21 @@ public:
   /** Detach this listener from ALL connections */
   virtual void
   detach(IOListener * l){ };
+
+protected:
+
+  /** The list of watches we currently have */
+  std::vector<std::shared_ptr<WatchInfo> > myWatches;
+};
+
+/** Root class for watcher information */
+class WatchInfo : public IO {
+public:
+  IOListener * myListener;
+
+  /** Create the events to be processed later */
+  virtual void
+  createEvents(WatcherType * w){ };
 };
 
 class IOWatcher : public IO {

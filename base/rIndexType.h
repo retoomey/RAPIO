@@ -20,7 +20,7 @@ public:
  * The Index class is a database of metadata records for
  * various input files
  */
-class IndexType : public IO {
+class IndexType : public IOListener {
 public:
 
   typedef std::vector<std::string> selections_t;

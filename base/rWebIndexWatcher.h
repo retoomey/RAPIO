@@ -16,16 +16,19 @@ class WebIndexWatcher : public WatcherType {
 public:
   WebIndexWatcher() : WatcherType(5000, "Web index event handler"){ }
 
+  /** Introduce this to the global factory */
   static void
   introduceSelf();
 
-  class WebInfo : public IO { // FIXME: could subclass one from watcher
+  class WebInfo : public WatchInfo {
 public:
-    IOListener * myListener;
     URL myURL;
 
     WebInfo(IOListener * l, const std::string& dir)
-      : myListener(l), myURL(dir){ }
+      : myURL(dir)
+    {
+      myListener = l;
+    }
   };
 
   /** Attach a pulse to web page for a given listener to us */
@@ -46,7 +49,7 @@ public:
 protected:
 
   /** The list of watches we currently have */
-  std::vector<WebInfo> myWatches;
+  std::vector<std::shared_ptr<WebInfo> > myWebWatches;
 
 private:
 
