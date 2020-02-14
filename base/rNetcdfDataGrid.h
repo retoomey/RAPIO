@@ -5,7 +5,9 @@
 #include "rURL.h"
 
 namespace rapio {
-/** Handles the read/write of DataGrid DataType from a netcdf file.  */
+/** Handles the read/write of DataGrid DataType from a netcdf file.
+ * @author Robert Toomey
+ */
 class NetcdfDataGrid : public NetcdfType {
 public:
 
@@ -18,6 +20,14 @@ public:
     const URL    & loc,
     const std::vector<std::string>&)
   override;
+
+  /** Lower level utility to read generically into a already created
+   * DataGrid */
+  virtual bool
+  readDataGrid(const int      ncid,
+    std::shared_ptr<DataGrid> dt,
+    const URL                 & loc,
+    const std::vector<std::string>&);
 
   /** Write DataType from given ncid */
   virtual bool

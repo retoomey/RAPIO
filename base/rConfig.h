@@ -3,11 +3,12 @@
 #include <rUtility.h>
 #include <rURL.h>
 #include <rIO.h>
-#include <rIOXML.h>
 
 #include <vector>
 #include <memory>
 #include <string>
+
+#include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
 /** Config types are registered with config, they handle a particular

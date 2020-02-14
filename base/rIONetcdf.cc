@@ -65,9 +65,6 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
       if (retval != NC_NOERR) {
         LogSevere("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader\n");
         type = "DataGrid";
-        // Create generic netcdf object.  Up to algorithm to open/close it
-        // datatype = std::make_shared<NetcdfDataType>(buf);
-        // datatype->setTypeName("NetcdfData");
       }
 
       std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
@@ -207,12 +204,9 @@ IONetcdf::introduceSelf()
   std::shared_ptr<IONetcdf> newOne = std::make_shared<IONetcdf>();
 
   // Read can read netcdf.  Can we read netcdf3?  humm
-  // Factory<DataReader>::introduce("netcdf", newOne);
   Factory<IODataType>::introduce("netcdf", newOne);
 
   // Read can write netcdf/netcdf3
-  // Factory<DataWriter>::introduce("netcdf", newOne);
-  // Factory<DataWriter>::introduce("netcdf3", newOne);
   Factory<IODataType>::introduce("netcdf3", newOne);
 
   // Add the default classes we handle...
@@ -548,163 +542,6 @@ IONetcdf::addAtt(int ncid,
 
   retval = nc_put_att_short(ncid, varid, name.c_str(), NC_SHORT, 1, &value);
   return (retval);
-}
-
-bool
-IONetcdf::addGlobalAttr(int ncid, const DataType& dt,
-  const std::string& encoded_type)
-{
-  // Datatype and typename
-  NETCDF(addAtt(ncid, Constants::TypeName, dt.getTypeName()));
-  NETCDF(addAtt(ncid, Constants::sDataType, encoded_type));
-
-  // Space-time-ref: Latitude, Longitude, Height, Time and FractionalTime
-  Time aTime    = dt.getTime();
-  LLH aLocation = dt.getLocation();
-  NETCDF(addAtt(ncid, Constants::Latitude, aLocation.getLatitudeDeg()));
-  NETCDF(addAtt(ncid, Constants::Longitude, aLocation.getLongitudeDeg()));
-  NETCDF(addAtt(ncid, Constants::Height, aLocation.getHeightKM() * 1000.0));
-  NETCDF(addAtt(ncid, Constants::Time, aTime.getSecondsSinceEpoch()));
-  NETCDF(addAtt(ncid, Constants::FractionalTime, aTime.getFractional()));
-
-  // We can go ahead and write the -unit -value stuff, however, for reading
-  // they can't be read until the datatype is created.
-  return (writeUnitValueList(ncid, dt));
-}
-
-bool
-IONetcdf::getGlobalAttr(
-  int ncid, std::vector<std::string>& all_attr,
-  rapio::LLH * location,
-  rapio::Time * time,
-  rapio::SentinelDouble * FILE_MISSING_DATA,
-  rapio::SentinelDouble * FILE_RANGE_FOLDED)
-{
-  // Datatype and typename
-  std::string aDataType, aTypeName;
-  NETCDF(getAtt(ncid, Constants::TypeName, aTypeName));
-  NETCDF(getAtt(ncid, Constants::sDataType, aDataType));
-
-  // FIXME: handle ConfigFile and DataIdentifier attributes.  Do we even use
-  // these?
-  // Maybe not even used here.  Probably Lak used it somewhere in the algs
-  // Need to check but if not used wipe em and match the addGlobal above...
-  std::string configFile, dataId;
-
-  // if no config file was provided, use the data type as default.
-  // getAtt(ncid, Constants::ConfigFile, configFile); // Ok to fail
-  if (configFile.empty()) {
-    configFile = aDataType; // getAtt(ncid,
-  }
-
-  // Constants::DataIdentifier,
-  // dataId); // Ok to fail
-
-  if (dataId.empty()) {
-    dataId = "Filename"; // FIXME: netcdf file name
-                         // really?.
-  }
-
-  // This seems really stupid.  Keeping the 'enum' list for moment...
-  // Think a generic map might be better...
-  all_attr.push_back(aTypeName);
-  all_attr.push_back(aDataType);
-  all_attr.push_back(configFile);
-  all_attr.push_back(dataId);
-
-  // Space-time-ref: Latitude, Longitude, Height, Time and FractionalTime
-  float lat_degrees, lon_degrees, ht_meters;
-  unsigned long long aTimeSecs;
-  double aTimeFrac = 0;
-  NETCDF(getAtt(ncid, Constants::Latitude, &lat_degrees));
-  NETCDF(getAtt(ncid, Constants::Longitude, &lon_degrees));
-  NETCDF(getAtt(ncid, Constants::Height, &ht_meters));
-  NETCDF(getAtt(ncid, Constants::Time, &aTimeSecs));
-  getAtt(ncid, Constants::FractionalTime, &aTimeFrac); // ok to fail here
-
-  // Now create a space time ref
-  location->set(lat_degrees, lon_degrees, ht_meters / 1000.0);
-
-  time->set(aTimeSecs, aTimeFrac);
-
-  // missing and rangefolded ...
-  if (FILE_MISSING_DATA) {
-    float missing;
-    int retval = getAtt(ncid, "MissingData", &missing); // ok to fail here
-
-    *FILE_MISSING_DATA =
-      (retval == NC_NOERR) ? SentinelDouble((int) (missing), 0.0001) :
-      Constants::MISSING_DATA;
-  }
-
-  if (FILE_RANGE_FOLDED) {
-    float range;
-    int retval = getAtt(ncid, "RangeFolded", &range); // ok to fail here
-    *FILE_RANGE_FOLDED =
-      (retval == NC_NOERR) ? SentinelDouble((int) (range), 0.0001) :
-      Constants::RANGE_FOLDED;
-  }
-
-  return (true);
-} // IONetcdf::getGlobalAttr
-
-bool
-IONetcdf::writeUnitValueList(int ncid, const rapio::DataType& dt)
-{
-  const DataType::DataAttributes attr = dt.getAttributes2();
-
-  // List of attributes used by NSSL/netcdf
-  std::string attrnames;
-
-  for (auto& iter: attr) {
-    attrnames = attrnames + " " + iter.first;
-  }
-  NETCDF(addAtt(ncid, "attributes", attrnames));
-
-  for (auto& iter:attr) {
-    string str, unit;
-
-    if (dt.getRawDataAttribute(iter.first, str, unit)) {
-      NETCDF(addAtt(ncid, iter.first + "-unit", unit));
-      NETCDF(addAtt(ncid, iter.first + "-value", str));
-    }
-  }
-  return (true);
-}
-
-bool
-IONetcdf::readUnitValueList(int ncid, rapio::DataType& dt)
-{
-  int retval, retval2;
-
-  // Read the general -unit -value attributes
-  std::string strs;
-  retval = getAtt(ncid, "attributes", strs);
-
-  if (retval != NC_NOERR) {
-    LogInfo(
-      "No attributes string in datatype...skipping attribute -unit -value pairs\n");
-    return (false);
-  }
-  std::vector<std::string> attrs;
-  size_t total_attrs = rapio::Strings::split(strs, &attrs);
-  std::string attr_value, attr_unit;
-
-  for (size_t j = 0; j < total_attrs; j++) {
-    const std::string value = attrs[j] + string("-value");
-    const std::string unit  = attrs[j] + string("-unit");
-    retval  = getAtt(ncid, value, attr_value);
-    retval2 = getAtt(ncid, unit, attr_unit);
-
-    if ((retval == NC_NOERR) && (retval2 == NC_NOERR)) {
-      if ((attr_value.size() != 0) && (attr_unit.size() != 0)) {
-        dt.setDataAttributeValue(attrs[j], attr_value, attr_unit);
-      } else if ((attr_value.size() != 0) && (attr_unit.size() == 0)) {
-        dt.setDataAttributeValue(attrs[j], attr_value);
-      }
-    }
-  }
-  return (true);
 }
 
 bool
@@ -1209,7 +1046,7 @@ IONetcdf::declareGridVars(
   for (auto l:list) {
     auto theName = l->getName();
     // auto theUnits = l->getUnits();
-    auto theUnitAttr = l->getAttribute<std::string>("units");
+    auto theUnitAttr = l->getAttribute<std::string>("Units");
     std::string theUnits;
     if (theUnitAttr) {
       theUnits = *theUnitAttr;
@@ -1265,7 +1102,7 @@ IONetcdf::getDimensions(int ncid,
 
   // Find the dimension ids
   // std::vector<int> dimids;
-  dimids.resize(ndimsp);
+  dimids.resize(numdims);
   NETCDF(nc_inq_dimids(ncid, 0, &dimids[0], 0));
 
   // Find the number of unlimited dimensions.  FIXME: Can't handle this yet
@@ -1309,7 +1146,11 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
   size_t nattsp2 = nattsp < 0 ? 0 : nattsp;
   for (size_t v = 0; v < nattsp2; ++v) {
     NETCDF(nc_inq_attname(ncid, varid, v, name_in));
-    std::string attname = std::string(name_in);
+    std::string attname    = std::string(name_in);
+    std::string outattname = attname;
+    if (attname == "units") { // Sparse used lowercase, should be capital
+      outattname = "Units";
+    }
 
     // Can do all in one right?  Well need name from above though
     // ...and get the type and length.
@@ -1340,7 +1181,9 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
             LogSevere("Unhandled NETCDF type NC_USHORT for " << name_in << ", ignoring read of it.\n");
             break;
           case NC_LONG:
-            LogSevere("Unhandled NETCDF type NC_LONG for " << name_in << ", ignoring read of it.\n");
+            long aLong;
+            getAtt(ncid, attname, &aLong, varid);
+            list->put<long>(attname, aLong);
             break; // or NC_INT
           case NC_UINT:
             LogSevere("Unhandled NETCDF type NC_UINT for " << name_in << ", ignoring read of it.\n");
@@ -1368,3 +1211,31 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
 
   return 0;
 } // IONetcdf::getAttributes
+
+void
+IONetcdf::setAttributes(int ncid, int varid, DataAttributeList * list)
+{
+  // For each type, write out attr...
+  // Netcdf has c functions each type so we check types...
+  // FIXME: Anyway to reduce the code in a smart way?
+  for (auto& i: *list) {
+    auto name = i.getName().c_str();
+    // NC_CHAR
+    if (i.is<std::string>()) {
+      auto field = i.get<std::string>();
+      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
+      // NC_LONG
+    } else if (i.is<long>()) {
+      auto field = i.get<long>();
+      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
+      // NC_FLOAT
+    } else if (i.is<float>()) {
+      auto field = i.get<float>();
+      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
+      // NC_DOUBLE
+    } else if (i.is<double>()) {
+      auto field = i.get<double>();
+      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
+    }
+  }
+}

@@ -59,7 +59,7 @@ const std::string Constants::FilenameDateTime = "FilenameDateTime";
 // Datatype reading/writing
 const std::string Constants::TypeName("TypeName");
 const std::string Constants::sDataType("DataType");
-const std::string Constants::Units("units");
+const std::string Constants::Units("Units");
 const std::string Constants::Latitude("Latitude");
 const std::string Constants::Longitude("Longitude");
 const std::string Constants::Height("Height");

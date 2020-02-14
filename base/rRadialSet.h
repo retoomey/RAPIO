@@ -19,16 +19,20 @@ namespace rapio {
 class RadialSet : public DataGrid {
 public:
 
-  virtual LLH
-  getLocation() const override;
-
-  virtual Time
-  getTime() const override;
+  /** Construct uninitialized RadialSet, usually for
+   * factories */
+  RadialSet();
 
   /** Construct a radial set */
   RadialSet(const LLH& location,
     const Time       & time,
     const Length     & dist_to_first_gate);
+
+  virtual LLH
+  getLocation() const override;
+
+  virtual Time
+  getTime() const override;
 
   /** Return the location of the radar. */
   const LLH&
@@ -72,20 +76,6 @@ public:
   virtual std::string
   getGeneratedSubtype() const override;
 
-  /** Set the units used for nyquist, if any */
-  void
-  setNyquistVelocityUnit(const std::string& unit)
-  {
-    myNyquistUnit = unit;
-  }
-
-  /** Get the units used for nyquist, if any */
-  std::string
-  getNyquistVelocityUnit()
-  {
-    return myNyquistUnit;
-  }
-
   /** Resize the data structure */
   void
   init(size_t rows, size_t cols, const float fill = 0);
@@ -93,6 +83,15 @@ public:
   /** Resize the data structure */
   // virtual void
   // resize(size_t rows, size_t cols, const float fill = 0) override;
+
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
+
+  /** Update global attribute list for RadialSet */
+  virtual void
+  updateGlobalAttributes(const std::string& encoded_type) override;
 
 protected:
   // I think these could be considered projection information
@@ -108,8 +107,5 @@ protected:
 
   /** Distance to the first gate */
   Length myFirst;
-
-  /** Units for Nyquist values, if any */
-  std::string myNyquistUnit;
 };
 }

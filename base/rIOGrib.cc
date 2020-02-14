@@ -18,6 +18,7 @@ using namespace rapio;
  * FIXME: this should go somewhere or become generic
  *
  * @author Robert Toomey */
+namespace rapio {
 class NumberToStringLookup : public IO
 {
 public:
@@ -64,6 +65,7 @@ public:
     }
   }
 };
+}
 
 // Tables for moment
 NumberToStringLookup ncep;
@@ -172,6 +174,7 @@ readTable4dot4()
   table4dot4.add(255, "missing");
 }
 
+namespace rapio {
 class GribLookup : public IO
 {
 public:
@@ -192,6 +195,7 @@ public:
   std::string description;
   std::string units;
 };
+}
 
 static std::vector<GribLookup> myLookup;
 

@@ -31,6 +31,7 @@ librapio_la_SOURCES =\
   rIndexType.cc\
   rError.cc\
   rIOXML.cc\
+  rIOJSON.cc\
   rIOURL.cc\
   rOS.cc\
   rWebIndex.cc\
@@ -108,6 +109,7 @@ pkginclude_HEADERS =\
   rOS.h\
   rIODataType.h\
   rIOXML.h\
+  rIOJSON.h\
   rIndexType.h\
   rLLH.h\
   rXYZ.h\
@@ -150,5 +152,6 @@ pkginclude_HEADERS =\
   rAlgConfigFile.h\
   rAWS.h\
   rTestTime.h\
-  rTestIndex.h
+  rTestIndex.h\
+  rNamedAny.h
 

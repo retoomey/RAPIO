@@ -60,7 +60,7 @@ public:
     const DataArrayType& type, const std::vector<size_t>& dimindexes)
     : NamedAny(name), myUnits(units), myStorageType(type), myDimIndexes(dimindexes)
   {
-    myAttributes.put<std::string>("units", units);
+    myAttributes.put<std::string>("Units", units);
   }
 
   /** Get the DataArrayType of this data array */

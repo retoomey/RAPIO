@@ -256,12 +256,6 @@ public:
     const short      value,
     int              nvar = NC_GLOBAL);
 
-  /** Add all global attributes to file */
-  static bool
-  addGlobalAttr(int  ncid,
-    const DataType   & dt,
-    const std::string& encoded_type);
-
   // --------------------------------------------------------
   // GET utilities
   //
@@ -300,27 +294,6 @@ public:
     const std::string    & name,
     unsigned long long * value,
     const int            varid = NC_GLOBAL);
-
-  /** Get global attributes from a netcdf file */
-  static bool
-  getGlobalAttr(int         ncid,
-    std::vector<std::string>& all_attr,
-    rapio::LLH *            location,
-    rapio::Time *           time,
-    rapio::SentinelDouble * FILE_MISSING_DATA,
-    rapio::SentinelDouble * FILE_RANGE_FOLDED);
-
-  /** Read the -unit -value list from the netcdf file. Called
-   * after successful datatype creation. */
-  static bool
-  readUnitValueList(int ncid,
-    rapio::DataType     & dt);
-
-  /** Write the -unit -value list to the netcdf file. Called
-   * after successful datatype creation. */
-  static bool
-  writeUnitValueList(int ncid,
-    const rapio::DataType& dt);
 
   /** Get background attribute for sparse data sets */
   static bool
@@ -385,10 +358,15 @@ public:
   getDimensions(int ncid, std::vector<int>& dimids,
     std::vector<std::string>& dimnames, std::vector<size_t>& dimsizes);
 
-  /** Convenience for gathering attributes.*/
+  /** Get a data attribute list from a netcdf attribute list */
   static
   size_t
-  getAttributes(int ncid, int varid, DataAttributeList * list = nullptr);
+  getAttributes(int ncid, int varid, DataAttributeList * list);
+
+  /** Set netcdf attributes from a data attribute list */
+  static
+  void
+  setAttributes(int ncid, int varid, DataAttributeList * list);
 
   /** Convenience for gathering global attributes.*/
   // static

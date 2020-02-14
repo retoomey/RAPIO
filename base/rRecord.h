@@ -2,11 +2,12 @@
 
 #include <rDataType.h>
 #include <rTime.h>
-#include <rIOXML.h>
 
 #include <memory>
 #include <vector>
 #include <iostream>
+
+#include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
 class IndexType;

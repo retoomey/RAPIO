@@ -15,6 +15,10 @@ namespace rapio {
 class LatLonGrid : public DataGrid {
 public:
 
+  /** Construct uninitialized LatLonGrid, usually for
+   * factories */
+  LatLonGrid();
+
   /** Create a lat lon grid object */
   LatLonGrid(
     const LLH&,
@@ -77,6 +81,15 @@ public:
 
   virtual std::string
   getGeneratedSubtype() const override;
+
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
+
+  /** Update global attribute list for RadialSet */
+  virtual void
+  updateGlobalAttributes(const std::string& encoded_type) override;
 
 protected:
 

@@ -78,7 +78,11 @@ IODataType::generateOutputInfo(const DataType& dt,
   // Create record params
   params.push_back(suffix);
   params.push_back(directory);
-  Strings::splitWithoutEnds(filepath, '/', &params);
+  std::vector<std::string> fileparams;
+  Strings::splitWithoutEnds(filepath, '/', &fileparams);
+  for (auto f:fileparams) {
+    params.push_back(f);
+  }
 
   // Create record selections
   selections.push_back(time_string);

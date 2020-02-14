@@ -237,8 +237,22 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
     }
 
     // Add globals...
-    if (!IONetcdf::addGlobalAttr(ncid, binaryTable,
-      "BinaryTable")) { return (false); }
+    // FIXME: Binary table needs test case and work using
+    // the new arrays and attributes
+    // if (!IONetcdf::addGlobalAttr(ncid, binaryTable,
+    //  "BinaryTable")) { return (false); }
+    // Datatype and typename
+    NETCDF(IONetcdf::addAtt(ncid, Constants::TypeName, binaryTable.getTypeName()));
+    NETCDF(IONetcdf::addAtt(ncid, Constants::sDataType, "BinaryTable"));
+
+    // Space-time-ref: Latitude, Longitude, Height, Time and FractionalTime
+    Time aTime    = binaryTable.getTime();
+    LLH aLocation = binaryTable.getLocation();
+    NETCDF(IONetcdf::addAtt(ncid, Constants::Latitude, aLocation.getLatitudeDeg()));
+    NETCDF(IONetcdf::addAtt(ncid, Constants::Longitude, aLocation.getLongitudeDeg()));
+    NETCDF(IONetcdf::addAtt(ncid, Constants::Height, aLocation.getHeightKM() * 1000.0));
+    NETCDF(IONetcdf::addAtt(ncid, Constants::Time, aTime.getSecondsSinceEpoch()));
+    NETCDF(IONetcdf::addAtt(ncid, Constants::FractionalTime, aTime.getFractional()));
 
     // float MISSING_DATA( Constants::MissingData );
     // float RANGE_FOLDED( Constants::RangeFolded );

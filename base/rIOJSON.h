@@ -11,7 +11,7 @@ namespace rapio {
 class URL;
 
 /** Simple routines for reading/writing XML documents */
-class IOXML : public IODataType {
+class IOJSON : public IODataType {
 public:
 
   // Registering of classes ---------------------------------------------
@@ -29,7 +29,7 @@ public:
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
-  readXMLDataType(const std::vector<std::string>& args);
+  readJSONDataType(const std::vector<std::string>& args);
 
   /** Read property tree from URL */
   static std::shared_ptr<boost::property_tree::ptree>

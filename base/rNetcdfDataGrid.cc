@@ -29,10 +29,34 @@ NetcdfDataGrid::read(const int ncid, const URL& loc,
 {
   ProcessTimer("Reading general netcdf data file\n");
 
+  // Generic make DataGrid type
+  std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
+  if (readDataGrid(ncid, dataGridSP, loc, params)) {
+    return dataGridSP;
+  } else {
+    return nullptr;
+  }
+}
+
+bool
+NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridSP, const URL& loc,
+  const vector<string>& params)
+{
   try {
-    // Create generic array storage...
-    std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
     DataGrid& dataGrid = *dataGridSP;
+
+    // ------------------------------------------------------------
+    // GLOBAL ATTRIBUTES
+    // Do this first to allow subclasses to check/validate format
+    IONetcdf::getAttributes(ncid, NC_GLOBAL, dataGrid.getRawGlobalAttributePointer());
+
+    // DataGrid doesn't care, but other classes might be pickier
+    if (!dataGrid.initFromGlobalAttributes()) {
+      LogSevere("Bad or missing global attributes in data.\n");
+      return nullptr;
+    }
+    // TypeName from WDSSII type data
+    auto aTypeName = dataGrid.getTypeName();
 
     // ------------------------------------------------------------
     // DIMENSIONS
@@ -40,28 +64,58 @@ NetcdfDataGrid::read(const int ncid, const URL& loc,
     std::vector<int> dimids;
     std::vector<std::string> dimnames;
     std::vector<size_t> dimsizes;
-    IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
-    // If 'pixel' declared and nssl datatype, remove dimension.  yay
+    auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+
+    // ------------------------------------------------------------
+    // Look for pixel dimension and assume this is a WDSS2 sparse netcdf
+    // FIXME: It 'might' be better to read generically and then
+    // 'unsparse' the data afterwards with the DataGrid
+    bool sparse = false;
+    for (size_t i = 0; i < s; i++) {
+      if (dimnames[i] == "pixel") {
+        sparse = true;
+        // Remove pixel dimension
+        dimids.erase(dimids.begin() + i);
+        dimnames.erase(dimnames.begin() + i);
+        dimsizes.erase(dimsizes.begin() + i);
+        // dimnames.erase(&dimnames[i]);
+        // dimsizes.erase(&dimsizes[i]);
+        break;
+      }
+    }
+
+    // Declare dimensions in data structure
     dataGridSP->declareDims(dimsizes, dimnames);
     auto dims = dataGridSP->getDims();
 
     // ------------------------------------------------------------
-    // GLOBAL ATTRIBUTES
-    //
-    IONetcdf::getAttributes(ncid, NC_GLOBAL, &(dataGrid.myAttributes));
-
-    // ------------------------------------------------------------
     // VARIABLES (DataArrays)
     //
+    // Sparse WDSS2:
+    // pixel dimension exists
+    // pixel_x, pixel_y, pixel_count variables
     int varcount = -1;
-    NETCDF(nc_inq_nvars(ncid, &varcount)); // global?  How to get count from local?
-    size_t vsize = varcount > 0 ? varcount : 0;
+    NETCDF(nc_inq_nvars(ncid, &varcount));
+    const size_t vsize = varcount > 0 ? varcount : 0;
     for (size_t i = 0; i < vsize; ++i) {
       // ... get name
       char name_in[NC_MAX_NAME + 1];
       std::string name;
       NETCDF(nc_inq_varname(ncid, i, &name_in[0]));
       name = std::string(name_in);
+
+      // If marked sparse
+      if (sparse) {
+        if (name == "pixel_x") {
+          continue;
+        }
+        if (name == "pixel_y") {
+          continue;
+        }
+        if (name == "pixel_count") {
+          continue;
+        }
+      }
 
       // Now for this variable with given name
       // ... get number of dimensions
@@ -76,7 +130,7 @@ NetcdfDataGrid::read(const int ncid, const URL& loc,
       // Get variable info FIXME: do we need all these functions?
       nc_type xtypep;
       int ndimsp2;
-      int dimidsp[NC_MAX_VAR_DIMS]; // This was the bug
+      int dimidsp[NC_MAX_VAR_DIMS];
       int nattsp2;
       NETCDF(nc_inq_var(ncid, i, name_in, &xtypep, &ndimsp2, dimidsp, &nattsp2));
 
@@ -90,96 +144,99 @@ NetcdfDataGrid::read(const int ncid, const URL& loc,
         dimindexes.push_back(dd);
       }
 
-      std::string units = "NONE"; // FIXME: units part of DataAttributeList right?
+      // --------------------------------------------------
+      // WDSS2, we store the TypeName array as 'primary'
+      // I'm not sure we still need to do this.  The issue could
+      // happen if TypeName is changed...need to handle that properly
+      std::string arrayName = name;
+      if (aTypeName == name) {
+        // Map to primary in internal structure in case TypeName
+        // changes.
+        arrayName = "primary";
+      }
 
-      /* for NSSL datatype...
-       *    // Presnag the sparse right?
-       *    if (name == myTypeName){
-       *       if (ndimsp2 == 1) and (xtypep == NC_FLOAT)){
-       *          // SPARSE DATA READ
-       *          // Expand it to 2D float array from sparse...
-       *          auto data2DF = dataGrid.addFloat2D(name, units, { 0, 1 });
-       *          IONetcdf::readSparse2D(ncid, data_var1, num_radials, num_gates,
-       *            FILE_MISSING_DATA, FILE_RANGE_FOLDED, *data2DF);
-       *          // FIXME: STILL NEED DATA ATTRIBUTE right?
-       *       }
-       *    }
-       *    if (name == "pixel_count"){
-       *    }
-       *    if (name == "pixel_x"){
-       *    }
-       *    if (name == "pixel_y"){
-       *       //ignore this since sparse will find it
-       *    }
-       */
+      // If there's a units attribute it will replace later in general pull
+      const std::string units = "dimensionless";
 
-      void * data = nullptr;
-
-      // Slowly evolving to more generalized code
-      if (ndimsp2 == 1) { // 1D float
-        if (xtypep == NC_FLOAT) {
-          auto data1DF = dataGrid.addFloat1D(name, units, dimindexes);
-          data = data1DF->data();
-
-          //       NETCDF(nc_get_var_float(ncid, varid, data1DF->data()));
-          //          NETCDF(nc_get_var(ncid, varid, data));
-        } else if (xtypep == NC_INT) {
-          auto data1DI = dataGrid.addInt1D(name, units, dimindexes);
-          data = data1DI->data();
-
-          //       NETCDF(nc_get_var_int(ncid, varid, data1DI->data()));
-          //          NETCDF(nc_get_var(ncid, varid, data));
+      // If we had pixel dimension, check the sparse
+      if (sparse) {
+        if (name == aTypeName) {
+          if ((ndimsp2 == 1)and(xtypep == NC_FLOAT)) {
+            // SPARSE DATA READ
+            // Expand it to 2D float array from sparse...
+            // We're assuming it's using first two dimensions on 2D sparse...
+            auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
+            IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
+              Constants::MissingData, Constants::RangeFolded, *data2DF);
+          }
         }
-      } else if (ndimsp2 == 2) { // 2D stuff
-        if (xtypep == NC_FLOAT) {
-          auto data2DF = dataGrid.addFloat2D(name, units, dimindexes);
-          data = data2DF->data();
+      } else {
+        // --------------------------------------------------
 
-          //          const size_t start2[] = { 0, 0 };
-          //          const size_t count2[] = { dims[dimindexes[0]].size(), dims[dimindexes[1]].size() };
-          //          NETCDF(nc_get_vara(ncid, varid, start2, count2, data));
+        void * data = nullptr;
 
-          //       Could we just do this? Seems the same output...
-          //             NETCDF(nc_get_var_float(ncid, varid, data2DF->data()));
-          //        NETCDF(nc_get_var(ncid, varid, data2DF->data())); yeah we can I think
-          // Do we need this?  FIXME: should take any grid right?
-          //          dataGrid.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
-          //          Only for NSSL data sets
+
+        // Slowly evolving to more generalized code
+        if (ndimsp2 == 1) { // 1D float
+          if (xtypep == NC_FLOAT) {
+            auto data1DF = dataGrid.addFloat1D(arrayName, units, dimindexes);
+            data = data1DF->data();
+
+            //       NETCDF(nc_get_var_float(ncid, varid, data1DF->data()));
+            //          NETCDF(nc_get_var(ncid, varid, data));
+          } else if (xtypep == NC_INT) {
+            auto data1DI = dataGrid.addInt1D(arrayName, units, dimindexes);
+            data = data1DI->data();
+
+            //       NETCDF(nc_get_var_int(ncid, varid, data1DI->data()));
+            //          NETCDF(nc_get_var(ncid, varid, data));
+          }
+        } else if (ndimsp2 == 2) { // 2D stuff
+          if (xtypep == NC_FLOAT) {
+            auto data2DF = dataGrid.addFloat2D(arrayName, units, dimindexes);
+            data = data2DF->data();
+
+            //          const size_t start2[] = { 0, 0 };
+            //          const size_t count2[] = { dims[dimindexes[0]].size(), dims[dimindexes[1]].size() };
+            //          NETCDF(nc_get_vara(ncid, varid, start2, count2, data));
+
+            //       Could we just do this? Seems the same output...
+            //             NETCDF(nc_get_var_float(ncid, varid, data2DF->data()));
+            //        NETCDF(nc_get_var(ncid, varid, data2DF->data())); yeah we can I think
+            // Do we need this?  FIXME: should take any grid right?
+            //          dataGrid.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
+            //          Only for NSSL data sets
+          }
+        }
+        // Read generally into array
+        if (data != nullptr) {
+          NETCDF(nc_get_var(ncid, varid, data));
         }
       }
 
-      if (data != nullptr) {
-        NETCDF(nc_get_var(ncid, varid, data));
-
-        DataAttributeList * theList = dataGridSP->getRawAttributePointer(name);
-        if (theList != nullptr) {
-          IONetcdf::getAttributes(ncid, varid, theList);
-        }
+      // This should fill in attributes per array, such as the stored Units in wdssii
+      DataAttributeList * theList = dataGridSP->getRawAttributePointer(arrayName);
+      if (theList != nullptr) {
+        IONetcdf::getAttributes(ncid, varid, theList);
       }
-
-      // -----------------------------------------------------------------------
-      //   IONetcdf::readUnitValueList(ncid, dataGrid); // Can read now with value
-      // object...
     }
     // End generic read 2D?
 
-    return (dataGridSP);
+    return (true);
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf read error with data grid: " << ex.getNetcdfStr() << "\n");
-    return (nullptr);
+    return (false);
   }
-  return (nullptr);
+  return (false);
 } // NetcdfDataGrid::read
 
 bool
 NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
   std::shared_ptr<DataFormatSetting> dfs)
 {
-  ProcessTimer("Writing DataGrid to netcdf");
-
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
-  // const float missing = IONetcdf::MISSING_DATA;
-  // const float rangeFolded = IONetcdf::RANGE_FOLDED;
+  auto dataType = dataGrid->getDataType();
+  ProcessTimer("Writing " + dataType + " (general writer) to netcdf");
 
   try {
     // ------------------------------------------------------------
@@ -198,29 +255,20 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
     // ------------------------------------------------------------
     // VARIABLES
     //
-    std::vector<int> datavars = IONetcdf::declareGridVars(*dataGrid, "NOTHING", dimvars, ncid);
-
-    // ------------------------------------------------------------
-    // GLOBAL ATTRIBUTES
-    //
-    // auto& test = dataGrid.myAttributes.myAttributes;
-    // for(auto i:test){
-    //  auto& test = dataGrid.myAttributes.myAttributes;
-    for (auto& i:dataGrid->myAttributes) {
-      // For each type, write out attr...
-      // FIXME: All the basic types
-      auto field = i.get<std::string>();
-      if (field) {
-        NETCDF(IONetcdf::addAtt(ncid, i.getName().c_str(), *field));
-        //    LogSevere("GOTZ " << i.getName() << " " << field << "\n");
-      } else {
-        //    LogSevere("NOGOTZ " << i.getName() << " not there\n");
-      }
-    }
+    auto typeName = dataGrid->getTypeName(); // FIXME: can't routine get it?
+    std::vector<int> datavars = IONetcdf::declareGridVars(*dataGrid, typeName, dimvars, ncid);
 
     // Non netcdf-4/hdf5 require separation between define and data...
     // netcdf-4 doesn't care though
     NETCDF(nc_enddef(ncid));
+
+    // ------------------------------------------------------------
+    // GLOBAL ATTRIBUTES
+    //
+    // NOTE: Currently this will add in WDSS2 global attributes,
+    // We might want a flag or something
+    dataGrid->updateGlobalAttributes(dataType);
+    IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getRawGlobalAttributePointer());
 
     // Write pass using datavars
     size_t count = 0;
@@ -251,24 +299,7 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
       count++;
 
       // Put attributes for this var...
-      // For each type, write out attr...
-      // FIXME: All the basic types
-      // auto& test = dataGrid.myAttributes.myAttributes;
-      DataAttributeList * raw = l->getRawAttributePointer();
-      if (raw != nullptr) {
-        // auto& test = raw->myAttributes;
-        for (auto i:*raw) {
-          // For each type, write out attr...
-          // FIXME: All the basic types
-          auto field = i.get<std::string>();
-          if (field) {
-            NETCDF(IONetcdf::addAtt(ncid, i.getName().c_str(), *field, varid));
-            //    LogSevere("GOTZ " << i.getName() << " " << field << "\n");
-          } else {
-            //    LogSevere("NOGOTZ " << i.getName() << " not there\n");
-          }
-        }
-      }
+      IONetcdf::setAttributes(ncid, varid, l->getRawAttributePointer());
     }
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with DataGrid: " << ex.getNetcdfStr() << "\n");

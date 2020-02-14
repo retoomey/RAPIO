@@ -16,9 +16,25 @@ Strings::beginsWith(const std::string& str, const std::string& prefix)
 }
 
 bool
+Strings::removePrefix(std::string& str, const std::string& prefix)
+{
+  std::string original = str;
+  str = boost::algorithm::replace_first_copy(str, prefix, "");
+  return (original != str);
+}
+
+bool
 Strings::endsWith(const std::string& str, const std::string& suffix)
 {
   return (boost::algorithm::ends_with(str, suffix));
+}
+
+bool
+Strings::removeSuffix(std::string& str, const std::string& suffix)
+{
+  std::string original = str;
+  str = boost::algorithm::replace_last_copy(str, suffix, "");
+  return (original != str);
 }
 
 void

@@ -10,7 +10,6 @@
 #include "rStrings.h"
 #include "rConfig.h"
 #include "rUnit.h"
-#include "rIOXML.h"
 #include "rDataType.h"
 #include "rIODataType.h"
 #include "rIndexType.h"
@@ -30,11 +29,15 @@
 #include <string>
 #include <algorithm>
 
+// Datatype creation factories
 // FIXME: Eventually want some sort of dynamic
 // extension loading ability or something?
-#include "rSignals.h"
 #include "rIONetcdf.h"
 #include "rIOGrib.h"
+#include "rIOXML.h"
+#include "rIOJSON.h"
+
+#include "rSignals.h"
 
 using namespace rapio;
 using namespace std;
@@ -223,11 +226,13 @@ RAPIOAlgorithm::initializeBaseline()
   // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
   IONetcdf::introduceSelf();
   IOGrib::introduceSelf();
+  IOXML::introduceSelf();
+  IOJSON::introduceSelf();
 
   // Everything should be registered, try initial start up
   Config::initialize();
   Unit::initialize(); // Think this could be a ConfigType.  It reads xml
-}
+} // RAPIOAlgorithm::initializeBaseline
 
 void
 RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])

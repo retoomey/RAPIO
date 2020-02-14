@@ -4,6 +4,8 @@
 #include "rTimeDuration.h"
 #include "rTime.h"
 #include "rUnit.h"
+#include "rLLH.h"
+#include "rStrings.h"
 
 using namespace rapio;
 
@@ -49,152 +51,14 @@ DataType::setTypeName(const std::string& typeName)
   myTypeName = typeName;
 }
 
-std::string
-DataType::getDataAttributeString(const std::string& key) const
-{
-  auto at = myAttributes2.find(key);
-
-  if (at != myAttributes2.end()) {
-    return (at->second.getValue());
-  }
-  return ("");
-}
-
-bool
-DataType::getRawDataAttribute(const std::string& key,
-  std::string& value, std::string& unit) const
-{
-  auto at = myAttributes2.find(key);
-
-  if (at != myAttributes2.end()) {
-    value = at->second.getValue();
-    unit  = at->second.getUnit();
-    return (true);
-  }
-  return (false);
-}
-
-bool
-DataType::getDataAttributeFloat(
-  const std::string& key, float& value, const std::string& unit) const
-{
-  auto at = myAttributes2.find(key);
-
-  if (at != myAttributes2.end()) {
-    const auto d = at->second;
-
-    if (unit.empty()) {
-      value = atof(d.getValue().c_str());
-    } else {
-      float newV = Unit::value(d.getUnit(),
-          unit,
-          atof(d.getValue().c_str()));
-      value = newV;
-    }
-    return (true);
-  }
-  return (false);
-}
-
-void
-DataType::setDataAttributeValue(
-  const std::string& key,
-  const std::string& value,
-  const std::string& unit
-)
-{
-  // Don't allow empty keys or values at moment
-  if (value.empty() || key.empty()) {
-    return;
-  }
-
-  // Store replacement data attribute
-  myAttributes2[key] = DataAttribute(value, unit);
-}
-
-void
-DataType::clearAttribute(const std::string& key)
-{
-  myAttributes2.erase(key);
-}
-
-TimeDuration
-DataType::getExpiryInterval() const
-{
-  double d;
-  TimeDuration t;
-  auto at = myAttributes2.find(Constants::ExpiryInterval);
-
-  if (at != myAttributes2.end()) {
-    d = atof(at->second.getValue().c_str());
-    t = TimeDuration::Minutes(d);
-  } else {
-    // LogInfo( "No ExpiryInterval in data. Use default 15 minutes\n" );
-    t = TimeDuration::Minutes(15);
-  }
-  return (t);
-}
-
-Time
-DataType::getFilenameDateTime() const
-{
-  auto at = myAttributes2.find(Constants::FilenameDateTime);
-
-  if (at != myAttributes2.end()) {
-    return (Time(at->second.getValue()));
-  }
-  return (Time("00000000-000000"));
-}
-
-void
-DataType::setFilenameDateTime(rapio::Time dateTime)
-{
-  setDataAttributeValue(Constants::FilenameDateTime,
-    dateTime.getFileNameString(), "text");
-}
-
-std::string
-DataType::getUnits()
-{
-  // Noticed it's either Units or units (bug).  Better to check for both then
-  // for maximum compatibility with data.
-  std::string unit = getDataAttributeString(Constants::Unit);
-
-  if (!unit.empty()) {
-    return (unit); // Could actually be ""
-  }
-
-  unit = getDataAttributeString("units"); // units
-
-  if (!unit.empty()) { return (unit); }
-
-  // Report units missing in file or not?
-  std::string typeName = getTypeName();
-  static size_t count  = 0;
-
-  if (count == 0) {
-    LogSevere("WARNING! " << typeName << " (" << Constants::Unit << ")"
-                          << " does not have the Unit attribute set.\n");
-  }
-  count++;
-
-  if (count > 1000) { count = 0; }
-
-  // A default units for a given typename...for legacy datasets
-  if (typeName == "Reflectivity") { return ("dBZ"); }
-
-  if (typeName == "Velocity") { return ("MetersPerSecond"); }
-
-  if (typeName == "DEM") { return ("Meters"); } return ("SI");
-}
-
 bool
 DataType::getSubType(std::string& result) const
 {
-  // FIXME: Should this be separate from the generated subtype?
-  // I'm not why we would override RadialSet elevation with the
-  // give attribute.  If elevation changes we want the new one right?
-  std::string subtype = getDataAttributeString("SubType");
+  std::string subtype;
+  auto f = myAttributes.get<std::string>("SubType");
+  if (f) {
+    subtype = *f;
+  }
 
   if (!subtype.empty()) {
     if (subtype != "NoPRI") { // Special case
@@ -206,3 +70,72 @@ DataType::getSubType(std::string& result) const
   result = getGeneratedSubtype();
   return (false);
 }
+
+void
+DataType::setDataAttributeValue(
+  const std::string& key,
+  const std::string& value,
+  const std::string& unit
+)
+{
+  // Don't allow empty keys or values
+  if (value.empty() || key.empty()) {
+    return;
+  }
+
+  // Stick as a pair into attributes.
+  auto one = key + "-unit";
+  auto two = key + "-value";
+  myAttributes.put<std::string>(one, unit);
+  myAttributes.put<std::string>(two, value);
+}
+
+bool
+DataType::initFromGlobalAttributes()
+{
+  return true;
+}
+
+void
+DataType::updateGlobalAttributes(const std::string& encoded_type)
+{
+  // FIXME: Actually general DataGrids might not want to stick all
+  // this stuff in there.  Maybe a 'wdssii' flag or something here..
+  // the class tree might not be good design
+
+  myAttributes.put<std::string>(Constants::TypeName, getTypeName());
+
+  // This 'could' be placed by encoders, but we pass it in
+  myAttributes.put<std::string>(Constants::sDataType, encoded_type);
+
+  // Store special time/location into global attributes
+  // Should we just do in in set time and location?
+  Time aTime    = getTime();
+  LLH aLocation = getLocation();
+
+  myAttributes.put<double>(Constants::Latitude, aLocation.getLatitudeDeg());
+  myAttributes.put<double>(Constants::Longitude, aLocation.getLongitudeDeg());
+  myAttributes.put<double>(Constants::Height, aLocation.getHeightKM() * 1000.0);
+
+  myAttributes.put<long>(Constants::Time, aTime.getSecondsSinceEpoch());
+  myAttributes.put<double>(Constants::FractionalTime, aTime.getFractional());
+
+  // Standard missing/range
+  myAttributes.put<float>("MissingData", Constants::MissingData);
+  myAttributes.put<float>("RangeFolded", Constants::RangeFolded);
+
+  // Regenerate attributes global attribute string, representing
+  // all the -unit -value pairs.  This is used by netcdf, etc...legacy storage
+  std::string attributes;
+  for (auto& a:myAttributes) {
+    auto name = a.getName();
+    if (Strings::removeSuffix(name, "-value")) {
+      auto unit = name + "-unit";
+      if (myAttributes.index(unit) > -1) {
+        // Found the pair, add to attribute string
+        attributes += (" " + name);
+      }
+    }
+  }
+  myAttributes.put<std::string>("attributes", attributes);
+} // DataType::updateGlobalAttributes

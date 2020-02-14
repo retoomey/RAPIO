@@ -1,38 +1,36 @@
-#include "rIOXML.h"
+#include "rIOJSON.h"
 
 #include "rFactory.h"
 #include "rStrings.h"
 #include "rError.h"
 #include "rIOURL.h"
 
-#include <boost/property_tree/xml_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 using namespace rapio;
 
 void
-IOXML::introduceSelf()
+IOJSON::introduceSelf()
 {
-  std::shared_ptr<IOXML> newOne = std::make_shared<IOXML>();
-
-  // Read can write netcdf/netcdf3
-  Factory<IODataType>::introduce("xml", newOne);
-  Factory<IODataType>::introduce("W2ALGS", newOne); // Old school
+  std::shared_ptr<IOJSON> newOne = std::make_shared<IOJSON>();
+  Factory<IODataType>::introduce("json", newOne);
 
   // Add the default classes we handle...
 }
 
+/** Read call */
 std::shared_ptr<DataType>
-IOXML::readXMLDataType(const std::vector<std::string>& args)
+IOJSON::readJSONDataType(const std::vector<std::string>& args)
 {
   std::shared_ptr<DataType> datatype = nullptr;
 
-  // Note, in RAPIO we can read a xml file remotely too
+  // Note, in RAPIO we can read a json file remotely too
   const URL url = getFileName(args);
   std::vector<char> buf;
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
-    LogSevere("XML UNIMPLEMENTED READ OBJECT CALLED!!!\n");
+    LogSevere("JSON UNIMPLEMENTED READ CALLED!\n");
   } else {
     LogSevere("Unable to pull data from " << url << "\n");
   }
@@ -41,29 +39,28 @@ IOXML::readXMLDataType(const std::vector<std::string>& args)
 
 /** Read call */
 std::shared_ptr<DataType>
-IOXML::createObject(const std::vector<std::string>& args)
+IOJSON::createObject(const std::vector<std::string>& args)
 {
-  return (IOXML::readXMLDataType(args));
+  return (IOJSON::readJSONDataType(args));
 }
 
 bool
-IOXML::writeURL(
+IOJSON::writeURL(
   const URL                  & path,
   boost::property_tree::ptree& tree,
   bool                       shouldIndent)
 {
-  // Formatting for humans
-  auto settings = boost::property_tree::xml_writer_make_settings<std::string>(' ', shouldIndent ? 1 : 0);
+  auto settings = shouldIndent ? true : false;
 
   // .xml means to console
   std::string base = path.getBaseName();
   Strings::toLower(base);
-  bool console = base == ".xml";
+  bool console = base == ".json";
   if (console) {
-    boost::property_tree::write_xml(std::cout, tree, settings);
+    boost::property_tree::write_json(std::cout, tree, settings);
   } else {
     if (path.isLocal()) {
-      boost::property_tree::write_xml(path.toString(), tree, std::locale(), settings);
+      boost::property_tree::write_json(path.toString(), tree, std::locale(), settings);
     } else {
       LogSevere("Can't write to a remote URL at " << path << "\n");
       return false;
@@ -73,7 +70,7 @@ IOXML::writeURL(
 }
 
 std::shared_ptr<boost::property_tree::ptree>
-IOXML::readURL(const URL& url)
+IOJSON::readURL(const URL& url)
 {
   std::vector<char> buf;
 
@@ -83,11 +80,11 @@ IOXML::readURL(const URL& url)
 
     std::shared_ptr<boost::property_tree::ptree> pt = std::make_shared<boost::property_tree::ptree>();
     try{
-      boost::property_tree::read_xml(is, *pt);
+      boost::property_tree::read_json(is, *pt);
       return pt;
-    }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
+    }catch (std::exception& e) { // pt::json_parser::json_parser_error
       // We catch all to recover
-      LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
+      LogSevere("Exception reading JSON data..." << e.what() << " ignoring\n");
       return nullptr;
     }
   }
@@ -95,13 +92,13 @@ IOXML::readURL(const URL& url)
 }
 
 std::string
-IOXML::encode(std::shared_ptr<DataType> dt,
-  const std::string                     & directory,
-  std::shared_ptr<DataFormatSetting>    dfs,
-  std::vector<Record>                   & records)
+IOJSON::encode(std::shared_ptr<DataType> dt,
+  const std::string                      & directory,
+  std::shared_ptr<DataFormatSetting>     dfs,
+  std::vector<Record>                    & records)
 {
   // FIXME: Do we need this to be static?
   // return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
-  LogSevere("XML UNIMPLEMENTED ENCODE OBJECT CALLED!!! YAY\n");
+  LogSevere("JSON ENCODE OBJECT CALLED!!! YAY\n");
   return nullptr;
 }

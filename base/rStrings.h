@@ -29,9 +29,17 @@ public:
   static bool
   beginsWith(const std::string& str, const std::string& prefix);
 
+  /** Does the string begin with prefix, and remove it */
+  static bool
+  removePrefix(std::string& str, const std::string& suffix);
+
   /** Does the string end with the given suffix? */
   static bool
   endsWith(const std::string& str, const std::string& suffix);
+
+  /** Does the string end with suffix, and remove it */
+  static bool
+  removeSuffix(std::string& str, const std::string& suffix);
 
   /** Convert to upper case. */
   static void

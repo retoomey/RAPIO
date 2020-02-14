@@ -5,6 +5,7 @@
 #include "rError.h"
 #include "rOS.h"
 #include "rFactory.h"
+#include "rIOXML.h"
 
 // ConfigTypes
 #include "rConfigDirectoryMapping.h"
