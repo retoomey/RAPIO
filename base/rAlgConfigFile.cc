@@ -73,17 +73,19 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
 
   try{
     if (conf != nullptr) {
-      for (auto r: conf->get_child("w2algxml")) {
-        if (r.first == "option") {
-          const auto option = r.second.get("<xmlattr>.letter", "");
-          const auto value  = r.second.get("<xmlattr>.value", "");
-          if (!option.empty()) {
-            optionlist.push_back(option);
-            valuelist.push_back(value);
-          }
-        }
-      }
-      return true;
+      /* GOOPXML
+       *    for (auto r: conf->get_child("w2algxml")) {
+       *      if (r.first == "option") {
+       *        const auto option = r.second.get("<xmlattr>.letter", "");
+       *        const auto value  = r.second.get("<xmlattr>.value", "");
+       *        if (!option.empty()) {
+       *          optionlist.push_back(option);
+       *          valuelist.push_back(value);
+       *        }
+       *      }
+       *    }
+       *    return true;
+       */
     }
   }catch (std::exception& e) {
     LogSevere("Error parsing XML from " << path << "\n");
@@ -99,13 +101,14 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   std::vector<std::string>                & valuelist)
 {
   // Create document tree
-  boost::property_tree::ptree tree;
-  tree.put("w2algxml.<xmlattr>.program", program);
+  std::shared_ptr<XMLData> tree = std::make_shared<XMLData>();
+  auto root = tree->getTree();
+  root->put("w2algxml.<xmlattr>.program", program);
   for (size_t i = 0; i < optionlist.size(); ++i) {
-    boost::property_tree::ptree option;
-    option.add("<xmlattr>.letter", optionlist[i]);
-    option.add("<xmlattr>.value", valuelist[i]);
-    tree.add_child("w2algxml.option", option);
+    XMLNode option;
+    option.put("<xmlattr>.letter", optionlist[i]);
+    option.put("<xmlattr>.value", valuelist[i]);
+    root->addNode("w2algxml.option", option);
   }
 
   // Write document tree

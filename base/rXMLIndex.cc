@@ -52,14 +52,22 @@ XMLIndex::initialRead(bool realtime)
     const auto indexLabel = getIndexLabel();
 
     try{
-      // Each child of the full ptree
-      for (auto r: doc2->get_child("codeindex")) { // Can boost get first child?
-        if (r.first == "item") {                   // do we need to check? Safest but slower
-          // Note priority queue time sorts all initial indexes
-          Record rec;
-          if (rec.readXML(r.second, indexPath, indexLabel)) {
-            Record::theRecordQueue->addRecord(rec);
-          }
+      /* <codeindex>
+       * <item>
+       *   <time fractional="0.00000000"> 925767255 </time>
+       *   <params>
+       *   <selections>
+       * </item>
+       * </codeindex>
+       */
+      auto itemTree = doc2->getTree()->getChild("codeindex");
+      auto items    = itemTree.getChildren("item");
+      for (auto r: items) {
+        // Note priority queue time sorts all initial indexes
+        Record rec;
+        // FIXME: still using boost
+        if (rec.readXML(r.node, indexPath, indexLabel)) {
+          Record::theRecordQueue->addRecord(rec);
         }
       }
     }catch (std::exception& e) {

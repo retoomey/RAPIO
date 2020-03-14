@@ -107,8 +107,10 @@ WebIndex::readRemoteRecords()
   myReadOK = (doc != nullptr);
 
   if (myReadOK) {
+    // GOOPXML
     // FIXME: test somewhere with w2server access make sure the XML
     // ported properly
+    #if 0
     auto rectest = doc->get_child_optional("records");
     if (rectest == boost::none) {
       LogSevere("Couldn't read records tag from webindex xml return\n");
@@ -168,6 +170,7 @@ WebIndex::readRemoteRecords()
     } else {
       LogSevere("Unhandled lastRead=" << lastRead << '\n');
     }
+    #endif // if 0
   }
 
   return (myFoundNew);

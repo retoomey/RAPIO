@@ -361,12 +361,12 @@ public:
   /** Get a data attribute list from a netcdf attribute list */
   static
   size_t
-  getAttributes(int ncid, int varid, DataAttributeList * list);
+  getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list);
 
   /** Set netcdf attributes from a data attribute list */
   static
   void
-  setAttributes(int ncid, int varid, DataAttributeList * list);
+  setAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list);
 
   /** Convenience for gathering global attributes.*/
   // static

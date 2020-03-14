@@ -59,28 +59,29 @@ ConfigDataFormat::readInSettings()
 
   try{
     if (doc != nullptr) {
-      for (const auto r: doc->get_child("dataformat")) {
-        if (r.first == "setting") {
-          DataFormatSetting setting;
+      auto itemTree = doc->getTree()->getChild("dataformat");
+      auto items    = itemTree.getChildren("setting");
+      for (auto r: items) {
+        DataFormatSetting setting;
 
-          // Snag attributes
-          const auto l = r.second.get_child("<xmlattr>");
-          setting.datatype = l.get("datatype", "");
-          if (setting.datatype == "default") {
-            haveDefault = true;
-          }
-          setting.format        = l.get("format", "");
-          setting.compress      = l.get("compression", true);
-          setting.subdirs       = l.get("subdirs", true);
-          setting.cdmcompliance = l.get("cdmcompliance", false);
-          setting.faacompliance = l.get("faacompliance", false);
-
-          // Store all attributes generally.  This includes the specials above
-          for (auto att: l) {
-            setting.attributes[att.first.data()] = att.second.data();
-          }
-          mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
+        // Snag attributes
+        const auto l = r.getChild("<xmlattr>");
+        // const auto l = r.second.get_child("<xmlattr>");
+        setting.datatype = l.get("datatype", std::string(""));
+        if (setting.datatype == "default") {
+          haveDefault = true;
         }
+        setting.format        = l.get("format", std::string(""));
+        setting.compress      = l.get("compression", true);
+        setting.subdirs       = l.get("subdirs", true);
+        setting.cdmcompliance = l.get("cdmcompliance", false);
+        setting.faacompliance = l.get("faacompliance", false);
+
+        // Store all attributes generally.  This includes the specials above
+        // for (auto att: l) {
+        //  setting.attributes[att.first.data()] = att.second.data();
+        // }
+        mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
       }
     }
   }catch (std::exception& e) {

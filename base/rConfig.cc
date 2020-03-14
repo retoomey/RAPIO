@@ -197,7 +197,7 @@ Config::setEnvVar(const std::string& envVarName, const std::string& value)
   LogInfo("Set environment: " << envVarName << " = " << value << "\n");
 }
 
-std::shared_ptr<boost::property_tree::ptree>
+std::shared_ptr<XMLData>
 Config::huntXML(const std::string& pathName)
 {
   // FIXME: assuming always relative path?  Should

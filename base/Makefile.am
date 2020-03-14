@@ -54,6 +54,8 @@ librapio_la_SOURCES =\
   rLatLonGrid.cc\
   rRadialSet.cc\
   rDataType.cc\
+  rJSONData.cc\
+  rXMLData.cc\
   rGribDataType.cc\
   rNetcdfDataType.cc\
   rFMLIndex.cc\
@@ -126,6 +128,8 @@ pkginclude_HEADERS =\
   rDataStore.h\
   rDataStore2D.h\
   rDataType.h\
+  rJSONData.h\
+  rXMLData.h\
   rGribDataType.h\
   rNetcdfDataType.h\
   rDataGrid.h\

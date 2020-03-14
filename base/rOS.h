@@ -25,6 +25,12 @@ public:
   static std::string
   getProcessName();
 
+  /**
+   * Returns the process id.
+   */
+  static int
+  getProcessID();
+
   /** Test if path is a directory */
   static bool
   isDirectory(const std::string& path);

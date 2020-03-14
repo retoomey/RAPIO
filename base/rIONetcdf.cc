@@ -1127,7 +1127,7 @@ IONetcdf::getDimensions(int ncid,
 } // IONetcdf::getDimensions
 
 size_t
-IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
+IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list)
 {
   char name_in[NC_MAX_NAME + 1];
 
@@ -1171,7 +1171,7 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
           case NC_CHAR: {
             std::string aString;
             getAtt(ncid, attname, aString, varid);
-            list->put<std::string>(attname, aString);
+            list->put<std::string>(outattname, aString);
           }
           break;
           case NC_SHORT:
@@ -1183,7 +1183,7 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
           case NC_LONG:
             long aLong;
             getAtt(ncid, attname, &aLong, varid);
-            list->put<long>(attname, aLong);
+            list->put<long>(outattname, aLong);
             break; // or NC_INT
           case NC_UINT:
             LogSevere("Unhandled NETCDF type NC_UINT for " << name_in << ", ignoring read of it.\n");
@@ -1191,13 +1191,13 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
           case NC_FLOAT: {
             float aFloat;
             getAtt(ncid, attname, &aFloat, varid);
-            list->put<float>(attname, aFloat);
+            list->put<float>(outattname, aFloat);
           }
           break;
           case NC_DOUBLE: {
             double aDouble;
             getAtt(ncid, attname, &aDouble);
-            list->put<double>(attname, aDouble);
+            list->put<double>(outattname, aDouble);
           }
           break;
           case NC_STRING:
@@ -1213,7 +1213,7 @@ IONetcdf::getAttributes(int ncid, int varid, DataAttributeList * list)
 } // IONetcdf::getAttributes
 
 void
-IONetcdf::setAttributes(int ncid, int varid, DataAttributeList * list)
+IONetcdf::setAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list)
 {
   // For each type, write out attr...
   // Netcdf has c functions each type so we check types...

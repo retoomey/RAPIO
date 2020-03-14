@@ -48,7 +48,7 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
     // Do this first to allow subclasses to check/validate format
-    IONetcdf::getAttributes(ncid, NC_GLOBAL, dataGrid.getRawGlobalAttributePointer());
+    IONetcdf::getAttributes(ncid, NC_GLOBAL, dataGrid.getGlobalAttributes());
 
     // DataGrid doesn't care, but other classes might be pickier
     if (!dataGrid.initFromGlobalAttributes()) {
@@ -215,7 +215,7 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
       }
 
       // This should fill in attributes per array, such as the stored Units in wdssii
-      DataAttributeList * theList = dataGridSP->getRawAttributePointer(arrayName);
+      auto theList = dataGridSP->getAttributes(arrayName);
       if (theList != nullptr) {
         IONetcdf::getAttributes(ncid, varid, theList);
       }
@@ -268,7 +268,7 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
     // NOTE: Currently this will add in WDSS2 global attributes,
     // We might want a flag or something
     dataGrid->updateGlobalAttributes(dataType);
-    IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getRawGlobalAttributePointer());
+    IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getGlobalAttributes());
 
     // Write pass using datavars
     size_t count = 0;
@@ -299,7 +299,7 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
       count++;
 
       // Put attributes for this var...
-      IONetcdf::setAttributes(ncid, varid, l->getRawAttributePointer());
+      IONetcdf::setAttributes(ncid, varid, l->getAttributes());
     }
   } catch (NetcdfException& ex) {
     LogSevere("Netcdf write error with DataGrid: " << ex.getNetcdfStr() << "\n");

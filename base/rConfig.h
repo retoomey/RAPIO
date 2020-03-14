@@ -3,12 +3,11 @@
 #include <rUtility.h>
 #include <rURL.h>
 #include <rIO.h>
+#include <rXMLData.h>
 
 #include <vector>
 #include <memory>
 #include <string>
-
-#include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
 /** Config types are registered with config, they handle a particular
@@ -71,7 +70,7 @@ public:
   getAbsoluteForRelative(const std::string& relativePath);
 
   /* Read from a string, hunt in config */
-  static std::shared_ptr<boost::property_tree::ptree>
+  static std::shared_ptr<XMLData>
   huntXML(const std::string& pathname);
 
   /** Use this to introduce new subclasses. */

@@ -40,6 +40,14 @@ OS::getProcessName()
   return process;
 }
 
+int
+OS::getProcessID()
+{
+  pid_t pid = getpid();
+
+  return pid;
+}
+
 std::string
 OS::getCurrentDirectory()
 {

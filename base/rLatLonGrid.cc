@@ -62,7 +62,7 @@ LatLonGrid::initFromGlobalAttributes()
   bool success = true;
 
   // TypeName check, such as Reflectivity or Velocity
-  auto aTypeName = myAttributes.get<std::string>(Constants::TypeName);
+  auto aTypeName = myAttributes->get<std::string>(Constants::TypeName);
 
   if (!aTypeName) {
     LogSevere("Missing TypeName attribute such as Reflectivity.\n");
@@ -73,11 +73,11 @@ LatLonGrid::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Location
-  auto lat = myAttributes.get<double>(Constants::Latitude);
+  auto lat = myAttributes->get<double>(Constants::Latitude);
   if (!lat) { success = false; }
-  auto lon = myAttributes.get<double>(Constants::Longitude);
+  auto lon = myAttributes->get<double>(Constants::Longitude);
   if (!lon) { success = false; }
-  auto ht = myAttributes.get<double>(Constants::Height);
+  auto ht = myAttributes->get<double>(Constants::Height);
   if (!ht) { success = false; }
   if (success) {
     myLocation = LLH(*lat, *lon, *ht / 1000.0); // diff radial
@@ -87,10 +87,10 @@ LatLonGrid::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Time
-  auto timesecs = myAttributes.get<long>(Constants::Time);
+  auto timesecs = myAttributes->get<long>(Constants::Time);
   if (timesecs) {
     double f        = 0.0;
-    auto fractional = myAttributes.get<double>(Constants::FractionalTime);
+    auto fractional = myAttributes->get<double>(Constants::FractionalTime);
     if (fractional) {
       f = *fractional;
     }
@@ -105,7 +105,7 @@ LatLonGrid::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Latitude grid spacing
-  auto latSpacing = myAttributes.get<double>("LatGridSpacing");
+  auto latSpacing = myAttributes->get<double>("LatGridSpacing");
   if (!latSpacing) {
     LogSevere("Missing LatGridSpacing attribute\n");
     success = false;
@@ -115,7 +115,7 @@ LatLonGrid::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Longitude grid spacing
-  auto lonSpacing = myAttributes.get<double>("LonGridSpacing");
+  auto lonSpacing = myAttributes->get<double>("LonGridSpacing");
   if (!lonSpacing) {
     LogSevere("Missing LonGridSpacing attribute\n");
     success = false;
@@ -134,6 +134,6 @@ LatLonGrid::updateGlobalAttributes(const std::string& encoded_type)
   DataType::updateGlobalAttributes(encoded_type);
 
   // LatLonGrid only global attributes
-  myAttributes.put<double>("LatGridSpacing", myLatSpacing);
-  myAttributes.put<double>("LonGridSpacing", myLonSpacing);
+  myAttributes->put<double>("LatGridSpacing", myLatSpacing);
+  myAttributes->put<double>("LonGridSpacing", myLonSpacing);
 }

@@ -4,8 +4,7 @@
 #include "rStrings.h"
 #include "rError.h"
 #include "rIOURL.h"
-
-#include <boost/property_tree/xml_parser.hpp>
+#include "rOS.h"
 
 using namespace rapio;
 
@@ -28,15 +27,14 @@ IOXML::readXMLDataType(const std::vector<std::string>& args)
 
   // Note, in RAPIO we can read a xml file remotely too
   const URL url = getFileName(args);
-  std::vector<char> buf;
-  IOURL::read(url, buf);
 
-  if (!buf.empty()) {
-    LogSevere("XML UNIMPLEMENTED READ OBJECT CALLED!!!\n");
+  auto out = readURL(url);
+  if (out != nullptr) {
+    return out;
   } else {
-    LogSevere("Unable to pull data from " << url << "\n");
+    LogSevere("Unable to create XML from " << url << "\n");
   }
-  return (datatype);
+  return nullptr;
 }
 
 /** Read call */
@@ -48,47 +46,24 @@ IOXML::createObject(const std::vector<std::string>& args)
 
 bool
 IOXML::writeURL(
-  const URL                  & path,
-  boost::property_tree::ptree& tree,
-  bool                       shouldIndent)
+  const URL                & path,
+  std::shared_ptr<XMLData> tree,
+  bool                     shouldIndent,
+  bool                     console)
 {
-  // Formatting for humans
-  auto settings = boost::property_tree::xml_writer_make_settings<std::string>(' ', shouldIndent ? 1 : 0);
-
-  // .xml means to console
-  std::string base = path.getBaseName();
-  Strings::toLower(base);
-  bool console = base == ".xml";
-  if (console) {
-    boost::property_tree::write_xml(std::cout, tree, settings);
-  } else {
-    if (path.isLocal()) {
-      boost::property_tree::write_xml(path.toString(), tree, std::locale(), settings);
-    } else {
-      LogSevere("Can't write to a remote URL at " << path << "\n");
-      return false;
-    }
-  }
-  return true;
+  // Delegate to XML since it knows the internals
+  return (tree->writeURL(path, shouldIndent, console));
 }
 
-std::shared_ptr<boost::property_tree::ptree>
+std::shared_ptr<XMLData>
 IOXML::readURL(const URL& url)
 {
   std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {
-    buf.push_back('\0');
-    std::istringstream is(&buf.front());
-
-    std::shared_ptr<boost::property_tree::ptree> pt = std::make_shared<boost::property_tree::ptree>();
-    try{
-      boost::property_tree::read_xml(is, *pt);
-      return pt;
-    }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
-      // We catch all to recover
-      LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
-      return nullptr;
+    std::shared_ptr<XMLData> xml = std::make_shared<XMLData>();
+    if (xml->readBuffer(buf)) {
+      return xml;
     }
   }
   return nullptr;
@@ -100,8 +75,47 @@ IOXML::encode(std::shared_ptr<DataType> dt,
   std::shared_ptr<DataFormatSetting>    dfs,
   std::vector<Record>                   & records)
 {
-  // FIXME: Do we need this to be static?
-  // return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
-  LogSevere("XML UNIMPLEMENTED ENCODE OBJECT CALLED!!! YAY\n");
-  return nullptr;
-}
+  // Specialization if any, for json we don't for now
+  const std::string type = dt->getDataType();
+
+  // FIXME: Overlaps with IONetcdf writing stuff, so we could
+  // generalize more here
+
+  // start duplication ----
+  // Generate the filepath/notification info for this datatype.
+  // Static encoded for now.  Could make it virtual in the formatter
+  std::vector<std::string> selections;
+  std::vector<std::string> params;
+  URL aURL = generateOutputInfo(*dt, directory, dfs, "xml", params, selections);
+
+  // Ensure full path to output file exists
+  const std::string dir(aURL.getDirName());
+  if (!OS::isDirectory(dir) && !OS::mkdirp(dir)) {
+    LogSevere("Unable to create " << dir << "\n");
+    return ("");
+  }
+  // end duplication ----
+
+  bool successful = false;
+  try{
+    std::shared_ptr<XMLData> xml = std::dynamic_pointer_cast<XMLData>(dt);
+    // FIXME: shouldIndent probably added to dfs
+    if (xml != nullptr) {
+      writeURL(aURL, xml, true, false);
+    }
+  }catch (std::exception& e) {
+    LogSevere("XML create error: "
+      << aURL.path << " " << e.what() << "\n");
+    return ("");
+  }
+
+  // -------------------------------------------------------------
+  // Update records to match our written stuff...
+  if (successful) {
+    const rapio::Time aTime = dt->getTime();
+    Record rec(params, selections, aTime);
+    records.push_back(rec);
+    return (aURL.path);
+  }
+  return ("");
+} // IOXML::encode

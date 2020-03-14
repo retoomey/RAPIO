@@ -46,20 +46,20 @@ DataArray::getRawDataPointer()
   return nullptr;
 }
 
-DataAttributeList *
-DataArray::getRawAttributePointer()
+std::shared_ptr<DataAttributeList>
+DataArray::getAttributes()
 {
-  return &myAttributes;
+  return myAttributes;
 }
 
-DataAttributeList *
-DataGrid::getRawAttributePointer(
+std::shared_ptr<DataAttributeList>
+DataGrid::getAttributes(
   const std::string& name)
 {
   auto node = getNode(name);
 
   if (node != nullptr) {
-    return node->getRawAttributePointer();
+    return node->getAttributes();
   }
   return nullptr;
 }

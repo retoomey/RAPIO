@@ -17,12 +17,22 @@ ConfigDirectoryMapping::readInSettings()
 
   try{
     if (doc != nullptr) {
-      for (const auto r: doc->get_child("directoryMapping")) {
+      /* GOOPXML --leaving until fully tested
+       *    for (const auto r: doc->get_child("directoryMapping")) {
+       *      // Snag attributes
+       *      const auto l = r.second.get_child("<xmlattr>");
+       *      // const auto from = r.second.get("<xmlattr>.from", "");
+       *      const auto from = l.get("from", "");
+       *      const auto to   = l.get("to", "");
+       *    }
+       */
+      auto tree = doc->getTree();
+      auto maps = tree->getChildren("directoryMapping");
+      for (const auto r: maps) {
         // Snag attributes
-        const auto l = r.second.get_child("<xmlattr>");
-        // const auto from = r.second.get("<xmlattr>.from", "");
-        const auto from = l.get("from", "");
-        const auto to   = l.get("to", "");
+        const auto l    = r.getChild("<xmlattr>");
+        const auto from = l.get("from", std::string(""));
+        const auto to   = l.get("to", std::string(""));
       }
     }
   }catch (std::exception& e) {

@@ -97,14 +97,14 @@ public:
   /** Call descendant's destructor. */
   virtual ~DataType(){ }
 
-  /** Raw attribute pointer, used by reader/writers */
-  DataAttributeList *
-  getRawGlobalAttributePointer(){ return &myAttributes; }
+  /** Global attributes, used by reader/writers */
+  std::shared_ptr<DataAttributeList>
+  getGlobalAttributes(){ return myAttributes; }
 
 protected:
 
   /** Global attributes for data type */
-  DataAttributeList myAttributes;
+  std::shared_ptr<DataAttributeList> myAttributes;
 
   /** String used for writer/reader factory, such as 'RadialSet' */
   std::string myDataType;

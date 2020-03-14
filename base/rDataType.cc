@@ -10,7 +10,9 @@
 using namespace rapio;
 
 DataType::DataType() : myTypeName("not set")
-{ }
+{
+  myAttributes = std::make_shared<DataAttributeList>();
+}
 
 std::string
 DataType::formatString(float spec,
@@ -55,7 +57,7 @@ bool
 DataType::getSubType(std::string& result) const
 {
   std::string subtype;
-  auto f = myAttributes.get<std::string>("SubType");
+  auto f = myAttributes->get<std::string>("SubType");
   if (f) {
     subtype = *f;
   }
@@ -86,8 +88,8 @@ DataType::setDataAttributeValue(
   // Stick as a pair into attributes.
   auto one = key + "-unit";
   auto two = key + "-value";
-  myAttributes.put<std::string>(one, unit);
-  myAttributes.put<std::string>(two, value);
+  myAttributes->put<std::string>(one, unit);
+  myAttributes->put<std::string>(two, value);
 }
 
 bool
@@ -103,39 +105,39 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
   // this stuff in there.  Maybe a 'wdssii' flag or something here..
   // the class tree might not be good design
 
-  myAttributes.put<std::string>(Constants::TypeName, getTypeName());
+  myAttributes->put<std::string>(Constants::TypeName, getTypeName());
 
   // This 'could' be placed by encoders, but we pass it in
-  myAttributes.put<std::string>(Constants::sDataType, encoded_type);
+  myAttributes->put<std::string>(Constants::sDataType, encoded_type);
 
   // Store special time/location into global attributes
   // Should we just do in in set time and location?
   Time aTime    = getTime();
   LLH aLocation = getLocation();
 
-  myAttributes.put<double>(Constants::Latitude, aLocation.getLatitudeDeg());
-  myAttributes.put<double>(Constants::Longitude, aLocation.getLongitudeDeg());
-  myAttributes.put<double>(Constants::Height, aLocation.getHeightKM() * 1000.0);
+  myAttributes->put<double>(Constants::Latitude, aLocation.getLatitudeDeg());
+  myAttributes->put<double>(Constants::Longitude, aLocation.getLongitudeDeg());
+  myAttributes->put<double>(Constants::Height, aLocation.getHeightKM() * 1000.0);
 
-  myAttributes.put<long>(Constants::Time, aTime.getSecondsSinceEpoch());
-  myAttributes.put<double>(Constants::FractionalTime, aTime.getFractional());
+  myAttributes->put<long>(Constants::Time, aTime.getSecondsSinceEpoch());
+  myAttributes->put<double>(Constants::FractionalTime, aTime.getFractional());
 
   // Standard missing/range
-  myAttributes.put<float>("MissingData", Constants::MissingData);
-  myAttributes.put<float>("RangeFolded", Constants::RangeFolded);
+  myAttributes->put<float>("MissingData", Constants::MissingData);
+  myAttributes->put<float>("RangeFolded", Constants::RangeFolded);
 
   // Regenerate attributes global attribute string, representing
   // all the -unit -value pairs.  This is used by netcdf, etc...legacy storage
   std::string attributes;
-  for (auto& a:myAttributes) {
+  for (auto& a:*myAttributes) {
     auto name = a.getName();
     if (Strings::removeSuffix(name, "-value")) {
       auto unit = name + "-unit";
-      if (myAttributes.index(unit) > -1) {
+      if (myAttributes->index(unit) > -1) {
         // Found the pair, add to attribute string
         attributes += (" " + name);
       }
     }
   }
-  myAttributes.put<std::string>("attributes", attributes);
+  myAttributes->put<std::string>("attributes", attributes);
 } // DataType::updateGlobalAttributes

@@ -60,7 +60,8 @@ public:
     const DataArrayType& type, const std::vector<size_t>& dimindexes)
     : NamedAny(name), myUnits(units), myStorageType(type), myDimIndexes(dimindexes)
   {
-    myAttributes.put<std::string>("Units", units);
+    myAttributes = std::make_shared<DataAttributeList>();
+    myAttributes->put<std::string>("Units", units);
   }
 
   /** Get the DataArrayType of this data array */
@@ -85,18 +86,16 @@ public:
   void *
   getRawDataPointer();
 
-  /** Get a raw pointer to the attributes list.  Used by reader/writers.
-   * You probably don't want this, see the example algorithm.
-   * FIXME: Maybe better as an optional */
-  DataAttributeList *
-  getRawAttributePointer();
+  /** Get attributes list.  Used by reader/writers. */
+  std::shared_ptr<DataAttributeList>
+  getAttributes();
 
   /** Get attribute */
   template <typename T>
   boost::optional<T>
   getAttribute(const std::string& name)
   {
-    return myAttributes.get<T>(name);
+    return myAttributes->get<T>(name);
   }
 
   /** Put attribute */
@@ -104,13 +103,13 @@ public:
   void
   putAttribute(const std::string& name, const T& value)
   {
-    myAttributes.put<T>(name, value);
+    myAttributes->put<T>(name, value);
   }
 
 protected:
 
   /** The data attribute list for this data */
-  DataAttributeList myAttributes;
+  std::shared_ptr<DataAttributeList> myAttributes;
 
   /** The units of the data */
   std::string myUnits;
@@ -281,8 +280,8 @@ public:
   }
 
   /** Return attribute pointer for readers/writers */
-  DataAttributeList *
-  getRawAttributePointer(
+  std::shared_ptr<DataAttributeList>
+  getAttributes(
     const std::string& name);
 
 protected:

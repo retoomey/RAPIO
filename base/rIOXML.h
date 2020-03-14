@@ -3,6 +3,7 @@
 #include <rIO.h>
 #include <rData.h>
 #include <rIODataType.h>
+#include <rXMLData.h>
 #include <memory>
 
 #include <boost/property_tree/ptree.hpp>
@@ -32,7 +33,7 @@ public:
   readXMLDataType(const std::vector<std::string>& args);
 
   /** Read property tree from URL */
-  static std::shared_ptr<boost::property_tree::ptree>
+  static std::shared_ptr<XMLData>
   readURL(const URL& url);
 
   // WRITING ------------------------------------------------------------
@@ -49,8 +50,9 @@ public:
   /** Write property tree to URL */
   static bool
   writeURL(
-    const URL                  & path,
-    boost::property_tree::ptree& tree,
-    bool                       shouldIndent = true);
+    const URL                & path,
+    std::shared_ptr<XMLData> tree,
+    bool                     shouldIndent = true,
+    bool                     console = false);
 };
 }

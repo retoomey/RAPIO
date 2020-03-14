@@ -115,17 +115,17 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 {
   auto doc = IOXML::readURL(filename);
 
+  auto tree = doc->getTree();
+
   /*
-   * auto meta = doc->get_child_optional("meta");
-   * if (meta != boost::none){
-   *  // FIXME: use meta data?
-   * }
+   * auto meta = doc->getChildOptional("meta");
+   * FIXME: Use meta data?
    */
-
-  auto item = doc->get_child_optional("item");
-
-  if (item != boost::none) {
-    return (rec.readXML(item.get(), indexPath, getIndexLabel()));
+  try{
+    auto item = tree->getChild("item");
+    return (rec.readXML(item.node, indexPath, getIndexLabel()));
+  }catch (std::exception& e) {
+    LogSevere("Missing item tag in FML record\n");
   }
   return false;
 }
