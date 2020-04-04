@@ -10,6 +10,7 @@ AUTOMAKE_OPTIONS   = foreign
 
 SUBDIRS     =\
   base\
-  rexample
+  rexample\
+  PYTHON
 
 MAINTAINERCLEANFILES  = Makefile.in aclocal.m4 configure

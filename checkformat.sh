@@ -3,3 +3,5 @@ uncrustify -c uncrustify.cfg --check base/*.cc | grep FAIL
 uncrustify -c uncrustify.cfg --check base/*.h | grep FAIL
 uncrustify -c uncrustify.cfg --check rexample/*.cc | grep FAIL
 uncrustify -c uncrustify.cfg --check rexample/*.h | grep FAIL
+uncrustify -c uncrustify.cfg --check PYTHON/*.cc | grep FAIL
+uncrustify -c uncrustify.cfg --check PYTHON/*.h | grep FAIL

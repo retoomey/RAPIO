@@ -4,6 +4,7 @@
 #include <rData.h>
 #include <rIODataType.h>
 #include <rJSONData.h>
+#include <rDataGrid.h>
 #include <memory>
 
 #include <ostream>
@@ -69,5 +70,10 @@ public:
   static
   void
   setAttributes(std::shared_ptr<JSONData> json, std::shared_ptr<DataAttributeList> list);
+
+  /** Create JSON tree from a data grid */
+  static
+  std::shared_ptr<JSONData>
+  createJSON(std::shared_ptr<DataGrid> datagrid);
 };
 }

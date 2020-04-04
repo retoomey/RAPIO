@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rUtility.h>
+#include <rDataGrid.h>
 
 #include <string>
 #include <vector>
@@ -64,5 +65,13 @@ public:
    */
   static std::vector<std::string>
   runProcess(const std::string& command);
+
+  /**
+   * Run a python data process (or others if they know the API), passing JSON and data
+   * as shared memory
+   * FIXME: Make it data type (more general)
+   */
+  static std::vector<std::string>
+  runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
 };
 }

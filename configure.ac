@@ -50,4 +50,5 @@ AC_OUTPUT([
  Makefile
  base/Makefile\
  rexample/Makefile
+ PYTHON/Makefile
 ])
