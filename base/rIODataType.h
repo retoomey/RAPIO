@@ -24,6 +24,10 @@ class ConfigDataFormat;
 class IODataType : public IO {
 public:
 
+  /** Initialize a loaded IODataType */
+  virtual void
+  initialize(){ };
+
   // ------------------------------------------------------------------------------------
   // Reader stuff
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <dlfcn.h>
+
 namespace rapio {
 /**
  * A utility for common system calls.
@@ -73,5 +75,32 @@ public:
    */
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
+
+  /** Load a dynamic module */
+  template <class T> static std::shared_ptr<T>
+  loadDynamic(const std::string& module, const std::string& function)
+  {
+    void * library = dlopen(module.c_str(), RTLD_LAZY);
+
+    if (library == NULL) {
+      LogSevere("Cannot load requested module: " << module << ":" << dlerror() << "\n");
+    } else {
+      // dlerror(); // why this here?
+      LogSevere("Loaded requested module: " << module << "\n");
+      typedef T * create_h ();
+      create_h * create_handler = (create_h *)  dlsym(library, function.c_str());
+      const char * dlsym_error  = dlerror();
+      if (dlsym_error) {
+        LogSevere("Missing " << function << " routine in module " << module << "\n");
+      } else {
+        T * working = create_handler();
+        if (working != nullptr) {
+          std::shared_ptr<T> newOne(working);
+          return newOne;
+        }
+      }
+    }
+    return nullptr;
+  }
 };
 }

@@ -16,6 +16,7 @@
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
 #include "rAlgConfigFile.h"
+#include "rFactory.h"
 
 #include <iostream>
 #include <map>
@@ -29,10 +30,12 @@
 #include <string>
 #include <algorithm>
 
+#include <dlfcn.h>
+
 // Datatype creation factories
 // FIXME: Eventually want some sort of dynamic
 // extension loading ability or something?
-#include "rIONetcdf.h"
+// #include "rIONetcdf.h"
 #include "rIOGrib.h"
 #include "rIOXML.h"
 #include "rIOJSON.h"
@@ -224,8 +227,24 @@ RAPIOAlgorithm::initializeBaseline()
 
   // -------------------------------------------------------------------
   // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
-  IONetcdf::introduceSelf();
-  IOGrib::introduceSelf();
+
+  // Alpha: Dynamic module loading.
+  // We'll make all the IO modules load from configuration, this
+  // will allow plugins.  Start with netcdf for testing
+  std::string create = "createRAPIOIO";
+  std::string module = "librapionetcdf.so"; // does the name matter?
+  std::shared_ptr<IODataType> dynamicNetcdf = OS::loadDynamic<IODataType>(module, create);
+  if (dynamicNetcdf != nullptr) {
+    dynamicNetcdf->initialize();
+    // Read can read netcdf.  Can we read netcdf3?  humm
+    Factory<IODataType>::introduce("netcdf", dynamicNetcdf);
+
+    // Read can write netcdf/netcdf3
+    Factory<IODataType>::introduce("netcdf3", dynamicNetcdf);
+  }
+
+  // IONetcdf::introduceSelf();
+  IOGrib::introduceSelf(); // FIXME: dynamic as well probably
   IOXML::introduceSelf();
   IOJSON::introduceSelf();
 

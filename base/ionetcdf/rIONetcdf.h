@@ -90,9 +90,8 @@ public:
 
   // Registering of classes ---------------------------------------------
 
-  /** Introduce self into factories */
-  static void
-  introduceSelf();
+  virtual void
+  initialize() override;
 
   /** Use this to introduce new subclasses. */
   static void

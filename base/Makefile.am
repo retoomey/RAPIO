@@ -57,17 +57,11 @@ librapio_la_SOURCES =\
   rJSONData.cc\
   rXMLData.cc\
   rGribDataType.cc\
-  rNetcdfDataType.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
   rIOWatcher.cc\
   rFAMWatcher.cc\
-  rIONetcdf.cc\
   rIOGrib.cc\
-  rNetcdfDataGrid.cc\
-  rNetcdfBinaryTable.cc\
-  rNetcdfRadialSet.cc\
-  rNetcdfLatLonGrid.cc\
   rOption.cc\
   rOptionList.cc\
   rAlgConfigFile.cc\
@@ -131,7 +125,6 @@ pkginclude_HEADERS =\
   rJSONData.h\
   rXMLData.h\
   rGribDataType.h\
-  rNetcdfDataType.h\
   rDataGrid.h\
   rBinaryTable.h\
   rRadialSet.h\
@@ -140,12 +133,7 @@ pkginclude_HEADERS =\
   rFMLRecordNotifier.h\
   rIOWatcher.h\
   rFAMWatcher.h\
-  rIONetcdf.h\
   rIOGrib.h\
-  rNetcdfDataGrid.h\
-  rNetcdfBinaryTable.h\
-  rNetcdfRadialSet.h\
-  rNetcdfLatLonGrid.h\
   rOption.h\
   rOptionList.h\
   rSentinelDouble.h\

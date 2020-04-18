@@ -21,9 +21,34 @@
 using namespace rapio;
 using namespace std;
 
+// Library dynamic link to create this factory
+extern "C"
+{
+void *
+createRAPIOIO(void)
+{
+  return reinterpret_cast<void *>(new IONetcdf());
+}
+};
+
 float IONetcdf::MISSING_DATA = Constants::MissingData;
 float IONetcdf::RANGE_FOLDED = Constants::RangeFolded;
 int IONetcdf::GZ_LEVEL       = 6;
+
+void
+IONetcdf::initialize()
+{
+  // Add the default classes we handle...
+  // Note: These could be replaced by algorithms with subclasses
+  // for example to add or replace functionality
+  // FIXME: This means some of the creation path/filename stuff
+  // needs to be run through the NetcdfType class...
+  NetcdfRadialSet::introduceSelf();
+  NetcdfLatLonGrid::introduceSelf();
+  NetcdfBinaryTable::introduceSelf();
+  // Generic netcdf reader class
+  NetcdfDataGrid::introduceSelf();
+}
 
 void
 IONetcdf::introduce(const std::string & name,
@@ -198,28 +223,30 @@ IONetcdf::encode(std::shared_ptr<DataType> dt,
   return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
 }
 
-void
-IONetcdf::introduceSelf()
-{
-  std::shared_ptr<IONetcdf> newOne = std::make_shared<IONetcdf>();
-
-  // Read can read netcdf.  Can we read netcdf3?  humm
-  Factory<IODataType>::introduce("netcdf", newOne);
-
-  // Read can write netcdf/netcdf3
-  Factory<IODataType>::introduce("netcdf3", newOne);
-
-  // Add the default classes we handle...
-  // Note: These could be replaced by algorithms with subclasses
-  // for example to add or replace functionality
-  // FIXME: This means some of the creation path/filename stuff
-  // needs to be run through the NetcdfType class...
-  NetcdfRadialSet::introduceSelf();
-  NetcdfLatLonGrid::introduceSelf();
-  NetcdfBinaryTable::introduceSelf();
-  // Generic netcdf reader class
-  NetcdfDataGrid::introduceSelf();
-}
+/*
+ * void
+ * IONetcdf::introduceSelf()
+ * {
+ * std::shared_ptr<IONetcdf> newOne = std::make_shared<IONetcdf>();
+ *
+ * // Read can read netcdf.  Can we read netcdf3?  humm
+ * Factory<IODataType>::introduce("netcdf", newOne);
+ *
+ * // Read can write netcdf/netcdf3
+ * Factory<IODataType>::introduce("netcdf3", newOne);
+ *
+ * // Add the default classes we handle...
+ * // Note: These could be replaced by algorithms with subclasses
+ * // for example to add or replace functionality
+ * // FIXME: This means some of the creation path/filename stuff
+ * // needs to be run through the NetcdfType class...
+ * NetcdfRadialSet::introduceSelf();
+ * NetcdfLatLonGrid::introduceSelf();
+ * NetcdfBinaryTable::introduceSelf();
+ * // Generic netcdf reader class
+ * NetcdfDataGrid::introduceSelf();
+ * }
+ */
 
 /** Read call */
 std::shared_ptr<DataType>
