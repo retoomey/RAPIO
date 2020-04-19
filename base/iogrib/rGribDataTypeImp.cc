@@ -1,23 +1,23 @@
-#include "rGribDataType.h"
+#include "rGribDataTypeImp.h"
 #include "rIOGrib.h"
 
 using namespace rapio;
 
 LLH
-GribDataType::getLocation() const
+GribDataTypeImp::getLocation() const
 {
   return LLH();
 }
 
 Time
-GribDataType::getTime() const
+GribDataTypeImp::getTime() const
 {
   // FIXME: should be from grib data right?
   return Time();
 }
 
 void
-GribDataType::printCatalog()
+GribDataTypeImp::printCatalog()
 {
   GribCatalog test;
 
@@ -25,7 +25,7 @@ GribDataType::printCatalog()
 }
 
 std::shared_ptr<RAPIO_2DF>
-GribDataType::getFloat2D(const std::string& key, const std::string& levelstr)
+GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
 {
   // Humm has vs is...a better way?
   GribMatcher test(key, levelstr);

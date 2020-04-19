@@ -4,13 +4,24 @@
 #include "rIOURL.h"
 #include "rStrings.h"
 
-#include "rGribDataType.h"
+#include "rGribDataTypeImp.h"
+
+using namespace rapio;
+
+// Library dynamic link to create this factory
+extern "C"
+{
+void *
+createRAPIOIO(void)
+{
+  return reinterpret_cast<void *>(new IOGrib());
+}
+};
 
 extern "C" {
 #include <grib2.h>
 }
 
-using namespace rapio;
 
 /** A simple lookup from number to string.
  * Using a vector which actually tends to be quicker than map in practice.
@@ -788,13 +799,8 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
 } // myseekgbbuf
 
 void
-IOGrib::introduceSelf()
-{
-  std::shared_ptr<IOGrib> newOne = std::make_shared<IOGrib>();
-  Factory<IODataType>::introduce("grib", newOne);
-
-  // Add the default classes we handle, if any
-}
+IOGrib::initialize()
+{ }
 
 /** a quick dirty wgrib2 gribtab.dat reader to make a lookup database.
  * Usually we look up by name and level and strings are easier for
@@ -945,7 +951,7 @@ IOGrib::readGribDataType(const std::vector<std::string>& args)
     // pass it onto the DataType object?
     //  GribSanity test;
     //  if scanGribData(buf, &test) good to go;
-    std::shared_ptr<GribDataType> g = std::make_shared<GribDataType>(buf);
+    std::shared_ptr<GribDataTypeImp> g = std::make_shared<GribDataTypeImp>(buf);
     return g;
   } else {
     LogSevere("Couldn't read data for grib2 at " << url << "\n");

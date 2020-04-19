@@ -5,14 +5,17 @@
 #include <rProcessTimer.h>
 
 // Allow access to direct readers?
-#include <rIOGrib.h>
+// Thinking gdal's way of passing a key
+// #include <rIOGrib.h>
 #include <rIOJSON.h>
 
 // Allow access to standard datatypes
 #include <rGribDataType.h>
+#include <rNetcdfDataType.h>
 #include <rRadialSet.h>
 #include <rLatLonGrid.h>
 #include <rJSONData.h>
+#include <rXMLData.h>
 
 // Experimental AWS calls..
 #include <rAWS.h>

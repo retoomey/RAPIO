@@ -7,7 +7,7 @@ lib_LTLIBRARIES =\
 # MRMS builder makes a lib folder one up from us with all the extra libraries
 # we use.
 librapio_la_LIBADD =\
-   -L@prefix@/lib -lgrib2c -lboost_system
+   -L@prefix@/lib -lboost_system
 
 librapio_la_SOURCES =\
   rRAPIOAlgorithm.cc\
@@ -28,6 +28,8 @@ librapio_la_SOURCES =\
   rConfigDataFormat.cc\
   rConfigDirectoryMapping.cc\
   rIODataType.cc\
+  rNetcdfDataType.cc\
+  rGribDataType.cc\
   rIndexType.cc\
   rError.cc\
   rIOXML.cc\
@@ -56,12 +58,10 @@ librapio_la_SOURCES =\
   rDataType.cc\
   rJSONData.cc\
   rXMLData.cc\
-  rGribDataType.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
   rIOWatcher.cc\
   rFAMWatcher.cc\
-  rIOGrib.cc\
   rOption.cc\
   rOptionList.cc\
   rAlgConfigFile.cc\
@@ -104,6 +104,8 @@ pkginclude_HEADERS =\
   rConfigDirectoryMapping.h\
   rOS.h\
   rIODataType.h\
+  rNetcdfDataType.h\
+  rGribDataType.h\
   rIOXML.h\
   rIOJSON.h\
   rIndexType.h\
@@ -124,7 +126,6 @@ pkginclude_HEADERS =\
   rDataType.h\
   rJSONData.h\
   rXMLData.h\
-  rGribDataType.h\
   rDataGrid.h\
   rBinaryTable.h\
   rRadialSet.h\
@@ -133,7 +134,6 @@ pkginclude_HEADERS =\
   rFMLRecordNotifier.h\
   rIOWatcher.h\
   rFAMWatcher.h\
-  rIOGrib.h\
   rOption.h\
   rOptionList.h\
   rSentinelDouble.h\

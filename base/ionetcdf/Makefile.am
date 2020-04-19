@@ -13,10 +13,10 @@ librapionetcdf_la_SOURCES =\
   rNetcdfBinaryTable.cc\
   rNetcdfRadialSet.cc\
   rNetcdfLatLonGrid.cc\
-  rNetcdfDataType.cc #-- humm put this in module?
+  rNetcdfDataTypeImp.cc
    
 pkginclude_HEADERS =\
-  rNetcdfDataType.h\
+  rNetcdfDataTypeImp.h\
   rNetcdfDataGrid.h\
   rNetcdfBinaryTable.h\
   rNetcdfRadialSet.h\

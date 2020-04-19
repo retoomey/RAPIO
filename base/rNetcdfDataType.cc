@@ -1,8 +1,4 @@
 #include "rNetcdfDataType.h"
-#include "rIONetcdf.h"
-
-#include <vector>
-#include <string>
 
 using namespace rapio;
 

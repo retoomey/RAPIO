@@ -5,16 +5,18 @@
 #include <rTime.h>
 #include <rLLH.h>
 #include <rIOGrib.h>
+#include <rGribDataType.h>
 
 #include <memory>
 
 namespace rapio {
 /** DataType for holding Grib data
- *
+ * Implement the GribDataTypeImp interface from RAPIO
+ * to do provide Grib2 support.
  * @author Robert Toomey */
-class GribDataType : public DataType {
+class GribDataTypeImp : public GribDataType {
 public:
-  GribDataType(const std::vector<char>& buf) : myBuf(buf)
+  GribDataTypeImp(const std::vector<char>& buf) : myBuf(buf)
   {
     myDataType = "GribData";
   }

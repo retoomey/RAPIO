@@ -126,9 +126,8 @@ public:
 
   // Registering of classes ---------------------------------------------
 
-  /** Introduce self into factories */
-  static void
-  introduceSelf();
+  virtual void
+  initialize() override;
 
   /** Get grib2 error into string. */
   static std::string

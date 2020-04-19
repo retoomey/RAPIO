@@ -36,7 +36,7 @@
 // FIXME: Eventually want some sort of dynamic
 // extension loading ability or something?
 // #include "rIONetcdf.h"
-#include "rIOGrib.h"
+// #include "rIOGrib.h"
 #include "rIOXML.h"
 #include "rIOJSON.h"
 
@@ -242,9 +242,13 @@ RAPIOAlgorithm::initializeBaseline()
     // Read can write netcdf/netcdf3
     Factory<IODataType>::introduce("netcdf3", dynamicNetcdf);
   }
+  module = "librapiogrib.so"; // does the name matter?
+  std::shared_ptr<IODataType> dynamicGrib = OS::loadDynamic<IODataType>(module, create);
+  if (dynamicNetcdf != nullptr) {
+    dynamicGrib->initialize();
+    Factory<IODataType>::introduce("grib", dynamicGrib);
+  }
 
-  // IONetcdf::introduceSelf();
-  IOGrib::introduceSelf(); // FIXME: dynamic as well probably
   IOXML::introduceSelf();
   IOJSON::introduceSelf();
 

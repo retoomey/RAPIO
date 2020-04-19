@@ -11,6 +11,7 @@ AUTOMAKE_OPTIONS   = foreign
 SUBDIRS     =\
   base\
   base/ionetcdf\
+  base/iogrib\
   rexample\
   PYTHON
 

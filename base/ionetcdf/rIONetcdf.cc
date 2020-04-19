@@ -223,31 +223,6 @@ IONetcdf::encode(std::shared_ptr<DataType> dt,
   return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
 }
 
-/*
- * void
- * IONetcdf::introduceSelf()
- * {
- * std::shared_ptr<IONetcdf> newOne = std::make_shared<IONetcdf>();
- *
- * // Read can read netcdf.  Can we read netcdf3?  humm
- * Factory<IODataType>::introduce("netcdf", newOne);
- *
- * // Read can write netcdf/netcdf3
- * Factory<IODataType>::introduce("netcdf3", newOne);
- *
- * // Add the default classes we handle...
- * // Note: These could be replaced by algorithms with subclasses
- * // for example to add or replace functionality
- * // FIXME: This means some of the creation path/filename stuff
- * // needs to be run through the NetcdfType class...
- * NetcdfRadialSet::introduceSelf();
- * NetcdfLatLonGrid::introduceSelf();
- * NetcdfBinaryTable::introduceSelf();
- * // Generic netcdf reader class
- * NetcdfDataGrid::introduceSelf();
- * }
- */
-
 /** Read call */
 std::shared_ptr<DataType>
 IONetcdf::createObject(const std::vector<std::string>& args)
