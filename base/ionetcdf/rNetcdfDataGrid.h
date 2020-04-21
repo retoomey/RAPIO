@@ -17,8 +17,8 @@ public:
    */
   virtual std::shared_ptr<DataType>
   read(const int ncid,
-    const URL    & loc,
-    const std::vector<std::string>&)
+    const URL    & loc
+  )
   override;
 
   /** Lower level utility to read generically into a already created
@@ -26,8 +26,7 @@ public:
   virtual bool
   readDataGrid(const int      ncid,
     std::shared_ptr<DataGrid> dt,
-    const URL                 & loc,
-    const std::vector<std::string>&);
+    const URL                 & loc);
 
   /** Write DataType from given ncid */
   virtual bool

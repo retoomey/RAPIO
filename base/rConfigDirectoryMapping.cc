@@ -1,7 +1,6 @@
 #include "rConfigDirectoryMapping.h"
 
 #include "rStrings.h"
-#include "rIOXML.h"
 #include "rError.h"
 
 #include <memory>

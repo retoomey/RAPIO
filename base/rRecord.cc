@@ -142,6 +142,27 @@ operator < (const Record& a, const Record& b)
 } // <
 }
 
+URL
+Record::getFileName(const std::vector<std::string>& params)
+{
+  URL loc;
+
+  const size_t tot_parts(params.size());
+
+  if (tot_parts < 1) {
+    LogSevere("Params missing filename.\n");
+    return (loc);
+  }
+
+  loc = params[0];
+
+  for (size_t j = 1; j < tot_parts; ++j) {
+    loc.path += "/" + params[j];
+  }
+
+  return (loc);
+}
+
 std::shared_ptr<DataType>
 Record::createObject(size_t i) const
 {
@@ -157,14 +178,9 @@ Record::createObject(size_t i) const
   const std::string dataSourceType(params.front());
   params.erase(params.begin());
 
-  // get the builder associated with the data type...
-  std::shared_ptr<IODataType> builder = IODataType::getIODataType(dataSourceType);
-  if (builder == nullptr) {
-    LogSevere("No builder corresponding to " << dataSourceType << '\n');
-    return (0);
-  }
-
-  std::shared_ptr<DataType> dt = builder->createObject(params);
+  // Note param determines type here
+  const URL path = getFileName(params);
+  std::shared_ptr<DataType> dt = IODataType::readDataType(path, dataSourceType);
 
   if (dt != nullptr) {
     // set sub-type

@@ -20,11 +20,10 @@ NetcdfLatLonGrid::introduceSelf()
 }
 
 std::shared_ptr<DataType>
-NetcdfLatLonGrid::read(const int ncid, const URL& loc,
-  const vector<string>& params)
+NetcdfLatLonGrid::read(const int ncid, const URL& loc)
 {
   std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>();
-  if (readDataGrid(ncid, LatLonGridSP, loc, params)) {
+  if (readDataGrid(ncid, LatLonGridSP, loc)) {
     return LatLonGridSP;
   } else {
     return nullptr;

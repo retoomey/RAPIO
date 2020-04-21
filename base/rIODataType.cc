@@ -4,112 +4,154 @@
 #include "rDataType.h"
 #include "rStrings.h"
 #include "rConfigDataFormat.h"
-#include "rIOXML.h"
+#include "rOS.h"
 
 using namespace rapio;
 
 // -----------------------------------------------------------------------------------------
 // Reader stuff
 //
-std::shared_ptr<IODataType>
-IODataType::getIODataType(const std::string& sourceType)
+
+std::shared_ptr<DataType>
+IODataType::readDataType(const URL& path, const std::string& factory)
 {
-  return (Factory<IODataType>::get(sourceType, "IODataType source"));
-}
-
-URL
-IODataType::getFileName(const std::vector<std::string>& params)
-{
-  URL loc;
-
-  const size_t tot_parts(params.size());
-
-  if (tot_parts < 1) {
-    LogSevere("Params missing filename.\n");
-    return (loc);
+  std::string f = factory;
+  if (f == "") {
+    // Snag from end of filename...FIXME: to Strings probably
+    f = boost::filesystem::extension(path.toString());
+    Strings::removePrefix(f, ".");
+    Strings::toLower(f);
   }
-
-  loc = params[0];
-
-  for (size_t j = 1; j < tot_parts; ++j) {
-    loc.path += "/" + params[j];
+  auto builder = Factory<IODataType>::get(f, "IODataType source");
+  if (builder == nullptr) {
+    LogSevere("No builder corresponding to '" << f << "'\n");
+    return nullptr;
+  } else {
+    std::shared_ptr<DataType> dt = builder->createDataType(path);
+    return dt;
   }
-
-  return (loc);
 }
 
 // -----------------------------------------------------------------------------------------
 // Writer stuff
 //
 
-// static
-URL
-IODataType::generateOutputInfo(const DataType& dt,
-  const std::string                          & directory,
-  std::shared_ptr<DataFormatSetting>         dfs,
-  const std::string                          & suffix,
-  std::vector<std::string>                   & params,
-  std::vector<std::string>                   & selections)
+bool
+IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
+  bool generateFileName,
+  std::vector<Record>& records, const std::string& factory)
 {
-  const rapio::Time rsTime      = dt.getTime();
-  const std::string time_string = rsTime.getFileNameString();
-  const std::string dataType    = dt.getTypeName();
+  URL path = aURL;
 
-  std::string spec;
-  dt.getSubType(spec);
-
-  // Filename typical example:
-  // dirName/Reflectivity/00.50/TIME.netcdf
-  // dirName/TIME_Reflectivity_00.50.netcdf
-  std::stringstream fs;
-  if (!dfs->subdirs) {
-    // Without subdirs, name files with time first followed by details
-    fs << time_string << "_" << dataType;
-    if (!spec.empty()) { fs << "_" << spec; }
-  } else {
-    // With subdirs, name files datatype first in folders
-    fs << dataType;
-    if (!spec.empty()) { fs << "/" << spec; }
-    fs << "/" << time_string;
+  // LogSevere("Write called url: "+path.toString()+"\n");
+  std::string f = factory;
+  if (f == "") {
+    // Doesn't work for directory right? Could skip this then
+    // Snag factory from end of filename...FIXME: to Strings probably
+    f = boost::filesystem::extension(path.toString());
+    Strings::removePrefix(f, ".");
   }
-  fs << "." << suffix;
-  const auto filepath = fs.str();
+  Strings::toLower(f);
+  std::string suffix = f; // This might not always be true
 
-  // Create record params
-  params.push_back(suffix);
-  params.push_back(directory);
-  std::vector<std::string> fileparams;
-  Strings::splitWithoutEnds(filepath, '/', &fileparams);
-  for (auto f:fileparams) {
-    params.push_back(f);
-  }
-
-  // Create record selections
-  selections.push_back(time_string);
-  selections.push_back(dataType);
-  if (!spec.empty()) {
-    selections.push_back(spec);
-  }
-
-  return URL(directory + "/" + filepath);
-} // IODataType::generateOutputInfo
-
-// static
-std::string
-IODataType::writeData(std::shared_ptr<DataType> dt,
-  const std::string                             & outputDir,
-  std::vector<Record>                           & records)
-{
-  // Settings are per datatype, so we need the unique settings for it right now
+  // Need to fix/redesign how this works.
+  // We don't want 'xml' turned into 'netcdf' for example....
+  // So a datatype like "RadialSet" might have special settings
   std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt->getDataType());
   if (dfs != nullptr) {
-    std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(dfs->format,
-        "IODataType writer");
-    if (encoder != nullptr) {
-      return (encoder->encode(dt, outputDir, dfs, records));
-    } else {
-      LogSevere("No IODataType for '" << dfs->format << "', I can't write the data\n");
-    }
+    // f = dfs->format;
   }
-  return ("");
+
+  std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(f, "IODataType writer");
+  if (encoder == nullptr) {
+    LogSevere("No builder corresponding to '" << f << "'\n");
+    return false;
+  }
+
+  // Used for record and auto generation
+  const rapio::Time rsTime      = dt->getTime();
+  const std::string time_string = rsTime.getFileNameString();
+  const std::string dataType    = dt->getTypeName();
+  std::string spec;
+  dt->getSubType(spec);
+
+  // If a directory passed in, we generate the filename based on time, etc.
+  // else if actual file, use it directly
+  std::string filepath;
+  std::string sfilepath;
+  std::string dirpath; // root dir
+
+  if (generateFileName) {
+    // LogSevere("Directory passed in, generating file name\n");
+    dirpath = path.toString();
+
+    // Filename typical example:
+    // dirName/Reflectivity/00.50/TIME.netcdf
+    // dirName/TIME_Reflectivity_00.50.netcdf
+    std::stringstream fs;
+    if (!dfs->subdirs) {
+      // Without subdirs, name files with time first followed by details
+      fs << time_string << "_" << dataType;
+      if (!spec.empty()) { fs << "_" << spec; }
+    } else {
+      // With subdirs, name files datatype first in folders
+      fs << dataType;
+      if (!spec.empty()) { fs << "/" << spec; }
+      fs << "/" << time_string;
+    }
+    fs << "." << suffix;
+    sfilepath = fs.str();
+    filepath  = dirpath + "/" + sfilepath; // full path to file
+  } else {
+    LogSevere("File passed in using it directly\n");
+    dirpath   = path.getDirName(); // up a '/'
+    filepath  = path.toString();
+    sfilepath = URL(filepath).getBaseName();
+    // FAMS for these might have param issues (bad WDSS2 design)
+  }
+
+  // Directory must exist. We need getDirName to get added subdirs
+  const std::string dir(URL(filepath).getDirName());
+  if (!OS::isDirectory(dir) && !OS::mkdirp(dir)) {
+    LogSevere("Unable to create directory: " << dir << "\n");
+    return false;
+  }
+  // LogSevere("Directory:"+dirpath+"\n");
+  // LogSevere("File:"+filepath+"\n");
+  // LogSevere("SFile:"+sfilepath+"\n");
+  // LogSevere("Factory name is "+f+"\n");
+
+  path = URL(filepath);
+  // LogSevere("URL:"+path.toString()+"\n");
+  if (encoder->encodeDataType(dt, path, dfs)) {
+    // Create record params
+    std::vector<std::string> params;
+    params.push_back(suffix);
+    params.push_back(dirpath);
+    std::vector<std::string> fileparams;
+
+    Strings::splitWithoutEnds(sfilepath, '/', &fileparams);
+    // Create record selections
+    std::vector<std::string> selections;
+    selections.push_back(time_string);
+    selections.push_back(dataType);
+    if (!spec.empty()) {
+      selections.push_back(spec);
+    }
+    for (auto f:fileparams) {
+      params.push_back(f);
+    }
+    Record rec(params, selections, rsTime);
+    records.push_back(rec);
+    return true;
+  }
+
+  return false;
+} // IODataType::write
+
+bool
+IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL, const std::string& factory)
+{
+  std::vector<Record> blackHole;
+  return write(dt, aURL, false, blackHole, factory); // Default write single file
 }

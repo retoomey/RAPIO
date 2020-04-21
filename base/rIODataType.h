@@ -30,63 +30,65 @@ public:
 
   // ------------------------------------------------------------------------------------
   // Reader stuff
+  //
+
+  /** Factory: Read a data file object */
+  template <class T> static std::shared_ptr<T>
+  read(const URL& path, const std::string& factory = "")
+  {
+    std::shared_ptr<DataType> dt = readDataType(path, factory);
+    if (dt != nullptr) {
+      std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
+      return dr;
+    }
+    return nullptr;
+  }
+
+  /** Factory: Figure out how to read DataType from given path */
+  static std::shared_ptr<DataType>
+  readDataType(const URL& path, const std::string& factory = "");
+
+protected:
 
   /**
-   * Convenience function to get the builder for a sourceType, eg. hires.
-   * @param sourceType The sourceType name, such as "AWIPS" or "hires"
-   */
-  static std::shared_ptr<IODataType>
-  getIODataType(const std::string& sourceType);
-
-  /**
-   * Create a data object.
-   * @param params The parameters needed to create the object.
-   *               Their number and meaning vary by sourceType.
+   * Subclasses create various data objects in various ways.
+   * @param url The URL to the data location.
    */
   virtual std::shared_ptr<DataType>
-  createObject(const std::vector<std::string>& params) = 0;
-
-  /** Standard get filename from param list */
-  static URL
-  getFileName(const std::vector<std::string>& params);
+  createDataType(const URL& url) = 0;
 
   // ------------------------------------------------------------------------------------
   // Writer stuff
 
 public:
 
-  /** Generate information from datatype for the output URL location and
-   * the specials strings used to generate notification records.
-   * FIXME: still feel this could be cleaner. */
-  static URL
-  generateOutputInfo(const DataType    & dt,
-    const std::string                  & directory,
-    std::shared_ptr<DataFormatSetting> dfs,
-    const std::string                  & suffix,
-    std::vector<std::string>           & params,
-    std::vector<std::string>           & selections);
-
   /**
    *  Chooses the correct data encoder for the particular data type,
    *  writes out the product, and appends the records to the given
-   *  vector.
-   *  @return filename (empty if error)
+   *  vector.  Can write to a set file path or a directory with
+   *  filename generation
    */
-  static std::string
-  writeData(std::shared_ptr<DataType> dt,
-    const std::string                 & outputDir,
-    std::vector<Record>               & records);
+  static bool
+  write(std::shared_ptr<DataType> dt, const URL& path,
+    bool generateFileName,
+    std::vector<Record>              & records,
+    const std::string& factory = "");
+
+  /**
+   *  Write out to a set given path, ignore records.
+   */
+  static bool
+  write(std::shared_ptr<DataType> dt,
+    const URL                     & path,
+    const std::string             & factory = "");
 
 protected:
 
-  /** Write out this product and append the Record(s) for it
-   *   into the resulting vector. No record will be appended if
-   *   there was a problem. @return filename (empty if error) */
-  virtual std::string
-  encode(std::shared_ptr<DataType>     dt,
-    const std::string                  & directory,
-    std::shared_ptr<DataFormatSetting> dfs,
-    std::vector<Record>                & records) = 0;
+  /** Encode this data type to path given format settings */
+  virtual bool
+  encodeDataType(std::shared_ptr<DataType> dt,
+    const URL                              & path,
+    std::shared_ptr<DataFormatSetting>     dfs){ return false; }
 
 public:
 

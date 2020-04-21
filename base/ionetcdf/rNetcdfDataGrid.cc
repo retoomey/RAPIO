@@ -24,14 +24,13 @@ NetcdfDataGrid::introduceSelf()
 }
 
 std::shared_ptr<DataType>
-NetcdfDataGrid::read(const int ncid, const URL& loc,
-  const vector<string>& params)
+NetcdfDataGrid::read(const int ncid, const URL& loc)
 {
   ProcessTimer("Reading general netcdf data file\n");
 
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
-  if (readDataGrid(ncid, dataGridSP, loc, params)) {
+  if (readDataGrid(ncid, dataGridSP, loc)) {
     return dataGridSP;
   } else {
     return nullptr;
@@ -39,8 +38,7 @@ NetcdfDataGrid::read(const int ncid, const URL& loc,
 }
 
 bool
-NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridSP, const URL& loc,
-  const vector<string>& params)
+NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridSP, const URL& loc)
 {
   try {
     DataGrid& dataGrid = *dataGridSP;

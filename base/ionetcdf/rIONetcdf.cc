@@ -67,12 +67,11 @@ IONetcdf::~IONetcdf()
 { }
 
 std::shared_ptr<DataType>
-IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
+IONetcdf::readNetcdfDataType(const URL& url)
 {
   std::shared_ptr<DataType> datatype = nullptr;
 
   // Note, in RAPIO we can read a netcdf file remotely too
-  const URL url = getFileName(args);
   std::vector<char> buf;
   IOURL::read(url, buf);
 
@@ -98,7 +97,7 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
         fmt = IONetcdf::getIONetcdf("DataGrid");
       }
       if (fmt != nullptr) {
-        datatype = fmt->read(ncid, url, args);
+        datatype = fmt->read(ncid, url);
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
@@ -110,14 +109,15 @@ IONetcdf::readNetcdfDataType(const std::vector<std::string>& args)
   return (datatype);
 } // IONetcdf::readNetcdfDataType
 
+#if 0
 std::string
 IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
   const std::string                                     & myDirectory,
   std::shared_ptr<DataFormatSetting>                    dfs,
   std::vector<Record>                                   & records)
 {
-  /** So myLookup "RadialSet" writer for example from the data type.
-   * This allows algs etc to replace our IONetcdf with a custom if needed. */
+  // So myLookup "RadialSet" writer for example from the data type.
+  //  This allows algs etc to replace our IONetcdf with a custom if needed.
   const std::string type = dt->getDataType();
 
   std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
@@ -213,22 +213,61 @@ IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
   return ("");
 } // IONetcdf::encodeStatic
 
-std::string
-IONetcdf::encode(std::shared_ptr<DataType> dt,
-  const std::string                        & directory,
-  std::shared_ptr<DataFormatSetting>       dfs,
-  std::vector<Record>                      & records)
+#endif // if 0
+
+bool
+IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
+  const URL                                        & aURL,
+  std::shared_ptr<DataFormatSetting>               dfs)
 {
-  // FIXME: Do we need this to be static?
-  return (IONetcdf::writeNetcdfDataType(dt, directory, dfs, records));
-}
+  /** So myLookup "RadialSet" writer for example from the data type.
+   * This allows algs etc to replace our IONetcdf with a custom if needed. */
+  const std::string type = dt->getDataType();
+
+  std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+  if (fmt == nullptr) {
+    fmt = IONetcdf::getIONetcdf("DataGrid");
+  }
+
+  if (fmt == nullptr) {
+    LogSevere("Can't create IO writer for " << type << "\n");
+    return false;
+  }
+
+  // Open netcdf file
+  int ncid;
+
+  // FIXME: should speed test this...
+  try {
+    NETCDF(nc_create(aURL.path.c_str(), NC_NETCDF4, &ncid));
+  } catch (NetcdfException& ex) {
+    nc_close(ncid);
+    LogSevere("Netcdf create error: "
+      << aURL.path << " " << ex.getNetcdfStr() << "\n");
+    return false;
+  }
+
+  if (ncid == -1) { return false; }
+
+  bool successful = false;
+
+  try {
+    successful = fmt->write(ncid, dt, dfs);
+  } catch (...) {
+    successful = false;
+    LogSevere("Failed to write netcdf file for DataType\n");
+  }
+
+  nc_close(ncid);
+  return successful;
+} // IONetcdf::encodeDataType
 
 /** Read call */
 std::shared_ptr<DataType>
-IONetcdf::createObject(const std::vector<std::string>& args)
+IONetcdf::createDataType(const URL& path)
 {
   // virtual to static call..bleh
-  return (IONetcdf::readNetcdfDataType(args));
+  return (IONetcdf::readNetcdfDataType(path));
 }
 
 /** Add multiple dimension variable and assign a units to it */

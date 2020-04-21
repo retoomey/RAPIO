@@ -5,7 +5,7 @@
 #include "rError.h"
 #include "rOS.h"
 #include "rFactory.h"
-#include "rIOXML.h"
+#include "rIODataType.h"
 
 // ConfigTypes
 #include "rConfigDirectoryMapping.h"
@@ -205,7 +205,7 @@ Config::huntXML(const std::string& pathName)
   const URL loc(getAbsoluteForRelative(pathName));
 
   if (!loc.empty()) {
-    return (IOXML::readURL(loc));
+    return (IODataType::read<XMLData>(loc, "xml"));
   }
   return (nullptr);
 }

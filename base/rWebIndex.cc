@@ -102,7 +102,7 @@ WebIndex::readRemoteRecords()
   // XMLIndex's ctor, plus a new "lastRead" attribute in the toplevel.
   // The lastRead needs to be kept for next time to give the server a
   // point of reference of what "new" means for us.
-  auto doc = IOXML::readURL(tmpURL);
+  auto doc = IODataType::read<XMLData>(tmpURL);
 
   myReadOK = (doc != nullptr);
 

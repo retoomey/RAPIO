@@ -52,8 +52,7 @@ NetcdfBinaryTable::introduceSelf()
 
 std::shared_ptr<DataType>
 NetcdfBinaryTable::read(const int ncid,
-  const URL                       & loc,
-  const vector<string>            & params)
+  const URL                       & loc)
 {
   LogSevere("Unimplemented raw table, returning empty table\n");
 

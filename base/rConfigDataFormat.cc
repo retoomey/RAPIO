@@ -1,6 +1,5 @@
 #include "rConfigDataFormat.h"
 #include "rError.h"
-#include "rIOXML.h"
 #include "rFactory.h"
 #include "rDataType.h"
 

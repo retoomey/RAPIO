@@ -249,8 +249,12 @@ RAPIOAlgorithm::initializeBaseline()
     Factory<IODataType>::introduce("grib", dynamicGrib);
   }
 
-  IOXML::introduceSelf();
-  IOJSON::introduceSelf();
+  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
+  Factory<IODataType>::introduce("xml", xml);
+  Factory<IODataType>::introduce("W2ALGS", xml);
+
+  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
+  Factory<IODataType>::introduce("json", json);
 
   // Everything should be registered, try initial start up
   Config::initialize();
@@ -844,7 +848,9 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     std::string typeName = outputData->getTypeName(); // Old one...
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
-    IODataType::writeData(outputData, myOutputDir, records);
+    // IODataType::writeData(outputData, myOutputDir, records);
+    IODataType::write(outputData, myOutputDir, true, records, "netcdf");
+
     if (myNotifier != nullptr) {
       myNotifier->writeRecords(records);
     }

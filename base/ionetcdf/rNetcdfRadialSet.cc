@@ -29,11 +29,10 @@ NetcdfRadialSet::introduceSelf()
 }
 
 std::shared_ptr<DataType>
-NetcdfRadialSet::read(const int ncid, const URL& loc,
-  const vector<string>& params)
+NetcdfRadialSet::read(const int ncid, const URL& loc)
 {
   std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>();
-  if (readDataGrid(ncid, radialSetSP, loc, params)) {
+  if (readDataGrid(ncid, radialSetSP, loc)) {
     return radialSetSP;
   } else {
     return nullptr;

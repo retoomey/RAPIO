@@ -23,8 +23,7 @@ public:
    */
   virtual std::shared_ptr<DataType>
   read(const int ncid,
-    const URL    & loc,
-    const std::vector<std::string>&)
+    const URL    & loc)
   override;
 
   /** Get number of test objects we provide for read/write tests */

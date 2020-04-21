@@ -142,7 +142,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createObject(const std::vector<std::string>&) override;
+  createDataType(const URL& path) override;
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<RAPIO_2DF>
@@ -150,31 +150,17 @@ public:
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
-  readGribDataType(const std::vector<std::string>& args);
+  readGribDataType(const URL& path);
 
   // WRITING ------------------------------------------------------------
 
-  /** Encode a DataType for writing */
-  static std::string
-  writeGribDataType(std::shared_ptr<DataType> dt,
-    const std::string                         & dir,
-    std::shared_ptr<DataFormatSetting>        dfs,
-    std::vector<Record>                       & records);
-
-  // Virtual functions for DataWriter calls....
-  std::string
-  encode(std::shared_ptr<DataType>     dt,
-    const std::string                  & directory,
-    std::shared_ptr<DataFormatSetting> dfs,
-    std::vector<Record>                & records) override;
+  /** Encode this data type to path given format settings */
+  virtual bool
+  encodeDataType(std::shared_ptr<DataType> dt,
+    const URL                              & path,
+    std::shared_ptr<DataFormatSetting>     dfs) override;
 
   virtual
   ~IOGrib();
-
-protected:
-
-public:
-
-private:
 };
 }

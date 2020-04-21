@@ -45,7 +45,12 @@ XMLIndex::createIndexType(
 bool
 XMLIndex::initialRead(bool realtime)
 {
-  auto doc2 = IOXML::readURL(myURL);
+  LogSevere("Radial set single read/write test\n");
+  auto radialset1 = IODataType::read<DataType>("/tmp/test.netcdf");
+  IODataType::write(radialset1, "/tmp/test2.netcdf");
+  exit(1);
+
+  auto doc2 = IODataType::read<XMLData>(myURL);
 
   if (doc2 != nullptr) {
     const auto indexPath  = IOIndex::getIndexPath(myURL);
@@ -78,4 +83,4 @@ XMLIndex::initialRead(bool realtime)
   }
 
   return (false);
-}
+} // XMLIndex::initialRead

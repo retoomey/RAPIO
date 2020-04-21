@@ -26,8 +26,7 @@ public:
    */
   virtual std::shared_ptr<DataType>
   read(const int ncid,
-    const URL    & loc,
-    const std::vector<std::string>&)
+    const URL    & loc)
   override;
 
   virtual

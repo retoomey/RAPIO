@@ -2,7 +2,7 @@
 
 #include "rFactory.h"
 #include "rStrings.h"
-#include "rIOXML.h"
+#include "rIODataType.h"
 
 using namespace rapio;
 using namespace std;
@@ -69,7 +69,7 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>               & optionlist,
   std::vector<std::string>               & valuelist)
 {
-  auto conf = IOXML::readURL(path);
+  auto conf = IODataType::read<XMLData>(path);
 
   try{
     if (conf != nullptr) {
@@ -112,7 +112,7 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   }
 
   // Write document tree
-  return (IOXML::writeURL(path, tree, true));
+  return (IODataType::write(tree, path));
 } // AlgXMLConfigFile::writeConfigURL
 
 bool

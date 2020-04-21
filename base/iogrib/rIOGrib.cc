@@ -935,14 +935,13 @@ readGribDatabase()
 } // readGribDatabase
 
 std::shared_ptr<DataType>
-IOGrib::readGribDataType(const std::vector<std::string>& args)
+IOGrib::readGribDataType(const URL& url)
 {
   // HACK IN MY GRIB.data thing for moment...
   // Could lazy read only on string matching...
   readGribDatabase();
 
   // Note, in RAPIO we can read a grib file remotely too
-  const URL url = getFileName(args);
   std::vector<char> buf;
   IOURL::read(url, buf);
 
@@ -961,28 +960,18 @@ IOGrib::readGribDataType(const std::vector<std::string>& args)
 } // IOGrib::readGribDataType
 
 std::shared_ptr<DataType>
-IOGrib::createObject(const std::vector<std::string>& args)
+IOGrib::createDataType(const URL& path)
 {
   // virtual to static
-  return (IOGrib::readGribDataType(args));
+  return (IOGrib::readGribDataType(path));
 }
 
-std::string
-IOGrib::writeGribDataType(std::shared_ptr<DataType> dt,
-  const std::string                                 & myDirectory,
-  std::shared_ptr<DataFormatSetting>                dfs,
-  std::vector<Record>                               & records)
+bool
+IOGrib::encodeDataType(std::shared_ptr<DataType> dt,
+  const URL                                      & aURL,
+  std::shared_ptr<DataFormatSetting>             dfs)
 {
-  return "";
-}
-
-std::string
-IOGrib::encode(std::shared_ptr<DataType> dt,
-  const std::string                      & directory,
-  std::shared_ptr<DataFormatSetting>     dfs,
-  std::vector<Record>                    & records)
-{
-  return (IOGrib::writeGribDataType(dt, directory, dfs, records));
+  return false;
 }
 
 IOGrib::~IOGrib(){ }

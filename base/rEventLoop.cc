@@ -6,7 +6,6 @@
 #include "rTime.h"
 
 #include "rTest.h"
-#include "rIOXML.h"
 #include "rURL.h"
 
 #include <cassert>

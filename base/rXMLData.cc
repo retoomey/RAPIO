@@ -46,7 +46,9 @@ XMLData::readBuffer(std::vector<char>& buffer)
   try{
     buffer.push_back('\0');
     std::istringstream is(&buffer.front());
-    boost::property_tree::read_xml(is, myRoot.node);
+    // Need to trim white space, or when we write we gets tons of blank lines.
+    // Bug in boost or rapidxml I think.
+    boost::property_tree::read_xml(is, myRoot.node, boost::property_tree::xml_parser::trim_whitespace);
     return true;
   }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
     // We catch all to recover

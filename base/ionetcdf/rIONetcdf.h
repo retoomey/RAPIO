@@ -73,8 +73,8 @@ public:
   virtual std::shared_ptr<DataType>
   read(
     const int ncid,
-    const URL & loc,
-    const std::vector<std::string>&) = 0;
+    const URL & loc
+  ) = 0;
 };
 
 /**
@@ -107,33 +107,32 @@ public:
   getIONetcdf(const std::string& type);
 
   // READING ------------------------------------------------------------
-  //
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createObject(const std::vector<std::string>&) override;
+  createDataType(const URL& path) override;
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
-  readNetcdfDataType(const std::vector<std::string>& args);
+  readNetcdfDataType(const URL& path);
 
   // WRITING ------------------------------------------------------------
 
-  // Virtual functions for DataWriter calls....
+  /** Encode this data type to path given format settings */
+  virtual bool
+  encodeDataType(std::shared_ptr<DataType> dt,
+    const URL                              & path,
+    std::shared_ptr<DataFormatSetting>     dfs) override;
 
   /** Encode a DataType for writing */
-  std::string
-  encode(std::shared_ptr<DataType>     dt,
-    const std::string                  & directory,
-    std::shared_ptr<DataFormatSetting> dfs,
-    std::vector<Record>                & records) override;
 
-  /** Encode a DataType for writing */
-  static std::string
-  writeNetcdfDataType(std::shared_ptr<DataType> dt,
-    const std::string                           & dir,
-    std::shared_ptr<DataFormatSetting>          dfs,
-    std::vector<Record>                         & records);
+  /*
+   * static std::string
+   * writeNetcdfDataType(std::shared_ptr<DataType> dt,
+   *  const std::string                           & dir,
+   *  std::shared_ptr<DataFormatSetting>          dfs,
+   *  std::vector<Record>                         & records);
+   */
 
   /** Current compression level of netcdf files */
   static void

@@ -113,7 +113,7 @@ FMLIndex::initialRead(bool realtime)
 bool
 FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 {
-  auto doc = IOXML::readURL(filename);
+  auto doc = IODataType::read<XMLData>(filename);
 
   auto tree = doc->getTree();
 
