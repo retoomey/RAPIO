@@ -9,11 +9,14 @@
 
 using namespace rapio;
 
+/** Default constant for a web polling index */
+const std::string WebIndex::WEBINDEX = "iweb";
+
 void
 WebIndex::introduceSelf()
 {
   std::shared_ptr<IndexType> newOne = std::make_shared<WebIndex>();
-  IOIndex::introduce("webindex", newOne);
+  IOIndex::introduce(WEBINDEX, newOne);
 }
 
 WebIndex::WebIndex(const URL                        & url,
@@ -178,6 +181,7 @@ WebIndex::readRemoteRecords()
 
 std::shared_ptr<IndexType>
 WebIndex::createIndexType(
+  const std::string                            & protocol,
   const URL                                    & location,
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)

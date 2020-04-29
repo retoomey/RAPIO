@@ -467,7 +467,23 @@ RAPIOAlgorithm::addIndex(const std::string & index,
   LogDebug("Adding source index url '" << index << "'\n");
 
   indexInputInfo info;
-  info.indexURL       = index;
+
+  // For the new xml=/home/code_index.xml protocol passing
+  std::vector<std::string> pieces;
+  Strings::split(index, '=', &pieces);
+  const size_t aSize = pieces.size();
+  if (aSize == 1) {
+    info.protocol = "";
+    info.indexURL = pieces[0];
+  } else if (aSize == 2) {
+    info.protocol = pieces[0];
+    info.indexURL = pieces[1];
+  } else {
+    LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
+    exit(1);
+  }
+  // info.protocol       = "xml";
+  // info.indexURL       = index;
   info.maximumHistory = maximumHistory;
   myIndexInputInfo.push_back(info);
 }
@@ -624,11 +640,14 @@ RAPIOAlgorithm::execute()
     const indexInputInfo& i = myIndexInputInfo[p];
     std::shared_ptr<IndexType> in;
 
-    in = IOIndex::createIndex(i.indexURL, llist, i.maximumHistory);
-    myConnectedIndexes.push_back(in);        // Since we just create object now, should
-                                             // be good
-    myConnectedIndexes[p]->setIndexLabel(p); // Mark in order
-    const bool success = myConnectedIndexes[p]->initialRead(myRealtime);
+    bool success = false;
+    in = IOIndex::createIndex(i.protocol, i.indexURL, llist, i.maximumHistory);
+    if (in != nullptr) {
+      myConnectedIndexes.push_back(in);        // Since we just create object now, should
+                                               // be good
+      myConnectedIndexes[p]->setIndexLabel(p); // Mark in order
+      success = myConnectedIndexes[p]->initialRead(myRealtime);
+    }
     if (success) {
       count++;
 

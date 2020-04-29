@@ -10,11 +10,13 @@
 
 using namespace rapio;
 
+/** Default constant for a static XML index */
+const std::string XMLIndex::XMLINDEX = "ixml";
+
 XMLIndex::XMLIndex(const URL                        & xmlURL,
   const std::vector<std::shared_ptr<IndexListener> >& listeners,
   const TimeDuration                                & maximumHistory)
-  : IndexType(listeners, maximumHistory),
-  readok(false)
+  : IndexType(listeners, maximumHistory)
 {
   myURL = xmlURL;
 }
@@ -26,11 +28,12 @@ void
 XMLIndex::introduceSelf()
 {
   std::shared_ptr<IndexType> newOne = std::make_shared<XMLIndex>();
-  IOIndex::introduce("xml", newOne);
+  IOIndex::introduce(XMLINDEX, newOne);
 }
 
 std::shared_ptr<IndexType>
 XMLIndex::createIndexType(
+  const std::string                            & protocol,
   const URL                                    & location,
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
@@ -45,11 +48,6 @@ XMLIndex::createIndexType(
 bool
 XMLIndex::initialRead(bool realtime)
 {
-  LogSevere("Radial set single read/write test\n");
-  auto radialset1 = IODataType::read<DataType>("/tmp/test.netcdf");
-  IODataType::write(radialset1, "/tmp/test2.netcdf");
-  exit(1);
-
   auto doc2 = IODataType::read<XMLData>(myURL);
 
   if (doc2 != nullptr) {

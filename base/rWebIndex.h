@@ -12,6 +12,9 @@ namespace rapio {
 class WebIndex : public IndexType {
 public:
 
+  /** Default constant for a FAM index */
+  static const std::string WEBINDEX;
+
   WebIndex(){ }
 
   virtual
@@ -21,6 +24,7 @@ public:
 
   virtual std::shared_ptr<IndexType>
   createIndexType(
+    const std::string                            & protocol,
     const URL                                    & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
@@ -48,10 +52,6 @@ public:
   /** Read all xml records from a remote changing URL */
   virtual bool
   readRemoteRecords();
-
-  //  bool         isValid() const {
-  //    return (myReadOK);
-  //  }
 
 private:
 

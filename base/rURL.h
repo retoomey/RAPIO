@@ -8,14 +8,6 @@ namespace rapio {
 /**
  * A class for parsing, accessing, changing, and recombining a URL's components.
  *
- * <b>Compatability with RSS</b>\n
- * URLs can be instantiated from strings containing an rssd pseudo-URL\n
- * or code's deprecated protocol-plus-rssd-URL:
- * \li <b>tensor:/tmp/foo.txt</b> becomes <b>rssd://tensor/tmp/foo.txt</b>
- * \li <b>tensor:/tmp/foo.lb</b> becomes <b>lb://tensor/tmp/foo.lb</b>
- * \li <b>xmllb:tensor:/tmp/foo.lb</b> becomes
- *<b>orpg://tensor/tmp/foo.lb?protocol=xmllb</b>
- *
  * <b>Anatomy of a URL</b>\n
  * The URL
  *<tt>http://joe:blow@example.com:81/loc/script.php?var=val&foo=bar#here</tt>\n
@@ -33,7 +25,7 @@ namespace rapio {
  * @class URL
  */
 class URL : public Data {
-public:
+protected:
 
   /** The scheme of the url, such as ftp, http, file, or rssd. */
   std::string scheme;
@@ -43,6 +35,8 @@ public:
 
   /** Optional username.  Use if authentication is needed. */
   std::string pass;
+
+public:
 
   /** Hostname of the machine to be accessed.  An empty string or \p localhost
    * implies the file is local. */
@@ -76,9 +70,6 @@ public:
     *this = s;
   }
 
-  static URL
-  fromHostFileName(const std::string& host,
-    const std::string               & file);
   URL      &
   operator = (const std::string&);
   URL      &
@@ -102,6 +93,34 @@ public:
    */
   std::string
   toString() const;
+
+  /** Return the scheme part of URL, if any */
+  std::string
+  getScheme() const
+  {
+    return scheme;
+  }
+
+  /** Return the user part of URL, if any */
+  std::string
+  getUser() const
+  {
+    return user;
+  }
+
+  /** Return the password part of URL, if any */
+  std::string
+  getPassword() const
+  {
+    return pass;
+  }
+
+  /** Return the host part of URL, if any */
+  std::string
+  getHost() const
+  {
+    return host;
+  }
 
   /**
    * Gets path's basename.

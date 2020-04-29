@@ -1,5 +1,6 @@
 #include "rCompression.h"
 #include "rError.h"
+#include "rStrings.h"
 
 // BOOST compression
 #include <boost/iostreams/filtering_stream.hpp>
@@ -10,6 +11,14 @@
 #include <boost/iostreams/filter/lzma.hpp>  // .lzma files
 
 using namespace rapio;
+
+bool
+Compression::suffixRecognized(const std::string& suffix)
+{
+  auto s = Strings::makeLower(suffix);
+
+  return ((s == "gz") || (s == "bz2") || (s == "z") || (s == "lzma"));
+}
 
 // FIXME: might be able to group common code, but boost makes it difficult to
 // figure out common superclasses...looks like gzip_decompressor, bzip_decompressor,

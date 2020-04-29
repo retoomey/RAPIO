@@ -58,6 +58,18 @@ public:
     return (myLookup.count(name) != 0);
   }
 
+  /** Return list of factory.  smart ptrs, so not a copy */
+  static std::vector<std::shared_ptr<X> >
+  toList(std::vector<std::string>& names)
+  {
+    std::vector<std::shared_ptr<X> > myList;
+    for (auto ele: myLookup) {
+      names.push_back(ele.first);
+      myList.push_back(ele.second);
+    }
+    return myList;
+  }
+
   /**
    * This is meant to be used only by the class X,
    * which normally will be a base-class type.

@@ -8,32 +8,45 @@ namespace rapio {
  * Index that is meant to be used with the FAM protocol of notification.
  * This relies on an index directory that is monitored by libfam.
  *
+ * @author Robert Toomey
  */
 class FMLIndex : public IndexType {
 public:
 
-  // Factory
+  /** Default constant for a FAM index */
+  static const std::string FMLINDEX_FAM;
+
+  /** Default constant for a polling FML index */
+  static const std::string FMLINDEX_POLL;
+
   // ---------------------------------------------------------------------
+  // Factory
 
-  FMLIndex(){ }
+  /** Introduce ourselves to the index factories */
+  static void
+  introduceSelf();
 
-  /** Create a FMLIndex */
+  /** Create an individual FMLIndex to a particular location */
   virtual std::shared_ptr<IndexType>
   createIndexType(
+    const std::string                            & protocol,
     const URL                                    & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
 
-  FMLIndex(const URL                                  & index_directory_name,
+  /** Create a new empty FMLIndex, probably as main factory */
+  FMLIndex(){ }
+
+  /** Specialized constructor */
+  FMLIndex(
+    const std::string                                 & protocol,
+    const URL                                         & index_directory_name,
     const std::vector<std::shared_ptr<IndexListener> >& listeners,
     const TimeDuration                                & maximumHistory);
 
-  virtual
-  ~FMLIndex();
-
-  /** Do we want to process this file? */
-  bool
-  wantFile(const std::string& path);
+  /** Handle realtime vs. archive mode stuff */
+  virtual bool
+  initialRead(bool realtime) override;
 
   /** Handle a new file from a watcher.  We're allowed to do work here. */
   virtual void
@@ -43,36 +56,27 @@ public:
   virtual void
   handleUnmount(const std::string& dir) override;
 
+  /** Destroy a FMLIndex */
+  virtual
+  ~FMLIndex();
+
+protected:
+
+  /** Do we want to process this file? */
+  bool
+  wantFile(const std::string& path);
+
   /** The worker beast for turning a file into a record */
   bool
   fileToRecord(const std::string& filename, Record& rec);
 
-  /** Was thie FAM index sucessfully set up? */
-  bool
-  isValid() const
-  {
-    return (is_valid);
-  }
-
-  void
-  initialDirectory(const std::string& dirname);
-
-  /** Handle realtime vs. archive mode stuff */
-  virtual bool
-  initialRead(bool realtime) override;
-
-  static void
-  introduceSelf();
-
 private:
 
-  std::string indexPath;
-  bool is_valid;
+  /** Protocol used for polling the fml */
+  std::string myProtocol;
 
-  // not implemented
-  FMLIndex(const FMLIndex&);
-  FMLIndex&
-  operator = (const FMLIndex&);
+  /** Resolved index path to the polled location */
+  std::string myIndexPath;
 }
 ;
 }

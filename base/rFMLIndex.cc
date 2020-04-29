@@ -14,6 +14,12 @@
 
 using namespace rapio;
 
+/** Default constant for a FAM polling index */
+const std::string FMLIndex::FMLINDEX_FAM = "ifam";
+
+/** Default constant for a polling FML index */
+const std::string FMLIndex::FMLINDEX_POLL = "ipoll";
+
 FMLIndex::~FMLIndex()
 {
   /* Already destroyed.  Need a clean up exit caller
@@ -24,12 +30,14 @@ FMLIndex::~FMLIndex()
    */
 }
 
-FMLIndex::FMLIndex(const URL                        & url,
+FMLIndex::FMLIndex(
+  const std::string                                 & protocol,
+  const URL                                         & url,
   const std::vector<std::shared_ptr<IndexListener> >& listeners,
   const TimeDuration                                & maximumHistory) :
   IndexType(listeners, maximumHistory),
-  indexPath(IOIndex::getIndexPath(url)),
-  is_valid(false)
+  myProtocol(protocol),
+  myIndexPath(IOIndex::getIndexPath(url))
 {
   myURL = url; // duplicated?
 }
@@ -100,7 +108,15 @@ FMLIndex::initialRead(bool realtime)
   //
   if (realtime) {
     // Connect to FAM, we'll get notified of new files
-    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher("fam");
+    std::string poll = "fam";
+    if (myProtocol == FMLIndex::FMLINDEX_FAM) {
+      poll = "fam";
+    } else if (myProtocol == FMLINDEX_POLL) {
+      poll = "dir"; // FIXME: Still magic string here
+    } else {
+      LogSevere("FML index doesn't recognize polling protocol '" << myProtocol << "', trying inotify\n");
+    }
+    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(poll);
     bool ok = watcher->attach(loc, this);
     // watcher->attach("/home/dyolf/FAM2/", this);
     // watcher->attach("/home/dyolf/FAM3/", this);
@@ -113,8 +129,13 @@ FMLIndex::initialRead(bool realtime)
 bool
 FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 {
-  auto doc = IODataType::read<XMLData>(filename);
+  // For now, tell .fml to be parsed as xml builder
+  auto doc = IODataType::read<XMLData>(filename, "xml");
 
+  if (doc == nullptr) {
+    LogSevere("Unable to parse " << filename << "\n");
+    return false;
+  }
   auto tree = doc->getTree();
 
   /*
@@ -123,7 +144,7 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
    */
   try{
     auto item = tree->getChild("item");
-    return (rec.readXML(item.node, indexPath, getIndexLabel()));
+    return (rec.readXML(item.node, myIndexPath, getIndexLabel()));
   }catch (std::exception& e) {
     LogSevere("Missing item tag in FML record\n");
   }
@@ -156,17 +177,23 @@ FMLIndex::introduceSelf()
 {
   // input FAM ingestor
   std::shared_ptr<IndexType> newOne = std::make_shared<FMLIndex>();
-  IOIndex::introduce("fml", newOne);
+  // Handle a fml index getting stuff from fam
+  IOIndex::introduce(FMLINDEX_FAM, newOne);
+  // Handle a fml index getting stuff from a directory poll
+  IOIndex::introduce(FMLINDEX_POLL, newOne);
 }
 
 std::shared_ptr<IndexType>
 FMLIndex::createIndexType(
+  const std::string                            & protocol,
   const URL                                    & location,
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<FMLIndex> result = std::make_shared<FMLIndex>(location,
-      listeners,
-      maximumHistory);
+  std::shared_ptr<FMLIndex> result = std::make_shared<FMLIndex>(
+    protocol,
+    location,
+    listeners,
+    maximumHistory);
   return (result); // Factory handles isValid now...
 }

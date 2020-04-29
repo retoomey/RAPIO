@@ -5,6 +5,7 @@
 #include "rStrings.h"
 #include "rOS.h"
 #include "rConfigDirectoryMapping.h"
+#include "rCompression.h"
 
 // Index ability classes
 #include "rXMLIndex.h"
@@ -35,40 +36,35 @@ IOIndex::~IOIndex()
 { }
 
 std::shared_ptr<IndexType>
-IOIndex::createIndex(const URL            & url,
+IOIndex::createIndex(
+  const std::string                       & protocolin,
+  const URL                               & url,
   vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                      & maximumHistory)
 {
-  // This protocol check is typically for type based on file ending,
-  // such as netcdf, xml, etc.
-  std::string protocol = url.getQuery("protocol");
-
-  if (protocol.empty() || (protocol == "auto")) {
-    std::string suffix = url.getSuffixLC();
-
-    if ((suffix == "gz") || (suffix == "bz2")) {
-      URL tmp(url);
-      tmp.removeSuffix();                   // removes the gz
-      tmp.path.resize(tmp.path.size() - 1); /// removes the dot
-      suffix = tmp.getSuffixLC();
-    }
-
-    if (suffix == "lb") {
-      protocol = "xmllb";
-    } else {
-      protocol = suffix;
-    }
-
-    // LogInfo("Using protocol=" << protocol << " based on suffix=" << suffix <<
-    // "\n");
-  }
-
-  // We macro machine names to our nssl vmrms data sources like so...
-  // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
+  // Look for a scheme for factory
   URL u = url;
 
+  std::string protocol = protocolin;
+
+  // ---------------------------------------------------------
+  // Legacy support for old style -i options:
+  //
+  // Web index:
+  //   "//vmrms-sr02/KTLX" and http://vmrms-webserv/vmrms-sr02?source=KTLX
+  // XML index (no protocol, ends with .xml):
+  //   //code_index.xml
+  // FML index using FAM (no protocol, ends with fam):
+  //   //path/something.fam
+
+  if (!url.getQuery("source").empty()) {
+    protocol = WebIndex::WEBINDEX;
+  }
+
   if (protocol.empty()) {
-    if (url.host == "") {
+    // We macro machine names to our nssl vmrms data sources like so...
+    // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
+    if (url.getHost() == "") {
       std::string p = url.path;
 
       if (p.size() > 1) {
@@ -85,34 +81,41 @@ IOIndex::createIndex(const URL            & url,
             LogInfo("Web macro source sent to " << expanded << "\n");
             u = URL(expanded);
           }
+          protocol = WebIndex::WEBINDEX;
         }
       }
     }
-
-    // Go ahead and try a webindex protocol
-    // This avoids needing '&protocol=webindex' on all our web served source
-    // strings.
-    protocol = "webindex";
   }
 
-  if (u.path.empty() || protocol.empty()) {
-    LogSevere("Unable to get protocol out of " << u << "\n");
-    return (0);
+  // If still empty, Look at suffix for legacy fam/xml
+  if (protocol.empty()) {
+    std::string suffix = url.getSuffixLC();
+    if (suffix == "fam") {
+      protocol = FMLIndex::FMLINDEX_FAM;
+    } else if (suffix == "xml") {
+      protocol = XMLIndex::XMLINDEX;
+    } else if (Compression::suffixRecognized(suffix)) {
+      URL tmp(url);
+      tmp.removeSuffix();                   // removes the suffix
+      tmp.path.resize(tmp.path.size() - 1); /// removes the dot
+      suffix = tmp.getSuffixLC();
+      if (suffix == "xml") {
+        protocol = XMLIndex::XMLINDEX;
+      }
+    }
   }
 
-  // use protocol and device to get the index.
-  if (protocol == "fam") { protocol = "fml"; } // Because it's NOT fam, it's fml files
-  std::shared_ptr<IndexType> factory = Factory<IndexType>::get(protocol,
-      "Index protocol");
-
-  if (factory == nullptr) {
-    return (0);
+  if (protocol.empty()) {
+    LogSevere("Unable to guess schema from '" << url << "'\n");
+  } else {
+    // use protocol and device to get the index.
+    std::shared_ptr<IndexType> factory = Factory<IndexType>::get(protocol,
+        "Index protocol");
+    if (factory != nullptr) {
+      return (factory->createIndexType(protocol, u, listeners, maximumHistory));
+    }
   }
-
-  std::shared_ptr<IndexType> newindex = factory->createIndexType(
-    u, listeners, maximumHistory);
-
-  return (newindex);
+  return (nullptr);
 } // IOIndex::createIndex
 
 /**

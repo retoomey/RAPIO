@@ -52,6 +52,7 @@ public:
   /** Store database of index information before creation */
   class indexInputInfo : public Algorithm {
 public:
+    std::string protocol;
     std::string indexURL;
     TimeDuration maximumHistory;
   };

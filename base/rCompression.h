@@ -17,6 +17,10 @@ public:
   // -----------------------------------------------------------
   // Decompression routines.
 
+  /** Is suffix one of our supported file endings? */
+  static bool
+  suffixRecognized(const std::string& suffix);
+
   // FIXME: Could introduce a class here to 'add' compression ability, but
   // currently probably overkill
 

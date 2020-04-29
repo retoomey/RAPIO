@@ -36,6 +36,7 @@ public:
    *  create a brand-new object.  */
   virtual std::shared_ptr<IndexType>
   createIndexType(
+    const std::string                            & protocol,
     const URL                                    & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) = 0;

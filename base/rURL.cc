@@ -130,20 +130,6 @@ URL::operator += (const std::string& s)
   return (*this);
 }
 
-// static
-URL
-URL::fromHostFileName(const std::string& h, const std::string& p)
-{
-  URL result;
-
-  if (h.empty()) { result.scheme = "file"; } else {
-    result.scheme = "orpg"; // remote file
-    result.host   = h;
-  }
-  result.path = p;
-  return (result);
-}
-
 URL&
 URL::operator = (const std::string& s)
 {
@@ -161,28 +147,13 @@ URL::operator = (const std::string& s)
     parseURL(s, scheme, user, pass, host, port, path, query, fragment);
   } else if (isalpha(s[0]) && (s[1] == ':') && ((s[2] == '\\') || (s[2] == '/'))) {
     parseAfterHost(s, path, query, fragment);
-  } else if (s.find(":/") != s.npos) { // this is orpginfr format
-    scheme = "orpg";
-    auto w = s;
-    auto p = w.find(":/");
-    host = w.substr(0, p);
-    w    = p == npos ? "" : w.substr(p + 1);
-
-    parseAfterHost(w, path, query, fragment);
-
-    p = host.find(":");
-
-    if (p != npos) { // xmllb:tensor:/ ...
-      query["protocol"] = host.substr(0, p);
-      host = host.substr(p + 1);
-    }
   } else if (s[0] == '/') { // this is a local file format in Unix
     parseAfterHost(s, path, query, fragment);
   } else { // treat it as a file with a relative path...
     *this = OS::getCurrentDirectory() + "/" + s;
   }
 
-  if (((host == "xmllb") || (host == "xml") || (host == "webindex")) &&
+  if (((host == "xml") || (host == "webindex")) &&
     !query.count("protocol")) { std::swap(host, query["protocol"]); }
 
   //  LogDebug ("Parsed \"" << s << "\" to " << toString() << '\n');
@@ -208,7 +179,7 @@ URL::toString() const
       }
       s += host;
 
-      if ((scheme != "orpg") && (port != 0) && (port != defaultPort(scheme))) {
+      if ((port != 0) && (port != defaultPort(scheme))) {
         char buf[32];
         snprintf(buf, sizeof(buf), ":%d", port);
         s += buf;
@@ -331,7 +302,6 @@ URL::isLocal() const
 
   std::string hostname;
 
-  // if (OS::getHostName(&hostname, 0) && (hostname == host)) { return (true); }
   if (OS::getHostName() == host) { return (true); }
 
   return (false);

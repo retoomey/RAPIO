@@ -5,31 +5,19 @@
 
 namespace rapio {
 /**
- * The XMLIndex class implements the Index interface by obtaining
- * all the needed information from a XML file that follows certain
- * conventions. See the documentation for the method constructRecord
- * for the XML format. The XML file itself has this format:
- * <pre>
- *   <codeindex>
- *     <item> ... </item>
- *     .
- *     .
- *     .
- *     <item> ... </item>
- *   </codeindex>
- * </pre>
- * with each of the item tags corresponding to an Record.
+ * The XMLIndex has a static file of index records,
+ * used for an ordered archived dataset
  *
- * @see constructRecord
+ * @author Robert Toomey
  */
 class XMLIndex : public IndexType {
 public:
 
-  // Factory
-  // ---------------------------------------------------------------------
+  /** Default constant for a static XML index */
+  static const std::string XMLINDEX;
 
-  /** Empty for factory */
-  XMLIndex(){ }
+  // ---------------------------------------------------------------------
+  // Factory
 
   /** Introduce to index builder */
   static void
@@ -38,19 +26,15 @@ public:
   /** Create a XML index */
   virtual std::shared_ptr<IndexType>
   createIndexType(
+    const std::string                            & protocol,
     const URL                                    & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
 
-  /**
-   * Parse the given XML file for the information.
-   *
-   * This will ensure that all the records are added.
-   * Hence, this index will become searchable.
-   *
-   * @param xmlFile the file to parse
-   * @param baseClass (optional) -- use for simulations, etc.
-   */
+  /** Create a new empty XMLIndex, probably as main factory */
+  XMLIndex(){ }
+
+  /** Create an individual XMLIndex to a particular location */
   XMLIndex(const URL                                  & xmlFile,
     const std::vector<std::shared_ptr<IndexListener> >& listeners,
     const TimeDuration                                & maximumHistory);
@@ -59,19 +43,8 @@ public:
   virtual bool
   initialRead(bool realtime) override;
 
+  /** Destory an XML index */
   virtual
   ~XMLIndex();
-
-  bool
-  isValid() const
-  {
-    return (readok);
-  }
-
-public:
-
-  /** Extract out of this param element, placing the stuff into params.
-   *  If necessary use the previous params in the vector. */
-  bool readok;
 };
 }
