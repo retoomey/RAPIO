@@ -105,24 +105,23 @@ WebIndex::readRemoteRecords()
   // XMLIndex's ctor, plus a new "lastRead" attribute in the toplevel.
   // The lastRead needs to be kept for next time to give the server a
   // point of reference of what "new" means for us.
-  auto doc = IODataType::read<XMLData>(tmpURL);
+  LogInfo("Web:" << tmpURL << "\n");
+  auto doc = IODataType::read<XMLData>(tmpURL, "xml");
 
   myReadOK = (doc != nullptr);
 
   if (myReadOK) {
-    // GOOPXML
-    // FIXME: test somewhere with w2server access make sure the XML
-    // ported properly
-    #if 0
-    auto rectest = doc->get_child_optional("records");
-    if (rectest == boost::none) {
+    auto tree    = doc->getTree();
+    auto rectest = tree->getChildOptional("records");
+    if (rectest == nullptr) {
       LogSevere("Couldn't read records tag from webindex xml return\n");
       return false;
     }
 
-    auto recs = rectest.get();
-    const long long lastRead = recs.get("<xmlattr>.lastRead", (long long) (-1));
-    const long lastReadNS    = recs.get("<xmlattr>.lastReadNS", (long) (0));
+    // FIXME: xmlattr is BOOST only..we'll wrap it better
+    const auto rectag        = rectest->getChild("<xmlattr>");
+    const long long lastRead = rectag.get("lastRead", (long long) (-1));
+    const long lastReadNS    = rectag.get("lastReadNS", (long) (0));
 
     if (lastRead >= 0) {
       // W2Server returns AT the time or greater...so when no new data comes
@@ -148,15 +147,14 @@ WebIndex::readRemoteRecords()
       if (myFoundNew) {
         const std::string indexPath = indexDataPath.toString();
         size_t count = 0;
-        for (auto r: recs) {       // Can boost get first child?
-          if (r.first == "item") { // do we need to check? Safest but slower
-            // Note priority queue time sorts all initial indexes
-            Record rec;
-            if (rec.readXML(r.second, indexPath, getIndexLabel())) {
-              Record::theRecordQueue->addRecord(rec);
-            }
-            count++;
+        auto recs    = rectest->getChildren("item");
+        for (auto r: recs) { // Can boost get first child?
+          // Note priority queue time sorts all initial indexes
+          Record rec;
+          if (rec.readXML(r.node, indexPath, getIndexLabel())) {
+            Record::theRecordQueue->addRecord(rec);
           }
+          count++;
         }
 
         LogDebug("Polled: " << tmpURL << " New:(" << count
@@ -173,7 +171,6 @@ WebIndex::readRemoteRecords()
     } else {
       LogSevere("Unhandled lastRead=" << lastRead << '\n');
     }
-    #endif // if 0
   }
 
   return (myFoundNew);

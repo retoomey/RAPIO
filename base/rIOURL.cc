@@ -3,6 +3,7 @@
 #include "rFactory.h"
 #include "rCompression.h"
 #include "rError.h"
+#include "rStrings.h"
 
 #include <curl/curl.h>
 #include <fstream>
@@ -82,7 +83,10 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
     }
 
     // Read file with curl
-    std::string urls = url.toString();
+    URL urlb = url;
+    Strings::replace(urlb.path, "//", "/");
+
+    std::string urls = urlb.toString();
     CURLcode ret     = curl_easy_setopt(
       myCurlConnection->connection(), CURLOPT_URL, urls.c_str());
 

@@ -61,16 +61,18 @@ public:
   }
 
   /** Read child of node */
-  XMLNode
+  std::shared_ptr<XMLNode>
   getChildOptional(const std::string& path)
   {
-    XMLNode child;
+    // XMLNode child;
     auto thing = node.get_child_optional(path);
 
     if (thing != boost::none) {
-      child.node = *thing;
+      std::shared_ptr<XMLNode> child = std::make_shared<XMLNode>();
+      child->node = *thing;
+      return child;
     }
-    return child;
+    return nullptr;
   }
 
   /** BOOST is a dom so we just copy into our wrapper.

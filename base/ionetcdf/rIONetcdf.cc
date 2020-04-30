@@ -78,7 +78,14 @@ IONetcdf::readNetcdfDataType(const URL& url)
   if (!buf.empty()) {
     // Open netcdf directly from buffer memory
     int retval, ncid;
-    const auto name = url.toString();
+    // nc_open_mem looks like it actually tries to read URLS directly
+    // now...lol, this caused a massively confusing bug of double http server logs
+    // and the 'second' url was misencoded as well.
+    // const auto name = url.toString();
+    // Trying to keep names fairly unique, not sure if it matters
+    static size_t counter  = 1;
+    const std::string name = "netcdf-" + std::to_string(OS::getProcessID()) + std::to_string(counter) + ".nc";
+    if (counter++ > 1000000000) { counter = 1; }
     retval = nc_open_mem(name.c_str(), 0, buf.size(), &buf[0], &ncid);
 
     if (retval == NC_NOERR) {
