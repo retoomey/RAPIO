@@ -4,8 +4,8 @@
 # Robert Toomey April 2020
 #
 
-AC_INIT([RAPIO], [1.0])
-AC_CONFIG_SRCDIR(base/rRAPIOAlgorithm.cc)
+AC_INIT([RAPIOBASE], [1.0])
+AC_CONFIG_SRCDIR(rRAPIOAlgorithm.cc)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -39,13 +39,12 @@ AC_TYPE_SIZE_T
 AC_SUBST(ac_aux_dir)
 
 AC_CONFIG_FILES([
- Makefile
- rexample/Makefile
- PYTHON/Makefile]
+ Makefile]
 )
   
 AC_CONFIG_SUBDIRS([
-  base]
+  ionetcdf
+  iogrib]
 )
   
 AC_OUTPUT

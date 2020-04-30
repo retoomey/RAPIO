@@ -147,3 +147,8 @@ pkginclude_HEADERS =\
   rTestIndex.h\
   rNamedAny.h
 
+SUBDIRS     =\
+  ionetcdf\
+  iogrib
+
+MAINTAINERCLEANFILES  = Makefile.in aclocal.m4 configure
