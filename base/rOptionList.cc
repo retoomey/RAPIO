@@ -26,6 +26,22 @@ OptionList::replaceMacros(const std::string& original)
   return (newString);
 }
 
+void
+OptionList::addOption(const Option& o)
+{
+  const std::string opt = o.opt;
+
+  optionMap[opt] = o;
+
+  if (opt.length() > max_arg_width) {
+    max_arg_width = opt.length();
+  }
+
+  if (o.name.length() > max_name_width) {
+    max_name_width = o.name.length();
+  }
+}
+
 Option *
 OptionList::makeOption(
   bool             required,
@@ -78,15 +94,8 @@ OptionList::makeOption(
   o.parsed       = false;
   o.suboptionmax = 0;
 
-  optionMap[opt] = o;
+  addOption(o);
 
-  if (opt.length() > max_arg_width) {
-    max_arg_width = opt.length();
-  }
-
-  if (name.length() > max_name_width) {
-    max_name_width = name.length();
-  }
   return (&optionMap[opt]);
 } // OptionList::makeOption
 
@@ -156,7 +165,7 @@ OptionList::isParsed(const std::string& key)
 }
 
 void
-OptionList::storeParsedArg(const std::string& arg, const std::string& value)
+OptionList::storeParsedArg(const std::string& arg, const std::string& value, const bool enforceStrict)
 {
   // Store the option...
   Option * o = getOption(arg);
@@ -194,9 +203,14 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value)
     o.required = false;
     o.boolean  = false;
     o.system   = false;
-    o.enforceSuboptions  = false;
-    o.suboptionmax       = 0;
-    unusedOptionMap[arg] = o;
+    o.enforceSuboptions = false;
+    o.suboptionmax      = 0;
+
+    if (enforceStrict) {
+      unusedOptionMap[arg] = o;
+    } else {
+      addOption(o);
+    }
   }
 } // OptionList::storeParsedArg
 

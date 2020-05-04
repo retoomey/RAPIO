@@ -107,11 +107,16 @@ public:
   /** Store a parsed argument value, from XML or command line */
   void
   storeParsedArg(const std::string& name,
-    const std::string             & value);
+    const std::string             & value,
+    const bool                    enforceStrict = true);
 
   /** Replace all macros within a string */
   std::string
   replaceMacros(const std::string& original);
+
+  /** Force add given option to map */
+  void
+  addOption(const Option& o);
 
   /** Make an option */
   Option *

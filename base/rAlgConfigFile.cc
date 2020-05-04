@@ -73,20 +73,19 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
 
   try{
     if (conf != nullptr) {
-      /* GOOPXML
-       *    for (auto r: conf->get_child("w2algxml")) {
-       *      if (r.first == "option") {
-       *        const auto option = r.second.get("<xmlattr>.letter", "");
-       *        const auto value  = r.second.get("<xmlattr>.value", "");
-       *        if (!option.empty()) {
-       *          optionlist.push_back(option);
-       *          valuelist.push_back(value);
-       *        }
-       *      }
-       *    }
-       *    return true;
-       */
+      auto rootTree = conf->getTree()->getChild("w2algxml");
+      auto items    = rootTree.getChildren("option");
+      for (auto r: items) {
+        const auto l      = r.getChild("<xmlattr>");
+        const auto option = l.get("<xmlattr>.letter", std::string(""));
+        const auto value  = l.get("<xmlattr>.value", std::string(""));
+        if (!option.empty()) {
+          optionlist.push_back(option);
+          valuelist.push_back(value);
+        }
+      }
     }
+    return true;
   }catch (std::exception& e) {
     LogSevere("Error parsing XML from " << path << "\n");
     return false;

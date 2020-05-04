@@ -630,7 +630,8 @@ RAPIOOptions::readConfigFile(const std::string& string)
     for (size_t i = 0; i < options.size(); ++i) {
       if (allowInConfig(options[i])) {
         // LogDebug("STORING " << options[i] << " == " << values[i] << "\n");
-        storeParsedArg(options[i], values[i]);
+        // Don't enforce declaration with HMET files, there are too many options
+        storeParsedArg(options[i], values[i], false);
       } else {
         // LogDebug("**IGNORING*** " << options[i] << " == " << values[i] << "\n");
       }
