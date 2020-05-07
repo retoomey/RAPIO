@@ -38,7 +38,7 @@ public:
 
   /** One way to get 2D data, using key and level string like our HMET library */
   std::shared_ptr<RAPIO_2DF>
-  getFloat2D(const std::string& key, const std::string& levelstr);
+  getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y);
 
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */

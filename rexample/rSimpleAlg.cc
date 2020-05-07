@@ -100,7 +100,10 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
       // LogInfo("Reading dewpoint temperature from GRIB2...\n");
       // auto dpt_sfc_ext = grib2->get2DData("DPT", "2 m above ground");
       LogInfo("Reading upward longwave radiation product from GRIB2...\n");
-      auto uplwav_ext = grib2->getFloat2D("ULWRF", "surface");
+      size_t numX     = 0;
+      size_t numY     = 0;
+      auto uplwav_ext = grib2->getFloat2D("ULWRF", "surface", numX, numY);
+      LogInfo("Size back is " << numX << " by " << numY << "\n");
 
       if (uplwav_ext != nullptr) {
         auto& ref = *uplwav_ext;
@@ -119,7 +122,63 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
       } else {
         LogSevere("Couldn't read 2D data from grib2\n");
       }
-      return; // We can't write grib2 yet
+
+      // Create a completely NEW latlongrid for output in this case
+
+      // ------------------------------------------------
+      // ALPHA: Create projection lookup mapping
+
+      // Create a brand new LatLonGrid
+      float lat_spacing     = .01;
+      float lon_spacing     = .01;
+      const size_t num_lats = 3500; // 3500 conus
+      const size_t num_lons = 7000; // 7000 conus
+      auto llgridsp         = LatLonGrid::Create(
+        "ULWRF",
+        "dimensionless",         // wrong probably
+        LLH(55.0, -130.0, .500), // CONUS origin
+        Time::CurrentTime(),     // Now
+        lat_spacing,
+        lon_spacing,
+        num_lats, // X
+        num_lons  // Y
+        );
+
+      // ALPHA: For moment just make one without caching or anything.
+      // This is slow on first call, but we'd be able to cache in a
+      // real time situation.
+      // Also PROJ6 and up uses different strings
+      // But basically we'll 'declare' our projection somehow
+      Project * project = new ProjLibProject(
+        "+proj=lcc +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3",
+        // WDSSII default (probably doesn't even need to be parameter)
+        "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+        );
+      bool success = project->initialize();
+
+      LogInfo("Created projection:  " << success << "\n");
+      // Project from source project to output
+      project->toLatLonGrid(uplwav_ext, llgridsp);
+
+      /*
+       *    // General LatLonGrid fill test
+       *    // Get the 2D array from it.  FIXME: We should get x, y here I think.
+       *    // Users can't just 'add' new dimensions, only same size (Restricted DataGrid)
+       *    auto data2DF = llgridsp->getFloat2D("ULWRF");
+       *
+       *    float counter = 0;
+       *    for (size_t x = 0; x < num_lats; ++x) {
+       *      for (size_t y = 0; y < num_lons; ++y) {
+       *        (*data2DF)[x][y] = counter;
+       *        counter++;
+       *      }
+       *    }
+       */
+
+      // Write our LatLonGrid out.
+      // Typename will be replaced by -O filters
+      writeOutputProduct(llgridsp->getTypeName(), llgridsp);
+      return;
     }
 
     // Look for a radial set

@@ -19,4 +19,5 @@
 
 // Experimental AWS calls..
 #include <rAWS.h>
+#include <rProject.h>
 // #include <rCurlConnection.h>

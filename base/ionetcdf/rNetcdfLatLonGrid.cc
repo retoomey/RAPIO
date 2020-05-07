@@ -55,19 +55,16 @@ NetcdfLatLonGrid::getTestObject(
   float lat_spacing     = .05;
   float lon_spacing     = .05;
 
-  std::shared_ptr<LatLonGrid> llgridsp = std::make_shared<LatLonGrid>(
-    location, time,
+  auto llgridsp = LatLonGrid::Create(
+    "MergedReflectivityQC",
+    "MetersPerSecond",
+    location,
+    time,
     lat_spacing,
-    lon_spacing);
-  LatLonGrid& llgrid = *llgridsp;
-
-  // llgrid.resize(num_lats, num_lons, 7.0f);
-  llgrid.declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
-
-  llgrid.setTypeName("MergedReflectivityQC");
-
-  // RAPIO: Direct access into lat lon grid...
-  llgrid.setDataAttributeValue("Unit", "dimensionless", "MetersPerSecond");
+    lon_spacing,
+    num_lats,
+    num_lons,
+    7.0);
 
   return (llgridsp);
 }

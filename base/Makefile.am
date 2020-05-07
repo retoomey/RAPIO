@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I@prefix@/include
-AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 -DBOOST_LOG_DYN_LINK
+AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 -DBOOST_LOG_DYN_LINK -lproj
 
 lib_LTLIBRARIES =\
   librapio.la
@@ -66,6 +66,7 @@ librapio_la_SOURCES =\
   rOptionList.cc\
   rAlgConfigFile.cc\
   rAWS.cc\
+  rProject.cc\
   rTest.cc\
   rTestTime.cc\
   rTestIndex.cc
@@ -143,6 +144,7 @@ pkginclude_HEADERS =\
   rUtility.h\
   rAlgConfigFile.h\
   rAWS.h\
+  rProject.h\
   rTestTime.h\
   rTestIndex.h\
   rNamedAny.h

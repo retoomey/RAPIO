@@ -15,24 +15,43 @@ LatLonGrid::LatLonGrid()
   // init(LLH(), Time::CurrentTime(), 1, 1);
 }
 
-LatLonGrid::LatLonGrid(
+std::shared_ptr<LatLonGrid>
+LatLonGrid::Create(
+  const std::string& TypeName,
+  const std::string& Units,
 
   // Projection information (metadata of the 2D)
-  const LLH   & location,
-  const Time  & time,
-  const float lat_spacing, // FIXME: stored as double
-  const float lon_spacing,
+  const LLH        & location,
+  const Time       & time,
+  const float      lat_spacing, // FIXME: stored as double
+  const float      lon_spacing,
 
   // Basically the 2D array and initial value
-  size_t      rows,
-  size_t      cols,
-  float       value
+  size_t           num_lats,
+  size_t           num_lons,
+  float            value
 )
 {
-  // Lookup for read/write factories
-  myDataType = "LatLonGrid";
+  auto llgridsp = std::make_shared<LatLonGrid>();
 
-  init(location, time, lat_spacing, lon_spacing);
+  if (llgridsp == nullptr) {
+    LogSevere("Couldn't create LatLonGrid\n");
+  } else {
+    // Initialize default band
+    LatLonGrid& llgrid = *llgridsp;
+    llgrid.init(location, time, lat_spacing, lon_spacing);
+    llgrid.setTypeName(TypeName);
+    llgrid.setDataAttributeValue("Unit", "dimensionless", Units);
+
+    llgrid.declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
+    // Old WDSS2 does this...FIXME: validate we're doing correctly
+    std::vector<size_t> dimindexes;
+    dimindexes.push_back(0);
+    dimindexes.push_back(1);
+
+    llgrid.addFloat2D(TypeName, Units, dimindexes);
+  }
+  return llgridsp;
 }
 
 /** Set what defines the lat lon grid in spacetime */

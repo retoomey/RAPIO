@@ -146,7 +146,7 @@ public:
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<RAPIO_2DF>
-  get2DData(std::vector<char>& b, size_t at, size_t fieldNumber);
+  get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y);
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>

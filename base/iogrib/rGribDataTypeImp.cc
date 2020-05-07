@@ -25,7 +25,7 @@ GribDataTypeImp::printCatalog()
 }
 
 std::shared_ptr<RAPIO_2DF>
-GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
+GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y)
 {
   // Humm has vs is...a better way?
   GribMatcher test(key, levelstr);
@@ -33,7 +33,7 @@ GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
   IOGrib::scanGribData(myBuf, &test);
   size_t at, fieldNumber;
   if (test.getMatch(at, fieldNumber)) {
-    return IOGrib::get2DData(myBuf, at, fieldNumber);
+    return IOGrib::get2DData(myBuf, at, fieldNumber, x, y);
   }
   return nullptr;
 }

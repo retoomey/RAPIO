@@ -537,7 +537,7 @@ IOGrib::toCatalog(gribfield * gfld,
 }
 
 std::shared_ptr<RAPIO_2DF>
-IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
+IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y)
 {
   // size_t aSize       = b.size();
   unsigned char * bu = (unsigned char *) (&b[0]);
@@ -546,7 +546,7 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
   int ierr         = g2_getfld(&bu[at], fieldNumber, 1, 1, &gfld);
 
   if (ierr == 0) {
-    LogSevere("UNPACK PASS WORKED?\n");
+    LogInfo("Grib2 field unpack successful\n");
   }
   const g2int * gds = gfld->igdtmpl;
   int tX      = gds[7]; // 31-34 Nx -- Number of points along the x-axis
@@ -554,7 +554,9 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber)
   size_t numX = (tX < 0) ? 0 : (size_t) (tX);
   size_t numY = (tY < 0) ? 0 : (size_t) (tY);
 
-  LogSevere("Grid size is " << numX << " * " << numY << "\n");
+  LogInfo("Grib2 2D field size " << numX << " * " << numY << "\n");
+  x = numX;
+  y = numY;
   g2float * g2grid = gfld->fld;
 
   std::shared_ptr<RAPIO_2DF> newOne = std::make_shared<RAPIO_2DF>(RAPIO_DIM2(numX, numY));

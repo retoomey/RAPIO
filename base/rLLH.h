@@ -60,7 +60,6 @@ public:
   }
 
   /** @return the height (const Length& as return type) */
-  // const Length& getHeight() const {
   const double&
   getHeightKM() const
   {

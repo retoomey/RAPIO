@@ -19,15 +19,30 @@ public:
    * factories */
   LatLonGrid();
 
+  /** Public API for users to create a single band LatLonGrid quickly */
+  static std::shared_ptr<LatLonGrid>
+  Create(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & northwest,
+    const Time       & gridtime,
+    float            lat_spacing,
+    float            lon_spacing,
+    size_t           num_lats,
+    size_t           num_lons,
+    float            value = Constants::MISSING_DATA);
+
   /** Create a lat lon grid object */
-  LatLonGrid(
-    const LLH&,
-    const Time&,
-    float  lat_spacing,
-    float  lon_spacing,
-    size_t rows = 0,
-    size_t cols = 0,
-    float  value = 0.0f);
+
+  /*  LatLonGrid(
+   *  const LLH&,
+   *  const Time&,
+   *  float  lat_spacing,
+   *  float  lon_spacing,
+   *  size_t rows = 0,
+   *  size_t cols = 0,
+   *  float  value = 0.0f);
+   */
 
   /** Post creation initialization (for testing automation)
    * Resize can change data size. */
