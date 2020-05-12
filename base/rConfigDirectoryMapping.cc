@@ -20,9 +20,8 @@ ConfigDirectoryMapping::readInSettings()
       auto maps = tree->getChildren("directoryMapping");
       for (const auto r: maps) {
         // Snag attributes
-        const auto l    = r.getChild("<xmlattr>");
-        const auto from = l.get("from", std::string(""));
-        const auto to   = l.get("to", std::string(""));
+        const auto from = r.getAttr("from", std::string(""));
+        const auto to   = r.getAttr("to", std::string(""));
       }
     }
   }catch (std::exception& e) {

@@ -17,8 +17,8 @@ IODataType::readDataType(const URL& path, const std::string& factory)
 {
   std::string f = factory;
   if (f == "") {
-    // Snag from end of filename...FIXME: to Strings probably
-    f = boost::filesystem::extension(path.toString());
+    // Snag from end of filename.
+    f = OS::getFileExtension(path.toString());
     Strings::removePrefix(f, ".");
     Strings::toLower(f);
   }

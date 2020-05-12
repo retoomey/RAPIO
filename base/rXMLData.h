@@ -15,11 +15,14 @@ namespace rapio {
 
 /** Node in a tree, hides implementation */
 class XMLNode : public Data {
-public:
+  friend class XMLData;
+
+protected:
 
   /** Stored in a node */
   boost::property_tree::ptree node;
 
+public:
   /** Get data from node.  Uses the BOOST style . path  */
   template <class Type>
   Type
@@ -28,12 +31,44 @@ public:
     return (node.get(path, value));
   }
 
+  /** Get tag from node. */
+  template <class Type>
+  Type
+  get(const Type & value) const
+  {
+    return (node.get_value<Type>());
+  }
+
+  /** Get attr from node, or default if missing */
+  template <class Type>
+  Type
+  getAttr(const std::string& attr, const Type & value) const
+  {
+    auto attrs = node.get_child_optional("<xmlattr>");
+
+    if (attrs != boost::none) {
+      return (attrs->get(attr, value));
+      // return (*attrs.get(attr, value));
+    }
+
+    return value;
+    // return (node.get("<xmlattr>", value));
+  }
+
   /** Put data into node.  Uses the BOOST style . path  */
   template <typename Type>
   void
   put(const std::string& path, const Type & value)
   {
     node.put(path, value);
+  }
+
+  /** Put data into attributes.*/
+  template <typename Type>
+  void
+  putAttr(const std::string& name, const Type & value)
+  {
+    node.put("<xmlattr>." + name, value);
   }
 
   /** Add a child to the node */

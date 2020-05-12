@@ -15,11 +15,14 @@ namespace rapio {
 
 /** Node in a tree, hides implementation */
 class JSONNode : public Data {
-public:
+  friend class JSONData;
+
+protected:
 
   /** Stored in a node */
   boost::property_tree::ptree node;
 
+public:
   /** Get data from node.  Uses the BOOST style . path  */
   template <class Type>
   Type

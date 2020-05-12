@@ -267,24 +267,34 @@ Record::readParams(const std::string & params,
 } // Record::readParams
 
 bool
-Record::readXML(const boost::property_tree::ptree& itemNode,
-  const std::string                              & indexPath,
-  size_t                                         indexLabel) // Not sure these should be passed
+Record::readXML(const XMLNode& item,
+  const std::string          & indexPath,
+  size_t                     indexLabel) // Not sure these should be passed
 {
-  // FIXME: debating this being a constructor.  Want the bool return though
+  // <item>
+  // <time fractional="0.057"> 925767275 </time>
+  // <params>netcdf /RADIALTEST Velocity 00.50 19990503-213435.netcdf </params>
+  // <selections>19990503-213435.057 Velocity 00.50 </selections>
+  // </item>
 
-  // Well boost makes this easier...
-  const auto fractional = itemNode.get("time.<xmlattr>.fractional", 0.0f); // what's quickest?
-  const auto timelong   = itemNode.get("time", 0l);
+  // Time tag
+  const auto time = item.getChild("time");
+  // or as const auto timelong   = item.get("time", 0l);
+  const auto timelong   = time.get(0l);
+  const auto fractional = time.getAttr("fractional", 1.0f);
 
   myTime = Time::SecondsSinceEpoch(timelong, fractional);
 
-  const auto params     = itemNode.get("params", "");
-  const auto changeAttr = itemNode.get("params.<xmlattr>.changes", "");
+  // Params tag
+  const auto paramTag   = item.getChild("params");
+  const auto params     = item.get("params", std::string("")); // direct
+  const auto changeAttr = paramTag.getAttr("changes", std::string(""));
+
   // Might be faster just to inline here
   readParams(params, changeAttr, myParams, indexPath);
 
-  const auto selections = itemNode.get("selections", ""); // what's quickest?
+  // Selections tag
+  const auto selections = item.get("selections", std::string(""));
   Strings::split(selections, &mySelections);
 
   if (myParams.empty() || mySelections.empty()) {

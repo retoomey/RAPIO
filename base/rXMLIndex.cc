@@ -68,8 +68,7 @@ XMLIndex::initialRead(bool realtime)
       for (auto r: items) {
         // Note priority queue time sorts all initial indexes
         Record rec;
-        // FIXME: still using boost
-        if (rec.readXML(r.node, indexPath, indexLabel)) {
+        if (rec.readXML(r, indexPath, indexLabel)) {
           Record::theRecordQueue->addRecord(rec);
         }
       }

@@ -201,6 +201,21 @@ RAPIOAlgorithm::getMaximumHistory()
 }
 
 void
+RAPIOAlgorithm::initializeBaseParsers()
+{
+  // We have to introduce the 'raw' builder types
+  // early since eveyrthing else will use them.
+  // More advanced stuff like netcdf, etc will be
+  // introduced later as system ramps up.
+  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
+  Factory<IODataType>::introduce("xml", xml);
+  Factory<IODataType>::introduce("W2ALGS", xml);
+
+  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
+  Factory<IODataType>::introduce("json", json);
+}
+
+void
 RAPIOAlgorithm::initializeBaseline()
 {
   // Typically algorithms are run in realtime for operations and
@@ -249,12 +264,6 @@ RAPIOAlgorithm::initializeBaseline()
     Factory<IODataType>::introduce("grib", dynamicGrib);
   }
 
-  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xml);
-  Factory<IODataType>::introduce("W2ALGS", xml);
-
-  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
-  Factory<IODataType>::introduce("json", json);
 
   // Everything should be registered, try initial start up
   Config::initialize();
@@ -298,6 +307,7 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 
     // 2. Parse step
     // Algorithm special read/write of options support, processing args
+    initializeBaseParsers(); // raw xml, json reading, etc.
     AlgConfigFile::introduceSelf();
     o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 

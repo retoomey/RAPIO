@@ -88,6 +88,10 @@ public:
   virtual void
   processInputParams(RAPIOOptions& o);
 
+  /** Initialize system wide base parsers */
+  virtual void
+  initializeBaseParsers();
+
   /** Initialize system wide setup */
   virtual void
   initializeBaseline();

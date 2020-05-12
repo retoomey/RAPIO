@@ -62,6 +62,10 @@ public:
   static std::string
   getUniqueTemporaryFile(const std::string& base = "wdssii");
 
+  /** Return file extension using OS ability */
+  static std::string
+  getFileExtension(const std::string& path);
+
   /**
    * Run a OS process
    */

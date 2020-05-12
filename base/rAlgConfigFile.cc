@@ -76,9 +76,8 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
       auto rootTree = conf->getTree()->getChild("w2algxml");
       auto items    = rootTree.getChildren("option");
       for (auto r: items) {
-        const auto l      = r.getChild("<xmlattr>");
-        const auto option = l.get("<xmlattr>.letter", std::string(""));
-        const auto value  = l.get("<xmlattr>.value", std::string(""));
+        const auto option = r.getAttr("letter", std::string(""));
+        const auto value  = r.getAttr("value", std::string(""));
         if (!option.empty()) {
           optionlist.push_back(option);
           valuelist.push_back(value);
@@ -87,7 +86,7 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
     }
     return true;
   }catch (std::exception& e) {
-    LogSevere("Error parsing XML from " << path << "\n");
+    LogSevere("Error parsing XML from " << path << ", " << e.what() << "\n");
     return false;
   }
   return false;
@@ -100,15 +99,19 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   std::vector<std::string>                & valuelist)
 {
   // Create document tree
-  std::shared_ptr<XMLData> tree = std::make_shared<XMLData>();
+  auto tree = std::make_shared<XMLData>();
   auto root = tree->getTree();
-  root->put("w2algxml.<xmlattr>.program", program);
+  XMLNode w2algxml;
+
+  w2algxml.putAttr("program", program);
+
   for (size_t i = 0; i < optionlist.size(); ++i) {
     XMLNode option;
-    option.put("<xmlattr>.letter", optionlist[i]);
-    option.put("<xmlattr>.value", valuelist[i]);
-    root->addNode("w2algxml.option", option);
+    option.putAttr("letter", optionlist[i]);
+    option.putAttr("value", valuelist[i]);
+    w2algxml.addNode("option", option);
   }
+  root->addNode("w2algxml", w2algxml);
 
   // Write document tree
   return (IODataType::write(tree, path));

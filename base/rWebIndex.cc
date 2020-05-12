@@ -117,11 +117,8 @@ WebIndex::readRemoteRecords()
       LogSevere("Couldn't read records tag from webindex xml return\n");
       return false;
     }
-
-    // FIXME: xmlattr is BOOST only..we'll wrap it better
-    const auto rectag        = rectest->getChild("<xmlattr>");
-    const long long lastRead = rectag.get("lastRead", (long long) (-1));
-    const long lastReadNS    = rectag.get("lastReadNS", (long) (0));
+    const long long lastRead = rectest->getAttr("lastRead", (long long) (-1));
+    const long lastReadNS    = rectest->getAttr("lastReadNS", (long) (0));
 
     if (lastRead >= 0) {
       // W2Server returns AT the time or greater...so when no new data comes
@@ -151,7 +148,7 @@ WebIndex::readRemoteRecords()
         for (auto r: recs) { // Can boost get first child?
           // Note priority queue time sorts all initial indexes
           Record rec;
-          if (rec.readXML(r.node, indexPath, getIndexLabel())) {
+          if (rec.readXML(r, indexPath, getIndexLabel())) {
             Record::theRecordQueue->addRecord(rec);
           }
           count++;

@@ -108,6 +108,12 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
   return full;
 }
 
+std::string
+OS::getFileExtension(const std::string& path)
+{
+  return (boost::filesystem::extension(path));
+}
+
 std::vector<std::string>
 OS::runProcess(const std::string& command)
 {
