@@ -78,7 +78,7 @@ void
 parseAfterScheme(const std::string& url,
   const std::string& scheme,
   std::string& user, std::string& pass,
-  std::string& host, int& port,
+  std::string& host, unsigned short& port,
   std::string& path,
   std::map<std::string, std::string>& query,
   std::string& fragment)
@@ -105,7 +105,7 @@ parseAfterScheme(const std::string& url,
 void
 parseURL(const std::string& url,
   std::string& scheme, std::string& user,
-  std::string& pass, std::string& host, int& port,
+  std::string& pass, std::string& host, unsigned short& port,
   std::string& path,
   std::map<std::string, std::string>& query,
   std::string& fragment)

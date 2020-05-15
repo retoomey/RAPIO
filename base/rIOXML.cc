@@ -52,7 +52,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
     }
   }catch (std::exception& e) {
     LogSevere("XML create error: "
-      << aURL.path << " " << e.what() << "\n");
+      << aURL.getPath() << " " << e.what() << "\n");
   }
   return successful;
 }

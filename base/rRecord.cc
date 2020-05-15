@@ -156,9 +156,11 @@ Record::getFileName(const std::vector<std::string>& params)
 
   loc = params[0];
 
+  std::string p = loc.getPath();
   for (size_t j = 1; j < tot_parts; ++j) {
-    loc.path += "/" + params[j];
+    p += "/" + params[j];
   }
+  loc.setPath(p);
 
   return (loc);
 }

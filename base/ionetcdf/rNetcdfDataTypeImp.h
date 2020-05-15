@@ -1,10 +1,10 @@
 #pragma once
 
 #include <rDataGrid.h>
-#include <rIONetcdf.h>
-
 #include <rTime.h>
 #include <rLLH.h>
+#include <rIONetcdf.h>
+#include <rNetcdfDataType.h>
 
 #include <memory>
 #include <string>
@@ -15,7 +15,7 @@ namespace rapio {
  * might not be a direct subclass.
  *
  * @author Robert Toomey */
-class NetcdfDataTypeImp : public DataGrid {
+class NetcdfDataTypeImp : public NetcdfDataType {
 public:
   NetcdfDataTypeImp(const std::vector<char>& buf) : myBuf(buf) // copy or move?
   {

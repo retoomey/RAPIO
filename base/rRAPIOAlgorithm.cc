@@ -600,7 +600,7 @@ RAPIOAlgorithm::setUpRecordNotifier()
   if (myNotifier == nullptr) {
     LogSevere("Notifier is not created.\n");
   } else {
-    myNotifierPath = myNotifier->getURL().path;
+    myNotifierPath = myNotifier->getURL().getPath();
   }
   LogInfo("Notifier path set to " << myNotifierPath << "\n");
 }
@@ -877,7 +877,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     std::string typeName = outputData->getTypeName(); // Old one...
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
-    // IODataType::writeData(outputData, myOutputDir, records);
     IODataType::write(outputData, myOutputDir, true, records, "netcdf");
 
     if (myNotifier != nullptr) {

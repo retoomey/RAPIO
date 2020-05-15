@@ -16,9 +16,9 @@ FMLRecordNotifier::setURL(URL at, URL datalocation)
 {
   // Default when given notify output location is empty
   if (at.empty()) {
-    myOutputDir = datalocation.path;
+    myOutputDir = datalocation.getPath();
   } else {
-    myOutputDir = at.path;
+    myOutputDir = at.getPath();
   }
 
   myIndexPath = IOIndex::getIndexPath(myOutputDir);

@@ -47,8 +47,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
   std::string f = factory;
   if (f == "") {
     // Doesn't work for directory right? Could skip this then
-    // Snag factory from end of filename...FIXME: to Strings probably
-    f = boost::filesystem::extension(path.toString());
+    f = OS::getFileExtension(path.toString());
     Strings::removePrefix(f, ".");
   }
   Strings::toLower(f);

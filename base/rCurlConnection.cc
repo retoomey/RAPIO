@@ -1,10 +1,15 @@
 #include "rCurlConnection.h"
 
 #include "rError.h"
+#include "rStrings.h"
 
 #include <curl/curl.h>
 
 using namespace rapio;
+
+bool CurlConnection::TRY_CURL  = true;
+bool CurlConnection::GOOD_CURL = false;
+std::shared_ptr<CurlConnection> CurlConnection::myCurlConnection;
 
 CurlConnection::CurlConnection()
 {
@@ -98,6 +103,58 @@ CurlConnection::lazyInit()
   myCurlInited = true;
   return (true);
 }
+
+int
+CurlConnection::read(const std::string& url, std::vector<char>& buf)
+{
+  // Lazy init of global curl
+
+  if (!GOOD_CURL) { // 99.999% skip
+    // Try to set up curl if we haven't tried
+    if (TRY_CURL) {
+      if (myCurlConnection == nullptr) {
+        myCurlConnection = std::make_shared<CurlConnection>();
+      }
+      if (!(myCurlConnection->isValid() && myCurlConnection->isInit())) {
+        LogInfo("Initializing curl for remote request ability...\n");
+
+        if (myCurlConnection->lazyInit()) {
+          LogInfo("...curl initialized.\n");
+          GOOD_CURL = true;
+        }
+      } else {
+        LogInfo("...curl failed to initialize.\n");
+        return (-1); // Curl failed :(
+      }
+      TRY_CURL = false; // Don't try again
+    } else {
+      LogSevere("Can't read remote URL without curl\n");
+      return (-1);
+    }
+  }
+
+  URL urlb      = url;
+  std::string p = urlb.getPath();
+  Strings::replace(p, "//", "/");
+  urlb.setPath(p);
+
+  std::string urls = urlb.toString();
+  CURLcode ret     = curl_easy_setopt(
+    CurlConnection::myCurlConnection->connection(), CURLOPT_URL, urls.c_str());
+
+  if (ret != 0) {
+    LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
+    return (-1);
+  }
+  curl_easy_setopt(CurlConnection::myCurlConnection->connection(), CURLOPT_WRITEDATA, &(buf));
+  ret = curl_easy_perform(CurlConnection::myCurlConnection->connection());
+
+  if (ret != 0) {
+    LogSevere("Reading " << url << " failed with err=" << ret << "\n");
+    return (-1);
+  }
+  return (buf.size());
+} // CurlConnection::read
 
 int
 CurlConnection::read1(const std::string& url, std::vector<char>& buf)

@@ -33,7 +33,7 @@ WebIndex::WebIndex(const URL                        & url,
   // We then add servlet relative path on the remote server
   // This keeps the datapath correct (what the user provided)
   // LogInfo("The provided path was: " << myURL.path << "\n");
-  myURL.path += "/webindex/getxml.do";
+  myURL.setPath(myURL.getPath() + "/webindex/getxml.do");
 
   // LogInfo("I've changed it to " << myURL.path << "\n");
   if (!myURL.hasQuery("source")) {
@@ -44,8 +44,8 @@ WebIndex::WebIndex(const URL                        & url,
   // the data comes via static links from the same server, but we need to append
   // the source
   std::string source = indexDataPath.getQuery("source");
-  indexDataPath.path = indexDataPath.path + '/' + source;
-  indexDataPath.query.clear();
+  indexDataPath.setPath(indexDataPath.getPath() + '/' + source);
+  indexDataPath.clearQuery();
 }
 
 WebIndex::~WebIndex()
@@ -63,7 +63,7 @@ WebIndex::initialRead(bool realtime)
 
     // The pulse poll that updates for realtime. Not needed for archive mode
     std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher("web");
-    bool ok = watcher->attach(myURL.path, this);
+    bool ok = watcher->attach(myURL.getPath(), this);
     if (!ok) { return false; }
   }
 
@@ -93,11 +93,10 @@ WebIndex::readRemoteRecords()
   URL tmpURL(myURL);
   char str[64], str2[64];
 
-  // std::snprintf (str, sizeof(str), "%ld", myLastRead);
   std::snprintf(str, sizeof(str), "%lld", myLastRead);
-  tmpURL.query["lastRead"] = str;
+  tmpURL.setQuery("lastRead", str);
   std::snprintf(str2, sizeof(str2), "%ld", myLastReadNS);
-  tmpURL.query["lastReadNS"] = str2;
+  tmpURL.setQuery("lastReadNS", str2);
 
   // ----------------------------------------------------------------------
   // Read the URL and parse the results.

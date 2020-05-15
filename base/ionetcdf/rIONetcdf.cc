@@ -246,11 +246,11 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   // FIXME: should speed test this...
   try {
-    NETCDF(nc_create(aURL.path.c_str(), NC_NETCDF4, &ncid));
+    NETCDF(nc_create(aURL.getPath().c_str(), NC_NETCDF4, &ncid));
   } catch (NetcdfException& ex) {
     nc_close(ncid);
     LogSevere("Netcdf create error: "
-      << aURL.path << " " << ex.getNetcdfStr() << "\n");
+      << aURL.getPath() << " " << ex.getNetcdfStr() << "\n");
     return false;
   }
 

@@ -65,7 +65,7 @@ IOIndex::createIndex(
     // We macro machine names to our nssl vmrms data sources like so...
     // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
     if (url.getHost() == "") {
-      std::string p = url.path;
+      std::string p = url.getPath();
 
       if (p.size() > 1) {
         if ((p[0] == '/') && (p[1] == '/')) {
@@ -96,9 +96,12 @@ IOIndex::createIndex(
       protocol = XMLIndex::XMLINDEX;
     } else if (Compression::suffixRecognized(suffix)) {
       URL tmp(url);
-      tmp.removeSuffix();                   // removes the suffix
-      tmp.path.resize(tmp.path.size() - 1); /// removes the dot
+      tmp.removeSuffix(); // removes the suffix
+      std::string p = tmp.getPath();
+      p.resize(p.size() - 1); /// removes the dot
+      tmp.setPath(p);
       suffix = tmp.getSuffixLC();
+
       if (suffix == "xml") {
         protocol = XMLIndex::XMLINDEX;
       }
@@ -133,26 +136,34 @@ IOIndex::getIndexPath(const URL& url_in)
 {
   URL url(url_in);
 
+  std::string p = url.getPath();
+
   // if no dir, use the current working directory
   if (url.getDirName().empty()) {
-    url.path = OS::getCurrentDirectory() + "/" + url.path;
+    p = OS::getCurrentDirectory() + "/" + p;
   }
 
   // strip out the filename...
-  url.path = url.getDirName();
+  p = url.getDirName();
 
   // if the url.query contains source=KVNX, add KVNX to path
   if (url.hasQuery("source")) {
-    url.path = url.path + '/' + url.getQuery("source");
+    p = p + '/' + url.getQuery("source");
   }
 
   // strip out the query...
-  url.query.clear();
+  url.clearQuery();
 
   // directory mapping can operate on both host and path...
-  if (!url.host.empty()) { ConfigDirectoryMapping::doDirectoryMapping(url.host); }
-  ConfigDirectoryMapping::doDirectoryMapping(url.path);
+  if (!url.getHost().empty()) {
+    std::string h = url.getHost();
+    ConfigDirectoryMapping::doDirectoryMapping(h);
+    url.setHost(h);
+  }
+  ConfigDirectoryMapping::doDirectoryMapping(p);
+
+  url.setPath(p);
 
   LogDebug("getIndexPath for [" << url_in << "] returns [" << url << "]\n");
   return (url.toString());
-}
+} // IOIndex::getIndexPath

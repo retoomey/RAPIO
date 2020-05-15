@@ -11,10 +11,6 @@
 using namespace rapio;
 using namespace std;
 
-bool IOURL::TRY_CURL  = true;
-bool IOURL::GOOD_CURL = false;
-std::shared_ptr<CurlConnection> IOURL::myCurlConnection;
-
 int
 IOURL::read(const URL& url, std::vector<char>& buf)
 {
@@ -59,53 +55,12 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
 {
   // Web ingest ------------------------------------------------------------
   if (url.isLocal() == false) {
-    if (!GOOD_CURL) { // 99.999% skip
-      // Try to set up curl if we haven't tried
-      if (TRY_CURL) {
-        if (myCurlConnection == nullptr) {
-          myCurlConnection = std::make_shared<CurlConnection>();
-        }
-        if (!(myCurlConnection->isValid() && myCurlConnection->isInit())) {
-          LogInfo("Remote URL.  Initializing curl for remote request ability...\n");
-
-          if (myCurlConnection->lazyInit()) {
-            LogInfo("...curl initialized\n");
-            GOOD_CURL = true;
-          }
-        } else {
-          return (-1); // Curl failed :(
-        }
-        TRY_CURL = false; // Don't try again
-      } else {
-        LogSevere("Can't read remote URL without curl\n");
-        return (-1);
-      }
-    }
-
-    // Read file with curl
-    URL urlb = url;
-    Strings::replace(urlb.path, "//", "/");
-
-    std::string urls = urlb.toString();
-    CURLcode ret     = curl_easy_setopt(
-      myCurlConnection->connection(), CURLOPT_URL, urls.c_str());
-
-    if (ret != 0) {
-      LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
-      return (-1);
-    }
-    curl_easy_setopt(myCurlConnection->connection(), CURLOPT_WRITEDATA, &(buf));
-    ret = curl_easy_perform(myCurlConnection->connection());
-
-    if (ret != 0) {
-      LogSevere("Reading " << url << " failed with err=" << ret << "\n");
-      return (-1);
-    }
+    // Use curl to pull it.
+    CurlConnection::read(url.toString(), buf);
   } else {
     // Local file ingest
     // ------------------------------------------------------------
-    // std::vector<char>& c = buf.data();
-    std::ifstream file(url.path);
+    std::ifstream file(url.getPath());
 
     if (file) {
       // Get size of file

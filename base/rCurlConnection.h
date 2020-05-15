@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <curl/curl.h>
 
@@ -38,6 +39,10 @@ public:
   bool
   lazyInit();
 
+  /** Static read using a global static shared curl connection */
+  static int
+  read(const std::string& url, std::vector<char>& buf);
+
   /** Static read once if able, return -1 on fail or size of buffer */
   static int
   read1(const std::string& url, std::vector<char>& buf);
@@ -63,5 +68,16 @@ private:
 
   /** Are we initialized? */
   bool myCurlInited;
+
+  // Global curl setup
+
+  /** Try to initialize curl on first call to a remote data file */
+  static bool TRY_CURL;
+
+  /** Set to true when curl initialization is successfull */
+  static bool GOOD_CURL;
+
+  /** A global shareable curl connection */
+  static std::shared_ptr<CurlConnection> myCurlConnection;
 };
 }

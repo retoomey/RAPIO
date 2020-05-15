@@ -73,7 +73,7 @@ FMLIndex::initialRead(bool realtime)
     LogSevere("Can't do an FML index off a remote URL at moment\n");
     return false;
   }
-  const std::string loc = myURL.path;
+  const std::string loc = myURL.getPath();
 
   // ---------------------------------------------------------
   // Archive

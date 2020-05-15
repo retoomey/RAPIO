@@ -5,7 +5,6 @@
 #include <rCurlConnection.h>
 
 #include <string>
-#include <rBuffer.h>
 #include <memory>
 
 namespace rapio {
@@ -25,7 +24,6 @@ public:
    */
   static int
   read(const URL      & url,
-    // Buffer      & buffer);
     std::vector<char> & buffer);
 
   /**
@@ -35,21 +33,9 @@ public:
    */
   static int
   readRaw(const URL   & url,
-    // Buffer         & b);
     std::vector<char> & buffer);
 
   /** Destroy a reader */
   virtual ~IOURL(){ }
-
-protected:
-
-  /** Try to initialize curl on first call to a remote data file */
-  static bool TRY_CURL;
-
-  /** Set to true when curl initialization is successfull */
-  static bool GOOD_CURL;
-
-  /** Keep a pointer to a Curl connection for remote URL access */
-  static std::shared_ptr<CurlConnection> myCurlConnection;
 };
 }

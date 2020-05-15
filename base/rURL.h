@@ -25,35 +25,6 @@ namespace rapio {
  * @class URL
  */
 class URL : public Data {
-protected:
-
-  /** The scheme of the url, such as ftp, http, file, or rssd. */
-  std::string scheme;
-
-  /** Optional username.  Use if authentication is needed. */
-  std::string user;
-
-  /** Optional username.  Use if authentication is needed. */
-  std::string pass;
-
-public:
-
-  /** Hostname of the machine to be accessed.  An empty string or \p localhost
-   * implies the file is local. */
-  std::string host;
-
-  /** The port to connect to host on. */
-  int port;
-
-  /** Path to the file, including directory and basename. */
-  std::string path;
-
-  /** Arguments to be passed along when accessing the URL */
-  std::map<std::string, std::string> query;
-
-  /** Sub-part of the URL to skip to.  Currently unused by WDSSII. */
-  std::string fragment;
-
 public:
 
   URL() : port(0){ }
@@ -72,8 +43,10 @@ public:
 
   URL      &
   operator = (const std::string&);
+
   URL      &
   operator = (const char * s);
+
   bool
   operator < (const URL& that) const
   {
@@ -82,8 +55,10 @@ public:
 
   bool
   operator == (const URL&) const;
+
   bool
   operator != (const URL&) const;
+
   URL       &
   operator += (const std::string& add);
 
@@ -122,6 +97,34 @@ public:
     return host;
   }
 
+  /** Return the port of URL */
+  unsigned short
+  getPort() const
+  {
+    return port;
+  }
+
+  /** Return the path part of URL, if any */
+  std::string
+  getPath() const
+  {
+    return path;
+  }
+
+  /** Force set the path of URL */
+  void
+  setPath(const std::string& p)
+  {
+    path = p;
+  }
+
+  /** Force set the host of URL */
+  void
+  setHost(const std::string& p)
+  {
+    host = p;
+  }
+
   /**
    * Gets path's basename.
    * For example, if path is \p /tmp/filename.txt.bz2, then \p filename.txt.bz2
@@ -140,11 +143,7 @@ public:
   std::string
   getDirName() const;
 
-  /**
-   * Returns path's suffix.
-   * For example, if path is \p /tmp/filename.txt.bz2, then \p bz2 will be
-   * returned.
-   */
+  /** Returns path's suffix.  */
   std::string
   getSuffix() const;
 
@@ -157,31 +156,45 @@ public:
   std::string
   getSuffixLC() const;
 
+  /** Get a query key */
   std::string
   getQuery(const std::string& key) const;
 
-  bool
-  hasQuery(const std::string& key) const
-  {
-    return (query.find(key) != query.end());
-  }
-
-  bool
-  empty() const;
-
-  bool
-  isLocal() const;
-
+  /** Set a query key to integer */
   void
   setQuery(const std::string& key,
     int                     val);
 
+  /** Set a query key to string */
   void
   setQuery(const std::string& key, const std::string& val)
   {
     query[key] = val;
   }
 
+  /** Clear all query items */
+  void
+  clearQuery()
+  {
+    query.clear();
+  }
+
+  /** Do we have this query key? */
+  bool
+  hasQuery(const std::string& key) const
+  {
+    return (query.find(key) != query.end());
+  }
+
+  /** Is this URL empty? */
+  bool
+  empty() const;
+
+  /** Is this URL a local file? */
+  bool
+  isLocal() const;
+
+  /** Remove suffix of the URL */
   void
   removeSuffix()
   {
@@ -191,5 +204,32 @@ public:
   friend std::ostream&
   operator << (std::ostream&,
     const rapio::URL&);
+
+protected:
+
+  /** The scheme of the url, such as ftp, http, file, or rssd. */
+  std::string scheme;
+
+  /** Optional username.  Use if authentication is needed. */
+  std::string user;
+
+  /** Optional username.  Use if authentication is needed. */
+  std::string pass;
+
+  /** Hostname of the machine to be accessed.  An empty string or \p localhost
+   * implies the file is local. */
+  std::string host;
+
+  /** The port to connect to host on. */
+  unsigned short port;
+
+  /** Path to the file, including directory and basename. */
+  std::string path;
+
+  /** Sub-part of the URL to skip to.  Currently unused by WDSSII. */
+  std::string fragment;
+
+  /** Arguments to be passed along when accessing the URL */
+  std::map<std::string, std::string> query;
 };
 }

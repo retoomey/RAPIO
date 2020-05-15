@@ -36,37 +36,41 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
 
   for (auto& i:mySearchPaths) {
     testMe = i;
+    std::string p = testMe.getPath();
+
     // We added a "/" in addSearchPath
     // testMe.path += "/" + relativePath;
-    testMe.path += relativePath;
+    p += relativePath;
 
     if (testMe.isLocal()) {
-      if (!::access(testMe.path.c_str(), R_OK)) {
+      if (!::access(p.c_str(), R_OK)) {
         // Read locally...
         found = true;
+        testMe.setPath(p);
         break;
       }
     } else {
       LogSevere("WEB READ?\n");
     }
+    testMe.setPath(p);
   }
 
   URL ret;
   if (found) {
     ret = testMe;
-    LogInfo(">>>Read:" << testMe.path << "\n");
+    LogInfo(">>>Read:" << testMe.getPath() << "\n");
   } else {
     LogDebug("WARNING! " << relativePath << " was not found.\n");
   }
 
   return (ret);
-}
+} // Config::getAbsoluteForRelative
 
 bool
 Config::addSearchPath(const URL& absolutePath)
 {
   const bool exists = absolutePath.isLocal() &&
-    OS::isDirectory(absolutePath.path);
+    OS::isDirectory(absolutePath.getPath());
 
   // Make sure there's a '/' on the end of every URL, for when we add relatives.
   std::string p = absolutePath.toString();
