@@ -128,8 +128,11 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
     params.push_back(suffix);
     params.push_back(dirpath);
     std::vector<std::string> fileparams;
-
     Strings::splitWithoutEnds(sfilepath, '/', &fileparams);
+    for (auto f:fileparams) {
+      params.push_back(f);
+    }
+
     // Create record selections
     std::vector<std::string> selections;
     selections.push_back(time_string);
@@ -137,9 +140,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
     if (!spec.empty()) {
       selections.push_back(spec);
     }
-    for (auto f:fileparams) {
-      params.push_back(f);
-    }
+
     Record rec(params, selections, rsTime);
     records.push_back(rec);
     return true;

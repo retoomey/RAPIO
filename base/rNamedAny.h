@@ -16,23 +16,16 @@ class Time;
 class TimeDuration;
 class LLH;
 
-/** Store a name to std::shared_ptr OR direct of anything pair.
+/** Store an any object possibly as smart ptr, etc.
+ *
  * @author Robert Toomey
  */
-class NamedAny : public Data
+class Any : public Data
 {
 public:
-  /** Create a named object */
-  NamedAny(const std::string& name) : myName(name)
+  /** Create an Any */
+  Any()
   { }
-
-  /** Get the name of this named any */
-  const std::string&
-  getName(){ return myName; }
-
-  /** Set the name of this named any */
-  void
-  setName(const std::string& s){ myName = s; }
 
   // -----------------------------------------
   // Store as a wrapped smart ptr
@@ -91,11 +84,32 @@ public:
 
 protected:
 
-  /** Name of this data */
-  std::string myName;
-
   /** We can store ANYTHING!!!!! */
   boost::any myData;
+};
+
+/** Store a name to std::shared_ptr OR direct of anything pair.
+ * @author Robert Toomey
+ */
+class NamedAny : public Any
+{
+public:
+  /** Create a named object */
+  NamedAny(const std::string& name) : myName(name)
+  { }
+
+  /** Get the name of this named any */
+  const std::string&
+  getName(){ return myName; }
+
+  /** Set the name of this named any */
+  void
+  setName(const std::string& s){ myName = s; }
+
+protected:
+
+  /** Name of this data */
+  std::string myName;
 };
 
 /** A mapping class for NamedAny objects*/

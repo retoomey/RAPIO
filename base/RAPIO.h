@@ -21,3 +21,4 @@
 #include <rAWS.h>
 #include <rProject.h>
 // #include <rCurlConnection.h>
+#include <rArray.h>

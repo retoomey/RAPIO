@@ -10,6 +10,7 @@ librapio_la_LIBADD =\
    -L@prefix@/lib -lboost_system
 
 librapio_la_SOURCES =\
+  rArray.cc\
   rRAPIOAlgorithm.cc\
   rRAPIOOptions.cc\
   rRAPIOData.cc\
@@ -73,6 +74,7 @@ librapio_la_SOURCES =\
 
 pkginclude_HEADERS =\
   RAPIO.h\
+  rArray.h\
   rRapio.h\
   rRAPIOAlgorithm.h\
   rRAPIOOptions.h\
