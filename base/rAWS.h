@@ -20,17 +20,8 @@ namespace rapio {
 class AWS : public Utility {
 public:
   // -----------------------------------------------
-  // Stupid simple we'll wrap aws cli calls.  The good
-  // thing is it will handle roles and STS for us,
-  // bad is that this way is slower than snails I'm sure.
-
-  // -----------------------------------------------
   // REST experimental interface stuff
   // Basically just translating the AWS python example given.
-
-  /** Do signing using SHA256 */
-  static std::string
-  sign(const std::string& key, const std::string& message);
 
   /** Do AWS4 REST signature */
   static std::string
@@ -39,14 +30,6 @@ public:
     const std::string& dateStamp,
     const std::string& regionName,
     const std::string& serviceName);
-
-  /** Sha256 of a string */
-  static std::string
-  sha256(const std::string str);
-
-  /** Hex digest of bytes */
-  static std::string
-  hexdigest(const std::string bytes);
 
   /** Test REST get method */
   static void

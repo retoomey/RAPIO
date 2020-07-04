@@ -19,6 +19,7 @@ librapio_la_SOURCES =\
   rEventTimer.cc\
   rEventLoop.cc\
   rCompression.cc\
+  rSecure.cc\
   rSignals.cc\
   rRecord.cc\
   rRecordQueue.cc\
@@ -97,6 +98,7 @@ pkginclude_HEADERS =\
   rWebIndex.h\
   rWebIndexWatcher.h\
   rDirWatcher.h\
+  rSecure.h\
   rSignals.h\
   rIOIndex.h\
   rIOURL.h\

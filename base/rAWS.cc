@@ -1,4 +1,5 @@
 #include "rAWS.h"
+#include "rSecure.h"
 
 #include "rError.h"
 #include "rTime.h"
@@ -13,34 +14,6 @@
 using namespace rapio;
 
 std::string
-AWS::sign(const std::string& key, const std::string& message)
-{
-  std::string out;
-  #ifdef EVP_MAX_MD_SIZE
-  // LogInfo("HMAC_SHA256 algorithm recursively applied for AWS4\n");
-  unsigned int result_len = -1;
-  unsigned char result[EVP_MAX_MD_SIZE];
-  // FIXME: Seems to be handling utf8 conversion...python did this
-  // explicitly.  How to check?
-  HMAC(EVP_sha256(),
-    key.c_str(), key.size(),
-    (const unsigned char *) message.c_str(), message.size(),
-    result, &result_len);
-
-  //  out = std::string(result);
-
-  for (size_t i = 0; i < result_len; i++) {
-    out += result[i];
-  }
-  // LogInfo("OUT:"<< out.size() << ", result: " << result_len << "\n");
-  // LogInfo("OUT:"<< out << std::endl);
-  #else // ifdef EVP_MAX_MD_SIZE
-  // FIXME: Complain?
-  #endif // ifdef EVP_MAX_MD_SIZE
-  return out;
-}
-
-std::string
 AWS::getSignatureKey(
   const std::string& key,
   const std::string& dateStamp,
@@ -48,43 +21,12 @@ AWS::getSignatureKey(
   const std::string& serviceName)
 {
   // FIXME: utf8 enforce?
-  const std::string kDate    = sign("AWS4" + key, dateStamp);
-  const std::string kRegion  = sign(kDate, regionName);
-  const std::string kService = sign(kRegion, serviceName);
-  const std::string kSigning = sign(kService, "aws4_request");
+  const std::string kDate    = Secure::sign("AWS4" + key, dateStamp);
+  const std::string kRegion  = Secure::sign(kDate, regionName);
+  const std::string kService = Secure::sign(kRegion, serviceName);
+  const std::string kSigning = Secure::sign(kService, "aws4_request");
 
   return kSigning;
-}
-
-std::string
-AWS::hexdigest(const std::string bytes)
-{
-  std::stringstream ss;
-  for (size_t i = 0; i < bytes.length(); i++) {
-    // Clip to unsigned char, this is why should be utf-8
-    unsigned char x = bytes[i] & 0xFF;
-    // ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned char)bytes[i];
-    ss << std::hex << std::setw(2) << std::setfill('0') << (int) x;
-  }
-  return ss.str();
-}
-
-std::string
-AWS::sha256(const std::string str)
-{
-  unsigned char hash[SHA256_DIGEST_LENGTH];
-  SHA256_CTX sha256;
-
-  SHA256_Init(&sha256);
-  SHA256_Update(&sha256, str.c_str(), str.size());
-  SHA256_Final(hash, &sha256);
-  std::stringstream ss;
-
-  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-    // ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-    ss << hash[i];
-  }
-  return ss.str();
 }
 
 void
@@ -140,7 +82,7 @@ AWS::test_REST_API_Get(
   // requests, the payload is an empty string ("").
 
   // std::string payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
-  const std::string payload_hash = hexdigest(sha256("")); // guessing here
+  const std::string payload_hash = Secure::hexdigest(Secure::sha256("")); // guessing here
   LogInfo("Payload_hash: " << payload_hash << "\n");
 
   // Step 7: Combine elements to create canonical request
@@ -156,8 +98,8 @@ AWS::test_REST_API_Get(
   LogInfo("ALGORITHM:" << algorithm << "\n");
   LogInfo("AMZDATE:" << amzdate << "\n");
   std::string string_to_sign = algorithm + "\n" + amzdate + "\n"
-    + credential_scope + "\n" + hexdigest(sha256(canonical_request));
-  std::string testcan = hexdigest(sha256(canonical_request));
+    + credential_scope + "\n" + Secure::hexdigest(Secure::sha256(canonical_request));
+  std::string testcan = Secure::hexdigest(Secure::sha256(canonical_request));
   LogInfo("CAN:" << testcan << "\n");
 
   // ************* TASK 3: CALCULATE THE SIGNATURE *************
@@ -178,7 +120,7 @@ AWS::test_REST_API_Get(
 
   // Sign the string_to_sign using the signing_key
   // signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'), hashlib.sha256).hexdigest()
-  std::string signature = hexdigest(sign(signing_key, string_to_sign));
+  std::string signature = Secure::hexdigest(Secure::sign(signing_key, string_to_sign));
   LogInfo("SIGN:" << signature << "\n");
 
   // ************* TASK 4: ADD SIGNING INFORMATION TO THE REQUEST *************

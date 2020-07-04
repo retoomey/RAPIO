@@ -21,6 +21,13 @@ public:
   virtual std::shared_ptr<DataType>
   createDataType(const URL& path) override;
 
+  /** Split an XML file that contains a <signed> signature
+   * tag at the end of the file into message and signature parts*/
+  static bool
+  splitSignedXMLFile(const std::string& signedxml,
+    std::string                       & outmsg,
+    std::string                       & outkey);
+
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
