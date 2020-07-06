@@ -41,7 +41,7 @@ public:
   };
 
   /** We store a vector of events */
-  class DirWatchEvent : public IO {
+  class DirWatchEvent : public WatchEvent {
 public:
 
     /** Create a Dir Event for notifying listeners */

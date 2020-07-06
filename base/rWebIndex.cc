@@ -19,15 +19,15 @@ WebIndex::introduceSelf()
   IOIndex::introduce(WEBINDEX, newOne);
 }
 
-WebIndex::WebIndex(const URL                        & url,
+WebIndex::WebIndex(const URL                        & aURL,
   const std::vector<std::shared_ptr<IndexListener> >& listeners,
   const TimeDuration                                & maximumHistory) :
   IndexType(listeners, maximumHistory),
-  myURL(url),
   myLastRead(0),
   myLastReadNS(0),
   myReadOK(false),
-  indexDataPath(url)
+  myURL(aURL),
+  indexDataPath(aURL)
 {
   // The user needs to give us http://venus:8080/?source=KABR
   // We then add servlet relative path on the remote server
@@ -175,11 +175,11 @@ WebIndex::readRemoteRecords()
 std::shared_ptr<IndexType>
 WebIndex::createIndexType(
   const std::string                            & protocol,
-  const URL                                    & location,
+  const std::string                            & indexparams,
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<WebIndex> result = std::make_shared<WebIndex>(location,
+  std::shared_ptr<WebIndex> result = std::make_shared<WebIndex>(URL(indexparams),
       listeners,
       maximumHistory);
   return (result);

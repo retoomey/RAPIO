@@ -37,27 +37,13 @@ public:
   virtual std::shared_ptr<IndexType>
   createIndexType(
     const std::string                            & protocol,
-    const URL                                    & location,
+    const std::string                            & params,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) = 0;
 
   /** Handle initial read of data and posting ofrecords. */
   virtual bool
   initialRead(bool realtime) = 0;
-
-  /** The URL location for where the data is coming from */
-  const URL&
-  getURL() const
-  {
-    return (myURL);
-  }
-
-  /** Set the URL of the index */
-  void
-  setURL(const URL& u)
-  {
-    myURL = u;
-  }
 
   /** Get the index label used to mark new records */
   size_t
@@ -117,9 +103,6 @@ protected:
 
   /** How long to keep back history, if any */
   TimeDuration myAgeOffInterval;
-
-  /** Every index has a URL representing its location */
-  URL myURL;
 
   /** Our listeners. */
   std::vector<std::shared_ptr<IndexListener> > myListeners;

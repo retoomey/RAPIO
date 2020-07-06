@@ -19,8 +19,26 @@ namespace rapio {
  */
 class WatchInfo;
 
+class WatchEvent : public IO {
+public:
+  virtual void
+  fill(){ }
+};
+
 class IOListener : public IO {
 public:
+  /** Handle a poll event for your watch */
+  virtual bool
+  handlePoll(){ return false; };
+
+  /** Handle a general watch event */
+  virtual void
+  handleNewEvent(WatchEvent * event){ };
+
+  // Deprecated -----------------------------------
+  // Probably should just cast in NewEvent and avoid
+  // having to keep adding functions here....
+
   /** Handle a new file event for your watch */
   virtual void
   handleNewFile(const std::string& filename){ };
@@ -33,9 +51,7 @@ public:
   virtual void
   handleUnmount(const std::string& dirname){ };
 
-  /** Handle a poll event for your watch */
-  virtual bool
-  handlePoll(){ return false; };
+  // ^^^^Deprecated -----------------------------------
 };
 
 class WatcherType : public EventTimer {

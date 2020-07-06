@@ -11,6 +11,7 @@
 #include "rXMLIndex.h"
 #include "rWebIndex.h"
 #include "rFMLIndex.h"
+#include "rStreamIndex.h"
 
 using namespace rapio;
 using namespace std;
@@ -27,9 +28,10 @@ void
 IOIndex::introduceSelf()
 {
   // Indexes we support by default
-  XMLIndex::introduceSelf(); // Local code_index.xml
-  FMLIndex::introduceSelf(); // .fml files
-  WebIndex::introduceSelf(); // web connection
+  XMLIndex::introduceSelf();    // Local code_index.xml
+  FMLIndex::introduceSelf();    // .fml files
+  WebIndex::introduceSelf();    // web connection
+  StreamIndex::introduceSelf(); // Stream index
 }
 
 IOIndex::~IOIndex()
@@ -38,14 +40,13 @@ IOIndex::~IOIndex()
 std::shared_ptr<IndexType>
 IOIndex::createIndex(
   const std::string                       & protocolin,
-  const URL                               & url,
+  const std::string                       & indexparamsin,
   vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                      & maximumHistory)
 {
   // Look for a scheme for factory
-  URL u = url;
-
-  std::string protocol = protocolin;
+  std::string protocol    = protocolin;
+  std::string indexparams = indexparamsin;
 
   // ---------------------------------------------------------
   // Legacy support for old style -i options:
@@ -56,66 +57,73 @@ IOIndex::createIndex(
   //   //code_index.xml
   // FML index using FAM (no protocol, ends with fam):
   //   //path/something.fam
-
-  if (!url.getQuery("source").empty()) {
-    protocol = WebIndex::WEBINDEX;
-  }
-
   if (protocol.empty()) {
-    // We macro machine names to our nssl vmrms data sources like so...
-    // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
-    if (url.getHost() == "") {
-      std::string p = url.getPath();
+    // Try to make URL from the indexparams...
 
-      if (p.size() > 1) {
-        if ((p[0] == '/') && (p[1] == '/')) {
-          p = p.substr(2);
-          std::vector<std::string> pieces;
-          Strings::splitWithoutEnds(p, '/', &pieces);
+    URL url(indexparams);
 
-          if (pieces.size() > 1) {
-            std::string machine  = pieces[0];
-            std::string source   = pieces[1];
-            std::string expanded = "http://vmrms-webserv/" + machine
-              + "?source=" + source;
-            LogInfo("Web macro source sent to " << expanded << "\n");
-            u = URL(expanded);
+    // If there's a source tag, it's an old web index
+    if (!url.getQuery("source").empty()) {
+      protocol = WebIndex::WEBINDEX;
+    }
+
+    if (protocol.empty()) {
+      // We macro machine names to our nssl vmrms data sources like so...
+      // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
+      if (url.getHost() == "") {
+        std::string p = url.getPath();
+
+        if (p.size() > 1) {
+          if ((p[0] == '/') && (p[1] == '/')) {
+            p = p.substr(2);
+            std::vector<std::string> pieces;
+            Strings::splitWithoutEnds(p, '/', &pieces);
+
+            if (pieces.size() > 1) {
+              std::string machine  = pieces[0];
+              std::string source   = pieces[1];
+              std::string expanded = "http://vmrms-webserv/" + machine
+                + "?source=" + source;
+              LogInfo("Web macro source sent to " << expanded << "\n");
+              //   u = URL(expanded);
+              indexparams = expanded; // Change to non-macroed format
+            }
+            protocol = WebIndex::WEBINDEX;
           }
-          protocol = WebIndex::WEBINDEX;
+        }
+      }
+    }
+
+    // If still empty, Look at suffix for legacy fam/xml
+    if (protocol.empty()) {
+      std::string suffix = url.getSuffixLC();
+      if (suffix == "fam") {
+        protocol = FMLIndex::FMLINDEX_FAM;
+      } else if (suffix == "xml") {
+        protocol = XMLIndex::XMLINDEX;
+      } else if (Compression::suffixRecognized(suffix)) {
+        URL tmp(url);
+        tmp.removeSuffix(); // removes the suffix
+        std::string p = tmp.getPath();
+        p.resize(p.size() - 1); /// removes the dot
+        tmp.setPath(p);
+        suffix = tmp.getSuffixLC();
+
+        if (suffix == "xml") {
+          protocol = XMLIndex::XMLINDEX;
         }
       }
     }
   }
 
-  // If still empty, Look at suffix for legacy fam/xml
   if (protocol.empty()) {
-    std::string suffix = url.getSuffixLC();
-    if (suffix == "fam") {
-      protocol = FMLIndex::FMLINDEX_FAM;
-    } else if (suffix == "xml") {
-      protocol = XMLIndex::XMLINDEX;
-    } else if (Compression::suffixRecognized(suffix)) {
-      URL tmp(url);
-      tmp.removeSuffix(); // removes the suffix
-      std::string p = tmp.getPath();
-      p.resize(p.size() - 1); /// removes the dot
-      tmp.setPath(p);
-      suffix = tmp.getSuffixLC();
-
-      if (suffix == "xml") {
-        protocol = XMLIndex::XMLINDEX;
-      }
-    }
-  }
-
-  if (protocol.empty()) {
-    LogSevere("Unable to guess schema from '" << url << "'\n");
+    LogSevere("Unable to guess schema from '" << indexparamsin << "'\n");
   } else {
     // use protocol and device to get the index.
     std::shared_ptr<IndexType> factory = Factory<IndexType>::get(protocol,
         "Index protocol");
     if (factory != nullptr) {
-      return (factory->createIndexType(protocol, u, listeners, maximumHistory));
+      return (factory->createIndexType(protocol, indexparams, listeners, maximumHistory));
     }
   }
   return (nullptr);

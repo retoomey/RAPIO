@@ -21,7 +21,7 @@ public:
    */
   static std::shared_ptr<IndexType>
   createIndex(const std::string                  & protocol,
-    const URL                                    & url,
+    const std::string                            & indexparams,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory =
     TimeDuration());

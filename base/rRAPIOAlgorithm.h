@@ -53,7 +53,7 @@ public:
   class indexInputInfo : public Algorithm {
 public:
     std::string protocol;
-    std::string indexURL;
+    std::string indexparams;
     TimeDuration maximumHistory;
   };
 

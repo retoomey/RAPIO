@@ -474,7 +474,7 @@ RAPIOAlgorithm::addIndex(const std::string & index,
   const TimeDuration                       & maximumHistory)
 {
   // We don't actually create an index here...we wait until execute.
-  LogDebug("Adding source index url '" << index << "'\n");
+  LogDebug("Adding source index:'" << index << "'\n");
 
   indexInputInfo info;
 
@@ -483,17 +483,17 @@ RAPIOAlgorithm::addIndex(const std::string & index,
   Strings::split(index, '=', &pieces);
   const size_t aSize = pieces.size();
   if (aSize == 1) {
-    info.protocol = "";
-    info.indexURL = pieces[0];
+    info.protocol    = "";
+    info.indexparams = pieces[0];
   } else if (aSize == 2) {
-    info.protocol = pieces[0];
-    info.indexURL = pieces[1];
+    info.protocol    = pieces[0];
+    info.indexparams = pieces[1];
   } else {
     LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
     exit(1);
   }
   // info.protocol       = "xml";
-  // info.indexURL       = index;
+  // info.indexparams    = index;
   info.maximumHistory = maximumHistory;
   myIndexInputInfo.push_back(info);
 }
@@ -502,7 +502,7 @@ void
 RAPIOAlgorithm::addIndexes(const std::string & param,
   const TimeDuration                         & maximumHistory)
 {
-  // Split the "-i" option up into multiple indexes
+  // Split indexes by spaces
   std::vector<std::string> pieces;
   Strings::splitWithoutEnds(param, ' ', &pieces);
 
@@ -651,24 +651,24 @@ RAPIOAlgorithm::execute()
     std::shared_ptr<IndexType> in;
 
     bool success = false;
-    in = IOIndex::createIndex(i.protocol, i.indexURL, llist, i.maximumHistory);
-    if (in != nullptr) {
-      myConnectedIndexes.push_back(in);        // Since we just create object now, should
-                                               // be good
-      myConnectedIndexes[p]->setIndexLabel(p); // Mark in order
-      success = myConnectedIndexes[p]->initialRead(myRealtime);
-    }
-    if (success) {
-      count++;
+    in = IOIndex::createIndex(i.protocol, i.indexparams, llist, i.maximumHistory);
+    myConnectedIndexes.push_back(in);
 
-      if (myRealtime) {
-        rcount++;
+    if (in != nullptr) {
+      in->setIndexLabel(p); // Mark in order
+      success = in->initialRead(myRealtime);
+      if (success) {
+        count++;
+
+        if (myRealtime) {
+          rcount++;
+        }
       }
     }
 
     std::string how  = success ? "Successful" : "Failed";
     std::string what = myRealtime ? "realtime" : "archive";
-    LogInfo(how << " " << what << " connection to '" << i.indexURL << "'\n");
+    LogInfo(how << " " << what << " connection to '" << i.protocol << "-->" << i.indexparams << "'\n");
   }
 
   // Failed to connect to all needed sources...

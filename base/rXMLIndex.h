@@ -27,7 +27,7 @@ public:
   virtual std::shared_ptr<IndexType>
   createIndexType(
     const std::string                            & protocol,
-    const URL                                    & location,
+    const std::string                            & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
 
@@ -46,5 +46,9 @@ public:
   /** Destory an XML index */
   virtual
   ~XMLIndex();
+protected:
+
+  /** Location of the data file */
+  URL myURL;
 };
 }

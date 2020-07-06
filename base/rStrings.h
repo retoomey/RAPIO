@@ -144,4 +144,42 @@ public:
     size_t                     restwidth,
     size_t                     firstwidth = 0);
 };
+
+/** A class for DFA parsing a word/token by character */
+class DFAWord : public Utility
+{
+public:
+
+  /** Create a word to parse */
+  DFAWord(const std::string& t)
+  {
+    text = t;
+    at   = 0;
+  }
+
+  /** Parse another character */
+  bool
+  parse(const char& c)
+  {
+    if (text[at] == c) {
+      at++;
+      if (at >= text.size()) {
+        at = 0;
+        return true; // parse hit
+      }
+    } else {
+      // Reset check first character again
+      at = 0;
+      if (text[at] == c) {
+        at++;
+      }
+    }
+    return false;
+  }
+
+protected:
+
+  size_t at;
+  std::string text;
+};
 }

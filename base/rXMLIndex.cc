@@ -34,11 +34,11 @@ XMLIndex::introduceSelf()
 std::shared_ptr<IndexType>
 XMLIndex::createIndexType(
   const std::string                            & protocol,
-  const URL                                    & location,
+  const std::string                            & indexparams,
   std::vector<std::shared_ptr<IndexListener> > listeners,
   const TimeDuration                           & maximumHistory)
 {
-  std::shared_ptr<XMLIndex> result = std::make_shared<XMLIndex>(location,
+  std::shared_ptr<XMLIndex> result = std::make_shared<XMLIndex>(URL(indexparams),
       listeners,
       maximumHistory);
   return (result);

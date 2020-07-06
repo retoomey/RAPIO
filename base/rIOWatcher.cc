@@ -7,6 +7,7 @@
 #include "rFAMWatcher.h"
 #include "rWebIndexWatcher.h"
 #include "rDirWatcher.h"
+#include "rEXEWatcher.h"
 
 #include <string>
 #include <memory>
@@ -28,6 +29,7 @@ IOWatcher::introduceSelf()
   FAMWatcher::introduceSelf();
   WebIndexWatcher::introduceSelf();
   DirWatcher::introduceSelf();
+  EXEWatcher::introduceSelf();
 }
 
 std::shared_ptr<WatcherType>

@@ -38,7 +38,7 @@ public:
   };
 
   /** We store a vector of events */
-  class FAMEvent : public IO {
+  class FAMEvent : public WatchEvent {
 public:
 
     /** Create a FAM Event for notifying listeners */

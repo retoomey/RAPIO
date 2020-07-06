@@ -30,7 +30,7 @@ public:
   virtual std::shared_ptr<IndexType>
   createIndexType(
     const std::string                            & protocol,
-    const URL                                    & location,
+    const std::string                            & location,
     std::vector<std::shared_ptr<IndexListener> > listeners,
     const TimeDuration                           & maximumHistory) override;
 
@@ -74,6 +74,9 @@ private:
 
   /** Protocol used for polling the fml */
   std::string myProtocol;
+
+  /** URL of the watched location */
+  URL myURL;
 
   /** Resolved index path to the polled location */
   std::string myIndexPath;

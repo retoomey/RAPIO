@@ -43,6 +43,7 @@ librapio_la_SOURCES =\
   rDirWatcher.cc\
   rProcessTimer.cc\
   rXMLIndex.cc\
+  rStreamIndex.cc\
   rXYZ.cc\
   rIJK.cc\
   rConstants.cc\
@@ -64,6 +65,7 @@ librapio_la_SOURCES =\
   rFMLRecordNotifier.cc\
   rIOWatcher.cc\
   rFAMWatcher.cc\
+  rEXEWatcher.cc\
   rOption.cc\
   rOptionList.cc\
   rAlgConfigFile.cc\
@@ -92,6 +94,7 @@ pkginclude_HEADERS =\
   rByteOrder.h\
   rFactory.h\
   rXMLIndex.h\
+  rStreamIndex.h\
   rCompression.h\
   rURL.h\
   rProcessTimer.h\
@@ -139,6 +142,7 @@ pkginclude_HEADERS =\
   rFMLRecordNotifier.h\
   rIOWatcher.h\
   rFAMWatcher.h\
+  rEXEWatcher.h\
   rOption.h\
   rOptionList.h\
   rSentinelDouble.h\
