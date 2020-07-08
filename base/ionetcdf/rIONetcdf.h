@@ -320,12 +320,12 @@ public:
    * DataType classes */
   static bool
   readSparse2D(int ncid,
-    int            data_var,
-    int            num_x,
-    int            num_y,
-    float          fileMissing,
-    float          fileRangeFolded,
-    RAPIO_2DF      & dt);
+    int data_var,
+    int num_x,
+    int num_y,
+    float fileMissing,
+    float fileRangeFolded,
+    Array<float, 2> & dt);
 
   // static bool readSparse3D(int   ncid,
   //                                           int   data_var,

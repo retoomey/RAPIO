@@ -24,7 +24,7 @@ GribDataTypeImp::printCatalog()
   IOGrib::scanGribData(myBuf, &test);
 }
 
-std::shared_ptr<RAPIO_2DF>
+std::shared_ptr<Array<float, 2> >
 GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y)
 {
   // Humm has vs is...a better way?
@@ -36,4 +36,12 @@ GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr,
     return IOGrib::get2DData(myBuf, at, fieldNumber, x, y);
   }
   return nullptr;
+}
+
+std::shared_ptr<Array<float, 3> >
+GribDataTypeImp::getFloat3D(const std::string& key, size_t& x, size_t& y, size_t& z,
+  std::vector<std::string> zLevelsVec, float missing)
+{
+  return IOGrib::get3DData(myBuf, key, zLevelsVec, x, y, z, missing);
+  // return nullptr;
 }

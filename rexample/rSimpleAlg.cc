@@ -106,7 +106,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("Size back is " << numX << " by " << numY << "\n");
 
       if (uplwav_ext != nullptr) {
-        auto& ref = *uplwav_ext;
+        auto& ref = uplwav_ext->ref();
         LogInfo("First 10x10 values\n");
         LogInfo("----------------------------------------------------\n");
         // Dump grid.. Log needs a way to dump multiline

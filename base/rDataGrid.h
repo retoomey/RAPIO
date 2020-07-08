@@ -2,6 +2,7 @@
 
 #include <rDataType.h>
 #include <rDataStore2D.h>
+#include <rArray.h>
 
 #include <vector>
 
@@ -11,35 +12,6 @@
 #include <boost/optional.hpp>
 
 namespace rapio {
-// Bunch of macros to allow plug and play here
-// This uses boost over my DataStore.  It's a bit
-// slower but the API is cleaner and expands to dimensions better
-// I'm keeping DataStore for now
-#define BOOST_ARRAY
-
-#ifdef BOOST_ARRAY
-
-# define RAPIO_1DF boost::multi_array<float, 1>
-# define RAPIO_1DI boost::multi_array<int, 1>
-
-# define RAPIO_2DF boost::multi_array<float, 2>
-
-# define RAPIO_DIM1(x)       boost::extents[x]
-# define RAPIO_DIM2(x, y)    boost::extents[x][y]
-# define RAPIO_DIM3(x, y, z) boost::extents[x][y][z]
-
-#else // ifdef BOOST_ARRAY
-
-# define RAPIO_1DF DataStore<float>
-# define RAPIO_1DI DataStore<int>
-# define RAPIO_2DF DataStore2D<float>
-
-# define RAPIO_DIM1(x)       x
-# define RAPIO_DIM2(x, y)    x, y
-# define RAPIO_DIM3(x, y, z) x, y, z
-
-#endif // ifdef BOOST_ARRAY
-
 /** Type marker of data to help out reader/writers */
 enum DataArrayType {
   UNKNOWN,
@@ -168,34 +140,34 @@ public:
   // 1D stuff ----------------------------------------------------------
 
   /** Get back object so can call methods on it */
-  std::shared_ptr<RAPIO_1DF>
+  std::shared_ptr<Array<float, 1> >
   getFloat1D(const std::string& name);
 
   /** Add named float data with initial size and value (uninitialized) */
-  std::shared_ptr<RAPIO_1DF>
+  std::shared_ptr<Array<float, 1> >
   addFloat1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
 
   /** Get a pointer data for quick transversing */
-  std::shared_ptr<RAPIO_1DI>
+  std::shared_ptr<Array<int, 1> >
   getInt1D(const std::string& name);
 
   /** Add named int data with initial size and value (uninitialized) */
-  std::shared_ptr<RAPIO_1DI>
+  std::shared_ptr<Array<int, 1> >
   addInt1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
 
   // 2D stuff ----------------------------------------------------------
 
   /** Get back object so can call methods on it */
-  std::shared_ptr<RAPIO_2DF>
+  std::shared_ptr<Array<float, 2> >
   getFloat2D(const std::string& name);
 
   /** Add named float data with initial size and value */
-  std::shared_ptr<RAPIO_2DF>
+  std::shared_ptr<Array<float, 2> >
   addFloat2D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
 
   /** Replace missing/range in the primary 2D data grid */
   static void
-  replaceMissing(std::shared_ptr<RAPIO_2DF> f, const float missing, const float range);
+  replaceMissing(std::shared_ptr<Array<float, 2> > f, const float missing, const float range);
   // ----------------------------------------------------------------------
   //
 public:

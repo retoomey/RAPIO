@@ -178,13 +178,15 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
         if (ndimsp2 == 1) { // 1D float
           if (xtypep == NC_FLOAT) {
             auto data1DF = dataGrid.addFloat1D(arrayName, units, dimindexes);
-            data = data1DF->data();
+            // data = data1DF->data();
+            data = data1DF->getRawDataPointer();
 
             //       NETCDF(nc_get_var_float(ncid, varid, data1DF->data()));
             //          NETCDF(nc_get_var(ncid, varid, data));
           } else if (xtypep == NC_INT) {
             auto data1DI = dataGrid.addInt1D(arrayName, units, dimindexes);
-            data = data1DI->data();
+            // data = data1DI->data();
+            data = data1DI->getRawDataPointer();
 
             //       NETCDF(nc_get_var_int(ncid, varid, data1DI->data()));
             //          NETCDF(nc_get_var(ncid, varid, data));
@@ -192,7 +194,8 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
         } else if (ndimsp2 == 2) { // 2D stuff
           if (xtypep == NC_FLOAT) {
             auto data2DF = dataGrid.addFloat2D(arrayName, units, dimindexes);
-            data = data2DF->data();
+            // data = data2DF->data();
+            data = data2DF->getRawDataPointer();
 
             //          const size_t start2[] = { 0, 0 };
             //          const size_t count2[] = { dims[dimindexes[0]].size(), dims[dimindexes[1]].size() };

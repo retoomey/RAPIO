@@ -536,7 +536,7 @@ IOGrib::toCatalog(gribfield * gfld,
   levelName   = getLevelName(gfld);
 }
 
-std::shared_ptr<RAPIO_2DF>
+std::shared_ptr<Array<float, 2> >
 IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y)
 {
   // size_t aSize       = b.size();
@@ -559,8 +559,8 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x
   y = numY;
   g2float * g2grid = gfld->fld;
 
-  std::shared_ptr<RAPIO_2DF> newOne = std::make_shared<RAPIO_2DF>(RAPIO_DIM2(numX, numY));
-  auto& data = *newOne;
+  auto newOne = Arrays::CreateFloat2D(numX, numY);
+  auto& data  = newOne->ref();
 
   for (size_t x = 0; x < numX; ++x) {
     for (size_t y = 0; y < numY; ++y) {
@@ -572,6 +572,79 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x
 
   return newOne;
 } // IOGrib::get2DData
+
+std::shared_ptr<Array<float, 3> >
+IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string> levelsStringVec,
+  size_t& x, size_t&y, size_t& z, float missing)
+{
+  size_t zVecSize = levelsStringVec.size();
+  size_t nz       = (zVecSize <= 0) ? 40 : (size_t) zVecSize;
+
+  size_t nx   = (x <= 0) ? 1 : x;
+  size_t ny   = (y <= 0) ? 1 : y;
+  auto newOne = Arrays::CreateFloat3D(nx, ny, nz);
+  auto &data  = newOne->ref();
+
+  // std::shared_ptr<RAPIO_3DF> newOne = std::make_shared<RAPIO_3DF>(RAPIO_DIM3(nx, ny, nz));
+  // auto &data = *newOne;
+
+  unsigned char * bu = (unsigned char *) (&b[0]);
+
+  for (size_t k = 0; k < nz; ++k) {
+    GribMatcher test(key, levelsStringVec[k]);
+    IOGrib::scanGribData(b, &test);
+
+    size_t at, fieldNumber;
+    if (test.getMatch(at, fieldNumber)) {
+      gribfield * gfld = 0; // output
+
+      int ierr = g2_getfld(&bu[at], fieldNumber, 1, 1, &gfld);
+
+      if (ierr == 0) {
+        LogInfo("Grib2 field unpack successful\n");
+      }
+      const g2int * gds = gfld->igdtmpl;
+      int tX      = gds[7]; // 31-34 Nx -- Number of points along the x-axis
+      int tY      = gds[8]; // 35-38 Ny -- Number of points along te y-axis
+      size_t numX = (tX < 0) ? 0 : (size_t) (tX);
+      size_t numY = (tY < 0) ? 0 : (size_t) (tY);
+
+      x = numX;
+      y = numY;
+
+      LogInfo("Grib2 3D field size " << numX << " * " << numY << " * " << nz << "\n");
+      if ((nx != x) || (ny != y)) {
+        LogInfo("Warning! sizes do not match" << nx << " != " << x << " and/or " << ny << " != " << y << "\n");
+      }
+
+      g2float * g2grid = gfld->fld;
+
+      for (size_t x = 0; x < numX; ++x) {
+        for (size_t y = 0; y < numY; ++y) {
+          data[x][y][k] = (float) (g2grid[y * numX + x]);
+        }
+      }
+
+      g2_free(gfld);
+    } // test.getMatch
+    else {
+      LogSevere("No data for " << key << " at " << levelsStringVec[k] << "\n");
+
+      // FIXME: The desired situation has to be confirmed - exit, which will help ensure the mistake is corrected, or a log
+      // exit(1);
+
+      for (size_t x = 0; x < nx; ++x) {
+        for (size_t y = 0; y < ny; ++y) {
+          data[x][y][k] = missing;
+        }
+      }
+    }
+  }
+  // g2_free(gfld);
+  z = nz;
+
+  return newOne; // nullptr;
+} // IOGrib::get3DData
 
 /*
  *  // A Wgrib2 style dump.

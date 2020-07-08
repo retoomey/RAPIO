@@ -1,6 +1,6 @@
 #include "rProject.h"
 #include "rError.h"
-#include "rDataGrid.h"
+#include "rArray.h"
 
 using namespace rapio;
 
@@ -38,9 +38,8 @@ Project::createLookup(
   float latres,
   float lonres)
 {
-  // FIXME: Array should have its own header now I think,
-  // right now it's part of DataGrid.  This API a bit messy
-  auto result = RAPIO_2DF(RAPIO_DIM2(imageRows, imageCols));
+  auto resultArray = Arrays::CreateFloat2D(imageRows, imageCols);
+  auto& result     = resultArray->ref();
 
   int hits   = 0;
   int misses = 0;
@@ -197,10 +196,11 @@ ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
 }
 
 void
-ProjLibProject::toLatLonGrid(std::shared_ptr<RAPIO_2DF> in,
+ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   std::shared_ptr<LatLonGrid>                           out)
 {
-  auto data2DF = out->getFloat2D("ULWRF"); // size could be nice right?
+  auto data2DFA = out->getFloat2D("ULWRF"); // size could be nice right?
+  auto& data2DF = data2DFA->ref();
 
   // ----------------------------------------------------------
   // source projection system (non geometric)
@@ -213,8 +213,12 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<RAPIO_2DF> in,
   // using 'units=km' and you should have an mCell of 3 (km)
   int mCell = 3;
 
-  auto imageCols = in->shape()[0];
-  auto imageRows = in->shape()[1];
+  auto dims = ina->dims();
+  auto& in  = ina->ref();
+  // auto imageCols = in->shape()[0];
+  // auto imageRows = in->shape()[1];
+  auto imageCols = dims[0];
+  auto imageRows = dims[1];
 
   size_t num_lats = out->getNumLats();
   size_t num_lons = out->getNumLons();
@@ -263,17 +267,17 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<RAPIO_2DF> in,
     double atLon = nwLon;
     for (size_t y = 0; y < num_lons; ++y) {
       // Border/band debugging
-      if ((x >= 0) && (x <= 10)) { (*data2DF)[x][y] = 53; continue; }
-      if ((x <= num_lats - 1) && (x >= num_lats - 10)) { (*data2DF)[x][y] = 53; continue; }
-      if ((y >= 0) && (y <= 11)) { (*data2DF)[x][y] = 53; continue; }
-      if ((y <= num_lons - 1) && (y >= num_lons - 10)) { (*data2DF)[x][y] = 53; continue; }
+      if ((x >= 0) && (x <= 10)) { data2DF[x][y] = 53; continue; }
+      if ((x <= num_lats - 1) && (x >= num_lats - 10)) { data2DF[x][y] = 53; continue; }
+      if ((y >= 0) && (y <= 11)) { data2DF[x][y] = 53; continue; }
+      if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
 
       double radLat = atLat * DEG_TO_RAD;
       double radLon = atLon * DEG_TO_RAD;
       int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
 
       if (k != 0) {
-        (*data2DF)[x][y] = Constants::MISSING_DATA;
+        data2DF[x][y] = Constants::MISSING_DATA;
       } else {
         if (radLat < lowestX) { lowestX = radLat; }
         if (radLon < lowestY) { lowestY = radLon; }
@@ -285,25 +289,25 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<RAPIO_2DF> in,
         int binY = (radLat - startY) / scaleY;
 
         if ( (binX >= 0) && (binX < int(imageCols)) && (binY >= 0) && (binY < int(imageRows))) {
-          double value = (*in)[binX][binY];
+          double value = in[binX][binY];
           //   if (value > 400){ value = Constants::MISSING_DATA; } // ULWRF
-          (*data2DF)[x][y] = value;
+          data2DF[x][y] = value;
         } else {
           /* Quad test, should be centerd
            *            if (radLat < 0){
            *              if (radLon < 0){
-           *                (*data2DF)[x][y] = 20;
+           *                data2DF[x][y] = 20;
            *              }else{
-           *                (*data2DF)[x][y] = 40;
+           *                data2DF[x][y] = 40;
            *              }
            *            }else{
            *              if (radLon < 0){
-           *                (*data2DF)[x][y] = 30;
+           *                data2DF[x][y] = 30;
            *              }else{
-           *                (*data2DF)[x][y] = 50;
+           *                data2DF[x][y] = 50;
            *              }
            *            }
-           *     if ((atLat > 33) && (atLat < 35)){ (*data2DF)[x][y] = 20; }
+           *     if ((atLat > 33) && (atLat < 35)){ data2DF[x][y] = 20; }
            */
         }
       }

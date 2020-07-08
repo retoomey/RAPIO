@@ -50,15 +50,15 @@ public:
   // Vector access
 
   /** Allow reader/writer access to full vector */
-  std::shared_ptr<RAPIO_1DF>
+  std::shared_ptr<Array<float, 1> >
   getAzimuthVector(){ return getFloat1D("Azimuth"); }
 
   /** Allow reader/writer access to full vector */
-  std::shared_ptr<RAPIO_1DF>
+  std::shared_ptr<Array<float, 1> >
   getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
 
   /** Allow reader/writer access to full vector */
-  std::shared_ptr<RAPIO_1DF>
+  std::shared_ptr<Array<float, 1> >
   getGateWidthVector(){ return getFloat1D("GateWidth"); }
 
   /** Get number of gates for radial set */

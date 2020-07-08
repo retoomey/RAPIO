@@ -31,15 +31,18 @@ DataArray::getRawDataPointer()
 
   if (myStorageType == FLOAT) {
     if (size == 2) {
-      return (getSP<RAPIO_2DF>()->data());
+      // return (getSP<RAPIO_2DF>()->data());
+      return (getSP<Array<float, 2> >()->getRawDataPointer());
     }
     if (size == 1) {
-      return (getSP<RAPIO_1DF>()->data());
+      // return (getSP<RAPIO_1DF>()->data());
+      return (getSP<Array<float, 1> >()->getRawDataPointer());
     }
   }
   if (myStorageType == INT) {
     if (size == 1) {
-      return (getSP<RAPIO_1DI>()->data());
+      // return (getSP<RAPIO_1DI>()->data());
+      return (getSP<Array<int, 1> >()->getRawDataPointer());
     }
   }
 
@@ -100,20 +103,20 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
     // type checking here.  FIXME: better way?
     if (size == 1) {
       if (type == FLOAT) {
-        auto f = l->getSP<RAPIO_1DF>();
+        auto f = l->getSP<Array<float, 1> >();
         if (f != nullptr) {
-          f->resize(RAPIO_DIM1(sizes[0]));
+          f->resize({ sizes[0] });
         }
       } else if (type == INT) {
-        auto f = l->getSP<RAPIO_1DI>();
+        auto f = l->getSP<Array<int, 1> >();
         if (f != nullptr) {
-          f->resize(RAPIO_DIM1(sizes[0]));
+          f->resize({ sizes[0] });
         }
       }
     } else if (size == 2) {
-      auto f = l->getSP<RAPIO_2DF>();
+      auto f = l->getSP<Array<float, 2> >();
       if (f != nullptr) {
-        f->resize(RAPIO_DIM2(sizes[0], sizes[1]));
+        f->resize({ sizes[0], sizes[1] });
       }
     }
   }
@@ -122,36 +125,36 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
 // 1D stuff ----------------------------------------------------------
 //
 
-std::shared_ptr<RAPIO_1DF>
+std::shared_ptr<Array<float, 1> >
 DataGrid::getFloat1D(const std::string& name)
 {
-  return get<RAPIO_1DF>(name);
+  return get<Array<float, 1> >(name);
 }
 
-std::shared_ptr<RAPIO_1DF>
+std::shared_ptr<Array<float, 1> >
 DataGrid::addFloat1D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
   // Map index to dimension sizes
   const auto size = myDims[dimindexes[0]].size();
-  auto a = add<RAPIO_1DF>(name, units, RAPIO_1DF(RAPIO_DIM1(size)), FLOAT, dimindexes);
+  auto a = add<Array<float, 1> >(name, units, Array<float, 1>({ size }), FLOAT, dimindexes);
 
   return a;
 }
 
-std::shared_ptr<RAPIO_1DI>
+std::shared_ptr<Array<int, 1> >
 DataGrid::getInt1D(const std::string& name)
 {
-  return get<RAPIO_1DI>(name);
+  return get<Array<int, 1> >(name);
 }
 
-std::shared_ptr<RAPIO_1DI>
+std::shared_ptr<Array<int, 1> >
 DataGrid::addInt1D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
   // Map index to dimension sizes
   const auto size = myDims[dimindexes[0]].size();
-  auto a = add<RAPIO_1DI>(name, units, RAPIO_1DI(RAPIO_DIM1(size)), INT, dimindexes);
+  auto a = add<Array<int, 1> >(name, units, Array<int, 1>({ size }), INT, dimindexes);
 
   return a;
 }
@@ -159,13 +162,13 @@ DataGrid::addInt1D(const std::string& name,
 // 2D stuff ----------------------------------------------------------
 //
 
-std::shared_ptr<RAPIO_2DF>
+std::shared_ptr<Array<float, 2> >
 DataGrid::getFloat2D(const std::string& name)
 {
-  return get<RAPIO_2DF>(name);
+  return get<Array<float, 2> >(name);
 }
 
-std::shared_ptr<RAPIO_2DF>
+std::shared_ptr<Array<float, 2> >
 DataGrid::addFloat2D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
@@ -175,31 +178,38 @@ DataGrid::addFloat2D(const std::string& name,
 
   // We always add/replace since index order could change or it could be different
   // type, etc.  Maybe possibly faster by updating over replacing
-  auto a = add<RAPIO_2DF>(name, units, RAPIO_2DF(RAPIO_DIM2(x, y)), FLOAT, dimindexes);
+  auto a = add<Array<float, 2> >(name, units, Array<float, 2>({ x, y }), FLOAT, dimindexes);
 
   return a;
 }
 
 void
-DataGrid::replaceMissing(std::shared_ptr<RAPIO_2DF> f, const float missing, const float range)
+DataGrid::replaceMissing(std::shared_ptr<Array<float, 2> > f, const float missing, const float range)
 {
   if (f == nullptr) {
     LogSevere("Replace missing called on null pointer\n");
     return;
   }
-  #ifdef BOOST_ARRAY
+  // #ifdef BOOST_ARRAY
   // Just view as 1D to fill it...
-  boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
-  for (size_t i = 0; i < a_ref.num_elements(); ++i) {
-    float * v = &a_ref[i];
-  #else
-  for (auto& i:*f) {
-    float * v = &i;
-    #endif
-    if (*v == missing) {
-      *v = Constants::MissingData;
-    } else if (*v == range) {
-      *v = Constants::RangeFolded;
-    }
-  }
+  LogSevere(">>>REPLACE MISSING NOT IMPLEMENTED\n");
+
+  /*
+   * boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
+   * for (size_t i = 0; i < a_ref.num_elements(); ++i) {
+   *  float * v = &a_ref[i];
+   * }
+   */
+
+  /*
+   #else
+   * for (auto& i:*f) {
+   *  float * v = &i;
+   #endif
+   *  if (*v == missing) {
+   * v = Constants::MissingData;
+   *  } else if (*v == range) {
+   * v = Constants::RangeFolded;
+   *  }
+   */
 }

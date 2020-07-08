@@ -188,8 +188,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     auto y       = theDims[1].size();
     auto size    = x * y;                // actual data
     auto memsize = size * sizeof(float); // a lot bigger.  FIXME: This depends on type of data!
-
-    auto& ref2 = *dataptr;
+    auto& ref2   = dataptr->ref();
     // ref2[0][0] = 999.0;
     // ref2[1][1] = -99000.0;
 

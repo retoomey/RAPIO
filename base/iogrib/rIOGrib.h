@@ -145,8 +145,13 @@ public:
   createDataType(const URL& path) override;
 
   /** Do a buffer read of a 2D field */
-  static std::shared_ptr<RAPIO_2DF>
+  static std::shared_ptr<Array<float, 2> >
   get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y);
+
+  /** Do a buffer read of a 3D field using 2D and input vector of levels */
+  static std::shared_ptr<Array<float, 3> >
+  get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string> levelsStringVec, size_t& x,
+    size_t& y, size_t& z, float missing = -999.0);
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
