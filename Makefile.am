@@ -13,6 +13,7 @@ SUBDIRS     =\
   base/ionetcdf\
   base/iogrib\
   rexample\
-  PYTHON
+  PYTHON\
+  tests
 
 MAINTAINERCLEANFILES  = Makefile.in aclocal.m4 configure

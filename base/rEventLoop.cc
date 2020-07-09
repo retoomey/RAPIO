@@ -4,8 +4,6 @@
 #include "rOS.h"
 #include "rError.h"
 #include "rTime.h"
-
-#include "rTest.h"
 #include "rURL.h"
 
 #include <cassert>

@@ -1,11 +1,7 @@
-# autoconf uses this file to produce the executable 'configure' script.
-# automake also scans this file to produce the various Makefile.in files.
-#
-# Robert Toomey April 2020
-#
+# Robert Toomey 
 
-AC_INIT([RAPIO], [1.0])
-AC_CONFIG_SRCDIR(base/rRAPIOAlgorithm.cc)
+AC_INIT([RAPIOTEST], [1.0])
+AC_CONFIG_SRCDIR(rTest1.cc)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -38,15 +34,5 @@ AC_TYPE_SIZE_T
 ### What does this do?
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([
- Makefile
- rexample/Makefile
- PYTHON/Makefile
- tests/Makefile]
-)
-  
-AC_CONFIG_SUBDIRS([
-  base]
-)
-  
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

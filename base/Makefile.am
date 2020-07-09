@@ -70,10 +70,7 @@ librapio_la_SOURCES =\
   rOptionList.cc\
   rAlgConfigFile.cc\
   rAWS.cc\
-  rProject.cc\
-  rTest.cc\
-  rTestTime.cc\
-  rTestIndex.cc
+  rProject.cc
 
 pkginclude_HEADERS =\
   RAPIO.h\
@@ -84,7 +81,6 @@ pkginclude_HEADERS =\
   rRAPIOData.h\
   rColorTerm.h\
   rCurlConnection.h\
-  rTest.h\
   rData.h\
   rAlgorithm.h\
   rEvent.h\
@@ -153,8 +149,6 @@ pkginclude_HEADERS =\
   rAlgConfigFile.h\
   rAWS.h\
   rProject.h\
-  rTestTime.h\
-  rTestIndex.h\
   rNamedAny.h
 
 SUBDIRS     =\

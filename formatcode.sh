@@ -9,3 +9,5 @@ uncrustify -c uncrustify.cfg --no-backup rexample/*.cc
 uncrustify -c uncrustify.cfg --no-backup rexample/*.h
 uncrustify -c uncrustify.cfg --no-backup PYTHON/*.cc
 uncrustify -c uncrustify.cfg --no-backup PYTHON/*.h
+uncrustify -c uncrustify.cfg --no-backup tests/*.cc
+uncrustify -c uncrustify.cfg --no-backup tests/*.h
