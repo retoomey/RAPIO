@@ -90,7 +90,7 @@ public:
       LogSevere("Cannot load requested module: " << module << ":" << dlerror() << "\n");
     } else {
       // dlerror(); // why this here?
-      LogSevere("Loaded requested module: " << module << "\n");
+      LogInfo("Loaded requested module: " << module << "\n");
       typedef T * create_h ();
       create_h * create_handler = (create_h *)  dlsym(library, function.c_str());
       const char * dlsym_error  = dlerror();

@@ -27,7 +27,10 @@ extern "C"
 void *
 createRAPIOIO(void)
 {
-  return reinterpret_cast<void *>(new IONetcdf());
+  auto * z = new IONetcdf();
+
+  z->initialize();
+  return reinterpret_cast<void *>(z);
 }
 };
 

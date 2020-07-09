@@ -243,27 +243,22 @@ RAPIOAlgorithm::initializeBaseline()
   // -------------------------------------------------------------------
   // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
 
-  // Alpha: Dynamic module loading.
-  // We'll make all the IO modules load from configuration, this
-  // will allow plugins.  Start with netcdf for testing
+  // Dynamic module registration.
   std::string create = "createRAPIOIO";
+
   std::string module = "librapionetcdf.so"; // does the name matter?
-  std::shared_ptr<IODataType> dynamicNetcdf = OS::loadDynamic<IODataType>(module, create);
-  if (dynamicNetcdf != nullptr) {
-    dynamicNetcdf->initialize();
-    // Read can read netcdf.  Can we read netcdf3?  humm
-    Factory<IODataType>::introduce("netcdf", dynamicNetcdf);
+  Factory<IODataType>::introduceLazy("netcdf", module, create);
+  Factory<IODataType>::introduceLazy("netcdf3", module, create);
 
-    // Read can write netcdf/netcdf3
-    Factory<IODataType>::introduce("netcdf3", dynamicNetcdf);
-  }
-  module = "librapiogrib.so"; // does the name matter?
-  std::shared_ptr<IODataType> dynamicGrib = OS::loadDynamic<IODataType>(module, create);
-  if (dynamicNetcdf != nullptr) {
-    dynamicGrib->initialize();
-    Factory<IODataType>::introduce("grib", dynamicGrib);
-  }
+  module = "librapiogrib.so";
+  Factory<IODataType>::introduceLazy("grib", module, create);
 
+  /*
+   * // Force immediate loading, maybe good for testing
+   * auto x = Factory<IODataType>::get("netcdf");
+   * auto y = Factory<IODataType>::get("netcdf3");
+   * auto z = Factory<IODataType>::get("grib");
+   */
 
   // Everything should be registered, try initial start up
   Config::initialize();

@@ -14,7 +14,10 @@ extern "C"
 void *
 createRAPIOIO(void)
 {
-  return reinterpret_cast<void *>(new IOGrib());
+  auto * z = new IOGrib();
+
+  z->initialize();
+  return reinterpret_cast<void *>(z);
 }
 };
 
