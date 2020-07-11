@@ -475,23 +475,31 @@ RAPIOAlgorithm::addIndex(const std::string & index,
 
   // For the new xml=/home/code_index.xml protocol passing
   std::vector<std::string> pieces;
-  Strings::split(index, '=', &pieces);
-  const size_t aSize = pieces.size();
-  if (aSize == 1) {
-    info.protocol    = "";
-    info.indexparams = pieces[0];
-  } else if (aSize == 2) {
-    info.protocol    = pieces[0];
-    info.indexparams = pieces[1];
+
+  // Macro ldm to the feedme binary by default for convenience
+  if (index == "ldm") {
+    info.protocol    = "exe";
+    info.indexparams = "feedme%-f%TEXT";
   } else {
-    LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
-    exit(1);
+    // Split on = if able to get protocol, otherwise we'll try to guess
+    Strings::split(index, '=', &pieces);
+    const size_t aSize = pieces.size();
+    if (aSize == 1) {
+      info.protocol    = "";
+      info.indexparams = pieces[0];
+    } else if (aSize == 2) {
+      info.protocol    = pieces[0];
+      info.indexparams = pieces[1];
+    } else {
+      LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
+      exit(1);
+    }
   }
   // info.protocol       = "xml";
   // info.indexparams    = index;
   info.maximumHistory = maximumHistory;
   myIndexInputInfo.push_back(info);
-}
+} // RAPIOAlgorithm::addIndex
 
 void
 RAPIOAlgorithm::addIndexes(const std::string & param,

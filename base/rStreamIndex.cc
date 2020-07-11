@@ -58,11 +58,14 @@ StreamIndex::initialRead(bool realtime)
 } // StreamIndex::initialRead
 
 void
-StreamIndex::handleNewEvent(WatchEvent * event)
+StreamIndex::handleNewEvent(WatchEvent * w)
 {
-  EXEWatcher::EXEWatchEvent * w = dynamic_cast<EXEWatcher::EXEWatchEvent *>(event);
-  if (w != nullptr) {
-    const size_t bytes_read    = w->myBuffer.size();
+  // Skip checking type, any buffer we'll use
+  // FIXME: Later might need type if we connect to multiple
+  // event types
+  const size_t bytes_read = w->myBuffer.size();
+
+  if (bytes_read > 0) {
     const std::vector<char>& b = w->myBuffer;
 
     /* Test dumping lines

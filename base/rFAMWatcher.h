@@ -18,7 +18,7 @@ namespace rapio {
 class FAMWatcher : public WatcherType {
 public:
 
-  FAMWatcher() : WatcherType(0, "FAM Watcher"){ }
+  FAMWatcher() : WatcherType(0, 1, "FAM Watcher"){ }
 
   /** Introduce this to the global factory */
   static void
@@ -35,62 +35,35 @@ public:
     {
       myListener = l;
     }
-  };
 
-  /** We store a vector of events */
-  class FAMEvent : public WatchEvent {
-public:
-
-    /** Create a FAM Event for notifying listeners */
-    FAMEvent(IOListener * l,
-      const std::string& d, const std::string& n, const uint32_t amask)
-      : myListener(l), myDirectory(d), myShortFile(n), myMask(amask){ }
-
-    /** Handle the event action */
-    void
-    handleEvent();
-
-private:
-
-    /** Listener to handle the event */
-    IOListener * myListener;
-
-    /** Directory of file */
-    std::string myDirectory;
-
-    /** Short file name */
-    std::string myShortFile;
-
-    /** FAM mask of event */
-    uint32_t myMask;
+    /** Handle detach of watch */
+    virtual bool
+    handleDetach(WatcherType * owner) override;
   };
 
   /** Attach a FAM listener to us */
   virtual bool
   attach(const std::string& dirname, IOListener *) override;
 
-  /** Detach all references for a given FAM listener from us */
+  /** Get some events.  Depending on watcher this can be a global process or
+   * passed on the individual infos */
   virtual void
-  detach(IOListener *) override;
+  getEvents() override;
 
-  /** Action to take on timer pulse */
-  virtual void
-  action() override;
-
-protected:
-
-  /** The list of watches we currently have */
-  std::vector<std::shared_ptr<FAMInfo> > myFAMWatches;
+  /** Get the global FAM file descripter */
+  static int
+  getFAMID(){ return theFAMID; }
 
 private:
-
-  /** Get new FAM events into the queue */
-  void
-  getEvents();
 
   /** Initialize FAM inotify */
   void
   init();
+
+  /** Add FAM Event */
+  void
+  addFAMEvent(IOListener * l,
+    const std::string& d, const std::string& n, const uint32_t amask);
 
   /** Global FAM file descripter for us */
   static int theFAMID;

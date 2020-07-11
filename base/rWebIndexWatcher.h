@@ -14,7 +14,7 @@ namespace rapio {
  */
 class WebIndexWatcher : public WatcherType {
 public:
-  WebIndexWatcher() : WatcherType(5000, "Web index event handler"){ }
+  WebIndexWatcher() : WatcherType(5000, 2, "Web index event handler"){ }
 
   /** Introduce this to the global factory */
   static void
@@ -35,26 +35,11 @@ public:
   virtual bool
   attach(const std::string& dirname, IOListener *) override;
 
-  /** Detach all references for a given listener from us */
-  virtual void
-  detach(IOListener *) override;
-
   /** Action to take on timer pulse */
   virtual void
   action() override;
 
   /** Destroy us */
   virtual ~WebIndexWatcher(){ }
-
-protected:
-
-  /** The list of watches we currently have */
-  std::vector<std::shared_ptr<WebInfo> > myWebWatches;
-
-private:
-
-  /** Get new WEB events into the queue */
-  void
-  getEvents();
 };
 }

@@ -17,11 +17,6 @@ using namespace rapio;
 /** Global file instance for inotify */
 int FAMWatcher::theFAMID = -1;
 
-/** Event queue for FAM */
-namespace rapio {
-static std::queue<FAMWatcher::FAMEvent> theEvents;
-}
-
 void
 FAMWatcher::init()
 {
@@ -90,115 +85,57 @@ FAMWatcher::attach(const std::string &dirname,
   }
 
   std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, watchID);
-  myFAMWatches.push_back(newWatch);
+  myWatches.push_back(newWatch);
   LogDebug(dirname << " being monitored ... \n");
   return true;
 } // FAMWatcher::attach
 
 void
-FAMWatcher::detach(IOListener * d)
+FAMWatcher::addFAMEvent(IOListener * l,
+  const std::string& directory, const std::string& shortfile, const uint32_t amask)
 {
-  for (auto& w:myFAMWatches) {
-    // If listener at i matches us...
-    if (w->myListener == d) {
-      int ret = inotify_rm_watch(theFAMID, w->myWatchID);
-      if (ret < 0) {
-        std::string errMessage(strerror(errno));
-        LogInfo("inotify_rm_watch on " << w->myDirectory << " Error: " << errMessage << "\n");
-      }
-    }
-    LogDebug(w->myDirectory << " no longer being monitored ... \n");
-    w->myListener = nullptr;
-  }
+  // FIXME: configuration of wanted events maybe so they only get created if wanted
 
-  // Lamba erase all zeroed listeners
-  myFAMWatches.erase(
-    std::remove_if(myFAMWatches.begin(), myFAMWatches.end(),
-    [](const std::shared_ptr<FAMInfo> &w){
-    return (w->myListener == nullptr);
-  }),
-    myFAMWatches.end());
-}
-
-void
-FAMWatcher::FAMEvent::handleEvent()
-{
-  // These should pass to the listener to decide maybe...
-  // Handling this
-  if (myMask & IN_IGNORED) { // Ignore deletions...
+  if (amask & IN_IGNORED) { // Ignore deletions...
     // LogSevere("...deletion?\n");
     return;
   }
   // IOListener class should decide.  Maybe it doesn't care...
-  if (myMask & IN_UNMOUNT) { // End on an unmount and hope restart will get
-                             // path again
-    myListener->handleUnmount(myDirectory);
+  if (amask & IN_UNMOUNT) { // End on an unmount and hope restart will get
+                            // path again
+    WatchEvent e(l, "unmount", directory);
+    myEvents.push(e);
     return;
   }
 
-  if (myMask & IN_ISDIR) {
+  if (amask & IN_ISDIR) {
     // Are create and move the same?
-    if ((myMask & IN_CREATE) || (myMask & IN_MOVE)) {
-      myListener->handleNewDirectory(myDirectory);
+    if ((amask & IN_CREATE) || (amask & IN_MOVE)) {
+      WatchEvent e(l, "newdir", directory);
+      myEvents.push(e);
     }
   } else {
     // Are create and move the same?
-    if ((myMask & IN_CLOSE_WRITE) || (myMask & IN_MOVE)) {
-      myListener->handleNewFile(myDirectory + '/' + myShortFile);
+    if ((amask & IN_CLOSE_WRITE) || (amask & IN_MOVE)) {
+      WatchEvent e(l, "newfile", directory + '/' + shortfile);
+      myEvents.push(e);
     }
   }
 }
 
 void
-FAMWatcher::action()
-{
-  // FIXME: Not sure we need a fam queue since records themselves
-  // are now queued.  However an ingestor might directly process
-  // data on a handle call..so probably should keep it for now
-
-  // Add to queue. Could be multiple fam files
-  getEvents();
-
-  // Do a _single_ action and don't hog the system.
-  // Don't worry, event loop will give us as much time as is possible.
-  if (!theEvents.empty()) {
-    auto e = theEvents.front();
-    theEvents.pop();
-    e.handleEvent();
-  }
-} // FAMWatcher::action
-
-void
 FAMWatcher::getEvents()
 {
-  // Let watches do stuff too..however with FAM they will wait for the traditional
-  // file events from us.
-  for (auto&w:myFAMWatches) {
-    w->myListener->handlePoll();
-  }
-
-  if (myFAMWatches.size() == 0) {
+  // Ignore global FAM polling if no watches left or exist
+  if (myWatches.size() == 0) {
     return;
   }
-
-  size_t MAX_QUEUE_SIZE = 1000;
-  bool WAIT_WHEN_FULL   = true;
-
-  // If queue is full do we wait or drop oldest...wait when full
-  // we don't poll for events.
-  if (theEvents.size() == MAX_QUEUE_SIZE) {
-    if (WAIT_WHEN_FULL) {
-      LogSevere("FAM queue is full..waiting.\n");
-      return;
-    }
-  }
-
   // initial guess: 5 new files per directory being watched?
-  static std::vector<char> buf((5 * myFAMWatches.size() + 10) * sizeof(inotify_event));
+  static std::vector<char> buf((5 * myWatches.size() + 10) * sizeof(inotify_event));
   size_t startSize;
 
   do {
-    startSize = theEvents.size(); // Ok so zero normally?
+    startSize = myEvents.size(); // Ok so zero normally?
     int len;
 
     // Start FAM poll ---------------------------------------------
@@ -230,7 +167,10 @@ FAMWatcher::getEvents()
       const int wd = event->wd;
 
       // This is O(n) but ends up being faster than std::map in practice
-      for (auto& w:myFAMWatches) {
+      for (auto ww:myWatches) {
+        // FIXME: I like reducing the code, but don't like this, maybe template
+        auto * z = ww.get();
+        auto * w = (FAMInfo *) (z);
         if (w->myWatchID == wd) {
           // Pre filter out events before even adding...
           bool want = true;
@@ -242,15 +182,14 @@ FAMWatcher::getEvents()
             want = false;
           }
           if (want) {
-            FAMEvent e(w->myListener, w->myDirectory, event->name, event->mask);
-            theEvents.push(e);
+            addFAMEvent(w->myListener, w->myDirectory, event->name, event->mask);
           }
           break;
         }
       }
       i = i + sizeof(inotify_event) + event->len;
     }
-  } while (theEvents.empty() || theEvents.size() != startSize);
+  } while (myEvents.empty() || myEvents.size() != startSize);
 } // FAMWatcher::getEvents
 
 void
@@ -258,4 +197,17 @@ FAMWatcher::introduceSelf()
 {
   std::shared_ptr<WatcherType> io = std::make_shared<FAMWatcher>();
   IOWatcher::introduce("fam", io);
+}
+
+bool
+FAMWatcher::FAMInfo::handleDetach(WatcherType * owner)
+{
+  int ret = inotify_rm_watch(FAMWatcher::getFAMID(), myWatchID);
+
+  if (ret < 0) {
+    std::string errMessage(strerror(errno));
+    LogInfo("inotify_rm_watch on " << myDirectory << " Error: " << errMessage << "\n");
+  }
+  LogDebug(myDirectory << " no longer being monitored ... \n");
+  return true;
 }

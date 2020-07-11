@@ -13,35 +13,6 @@
 
 using namespace rapio;
 
-/** Event queue for EXE watching. */
-namespace rapio {
-static std::queue<EXEWatcher::EXEWatchEvent> theEvents;
-}
-
-void
-EXEWatcher::EXEWatchEvent::handleEvent()
-{
-  if (myListener != nullptr) {
-    myListener->handleNewEvent(this);
-  }
-}
-
-void
-EXEWatcher::action()
-{
-  getEvents();
-
-  // Do a few actions and don't hog the system.
-  for (size_t i = 0; i < 10; ++i) {
-    if (!theEvents.empty()) {
-      // LogSevere("Pop a single one...\n");
-      auto e = theEvents.front();
-      theEvents.pop();
-      e.handleEvent();
-    }
-  }
-}
-
 void
 EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 {
@@ -65,8 +36,8 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
   size_t counter = 0;
   bool ended     = false;
 
-  EXEWatchEvent aCoutEvent(myListener);
-  // EXEWatchEvent aCerrEvent(myListener); // want or not? Ignoring fix pass
+  WatchEvent aCoutEvent(myListener, "pipe", "");
+  // WatchEvent aCerrEvent(myListener); // want or not? Ignoring fix pass
 
   for (int rval; (rval = poll(&plist[0], plist.size(), TIMEOUT)) > 0;) {
     // Check for various pipes
@@ -97,7 +68,7 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 
   // Add new event if we got data
   if (aCoutEvent.myBuffer.size() > 0) {
-    theEvents.push(aCoutEvent);
+    w->addEvent(aCoutEvent);
   }
 
   //  kill(myPid, SIGKILL); // Kill the spawned thing..
@@ -120,30 +91,6 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 void
 EXEWatcher::getEvents()
 {
-  // Let watches do stuff too...
-  for (auto&w:myWatches) {
-    w->myListener->handlePoll();
-  }
-
-  // Like the FAM, create events?  Probably a good idea...
-  // However, unlike FAM we don't want to be scanning full directory
-  // at 0 ms polling, lol.
-  if (myWatches.size() == 0) {
-    return;
-  }
-
-  size_t MAX_QUEUE_SIZE = 1000;
-  bool WAIT_WHEN_FULL   = true;
-
-  // If queue is full do we wait or drop oldest...wait when full
-  // we don't poll for events.
-  if (theEvents.size() == MAX_QUEUE_SIZE) {
-    if (WAIT_WHEN_FULL) {
-      LogSevere("EXE queue is full..waiting.\n");
-      return;
-    }
-  }
-
   // Watches can create events if the event creation process
   // is independent of other event processes.
   for (auto& w:myWatches) {
@@ -226,25 +173,6 @@ EXEWatcher::attach(const std::string & param,
   }
 
   return success;
-}
-
-void
-EXEWatcher::detach(IOListener * l)
-{
-  for (auto& w:myWatches) {
-    // If listener at i matches us...
-    if (w->myListener == l) {
-      w->myListener = nullptr;
-    }
-  }
-
-  // Lamba erase all zeroed listeners
-  myWatches.erase(
-    std::remove_if(myWatches.begin(), myWatches.end(),
-    [](const std::shared_ptr<WatchInfo> &w){
-    return (w->myListener == nullptr);
-  }),
-    myWatches.end());
 }
 
 void

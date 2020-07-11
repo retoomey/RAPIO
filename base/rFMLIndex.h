@@ -50,11 +50,7 @@ public:
 
   /** Handle a new file from a watcher.  We're allowed to do work here. */
   virtual void
-  handleNewFile(const std::string& filename) override;
-
-  /** Handle our directory being unmounted. */
-  virtual void
-  handleUnmount(const std::string& dir) override;
+  handleNewEvent(WatchEvent * w) override;
 
   /** Destroy a FMLIndex */
   virtual

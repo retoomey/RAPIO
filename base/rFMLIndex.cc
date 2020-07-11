@@ -132,7 +132,8 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
   auto doc = IODataType::read<XMLData>(filename, "xml");
 
   if (doc == nullptr) {
-    LogSevere("Unable to parse " << filename << "\n");
+    // Error not needed, XML will complain
+    // LogSevere("Unable to parse " << filename << "\n");
     return false;
   }
   auto tree = doc->getTree();
@@ -151,24 +152,28 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 }
 
 void
-FMLIndex::handleNewFile(const std::string& filename)
+FMLIndex::handleNewEvent(WatchEvent * event)
 {
-  if (wantFile(filename)) {
-    Record rec;
-    if (fileToRecord(filename, rec)) {
-      // Add to the record queue.  Never process here directly.  The queue
-      // will call our addRecord when it's time to do the work
-      Record::theRecordQueue->addRecord(rec);
-    }
-  }
-}
+  const auto& m = event->myMessage;
+  const auto& d = event->myData;
 
-void
-FMLIndex::handleUnmount(const std::string& dirname)
-{
-  LogSevere("Our FAM watch " << dirname << " was unmounted!\n");
-  LogSevere("Restarting algorithm/program.\n");
-  exit(1);
+  if (m == "newfile") {
+    const std::string& filename = d;
+    if (wantFile(filename)) {
+      Record rec;
+      if (fileToRecord(filename, rec)) {
+        // Add to the record queue.  Never process here directly.  The queue
+        // will call our addRecord when it's time to do the work
+        Record::theRecordQueue->addRecord(rec);
+      }
+    }
+  } else if (m == "newdir") {
+    LogInfo("New directory was added: " << d << "\n");
+  } else if (m == "unmount") {
+    LogSevere("Our FAM watch " << d << " was unmounted!\n");
+    LogSevere("Restarting algorithm/program.\n");
+    exit(1); // FIXME: configurable how to handle this?
+  }
 }
 
 void

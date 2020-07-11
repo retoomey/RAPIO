@@ -21,7 +21,7 @@ namespace rapio {
  */
 class EXEWatcher : public WatcherType {
 public:
-  EXEWatcher() : WatcherType(1000, "EXE Watcher"){ }
+  EXEWatcher() : WatcherType(100, 2, "EXE Watcher"){ }
 
   /** Introduce this to the global factory */
   static void
@@ -65,45 +65,16 @@ protected:
     std::string myParams;
   };
 
-  /** We store a vector of events */
-  class EXEWatchEvent : public WatchEvent {
-public:
-
-    /** Buffer of stuff */
-    std::vector<char> myBuffer;
-
-    /** Create a EXE buffer event for notifying listeners */
-    EXEWatchEvent(IOListener * l) : myListener(l){ }
-
-    /** Handle the event action */
-    void
-    handleEvent();
-
-private:
-
-    /** Listener to handle the event */
-    IOListener * myListener;
-  };
-
   /** Attach a pulse to web page for a given listener to us */
   virtual bool
   attach(const std::string& dirname, IOListener *) override;
 
-  /** Detach all references for a given listener from us */
+  /** Get some events.  Depending on watcher this can be a global process or
+   * passed on the individual infos */
   virtual void
-  detach(IOListener *) override;
-
-  /** Action to take on timer pulse */
-  virtual void
-  action() override;
+  getEvents() override;
 
   /** Destroy us */
   virtual ~EXEWatcher(){ }
-
-private:
-
-  /** Get new EXE events into the queue */
-  void
-  getEvents();
 };
 }

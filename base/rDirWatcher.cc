@@ -10,13 +10,6 @@
 
 using namespace rapio;
 
-/** Event queue for Dir watching.
- * FIXME: probably should merge with FAM events, spread over multiple
- * connections to stop starving. */
-namespace rapio {
-static std::queue<DirWatcher::DirWatchEvent> theEvents;
-}
-
 namespace
 {
 /** Time filter test for file/directory stats */
@@ -32,31 +25,6 @@ greaterStat(struct stat& a, struct stat& b)
   }
   return false;
 }
-}
-
-void
-DirWatcher::DirWatchEvent::handleEvent()
-{
-  myListener->handleNewFile(myFile);
-}
-
-void
-DirWatcher::action()
-{
-  // Actually directory poll time vs processing one record time..
-  // hummmm.  We should have another time for this I think...
-  // either that OR the handler is different than the gatherer...
-  getEvents();
-
-  // Do a few actions and don't hog the system.
-  for (size_t i = 0; i < 10; ++i) {
-    if (!theEvents.empty()) {
-      // LogSevere("Pop a single one...\n");
-      auto e = theEvents.front();
-      theEvents.pop();
-      e.handleEvent();
-    }
-  }
 }
 
 void
@@ -94,9 +62,9 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat& low
         scan(listener, full, lowtime, newlowtime);
       } else {
         // FIXME: Push into queue if wanted... realtime mode maybe so a skip pass at beginning
-        LogSevere("    NEW:" << full << " " << newlowtime.st_ctim.tv_sec << "." << newlowtime.st_ctim.tv_nsec << "\n");
-        DirWatchEvent e(listener, full);
-        theEvents.push(e);
+        // LogSevere("    NEW:" << full << " " << newlowtime.st_ctim.tv_sec << "." << newlowtime.st_ctim.tv_nsec << "\n");
+        WatchEvent e(listener, "newfile", full);
+        myEvents.push(e);
       }
 
       // Keep the max time of any of the new files, this will be new low threshold
@@ -135,17 +103,6 @@ DirWatcher::DirInfo::createEvents(WatcherType * w)
 void
 DirWatcher::getEvents()
 {
-  for (auto&w:myWatches) {
-    w->myListener->handlePoll();
-  }
-
-  // Like the FAM, create events?  Probably a good idea...
-  // However, unlike FAM we don't want to be scanning full directory
-  // at 0 ms polling, lol.
-  if (myWatches.size() == 0) {
-    return;
-  }
-
   for (auto& w:myWatches) {
     w->createEvents(this);
   }
@@ -159,25 +116,6 @@ DirWatcher::attach(const std::string & dirname,
   myWatches.push_back(newWatch);
 
   return true;
-}
-
-void
-DirWatcher::detach(IOListener * l)
-{
-  for (auto& w:myWatches) {
-    // If listener at i matches us...
-    if (w->myListener == l) {
-      w->myListener = nullptr;
-    }
-  }
-
-  // Lamba erase all zeroed listeners
-  myWatches.erase(
-    std::remove_if(myWatches.begin(), myWatches.end(),
-    [](const std::shared_ptr<WatchInfo> &w){
-    return (w->myListener == nullptr);
-  }),
-    myWatches.end());
 }
 
 void

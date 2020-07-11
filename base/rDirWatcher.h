@@ -8,14 +8,14 @@
 #include <sys/stat.h>
 
 namespace rapio {
-/** Poller for directories where networkd drives
+/** Poller for directories where networked drives
  * or situations where FAM is not available.
  *
  * @author Robert Toomey
  */
 class DirWatcher : public WatcherType {
 public:
-  DirWatcher() : WatcherType(5000, "Directory time poll event handler"){ }
+  DirWatcher() : WatcherType(5000, 10, "Directory time poll event handler"){ }
 
   static void
   introduceSelf();
@@ -27,7 +27,6 @@ public:
     struct stat myLastStat;
 
     DirInfo(IOListener * l, const std::string& dir)
-    // : myListener(l), myURL(dir)
       : myURL(dir)
     {
       myListener = l;
@@ -40,39 +39,14 @@ public:
     createEvents(WatcherType * w) override;
   };
 
-  /** We store a vector of events */
-  class DirWatchEvent : public WatchEvent {
-public:
-
-    /** Create a Dir Event for notifying listeners */
-    DirWatchEvent(IOListener * l,
-      const std::string        & file)
-      : myListener(l), myFile(file){ }
-
-    /** Handle the event action */
-    void
-    handleEvent();
-
-private:
-
-    /** Listener to handle the event */
-    IOListener * myListener;
-
-    /** New file to process */
-    std::string myFile;
-  };
-
   /** Attach a pulse to web page for a given listener to us */
   virtual bool
   attach(const std::string& dirname, IOListener *) override;
 
-  /** Detach all references for a given listener from us */
+  /** Get some events.  Depending on watcher this can be a global process or
+   * passed on the individual infos */
   virtual void
-  detach(IOListener *) override;
-
-  /** Action to take on timer pulse */
-  virtual void
-  action() override;
+  getEvents() override;
 
   /** Destroy us */
   virtual ~DirWatcher(){ }
@@ -82,9 +56,5 @@ private:
   /** Recursive scan for new files during a poll */
   void
   scan(IOListener * l, const std::string& dir, struct stat& lowtime, struct stat& newlowtime);
-
-  /** Get new WEB events into the queue */
-  void
-  getEvents();
 };
 }
