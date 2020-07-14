@@ -13,10 +13,9 @@ using namespace rapio;
 /** Default constant for a static XML index */
 const std::string XMLIndex::XMLINDEX = "ixml";
 
-XMLIndex::XMLIndex(const URL                        & xmlURL,
-  const std::vector<std::shared_ptr<IndexListener> >& listeners,
-  const TimeDuration                                & maximumHistory)
-  : IndexType(listeners, maximumHistory)
+XMLIndex::XMLIndex(const URL & xmlURL,
+  const TimeDuration         & maximumHistory)
+  : IndexType(maximumHistory)
 {
   myURL = xmlURL;
 }
@@ -33,13 +32,11 @@ XMLIndex::introduceSelf()
 
 std::shared_ptr<IndexType>
 XMLIndex::createIndexType(
-  const std::string                            & protocol,
-  const std::string                            & indexparams,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory)
+  const std::string  & protocol,
+  const std::string  & indexparams,
+  const TimeDuration & maximumHistory)
 {
   std::shared_ptr<XMLIndex> result = std::make_shared<XMLIndex>(URL(indexparams),
-      listeners,
       maximumHistory);
   return (result);
 }

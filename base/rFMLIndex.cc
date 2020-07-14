@@ -31,11 +31,10 @@ FMLIndex::~FMLIndex()
 }
 
 FMLIndex::FMLIndex(
-  const std::string                                 & protocol,
-  const URL                                         & aURL,
-  const std::vector<std::shared_ptr<IndexListener> >& listeners,
-  const TimeDuration                                & maximumHistory) :
-  IndexType(listeners, maximumHistory),
+  const std::string  & protocol,
+  const URL          & aURL,
+  const TimeDuration & maximumHistory) :
+  IndexType(maximumHistory),
   myProtocol(protocol),
   myURL(aURL),
   myIndexPath(IOIndex::getIndexPath(aURL))
@@ -189,15 +188,13 @@ FMLIndex::introduceSelf()
 
 std::shared_ptr<IndexType>
 FMLIndex::createIndexType(
-  const std::string                            & protocol,
-  const std::string                            & indexparams,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory)
+  const std::string  & protocol,
+  const std::string  & indexparams,
+  const TimeDuration & maximumHistory)
 {
   std::shared_ptr<FMLIndex> result = std::make_shared<FMLIndex>(
     protocol,
     URL(indexparams),
-    listeners,
     maximumHistory);
   return (result); // Factory handles isValid now...
 }

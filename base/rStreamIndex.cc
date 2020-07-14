@@ -19,11 +19,10 @@ StreamIndex::~StreamIndex()
 { }
 
 StreamIndex::StreamIndex(
-  const std::string                                 & protocol,
-  const std::string                                 & indexparams,
-  const std::vector<std::shared_ptr<IndexListener> >& listeners,
-  const TimeDuration                                & maximumHistory) :
-  IndexType(listeners, maximumHistory), myItemStart("<item>"), myItemEnd("</item>")
+  const std::string  & protocol,
+  const std::string  & indexparams,
+  const TimeDuration & maximumHistory) :
+  IndexType(maximumHistory), myItemStart("<item>"), myItemEnd("</item>")
 {
   // Using % to space separate exe, quotes and other stuff mess with the shell
   myParams   = indexparams;
@@ -159,15 +158,13 @@ StreamIndex::introduceSelf()
 
 std::shared_ptr<IndexType>
 StreamIndex::createIndexType(
-  const std::string                            & protocol,
-  const std::string                            & indexparams,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory)
+  const std::string  & protocol,
+  const std::string  & indexparams,
+  const TimeDuration & maximumHistory)
 {
   std::shared_ptr<StreamIndex> result = std::make_shared<StreamIndex>(
     protocol,
     indexparams,
-    listeners,
     maximumHistory);
   return (result); // Factory handles isValid now...
 }

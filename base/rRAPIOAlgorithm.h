@@ -176,11 +176,11 @@ public:
   virtual int
   matches(const Record& rec);
 
-  /** Handle ANY new record from an index, no filtering done here yet */
+  /** Handle new record, usually from event queue */
   virtual void
   handleRecordEvent(const Record& rec);
 
-  /** Handle end of event index event */
+  /** Handle end of event index event (sent by archives) */
   virtual void
   handleEndDatasetEvent();
 

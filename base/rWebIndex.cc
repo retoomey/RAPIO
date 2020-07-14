@@ -19,10 +19,9 @@ WebIndex::introduceSelf()
   IOIndex::introduce(WEBINDEX, newOne);
 }
 
-WebIndex::WebIndex(const URL                        & aURL,
-  const std::vector<std::shared_ptr<IndexListener> >& listeners,
-  const TimeDuration                                & maximumHistory) :
-  IndexType(listeners, maximumHistory),
+WebIndex::WebIndex(const URL & aURL,
+  const TimeDuration         & maximumHistory) :
+  IndexType(maximumHistory),
   myLastRead(0),
   myLastReadNS(0),
   myReadOK(false),
@@ -174,13 +173,11 @@ WebIndex::readRemoteRecords()
 
 std::shared_ptr<IndexType>
 WebIndex::createIndexType(
-  const std::string                            & protocol,
-  const std::string                            & indexparams,
-  std::vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                           & maximumHistory)
+  const std::string  & protocol,
+  const std::string  & indexparams,
+  const TimeDuration & maximumHistory)
 {
   std::shared_ptr<WebIndex> result = std::make_shared<WebIndex>(URL(indexparams),
-      listeners,
       maximumHistory);
   return (result);
 }

@@ -39,10 +39,9 @@ IOIndex::~IOIndex()
 
 std::shared_ptr<IndexType>
 IOIndex::createIndex(
-  const std::string                       & protocolin,
-  const std::string                       & indexparamsin,
-  vector<std::shared_ptr<IndexListener> > listeners,
-  const TimeDuration                      & maximumHistory)
+  const std::string  & protocolin,
+  const std::string  & indexparamsin,
+  const TimeDuration & maximumHistory)
 {
   // Look for a scheme for factory
   std::string protocol    = protocolin;
@@ -123,7 +122,7 @@ IOIndex::createIndex(
     std::shared_ptr<IndexType> factory = Factory<IndexType>::get(protocol,
         "Index protocol");
     if (factory != nullptr) {
-      return (factory->createIndexType(protocol, indexparams, listeners, maximumHistory));
+      return (factory->createIndexType(protocol, indexparams, maximumHistory));
     }
   }
   return (nullptr);

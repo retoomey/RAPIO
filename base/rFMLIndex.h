@@ -29,20 +29,18 @@ public:
   /** Create an individual FMLIndex to a particular location */
   virtual std::shared_ptr<IndexType>
   createIndexType(
-    const std::string                            & protocol,
-    const std::string                            & location,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory) override;
+    const std::string  & protocol,
+    const std::string  & location,
+    const TimeDuration & maximumHistory) override;
 
   /** Create a new empty FMLIndex, probably as main factory */
   FMLIndex(){ }
 
   /** Specialized constructor */
   FMLIndex(
-    const std::string                                 & protocol,
-    const URL                                         & index_directory_name,
-    const std::vector<std::shared_ptr<IndexListener> >& listeners,
-    const TimeDuration                                & maximumHistory);
+    const std::string  & protocol,
+    const URL          & index_directory_name,
+    const TimeDuration & maximumHistory);
 
   /** Handle realtime vs. archive mode stuff */
   virtual bool

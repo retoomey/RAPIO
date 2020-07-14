@@ -17,30 +17,15 @@
 #include "rRecordQueue.h"
 #include "rAlgConfigFile.h"
 #include "rFactory.h"
+#include "rSignals.h"
 
-#include <iostream>
-#include <map>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <algorithm>
-
-#include <dlfcn.h>
-
-// Datatype creation factories
-// FIXME: Eventually want some sort of dynamic
-// extension loading ability or something?
-// #include "rIONetcdf.h"
-// #include "rIOGrib.h"
+// Default always loaded datatype creation factories
 #include "rIOXML.h"
 #include "rIOJSON.h"
 
-#include "rSignals.h"
+
+#include <iostream>
+#include <string>
 
 using namespace rapio;
 using namespace std;
@@ -48,47 +33,6 @@ using namespace std;
 /** This listener class is connected to each index we create.
  * It does nothing but pass events onto the algorithm
  */
-namespace rapio {
-class StockInputListener : public IndexListener {
-public:
-
-  StockInputListener(RAPIOAlgorithm * anAlg) : myAlg(anAlg){ }
-
-  virtual ~StockInputListener()
-  {
-    myOn = false;
-  }
-
-  void
-  setListening(bool flag)
-  {
-    myOn = flag;
-  }
-
-  void
-  notifyNewRecordEvent(const Record& item) override
-  {
-    if (myOn) {
-      myAlg->handleRecordEvent(item);
-    }
-  }
-
-  void
-  notifyEndDatasetEvent(const Record& item) override
-  {
-    if (myOn) {
-      myAlg->handleEndDatasetEvent();
-    }
-  }
-
-  // void notifyNewTimeStampEvent(IndexType *idx, const Record& item) {}
-
-protected:
-
-  bool myOn;
-  RAPIOAlgorithm * myAlg;
-};
-}
 
 RAPIOAlgorithm::RAPIOAlgorithm()
   : myInitOnStart(false),
@@ -630,12 +574,6 @@ RAPIOAlgorithm::execute()
 
   setUpRecordNotifier();
 
-  // Create a single listener to connect to all required indexes.
-  std::vector<std::shared_ptr<IndexListener> > llist;
-  std::shared_ptr<StockInputListener> l = std::make_shared<StockInputListener>(this);
-  l->setListening(false);
-  llist.push_back(l);
-
   setUpRecordFilter();
 
   // Actually create all the indexes and link listener to each one.
@@ -644,17 +582,20 @@ RAPIOAlgorithm::execute()
   size_t wanted = myIndexInputInfo.size();
 
   // Create record queue
-  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this, myRealtime);
+  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
   Record::theRecordQueue = q;
 
   // Try to create an index for each source we want data from
   // and add sorted records to queue
+  // FIXME: Archive should probably skip queue in case of giant archive cases,
+  // otherwise we load a lot of memory.  We need better handling of this..
+  // though for small archives we load all and sort, which is a nice ability
   for (size_t p = 0; p < wanted; ++p) {
     const indexInputInfo& i = myIndexInputInfo[p];
     std::shared_ptr<IndexType> in;
 
     bool success = false;
-    in = IOIndex::createIndex(i.protocol, i.indexparams, llist, i.maximumHistory);
+    in = IOIndex::createIndex(i.protocol, i.indexparams, i.maximumHistory);
     myConnectedIndexes.push_back(in);
 
     if (in != nullptr) {
@@ -690,9 +631,8 @@ RAPIOAlgorithm::execute()
   static std::shared_ptr<ProcessTimer> fulltime(
     new ProcessTimer("Algorithm total runtime"));
 
-  q->setConnectedIndexes(myConnectedIndexes);
+  // Add RecordQueue
   EventLoop::addTimer(q);
-  l->setListening(true); // FIXME: shouldn't matter anymore
 
   // Do event loop
   EventLoop::doEventLoop();
@@ -796,20 +736,26 @@ RAPIOAlgorithm::matches(const Record& rec)
 void
 RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 {
-  // Record filter already took out any unwanted records
-  // at this point.
-  RAPIOData d(rec, rec.getIndexNumber());
-
-  // Give data to algorithm to process
-  processNewData(d);
+  if (rec.getSelections().back() == "EndDataset") {
+    handleEndDatasetEvent();
+  } else {
+    // Give data to algorithm to process
+    RAPIOData d(rec);
+    processNewData(d);
+  }
 }
 
 void
 RAPIOAlgorithm::handleEndDatasetEvent()
 {
-  // Throw anonymous temporary...
-  Log::flush();
-  throw std::string("End of data set.");
+  if (!myRealtime) {
+    // Archive empty means end it all
+    // FIXME: maybe just end event loop here, do a shutdown
+    Log::flush();
+    throw std::string("End of data set.");
+  } else {
+    // Realtime queue is empty, hey we're caught up...
+  }
 }
 
 void

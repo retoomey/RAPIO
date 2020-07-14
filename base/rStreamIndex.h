@@ -27,20 +27,18 @@ public:
   /** Create an individual StreamIndex to a particular location */
   virtual std::shared_ptr<IndexType>
   createIndexType(
-    const std::string                            & protocol,
-    const std::string                            & location,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory) override;
+    const std::string  & protocol,
+    const std::string  & location,
+    const TimeDuration & maximumHistory) override;
 
   /** Create a new empty StreamIndex, probably as main factory */
   StreamIndex() : myItemStart(""), myItemEnd(""){ }
 
   /** Specialized constructor */
   StreamIndex(
-    const std::string                                 & protocol,
-    const std::string                                 & indexparams,
-    const std::vector<std::shared_ptr<IndexListener> >& listeners,
-    const TimeDuration                                & maximumHistory);
+    const std::string  & protocol,
+    const std::string  & indexparams,
+    const TimeDuration & maximumHistory);
 
   /** Handle realtime vs. archive mode stuff */
   virtual bool

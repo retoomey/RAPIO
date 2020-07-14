@@ -9,11 +9,12 @@
 namespace rapio {
 /** RAPIOData is an information record passed to subclasses of a stock
  * algorithm. By grouping,
- * it allows us to add more information later without changing the API. */
+ * it allows us to add more information later without changing the API.
+ * @author Robert Toomey */
 class RAPIOData : public Algorithm {
 public:
 
-  RAPIOData(const Record& aRec, int aIndexNumber);
+  RAPIOData(const Record& aRec);
 
   /** Get the old style record if any associated with this data */
   Record
@@ -30,6 +31,7 @@ public:
     return (dr);
   }
 
+  /** Return matched index number in order of command line */
   int
   matchedIndexNumber();
 
@@ -40,8 +42,5 @@ protected:
 
   /** The created data type from the record. */
   std::shared_ptr<DataType> dt;
-
-  /** The index number.  Typically from the -i entry. */
-  int indexNumber;
 };
 }

@@ -24,10 +24,9 @@ public:
 
   virtual std::shared_ptr<IndexType>
   createIndexType(
-    const std::string                            & protocol,
-    const std::string                            & location,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory) override;
+    const std::string  & protocol,
+    const std::string  & location,
+    const TimeDuration & maximumHistory) override;
 
   static void
   introduceSelf();
@@ -36,9 +35,8 @@ public:
    *  http://venus.protect.nssl:8080/?source=KABR
    *  We'll add webIndex/WebIndexServlet etc. as required.
    */
-  WebIndex(const URL                                  & website,
-    const std::vector<std::shared_ptr<IndexListener> >& listeners,
-    const TimeDuration                                & maximumHistory);
+  WebIndex(const URL   & website,
+    const TimeDuration & maximumHistory);
 
   // Index methods ------------------------------------------
   /** Handle realtime vs. archive mode stuff */

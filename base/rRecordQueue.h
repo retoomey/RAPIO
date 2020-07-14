@@ -27,15 +27,11 @@ class RecordQueue : public EventTimer
 {
 public:
   RecordQueue(
-    RAPIOAlgorithm * alg,
-    bool             realtime
+    RAPIOAlgorithm * alg
   );
 
+  /** The algorithm we send records to */
   RAPIOAlgorithm * myAlg;
-  bool myRealtime;
-
-  std::vector<std::shared_ptr<IndexType> > myConnectedIndexes;
-  size_t indexsize;
 
   /** Records.  Stored in time order by record operator < */
   std::priority_queue<Record, std::vector<Record>, RecordQueueSort> myQueue;
@@ -43,10 +39,6 @@ public:
   /** Run full speed.  Not sure we need to override this... */
   virtual double
   readyInMS(std::chrono::time_point<std::chrono::high_resolution_clock> at) override { return 0.0; }
-
-  /** Set connected indexes for event queue.  Needed before action */
-  void
-  setConnectedIndexes(std::vector<std::shared_ptr<IndexType> > c);
 
   /** Add given record to queue */
   void

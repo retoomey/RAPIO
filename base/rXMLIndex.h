@@ -26,18 +26,16 @@ public:
   /** Create a XML index */
   virtual std::shared_ptr<IndexType>
   createIndexType(
-    const std::string                            & protocol,
-    const std::string                            & location,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory) override;
+    const std::string  & protocol,
+    const std::string  & location,
+    const TimeDuration & maximumHistory) override;
 
   /** Create a new empty XMLIndex, probably as main factory */
   XMLIndex(){ }
 
   /** Create an individual XMLIndex to a particular location */
-  XMLIndex(const URL                                  & xmlFile,
-    const std::vector<std::shared_ptr<IndexListener> >& listeners,
-    const TimeDuration                                & maximumHistory);
+  XMLIndex(const URL   & xmlFile,
+    const TimeDuration & maximumHistory);
 
   /** Handle realtime vs. archive mode stuff */
   virtual bool

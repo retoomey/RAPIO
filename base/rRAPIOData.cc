@@ -3,9 +3,8 @@
 using namespace rapio;
 using namespace std;
 
-RAPIOData::RAPIOData(const Record& aRec, int aIndexNumber)
-  : rec(aRec),
-  indexNumber(aIndexNumber)
+RAPIOData::RAPIOData(const Record& aRec)
+  : rec(aRec)
 { }
 
 Record
@@ -17,5 +16,5 @@ RAPIOData::record()
 int
 RAPIOData::matchedIndexNumber()
 {
-  return (indexNumber);
+  return (rec.getIndexNumber());
 }

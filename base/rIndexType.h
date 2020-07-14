@@ -6,19 +6,12 @@
 #include <rRecord.h>
 
 namespace rapio {
-/** A listener for getting record events from an index */
-class IndexListener : public Event {
-public:
-
-  virtual void
-  notifyNewRecordEvent(const Record& item) = 0;
-  virtual void
-  notifyEndDatasetEvent(const Record& item) = 0;
-};
-
 /**
  * The Index class is a database of metadata records for
- * various input files
+ * various input files. The job of an index is to
+ * create Records and push them into the job queue.
+ *
+ * @author Robert Toomey
  */
 class IndexType : public IOListener {
 public:
@@ -36,10 +29,9 @@ public:
    *  create a brand-new object.  */
   virtual std::shared_ptr<IndexType>
   createIndexType(
-    const std::string                            & protocol,
-    const std::string                            & params,
-    std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                           & maximumHistory) = 0;
+    const std::string  & protocol,
+    const std::string  & params,
+    const TimeDuration & maximumHistory) = 0;
 
   /** Handle initial read of data and posting ofrecords. */
   virtual bool
@@ -59,14 +51,6 @@ public:
     myIndexLabel = l;
   }
 
-  /** Add an index listener to get special index events */
-  void
-  addIndexListener(std::shared_ptr<IndexListener> l);
-
-  /** Get number of listeners */
-  size_t
-  getNumListeners();
-
   /**
    * Forms the key to which the given selection criteria would be
    * mapped. Uses only the criteria in the range [offset1,offset2)
@@ -85,8 +69,8 @@ public:
    * Users will normally create a subclass of Index, such
    * as XMLIndex, etc.
    */
-  IndexType(std::vector<std::shared_ptr<IndexListener> > listeners,
-    const TimeDuration                                   & maximumHistory);
+  IndexType(
+    const TimeDuration & maximumHistory);
 
   /** @return the maximum history maintained by this index.  */
   const TimeDuration&
@@ -95,34 +79,12 @@ public:
     return (myAgeOffInterval);
   }
 
-  /** Process a record in index, reading data and notifying all listeners. */
-  void
-  processRecord(const Record& item);
-
 protected:
 
   /** How long to keep back history, if any */
   TimeDuration myAgeOffInterval;
 
-  /** Our listeners. */
-  std::vector<std::shared_ptr<IndexListener> > myListeners;
-
   /** Our index label used to mark recrods */
   size_t myIndexLabel;
-
-public:
-
-  /**
-   * Notify interested parties of a new Record to the index
-   */
-  virtual void
-  notifyNewRecordEvent(const Record& item);
-
-  /**
-   * Notify interested parties that this data set is complete and
-   * that no new Records will come from this data set.
-   */
-  virtual void
-  notifyEndDatasetEvent(const Record& item);
 };
 }
