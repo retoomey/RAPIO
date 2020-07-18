@@ -61,6 +61,7 @@ librapio_la_SOURCES =\
   rDataType.cc\
   rJSONData.cc\
   rXMLData.cc\
+  rFileIndex.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
   rIOWatcher.cc\
@@ -134,6 +135,7 @@ pkginclude_HEADERS =\
   rBinaryTable.h\
   rRadialSet.h\
   rLatLonGrid.h\
+  rFileIndex.h\
   rFMLIndex.h\
   rFMLRecordNotifier.h\
   rIOWatcher.h\
