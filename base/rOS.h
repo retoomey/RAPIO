@@ -29,6 +29,12 @@ public:
   getProcessName();
 
   /**
+   * Gets root path of process.
+   */
+  static std::string
+  getProcessPath();
+
+  /**
    * Returns the process id.
    */
   static int

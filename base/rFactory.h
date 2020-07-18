@@ -22,7 +22,7 @@ namespace rapio {
 template <class X> class Factory : public Utility {
 private:
   /** Simple private lookup for late loaded dynamic factories */
-  template <class Z> class FactoryLookup {
+  template <class Z> class FactoryLookup : public Utility {
 public:
     /** Std containers */
     FactoryLookup(){ };
@@ -82,14 +82,12 @@ public:
     std::string key = libname + ":" + methodname;
     auto cur        = myDynamicInfo.find(key);
     if (cur != myDynamicInfo.end()) {
-      LogSevere("Lazy FOUND!\n");
       auto& f = cur->second;
       f.alias.push_back(name);
     } else {
       auto z = FactoryLookup<X>(libname, methodname);
       z.alias.push_back(name);
       myDynamicInfo[key] = z;
-      LogSevere("Lazy ADDED!\n");
     }
   }
 

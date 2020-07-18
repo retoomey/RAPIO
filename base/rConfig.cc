@@ -147,6 +147,10 @@ Config::initialize()
   addSearchFromString(rapio);
   addSearchFromString(w2);
 
+  // Fall back to relative from binary when running example program
+  auto path = OS::getProcessPath() + "/../../RAPIOConfig/";
+  addSearchFromString(path);
+
   // Fall back to home directory
   if (mySearchPaths.size() < 1) {
     const std::string home(getEnvVar("HOME"));

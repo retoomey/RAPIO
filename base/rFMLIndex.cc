@@ -169,9 +169,11 @@ FMLIndex::handleNewEvent(WatchEvent * event)
   } else if (m == "newdir") {
     LogInfo("New directory was added: " << d << "\n");
   } else if (m == "unmount") {
-    LogSevere("Our FAM watch " << d << " was unmounted!\n");
-    LogSevere("Restarting algorithm/program.\n");
-    exit(1); // FIXME: configurable how to handle this?
+    LogSevere("Our watch " << d << " was unmounted!\n");
+    LogSevere("Ending algorithm.\n");
+    exit(1);
+  } else if (m == "unmountr") {
+    // Nothing, our watcher will try to reconnect
   }
 }
 

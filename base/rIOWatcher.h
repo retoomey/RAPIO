@@ -71,7 +71,7 @@ class WatcherType : public EventTimer {
 public:
   WatcherType(size_t milliseconds, size_t process, const std::string& name) :
     EventTimer(milliseconds, name), myMaxQueueSize(1000), myWaitWhenQueueFull(true),
-    myProcessCount(process){ }
+    myProcessCount(process), myAutoReconnect(true), myAutoSeconds(5){ }
 
   /** Attach this listener to given URL */
   virtual bool
@@ -124,6 +124,12 @@ protected:
   /** Process count.  Max events to process at once.  We hog the system
    * here.  Tweak based on what we're doing */
   bool myProcessCount;
+
+  /** Try to auto reconnect a failed watcher */
+  bool myAutoReconnect;
+
+  /** Delay between auto reconnect in secs */
+  int myAutoSeconds;
 };
 
 /** Root class for watcher information */

@@ -3,6 +3,7 @@
 #include <rIOWatcher.h>
 
 #include <rURL.h>
+#include <rTime.h>
 
 #include <sys/inotify.h>
 
@@ -30,16 +31,24 @@ public:
     std::string myDirectory;
     int myWatchID;
 
+    /** Approximate time of latest connection */
+    Time myTime;
+
     FAMInfo(IOListener * l, const std::string& dir, int wd)
       : myDirectory(dir), myWatchID(wd)
     {
       myListener = l;
+      myTime     = Time::CurrentTime();
     }
 
     /** Handle detach of watch */
     virtual bool
     handleDetach(WatcherType * owner) override;
   };
+
+  /** Attach/update a FAMInfo with FAM connection */
+  bool
+  attach(FAMInfo * w);
 
   /** Attach a FAM listener to us */
   virtual bool
@@ -62,8 +71,7 @@ private:
 
   /** Add FAM Event */
   void
-  addFAMEvent(IOListener * l,
-    const std::string& d, const std::string& n, const uint32_t amask);
+  addFAMEvent(FAMInfo * w, const inotify_event * event);
 
   /** Global FAM file descripter for us */
   static int theFAMID;

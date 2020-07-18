@@ -37,18 +37,8 @@ FAMWatcher::init()
   }
 }
 
-namespace {
-// Ignore the 'system' stuff... '.' and '..'
-inline bool
-shouldIgnore(const std::string& filename)
-{
-  return (filename.size() < 2 || filename[0] == '.');
-}
-}
-
 bool
-FAMWatcher::attach(const std::string &dirname,
-  IOListener *                       l)
+FAMWatcher::attach(FAMInfo * w)
 {
   /** Check if initial inotify creation worked */
   if (theFAMID < 0) {
@@ -56,9 +46,12 @@ FAMWatcher::attach(const std::string &dirname,
     if (theFAMID < 0) { return (false); }
   }
 
-  // create watch for this directory
-  // based on mask to make sure we don't double respond to FAM events
+  // Mask for FAM events
   uint32_t mask = IN_CLOSE_WRITE | IN_MOVED_TO | IN_ONLYDIR |
+
+    // Watched directory itself was deleted.  Important to reconnect
+    // or kill algorithm since we just lost connection.
+    IN_DELETE_SELF |
 
     // We actually want IN_CREATE events, but only to add a new alg created
     // directory.
@@ -75,35 +68,76 @@ FAMWatcher::attach(const std::string &dirname,
   mask |= IN_EXCL_UNLINK;
   #endif // if IN_EXCL_UNLINK
 
-  int watchID = inotify_add_watch(theFAMID, dirname.c_str(), mask);
+  int watchID = inotify_add_watch(theFAMID, w->myDirectory.c_str(), mask);
   if (watchID < 0) {
     std::string errMessage(strerror(errno));
     LogSevere(
-      "inotify_add_watch for " << dirname << " failed with error: " << errMessage
+      "inotify_add_watch for " << w->myDirectory << " failed with error: " << errMessage
                                << "\n");
-    return (false);
+    return false;
+  } else {
+    LogInfo("FAM Attached to " << w->myDirectory << "\n");
+    w->myWatchID = watchID;
+    w->myTime    = Time::CurrentTime();
   }
+  return true;
+} // FAMWatcher::attach
 
-  std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, watchID);
-  myWatches.push_back(newWatch);
-  LogDebug(dirname << " being monitored ... \n");
+bool
+FAMWatcher::attach(const std::string &dirname,
+  IOListener *                       l)
+{
+  std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, -1);
+  if (attach(newWatch.get())) {
+    myWatches.push_back(newWatch);
+    LogDebug(dirname << " being monitored ... \n");
+    return true;
+  } else {
+    // If not auto connect mode, die
+    if (!myAutoReconnect) {
+      return false;
+    }
+  }
   return true;
 } // FAMWatcher::attach
 
 void
-FAMWatcher::addFAMEvent(IOListener * l,
-  const std::string& directory, const std::string& shortfile, const uint32_t amask)
+FAMWatcher::addFAMEvent(FAMInfo * w, const inotify_event * event)
 {
-  // FIXME: configuration of wanted events maybe so they only get created if wanted
+  IOListener * l = w->myListener;
+  const std::string& directory = w->myDirectory;
+  const uint32_t amask         = event->mask;
 
-  if (amask & IN_IGNORED) { // Ignore deletions...
-    // LogSevere("...deletion?\n");
-    return;
+  bool deleted = false;
+
+  // The watch was automatically removed, because the file was deleted or its
+  // filesystem was unmounted.
+  // I think you can't get this without getting the unmount or self delete first..
+  if (amask & IN_IGNORED) {
+    // LogSevere("IGNORED EVENT "<< w->myWatchID <<"\n");
+    w->myWatchID = -1;
+    deleted      = true;
   }
-  // IOListener class should decide.  Maybe it doesn't care...
-  if (amask & IN_UNMOUNT) { // End on an unmount and hope restart will get
-                            // path again
-    WatchEvent e(l, "unmount", directory);
+
+  // So we don't actually need to check unmount or delete self, since
+  // these will cause FAM to self delete the watch
+
+  // The backing filesystem was unmounted
+  // This is usually followed by a IN_IGNORED (watch auto remove) ?? FIXME: yes/no?
+  if (amask & IN_UNMOUNT) {
+    // LogSevere("UNMOUNT EVENT\n");
+    deleted = false;// wait for IN_IGNORED
+  }
+
+  // Watched file/directory was itself deleted
+  // This is usually followed by a IN_IGNORED (watch auto remove) yes
+  if (amask & IN_DELETE_SELF) {
+    // LogSevere("DELETE SELF EVENT\n");
+    deleted = false; // wait for IN_IGNORED
+  }
+
+  if (deleted) {
+    WatchEvent e(l, myAutoReconnect ? "unmountr" : "unmount", directory);
     myEvents.push(e);
     return;
   }
@@ -117,11 +151,12 @@ FAMWatcher::addFAMEvent(IOListener * l,
   } else {
     // Are create and move the same?
     if ((amask & IN_CLOSE_WRITE) || (amask & IN_MOVE)) {
+      const std::string& shortfile = event->name;
       WatchEvent e(l, "newfile", directory + '/' + shortfile);
       myEvents.push(e);
     }
   }
-}
+} // FAMWatcher::addFAMEvent
 
 void
 FAMWatcher::getEvents()
@@ -130,6 +165,25 @@ FAMWatcher::getEvents()
   if (myWatches.size() == 0) {
     return;
   }
+
+  // Check for disconnected watches and try to reconnect them...
+  // This happens if directory deleted, file system unmounted,
+  // or if directory didn't exist yet, which is 'possible' in realtime
+  // system.
+  if (myAutoReconnect) {
+    Time now = Time::CurrentTime();
+    for (auto ww:myWatches) {
+      auto * w = (FAMInfo *) (ww.get());
+      if (w->myWatchID < 0) { // Basically if disconnected check
+        TimeDuration d(now - w->myTime);
+        if (d.seconds() > myAutoSeconds) { // and enough time passed to not hammer
+          w->myTime = now;
+          attach(w);
+        }
+      }
+    }
+  }
+
   // initial guess: 5 new files per directory being watched?
   static std::vector<char> buf((5 * myWatches.size() + 10) * sizeof(inotify_event));
   size_t startSize;
@@ -162,28 +216,15 @@ FAMWatcher::getEvents()
 
     // Handle FAM events back...
     for (int i = 0; i < len;) {
-      inotify_event * event = (inotify_event *) (&(buf[i]));
+      const inotify_event * event = (inotify_event *) (&(buf[i]));
 
       const int wd = event->wd;
 
       // This is O(n) but ends up being faster than std::map in practice
       for (auto ww:myWatches) {
-        // FIXME: I like reducing the code, but don't like this, maybe template
-        auto * z = ww.get();
-        auto * w = (FAMInfo *) (z);
+        auto * w = (FAMInfo *) (ww.get());
         if (w->myWatchID == wd) {
-          // Pre filter out events before even adding...
-          bool want = true;
-          if (event->mask & IN_IGNORED) { // Ignore deletions...
-            want = false;
-          } else if (event->mask & IN_UNMOUNT) {
-            want = true;
-          } else if (shouldIgnore(event->name)) {
-            want = false;
-          }
-          if (want) {
-            addFAMEvent(w->myListener, w->myDirectory, event->name, event->mask);
-          }
+          addFAMEvent(w, event);
           break;
         }
       }

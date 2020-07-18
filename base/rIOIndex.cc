@@ -10,6 +10,7 @@
 // Index ability classes
 #include "rXMLIndex.h"
 #include "rWebIndex.h"
+#include "rFileIndex.h"
 #include "rFMLIndex.h"
 #include "rStreamIndex.h"
 
@@ -29,6 +30,7 @@ IOIndex::introduceSelf()
 {
   // Indexes we support by default
   XMLIndex::introduceSelf();    // Local code_index.xml
+  FileIndex::introduceSelf();   // General files
   FMLIndex::introduceSelf();    // .fml files
   WebIndex::introduceSelf();    // web connection
   StreamIndex::introduceSelf(); // Stream index

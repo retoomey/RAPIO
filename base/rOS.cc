@@ -44,6 +44,12 @@ OS::getProcessName()
   return process;
 }
 
+std::string
+OS::getProcessPath()
+{
+  return (boost::dll::program_location().parent_path().string());
+}
+
 int
 OS::getProcessID()
 {
