@@ -184,18 +184,11 @@ public:
   virtual void
   handleEndDatasetEvent();
 
-  /** Handle timed event */
+  /** Handle timed event.
+   * @param at The actual now time triggering the event.
+   * @param sync The pinned sync time we're firing for. */
   virtual void
-  handleTimedEvent();
-
-  /** Turn on algorithm heartbeat.  Call before execute to get periodic support.
-   */
-  virtual void
-  setHeartbeat(size_t periodInSeconds);
-
-  // Two ways of getting input.  By each record coming in (processNewData) and
-  // by a
-  // timed heartbeat pulse (no new data, output based on the incoming time)
+  handleTimedEvent(const Time& at, const Time& sync);
 
   /** Process a matched new record (occurs as the records come in)  Index number
    * is index into declared order */
@@ -218,20 +211,15 @@ public:
   TimeDuration
   getMaximumHistory();
 
-  /** Are we a realtime algorithm? */
+  /** Are we a daemon algorithm? For example, waiting on realtime data. */
   bool
-  isRealtime()
-  {
-    return (myRealtime);
-  }
+  isDaemon();
+
+  /** Are we reading old records? */
+  bool
+  isArchive();
 
 protected:
-
-  /** Init on start handles the latest record on execute */
-  bool myInitOnStart;
-
-  /** Heartbeat in seconds. A zero value means no heartbeat */
-  size_t myHeartbeatSecs;
 
   /** Database of added input products we want from any index */
   std::vector<productInputInfo> myProductInputInfo;
@@ -257,8 +245,11 @@ protected:
   /** History time for index storage */
   TimeDuration myMaximumHistory;
 
-  /** The realtime mode */
-  bool myRealtime;
+  /** The record read mode */
+  std::string myReadMode;
+
+  /** The cronlist for heartbeat/sync if any */
+  std::string myCronList;
 };
 
 //  end class RAPIOAlgorithm

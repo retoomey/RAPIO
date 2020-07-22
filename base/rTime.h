@@ -56,6 +56,8 @@ public:
    *
    *   @param unsigned_short  second (0--61) of the minute.  Values
    *        beyond 59 allow for leap seconds.
+   *
+   *   @param optional milliseconds, defaults to 0.0
    */
   Time(
     int,
@@ -63,7 +65,8 @@ public:
     unsigned short,
     unsigned short,
     unsigned short,
-    unsigned short
+    unsigned short,
+    double = 0.0
   );
 
   /**  Convert from a string.

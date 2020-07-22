@@ -64,6 +64,7 @@ librapio_la_SOURCES =\
   rFileIndex.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
+  rHeartbeat.cc\
   rIOWatcher.cc\
   rFAMWatcher.cc\
   rEXEWatcher.cc\
@@ -71,7 +72,8 @@ librapio_la_SOURCES =\
   rOptionList.cc\
   rAlgConfigFile.cc\
   rAWS.cc\
-  rProject.cc
+  rProject.cc\
+  ccronexpr.c
 
 pkginclude_HEADERS =\
   RAPIO.h\
@@ -138,6 +140,7 @@ pkginclude_HEADERS =\
   rFileIndex.h\
   rFMLIndex.h\
   rFMLRecordNotifier.h\
+  rHeartbeat.h\
   rIOWatcher.h\
   rFAMWatcher.h\
   rEXEWatcher.h\

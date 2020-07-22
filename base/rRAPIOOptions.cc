@@ -274,6 +274,22 @@ RAPIOOptions::getGrid(const std::string& name,
   }
 } // RAPIOOptions::getGrid
 
+/** Count a list of arguments with a given filter */
+size_t
+RAPIOOptions::countArgs(std::vector<Option>& options,
+  OptionFilter                             & a)
+{
+  size_t counter = 0;
+
+  for (auto& o: options) {
+    // Output the option
+    if (a.show(o)) {
+      counter++;
+    }
+  }
+  return counter;
+}
+
 /** Print a list of arguments with a given filter */
 void
 RAPIOOptions::dumpArgs(std::vector<Option>& options,
@@ -334,7 +350,10 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
         for (auto& i: o.suboptions) {
           s << setw(c1 + 4) << left << ""; // Indent 1 column
           std::string optpad = i.opt;
-          size_t max         = o.suboptionmax;
+          if (optpad.empty()) { // Existance only such as -r
+            optpad = "\"\"";
+          }
+          size_t max = o.suboptionmax;
 
           while (optpad.length() < max) {
             optpad += " ";
@@ -448,68 +467,36 @@ RAPIOOptions::dumpArgs()
   outputRequired += ColorTerm::bold("--verbose");
   ColorTerm::wrapWithIndent(commandLength, commandLength, outputRequired);
 
-  FilterGroup lio("I/O");
-  std::cout << ColorTerm::bold("I/O:\n");
-  dumpArgs(allOptions, lio);
+  // Collection option groups in desired order
+  std::vector<std::string> layout = { "I/O", "", "TIME", "LOGGING", "CONFIG", "HELP" };
 
-  std::cout << ColorTerm::bold("OPTIONS:\n");
-  FilterGroup la("");
-  dumpArgs(allOptions, la);
-
-  // Get all groups not matching our stuff
-  std::vector<std::string> otherGroups;
-
-  for (size_t i = 0; i < allOptions.size(); i++) {
-    const Option& o = allOptions[i];
-
-    // For each group in option...
-    for (size_t j = 0; j < o.groups.size(); j++) {
-      // FIXME: Maybe a map here is better
-      std::string group = o.groups[j];
-
-      // Add to total group list if not found...
-      bool found = false;
-
-      if (group == "I/O") { found = true; }
-
-      if (group == "CONFIG") { found = true; }
-
-      if (group == "LOGGING") { found = true; }
-
-      if (group == "HELP") { found = true; }
-
-      for (size_t k = 0; k < otherGroups.size(); k++) {
-        const std::string g = otherGroups[k];
-
-        if (g == group) { found = true; break; }
+  // Get all groups not matching preordered, sort and insert
+  // into position wanted.
+  std::vector<std::string> user;
+  for (const auto& o:allOptions) {
+    for (const auto& g: o.groups) {
+      // If not in our predefined group...
+      if (std::find(layout.begin(), layout.end(), g) != layout.end()) {
+        continue;
       }
-
-      if (!found) {
-        otherGroups.push_back(group);
+      // ... and not already included ...
+      if (std::find(user.begin(), user.end(), g) != user.end()) {
+        continue;
       }
+      user.push_back(g);
     }
   }
+  std::sort(user.begin(), user.end());
+  layout.insert(layout.begin() + 2, user.begin(), user.end());
 
-  // Print out user registered groups...
-  std::sort(otherGroups.begin(), otherGroups.end());
-
-  for (size_t i = 0; i < otherGroups.size(); i++) {
-    std::cout << ColorTerm::bold(otherGroups[i] + " OPTIONS:\n");
-    FilterGroup og(otherGroups[i]);
-    dumpArgs(allOptions, og);
+  // Dump options
+  for (auto& x:layout) {
+    FilterGroup l(x);
+    if (countArgs(allOptions, l) > 0) {
+      std::cout << ColorTerm::bold(x.empty() ? "OPTIONS:\n" : x + ":\n");
+    }
+    dumpArgs(allOptions, l);
   }
-
-  FilterGroup ll("LOGGING");
-  std::cout << ColorTerm::bold("LOGGING:\n");
-  dumpArgs(allOptions, ll);
-
-  FilterGroup lc("CONFIG");
-  std::cout << ColorTerm::bold("CONFIG:\n");
-  dumpArgs(allOptions, lc);
-
-  FilterGroup lh("HELP");
-  std::cout << ColorTerm::bold("HELP:\n");
-  dumpArgs(allOptions, lh);
 } // RAPIOOptions::dumpArgs
 
 /** Process and remove a single argument from a vector of strings.  Either 1 or

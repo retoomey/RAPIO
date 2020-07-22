@@ -65,7 +65,7 @@ FMLIndex::wantFile(const std::string& path)
 }
 
 bool
-FMLIndex::initialRead(bool realtime)
+FMLIndex::initialRead(bool realtime, bool archive)
 {
   if (!myURL.isLocal()) {
     LogSevere("Can't do an FML index off a remote URL at moment\n");
@@ -78,7 +78,7 @@ FMLIndex::initialRead(bool realtime)
   //
   // Grab the list of files currently in the directory
 
-  if (!realtime) {
+  if (archive) {
     DIR * dirp = opendir(loc.c_str());
     if (dirp == 0) {
       LogSevere("Unable to read location " << loc << "\n");

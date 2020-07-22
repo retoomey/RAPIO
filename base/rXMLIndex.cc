@@ -43,7 +43,7 @@ XMLIndex::createIndexType(
 
 /** Called by RAPIOAlgorithm to gather initial records from source */
 bool
-XMLIndex::initialRead(bool realtime)
+XMLIndex::initialRead(bool realtime, bool archive)
 {
   auto doc2 = IODataType::read<XMLData>(myURL);
 

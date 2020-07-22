@@ -40,7 +40,7 @@ FileIndex::FileIndex(
 { }
 
 bool
-FileIndex::initialRead(bool realtime)
+FileIndex::initialRead(bool realtime, bool archive)
 {
   if (!myURL.isLocal()) {
     LogSevere("Can't do a file index off a remote URL at moment.n");
@@ -53,7 +53,7 @@ FileIndex::initialRead(bool realtime)
   //
   // Grab the list of files currently in the directory
 
-  if (!realtime) {
+  if (archive) {
     DIR * dirp = opendir(loc.c_str());
     if (dirp == 0) {
       LogSevere("Unable to read location " << loc << "\n");

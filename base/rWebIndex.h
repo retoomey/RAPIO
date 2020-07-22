@@ -41,7 +41,7 @@ public:
   // Index methods ------------------------------------------
   /** Handle realtime vs. archive mode stuff */
   virtual bool
-  initialRead(bool realtime) override;
+  initialRead(bool realtime, bool archive) override;
 
   // IOListener methods ---------------------------------------
   virtual bool

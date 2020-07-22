@@ -44,7 +44,7 @@ public:
 
   /** Handle realtime vs. archive mode stuff */
   virtual bool
-  initialRead(bool realtime) override;
+  initialRead(bool realtime, bool archive) override;
 
   /** Handle a new file from a watcher.  We're allowed to do work here. */
   virtual void

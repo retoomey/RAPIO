@@ -18,6 +18,7 @@
 #include "rAlgConfigFile.h"
 #include "rFactory.h"
 #include "rSignals.h"
+#include "rHeartbeat.h"
 
 // Default always loaded datatype creation factories
 #include "rIOXML.h"
@@ -35,8 +36,6 @@ using namespace std;
  */
 
 RAPIOAlgorithm::RAPIOAlgorithm()
-  : myInitOnStart(false),
-  myHeartbeatSecs(0)
 { }
 
 void
@@ -56,8 +55,19 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
     "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
 
   // All stock algorithms support this
-  o.boolean("r", "Realtime mode for algorithm.");
-  o.addGroup("r", "TIME");
+  // o.boolean("r", "Realtime mode for algorithm.");
+  const std::string r = "r";
+  o.optional(r, "old", "Read mode for algorithm.");
+  o.addGroup(r, "TIME");
+  o.addSuboption(r, "old", "Only process existing old records and stop.");
+  o.addSuboption(r, "new", "Only process new incoming records. Same as -r");
+  o.addSuboption(r, "", "Same as new, original realtime flag.");
+  o.addSuboption(r, "all", "All old records, then wait for new.");
+
+  o.optional("sync", "", "Sync data option. Cron format style algorithm heartbeat.");
+  o.addGroup("sync", "TIME");
+  o.addAdvancedHelp("sync",
+    "In daemon/realtime sends heartbeat to algorithm.  Note if your algorithm lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
 
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
@@ -122,8 +132,9 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   // Have to think about it some more...
   std::string indexes  = o.getString("i");
   std::string products = o.getString("I");
-  bool realtime        = o.getBoolean("r");
-  myRealtime = realtime;
+
+  myReadMode = o.getString("r");
+  myCronList = o.getString("sync");
 
   // Add the inputs we want to handle, using history setting...
   float history = o.getFloat("h");
@@ -142,6 +153,20 @@ TimeDuration
 RAPIOAlgorithm::getMaximumHistory()
 {
   return (myMaximumHistory);
+}
+
+bool
+RAPIOAlgorithm::isDaemon()
+{
+  // If we are -r, -r=new or -r=new we are a daemon awaiting new records
+  return ((myReadMode == "") || (myReadMode == "new") || (myReadMode == "all"));
+}
+
+bool
+RAPIOAlgorithm::isArchive()
+{
+  // If we are missing -r, -r=old or -r=all we read archive
+  return (myReadMode == "old") || (myReadMode == "all");
 }
 
 void
@@ -458,59 +483,129 @@ RAPIOAlgorithm::addIndexes(const std::string & param,
   }
 }
 
-void
-RAPIOAlgorithm::setHeartbeat(size_t periodInSeconds)
-{
-  myHeartbeatSecs = periodInSeconds;
-}
-
+#if 0
 namespace rapio {
 class AlgorithmHeartbeat : public rapio::EventTimer {
 public:
 
-  AlgorithmHeartbeat(size_t milliseconds) : EventTimer(milliseconds, "Heartbeat")
-  { }
+  AlgorithmHeartbeat(size_t milliseconds, size_t pulseSecs) : EventTimer(milliseconds, "Heartbeat"), myPulseSecs(
+      pulseSecs)
+  {
+    // S, M, H, D
+    // parse("*/5 * * *");
+    parse("5 * * *");
+  }
+
+  std::vector<int> v;  // values
+  std::vector<bool> m; // mode is slash or not
+
+  bool
+  parse(const std::string& cronlist)
+  {
+    // My baby cron format, except we have seconds as well
+    // I don't think a realtime alg would want time settings
+    // longer than week.  Can always expand/change format.
+    // "Seconds, Mins, Hours, Day of week"
+    // We need two time tweaks so far:
+    // 1.  a 'lag' time to allow data to get there first.
+    //     Basically allow say a 12:00 fire time to occur
+    //     at 12:00 + lag.  This is for latency adjusting.
+    // 2.  a 'min' time to keep restarting algorithms from
+    //     immediately firing (because they have no memory)
+    //     We could possibly use a marker file or something
+    //     for this too...
+    //
+    // "*/5 * * *" -- every 5 seconds on mod 5
+    // "0 * * * " -- on the 0 second.
+    // "0 */2 * * " -- Every 2 min on the 0 second
+    std::vector<std::string> fields;
+    Strings::splitWithoutEnds(cronlist, ' ', &fields);
+    while (fields.size() < 4) { fields.push_back("*"); }
+
+    for (size_t i = 0; i < fields.size(); i++) {
+      v.push_back(-1);
+      m.push_back(false);
+
+      std::vector<std::string> pairs;
+      Strings::splitWithoutEnds(fields[i], '/', &pairs);
+
+      if (pairs.size() == 2) { // Every mode
+        if (pairs[0] == "*") {
+          try{
+            int value = std::stoi(pairs[1]);
+            v[i] = value;
+            m[i] = true; // from /
+          } catch (...) {
+            LogSevere("Bad / format for '" << fields[i] << "'\n");
+            return false;
+          }
+        }
+      } else {
+        if (pairs[0] != "*") {
+          try{
+            int value = std::stoi(pairs[0]);
+            v[i] = value;
+          } catch (...) {
+            LogSevere("Bad format for '" << fields[i] << "'\n");
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  } // parse
 
   virtual void
   action() override
   {
-    /*
-     *  LogSevere("---------------------->Heartbeat...\n");
-     *  Time t = Time::CurrentTime();
-     *  namespace C = std::chrono;
-     *  namespace D = date;
-     *
-     *  // This is interesting...c+11 is just cooler and cooler
-     *  // These are ALL smaller than out implementation
-     *  auto tp = C::system_clock::now();
-     *  auto dp = D::floor<date::days>(tp);
-     *  auto ymd = D::year_month_day{dp};
-     *  auto time = D::make_time(C::duration_cast<C::milliseconds>(tp-dp));
-     *
-     *  Date d = Date(t);
-     *  LogSevere("Time is " << t << "\n");
-     *  LogSevere("size of new one is " << sizeof(tp) << "\n");
-     *  LogSevere("size of new date stuff is " << sizeof(dp) << ", " <<
-     *     sizeof(ymd) << ", " << sizeof(time) << "\n");
-     *  {
-     *    using namespace date;
-     *     std::cout << tp << "\n";
-     *  }
-     *  LogSevere("Calendar is " << d << "\n");
-     *  LogSevere(ymd.year() << ", " << ymd.month() << ", " << ymd.day() << ", "
-     *     <<
-     *       "\n");
-     *  LogSevere(time.hours().count() << "h, " <<
-     *        time.minutes().count() << "m, " <<
-     *        time.seconds().count() << "s, " <<
-     *        time.subseconds().count() << "ms " <<
-     *      "\n");
-     */
+    // Current time, or time of the 'system'
+    // FIXME: with archive will need artifical times
+    Time n = Time::CurrentTime();
 
-    //  Log::flush();
-  }
+    auto newSecond = v[0];
+
+    // This is the */V every interval logic
+    if (m[0] == true) {
+      // LogSevere("/ logic: " << v[0] << "\n");
+      // Match mod of value
+      int syncSec = v[0];
+      if (syncSec < 0) { syncSec = 0; }
+      if (syncSec > 59) { syncSec = syncSec % 60; }
+      auto second = n.getSecond();
+      // auto newSecond = second-(second % syncSec);
+      newSecond = second - (second % syncSec);
+    } else {
+      // LogSevere("NO / logic: " << v[0] << "\n");
+      //    newSecond = v[0];  // match actual second value
+    }
+
+    // Calculate the sync time based on current
+    Time p = Time(n.getYear(), n.getMonth(), n.getDay(),
+        n.getHour(), n.getMinute(), newSecond, 0.0);
+
+    // Oh if actual less wanted, don't fire.
+
+    // Real time should be >= pulse wanted
+    // and not equal to the last pulsetime
+    // FIXME: minimum delay before first pulse to allow
+    // alg time to gather data.
+    if ((n >= p) && (p != myLastPulseTime)) {
+      // LogSevere("Pulse ("<<p<<") at actual time: " << n << "\n");
+      LogSevere(
+        "PULSE:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
+                 << "\n");
+      myLastPulseTime = p;
+    } else {
+      // LogSevere("T:" << n.getHour() << ":"<<n.getMinute()<<":"<<n.getSecond() << " and " << p.getHour() << ":"<<p.getMinute() << ":" <<p.getSecond() << "\n");
+    }
+  } // action
+
+  size_t myPulseSecs;
+  Time myLastPulseTime;
 };
 }
+
+#endif // if 0
 
 namespace rapio {
 class AlgRecordFilter : public RecordFilter
@@ -563,33 +658,37 @@ RAPIOAlgorithm::setUpRecordFilter()
 void
 RAPIOAlgorithm::execute()
 {
-  // Timed test (FIXME: might need this ability later)
-  myHeartbeatSecs = 1;
+  // Add Heartbeat (if wanted)
+  std::shared_ptr<Heartbeat> heart = nullptr;
+  if (!myCronList.empty()) { // None required, don't make it
+    LogInfo("Attempting to create heartbeat for " << myCronList << "\n");
+    heart = std::make_shared<Heartbeat>(this, 1000);
+    if (!heart->setCronList(myCronList)) {
+      LogSevere("Bad format for -sync string, aborting\n");
+      exit(1);
+    }
+  }
 
-  if (myHeartbeatSecs > 0) { }
-  std::shared_ptr<AlgorithmHeartbeat> flusher = std::make_shared<AlgorithmHeartbeat>(5000);
-  EventLoop::addTimer(flusher);
-
-  LogInfo("Output Directory is set to " << myOutputDir << "\n");
+  // Create record queue and record filter/notifier
+  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
+  Record::theRecordQueue = q;
 
   setUpRecordNotifier();
 
   setUpRecordFilter();
-
-  // Actually create all the indexes and link listener to each one.
-  size_t count  = 0;
-  size_t rcount = 0;
-  size_t wanted = myIndexInputInfo.size();
-
-  // Create record queue
-  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
-  Record::theRecordQueue = q;
 
   // Try to create an index for each source we want data from
   // and add sorted records to queue
   // FIXME: Archive should probably skip queue in case of giant archive cases,
   // otherwise we load a lot of memory.  We need better handling of this..
   // though for small archives we load all and sort, which is a nice ability
+  size_t count     = 0;
+  size_t wanted    = myIndexInputInfo.size();
+  bool daemon      = isDaemon();
+  bool archive     = isArchive();
+  std::string what = daemon ? "daemon" : "archive";
+  if (daemon && archive) { what = "allrecords"; }
+
   for (size_t p = 0; p < wanted; ++p) {
     const indexInputInfo& i = myIndexInputInfo[p];
     std::shared_ptr<IndexType> in;
@@ -600,18 +699,13 @@ RAPIOAlgorithm::execute()
 
     if (in != nullptr) {
       in->setIndexLabel(p); // Mark in order
-      success = in->initialRead(myRealtime);
+      success = in->initialRead(daemon, archive);
       if (success) {
         count++;
-
-        if (myRealtime) {
-          rcount++;
-        }
       }
     }
 
-    std::string how  = success ? "Successful" : "Failed";
-    std::string what = myRealtime ? "realtime" : "archive";
+    std::string how = success ? "Successful" : "Failed";
     LogInfo(how << " " << what << " connection to '" << i.protocol << "-->" << i.indexparams << "'\n");
   }
 
@@ -621,10 +715,10 @@ RAPIOAlgorithm::execute()
                                    << " data sources, ending.\n");
     exit(1);
   }
-  // const size_t rSize = initialRecords.size();
   const size_t rSize = q->size();
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
+  LogInfo("Output Directory is set to " << myOutputDir << "\n");
 
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
@@ -633,6 +727,10 @@ RAPIOAlgorithm::execute()
 
   // Add RecordQueue
   EventLoop::addTimer(q);
+
+  if (heart != nullptr) {
+    EventLoop::addTimer(heart);
+  }
 
   // Do event loop
   EventLoop::doEventLoop();
@@ -748,7 +846,7 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 void
 RAPIOAlgorithm::handleEndDatasetEvent()
 {
-  if (!myRealtime) {
+  if (!isDaemon()) {
     // Archive empty means end it all
     // FIXME: maybe just end event loop here, do a shutdown
     Log::flush();
@@ -759,9 +857,12 @@ RAPIOAlgorithm::handleEndDatasetEvent()
 }
 
 void
-RAPIOAlgorithm::handleTimedEvent()
+RAPIOAlgorithm::handleTimedEvent(const Time& n, const Time& p)
 {
-  LogSevere("Time event called in algorithm!\n");
+  // Dump heartbeat for now from the -sync option
+  LogSevere(
+    "Heartbeat actual:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and for: " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
+                        << "\n");
 }
 
 void

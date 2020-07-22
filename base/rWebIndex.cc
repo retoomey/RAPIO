@@ -51,7 +51,7 @@ WebIndex::~WebIndex()
 { }
 
 bool
-WebIndex::initialRead(bool realtime)
+WebIndex::initialRead(bool realtime, bool archive)
 {
   // Realtime starts from NOW, so don't real the entire archive.
   if (realtime) {

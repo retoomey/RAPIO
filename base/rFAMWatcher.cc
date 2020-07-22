@@ -72,8 +72,8 @@ FAMWatcher::attach(FAMInfo * w)
   if (watchID < 0) {
     std::string errMessage(strerror(errno));
     LogSevere(
-      "inotify_add_watch for " << w->myDirectory << " failed with error: " << errMessage
-                               << "\n");
+      "FAM attempt: " << w->myDirectory << ": " << errMessage
+                      << "\n");
     return false;
   } else {
     LogInfo("FAM Attached to " << w->myDirectory << "\n");
@@ -88,16 +88,15 @@ FAMWatcher::attach(const std::string &dirname,
   IOListener *                       l)
 {
   std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, -1);
-  if (attach(newWatch.get())) {
-    myWatches.push_back(newWatch);
-    LogDebug(dirname << " being monitored ... \n");
-    return true;
-  } else {
-    // If not auto connect mode, die
+  if (!attach(newWatch.get())) { // Failed initial attachment
+    // If not auto connect mode, die (no watch)
     if (!myAutoReconnect) {
       return false;
     }
   }
+  // Push broken or successful watch for checking
+  myWatches.push_back(newWatch);
+  LogDebug(dirname << " being monitored ... \n");
   return true;
 } // FAMWatcher::attach
 

@@ -99,7 +99,8 @@ Time::Time(
   unsigned short day,
   unsigned short hour,
   unsigned short minute,
-  unsigned short second
+  unsigned short second,
+  double         fractional
 )
 {
   tm a;
@@ -117,6 +118,8 @@ Time::Time(
   // I'm not planning on
   time_t retval = timegm(&a);
   myTimepoint = std::chrono::system_clock::from_time_t(retval);
+  int m = (int) (fractional * 1000000);
+  myTimepoint += std::chrono::microseconds(m);
 }
 
 Time

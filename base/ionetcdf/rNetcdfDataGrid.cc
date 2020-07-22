@@ -51,7 +51,7 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
     // DataGrid doesn't care, but other classes might be pickier
     if (!dataGrid.initFromGlobalAttributes()) {
       LogSevere("Bad or missing global attributes in data.\n");
-      return nullptr;
+      return false;
     }
     // TypeName from WDSSII type data
     auto aTypeName = dataGrid.getTypeName();

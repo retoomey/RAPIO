@@ -35,7 +35,7 @@ public:
 
   /** Handle initial read of data and posting ofrecords. */
   virtual bool
-  initialRead(bool realtime) = 0;
+  initialRead(bool realtime, bool archive) = 0;
 
   /** Get the index label used to mark new records */
   size_t

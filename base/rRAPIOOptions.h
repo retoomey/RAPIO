@@ -40,6 +40,11 @@ public:
   bool
   verifySuboptions();
 
+  /** Count arguments that match a given filter */
+  size_t
+  countArgs(std::vector<Option>& options,
+    OptionFilter               & a);
+
   /** Output arguments that match a given filter */
   void
   dumpArgs(std::vector<Option>& options,

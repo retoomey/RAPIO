@@ -30,14 +30,14 @@ StreamIndex::StreamIndex(
 }
 
 bool
-StreamIndex::initialRead(bool realtime)
+StreamIndex::initialRead(bool realtime, bool archive)
 {
   // ---------------------------------------------------------
   // Archive
   //
   // Grab the list of files currently in the directory
 
-  if (!realtime) {
+  if (archive) {
     // If we trust the external process to be a 'one-shot', we could
     // implement something here.  What if it doesn't die?
     LogSevere("Stream index has no archive ability, use with -r realtime.\n");
