@@ -33,7 +33,7 @@ Compression::uncompressGzip(std::vector<char>& input, std::vector<char>& output)
     os.push(boost::iostreams::back_inserter(output));
     boost::iostreams::write(os, &input[0], input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
-  }catch (boost::iostreams::gzip_error& e) {
+  }catch (const boost::iostreams::gzip_error& e) {
     LogSevere("GZIP decompress failed.\n"); // Let caller notify?
     return false;
   }
@@ -50,7 +50,7 @@ Compression::uncompressBzip2(std::vector<char>& input, std::vector<char>& output
     os.push(boost::iostreams::back_inserter(output));
     boost::iostreams::write(os, &input[0], input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
-  }catch (boost::iostreams::bzip2_error& e) {
+  }catch (const boost::iostreams::bzip2_error& e) {
     LogSevere("BZIP2 decompress failed.\n"); // Let caller notify?
     return false;
   }
@@ -67,7 +67,7 @@ Compression::uncompressZlib(std::vector<char>& input, std::vector<char>& output)
     os.push(boost::iostreams::back_inserter(output));
     boost::iostreams::write(os, &input[0], input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
-  }catch (boost::iostreams::zlib_error& e) {
+  }catch (const boost::iostreams::zlib_error& e) {
     LogSevere("ZLIB decompress failed.\n"); // Let caller notify?
     return false;
   }
@@ -84,7 +84,7 @@ Compression::uncompressLzma(std::vector<char>& input, std::vector<char>& output)
     os.push(boost::iostreams::back_inserter(output));
     boost::iostreams::write(os, &input[0], input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
-  }catch (boost::iostreams::lzma_error& e) {
+  }catch (const boost::iostreams::lzma_error& e) {
     LogSevere("LZMA decompress failed.\n"); // Let caller notify?
     return false;
   }

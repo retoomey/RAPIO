@@ -77,7 +77,7 @@ ConfigDataFormat::readInSettings()
         mySettings.push_back(std::make_shared<DataFormatSetting>(setting));
       }
     }
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("Error parsing XML from misc/dataformat\n");
   }
 

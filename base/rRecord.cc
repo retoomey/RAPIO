@@ -17,18 +17,6 @@ std::shared_ptr<RecordFilter> rapio::Record::theRecordFilter;
 
 std::shared_ptr<RecordQueue> rapio::Record::theRecordQueue;
 
-namespace {
-std::string
-getNextEventNumber()
-{
-  static unsigned long eventNumber = 0;
-  char temp[100];
-
-  std::sprintf(temp, "%lu", eventNumber++);
-  return (temp);
-}
-}
-
 Record::Record(const std::vector<std::string> & params,
   const std::vector<std::string>              & selects,
   const rapio::Time                           & productTime)
@@ -63,7 +51,7 @@ Record::matches(const std::string& spec) const
 }
 
 std::ostream&
-rapio::operator << (std::ostream& os, const rapio::Record& rec)
+operator << (std::ostream& os, const rapio::Record& rec)
 {
   rec.constructXMLString(os, "");
   return (os);

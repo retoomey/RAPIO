@@ -104,8 +104,18 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "",
     "The notifier for newly created files/records.");
   o.addGroup("n", "I/O");
-  o.addAdvancedHelp("n",
-    "If blank, this is typically set to {OutputDir}/code_index.fam  If == 'disable' then all notification is turned off which could speed up processing an archive, for instance.");
+
+  // Let the helper class do advanced help?
+  std::string help = "";
+  RecordNotifier::introduceHelp(help);
+  if (!help.empty()) {
+    o.addAdvancedHelp("n", help);
+  }
+
+  /*
+   * o.addAdvancedHelp("n",
+   *  "If blank, this is typically set to {OutputDir}/code_index.fam  If == 'disable' then all notification is turned off which could speed up processing an archive, for instance.");
+   */
 }
 
 void
@@ -115,8 +125,8 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   std::string param = o.getString("O");
   addOutputProducts(param);
 
-  // Gather output directory and link notifier.
-  myNotifierPath = o.getString("n");
+  // Gather notifier list and output directory
+  myNotifierList = o.getString("n");
   myOutputDir    = o.getString("o");
 }
 
@@ -289,7 +299,7 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 
     // 4. Execute the algorithm (this will connect listeners, etc. )
     execute();
-  } catch (std::string& e) {
+  } catch (const std::string& e) {
     std::cerr << "Error: " << e << "\n";
   } catch (...) {
     std::cerr << "Uncaught exception (unknown type) \n";
@@ -637,14 +647,8 @@ public:
 void
 RAPIOAlgorithm::setUpRecordNotifier()
 {
-  // Set notification for new records..will all algorithms have this?
-  myNotifier = RecordNotifier::getNotifier(myNotifierPath, myOutputDir, "fml");
-  if (myNotifier == nullptr) {
-    LogSevere("Notifier is not created.\n");
-  } else {
-    myNotifierPath = myNotifier->getURL().getPath();
-  }
-  LogInfo("Notifier path set to " << myNotifierPath << "\n");
+  // Let record notifier factory create them, we will hold them though
+  RecordNotifier::createNotifiers(myNotifierList, myOutputDir, myNotifiers);
 }
 
 void
@@ -927,10 +931,11 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     std::string typeName = outputData->getTypeName(); // Old one...
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
-    IODataType::write(outputData, myOutputDir, true, records, "netcdf");
+    std::vector<std::string> files;
+    IODataType::write(outputData, myOutputDir, true, records, files, "netcdf");
 
-    if (myNotifier != nullptr) {
-      myNotifier->writeRecords(records);
+    for (auto& n:myNotifiers) {
+      n->writeRecords(records, files);
     }
     outputData->setTypeName(typeName); // Restore old type name
                                        // not overriden.  Probably

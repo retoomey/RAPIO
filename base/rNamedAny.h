@@ -39,7 +39,7 @@ public:
     try{
       auto back = boost::any_cast<std::shared_ptr<T> >(myData);
       return back;
-    }catch (boost::bad_any_cast) {
+    }catch (const boost::bad_any_cast&) {
       return nullptr;
     }
   }
@@ -63,7 +63,7 @@ public:
     try{
       auto back = boost::any_cast<T>(myData);
       return boost::optional<T>(back);
-    }catch (boost::bad_any_cast) { }
+    }catch (const boost::bad_any_cast&) { }
     return boost::none;
   }
 

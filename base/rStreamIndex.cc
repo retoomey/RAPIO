@@ -135,7 +135,7 @@ StreamIndex::handleNewEvent(WatchEvent * w)
                 } else {
                   LogSevere("Failed record XML from stream, can't parse.\n");
                 }
-              }catch (std::exception& e) {
+              }catch (const std::exception& e) {
                 LogSevere("Failed record XML from stream, record invalid.\n");
               }
               myLineCout.clear();

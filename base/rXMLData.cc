@@ -50,7 +50,7 @@ XMLData::readBuffer(std::vector<char>& buffer)
     // Bug in boost or rapidxml I think.
     boost::property_tree::read_xml(is, myRoot.node, boost::property_tree::xml_parser::trim_whitespace);
     return true;
-  }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
+  }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
     // We catch all to recover
     LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
     return false;

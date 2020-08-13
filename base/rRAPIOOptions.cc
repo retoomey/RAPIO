@@ -363,14 +363,19 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
           ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
         }
       }
-
+      bool advancedHelp = true; // TESTING
       if (advancedHelp && (o.advancedHelp != "")) {
+        std::vector<std::string> lines;
+        Strings::splitWithoutEnds(o.advancedHelp, '\n', &lines);
         // s << fGreen;
         // s << setw(c1+2) << left << ""; // Indent 1 column
         int d = 5;
         s << ColorTerm::bold("DETAILED HELP:\n");
         s << setw(d) << left << ""; // Indent 1 column
-        ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
+        for (auto& s:lines) {
+          // ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
+          ColorTerm::wrapWithIndent(d, 0, s);
+        }
         s << "\n";
 
         // s << fNormal;

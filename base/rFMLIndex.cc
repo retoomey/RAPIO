@@ -144,7 +144,7 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
   try{
     auto item = tree->getChild("item");
     return (rec.readXML(item, myIndexPath, getIndexLabel()));
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("Missing item tag in FML record\n");
   }
   return false;

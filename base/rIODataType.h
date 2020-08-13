@@ -72,6 +72,7 @@ public:
   write(std::shared_ptr<DataType> dt, const URL& path,
     bool generateFileName,
     std::vector<Record>              & records,
+    std::vector<std::string>         & files,
     const std::string& factory = "");
 
   /**

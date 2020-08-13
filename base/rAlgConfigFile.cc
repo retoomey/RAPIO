@@ -85,7 +85,7 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
       }
     }
     return true;
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("Error parsing XML from " << path << ", " << e.what() << "\n");
     return false;
   }

@@ -16,6 +16,9 @@
 using namespace boost::interprocess;
 using namespace rapio;
 
+// Cleaner, but will test with all our compiler versions
+namespace fs = boost::filesystem;
+
 const std::string&
 OS::getHostName()
 {
@@ -61,7 +64,7 @@ OS::getProcessID()
 std::string
 OS::getCurrentDirectory()
 {
-  boost::filesystem::path boostpath(boost::filesystem::current_path());
+  fs::path boostpath(fs::current_path());
   std::string fullcwd = boostpath.string();
   return fullcwd;
 }
@@ -72,14 +75,29 @@ OS::isDirectory(const std::string& path)
   bool isDir = false;
 
   try {
-    boost::filesystem::file_status s = boost::filesystem::status(path);
-    isDir = boost::filesystem::is_directory(s);
+    fs::file_status s = fs::status(path);
+    isDir = fs::is_directory(s);
   }
-  catch (boost::filesystem::filesystem_error &e)
+  catch (const fs::filesystem_error &e)
   {
     // Just assume it's not a directory then
   }
   return isDir;
+}
+
+std::string
+OS::canonical(const std::string& path)
+{
+  try {
+    auto p = fs::canonical(path);
+    return p.string();
+  }
+  catch (const fs::filesystem_error &e)
+  {
+    LogSevere("Couldn't convert it! " << e.what() << "\n");
+    // Just return original, can't do anything with it
+    return path;
+  }
 }
 
 bool
@@ -88,15 +106,15 @@ OS::mkdirp(const std::string& path)
   bool haveIt = false;
 
   try {
-    boost::filesystem::file_status s = boost::filesystem::status(path);
-    const bool isDir = boost::filesystem::is_directory(s);
+    fs::file_status s = fs::status(path);
+    const bool isDir  = fs::is_directory(s);
     if (isDir) { // boost create is true only if directories were newly created
       haveIt = true;
     } else {
-      haveIt = boost::filesystem::create_directories(path);
+      haveIt = fs::create_directories(path);
     }
   }
-  catch (boost::filesystem::filesystem_error &e) {
+  catch (const fs::filesystem_error &e) {
     haveIt = false;
   }
   return haveIt;
@@ -107,8 +125,8 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 {
   // FIXME: what's the best way to do this in boost?
   // The '/' here is platform dependent
-  auto UNIQUE = boost::filesystem::unique_path();
-  auto TMP    = boost::filesystem::temp_directory_path();
+  auto UNIQUE = fs::unique_path();
+  auto TMP    = fs::temp_directory_path();
   auto full   = TMP.native() + "/" + base_in + UNIQUE.native();
 
   return full;
@@ -117,7 +135,32 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 std::string
 OS::getFileExtension(const std::string& path)
 {
-  return (boost::filesystem::extension(path));
+  return (fs::extension(path));
+}
+
+std::string
+OS::validateExe(const std::string& path)
+{
+  bool isExecute = false;
+
+  try {
+    const auto boostpath = fs::absolute(path);
+    const auto s         = fs::status(boostpath);
+
+    // Check if regular file and executable
+    if (fs::is_regular_file(s)) {
+      const auto p = s.permissions();
+      isExecute = ((p & fs::perms::owner_exe) != fs::perms::no_perms);
+      if (isExecute) {
+        return (boostpath.string());
+      }
+    }
+  }catch (const fs::filesystem_error &e)
+  {
+    // Just assume it's not executable then
+  }
+
+  return "";
 }
 
 std::vector<std::string>
@@ -145,7 +188,7 @@ OS::runProcess(const std::string& command)
 
     LogInfo("Success running command '" << command << "'\n");
     return data;
-  }catch (std::exception& e)
+  }catch (const std::exception& e)
   // Catch ALL exceptions deliberately and recover
   // since we want our algorithms to continue running
   {
@@ -214,7 +257,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
 
     // Do we need to copy back?  Aren't we mapped to this?
     memcpy(ref2.data(), at, size * sizeof(float));
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("Failed to execute command " << command << "\n");
   }
 

@@ -1,49 +1,116 @@
 #include "rRecordNotifier.h"
 
-#include "rFactory.h"
+#include "rStaticMethodFactory.h"
 #include "rStrings.h"
 
+// Subclasses we introduce
 #include "rFMLRecordNotifier.h"
+#include "rEXERecordNotifier.h"
 
 using namespace rapio;
 using namespace std;
 
 void
-RecordNotifier::introduce(const string & protocol,
-  std::shared_ptr<RecordNotifier>      factory)
-{
-  Factory<RecordNotifier>::introduce(protocol, factory);
-}
-
-void
 RecordNotifier::introduceSelf()
 {
   FMLRecordNotifier::introduceSelf();
-}
-
-std::shared_ptr<RecordNotifier>
-RecordNotifier::getNotifier(const URL& notifyLoc, const URL& dataLoc, const std::string& type)
-{
-  // We only have one use of each notifier.  FmlRecordNotifier keeps the
-  // path as internal variable.  Would need to change that for multiple paths...
-  std::shared_ptr<RecordNotifier> d = Factory<RecordNotifier>::get(type);
-  if (d != nullptr) {
-    d->setURL(notifyLoc, dataLoc);
-  }
-  return (d);
-}
-
-std::string
-RecordNotifier::getDefaultBaseName()
-{
-  return ("code_index.fam");
+  EXERecordNotifier::introduceSelf();
 }
 
 void
-RecordNotifier::
-writeRecords(const std::vector<Record>& rec)
+RecordNotifier::introduceHelp(std::string& help)
 {
-  for (auto& i:rec) {
-    writeRecord(i);
+  // Bleh first attempt, so horrible.  Need to spend some
+  // time on dynamic module help, etc. For now just need to
+  // document in the help.
+  // FIXME: thinking about writing a custom html style stream class
+  help += "If blank, set to {OutputDir}/code_index.fam\n";
+  help += "If 'disable' then turned off (could speed up archive processing.)\n";
+  help += "Notifier type: fml --> Write fml file to directory for each new record.\n";
+  help += "  'fml=/output' --> Write fml records to directory /output.\n";
+  help += "  'fml=' --> Write fml records to {OutputDir}/code_index.fam.\n";
+  help += "Notifier type: exe --> Call script/program for each new record.\n";
+  help += "  'exe=/test.exe' --> call /test.exe with final filename.\n";
+  help += "  'fml= exe=/test.exe fml=/copy' --> Two sets of fml records, default and in /copy and call exe.\n";
+  // FMLRecordNotifier::introduceSelf();
+}
+
+bool
+RecordNotifier::createNotifiers(const std::string  & nstring,
+  const std::string                                & outputdir,
+  std::vector<std::shared_ptr<RecordNotifierType> >& v)
+{
+  if (nstring == "disable") {
+    LogInfo("Notifiers disabled\n");
+    return true;
+  }
+
+  // Split n param by spaces
+  std::vector<std::string> pieces;
+  Strings::splitWithoutEnds(nstring, ' ', &pieces);
+
+  // For each split piece
+  for (auto& s: pieces) {
+    std::string protocol;
+    std::string params;
+
+    // FIXME: dup code, The whole ' ' and then '=' code matches the index stuff
+    // maybe can combine it...
+    std::vector<std::string> pair;
+    Strings::splitWithoutEnds(s, '=', &pair);
+    const size_t aSize = pair.size();
+    std::string path   = "";
+    if (aSize == 1) {
+      // Something like 'fml=' or 'test=', a type missing a parameter string
+      if (Strings::endsWith(s, "=")) {
+        protocol = pair[0];
+        params   = "";
+      } else {
+        // Something like "/test", etc..try to read as location
+        protocol = "fml";
+        params   = pair[0];
+      }
+    } else if (aSize == 2) {
+      protocol = pair[0];
+      params   = pair[1];
+    } else {
+      LogSevere("Format of passed notifier '" << s << "' is wrong, see help n\n");
+      exit(1);
+    }
+
+    auto n = getNotifier(params, outputdir, protocol);
+    if (n != nullptr) {
+      LogInfo("Added notifier: " << protocol << ":" << params << "\n");
+      v.push_back(n);
+    } else {
+      LogSevere("Format of passed notifier '" << protocol << " = " << params << "' is wrong, see help n\n");
+      exit(1);
+    }
+  }
+
+  return true;
+} // RecordNotifier::createNotifiers
+
+std::shared_ptr<RecordNotifierType>
+RecordNotifier::getNotifier(const std::string& params, const std::string& outputdir, const std::string& type)
+{
+  auto p = StaticMethodFactory<RecordNotifierType>::get(type, "Notifier");
+
+  if (p != nullptr) {
+    std::shared_ptr<RecordNotifierType> z = (*p)(); // Call the static method
+    if (z != nullptr) {
+      z->initialize(params, outputdir);
+      return (z);
+    }
+  }
+  return (nullptr);
+}
+
+void
+RecordNotifierType::
+writeRecords(const std::vector<Record>& rec, const std::vector<std::string>& files)
+{
+  for (size_t i = 0; i < rec.size(); i++) {
+    writeRecord(rec[i], files[i]);
   }
 }

@@ -69,7 +69,7 @@ XMLIndex::initialRead(bool realtime, bool archive)
           Record::theRecordQueue->addRecord(rec);
         }
       }
-    }catch (std::exception& e) {
+    }catch (const std::exception& e) {
       LogSevere("Error parsing codeindex XML\n");
       return (false);
     }

@@ -3,7 +3,7 @@
 #include "rOS.h"
 #include "rIOIndex.h"
 #include "rError.h"
-#include "rFactory.h"
+#include "rStaticMethodFactory.h"
 #include "fstream"
 #include "rStrings.h"
 
@@ -11,22 +11,38 @@
 
 using namespace rapio;
 
+/** Static factory method */
+std::shared_ptr<RecordNotifierType>
+FMLRecordNotifier::create()
+{
+  std::shared_ptr<FMLRecordNotifier> result = std::make_shared<FMLRecordNotifier>();
+  return (result);
+}
+
 void
-FMLRecordNotifier::setURL(URL at, URL datalocation)
+FMLRecordNotifier::introduceSelf()
+{
+  // No need to store a special object here, could if wanted
+  //  std::shared_ptr<FMLRecordNotifier> newOne = std::make_shared<FMLRecordNotifier>();
+  //  Factory<RecordNotifierType>::introduce("fml", newOne);
+  StaticMethodFactory<RecordNotifierType>::introduce("fml", &FMLRecordNotifier::create);
+}
+
+void
+FMLRecordNotifier::initialize(const std::string& params, const std::string& datalocation)
 {
   // Default when given notify output location is empty
-  if (at.empty()) {
-    myOutputDir = datalocation.getPath();
+  if (params.empty()) {
+    myOutputDir = URL(datalocation).getPath();
+    myIndexPath = IOIndex::getIndexPath(myOutputDir);
+    myOutputDir = myOutputDir + "/code_index.fam/";
   } else {
-    myOutputDir = at.getPath();
+    myOutputDir = URL(params).getPath();
+    myIndexPath = IOIndex::getIndexPath(myOutputDir);
   }
 
-  myIndexPath = IOIndex::getIndexPath(myOutputDir);
-  myOutputDir = myOutputDir + "/code_index.fam/";
-  myTempDir   = myOutputDir + ".working/"; // For file 'locking'
-  myURL       = myOutputDir;
-
-  //  makeDirectories();
+  myTempDir = myOutputDir + "/.working/"; // For file 'locking'
+  myURL     = myOutputDir;
 }
 
 bool
@@ -52,15 +68,9 @@ FMLRecordNotifier::makeDirectories()
 FMLRecordNotifier::~FMLRecordNotifier()
 { }
 
-void
-FMLRecordNotifier::introduceSelf()
-{
-  std::shared_ptr<FMLRecordNotifier> newOne = std::make_shared<FMLRecordNotifier>();
-  Factory<RecordNotifier>::introduce("fml", newOne);
-}
 
 void
-FMLRecordNotifier::writeRecord(const Record& rec)
+FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
 {
   if (!rec.isValid()) { return; }
 

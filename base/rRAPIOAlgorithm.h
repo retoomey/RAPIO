@@ -236,11 +236,11 @@ protected:
   /** Directory or output from "o" option */
   std::string myOutputDir;
 
-  /** Notifier path from "l" option */
-  std::string myNotifierPath;
+  /** Hold the "n" list of notifiers */
+  std::string myNotifierList;
 
-  /** Pointer to active notifier, if any */
-  std::shared_ptr<RecordNotifier> myNotifier;
+  /** Notifiers we are sending notification of new records to */
+  std::vector<std::shared_ptr<RecordNotifierType> > myNotifiers;
 
   /** History time for index storage */
   TimeDuration myMaximumHistory;

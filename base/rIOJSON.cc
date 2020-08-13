@@ -51,7 +51,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
       writeURL(aURL, json, true, false);
       successful = true;
     }
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("JSON create error: "
       << aURL.getPath() << " " << e.what() << "\n");
   }

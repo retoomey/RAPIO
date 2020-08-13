@@ -5,40 +5,34 @@
 #include <rRecord.h>
 #include <rURL.h>
 
-#include <vector>
-
 namespace rapio {
-/** Abstract base class of RecordNotifiers.  */
-class RecordNotifier : public IO {
+/** Record notifier types registered */
+class RecordNotifierType : public IO {
 public:
 
-  // Instance methods -------------------------------------
+  /** Create a record notifier */
+  RecordNotifierType(){ }
+
+  /** Destory a record notifier */
+  ~RecordNotifierType(){ }
 
   /** Notify about this record. */
   virtual void
-  writeRecord(const Record& rec) = 0;
+  writeRecord(const Record& rec, const std::string& file) = 0;
 
   /** The default implementation loops through the records,
    *  passing each to writeRecord(). */
   virtual void
-  writeRecords(const std::vector<Record>& rec);
+  writeRecords(const std::vector<Record>& rec, const std::vector<std::string>& files);
 
-  /** Get the URL output location of this record notifier */
-  virtual URL
-  getURL()
-  {
-    return (myURL);
-  }
-
-  /** Set the URL output location of this record notifier */
+  /** Set the initial params this record notifier */
   virtual void
-  setURL(URL aURL, URL datalocation)
-  {
-    myURL = aURL;
-  }
+  initialize(const std::string& params, const std::string& outputdir) = 0;
+};
 
-  /** Destroy a record notifier */
-  virtual ~RecordNotifier(){ }
+/** Factory container/helper for RecordNotifierType */
+class RecordNotifier : public IO {
+public:
 
   // Factory methods --------------------------------------
 
@@ -46,27 +40,24 @@ public:
   static void
   introduceSelf();
 
-  /** Introduce subclass into factories */
+  /** Introduce base notifier classes help on startup.  Note that
+   * introduceSelf may have not been called yet. */
   static void
-  introduce(const std::string       & protocol,
-    std::shared_ptr<RecordNotifier> factory);
+  introduceHelp(std::string& help);
 
-  /** returns a notifier that will notify data. */
-  static std::shared_ptr<RecordNotifier>
+  /** Process definition string for RAPIOAlgorithm.  Return
+   * vector of created notifiers */
+  static bool
+  createNotifiers(const std::string                  & nstring,
+    const std::string                                & outputdir,
+    std::vector<std::shared_ptr<RecordNotifierType> >& n);
+
+  /** Returns a notifier that will notify data. */
+  static std::shared_ptr<RecordNotifierType>
   getNotifier(
-    const URL        & notifyLoc, // Suggested location for notification out
-    const URL        & dataLoc,   // Data location can help with default settings
-    const std::string& type = "fml");
-
-  /** returns the default notification location in a directory.
-   *  For example:  code_index.lb or code_index.fam depending on protocol
-   */
-  static std::string
-  getDefaultBaseName();
-
-protected:
-
-  URL myURL;
+    const std::string & params,
+    const std::string & outputdir,
+    const std::string & type);
 }
 ;
 }

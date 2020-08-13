@@ -24,7 +24,7 @@ ConfigDirectoryMapping::readInSettings()
         const auto to   = r.getAttr("to", std::string(""));
       }
     }
-  }catch (std::exception& e) {
+  }catch (const std::exception& e) {
     LogSevere("Error parsing XML from misc/directoryMapping.xml\n");
   }
   // We can work without any mappings at all

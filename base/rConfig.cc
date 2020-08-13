@@ -58,7 +58,7 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
   URL ret;
   if (found) {
     ret = testMe;
-    LogInfo(">>>Read:" << testMe.getPath() << "\n");
+    LogInfo("Read: " << testMe.getPath() << "\n");
   } else {
     LogDebug("WARNING! " << relativePath << " was not found.\n");
   }
@@ -72,13 +72,14 @@ Config::addSearchPath(const URL& absolutePath)
   const bool exists = absolutePath.isLocal() &&
     OS::isDirectory(absolutePath.getPath());
 
-  // Make sure there's a '/' on the end of every URL, for when we add relatives.
-  std::string p = absolutePath.toString();
-  if (!Strings::endsWith(p, "/")) { p += "/"; }
-
   if (exists) {
-    mySearchPaths.push_back(absolutePath);
-    LogInfo("Adding search path \"" << absolutePath << "\"\n");
+    // This will clean up the path
+    std::string canon = OS::canonical(absolutePath.toString());
+    // Make sure there's a '/' on the end of every URL, for when we add relatives.
+    if (!Strings::endsWith(canon, "/")) { canon += "/"; }
+    mySearchPaths.push_back(canon);
+    // We print them all out later anyway
+    // LogInfo("Adding search path \"" << canon << "\"\n");
   }
   return exists;
 }
@@ -202,7 +203,7 @@ void
 Config::setEnvVar(const std::string& envVarName, const std::string& value)
 {
   setenv(envVarName.c_str(), value.c_str(), 1);
-  LogInfo("Set environment: " << envVarName << " = " << value << "\n");
+  LogInfo(envVarName << " = " << value << "\n");
 }
 
 std::shared_ptr<XMLData>

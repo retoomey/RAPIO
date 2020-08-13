@@ -300,8 +300,6 @@ URL::isLocal() const
 {
   if (host.empty() || (host == "localhost")) { return (true); }
 
-  std::string hostname;
-
   if (OS::getHostName() == host) { return (true); }
 
   return (false);

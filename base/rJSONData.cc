@@ -58,7 +58,7 @@ JSONData::readBuffer(std::vector<char>& buffer)
     std::istringstream is(&buffer.front());
     boost::property_tree::read_json(is, myRoot.node);
     return true;
-  }catch (std::exception& e) { // pt::xml_parser::xml_parser_error
+  }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
     // We catch all to recover
     LogSevere("Exception reading JSON data..." << e.what() << " ignoring\n");
     return false;

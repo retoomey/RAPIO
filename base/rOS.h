@@ -44,6 +44,10 @@ public:
   static bool
   isDirectory(const std::string& path);
 
+  /** Canonicalize a path (remove ../, etc. ) */
+  static std::string
+  canonical(const std::string& path);
+
   /**
    * Returns the current working directory.
    */
@@ -71,6 +75,10 @@ public:
   /** Return file extension using OS ability */
   static std::string
   getFileExtension(const std::string& path);
+
+  /** Validate executable path */
+  static std::string
+  validateExe(const std::string& path);
 
   /**
    * Run a OS process

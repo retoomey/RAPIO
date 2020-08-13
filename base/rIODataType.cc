@@ -39,7 +39,9 @@ IODataType::readDataType(const URL& path, const std::string& factory)
 bool
 IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
   bool generateFileName,
-  std::vector<Record>& records, const std::string& factory)
+  std::vector<Record>& records,
+  std::vector<std::string>& files,
+  const std::string& factory)
 {
   URL path = aURL;
 
@@ -120,6 +122,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
   // LogSevere("SFile:"+sfilepath+"\n");
   // LogSevere("Factory name is "+f+"\n");
 
+  // FIXME: Need to write/move files
   path = URL(filepath);
   // LogSevere("URL:"+path.toString()+"\n");
   if (encoder->encodeDataType(dt, path, dfs)) {
@@ -143,6 +146,9 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
 
     Record rec(params, selections, rsTime);
     records.push_back(rec);
+    // Final written file path.  Doing it this way
+    // in case we move or compress later
+    files.push_back(path.toString());
     return true;
   }
 
@@ -153,5 +159,6 @@ bool
 IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL, const std::string& factory)
 {
   std::vector<Record> blackHole;
-  return write(dt, aURL, false, blackHole, factory); // Default write single file
+  std::vector<std::string> files;
+  return write(dt, aURL, false, blackHole, files, factory); // Default write single file
 }

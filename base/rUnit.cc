@@ -76,14 +76,14 @@ Unit::initialize()
   URL url = Config::getConfigFile("misc/udunits2.xml");
 
   if (url.getPath() == "") {
-    LogSevere("Udunits2 requires a misc/udunits2.xml file and others in your configuration\n");
+    LogSevere("Udunits2 requires a misc/udunits2.xml file and others in one of your configuration paths.\n");
     exit(1);
   }
 
   // Initialize environment to xml files and udunits
   Config::setEnvVar("UDUNITS2_XML_PATH", url.getPath());
   utInit("");
-  LogInfo("UDUNITS initialized successfully\n");
+  // LogInfo("UDUNITS initialized successfully\n");
 }
 
 bool
