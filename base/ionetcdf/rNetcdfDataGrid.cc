@@ -224,7 +224,7 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
     // End generic read 2D?
 
     return (true);
-  } catch (NetcdfException& ex) {
+  } catch (const NetcdfException& ex) {
     LogSevere("Netcdf read error with data grid: " << ex.getNetcdfStr() << "\n");
     return (false);
   }
@@ -302,7 +302,7 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
       // Put attributes for this var...
       IONetcdf::setAttributes(ncid, varid, l->getAttributes());
     }
-  } catch (NetcdfException& ex) {
+  } catch (const NetcdfException& ex) {
     LogSevere("Netcdf write error with DataGrid: " << ex.getNetcdfStr() << "\n");
     return (false);
   }

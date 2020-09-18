@@ -159,7 +159,7 @@ IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
   // FIXME: should speed test this...
   try {
     NETCDF(nc_create(aURL.path.c_str(), NC_NETCDF4, &ncid));
-  } catch (NetcdfException& ex) {
+  } catch (const NetcdfException& ex) {
     nc_close(ncid);
     LogSevere("Netcdf create error: "
       << aURL.path << " " << ex.getNetcdfStr() << "\n");
@@ -186,7 +186,7 @@ IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
    * try {
    *  // Interesting, might be able to pre size it to speed it up
    *  NETCDF(nc_create_mem("testing", NC_NETCDF4, initialsize, &ncid));
-   * }catch(NetcdfException& ex){
+   * }catch(const NetcdfException& ex){
    *  nc_close_memio(ncid, &finalmem);
    *  LogSevere("Netcdf create error: " <<
    *            fileName_url.path << " " << ex.getNetcdfStr() << "\n");
@@ -250,7 +250,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   // FIXME: should speed test this...
   try {
     NETCDF(nc_create(aURL.getPath().c_str(), NC_NETCDF4, &ncid));
-  } catch (NetcdfException& ex) {
+  } catch (const NetcdfException& ex) {
     nc_close(ncid);
     LogSevere("Netcdf create error: "
       << aURL.getPath() << " " << ex.getNetcdfStr() << "\n");

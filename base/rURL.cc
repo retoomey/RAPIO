@@ -9,6 +9,8 @@
 #include <cstdio>   // snprintf()
 #include <libgen.h> // dirname
 
+#include "rProcessTimer.h"
+
 using namespace rapio;
 
 namespace {

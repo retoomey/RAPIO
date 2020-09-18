@@ -363,7 +363,6 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
           ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
         }
       }
-      bool advancedHelp = true; // TESTING
       if (advancedHelp && (o.advancedHelp != "")) {
         std::vector<std::string> lines;
         Strings::splitWithoutEnds(o.advancedHelp, '\n', &lines);

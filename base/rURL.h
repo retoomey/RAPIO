@@ -90,6 +90,13 @@ public:
     return pass;
   }
 
+  /** Return the fragment of URL, if any */
+  std::string
+  getFragment() const
+  {
+    return fragment;
+  }
+
   /** Return the host part of URL, if any */
   std::string
   getHost() const
@@ -201,6 +208,7 @@ public:
     path.resize(path.size() - getSuffix().size());
   }
 
+  /** Output a URL */
   friend std::ostream&
   operator << (std::ostream&,
     const rapio::URL&);
@@ -226,7 +234,7 @@ protected:
   /** Path to the file, including directory and basename. */
   std::string path;
 
-  /** Sub-part of the URL to skip to.  Currently unused by WDSSII. */
+  /** Sub-part of the URL to skip to. */
   std::string fragment;
 
   /** Arguments to be passed along when accessing the URL */

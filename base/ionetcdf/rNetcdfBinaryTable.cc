@@ -257,7 +257,7 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
     // float RANGE_FOLDED( Constants::RangeFolded );
     NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
     NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
-  } catch (NetcdfException& ex) {
+  } catch (const NetcdfException& ex) {
     LogSevere("Netcdf write error with BinaryTable: " << ex.getNetcdfStr()
                                                       << "\n");
     return (false);

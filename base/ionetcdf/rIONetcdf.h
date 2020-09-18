@@ -32,19 +32,19 @@ public:
   virtual ~NetcdfException() throw() { }
 
   int
-  getNetcdfVal()
+  getNetcdfVal() const
   {
     return (retval);
   }
 
   std::string
-  getNetcdfCommand()
+  getNetcdfCommand() const
   {
     return (command);
   }
 
   std::string
-  getNetcdfStr()
+  getNetcdfStr() const
   {
     return (std::string(nc_strerror(retval)) + " " + command);
   }

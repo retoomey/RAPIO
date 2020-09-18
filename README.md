@@ -1,39 +1,41 @@
-# RAPIO
+# RAPIO -- Real-time Algorithm Parameter and IO
 
-Real-time Algorithm Parameter and IO
+RAPIO is a data input and output system using a C++ and Python interface (Linux) designed for making it as simple as possible to quickly implement a real-time algorithm.  A real-time algorithm is something expecting data at regular intervals from some source(s), after which it processes this data in some way and then outputs more data, some optionally. The focus of RAPIO is on automating and hiding the back core of reading, writing, notification and parameters for these algorithms.  We also implement and keep consistent common parameters that are shared among any algorithm.
 
-RAPIO is a data input and output system in C++ (Linux) designed for making it as simple as possible to quickly implement a real-time algorithm.  A real-time algorithm is something expecting data at regular intervals from some source(s), after which it processes this data in some way and then outputs more data, some optionally. The focus of RAPIO is on automating and hiding the back core of reading, writing, notification and parameters for these algorithms.  We also implement and keep consistent common parameters that are shared among any algorithm.
+Some presentations and tutorials when time permits. The first video sound is pretty bad at moment, I had to get a new microphone.
+[RAPIO YouTube Presentation/Update Playlist](https://www.youtube.com/playlist?list=PLtFp1JgyWc4kj5A-I12LM0gCo40JorfPe)
 
-At the [National Severe Storms Laboratory](https://www.nssl.noaa.gov) we collect big data from hundreds of radars and process this data with proprietary meteorology algorithms.  Our algorithm collection comes from various systems, such as the [Warning Decision Support System --Integrated Information](http://www.wdssii.org), as well as other groups within the lab.  These systems run important algorithms such as tornado prediction, clustering, and weighted merging of data. 
+## WDSSII/MRMS
+At the [National Severe Storms Laboratory](https://www.nssl.noaa.gov) big data is collected from hundreds of radars and processed with proprietary meteorology and hydrology algorithms.  Algorithm collection comes from various systems, such as the [Warning Decision Support System --Integrated Information](http://www.wdssii.org), as well as other groups within the lab.  These systems run important algorithms such as tornado prediction, clustering, and weighted merging of data. Operational output of weather algorithms go into the [MRMS System](https://www.nssl.noaa.gov/projects/mrms/).  RAPIO in this use case allows students and other contributers to MRMS to create new algorithms more easily that can then be integrated/licensed into MRMS operations if desired.
+## RAPIO algorithms differences
+* No SmartPtr classes.  You have to use at least C++11 shared_ptr, unique_ptr and STL
+* Differences/enhancements in also all standard parameters.
+* Many more abilities in how to run/execute.  Most of these features are built into the help output of the algorithm but will also get more officially documented as the software matures.
 
-* Parameters for algorithms
-* Input of data with filters
-* Output of data with filters
-* Data monitoring (Linux FAM, IO polling, Web polling, etc.) 
-* Data notification (.fml MRMS/WDSSII files, AWS, etc. )
-* Built in support for [MRMS/WDSSII data sets and indexes](https://www.nssl.noaa.gov/projects/mrms/)
+## Features
+* Parameter handling for algorithms, command line and external files.
+* Input of various data streams with filtering abilities (WDSSII indexes, netcdf, grib2, etc.).
+* Output of data with filtering abilities.
+* Watchers for data ingest monitoring (Linux FAM, IO polling, Web polling, etc.).
+* Notifiers for data output notification (.fml MRMS/WDSSII files, external EXE, AWS, etc.).
 
-## Current devel rpm requirements (probably more, we have a lot of RPMS installed in Centos/Redhat)
-* udunits-2.2.24 (Unit conversion)
-* curl 7.55  (Web ingest)
-* netcdf-c-4.6.1 and hdf5  (Reading MRMS/WDSSII data formats)
-* proj-4.9.3 (Data projection) --Actually not 'yet' but I've got code that will use it
-* bzip2
-* Most algorithms link with -lrapio -lcurl -lnetcdf -ludunits2 -lbz2
-* uncrustify (For formatting code if you are contributing to core code)
+## Some third party requirements.
+#### Core dependencies
+* [BOOST C++](https://www.boost.org) Lots of stuff here, we tend to wrap these libraries to simplify algorithm development and to allow for possibility of swap out.
+* [cURL](https://curl.haxx.se) (as web ingest (though maybe BOOST asio later)
+* [UCAR udunits](https://www.unidata.ucar.edu/software/udunits) 
 
-## Main differences to using parts of WDSSII for data
-* No SmartPtr classes.  You have to use c++11 shared_ptr, unique_ptr and STL
-* Differences in the archive vs. real-time modes of WDSSII to be more flexible.
+#### Advanced data ingest libraries
+* [G2CLib](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/g2clib.html) Grib2 ingest
+* [HDF5](https://support.hdfgroup.org/HDF5/) HDF5 data ingest 
+* [Netcdf](https://www.unidata.ucar.edu/software/netcdf/) Netcdf data ingest 
+
+#### Projection libraries
+* [PROJ](https://proj.org/) Projection abilities for data
 
 ## API Documentation
-* I might put a Travis CI autogenerated doxygen on github eventually, but at the moment you can generate locally by running "doxygen rapio.dox" in the project directory.
-* The rexample folder is meant as a general API example and will be updated as RAPIO is.  The rexample shows a simple algorithm that echos its input to output. Obviously in a real life situation you would do something to the data first and output different stuff, either modifying in place or creating a clone.
-
-## Current Status/Features
-* Currently I'm speed testing the beta, gaining 30% CPU speed and 25% reduction in memory usage when used as back system for a WDSSII algorithm.
-* Adding abilities, improving speed, fixing bugs.
-* Currently designed to be built as a 3rd party library within an MRMS/WDSSII build, but could be built standalone if all requirements met.
+* Generate locally by running "doxygen rapio.dox" in the project directory.
+* The rexample folder is meant as a general API example and will be updated as RAPIO is.
 
 ## Images
 * Image of default example RAPIO algorithm with parameter formatting
