@@ -29,6 +29,12 @@ StreamIndex::StreamIndex(
   myDFAState = 0;
 }
 
+std::string
+StreamIndex::getHelpString()
+{
+  return " Stream index watches a program.  Example: exe='feedme -f TEST' for ldm ingest of fml. ";
+}
+
 bool
 StreamIndex::initialRead(bool realtime, bool archive)
 {

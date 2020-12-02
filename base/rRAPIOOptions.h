@@ -40,6 +40,10 @@ public:
   bool
   verifySuboptions();
 
+  /** Verify all options given are recognized */
+  bool
+  verifyAllRecognized();
+
   /** Count arguments that match a given filter */
   size_t
   countArgs(std::vector<Option>& options,
@@ -101,6 +105,10 @@ public:
   void
   setHeader(const std::string& header);
 
+  /** Draw a dash line */
+  void
+  dumpHeaderLine();
+
   /** Process one argument */
   unsigned int
   processArg(std::vector<std::string>& args,
@@ -108,10 +116,18 @@ public:
     std::string                      & arg,
     std::string                      & value);
 
-  /** Process command line arguments */
+  /** Dump help for options based on what is passed in */
+  void
+  dumpHelp();
+
+  /** Process command line arguments, no printing. */
   bool
   processArgs(int & argc,
     char **       & argv);
+
+  /** Finalize command line arguments and print out of everything. */
+  bool
+  finalizeArgs(bool haveHelp);
 
 protected:
 
@@ -127,7 +143,7 @@ protected:
   /** Simple description of algorithm */
   std::string myDescription;
 
-  /** The width of all our command line output */
-  size_t myOutputWidth;
+  /** Actual command line arguments */
+  std::vector<std::string> myRawArgs;
 };
 }

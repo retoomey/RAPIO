@@ -426,6 +426,43 @@ RAPIOOptions::verifySuboptions()
   return (good);
 }
 
+bool
+RAPIOOptions::verifyAllRecognized()
+{
+  // Couple of error cases can occur in the arguments
+  // One: actually non-processed stuff in the arguments (bad format)
+  // Two: processed but not defined (good format, but not used)
+  // We have stuff left not processed...
+  if (myRawArgs.size() > 0) {
+    std::cout
+      << "This part of your command line was unrecognized and ignored.  Maybe a typo?\n>>";
+
+    for (unsigned int k = 0; k < myRawArgs.size(); k++) {
+      std::cout << myRawArgs[k] << " ";
+    }
+    std::cout << "\n";
+  }
+
+  bool good = true;
+  // Ok, so on unrecognized options we need to exit
+  if (unusedOptionMap.size() > 0) {
+    std::map<std::string, Option>::iterator i;
+    std::vector<Option> unused;
+
+    for (i = unusedOptionMap.begin(); i != unusedOptionMap.end(); ++i) {
+      // Might have to modify some other parts...
+      unused.push_back(i->second);
+    }
+    std::cout
+      << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
+    std::cout << ColorTerm::bold("UNRECOGNIZED:\n");
+    OptionFilter ff;
+    dumpArgs(unused, ff, true);
+    good = false;
+  }
+  return (good);
+} // RAPIOOptions::verifyAllRecognized
+
 /** The default dump of all arguments available */
 void
 RAPIOOptions::dumpArgs()
@@ -667,23 +704,60 @@ RAPIOOptions::writeConfigFile(const std::string& string)
   ;
 }
 
-/** Process a command line argument list */
+void
+RAPIOOptions::dumpHelp()
+{
+  // Here we handle help something, where we filter groups and then variables
+  // to show just the help for those.  It's useful for algorithms with lots of
+  // options
+  // FIXME: Humm this is from left over options (non -), issue or not?
+  if (myRawArgs.size() > 1) { // help is one of them...
+    std::vector<Option> allOptions;
+    OptionFilter all;
+
+    // Make it dynamic based on what else is left on line
+    for (auto what: myRawArgs) {
+      // Skip help for help itself...hummm
+      if (what == "help") { continue; }
+
+      // Try to find a group matching argument...
+      // So if user types 'alg help time' they get detailed time options.
+      std::string group = Strings::makeUpper(what);
+      if (group == "OPTIONS") { group = ""; }
+      FilterGroup g(group);
+      sortOptions(allOptions, g);
+
+      // If not found, try to find a variable matching argument...
+      if (allOptions.size() == 0) {
+        FilterName aName(what); // Capital?
+        sortOptions(allOptions, aName);
+      }
+
+      // Dump advanced help for this if found
+      if (allOptions.size() > 0) {
+        std::cout << ColorTerm::bold(group + ":\n");
+        dumpArgs(allOptions, all, false, true);
+        allOptions.clear();
+      } else {
+        std::cout << "-->Unknown option/variable: " << what << "\n";
+      }
+    }
+  } else {
+    // Single help argument, dump basic non-detailed help
+    dumpArgs();
+  }
+} // RAPIOOptions::dumpHelp
+
 bool
 RAPIOOptions::processArgs(int& argc, char **& argv)
 {
-  // Get the console width in linux
-  myOutputWidth = ColorTerm::getOutputWidth();
-
   // Just make args a string vector, less C more C++, not as efficient
   // but a whole lot easier to work with.
   // Create a vector string copy of all args except program name
-  std::vector<std::string> args;
-
   for (int k = 1; k < argc; k++) {
     std::string stringArg((argv[k]));
-    args.push_back(stringArg);
+    myRawArgs.push_back(stringArg);
   }
-
   // Grab the name from the main program argument
   std::vector<std::string> pathbreaks;
   Strings::split(std::string(argv[0]), '/', &pathbreaks);
@@ -699,10 +773,10 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   std::string arg;
   std::string value;
 
-  while (j < args.size()) {
+  while (j < myRawArgs.size()) {
     arg   = "";
     value = "";
-    j     = processArg(args, j, arg, value);
+    j     = processArg(myRawArgs, j, arg, value);
 
     if (arg.empty()) { // Empty could be overriding a default, right?
       // Just text we ignore by default. We 'could' add the ability to handle
@@ -711,14 +785,13 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
       storeParsedArg(arg, value);
     }
   }
-
   // We can use the pull methods now...note we have yet to verify
   // we have all required/etc..
   setIsProcessed();
 
   // Help first incase of help iconfig
   bool haveHelp = false;
-  if (isParsed("help")) {
+  if (isParsed("help") || (argc < 2)) { // 'alg help' or 'alg' dumps help
     haveHelp = true;
   }
 
@@ -730,18 +803,23 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
 
   // Turn off color formatting if we have a nf format tag
   bool useFormatting = ColorTerm::haveColorSupport();
-  bool haveNF        = false;
   if (isParsed("nf")) {
-    haveNF        = true;
+    if (argc < 3) { haveHelp = true; } // 'alg nf' dumps help
     useFormatting = false;
   }
 
   // Set if we want color output or not...
   ColorTerm::setColors(useFormatting);
+  return haveHelp;
+} // RAPIOOptions::processArgs
 
+void
+RAPIOOptions::dumpHeaderLine()
+{
   // Start outputting now...
   std::string header = "";
 
+  size_t myOutputWidth = ColorTerm::getOutputWidth();
   for (size_t i = 0; i < myOutputWidth; i++) {
     header += "-";
   }
@@ -751,106 +829,35 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
   // std::string built = ColorTerm::bold("Binary Built:"+std::string(__DATE__) + "
   // " + __TIME__;
   // wrapWithIndent(0, 0, built);
+}
 
-  // Just dump options if no args or if just "-nf" passed. "nf" is special, it
-  // just removes
-  // formatting
-  if (haveHelp || (argc < 2) || ((argc < 3) && haveNF)) {
-    // Here we handle help something, where we filter groups and then variables
-    // to
-    // show just the help for those.  It's useful for algorithms with lots of
-    // options
-    //
-    if (args.size() > 1) { // help is one of them...
-      // Ok if 'help' is the first argument, make
-      // it dynamic based on what else is left on line
-      for (size_t i = 0; i < args.size(); i++) {
-        if (args[i] == "help") { continue; }
-        const std::string what = args[i];
+/** Finalize args by dumping info to user and possiblity ending */
+bool
+RAPIOOptions::finalizeArgs(bool haveHelp)
+{
+  dumpHeaderLine();
 
-        // Try to find a group matching argument...
-        // and filter help for it
-        OptionFilter all;
-        std::string group;
-        std::transform(what.begin(), what.end(), std::back_inserter(
-            group), ::toupper);
-
-        if (group == "OPTIONS") { group = ""; } FilterGroup g(group);
-        std::vector<Option> allOptions;
-        sortOptions(allOptions, g);
-
-        if (allOptions.size() > 0) {
-          std::cout << ColorTerm::bold(group + ":\n");
-          dumpArgs(allOptions, all, false, true);
-          std::exit(1);
-        } else {
-          // Try to find a variable matching argument...
-          FilterName aName(what);
-          std::vector<Option> names;
-          sortOptions(names, aName);
-
-          if (names.size() > 0) {
-            std::cout << ColorTerm::bold(group + ":\n");
-            dumpArgs(names, all, false, true);
-            std::exit(1);
-          } else {
-            dumpArgs();
-            std::exit(1);
-          }
-        }
-
-        break;
-      }
-    } else {
-      dumpArgs();
-    }
-
-    std::exit(1);
+  // Help dump
+  if (haveHelp) {
+    dumpHelp();
+    return false;
   }
 
-  // Couple of error cases can occur in the arguments
-  // One: actually non-processed stuff in the arguments (bad format)
-  // Two: processed but not defined (good format, but not used)
-  // We have stuff left not processed...
-  if (args.size() > 0) {
-    std::cout
-      << "This part of your command line was unrecognized and ignored.  Maybe a typo?\n>>";
-
-    for (unsigned int k = 0; k < args.size(); k++) {
-      std::cout << args[k] << " ";
-    }
-    std::cout << "\n";
-  }
-
-  // Ok, so on unrecognized options we need to exit
-  if (unusedOptionMap.size() > 0) {
-    std::map<std::string, Option>::iterator i;
-    std::vector<Option> unused;
-
-    for (i = unusedOptionMap.begin(); i != unusedOptionMap.end(); ++i) {
-      // Might have to modify some other parts...
-      unused.push_back(i->second);
-    }
-    std::cout
-      << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
-    std::cout << ColorTerm::bold("UNRECOGNIZED:\n");
-    OptionFilter ff;
-    dumpArgs(unused, ff, true);
-    exit(1);
-  }
+  // Check for any unrecognized options
+  if (!verifyAllRecognized()) { return false; }
 
   // Check for missing required arguments and complain
-  if (!verifyRequired()) { exit(1); }
+  if (!verifyRequired()) { return false; }
 
   // Check for invalid suboption in arguments and complain
-  if (!verifySuboptions()) { exit(1); }
+  if (!verifySuboptions()) { return false; }
 
   // Check for configuration output and write out now...
   std::string ofileName = getString("oconfig");
   if (!ofileName.empty()) { // help already processed now
     writeConfigFile(ofileName);
-    exit(1);
+    return false;
   }
 
-  return (false);
+  return true;
 } // RAPIOOptions::processArgs

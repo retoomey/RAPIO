@@ -14,6 +14,7 @@
 **/*.s
 rexample/rsimplealg
 PYTHON/rPython
+# Ignore autotools generated files
 aclocal.m4
 ltmain.sh
 install-sh
@@ -27,6 +28,9 @@ config.status
 config.sub
 configure
 m4
+compile
 # Ignore doxygen if it was ran locally
 html
 latex
+# Ignore the RAPIOBuilder rebuild script
+rebuild.sh

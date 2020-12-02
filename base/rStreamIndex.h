@@ -17,6 +17,9 @@ public:
   /** Default constant for a STREAM index */
   static const std::string STREAMINDEX;
 
+  /** Get help for us */
+  virtual std::string
+  getHelpString() override;
   // ---------------------------------------------------------------------
   // Factory
 

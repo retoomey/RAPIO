@@ -25,6 +25,10 @@ public:
   virtual
   ~IndexType();
 
+  /** Help function */
+  virtual std::string
+  getHelpString(){ return ""; }
+
   /** Every subclass should implement this method as a way to
    *  create a brand-new object.  */
   virtual std::shared_ptr<IndexType>

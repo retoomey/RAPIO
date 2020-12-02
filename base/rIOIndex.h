@@ -29,6 +29,10 @@ public:
   virtual
   ~IOIndex();
 
+  /** Introduce dynamic help */
+  static void
+  introduceHelp(std::string& help);
+
   /**
    * Returns a URL fragment that specifies a file's location.
    * It <b>must</b> contain the scheme, host, and directory portion of path.

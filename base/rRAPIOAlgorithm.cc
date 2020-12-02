@@ -104,18 +104,32 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "",
     "The notifier for newly created files/records.");
   o.addGroup("n", "I/O");
+}
+
+void
+RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
+{
+  // FIXME: Refactor as we clean up advanced dynamic help
+  // First pass just putting in the framework.  Each
+  // factory introducer will gather help from dynamically
+  // introduced subobjects.
+  // Humm maybe a common superclass more automation here
+
+  // Some advanced help is pulled from the introduced objects,
+  // this allows new objects to contain their own help.
+  std::string test;
+  IOIndex::introduceHelp(test);
+  if (!test.empty()) {
+    o.addAdvancedHelp("i", test);
+  }
 
   // Let the helper class do advanced help?
+  // FIXME: Previously done statically here, need to refactor
   std::string help = "";
   RecordNotifier::introduceHelp(help);
   if (!help.empty()) {
     o.addAdvancedHelp("n", help);
   }
-
-  /*
-   * o.addAdvancedHelp("n",
-   *  "If blank, this is typically set to {OutputDir}/code_index.fam  If == 'disable' then all notification is turned off which could speed up processing an archive, for instance.");
-   */
 }
 
 void
@@ -283,14 +297,40 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     // Algorithm special read/write of options support, processing args
     initializeBaseParsers(); // raw xml, json reading, etc.
     AlgConfigFile::introduceSelf();
-    o.processArgs(argc, argv); // Finally validate ALL arguments passed in.
 
-    // 2.5 setup signals, etc..some stuff based upon arguments
-    const int logFlush        = o.getInteger("flush");
-    const std::string verbose = o.getString("verbose");
-    Log::instance()->setInitialLogSettings(verbose, logFlush);
+    // Read/process arguments, don't react yet
+    bool wantHelp = o.processArgs(argc, argv);
 
-    initializeBaseline();
+    // If help requested by user, load system and dynamically append all
+    // the introducers/etc.  If not, just do finalize check.
+    // The reason is main system requires logging and other settings
+    // initialized in order to load up to get the advanced help dynamically
+    // We're going to exit anyway at this point
+    if (wantHelp) {
+      // We don't have arguments for logging, use some defaults
+      Log::instance()->setInitialLogSettings("severe", 900);
+
+      // Load everything
+      initializeBaseline();
+
+      addPostLoadedHelp(o);
+
+      // Dump advanced
+      o.finalizeArgs(wantHelp);
+      exit(1);
+    } else {
+      // Allow options final validatation of ALL arguments passed in.
+      bool success = o.finalizeArgs(wantHelp);
+      if (!success) { exit(1); }
+
+      // Now we should have log settings, etc.
+      // 2.5 setup signals, etc..some stuff based upon arguments
+      const int logFlush        = o.getInteger("flush");
+      const std::string verbose = o.getString("verbose");
+      Log::instance()->setInitialLogSettings(verbose, logFlush);
+
+      initializeBaseline();
+    }
 
     // 3. Process options, inputs, outputs that were successfully parsed
     processOptions(o);      // Process generic options declared above

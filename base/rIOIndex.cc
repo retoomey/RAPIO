@@ -36,6 +36,16 @@ IOIndex::introduceSelf()
   StreamIndex::introduceSelf(); // Stream index
 }
 
+void
+IOIndex::introduceHelp(std::string& help)
+{
+  help += "Indexes ingest data into the system.  The following types are registered:\n";
+  auto e = Factory<IndexType>::getAll();
+  for (auto i: e) {
+    help += " " + i.first + " : " + i.second->getHelpString() + "\n";
+  }
+}
+
 IOIndex::~IOIndex()
 { }
 

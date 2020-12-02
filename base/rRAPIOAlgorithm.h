@@ -64,6 +64,10 @@ public:
   virtual void
   declareFeatures(){ }
 
+  /** Post load, advanced help request.  This help requires the system to be initialized */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o);
+
   /** Declare all algorithm options algorithm needs */
   virtual void
   declareOptions(RAPIOOptions& o) = 0;
