@@ -5,7 +5,7 @@
 #include "rStrings.h"
 #include "rOS.h"
 #include "rConfigDirectoryMapping.h"
-#include "rCompression.h"
+#include "rColorTerm.h"
 
 // Index ability classes
 #include "rXMLIndex.h"
@@ -39,10 +39,14 @@ IOIndex::introduceSelf()
 void
 IOIndex::introduceHelp(std::string& help)
 {
+  help += "Indexes ingest data into the system, either with metadata notifications, or direct files.\n";
+  help += "Default no protocol ending in .xml is an xml index.\n";
+  help += "Default no protocol ending in .fam is an ifam index.\n";
+  help += "Default url with 'source' or web macro is a web index.\n";
   help += "Indexes ingest data into the system.  The following types are registered:\n";
   auto e = Factory<IndexType>::getAll();
   for (auto i: e) {
-    help += " " + i.first + " : " + i.second->getHelpString() + "\n";
+    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
   }
 }
 
@@ -60,73 +64,15 @@ IOIndex::createIndex(
   std::string indexparams = indexparamsin;
 
   // ---------------------------------------------------------
-  // Legacy support for old style -i options:
-  //
-  // Web index:
-  //   "//vmrms-sr02/KTLX" and http://vmrms-webserv/vmrms-sr02?source=KTLX
-  // XML index (no protocol, ends with .xml):
-  //   //code_index.xml
-  // FML index using FAM (no protocol, ends with fam):
-  //   //path/something.fam
+  // Let the indexes check in order for missing protocol support
   if (protocol.empty()) {
-    // Try to make URL from the indexparams...
-
     URL url(indexparams);
-
-    // If there's a source tag, it's an old web index
-    if (!url.getQuery("source").empty()) {
-      protocol = WebIndex::WEBINDEX;
-    }
-
-    if (protocol.empty()) {
-      // We macro machine names to our nssl vmrms data sources like so...
-      // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
-      if (url.getHost() == "") {
-        std::string p = url.getPath();
-
-        if (p.size() > 1) {
-          if ((p[0] == '/') && (p[1] == '/')) {
-            p = p.substr(2);
-            std::vector<std::string> pieces;
-            Strings::splitWithoutEnds(p, '/', &pieces);
-
-            if (pieces.size() > 1) {
-              std::string machine  = pieces[0];
-              std::string source   = pieces[1];
-              std::string expanded = "http://vmrms-webserv/" + machine
-                + "?source=" + source;
-              LogInfo("Web macro source sent to " << expanded << "\n");
-              //   u = URL(expanded);
-              indexparams = expanded; // Change to non-macroed format
-            }
-            protocol = WebIndex::WEBINDEX;
-          }
-        }
-      }
-    }
-
-    // If still empty, Look at suffix for legacy fam/xml
-    if (protocol.empty()) {
-      std::string suffix = url.getSuffixLC();
-      if (suffix == "fam") {
-        protocol = FMLIndex::FMLINDEX_FAM;
-      } else if (suffix == "xml") {
-        protocol = XMLIndex::XMLINDEX;
-      } else if (Compression::suffixRecognized(suffix)) {
-        URL tmp(url);
-        tmp.removeSuffix(); // removes the suffix
-        std::string p = tmp.getPath();
-        p.resize(p.size() - 1); /// removes the dot
-        tmp.setPath(p);
-        suffix = tmp.getSuffixLC();
-
-        if (suffix == "xml") {
-          protocol = XMLIndex::XMLINDEX;
-        }
-      }
-    }
+    WebIndex::canHandle(url, protocol, indexparams);
+    FMLIndex::canHandle(url, protocol, indexparams);
+    XMLIndex::canHandle(url, protocol, indexparams);
   }
 
+  // If STILL empty after indexes check/update protocol...
   if (protocol.empty()) {
     LogSevere("Unable to guess schema from '" << indexparamsin << "'\n");
   } else {

@@ -7,7 +7,7 @@
 namespace rapio {
 /**
  * A index type which pulls from a changing web server.
- *
+ * @author Robert Toomey
  */
 class WebIndex : public IndexType {
 public:
@@ -19,6 +19,14 @@ public:
 
   virtual
   ~WebIndex();
+
+  /** Get help for us */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
+  /** Can we handle this protocol/path from -i?  Update allowed*/
+  static bool
+  canHandle(const URL& url, std::string& protocol, std::string& indexparams);
 
   // Factory methods ------------------------------------------
 

@@ -19,6 +19,10 @@ public:
   /** Default constant for a polling File index */
   static const std::string FileINDEX_POLL;
 
+  /** Get help for us */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
   // ---------------------------------------------------------------------
   // Factory
 

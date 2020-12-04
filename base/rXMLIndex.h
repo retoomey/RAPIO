@@ -16,6 +16,14 @@ public:
   /** Default constant for a static XML index */
   static const std::string XMLINDEX;
 
+  /** Get help for us */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
+  /** Can we handle this protocol/path from -i?  Update allowed*/
+  static bool
+  canHandle(const URL& url, std::string& protocol, std::string& indexparams);
+
   // ---------------------------------------------------------------------
   // Factory
 

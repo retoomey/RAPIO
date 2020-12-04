@@ -27,7 +27,7 @@ public:
 
   /** Help function */
   virtual std::string
-  getHelpString(){ return ""; }
+  getHelpString(const std::string& fkey){ return ""; }
 
   /** Every subclass should implement this method as a way to
    *  create a brand-new object.  */

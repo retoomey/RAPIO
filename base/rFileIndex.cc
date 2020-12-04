@@ -39,6 +39,17 @@ FileIndex::FileIndex(
   myIndexPath(IOIndex::getIndexPath(aURL))
 { }
 
+std::string
+FileIndex::getHelpString(const std::string& fkey)
+{
+  if (fkey == FileINDEX_FAM) {
+    return " Use inotify to watch a directory for general data files (such as for an ingestor).\n  Example: fam=/mydata";
+  } else {
+    return
+      " Use polling to watch a directory for general data files (such as for an ingestor).\n  Example: poll=/mydata";
+  }
+}
+
 bool
 FileIndex::initialRead(bool realtime, bool archive)
 {

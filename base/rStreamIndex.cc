@@ -30,9 +30,10 @@ StreamIndex::StreamIndex(
 }
 
 std::string
-StreamIndex::getHelpString()
+StreamIndex::getHelpString(const std::string& fkey)
 {
-  return " Stream index watches a program.  Example: exe='feedme -f TEST' for ldm ingest of fml. ";
+  return
+    "Stream index watches a program, arguments separated by %.\n  Example: exe='feedme%-f%TXT' for ldm ingest of fml.";
 }
 
 bool

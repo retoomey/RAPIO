@@ -5,6 +5,7 @@
 #include "rError.h"
 #include "rOS.h"
 #include "rRecordQueue.h"
+#include "rCompression.h"
 
 #include <iostream>
 
@@ -22,6 +23,41 @@ XMLIndex::XMLIndex(const URL & xmlURL,
 
 XMLIndex::~XMLIndex()
 { }
+
+std::string
+XMLIndex::getHelpString(const std::string& fkey)
+{
+  return
+    "Reads a collection of fml records from a static file such as code_index.xml.\n  Example: /myarchive/code_index.xml";
+}
+
+bool
+XMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+{
+  // We'll claim any missing protocal with a .fam ending for legacy support
+  if (protocol.empty()) {
+    std::string suffix = url.getSuffixLC();
+    // Anything with .xml we'll try to take...
+    if (suffix == "xml") {
+      protocol = XMLIndex::XMLINDEX;
+      return true;
+      // ...or .gz etc with .xml
+    } else if (Compression::suffixRecognized(suffix)) {
+      URL tmp(url);
+      tmp.removeSuffix(); // removes the suffix
+      std::string p = tmp.getPath();
+      p.resize(p.size() - 1); /// removes the dot
+      tmp.setPath(p);
+      suffix = tmp.getSuffixLC();
+
+      if (suffix == "xml") {
+        protocol = XMLIndex::XMLINDEX;
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 void
 XMLIndex::introduceSelf()

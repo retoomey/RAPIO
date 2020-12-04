@@ -1,6 +1,7 @@
 #include "rWebIndex.h"
 
 #include "rError.h"
+#include "rStrings.h"
 #include "rXMLIndex.h"
 #include "rRecordQueue.h"
 
@@ -49,6 +50,59 @@ WebIndex::WebIndex(const URL & aURL,
 
 WebIndex::~WebIndex()
 { }
+
+std::string
+WebIndex::getHelpString(const std::string& fkey)
+{
+  return
+    "Web index polls a NSSL/WG data webserver for metadata.\n  Example: iweb=//vmrms-sr20/KTLX or http://vmrms-webserv/vmrms-sr02?source=KTLX (non macro)";
+}
+
+bool
+WebIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+{
+  if (protocol.empty() || (protocol == WEBINDEX)) {
+    // Try to make URL from the indexparams...
+    URL url(indexparams);
+
+    // If there's a source tag, it's an old web index...
+    // -i "iweb=http://vmrms-webserv/vmrms-sr02?source=KTLX"
+    if (!url.getQuery("source").empty()) {
+      protocol = WebIndex::WEBINDEX;
+      return true;
+    }
+
+    // ...else we macro machine names to our nssl vmrms data sources like so...
+    // "iweb=//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
+    // "//vmrms-sr02/KTLX" --> http://vmrms-webserv/vmrms-sr02?source=KTLX
+
+    // If it's a null host, look for a macro conversion
+    if (url.getHost() == "") {
+      std::string p = url.getPath();
+
+      if (p.size() > 1) {
+        if ((p[0] == '/') && (p[1] == '/')) {
+          p = p.substr(2);
+          std::vector<std::string> pieces;
+          Strings::splitWithoutEnds(p, '/', &pieces);
+
+          if (pieces.size() > 1) {
+            std::string machine  = pieces[0];
+            std::string source   = pieces[1];
+            std::string expanded = "http://vmrms-webserv/" + machine
+              + "?source=" + source;
+            LogInfo("Web macro source sent to " << expanded << "\n");
+            //   u = URL(expanded);
+            indexparams = expanded; // Change to non-macroed format
+          }
+          protocol = WebIndex::WEBINDEX;
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+} // WebIndex::canHandle
 
 bool
 WebIndex::initialRead(bool realtime, bool archive)

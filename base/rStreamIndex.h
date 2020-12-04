@@ -19,7 +19,7 @@ public:
 
   /** Get help for us */
   virtual std::string
-  getHelpString() override;
+  getHelpString(const std::string& fkey) override;
   // ---------------------------------------------------------------------
   // Factory
 

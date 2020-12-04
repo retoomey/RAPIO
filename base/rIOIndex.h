@@ -7,6 +7,7 @@
 namespace rapio {
 /**
  * Provides a way to create an appropriate index object
+ * @author Robert Toomey
  */
 class IOIndex : public IO {
 public:

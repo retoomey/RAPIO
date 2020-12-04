@@ -19,6 +19,14 @@ public:
   /** Default constant for a polling FML index */
   static const std::string FMLINDEX_POLL;
 
+  /** Get help for us */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
+  /** Can we handle this protocol/path from -i?  Update allowed*/
+  static bool
+  canHandle(const URL& url, std::string& protocol, std::string& indexparams);
+
   // ---------------------------------------------------------------------
   // Factory
 

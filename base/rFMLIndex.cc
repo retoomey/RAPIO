@@ -40,6 +40,30 @@ FMLIndex::FMLIndex(
   myIndexPath(IOIndex::getIndexPath(aURL))
 { }
 
+std::string
+FMLIndex::getHelpString(const std::string& fkey)
+{
+  if (fkey == FMLINDEX_FAM) {
+    return "Use inotify to watch a directory for .fml metadata files.\n  Example: ifam=code_index.fam";
+  } else {
+    return "Use polling to watch a directory for .fml metadata files.\n  Example: pol=code_index.fam";
+  }
+}
+
+bool
+FMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+{
+  // We'll claim any missing protocal with a .fam ending for legacy support
+  if (protocol.empty()) {
+    std::string suffix = url.getSuffixLC();
+    if (suffix == "fam") {
+      protocol = FMLIndex::FMLINDEX_FAM;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool
 FMLIndex::wantFile(const std::string& path)
 {
