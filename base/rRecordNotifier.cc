@@ -2,6 +2,7 @@
 
 #include "rStaticMethodFactory.h"
 #include "rStrings.h"
+#include "rColorTerm.h"
 
 // Subclasses we introduce
 #include "rFMLRecordNotifier.h"
@@ -24,15 +25,10 @@ RecordNotifier::introduceHelp(std::string& help)
   // time on dynamic module help, etc. For now just need to
   // document in the help.
   // FIXME: thinking about writing a custom html style stream class
-  help += "If blank, set to {OutputDir}/code_index.fam\n";
-  help += "If 'disable' then turned off (could speed up archive processing.)\n";
-  help += "Notifier type: fml --> Write fml file to directory for each new record.\n";
-  help += "  'fml=/output' --> Write fml records to directory /output.\n";
-  help += "  'fml=' --> Write fml records to {OutputDir}/code_index.fam.\n";
-  help += "Notifier type: exe --> Call script/program for each new record.\n";
-  help += "  'exe=/test.exe' --> call /test.exe with final filename.\n";
-  help += "  'fml= exe=/test.exe fml=/copy' --> Two sets of fml records, default and in /copy and call exe.\n";
-  // FMLRecordNotifier::introduceSelf();
+  help +=
+    "If blank, set to {OutputDir}/code_index.fam, while if set to 'disable' then turned off (could speed up archive processing.)\n";
+  help += " " + ColorTerm::fRed + "fml" + ColorTerm::fNormal + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
+  help += " " + ColorTerm::fRed + "exe" + ColorTerm::fNormal + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
 }
 
 bool

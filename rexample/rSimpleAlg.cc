@@ -205,3 +205,12 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
     LogInfo("--->Finished " << r->getTypeName() << " product to output\n");
   }
 } // W2SimpleAlg::processNewData
+
+void
+W2SimpleAlg::processHeartbeat(const Time& n, const Time& p)
+{
+  LogInfo("Simple alg got a heartbeat...what do you want me to do?\n");
+  // FIXME: longer example here maybe..
+  // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
+  // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
+}

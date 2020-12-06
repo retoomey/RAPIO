@@ -25,6 +25,10 @@ public:
   virtual
   ~EXERecordNotifier();
 
+  /** Get help for us */
+  static std::string
+  getHelpString(const std::string& fkey);
+
   /** Notify for a single record */
   virtual void
   writeRecord(const Record& rec, const std::string& file) override;

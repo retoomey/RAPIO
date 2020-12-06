@@ -62,9 +62,6 @@ bool
 WebIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
 {
   if (protocol.empty() || (protocol == WEBINDEX)) {
-    // Try to make URL from the indexparams...
-    URL url(indexparams);
-
     // If there's a source tag, it's an old web index...
     // -i "iweb=http://vmrms-webserv/vmrms-sr02?source=KTLX"
     if (!url.getQuery("source").empty()) {

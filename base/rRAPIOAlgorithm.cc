@@ -903,11 +903,16 @@ RAPIOAlgorithm::handleEndDatasetEvent()
 void
 RAPIOAlgorithm::handleTimedEvent(const Time& n, const Time& p)
 {
-  // Dump heartbeat for now from the -sync option
-  LogSevere(
-    "Heartbeat actual:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and for: " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
-                        << "\n");
+  // Debug dump heartbeat for now from the -sync option
+  LogDebug(
+    "sync heartbeat:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and for: " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
+                      << "\n");
+  processHeartbeat(n, p);
 }
+
+void
+RAPIOAlgorithm::processHeartbeat(const Time& n, const Time& p)
+{ }
 
 void
 RAPIOAlgorithm::addFeature(const std::string& key)

@@ -19,6 +19,13 @@ FMLRecordNotifier::create()
   return (result);
 }
 
+std::string
+FMLRecordNotifier::getHelpString(const std::string& fkey)
+{
+  return
+    "Write fml file to directory for each new record.\n  Example: fml=/output  Example: fml= Write to {OutputDir}/code_index.fam";
+}
+
 void
 FMLRecordNotifier::introduceSelf()
 {

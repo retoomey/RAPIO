@@ -65,12 +65,10 @@ IOIndex::createIndex(
 
   // ---------------------------------------------------------
   // Let the indexes check in order for missing protocol support
-  if (protocol.empty()) {
-    URL url(indexparams);
-    WebIndex::canHandle(url, protocol, indexparams);
-    FMLIndex::canHandle(url, protocol, indexparams);
-    XMLIndex::canHandle(url, protocol, indexparams);
-  }
+  URL url(indexparams);
+  WebIndex::canHandle(url, protocol, indexparams);
+  FMLIndex::canHandle(url, protocol, indexparams);
+  XMLIndex::canHandle(url, protocol, indexparams);
 
   // If STILL empty after indexes check/update protocol...
   if (protocol.empty()) {

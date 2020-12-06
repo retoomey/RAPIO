@@ -21,7 +21,10 @@ namespace rapio {
  *
  *  Some algorithms break down the -I into unique fields, these can
  *  be added using the addInputProduct method directly.
+ *  @author Robert Toomey
  *
+ *  FIXME: Clean up protect/public.  Right now they should be sticking
+ *  to the functions declared in the example algorithm.
  */
 class RAPIOAlgorithm : public Algorithm {
 public:
@@ -70,11 +73,11 @@ public:
 
   /** Declare all algorithm options algorithm needs */
   virtual void
-  declareOptions(RAPIOOptions& o) = 0;
+  declareOptions(RAPIOOptions& o){ };
 
   /** Process/setup from the given algorithm options */
   virtual void
-  processOptions(RAPIOOptions& o) = 0;
+  processOptions(RAPIOOptions& o){ };
 
   /** Declare input parameter options (Called before option parse) */
   virtual void
@@ -194,10 +197,16 @@ public:
   virtual void
   handleTimedEvent(const Time& at, const Time& sync);
 
+  /** Process heartbeat in subclasses.
+   * @param at The actual now time triggering the event.
+   * @param sync The pinned sync time we're firing for. */
+  virtual void
+  processHeartbeat(const Time& n, const Time& p);
+
   /** Process a matched new record (occurs as the records come in)  Index number
    * is index into declared order */
   virtual void
-  processNewData(RAPIOData&) = 0;
+  processNewData(RAPIOData&){ };
 
   // 'Features' I'll probably generalize later
 

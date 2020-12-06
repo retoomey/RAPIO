@@ -14,6 +14,13 @@ EXERecordNotifier::create()
   return (result);
 }
 
+std::string
+EXERecordNotifier::getHelpString(const std::string& fkey)
+{
+  return
+    "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with final filename.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
+}
+
 void
 EXERecordNotifier::introduceSelf()
 {
