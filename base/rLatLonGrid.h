@@ -30,7 +30,7 @@ public:
     float            lon_spacing,
     size_t           num_lats,
     size_t           num_lons,
-    float            value = Constants::MISSING_DATA);
+    float            value = Constants::MissingData);
 
   /** Create a lat lon grid object */
 

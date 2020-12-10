@@ -277,7 +277,7 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
       int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
 
       if (k != 0) {
-        data2DF[x][y] = Constants::MISSING_DATA;
+        data2DF[x][y] = Constants::MissingData;
       } else {
         if (radLat < lowestX) { lowestX = radLat; }
         if (radLon < lowestY) { lowestY = radLon; }
@@ -290,7 +290,7 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
 
         if ( (binX >= 0) && (binX < int(imageCols)) && (binY >= 0) && (binY < int(imageRows))) {
           double value = in[binX][binY];
-          //   if (value > 400){ value = Constants::MISSING_DATA; } // ULWRF
+          //   if (value > 400){ value = Constants::MissingData; } // ULWRF
           data2DF[x][y] = value;
         } else {
           /* Quad test, should be centerd

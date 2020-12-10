@@ -11,43 +11,27 @@
 namespace rapio {
 class Length;
 
-/** Hold all constants for RAPIO */
+/** Hold all constants for RAPIO
+ *
+ * Using non caps for constants since c++ standard recommends not to do
+ * this in order to avoid conflicts with compiler macros.  All caps is left
+ * over from old days.
+ *
+ * @author Robert Toomey */
 class Constants : public Utility
 {
 public:
   /** Default header for RAPIO */
   static const std::string RAPIOHeader;
 
-  /** Type of Reader, Writer that uses flat files */
-  static const std::string FlatFile;
-
-  /** Type of Reader, Writer that uses .gz files */
-  static const std::string GzippedFile;
-
-  /** Type of Reader,        that uses .bz2 files */
-  static const std::string BZippedFile;
-
-  /** The average size of an XML message to be put in a Linear
-   * Buffer.  The value 256 is the old avg size.  The Virtual Vol
-   * product has increased this value to roughly 600.  */
-  static const int AVERAGE_MSG_SIZE;
+  // GIS constants
 
   /** The mean equatorial radius of the earth. */
   static const Length&
   EarthRadius();
 
-  /** The value that is assigned to data that is missing.
-   */
-  static const SentinelDouble MISSING_DATA;
-
   /** The value that is assigned to data that is missing. */
   static const SentinelDouble MissingData;
-
-  /** The value that is assigned to range-folded doppler velocity
-   *  data regardless of the source of the data (hires/orpg/awips,
-   *  etc.).
-   */
-  static const SentinelDouble RANGE_FOLDED;
 
   /** The value that is assigned to range-folded doppler
    * velocity data regardless of the source of the data
@@ -79,20 +63,10 @@ public:
   }
 
   /** Radians per degree. */
-  static const double RAD_PER_DEGREE;
-
-  /** Radians per degree. */
   static const double RadiansPerDegree;
 
   /** Degrees per radian. */
-  static const double DEGREE_PER_RAD;
-
-  /** Degrees per radian. */
   static const double DegreesPerRadian;
-
-  /** The angle corresponding to pi radians. */
-  static const double&
-  Pi();
 
   /** The number of seconds in one day. */
   static const time_t SecondsPerDay;
@@ -104,7 +78,7 @@ public:
   static const std::string ExpiryInterval;
   static const std::string FilenameDateTime; // Formatted as filename expected
 
-  // Contants for reading/writing attributes
+  // Constants for reading/writing attributes
 
   /** What is the TypeName is present in this file? */
   static const std::string TypeName;

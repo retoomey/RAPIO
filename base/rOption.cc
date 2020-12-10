@@ -128,12 +128,6 @@ FilterRequired::show(const Option& opt)
   return (opt.required && !opt.system);
 }
 
-bool
-FilterOptional::show(const Option& opt)
-{
-  return (!opt.required && !opt.system);
-}
-
 FilterName::FilterName(const std::string& name)
 {
   myName = name;

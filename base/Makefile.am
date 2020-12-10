@@ -91,7 +91,6 @@ pkginclude_HEADERS =\
   rEventLoop.h\
   rEventTimer.h\
   rIO.h\
-  rByteOrder.h\
   rFactory.h\
   rStaticMethodFactory.h\
   rXMLIndex.h\
@@ -107,7 +106,6 @@ pkginclude_HEADERS =\
   rIOIndex.h\
   rIOURL.h\
   rError.h\
-  rBuffer.h\
   rConfig.h\
   rConfigDataFormat.h\
   rConfigDirectoryMapping.h\

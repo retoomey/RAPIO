@@ -9,18 +9,6 @@ using namespace rapio;
 /** Default header for RAPIO */
 const std::string Constants::RAPIOHeader = "Realtime Algorithm Parameter and IO (RAPIO) ";
 
-/** Type of Reader, Writer that uses flat files */
-const std::string Constants::FlatFile = "FlatFile";
-
-/** Type of Reader, Writer that uses .gz files */
-const std::string Constants::GzippedFile = "GzippedFile";
-
-/** Type of Reader, Writer that uses .bz2 files */
-const std::string Constants::BZippedFile = "BZippedFile";
-
-
-const int Constants::AVERAGE_MSG_SIZE = 600;
-
 const Length&
 Constants::EarthRadius()
 {
@@ -31,20 +19,14 @@ Constants::EarthRadius()
 }
 
 const SentinelDouble Constants::MissingData(-99900, 0.00001);
-const SentinelDouble
-Constants::MISSING_DATA(Constants::MissingData);
 
 const SentinelDouble Constants::RangeFolded(-99901, 0.00001);
-const SentinelDouble
-Constants::RANGE_FOLDED(Constants::RangeFolded);
 
 const SentinelDouble Constants::DataUnavailable(-99903, 0.00001);
 
 const double Constants::RadiansPerDegree = M_PI / 180.0;
-const double Constants::RAD_PER_DEGREE   = Constants::RadiansPerDegree;
 
 const double Constants::DegreesPerRadian = 180.0 / M_PI;
-const double Constants::DEGREE_PER_RAD   = Constants::DegreesPerRadian;
 
 const time_t Constants::SecondsPerDay = 86400;
 

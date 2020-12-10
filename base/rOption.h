@@ -109,13 +109,6 @@ public:
   show(const Option& opt) override;
 };
 
-/** Get list of optional options.  They usually have defaults that don't have to be changed */
-class FilterOptional :  public OptionFilter {
-public:
-  virtual bool
-  show(const Option& opt) override;
-};
-
 /** Filter options by given name.  Help uses this to try to find what you want advanced help for */
 class FilterName :  public OptionFilter {
 public:
