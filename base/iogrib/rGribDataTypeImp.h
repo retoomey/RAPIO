@@ -21,16 +21,6 @@ public:
     myDataType = "GribData";
   }
 
-  // FIXME: not liking this forced at this level...
-  //
-  /** Return Location that corresponds to this DataType */
-  virtual LLH
-  getLocation() const override;
-
-  /** Return Time that corresponds to this DataType */
-  virtual Time
-  getTime() const override;
-
   /** Print the catalog for thie GribDataType.
    * FIXME: better to be able to get a catalog I think */
   void

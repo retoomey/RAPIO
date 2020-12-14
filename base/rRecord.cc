@@ -133,24 +133,28 @@ operator < (const Record& a, const Record& b)
 URL
 Record::getFileName(const std::vector<std::string>& params)
 {
-  URL loc;
-
   const size_t tot_parts(params.size());
 
   if (tot_parts < 1) {
     LogSevere("Params missing filename.\n");
-    return (loc);
+    return (URL());
   }
 
-  loc = params[0];
+  std::string p;
 
-  std::string p = loc.getPath();
-  for (size_t j = 1; j < tot_parts; ++j) {
-    p += "/" + params[j];
+  for (auto& s:params) {
+    // Some WDSSII xml indexes have a GzippedFile/xmldata randomly stuffed into params,
+    // we don't want this to be part of the path.
+    // Netcdf format looks like:
+    // netcdf {indexlocation} Velocity 00.50 19990504-213435.netcdf.gz
+    // but here we have:
+    // W2ALGS GzippedFile {indexlocation} xmldata restofpath.xml.gz
+    if (s == "GzippedFile") { continue; }
+    if (s == "xmldata") { continue; }
+    p += "/" + s;
   }
-  loc.setPath(p);
 
-  return (loc);
+  return (URL(p));
 }
 
 std::shared_ptr<DataType>

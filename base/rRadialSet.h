@@ -28,15 +28,13 @@ public:
     const Time       & time,
     const Length     & dist_to_first_gate);
 
-  virtual LLH
-  getLocation() const override;
-
-  virtual Time
-  getTime() const override;
-
   /** Return the location of the radar. */
   const LLH&
-  getRadarLocation() const;
+  getRadarLocation() const
+  {
+    // We use the location as the center
+    return myLocation;
+  };
 
   /** Elevation of radial set */
   double
@@ -98,12 +96,6 @@ protected:
 
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
-
-  /** Center of Radial set */
-  LLH myCenter;
-
-  /** Time of this radial set */
-  Time myTime;
 
   /** Distance to the first gate */
   Length myFirst;

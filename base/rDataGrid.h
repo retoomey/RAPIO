@@ -121,13 +121,6 @@ protected:
 class DataGrid : public DataType {
 public:
 
-  // FIXME: woh can become attributes right?
-  virtual LLH
-  getLocation() const override;
-
-  virtual Time
-  getTime() const override;
-
   /** Resize the dimensions of array objects */
   void
   declareDims(const std::vector<size_t>& dimsizes,

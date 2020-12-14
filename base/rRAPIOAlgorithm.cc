@@ -977,7 +977,8 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
     std::vector<std::string> files;
-    IODataType::write(outputData, myOutputDir, true, records, files, "netcdf");
+    // IODataType::write(outputData, myOutputDir, true, records, files, "netcdf");
+    IODataType::write(outputData, myOutputDir, true, records, files, "");
 
     for (auto& n:myNotifiers) {
       n->writeRecords(records, files);

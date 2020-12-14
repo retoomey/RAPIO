@@ -1,6 +1,8 @@
 #pragma once
 
 #include <rData.h>
+#include <rTime.h>
+#include <rLLH.h>
 #include <rConstants.h>
 #include <rError.h>
 #include <rNamedAny.h>
@@ -9,9 +11,6 @@
 #include <string>
 #include <memory>
 
-#include <boost/any.hpp>
-#include <boost/optional.hpp>
-
 namespace rapio {
 class Time;
 class TimeDuration;
@@ -19,15 +18,39 @@ class LLH;
 
 typedef NamedAnyList DataAttributeList;
 
-/** The abstract base class for all of the data objects.  */
+/** The abstract base class for all of the data objects.
+ * Every DataType stores a location in space and time.
+ * Every DataType stores a generic collection of attributes.
+ */
 class DataType : public Data {
 public:
 
+  /** Create empty DataType */
+  DataType();
+
+  /** Destroy a DataType */
+  virtual ~DataType(){ }
+
   /** Format a subtype string utility function */
-  std::string
+  static std::string
   formatString(float spec,
     size_t           tot,
-    size_t           prec) const;
+    size_t           prec);
+
+  /** Get the factory used to read this in originally, if ever.
+   * This can assist writers in outputting */
+  std::string
+  getReadFactory() const
+  {
+    return (myReadFactory);
+  }
+
+  /** Set the factory used if any to create this DataType */
+  void
+  setReadFactory(const std::string& d)
+  {
+    myReadFactory = d;
+  }
 
   /** Get the data type we store */
   std::string
@@ -43,17 +66,23 @@ public:
     myDataType = d;
   }
 
-  /** Get subtype for writing */
-  bool
-  getSubType(std::string& result) const;
-
   /** Return the TypeName of this DataType. */
   const std::string &
-  getTypeName() const;
+  getTypeName() const
+  {
+    return myTypeName;
+  }
 
   /** Set the TypeName of this DataType. */
   void
-  setTypeName(const std::string&);
+  setTypeName(const std::string& t)
+  {
+    myTypeName = t;
+  }
+
+  /** Get subtype for writing */
+  bool
+  getSubType(std::string& result) const;
 
   /** Generated subtype for outputting from empty */
   virtual std::string
@@ -84,18 +113,26 @@ public:
   updateGlobalAttributes(const std::string& encoded_type);
 
   /** Return Location that corresponds to this DataType */
-  virtual LLH
-  getLocation() const = 0;
+  LLH
+  getLocation() const
+  {
+    return myLocation;
+  }
+
+  /** Set primary Location.  Meaning depends on subclass */
+  void
+  setLocation(const LLH& l)
+  {
+    myLocation = l;
+  }
 
   /** Return Time that corresponds to this DataType */
-  virtual Time
-  getTime() const = 0;
+  Time
+  getTime(){ return myTime; }
 
-  /** Initialize TypeName string to invalid value of "not set". */
-  DataType();
-
-  /** Call descendant's destructor. */
-  virtual ~DataType(){ }
+  /** Set the Time that corresponds to this DataType */
+  void
+  setTime(const Time& t){ myTime = t; }
 
   /** Global attributes, used by reader/writers */
   std::shared_ptr<DataAttributeList>
@@ -106,7 +143,17 @@ protected:
   /** Global attributes for data type */
   std::shared_ptr<DataAttributeList> myAttributes;
 
-  /** String used for writer/reader factory, such as 'RadialSet' */
+  /** Time stamp of this datatype, used for writing */
+  Time myTime;
+
+  /** Primary location of data, say NW corner for LLG or
+   * radar center for RadialSets */
+  LLH myLocation;
+
+  /** Factory reader if any, that was used to read in this data */
+  std::string myReadFactory;
+
+  /** String used for sub writer/reader factory, such as 'RadialSet' */
   std::string myDataType;
 
   /** The TypeName of the data contained.  */

@@ -9,7 +9,7 @@
 
 using namespace rapio;
 
-DataType::DataType() : myTypeName("not set")
+DataType::DataType() : myTime(Time::CurrentTime()), myReadFactory("default"), myTypeName("not set")
 {
   myAttributes = std::make_shared<DataAttributeList>();
 }
@@ -17,7 +17,7 @@ DataType::DataType() : myTypeName("not set")
 std::string
 DataType::formatString(float spec,
   size_t                     tot,
-  size_t                     prec) const
+  size_t                     prec)
 {
   char buf[100];
 
@@ -38,26 +38,13 @@ DataType::formatString(float spec,
   return (buf);
 }
 
-const std::string&
-DataType::getTypeName() const
-{
-  if (myTypeName.empty()) {
-    LogSevere("Type Name unset" << "\n");
-  }
-  return (myTypeName);
-}
-
-void
-DataType::setTypeName(const std::string& typeName)
-{
-  myTypeName = typeName;
-}
-
 bool
 DataType::getSubType(std::string& result) const
 {
   std::string subtype;
-  auto f = myAttributes->get<std::string>("SubType");
+  // Record calls setDataAttributeValue to set value/unit,
+  // is this correct..check the netcdf
+  auto f = myAttributes->get<std::string>("SubType-value");
   if (f) {
     subtype = *f;
   }

@@ -28,6 +28,11 @@ IODataType::readDataType(const URL& path, const std::string& factory)
     return nullptr;
   } else {
     std::shared_ptr<DataType> dt = builder->createDataType(path);
+    if (dt != nullptr) {
+      // Old W2ALGS is XML:
+      if (f == "W2ALGS") { f = "XML"; }
+      dt->setReadFactory(f);
+    }
     return dt;
   }
 }
@@ -45,21 +50,37 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
 {
   URL path = aURL;
 
+  // FIXME: Need to refactor/clean up for multi-write ability
+  // We should have ability to say write a radialset to png, netcdf, etc.
+  // We should have ability to turn on/off records for this too I think.
+
+  // 1. Determine factory we use to attempt to write this data
   // LogSevere("Write called url: "+path.toString()+"\n");
-  std::string f = factory;
-  if (f == "") {
-    // Doesn't work for directory right? Could skip this then
-    f = OS::getFileExtension(path.toString());
-    Strings::removePrefix(f, ".");
+  std::string f = factory; // FORCE (which can fail)
+  if (f == "") {           // Guess
+    // Check if data type has the read in factory info
+    // Note it could be set elsewhere to force a particular output
+    // type attempt.  For example, mirroring data files we'd just use
+    // same type as in
+    const auto rf = dt->getReadFactory();
+    if (rf != "default") {
+      f = rf; // Not default, use it (assumes readers can write)
+    } else {
+      // Doesn't work for directory right? Could skip this then
+      f = OS::getFileExtension(path.toString());
+      Strings::removePrefix(f, ".");
+    }
   }
   Strings::toLower(f);
-  std::string suffix = f; // This might not always be true
+  std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
 
-  // Need to fix/redesign how this works.
-  // We don't want 'xml' turned into 'netcdf' for example....
-  // So a datatype like "RadialSet" might have special settings
+  // The dfs settings from WDSS2 are messy, need refactor SOON.
+  // WDSS2 assumes 1 type to 1 output.  I'm thinking the settings should be set per factory.
+  // Read setting for datatype from dfs file
   std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt->getDataType());
   if (dfs != nullptr) {
+    // FIXME: The issue is that old WDSS2 has the default to netcdf, which stuff like xml
+    // won't write out to.
     // f = dfs->format;
   }
 

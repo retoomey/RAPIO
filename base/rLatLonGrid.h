@@ -53,20 +53,6 @@ public:
     const float lat_spacing,
     const float lon_spacing);
 
-  // ------------------------------------------------------
-  // Getting the 'metadata' on the 2d array
-  virtual LLH
-  getLocation() const override
-  {
-    return (myLocation);
-  }
-
-  virtual Time
-  getTime() const override
-  {
-    return (myTime);
-  }
-
   float
   getLatSpacing() const
   {
@@ -117,7 +103,6 @@ protected:
    *  Location of the extreme northwest corner grid point.
    */
   LLH myLocation;
-  Time myTime;
   float myLatSpacing;
   float myLonSpacing;
 };

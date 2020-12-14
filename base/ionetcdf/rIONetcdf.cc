@@ -235,8 +235,14 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string type = dt->getDataType();
 
   std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+
+  // Default base class for now at least is DataGrid, so if doesn't cast
+  // we have no methods to write this
   if (fmt == nullptr) {
-    fmt = IONetcdf::getIONetcdf("DataGrid");
+    auto dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
+    if (dataGrid != nullptr) {
+      fmt = IONetcdf::getIONetcdf("DataGrid");
+    }
   }
 
   if (fmt == nullptr) {

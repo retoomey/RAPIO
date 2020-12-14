@@ -18,12 +18,39 @@ IOXML::createDataType(const URL& url)
   if (IOURL::read(url, buf) > 0) {
     std::shared_ptr<XMLData> xml = std::make_shared<XMLData>();
     if (xml->readBuffer(buf)) {
+      // Most likely we'll introduce subtypes like in the other readers
+      // but how to do this generically..
+      // TEMP hack for WDSS2 DataTable class.  Look for <datatable>
+      // and the <stref> tags for time/location and set in the datatype
+      auto datatable = xml->getTree()->getChildOptional("datatable");
+      if (datatable != nullptr) {
+        auto datatype = datatable->getChildOptional("datatype");
+        if (datatype != nullptr) {
+          try{
+            // The type (for folder writing)
+            const auto theDataType = datatype->getAttr("name", std::string(""));
+            xml->setTypeName(theDataType);
+
+            auto time = datatype->getChild("stref.time");
+            // Units, bleh.  Assume for now to epoch.  FIXME: Use the units convert if needed
+            // const auto units = time.getAttr("units", std::string(""));
+            const auto value = time.getAttr("value", (time_t) (0));
+            xml->setTime(Time::SecondsSinceEpoch(value));
+
+            // FIXME: Need location too...
+            // LogSevere("GOT: " << value << "\n");
+          }catch (const std::exception& e) {
+            LogSevere("Tried to read stref tag in datatable and failed: " << e.what() << "\n");
+          }
+        }
+      }
+
       return xml;
     }
   }
   LogSevere("Unable to create XML from " << url << "\n");
   return nullptr;
-}
+} // IOXML::createDataType
 
 bool
 IOXML::writeURL(

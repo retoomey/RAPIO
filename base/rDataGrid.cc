@@ -7,18 +7,6 @@
 using namespace rapio;
 using namespace std;
 
-LLH
-DataGrid::getLocation() const
-{
-  return LLH();
-}
-
-Time
-DataGrid::getTime() const
-{
-  return Time();
-}
-
 void *
 DataArray::getRawDataPointer()
 {

@@ -20,19 +20,13 @@ RadialSet::RadialSet(const LLH& location,
   const Time                  & time,
   const Length                & dist_to_first_gate)
   :
-  myCenter(location),
-  myTime(time),
   myFirst(dist_to_first_gate)
 {
   // Lookup for read/write factories
   myDataType = "RadialSet";
+  myLocation = location;
+  myTime     = time;
   init(0, 0);
-}
-
-const LLH&
-RadialSet::getRadarLocation() const
-{
-  return (myCenter);
 }
 
 std::string
@@ -101,18 +95,6 @@ RadialSet::setElevation(const double& targetElev)
   myElevAngleDegs = targetElev;
 }
 
-LLH
-RadialSet::getLocation() const
-{
-  return (getRadarLocation());
-}
-
-Time
-RadialSet::getTime() const
-{
-  return (myTime);
-}
-
 Length
 RadialSet::getDistanceToFirstGate() const
 {
@@ -124,8 +106,8 @@ RadialSet::getDistanceToFirstGate() const
      *
      * // temp hack.  Something up with library
      * const LLH& first_gate = myRadials[0].getStartLocation();
-     * //IJK displacement_km = (first_gate - myCenter).getVector_ECCC();
-     * IJK displacement_km = (first_gate - myCenter);
+     * //IJK displacement_km = (first_gate - myLocation).getVector_ECCC();
+     * IJK displacement_km = (first_gate - myLocation);
      * LogSevere("Calculated: " << Length::Kilometers(displacement_km.norm()) << "\n");
      */
 
@@ -137,10 +119,10 @@ RadialSet::getDistanceToFirstGate() const
   //  assert(myRadials.size() > 0); // at least one radial present?
   //  const LLH& first_gate = myRadials[0].getStartLocation();
   // const LLH& first_gate = myRadials[0].getStartLocation();
-  // const LLH& first_gate = myCenter; // Where is first gate start information?
+  // const LLH& first_gate = myLocation; // Where is first gate start information?
 
-  // IJK displacement_km = (first_gate - myCenter).getVector_ECCC();
-  // IJK displacement_km = (first_gate - myCenter);
+  // IJK displacement_km = (first_gate - myLocation).getVector_ECCC();
+  // IJK displacement_km = (first_gate - myLocation);
   // return (Length::Kilometers(displacement_km.norm()));
   return (Length::Kilometers(0));
 }
@@ -173,7 +155,7 @@ RadialSet::initFromGlobalAttributes()
   auto ht = myAttributes->get<double>(Constants::Height);
   if (!ht) { success = false; }
   if (success) {
-    myCenter = LLH(*lat, *lon, *ht / 1000.0);
+    myLocation = LLH(*lat, *lon, *ht / 1000.0);
   } else {
     LogSevere("Missing Location attribute\n");
   }

@@ -11,6 +11,7 @@ using namespace std;
 JSONData::JSONData()
 {
   myDataType = "JSON";
+  myTypeName = "JSON"; // Affects output writing
 }
 
 size_t
@@ -63,16 +64,4 @@ JSONData::readBuffer(std::vector<char>& buffer)
     LogSevere("Exception reading JSON data..." << e.what() << " ignoring\n");
     return false;
   }
-}
-
-LLH
-JSONData::getLocation() const
-{
-  return (LLH());
-}
-
-Time
-JSONData::getTime() const
-{
-  return (Time::CurrentTime());
 }

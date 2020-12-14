@@ -86,17 +86,6 @@ public:
   virtual bool
   writeBlock(FILE * fp);
 
-  virtual LLH
-  getLocation() const override;
-
-  virtual Time
-  getTime() const override;
-
-  void
-  setLocation(const LLH& ref);
-  void
-  setTime(const Time& time);
-
   // ----------------------------------------------------------------------------
   // Query methods.  This allows writers such as the netcdf encoder to query
   // our information and store it for us
@@ -175,11 +164,5 @@ protected:
    * should increase their count by 1 (depth of subclass tree.  Siblings have
    * same value) */
   static const size_t BLOCK_LEVEL;
-
-  /** Space-time point most closely associated with this DataTable
-   *  object as a whole.
-   */
-  LLH myLocation;
-  Time myTime;
 };
 }

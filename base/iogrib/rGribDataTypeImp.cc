@@ -3,19 +3,6 @@
 
 using namespace rapio;
 
-LLH
-GribDataTypeImp::getLocation() const
-{
-  return LLH();
-}
-
-Time
-GribDataTypeImp::getTime() const
-{
-  // FIXME: should be from grib data right?
-  return Time();
-}
-
 void
 GribDataTypeImp::printCatalog()
 {

@@ -169,27 +169,3 @@ BinaryTable::writeBlock(FILE * fp)
 
   return (true);
 }
-
-LLH
-BinaryTable::getLocation() const
-{
-  return (myLocation);
-}
-
-Time
-BinaryTable::getTime() const
-{
-  return (myTime);
-}
-
-void
-BinaryTable::setLocation(const LLH& ref)
-{
-  myLocation = ref;
-}
-
-void
-BinaryTable::setTime(const Time& t)
-{
-  myTime = t;
-}

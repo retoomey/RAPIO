@@ -22,14 +22,6 @@ public:
     myDataType = "NetcdfData";
   }
 
-  /** Return Location that corresponds to this DataType */
-  virtual LLH
-  getLocation() const override;
-
-  /** Return Time that corresponds to this DataType */
-  virtual Time
-  getTime() const override;
-
 private:
   /** Store the buffer of data (copy wraps around shared_ptr) */
   std::vector<char> myBuf;

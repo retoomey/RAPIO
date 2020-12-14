@@ -11,6 +11,7 @@ using namespace std;
 XMLData::XMLData()
 {
   myDataType = "XML";
+  myTypeName = "XML"; // Affects output writing
 }
 
 bool
@@ -65,16 +66,4 @@ XMLData::writeBuffer(std::vector<char>& buf)
   std::string out = ss.str();
   buf = std::vector<char>(out.begin(), out.end());
   return buf.size();
-}
-
-LLH
-XMLData::getLocation() const
-{
-  return (LLH());
-}
-
-Time
-XMLData::getTime() const
-{
-  return (Time::CurrentTime());
 }

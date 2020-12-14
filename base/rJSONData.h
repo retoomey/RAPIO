@@ -110,13 +110,6 @@ public:
   /** Construct JSON tree */
   JSONData();
 
-  // Need to rethink location/time data type stuff
-  virtual LLH
-  getLocation() const override;
-
-  virtual Time
-  getTime() const override;
-
   /** Get root of document tree, valid only while XMLTree is. */
   JSONNode *
   getTree()

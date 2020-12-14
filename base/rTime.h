@@ -194,8 +194,11 @@ public:
 
   /** Convenience function */
   std::string
-  getFileNameString() const
+  getFileNameString(bool milli = true) const
   {
+    if (milli) {
+      return getString(RECORD_TIMESTAMP, true);
+    }
     return getString(FILE_TIMESTAMP);
   };
 
