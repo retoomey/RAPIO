@@ -4,6 +4,10 @@
 #include <rError.h>
 #include <zlib.h>
 
+// Most of these currently are meant to be called externally...
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 // included in .cc files that need binary IO capability
 namespace {
 /** Z compress a single vector column.  This is actually pretty
@@ -359,3 +363,4 @@ read_type(T& s, FILE * fp)
  * }
  */
 }
+#pragma GCC diagnostic pop

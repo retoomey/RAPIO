@@ -183,21 +183,20 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Look for a radial set
 
-    /*
-     *  auto radialSet = d.datatype<rapio::RadialSet>();
-     *  if (radialSet != nullptr) {
-     *       LogInfo("This is a radial set, do radial set stuff\n");
-     *       size_t radials = radialSet->getNumRadials(); //x
-     *       size_t gates = radialSet->getNumGates(); // y
-     *       auto dataptr = radialSet->getFloat2D("primary"); // FIXME: API needs to be better
-     *       auto& data = *dataptr;
-     *       for(size_t r=0; r<radials; ++r){
-     *         for(size_t g=0; g<gates; ++g){
-     *            data[r][g] = 5.0;  // Replace every gate with 5 dbz
-     *         }
-     *       }
-     *  }
-     */
+    #if 0
+    auto radialSet = d.datatype<rapio::RadialSet>();
+    if (radialSet != nullptr) {
+      LogInfo("This is a radial set, do radial set stuff\n");
+      size_t radials = radialSet->getNumRadials(); // x
+      size_t gates   = radialSet->getNumGates();   // y
+      auto& data     = radialSet->getFloat2D("primary")->ref();
+      for (size_t r = 0; r < radials; ++r) {
+        for (size_t g = 0; g < gates; ++g) {
+          data[r][g] = 5.0; // Replace every gate with 5 dbz
+        }
+      }
+    }
+    #endif // if 0
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");

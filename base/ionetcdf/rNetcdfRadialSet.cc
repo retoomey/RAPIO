@@ -66,7 +66,7 @@ NetcdfRadialSet::getTestObject(
 
   // std::string nyq_unit("MetersPerSecond");
 
-  std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time, Length());
+  std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time);
   RadialSet& radialSet = *radialSetSP;
 
   radialSet.setTypeName("Reflectivity");

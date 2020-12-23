@@ -2,7 +2,6 @@
 
 #include <rData.h>
 #include <rConstants.h>
-#include <rLength.h>
 #include <rLLH.h>
 #include <rDataType.h>
 #include <rTime.h>
@@ -25,8 +24,7 @@ public:
 
   /** Construct a radial set */
   RadialSet(const LLH& location,
-    const Time       & time,
-    const Length     & dist_to_first_gate);
+    const Time       & time);
 
   /** Return the location of the radar. */
   const LLH&
@@ -68,8 +66,11 @@ public:
   getNumRadials();
 
   /** Distance from radar center to the first gate */
-  Length
-  getDistanceToFirstGate() const;
+  double
+  getDistanceToFirstGateM() const
+  {
+    return myFirstGateDistanceM;
+  };
 
   virtual std::string
   getGeneratedSubtype() const override;
@@ -77,10 +78,6 @@ public:
   /** Resize the data structure */
   void
   init(size_t rows, size_t cols, const float fill = 0);
-
-  /** Resize the data structure */
-  // virtual void
-  // resize(size_t rows, size_t cols, const float fill = 0) override;
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */
@@ -92,12 +89,10 @@ public:
   updateGlobalAttributes(const std::string& encoded_type) override;
 
 protected:
-  // I think these could be considered projection information
-
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
 
   /** Distance to the first gate */
-  Length myFirst;
+  double myFirstGateDistanceM;
 };
 }

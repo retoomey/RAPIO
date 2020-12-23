@@ -10,6 +10,30 @@ Project::initialize()
   return false;
 }
 
+void
+Project::LatLonToAzRange(
+  const float &cLat,
+  const float &cLon,
+  const float &tLat,
+  const float &tLon,
+  float       &azDegs,
+  float       &rangeMeters)
+
+{
+  const float meterDeg = Constants::EarthRadiusM * Constants::RadiansPerDegree; // 2nr/360 amazingly
+
+  // Below equator we flip lat I think
+  float Y = (tLat > 0) ? (tLat - cLat) * meterDeg : (cLat - tLat) * meterDeg;
+  float X = ((tLon - cLon) * meterDeg) * cos((cLat + tLat) / 2.0 * Constants::RadiansPerDegree);
+
+  // Final range/azimuth guess
+  rangeMeters = sqrt(X * X + Y * Y);
+  azDegs      = atan2(X, Y) / Constants::RadiansPerDegree;
+  if (azDegs < 0) {
+    azDegs = 360.0 + azDegs;
+  }
+}
+
 bool
 Project::getXYCenter(double& centerXKm, double& centerYKm)
 {

@@ -124,21 +124,23 @@ OptionList::boolean(const std::string& opt,
   return (makeOption(false, true, false, opt, "", usage, "false"));
 }
 
-namespace {
-std::string
-getMapString(
-  std::map<std::string, std::string>& lookup, const std::string& name)
-{
-  std::map<std::string, std::string>::iterator iter;
-  std::string s = "";
-  iter = lookup.find(name);
-
-  if (iter != lookup.end()) {
-    s = iter->second;
-  }
-  return (s);
-}
-}
+/*
+ * namespace {
+ * std::string
+ * getMapString(
+ * std::map<std::string, std::string>& lookup, const std::string& name)
+ * {
+ * std::map<std::string, std::string>::iterator iter;
+ * std::string s = "";
+ * iter = lookup.find(name);
+ *
+ * if (iter != lookup.end()) {
+ *  s = iter->second;
+ * }
+ * return (s);
+ * }
+ * }
+ */
 
 Option *
 OptionList::getOption(const std::string& opt)

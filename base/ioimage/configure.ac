@@ -1,11 +1,7 @@
-# autoconf uses this file to produce the executable 'configure' script.
-# automake also scans this file to produce the various Makefile.in files.
-#
-# Robert Toomey April 2020
-#
+# Robert Toomey 
 
-AC_INIT([RAPIOBASE], [1.0])
-AC_CONFIG_SRCDIR(rRAPIOAlgorithm.cc)
+AC_INIT([RAPIOIMAGE], [1.0])
+AC_CONFIG_SRCDIR(rIOImage.cc)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -38,14 +34,5 @@ AC_TYPE_SIZE_T
 ### What does this do?
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([
- Makefile]
-)
-  
-AC_CONFIG_SUBDIRS([
-  ionetcdf
-  iogrib
-  ioimage]
-)
-  
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

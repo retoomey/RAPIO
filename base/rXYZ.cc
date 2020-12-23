@@ -21,14 +21,14 @@ XYZ::getLocation() const
   double lat = ((asin(z / r) * 180.0 / M_PI));
   double lon = ((atan2(y, x) * 180.0 / M_PI));
 
-  double h = r - Constants::EarthRadius().kilometers();
+  double h = r - Constants::EarthRadiusKM;
 
   return (LLH(lat, lon, h));
 }
 
 XYZ::XYZ(const LLH& loc)
 {
-  const double r = Constants::EarthRadius().kilometers()
+  const double r = Constants::EarthRadiusKM
     + loc.getHeightKM();
 
   const double phi      = loc.getLongitudeDeg() * M_PI / 180.0;

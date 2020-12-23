@@ -6,12 +6,22 @@
 
 // Allow access to direct readers?
 // Thinking gdal's way of passing a key
+// Since modules are dynamically loaded, we'll
+// probably need to pass xml/json and pointers
+// generically through the main algorithm
+// Or possibly I make the IO* classes stubs
 // #include <rIOGrib.h>
 #include <rIOJSON.h>
 
-// Allow access to standard datatypes
+// Module loaded types (these are stubs)
+// FIXME: API not 100% final here, goal is
+// dynamic ondemand usage while keeping
+// interface simple
 #include <rGribDataType.h>
 #include <rNetcdfDataType.h>
+#include <rImageDataType.h>
+
+// Allow access to standard datatypes
 #include <rRadialSet.h>
 #include <rLatLonGrid.h>
 #include <rJSONData.h>

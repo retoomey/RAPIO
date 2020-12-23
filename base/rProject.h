@@ -23,6 +23,11 @@ public:
   virtual bool
   initialize();
 
+  /** Project from a lat lon to azimuth range based on earth surface */
+  static void
+  LatLonToAzRange(const float &cLat, const float &cLon,
+    const float &tLat, const float &tLon, float &azDegs, float &rangeMeters);
+
   /** Get the X/Y kilometer coordinate origin for the raster grid center */
   virtual bool
   getXYCenter(double& centerXKm, double& centerYKm);

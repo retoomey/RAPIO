@@ -135,8 +135,6 @@ URL::operator += (const std::string& s)
 URL&
 URL::operator = (const std::string& s)
 {
-  const std::string::size_type npos(std::string::npos);
-
   // reset all the fields
   query.clear();
   scheme = user = pass = host = path = fragment = "";

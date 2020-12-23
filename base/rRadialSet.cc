@@ -17,15 +17,13 @@ RadialSet::RadialSet()
 }
 
 RadialSet::RadialSet(const LLH& location,
-  const Time                  & time,
-  const Length                & dist_to_first_gate)
-  :
-  myFirst(dist_to_first_gate)
+  const Time                  & time)
 {
   // Lookup for read/write factories
   myDataType = "RadialSet";
   myLocation = location;
   myTime     = time;
+  myFirstGateDistanceM = 0;
   init(0, 0);
 }
 
@@ -95,38 +93,6 @@ RadialSet::setElevation(const double& targetElev)
   myElevAngleDegs = targetElev;
 }
 
-Length
-RadialSet::getDistanceToFirstGate() const
-{
-  if ((myFirst.meters() != Constants::MissingData) &&
-    (myFirst != Length()))
-  {
-    /*
-     * LogSevere("\n\n\nFIRST GATE stored " << myFirst << "\n");
-     *
-     * // temp hack.  Something up with library
-     * const LLH& first_gate = myRadials[0].getStartLocation();
-     * //IJK displacement_km = (first_gate - myLocation).getVector_ECCC();
-     * IJK displacement_km = (first_gate - myLocation);
-     * LogSevere("Calculated: " << Length::Kilometers(displacement_km.norm()) << "\n");
-     */
-
-    return (myFirst);
-  }
-
-  // Calculate a first distance based on center and start location
-  // I think this was ALWAYS zero.  Start locations of radials were the center, lol
-  //  assert(myRadials.size() > 0); // at least one radial present?
-  //  const LLH& first_gate = myRadials[0].getStartLocation();
-  // const LLH& first_gate = myRadials[0].getStartLocation();
-  // const LLH& first_gate = myLocation; // Where is first gate start information?
-
-  // IJK displacement_km = (first_gate - myLocation).getVector_ECCC();
-  // IJK displacement_km = (first_gate - myLocation);
-  // return (Length::Kilometers(displacement_km.norm()));
-  return (Length::Kilometers(0));
-}
-
 bool
 RadialSet::initFromGlobalAttributes()
 {
@@ -192,9 +158,10 @@ RadialSet::initFromGlobalAttributes()
   // Range to first gate
   auto range = myAttributes->get<double>("RangeToFirstGate");
   if (range) {
-    myFirst = Length::Meters(*range);
+    myFirstGateDistanceM = *range;
   } else {
     LogInfo("Missing RangeToFirstGate attribute, will be zero.\n");
+    myFirstGateDistanceM = 0;
   }
 
   return success;
@@ -212,7 +179,7 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
   myAttributes->put<double>("Elevation", elevDegrees);
   myAttributes->put<std::string>("ElevationUnits", "Degrees");
 
-  const double firstGateM = getDistanceToFirstGate().meters();
+  const double firstGateM = getDistanceToFirstGateM();
   myAttributes->put<double>("RangeToFirstGate", firstGateM);
   myAttributes->put<std::string>("RangeToFirstGateUnits", "Meters");
 }

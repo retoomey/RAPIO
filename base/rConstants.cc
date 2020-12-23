@@ -1,7 +1,5 @@
 #include "rConstants.h"
 
-#include "rLength.h"
-
 #include <cmath> // for M_PI
 
 using namespace rapio;
@@ -9,14 +7,14 @@ using namespace rapio;
 /** Default header for RAPIO */
 const std::string Constants::RAPIOHeader = "Realtime Algorithm Parameter and IO (RAPIO) ";
 
-const Length&
-Constants::EarthRadius()
-{
-  // double EarthRadius         = 6370949.0; Didn't match with us anyway..wow
-  static Length result = Length::Meters(6.380E+06);
-
-  return (result);
-}
+// FIXME: Need to debate check/this.  MRMS was using multiple values everywhere,
+// which is the 'best'?  Earth varies from 6357 at poles to 6378 equator km
+// It's better to define a number instead of an object.  This is mostly used
+// in very intensive math projection.  A define might even be better here
+// double EarthRadius         = 6370949.0; Didn't match with us anyway..wow
+// double EarthRadius         = 6371000.0; Used by all the old storm motion stuff
+const double Constants::EarthRadiusM  = 6378000.0;
+const double Constants::EarthRadiusKM = 6378.0;
 
 const SentinelDouble Constants::MissingData(-99900, 0.00001);
 

@@ -236,6 +236,9 @@ RAPIOAlgorithm::initializeBaseline()
   // -------------------------------------------------------------------
   // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
 
+  // FIXME: Add the configuration file having modules flags, what, etc...
+  // The point it that these only load on demand.
+
   // Dynamic module registration.
   std::string create = "createRAPIOIO";
 
@@ -245,6 +248,11 @@ RAPIOAlgorithm::initializeBaseline()
 
   module = "librapiogrib.so";
   Factory<IODataType>::introduceLazy("grib", module, create);
+
+  module = "librapioimage.so";
+  Factory<IODataType>::introduceLazy("image", module, create);
+  // FIXME: Maybe introduce individual types, not sure yet
+  // Factory<IODataType>::introduceLazy("jpg", module, create);
 
   /*
    * // Force immediate loading, maybe good for testing
@@ -977,8 +985,12 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
     std::vector<std::string> files;
+    // Can call write multiple times for each output wanted.
+    // FIXME: This is getting refactored to pass XML settings soon I think,
+    // the 'dfs' stuff isn't flexible enough
     // IODataType::write(outputData, myOutputDir, true, records, files, "netcdf");
     IODataType::write(outputData, myOutputDir, true, records, files, "");
+    // IODataType::write(outputData, myOutputDir, true, records, files, "image");
 
     for (auto& n:myNotifiers) {
       n->writeRecords(records, files);

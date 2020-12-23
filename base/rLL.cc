@@ -47,7 +47,8 @@ LL::getSurfaceDistanceTo(const LL& b) const
   double longdiff = (myLongitudeDegs - b.getLongitudeDeg()) * M_PI / 180.0;
   double d        = sin(alat) * sin(blat) + cos(alat) * cos(blat) * cos(longdiff);
   double distance = acos(d)
-    * (Constants::EarthRadius().kilometers());
+    // * (Constants::EarthRadius().kilometers());
+    * (Constants::EarthRadiusKM);
 
   return (Length::Kilometers(distance));
 }

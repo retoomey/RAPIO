@@ -9,8 +9,6 @@
 #include <rSentinelDouble.h>
 
 namespace rapio {
-class Length;
-
 /** Hold all constants for RAPIO
  *
  * Using non caps for constants since c++ standard recommends not to do
@@ -26,9 +24,11 @@ public:
 
   // GIS constants
 
-  /** The mean equatorial radius of the earth. */
-  static const Length&
-  EarthRadius();
+  /** The mean equatorial radius of the earth in meters. */
+  static const double EarthRadiusM;
+
+  /** The mean equatorial radius of the earth in kilometers. */
+  static const double EarthRadiusKM;
 
   /** The value that is assigned to data that is missing. */
   static const SentinelDouble MissingData;
