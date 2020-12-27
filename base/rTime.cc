@@ -11,13 +11,6 @@
 
 using namespace rapio;
 
-// std::string Time::FILE_TIMESTAMP   = "%04d%02d%02d-%02d%02d%02d";
-// std::string Time::RECORD_TIMESTAMP = "%04d%02d%02d-%02d%02d%02d.%03d";
-// std::string Time::LOG_TIMESTAMP    = "[%04d %02d/%02d %02d:%02d:%02d UTC]";
-std::string Time::FILE_TIMESTAMP   = "%Y%m%d-%H%M%S";
-std::string Time::RECORD_TIMESTAMP = "%Y%m%d-%H%M%S.%/ms";
-std::string Time::LOG_TIMESTAMP    = "[%Y %m/%d %H:%M:%S UTC]";
-
 std::chrono::system_clock::time_point
 Time::toTimepoint(timeval& src)
 {
@@ -181,7 +174,7 @@ Time::CurrentTime()
 }
 
 std::string
-Time::getString(const std::string& pattern, bool milli) const
+Time::getString(const std::string& pattern) const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
   tm a = *gmtime(&t);
@@ -195,15 +188,13 @@ Time::getString(const std::string& pattern, bool milli) const
   // We use %/ms for our special legacy 3 millisecond number
   // NOTE: since we do this last here, make sure % symbol isn't in
   // strftime, think / is safe from any implementation.
-  if (milli) {
-    std::string newoutput = output;
-    Strings::replace(newoutput, "%/ms", "%03d");
-    if (newoutput != output) { // Only if found to prevent snprintf error
-      int millisec = (int) (1000.0 * getFractional() + 0.5);
-      if (millisec == 1000) { millisec = 999; } // possible???
-      std::snprintf(buf, sizeof(buf), newoutput.c_str(), millisec);
-      output = std::string(buf);
-    }
+  std::string newoutput = output;
+  Strings::replace(newoutput, "%/ms", "%03d");
+  if (newoutput != output) { // Only if found to prevent snprintf error
+    int millisec = (int) (1000.0 * getFractional() + 0.5);
+    if (millisec == 1000) { millisec = 999; } // possible???
+    std::snprintf(buf, sizeof(buf), newoutput.c_str(), millisec);
+    output = std::string(buf);
   }
 
   return output;
@@ -305,48 +296,98 @@ Time::getSecond() const
   return a.tm_sec;
 }
 
-Time::Time(const std::string& instr, int offset)
+bool
+Time::putString(const std::string& value,
+  const std::string              & format)
 {
-  tm myTM;
-  static const char * file_fmt = "%04d%02d%02d-%02d%02d%02d";
-  const int ret(std::sscanf(instr.c_str(), file_fmt,
-    &myTM.tm_year, &myTM.tm_mon, &myTM.tm_mday,
-    &myTM.tm_hour, &myTM.tm_min, &myTM.tm_sec));
-
-  // offset is never used.  Let's remove it
-  if (ret != 6) {
-    // look for two sets: "YYYY MM DD" followed by "HH MM SS"
-    // we look for them by walking throug the string looking for digits.
-    char ch;
-    offset = instr.find_first_of("0123456789", offset != -1 ? offset : 0);
-    std::sscanf(instr.c_str() + offset, "%04d%c%02d%c%02d",
-      &myTM.tm_year, &ch, &myTM.tm_mon, &ch, &myTM.tm_mday);
-    offset += 10;
-    offset  = instr.find_first_of("0123456789", offset);
-    std::sscanf(instr.c_str() + offset, "%02d%c%02d%c%02d",
-      &myTM.tm_hour, &ch, &myTM.tm_min, &ch, &myTM.tm_sec);
+  // Due to variable size of the value, for now at least
+  // only allow milliseconds at the end (so we know how many
+  // characters to steal)
+  // FIXME: how to easily handle random placement of the tag without
+  // blowing up strptime or doing custom parsing.
+  std::string useformat = format;
+  std::string usevalue  = value;
+  int ms = 0;
+  if (Strings::removeSuffix(useformat, "%/ms")) {
+    std::string millistr = "000";
+    if (value.length() >= 3) { // Digits required for milli
+      millistr = usevalue.substr(usevalue.size() - 3);
+      usevalue = usevalue.substr(0, usevalue.size() - 3);
+      try{
+        ms = std::stoi(millistr.c_str());
+      }catch (const std::exception& e) {
+        // allow failure, maybe warn
+        LogSevere("Failed to convert ms from string '" << millistr << "' to number\n");
+      }
+      if (ms < 0) { ms = 0; }
+      if (ms > 1000) { ms = 999; }
+    }
   }
 
-  myTM.tm_year = myTM.tm_year - 1900;
-  myTM.tm_mon  = myTM.tm_mon - 1;
+  // Try to convert everything else
+  tm a;
+  strptime(usevalue.c_str(), useformat.c_str(), &a);
+  a.tm_isdst = -1;
+  time_t retval = timegm(&a);
+  myTimepoint  = std::chrono::system_clock::from_time_t(retval);
+  myTimepoint += std::chrono::milliseconds(ms);
 
-  if ((myTM.tm_year >= 0) &&
-    (myTM.tm_mon >= 0) && (myTM.tm_mon <= 11) &&
-    (myTM.tm_mday >= 1) && (myTM.tm_mday <= 31) &&
-    (myTM.tm_hour >= 0) && (myTM.tm_hour <= 23) &&
-    (myTM.tm_min >= 0) && (myTM.tm_min <= 59) &&
-    (myTM.tm_sec >= 0) && (myTM.tm_sec <= 61))
-  {
-    myTM.tm_isdst = -1;
-    time_t retval = timegm(&myTM);
-    myTimepoint = std::chrono::system_clock::from_time_t(retval);
-  } else {
-    // FIXME.  Maybe current time?
+  return true;
+} // Time::putString
+
+Time::Time(const std::string& value, const std::string& format)
+{
+  if (putString(value, format)) { } else {
+    LogSevere("Failure matching time string format, time is NOW " << value << " (mismatch) " << format << "\n");
   }
 }
 
-Time
-Time::fromStringForFileName(const std::string& good_name)
-{
-  return (Time(good_name));
-}
+/*
+ * Time::Time(const std::string& instr, int offset)
+ * {
+ * tm myTM;
+ * static const char * file_fmt = "%04d%02d%02d-%02d%02d%02d";
+ * const int ret(std::sscanf(instr.c_str(), file_fmt,
+ *  &myTM.tm_year, &myTM.tm_mon, &myTM.tm_mday,
+ *  &myTM.tm_hour, &myTM.tm_min, &myTM.tm_sec));
+ *
+ * // offset is never used.  Let's remove it
+ * if (ret != 6) {
+ *  // look for two sets: "YYYY MM DD" followed by "HH MM SS"
+ *  // we look for them by walking throug the string looking for digits.
+ *  char ch;
+ *  offset = instr.find_first_of("0123456789", offset != -1 ? offset : 0);
+ *  std::sscanf(instr.c_str() + offset, "%04d%c%02d%c%02d",
+ *    &myTM.tm_year, &ch, &myTM.tm_mon, &ch, &myTM.tm_mday);
+ *  offset += 10;
+ *  offset  = instr.find_first_of("0123456789", offset);
+ *  std::sscanf(instr.c_str() + offset, "%02d%c%02d%c%02d",
+ *    &myTM.tm_hour, &ch, &myTM.tm_min, &ch, &myTM.tm_sec);
+ * }
+ *
+ * myTM.tm_year = myTM.tm_year - 1900;
+ * myTM.tm_mon  = myTM.tm_mon - 1;
+ *
+ * if ((myTM.tm_year >= 0) &&
+ *  (myTM.tm_mon >= 0) && (myTM.tm_mon <= 11) &&
+ *  (myTM.tm_mday >= 1) && (myTM.tm_mday <= 31) &&
+ *  (myTM.tm_hour >= 0) && (myTM.tm_hour <= 23) &&
+ *  (myTM.tm_min >= 0) && (myTM.tm_min <= 59) &&
+ *  (myTM.tm_sec >= 0) && (myTM.tm_sec <= 61))
+ * {
+ *  myTM.tm_isdst = -1;
+ *  time_t retval = timegm(&myTM);
+ *  myTimepoint = std::chrono::system_clock::from_time_t(retval);
+ * } else {
+ *  // FIXME.  Maybe current time?
+ * }
+ * }
+ */
+
+/*
+ * Time
+ * Time::fromStringForFileName(const std::string& good_name)
+ * {
+ * return (Time(good_name));
+ * }
+ */

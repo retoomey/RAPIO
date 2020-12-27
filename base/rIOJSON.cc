@@ -40,7 +40,7 @@ IOJSON::writeURL(
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   const URL                                      & aURL,
-  std::shared_ptr<DataFormatSetting>             dfs)
+  std::shared_ptr<XMLNode>                       dfs)
 {
   bool successful = false;
 

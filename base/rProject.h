@@ -28,6 +28,12 @@ public:
   LatLonToAzRange(const float &cLat, const float &cLon,
     const float &tLat, const float &tLon, float &azDegs, float &rangeMeters);
 
+  /** Create Lat Lon Grid marching information from a center and delta degree */
+  static void
+  createLatLonGrid(const float centerLatDegs, const float centerLonDegrees,
+    const float degreeOut, const size_t numRows, const size_t numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
   /** Get the X/Y kilometer coordinate origin for the raster grid center */
   virtual bool
   getXYCenter(double& centerXKm, double& centerYKm);

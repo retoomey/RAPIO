@@ -5,6 +5,10 @@
 #include "rStrings.h"
 #include "rProject.h"
 #include "rRadialSetLookup.h"
+#include "rColorMap.h"
+
+// Since we're compiling with gdal anyway, let's try this too
+#include "gdal_priv.h"
 
 #include "rImageDataTypeImp.h"
 
@@ -12,6 +16,7 @@
 // Not 100% sure yet we'll stick to this library,
 // will expand a bit before making a requirement
 // /usr/include/GraphicsMagick/Magick++.h
+
 #include <GraphicsMagick/Magick++.h>
 #include "rRadialSet.h"
 
@@ -80,21 +85,33 @@ IOImage::createDataType(const URL& path)
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   const URL                                      & aURL,
-  std::shared_ptr<DataFormatSetting>             dfs)
+  std::shared_ptr<XMLNode>                       dfs)
 {
-  // Subtype based on file suffix maybe?  I feel that
-  // geotiff, jpg, png, etc. could all be grouped within
-  // image
-  // FIXME: First pass just trying to write a POC file
-  // or do we do it by datatype...or both...
-  // not sure yet, let's see it work...
+  // Parse settings.  If we're doing multi call we'll have no 
+  // choice but to read each time?  
+  if (dfs != nullptr){
+    try{
+/*
+      auto output = dfs->getChild("output");
+      auto flag = output.getAttr("test", std::string(""));
+      if (flag == "true"){
+        LogSevere("Image reader got settings\n");
+      }else{
+        LogSevere("Image reader did not get setting\n");
+      }
+*/
+    }catch(const std::exception& e){
+      LogSevere("Unrecognized settings, using defaults\n");
+    }
+  }
+
   static bool setup = false;
   if (!setup){
     InitializeMagick(NULL);
+    GDALAllRegister(); // Register/introduce all GDAL drivers
+    CPLPushErrorHandler(CPLQuietErrorHandler);
     setup = true;
   }
-
-  // First pass I'm ignoring a lot of boilerplate stuff
 
   // FIXME: cleanup.  Messy for now, just do RadialSets
   std::shared_ptr<RadialSet> radialSet = std::dynamic_pointer_cast<RadialSet>(dt);
@@ -104,16 +121,18 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // FIXME: Refactoring xml settings/etc coming soon I think.  Hardcode here
-  size_t cols = 500; // If not the same we squish, probably need to change that
+  size_t cols = 500;
   size_t rows = 500;
-  size_t degreeOut = 1; // One degree lat/lon from center of radar for box
+  size_t degreeOut = 10.0; // degrees lat/lon from center of radar for box
 
-  // I actually still don't understand Lak's genius here lol
   RadialSet& r = *radialSet;
   // FIXME: API needs to be better.  Humm maybe just default name is primary internally?
   // Does this possibly allow hosting smart ptr to leave scope in optimization?
   auto& data = radialSet->getFloat2D("primary")->ref();
-  auto myLookup = RadialSetLookup(r); // Bin azimuths
+  auto myLookup = RadialSetLookup(r); // Bin azimuths.
+
+  // Read it once for first test.  Yay
+  static auto test = ColorMap::readColorMap("/home/dyolf/Reflectivity.xml");
 
   // Calculate the lat lon 'box' of the image using sizes, etc.
   // Kinda of a pain actually.
@@ -122,17 +141,21 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   // North America.  FIXME: General lat/lon box creator function
   // Latitude decreases as you go south
   // Longitude decreases as you go east
-  auto lat = centerLLH.getLatitudeDeg();
-  auto top = lat+degreeOut;
-  auto bottom = lat-degreeOut;
-  auto height = bottom-top;
-  auto deltaLat = height/rows;
-
+  // Ok we need a fixed aspect for non-square images...use the
+  // long for the actual width
   auto lon = centerLLH.getLongitudeDeg();
   auto left = lon-degreeOut;
   auto right = lon+degreeOut;
   auto width = right-left;
   auto deltaLon = width/cols;
+
+  // To keep aspect ratio per cell, use deltaLon to back calculate
+  auto deltaLat = -deltaLon; // keep the same square per pixel
+  auto lat = centerLLH.getLatitudeDeg();
+  auto top = lat-(deltaLat*rows/2.0);
+
+//LogSevere("DeltaLat/long " << deltaLat << ", " << deltaLon << "\n");
+//exit(1);
 
 //  LogSevere("Center:" << lat << ", " << lon << "\n");
 //  LogSevere("TopLeft:" << top << ", " << left << "\n");
@@ -141,6 +164,54 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
   //Image image;
   Magick::Blob output_blob;
+// Isn't this leaking?
+  std::string outfile = aURL.toString()+".tif";
+  float *rowBuff = (float*) CPLMalloc(sizeof(float)*cols);
+ 
+  GDALDriver* driverGeotiff = GetGDALDriverManager()->GetDriverByName("GTiff");
+  if (driverGeotiff == nullptr){
+     // Can't load?
+  }
+
+  // Does this driver support writing...otherwise we abort..
+  char **meta;
+  meta = driverGeotiff->GetMetadata();
+  if (CSLFetchBoolean(meta, GDAL_DCAP_CREATE, FALSE)){
+  }else{
+     // NOT supported
+  }
+  // 
+  //CSLFetchBoolean(meta, GDAL_DCAP_CREATE, FALSE):
+
+  GDALDataset* geotiffDataset = driverGeotiff->Create(outfile.c_str(),cols,rows,1,GDT_Float32,NULL);
+  // Data band is all we have.
+  geotiffDataset->GetRasterBand(1)->SetNoDataValue(Constants::MissingData);
+  // WDSS2 uses color map to set red, green, blue..which is nonsense for color mapped data.
+  // It would be correct for satellite visual frequencies
+
+  // Projection system
+  OGRSpatialReference oSRS;
+  oSRS.SetWellKnownGeogCS("WGS84");
+
+  // Transformation 
+  double geoTransform[6] = { left, deltaLon, 0, top, 0, deltaLat };
+  CPLErr terr = geotiffDataset->SetGeoTransform(geoTransform);
+  if (terr != 0){
+    LogSevere("Transform failed? " << terr << "\n");
+  }
+  
+  // What is this doing?
+  char* pszSRS_WKT = 0;
+  oSRS.exportToWkt( &pszSRS_WKT );
+  geotiffDataset->SetProjection( pszSRS_WKT );
+  CPLFree(pszSRS_WKT );
+
+  geotiffDataset->SetMetadataItem("TIFFTAG_SOFTWARE", "RAPIO C++ library");
+
+  // Set tiff time to our data time
+  const std::string tiffTime = dt->getTime().getString("%Y:%m:%d %H:%M:%S");
+  geotiffDataset->SetMetadataItem("TIFFTAG_DATETIME", tiffTime.c_str());
+
   try{
     // FIXME: Is there a way to create without 'begin' fill, would be faster
     Magick::Image i(Magick::Geometry(cols, rows), "white");
@@ -174,6 +245,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 	 double v = good? data[radial][gate]: Constants::MissingData;
 
 	 // Current color mapping... FIXME: Full color map ability from wg2 ported next
+	 rowBuff[x] = v; // super native attempt
 	  if (v == Constants::MissingData){
 	    *pixel = Magick::Color("blue");
 	  }else{
@@ -181,27 +253,41 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 	    // working at moment with any fancy color mapping
 	    // Magick::ColorRGB cc = Magick::ColorRGB(c.r/255.0, c.g/255.0, c.b/255.0);
 	    // FIXME: Flush out color map ability
+	    unsigned char r, g, b, a;
+if (test != nullptr){
+	    test->getColor(v, r,g,b,a);
+	    Magick::ColorRGB cc = Magick::ColorRGB(r/255.0, g/255.0, b/255.0);
+             *pixel = cc;
+}else{
 	    if (v > 200) v = 200;
-	    if (v < -50.0) v = -50.0;
+            if (v < -50.0) v = -50.0;
 	    float weight = (250-v)/250.0;
              Magick::ColorRGB cc = Magick::ColorRGB(weight, 0, 0);
              *pixel = cc;
+	    }
              // FIXME: transparent ability? if (transparent) {cc.alpha((255.0-c.a)/255.0); }
 	  }
 	  // if (x<10){ *pixel = Magick::Color("green");};
 	  //if (y<10){ *pixel = Magick::Color("yellow");};
 	startLon += deltaLon;
       }
+      CPLErr err = geotiffDataset->GetRasterBand(1)->RasterIO(GF_Write,0,y,cols,1,rowBuff,cols,1,GDT_Float32,0,0);
+      if (err != 0){
+          LogSevere("GDAL ERROR during write detected\n"); // fixme count and not spam
+      }
       startLat += deltaLat;
     }
     i.syncPixels(); 
+
+GDALClose(geotiffDataset);
+// GDALDestroyDriverManager(); leaking?
 
     // FIXME: Bleh this uses the suffix of the path to determine type.  
     // That will actually be good if we update the config ability
     // FIXME: Generalize and optimize the 'dfs' setting xml
     // FIXME: Do we write ourselves then compress, etc. or let this library
     // handle that directly here.
-    i.write(aURL.toString()+".png");
+//    i.write(aURL.toString()+".tif");
 
   }catch( const Exception& e)
   {

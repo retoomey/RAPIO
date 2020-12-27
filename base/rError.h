@@ -60,6 +60,9 @@ protected:
 class Log : public Utility {
 public:
 
+  /** The standard format string date of form [date UTC] we use for logging or xml, etc. */
+  static std::string LOG_TIMESTAMP;
+
   /** Severity levels in decreasing order of printing */
   enum class Severity {
     /** Debugging Messages, high volume */

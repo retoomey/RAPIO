@@ -30,7 +30,7 @@ public:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const URL                              & path,
-    std::shared_ptr<DataFormatSetting>     dfs) override;
+    std::shared_ptr<XMLNode>               dfs) override;
 
   /** Write property tree to URL */
   static bool

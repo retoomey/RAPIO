@@ -62,7 +62,7 @@ NetcdfBinaryTable::read(const int ncid,
 
 bool
 NetcdfBinaryTable::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<DataFormatSetting> dfs)
+  std::shared_ptr<XMLNode> dfs)
 {
   std::shared_ptr<BinaryTable> binaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
 

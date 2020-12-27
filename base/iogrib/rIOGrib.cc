@@ -3,6 +3,7 @@
 #include "rFactory.h"
 #include "rIOURL.h"
 #include "rStrings.h"
+#include "rConfig.h"
 
 #include "rGribDataTypeImp.h"
 
@@ -1047,7 +1048,7 @@ IOGrib::createDataType(const URL& path)
 bool
 IOGrib::encodeDataType(std::shared_ptr<DataType> dt,
   const URL                                      & aURL,
-  std::shared_ptr<DataFormatSetting>             dfs)
+  std::shared_ptr<XMLNode>                       dfs)
 {
   return false;
 }

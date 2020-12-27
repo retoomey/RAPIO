@@ -22,7 +22,7 @@ public:
 
   /** Do the actual read/storage of configuration information */
   virtual bool
-  readConfig() = 0;
+  readConfig(std::shared_ptr<XMLData> global) = 0;
 };
 
 /**
@@ -44,6 +44,14 @@ public:
   /** Initialize configuration by setting up search paths */
   static void
   initialize();
+
+  /** Initial set up of global configuration search paths */
+  static bool
+  setUpSearchPaths();
+
+  /** Initial read of global configuration file */
+  static std::shared_ptr<XMLData>
+  readGlobalConfigFile();
 
   /**
    * Find and return an environment variable.

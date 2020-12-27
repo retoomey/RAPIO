@@ -1,17 +1,36 @@
 #pragma once
 
 #include <rUtility.h>
+#include <rConfig.h>
 
 #include <iosfwd>
 #include <string>
 
 namespace rapio {
+/** Simple check of udunit configuration files, udunits will actually load these.
+ * We check for existance and update the udunit search path environment. */
+class ConfigUnit : public ConfigType {
+public:
+  /** Virtual object from config map to static for clarity. */
+  virtual bool
+  readConfig(std::shared_ptr<XMLData> d) override { return readSettings(d); }
+
+  /** Introduce self to configuration */
+  static void
+  introduceSelf();
+
+  /** Actual work of reading/checking settings */
+  static bool
+  readSettings(std::shared_ptr<XMLData> );
+};
+
 /**
  * Convenience wrapper around udunits2.
  *
  */
 class Unit : public Utility {
 public:
+
 
   /** Store slope and intercept used by Unit */
   class UnitConverter : public Utility {

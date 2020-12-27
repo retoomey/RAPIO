@@ -34,6 +34,31 @@ Project::LatLonToAzRange(
   }
 }
 
+void
+Project::createLatLonGrid(
+  const float  centerLatDegs,
+  const float  centerLonDegs,
+  const float  degreeOut,
+  const size_t numRows,
+  const size_t numCols,
+  float        & topDegs,
+  float        & leftDegs,
+  float        & deltaLatDegs,
+  float        & deltaLonDegs)
+{
+  auto lon = centerLonDegs;
+
+  leftDegs = lon - degreeOut;
+  auto rightDegs = lon + degreeOut;
+  auto width     = rightDegs - leftDegs;
+  deltaLonDegs = width / numCols;
+
+  // To keep aspect ratio per cell, use deltaLon to back calculate
+  deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
+  auto lat = centerLatDegs;
+  topDegs = lat - (deltaLatDegs * numRows / 2.0);
+}
+
 bool
 Project::getXYCenter(double& centerXKm, double& centerYKm)
 {

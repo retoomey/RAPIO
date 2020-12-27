@@ -11,6 +11,8 @@ librapio_la_LIBADD =\
 
 librapio_la_SOURCES =\
   rArray.cc\
+  rColor.cc\
+  rColorMap.cc\
   rRAPIOAlgorithm.cc\
   rRAPIOOptions.cc\
   rRAPIOData.cc\
@@ -27,8 +29,8 @@ librapio_la_SOURCES =\
   rIOIndex.cc\
   rURL.cc\
   rConfig.cc\
-  rConfigDataFormat.cc\
   rConfigDirectoryMapping.cc\
+  rConfigIODataType.cc\
   rIODataType.cc\
   rNetcdfDataType.cc\
   rGribDataType.cc\
@@ -81,6 +83,8 @@ librapio_la_SOURCES =\
 pkginclude_HEADERS =\
   RAPIO.h\
   rArray.h\
+  rColor.h\
+  rColorMap.h\
   rRapio.h\
   rRAPIOAlgorithm.h\
   rRAPIOOptions.h\
@@ -109,7 +113,7 @@ pkginclude_HEADERS =\
   rIOURL.h\
   rError.h\
   rConfig.h\
-  rConfigDataFormat.h\
+  rConfigIODataType.h\
   rConfigDirectoryMapping.h\
   rOS.h\
   rIODataType.h\

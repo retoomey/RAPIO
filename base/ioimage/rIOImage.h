@@ -19,7 +19,7 @@ public:
   virtual bool
   write(int                            ncid,
     std::shared_ptr<DataType>          dt,
-    std::shared_ptr<DataFormatSetting> dfs) = 0;
+    std::shared_ptr<XMLNode>           dfs) = 0;
 
   virtual std::shared_ptr<DataType>
   read(
@@ -65,7 +65,7 @@ public:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const URL                              & path,
-    std::shared_ptr<DataFormatSetting>     dfs) override;
+    std::shared_ptr<XMLNode>               dfs) override;
 
   virtual
   ~IOImage();

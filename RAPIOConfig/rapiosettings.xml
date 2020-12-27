@@ -1,0 +1,31 @@
+<!-- RAPIO global settings file 
+   Toomey December 2020
+
+  The whole global vs command line debate...things will evolve hopefully
+-->
+
+<settings>
+
+<!-- Settings for the individual datatype reader/writers. 
+     Currently these are global for every algorithm
+Information needed:
+1.  names  == the introduced builder name.  Used in FML records, etc. It's the
+    lookup for a record to a reader. Spaces separate alias
+2.  Each io can have multiple outputs with different settings, allowing a 
+    writer to be called multiple times.  For example writing png and jpeg at 
+    same time.
+ -->
+<datatype subdirs="true">
+  <io names="xml W2ALGS">
+    <output />
+  </io>
+  <io names="netcdf">
+    <!-- compressionlevel: -->
+    <output compressionlevel="6"/>
+  </io>
+  <io names="image">
+    <output test="true"/>
+  </io>
+</datatype>
+
+</settings>

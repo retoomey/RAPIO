@@ -2,7 +2,6 @@
 
 #include <rIO.h>
 #include <rRecord.h>
-#include <rConfigDataFormat.h>
 
 #include <string>
 #include <vector>
@@ -11,7 +10,6 @@
 namespace rapio {
 class DataType;
 class IndexType;
-class ConfigDataFormat;
 
 /**
  * IODataType has the ability to read and write some group of objects,
@@ -89,7 +87,7 @@ protected:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const URL                              & path,
-    std::shared_ptr<DataFormatSetting>     dfs){ return false; }
+    std::shared_ptr<XMLNode>               dfs){ return false; }
 
 public:
 

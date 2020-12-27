@@ -15,14 +15,21 @@ public:
   static void
   doDirectoryMapping(std::string& sub_me);
 
-private: // Config read
-
+  /** Virtual object from config map to static for clarity. */
   virtual bool
-  readConfig() override { return readInSettings(); }
+  readConfig(std::shared_ptr<XMLData> ) override { return readInSettings(); }
 
+  /** Introduce self to configuration */
+  static void
+  introduceSelf();
+
+  /** Actual work of reading/checking settings */
   static bool
   readInSettings();
 
+private:
+
+  /** Mapping of directory string to replacements */
   static std::map<std::string, std::string> myMappings;
 };
 }

@@ -59,6 +59,29 @@ getUtUnit(const std::string& u, utUnit& setme)
 }
 
 void
+ConfigUnit::introduceSelf()
+{
+  std::shared_ptr<ConfigType> units = std::make_shared<ConfigUnit>();
+  Config::introduce("unit", units);
+}
+
+bool
+ConfigUnit::readSettings(std::shared_ptr<XMLData> )
+{
+  // Udunits2 has xml configuration files
+  // FIXME: We could look for every single file needed...
+  URL url = Config::getConfigFile("misc/udunits2.xml");
+
+  if (url.getPath() == "") {
+    LogSevere("Udunits2 requires a misc/udunits2.xml file and others in one of your configuration paths.\n");
+    return false;
+  }
+  // Initialize environment to xml files and udunits
+  Config::setEnvVar("UDUNITS2_XML_PATH", url.getPath());
+  return true;
+}
+
+void
 Unit::initialize()
 {
   // This should return a non-zero iff ut_read_xml from udunits2 is
@@ -72,16 +95,9 @@ Unit::initialize()
    * }
    */
 
-  // Udunits2 has xml configuration files
-  URL url = Config::getConfigFile("misc/udunits2.xml");
-
-  if (url.getPath() == "") {
-    LogSevere("Udunits2 requires a misc/udunits2.xml file and others in one of your configuration paths.\n");
-    exit(1);
-  }
-
-  // Initialize environment to xml files and udunits
-  Config::setEnvVar("UDUNITS2_XML_PATH", url.getPath());
+  // Just initialize udunits2
+  // FIXME: Don't think we're actually using udunits yet anywhere
+  // in RAPIO directly.  But it will be used for algorithms/data
   utInit("");
   // LogInfo("UDUNITS initialized successfully\n");
 }

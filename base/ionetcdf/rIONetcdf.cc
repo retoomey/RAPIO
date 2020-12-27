@@ -123,7 +123,7 @@ IONetcdf::readNetcdfDataType(const URL& url)
 std::string
 IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
   const std::string                                     & myDirectory,
-  std::shared_ptr<DataFormatSetting>                    dfs,
+  std::shared_ptr<XMLNode>                              dfs,
   std::vector<Record>                                   & records)
 {
   // So myLookup "RadialSet" writer for example from the data type.
@@ -228,7 +228,7 @@ IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
 bool
 IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   const URL                                        & aURL,
-  std::shared_ptr<DataFormatSetting>               dfs)
+  std::shared_ptr<XMLNode>                         dfs)
 {
   /** So myLookup "RadialSet" writer for example from the data type.
    * This allows algs etc to replace our IONetcdf with a custom if needed. */

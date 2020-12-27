@@ -106,18 +106,20 @@ BOOST_AUTO_TEST_CASE(_TimeDuration_Comparisons_)
 
 BOOST_AUTO_TEST_CASE(_Time_LogStrings_)
 {
-  const char * instr = "[2001 10/28 16:45:59 UTC]";
-  const Time cd(instr);
+  const char * format1 = "[%Y %m/%d %H:%M:%S UTC]";
+  const char * format2 = "%Y%m%d-%H%M%S";
 
-  BOOST_CHECK(cd.getFileNameString() == "20011028-164559");
-  BOOST_CHECK(cd.getFileNameString() == "20011028-164559");
-  BOOST_CHECK(cd.getLogString() == "[2001 10/28 16:45:59 UTC]");
+  const char * times1 = "[2001 10/28 16:45:59 UTC]";
+  const char * times2 = "20011028-164559";
 
-  const Time da(Time::fromStringForFileName("20011028-164559") );
-  BOOST_CHECK(da.getFileNameString() == "20011028-164559");
-  BOOST_CHECK(da.getFileNameString() == "20011028-164559");
-  BOOST_CHECK(da.getLogString() == "[2001 10/28 16:45:59 UTC]");
+  const Time cd(times1, format1);
+  const Time da(times2, format2);
 
+  BOOST_CHECK(cd.getString(format2) == times2);
+
+  BOOST_CHECK(da.getString(format1) == times1);
+
+  // std::string test1 = "%Y%m%d-%H%M%S.%/ms";
   BOOST_CHECK(da == cd);
   BOOST_CHECK(!(da < cd));
   BOOST_CHECK(!(cd < da));
@@ -127,13 +129,6 @@ BOOST_AUTO_TEST_CASE(_Time_LogStrings_)
   BOOST_CHECK(cd.getHour() == 16);
   BOOST_CHECK(cd.getMinute() == 45);
   BOOST_CHECK(cd.getSecond() == 59);
-
-  std::string instr2 = "aaaaaa89030348sjf;jdf;jsfio3940384093843408 kjsf;ldfj;df39083049348";
-  int offset         = instr2.size();
-  instr2 += instr;
-  // const Date cdo (instr2, offset);
-  const Time cdo(instr2, offset);
-  BOOST_CHECK(da == cdo);
 }
 
 BOOST_AUTO_TEST_CASE(_Time_Current_)
@@ -141,16 +136,27 @@ BOOST_AUTO_TEST_CASE(_Time_Current_)
   // Current time test
   Time tnow = Time::CurrentTime();
 
-  std::string logcurrent1 = tnow.getLogString();
-  std::string filename1   = tnow.getFileNameString();
+  std::string test1       = "[%Y %m/%d %H:%M:%S UTC]";
+  std::string rec1        = "%Y%m%d-%H%M%S.%/ms";
+  std::string logcurrent1 = tnow.getString(test1);
+  std::string filename1   = tnow.getString(rec1);
   long epoch1 = tnow.getSecondsSinceEpoch();
 
   Time t5 = Time(tnow.getYear(), tnow.getMonth(), tnow.getDay(), tnow.getHour(), tnow.getMinute(), tnow.getSecond());
-  std::string logcurrent2 = t5.getLogString();
-  std::string filename2   = t5.getFileNameString();
+  std::string logcurrent2 = t5.getString(test1);
+  std::string filename2   = t5.getString(rec1);
   long epoch2 = t5.getSecondsSinceEpoch();
+  BOOST_CHECK(tnow.getYear() == t5.getYear());
+  BOOST_CHECK(tnow.getMonth() == t5.getMonth());
+  BOOST_CHECK(tnow.getDay() == t5.getDay());
+  BOOST_CHECK(tnow.getMinute() == t5.getMinute());
+  BOOST_CHECK(tnow.getSecond() == t5.getSecond());
+  // BOOST_TEST_MESSAGE(" Compare " << logcurrent1 << " and " << logcurrent2);
   BOOST_CHECK(logcurrent1 == logcurrent2);
-  BOOST_CHECK(filename1 == filename2);
+  tnow.putString(logcurrent1, test1); // put back
+
+  // BOOST_TEST_MESSAGE(" Compare " << filename1 << " and " << filename2);
+  // BOOST_CHECK(filename1 == filename2); ms diff
   BOOST_CHECK(epoch1 == epoch2);
 
   Time t4(1562292000, 0); // 7/5/2019 2:00:00 am GMT/UTC

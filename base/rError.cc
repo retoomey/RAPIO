@@ -25,6 +25,10 @@ namespace sinks   = boost::log::sinks;
 long Log::bytecounter = 0;
 boost::log::sources::severity_logger<boost::log::trivial::severity_level> Log::mySevLog;
 
+// Not used: FIXME: configurable. We capture logging externally
+// which has its own time stamp so don't have this used 'yet'
+std::string Log::LOG_TIMESTAMP = "[%Y %m/%d %H:%M:%S UTC]";
+
 void
 Log::pauseLogging()
 {

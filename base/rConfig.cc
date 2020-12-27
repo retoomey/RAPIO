@@ -8,8 +8,9 @@
 #include "rIODataType.h"
 
 // ConfigTypes
+#include "rUnit.h"
 #include "rConfigDirectoryMapping.h"
-#include "rConfigDataFormat.h"
+#include "rConfigIODataType.h"
 
 #include <set>
 #include <cstdlib>  // getenv()
@@ -108,16 +109,11 @@ Config::getConfigFile(const std::string& l)
 void
 Config::introduceSelf()
 {
-  // I think we should read the basic configuration files at start up and
-  // store variables in us.
-
-  // Add our configuration subclasses
-  // for the moment hard-coded.  I'll probably let algorithms
-  // declare new XML configuration classes pre-startup
-  std::shared_ptr<ConfigType> cdm = std::make_shared<ConfigDirectoryMapping>();
-  introduce("directorymap", cdm);
-  std::shared_ptr<ConfigType> df = std::make_shared<ConfigDataFormat>();
-  introduce("dataformat", df);
+  // Add our default configuration subclasses
+  ConfigUnit::introduceSelf();       // udunits
+  ConfigIODataType::introduceSelf(); // all iodatatype reader/writer settings
+  // FIXME: could become general index settings
+  ConfigDirectoryMapping::introduceSelf(); // directory (used by index)
 }
 
 namespace {
@@ -136,8 +132,8 @@ enforceLastSlash(const std::string& str)
 }
 }
 
-void
-Config::initialize()
+bool
+Config::setUpSearchPaths()
 {
   // Look for global configuration file folder.
 
@@ -155,7 +151,6 @@ Config::initialize()
   // Fall back to home directory
   if (mySearchPaths.size() < 1) {
     const std::string home(getEnvVar("HOME"));
-    // if (OS::testFile(home, OS::FILE_IS_DIRECTORY)) {
     if (OS::isDirectory(home)) {
       addSearchFromString(home);
     }
@@ -163,24 +158,52 @@ Config::initialize()
   if (mySearchPaths.size() < 1) {
     LogSevere(
       "No valid global configuration path found in environment variables RAPIO_CONFIG_LOCATION, W2_CONFIG_LOCATION or home directory.\n");
-    exit(1);
+    return false;
   }
   std::string s;
   for (auto& it:mySearchPaths) {
     s += "\n\t[" + it.toString() + "]";
   }
   LogInfo("Global configuration search order:" << s << '\n');
+  return true;
+} // Config::setUpSearchPaths
 
-  // Read all initial startup configurations
-  // FIXME: Allow fail here optionally
+std::shared_ptr<XMLData>
+Config::readGlobalConfigFile()
+{
+  const std::string file = "rapiosettings.xml";
+  auto doc = huntXML(file); // or maybe json
+
+  if (doc == nullptr) {
+    LogSevere("Failed to find global configuration file: " << file << "\n");
+  }
+  return doc;
+}
+
+void
+Config::initialize()
+{
+  // Set up all search files to configuration files
+  if (!setUpSearchPaths()) { exit(1); }
+
+  // Attempt to read the required global configuration file
+  auto doc = readGlobalConfigFile();
+  if (doc == nullptr) {
+    exit(1);
+  }
+
+  // Now let registered classes search for either nodes in the
+  // global file, or individual files...
   auto configs = Factory<ConfigType>::getAll();
   bool success = true;
   for (auto& i:configs) {
-    success &= i.second->readConfig();
+    success &= i.second->readConfig(doc);
   }
+
   if (success == false) {
+    LogSevere("Failed to read initial configurations due to missing or bad file format.\n");
     LogSevere(
-      "Failed to find/load required global configuration files, you might need to set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION\n");
+      "Set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION to help RAPIO find your configuation files.\n");
     exit(1);
   }
 } // Config::initialize

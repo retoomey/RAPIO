@@ -125,6 +125,21 @@ public:
     }
     return list;
   }
+
+  std::vector<std::shared_ptr<XMLNode> >
+  getChildrenPtr(const std::string& filter)
+  {
+    std::vector<std::shared_ptr<XMLNode> > list;
+    for (auto r: node.get_child("")) {
+      if (r.first == filter) {
+        // Copy to a shared_ptr
+        std::shared_ptr<XMLNode> child = std::make_shared<XMLNode>();
+        child->node = r.second;
+        list.push_back(child);
+      }
+    }
+    return list;
+  }
 };
 
 /** A wrapper to a XML tree.

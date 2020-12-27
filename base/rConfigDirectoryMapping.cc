@@ -9,6 +9,13 @@ using namespace rapio;
 
 std::map<std::string, std::string> ConfigDirectoryMapping::myMappings;
 
+void
+ConfigDirectoryMapping::introduceSelf()
+{
+  std::shared_ptr<ConfigDirectoryMapping> d = std::make_shared<ConfigDirectoryMapping>();
+  Config::introduce("directorymapping", d);
+}
+
 bool
 ConfigDirectoryMapping::readInSettings()
 {

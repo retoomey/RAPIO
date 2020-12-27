@@ -194,6 +194,8 @@ private:
   static std::string theProcessName;
 
 public:
+  /** The standard format string used by Record for time stamps. */
+  static std::string RECORD_TIMESTAMP;
 
   /** Global filter used to trim records before queuing */
   static std::shared_ptr<RecordFilter> theRecordFilter;

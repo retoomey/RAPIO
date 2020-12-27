@@ -1,9 +1,9 @@
 #include "rIODataType.h"
 
+#include "rConfigIODataType.h"
 #include "rFactory.h"
 #include "rDataType.h"
 #include "rStrings.h"
-#include "rConfigDataFormat.h"
 #include "rOS.h"
 
 using namespace rapio;
@@ -73,16 +73,8 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
   }
   Strings::toLower(f);
   std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
-
-  // The dfs settings from WDSS2 are messy, need refactor SOON.
-  // WDSS2 assumes 1 type to 1 output.  I'm thinking the settings should be set per factory.
-  // Read setting for datatype from dfs file
-  std::shared_ptr<DataFormatSetting> dfs = ConfigDataFormat::getSetting(dt->getDataType());
-  if (dfs != nullptr) {
-    // FIXME: The issue is that old WDSS2 has the default to netcdf, which stuff like xml
-    // won't write out to.
-    // f = dfs->format;
-  }
+  std::shared_ptr<XMLNode> dfs = ConfigIODataType::getSettings(factory);
+  bool useSubDirs = ConfigIODataType::getUseSubDirs();
 
   std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(f, "IODataType writer");
   if (encoder == nullptr) {
@@ -92,8 +84,9 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
 
   // Used for record and auto generation
   const rapio::Time rsTime      = dt->getTime();
-  const std::string time_string = rsTime.getFileNameString();
-  const std::string dataType    = dt->getTypeName();
+  const std::string time_string = rsTime.getString(Record::RECORD_TIMESTAMP);
+
+  const std::string dataType = dt->getTypeName();
   std::string spec;
   dt->getSubType(spec);
 
@@ -111,7 +104,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
     // dirName/Reflectivity/00.50/TIME.netcdf
     // dirName/TIME_Reflectivity_00.50.netcdf
     std::stringstream fs;
-    if (!dfs->subdirs) {
+    if (!useSubDirs) {
       // Without subdirs, name files with time first followed by details
       fs << time_string << "_" << dataType;
       if (!spec.empty()) { fs << "_" << spec; }

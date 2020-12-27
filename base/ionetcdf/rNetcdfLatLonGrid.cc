@@ -32,12 +32,12 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc)
 
 bool
 NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<DataFormatSetting> dfs)
+  std::shared_ptr<XMLNode> dfs)
 {
   // Generalize the writer maybe...
-  if (dfs->cdmcompliance || dfs->faacompliance) {
-    LogSevere("Ignoring cdm/faa flags, need example files for this.\n");
-  }
+  // if (dfs->cdmcompliance || dfs->faacompliance) {
+  //  LogSevere("Ignoring cdm/faa flags, need example files for this.\n");
+  // }
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Lat", "Lon"
   return (NetcdfDataGrid::write(ncid, dt, dfs));

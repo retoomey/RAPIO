@@ -5,7 +5,7 @@ lib_LTLIBRARIES =\
   librapioimage.la
 
 librapioimage_la_LIBADD =\
-   -L@prefix@/lib -lgrib2c -lboost_system -lGraphicsMagick++
+   -L@prefix@/lib -lgrib2c -lboost_system -lGraphicsMagick++ -lgdal
 
 librapioimage_la_SOURCES =\
   rImageDataTypeImp.cc\

@@ -17,6 +17,8 @@ std::shared_ptr<RecordFilter> rapio::Record::theRecordFilter;
 
 std::shared_ptr<RecordQueue> rapio::Record::theRecordQueue;
 
+std::string Record::RECORD_TIMESTAMP = "%Y%m%d-%H%M%S.%/ms";
+
 Record::Record(const std::vector<std::string> & params,
   const std::vector<std::string>              & selects,
   const rapio::Time                           & productTime)
@@ -25,7 +27,7 @@ Record::Record(const std::vector<std::string> & params,
   myTime(productTime)
 {
   myIndexCount    = 0;
-  mySelections[0] = myTime.getRecordTimeString();
+  mySelections[0] = myTime.getString(RECORD_TIMESTAMP);
 }
 
 namespace {
@@ -297,7 +299,7 @@ Record::readXML(const XMLNode& item,
   }
 
   // Make sure time matches actual time object...
-  mySelections[0] = myTime.getRecordTimeString();
+  mySelections[0] = myTime.getString(RECORD_TIMESTAMP);
   myIndexCount    = indexLabel;
 
   // Abort record if not wanted

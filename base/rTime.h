@@ -23,17 +23,6 @@ namespace rapio {
  * @see TimeDuration
  */
 class Time : public Data {
-public:
-
-  /** The standard file format string date with a - we use for writing files such as  20010228-160316 */
-  static std::string FILE_TIMESTAMP;
-
-  /** The standard format string date of form [date UTC] we use for logging or xml, etc. */
-  static std::string LOG_TIMESTAMP;
-
-  /** The standard format string used by Record for time stamps. */
-  static std::string RECORD_TIMESTAMP;
-
 private:
   /** Store a timepoint, size of 8 */
   std::chrono::system_clock::time_point myTimepoint;
@@ -69,21 +58,9 @@ public:
     double = 0.0
   );
 
-  /**  Convert from a string.
-   *
-   *   @param string  22 characters formatted as
-   *                  [2001-02/28-16:00:00-UTC] or
-   *                  [2001 02/28 16:00:00 UTC]
-   */
-  Time(const std::string&, int offset = -1);
-
-  /** Understands the filename format used by the getStringForFileName
-   *  function and converts back to a Date.
-   * The input should look like: 20010228-160316
-   * FIXME: Just make constructor?
-   */
-  static Time
-  fromStringForFileName(const std::string&);
+  /** Create from a string pattern. Use %Y, %m, %d, etc. from man page of strftime.
+   * You can also use %/ms which is our special 3 character ms extension field. */
+  Time(const std::string& v, const std::string& f);
 
   /** Destruction doesn't need anything extra */
   ~Time(){ }
@@ -179,35 +156,13 @@ public:
   void
   set(time_t t, double f);
 
-  // Utilities to get time back as a string
-
-  /**  Gets string output from time passing in a pattern string */
+  /** Gets string output from time passing in a pattern string */
   std::string
-  getString(const std::string&, bool wantMilli = false) const;
+  getString(const std::string&) const;
 
-  /** Convenience function */
-  std::string
-  getLogString() const
-  {
-    return getString(LOG_TIMESTAMP);
-  };
-
-  /** Convenience function */
-  std::string
-  getFileNameString(bool milli = true) const
-  {
-    if (milli) {
-      return getString(RECORD_TIMESTAMP, true);
-    }
-    return getString(FILE_TIMESTAMP);
-  };
-
-  /** Convenience function */
-  std::string
-  getRecordTimeString() const
-  {
-    return getString(RECORD_TIMESTAMP, true);
-  };
+  /** Try to set our values from a string output and pattern string */
+  bool
+  putString(const std::string& value, const std::string& pattern);
 
   // Get part of a time object routines -----
 
@@ -254,6 +209,7 @@ public:
   toTimeval(std::chrono::system_clock::time_point now);
 };
 
+/** Output a time */
 std::ostream&
 operator << (std::ostream&,
   const rapio::Time&);
