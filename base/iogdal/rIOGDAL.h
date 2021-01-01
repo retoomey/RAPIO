@@ -7,8 +7,8 @@
 #include <iomanip>
 
 namespace rapio {
-/** Worker classes that handle read and write of particular DataType */
-class ImageType : public IO {
+/** Worker classes that handle read and write of GDAL types. */
+class GDALType : public IO {
 public:
   /** Write DataType from given ncid (subclasses) */
   virtual bool
@@ -24,11 +24,11 @@ public:
 };
 
 /**
- * The base class of all image formatters.
+ * The base class of all GDAL formatters.
  *
  * @author Robert Toomey
  */
-class IOImage : public IODataType {
+class IOGDAL : public IODataType {
 public:
 
   // Registering of classes ---------------------------------------------
@@ -37,11 +37,11 @@ public:
 
   /** Use this to introduce new subclasses. */
   static void
-  introduce(const std::string  & dataType,
-    std::shared_ptr<ImageType> new_subclass);
+  introduce(const std::string & dataType,
+    std::shared_ptr<GDALType> new_subclass);
 
-  static std::shared_ptr<ImageType>
-  getIOImage(const std::string& type);
+  static std::shared_ptr<GDALType>
+  getIOGDAL(const std::string& type);
 
   // READING ------------------------------------------------------------
   //
@@ -52,9 +52,13 @@ public:
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
-  readImageDataType(const URL& path);
+  readGDALDataType(const URL& path);
 
   // WRITING ------------------------------------------------------------
+
+  /** Encode using GDAL library */
+  bool
+  encodeGDAL();
 
   /** Encode this data type to path given format settings */
   virtual bool
@@ -63,6 +67,6 @@ public:
     std::shared_ptr<XMLNode>               dfs) override;
 
   virtual
-  ~IOImage();
+  ~IOGDAL();
 };
 }

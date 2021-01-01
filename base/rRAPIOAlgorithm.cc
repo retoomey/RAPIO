@@ -251,11 +251,14 @@ RAPIOAlgorithm::initializeBaseline()
 
   module = "librapioimage.so";
   Factory<IODataType>::introduceLazy("image", module, create);
-  // FIXME: Maybe introduce individual types, not sure yet
-  // Factory<IODataType>::introduceLazy("jpg", module, create);
+
+  module = "librapiogdal.so";
+  Factory<IODataType>::introduceLazy("gdal", module, create);
 
   /*
    * // Force immediate loading, maybe good for testing
+   * auto v = Factory<IODataType>::get("gdal");
+   * auto w = Factory<IODataType>::get("image");
    * auto x = Factory<IODataType>::get("netcdf");
    * auto y = Factory<IODataType>::get("netcdf3");
    * auto z = Factory<IODataType>::get("grib");

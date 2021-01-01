@@ -35,6 +35,7 @@ librapio_la_SOURCES =\
   rNetcdfDataType.cc\
   rGribDataType.cc\
   rImageDataType.cc\
+  rGDALDataType.cc\
   rIndexType.cc\
   rError.cc\
   rIOXML.cc\
@@ -120,6 +121,7 @@ pkginclude_HEADERS =\
   rNetcdfDataType.h\
   rGribDataType.h\
   rImageDataType.h\
+  rGDALDataType.h\
   rIOXML.h\
   rIOJSON.h\
   rIndexType.h\
@@ -168,6 +170,7 @@ pkginclude_HEADERS =\
 SUBDIRS     =\
   ionetcdf\
   iogrib\
+  iogdal\
   ioimage
 
 MAINTAINERCLEANFILES  = Makefile.in aclocal.m4 configure
