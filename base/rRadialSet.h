@@ -6,6 +6,7 @@
 #include <rDataType.h>
 #include <rTime.h>
 #include <rDataGrid.h>
+#include <rRadialSetLookup.h>
 
 #include <vector>
 
@@ -88,11 +89,23 @@ public:
   virtual void
   updateGlobalAttributes(const std::string& encoded_type) override;
 
+  /** Get value at a lat lon for a given layer */
+  virtual double
+  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = "primary") override;
+
+  /** Calculate Lat Lon coverage marching grid from spatial center */
+  virtual bool
+  LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
 protected:
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
 
   /** Distance to the first gate */
   double myFirstGateDistanceM;
+private:
+  /** Cache lookup (FIXME: unique_ptr c++14 among other locations in code) */
+  std::shared_ptr<RadialSetLookup> myLookup;
 };
 }

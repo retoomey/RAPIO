@@ -1,4 +1,5 @@
 #include "rRadialSetLookup.h"
+#include "rRadialSet.h"
 
 #include <iostream>
 

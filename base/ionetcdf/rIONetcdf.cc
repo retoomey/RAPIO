@@ -250,12 +250,26 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
 
+  // Get general netcdf settings
+  int ncflags = NC_NETCDF4;
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      ncflags = output.getAttr("ncflags", ncflags);
+      IONetcdf::GZ_LEVEL = output.getAttr("deflate_level", IONetcdf::GZ_LEVEL);
+    }catch (const std::exception& e) {
+      LogSevere("Unrecognized settings, using defaults\n");
+    }
+  }
+  LogInfo("Netcdf settings: cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << "\n");
+
   // Open netcdf file
   int ncid;
 
   // FIXME: should speed test this...
   try {
-    NETCDF(nc_create(aURL.getPath().c_str(), NC_NETCDF4, &ncid));
+    // NETCDF(nc_create(aURL.getPath().c_str(), NC_NETCDF4, &ncid));
+    NETCDF(nc_create(aURL.getPath().c_str(), ncflags, &ncid));
   } catch (const NetcdfException& ex) {
     nc_close(ncid);
     LogSevere("Netcdf create error: "
@@ -325,29 +339,6 @@ IONetcdf::addVar(
       nc_def_var_deflate(ncid, *varid, shuffle, deflate, deflate_level);
     }
   }
-  return (retval);
-}
-
-/** Our default compression stuff for the c library.  */
-int
-IONetcdf::compressVar(int ncid, int datavar)
-{
-  int retval;
-  const int shuffle = NC_CONTIGUOUS;
-
-  // FIXME: gzcompress seems to be charle's .gz stuff..we never actually
-  // used it to do netcdf compression.  roflmao...
-  const int deflate = 1; // if non-zero, turn on the deflate-level
-  // const int deflate_level = GZ_LEVEL;   // Set the compression level
-  // Compression for variable
-  //   NETCDF(nc_def_var_chunking(ncid, datavar, 0, 0)); Probably will never
-  // need this
-  // shuffle == control the HDF5 shuffle filter
-  // default == turn on deflate for variable
-  // deflate_level 0 no compression and 9 (max compression)
-  const int deflate_level = 0; // GOOP
-
-  retval = nc_def_var_deflate(ncid, datavar, shuffle, deflate, deflate_level);
   return (retval);
 }
 

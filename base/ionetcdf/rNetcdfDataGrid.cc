@@ -259,17 +259,17 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
     auto typeName = dataGrid->getTypeName(); // FIXME: can't routine get it?
     std::vector<int> datavars = IONetcdf::declareGridVars(*dataGrid, typeName, dimvars, ncid);
 
-    // Non netcdf-4/hdf5 require separation between define and data...
-    // netcdf-4 doesn't care though
-    NETCDF(nc_enddef(ncid));
-
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
     //
     // NOTE: Currently this will add in WDSS2 global attributes,
     // We might want a flag or something
     dataGrid->updateGlobalAttributes(dataType);
-    IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getGlobalAttributes());
+    IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getGlobalAttributes()); // define
+
+    // Non netcdf-4/hdf5 require separation between define and data...
+    // netcdf-4 doesn't care though
+    NETCDF(nc_enddef(ncid));
 
     // Write pass using datavars
     size_t count = 0;

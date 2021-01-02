@@ -137,13 +137,13 @@ ColorMap::readColorMap(const URL& url)
 // For loops not using a color object is a bit faster
 void
 ColorMap::getColor(double v,
-  unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a)
+  unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const
 {
   // Maybe cache missing
   // if (v == Constants::MissingData){
   //  return myMissingColor;
   // }
-  const std::map<double, ColorBin>::iterator i = myValues.upper_bound(v);
+  const std::map<double, ColorBin>::const_iterator i = myValues.upper_bound(v);
 
   if (i != myValues.end()) {
     i->second.getColor(v, r, g, b, a);
@@ -155,4 +155,17 @@ ColorMap::getColor(double v,
     b = 0;
     a = 255;
   }
+}
+
+void
+LinearColorMap::getColor(double v,
+  unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const
+{
+  if (v > 200) { v = 200; }
+  if (v < -50.0) { v = -50.0; }
+  float weight = (250 - v) / 250.0;
+  r = weight;
+  g = 0;
+  b = 0;
+  a = 255;
 }

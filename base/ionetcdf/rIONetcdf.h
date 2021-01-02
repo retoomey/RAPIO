@@ -203,10 +203,6 @@ public:
     int          dim4,
     int *        varid);
 
-  static int
-  compressVar(int ncid,
-    int           datavar);
-
   /** Add a string attribute */
   static int
   addAtt(int         ncid,

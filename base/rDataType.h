@@ -119,6 +119,13 @@ public:
     return myLocation;
   }
 
+  /** Return the location considered the 'center' location of the datatype */
+  virtual LLH
+  getCenterLocation() const
+  {
+    return myLocation;
+  }
+
   /** Set primary Location.  Meaning depends on subclass */
   void
   setLocation(const LLH& l)
@@ -137,6 +144,19 @@ public:
   /** Global attributes, used by reader/writers */
   std::shared_ptr<DataAttributeList>
   getGlobalAttributes(){ return myAttributes; }
+
+  /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
+  virtual double
+  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = "primary")
+  {
+    return Constants::MissingData;
+  }
+
+  /** Calculate Lat Lon coverage marching grid from spatial center */
+  virtual bool
+  LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+
 
 protected:
 

@@ -20,11 +20,31 @@ Information needed:
     <output />
   </io>
   <io names="netcdf">
-    <!-- compressionlevel: -->
-    <output compressionlevel="6"/>
+<!-- ncflags: Combined cmode flags for nc_create function. 
+              Example: 4096 == 0x1000 == NC_NETCDF4
+                       256  == 0x0100 == NC_CLASSIC_MODEL   (This is fast)
+              We 'could' use strings but that would limit ability here.
+              Note: Mess up this value and it will complain on writing.
+     nc_def_var_deflate parameters
+     deflate_level: 0 no compression to 9 max compression
+-->
+    <output ncflags="4096" deflate_level="3"/>
   </io>
   <io names="image">
-    <output test="true"/>
+<!-- cols: width of image
+     rows: height of image
+     suffix: Imagick magic file ending such as png, tif, jpg
+             The suffix is how Imagick chooses its file output format 
+-->
+    <output suffix="png" cols="500" rows="500" degrees="1"/>
+  </io>
+  <io names="gdal">
+<!-- cols: width of image
+     rows: height of image
+     suffix: added to the file ending.
+     driver: Known GDAL driver string say from https://gdal.org/drivers/raster/index.html 
+-->
+    <output driver="GTiff" suffix="tif" cols="1000" rows="1000" degrees="10" />
   </io>
 </datatype>
 

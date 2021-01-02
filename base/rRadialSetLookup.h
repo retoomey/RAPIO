@@ -1,12 +1,13 @@
 #pragma once
 
 #include <rUtility.h>
-#include <rRadialSet.h>
 
 #include <vector>
 
 namespace rapio
 {
+class RadialSet;
+
 /** Bin lookup for O(1) lookup of azimuth/range to range/gate of a RadialSet.
  * Tried a few ways of doing this, this trades a bit of memory/setup for speed.
  * Lak's smart technique avoids doing OlogN sorting/searching of azimuths.

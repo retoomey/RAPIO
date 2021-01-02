@@ -45,7 +45,7 @@ public:
   }
 
   void
-  getColor(double value, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a)
+  getColor(double value, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const
   {
     if (myLinear) {
       double wt = (value - lower) / (upper - lower);
@@ -104,10 +104,16 @@ public:
   static std::shared_ptr<ColorMap>
   readColorMap(const URL& u);
 
-  void
-  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a);
+  virtual void
+  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const;
 
   // first hack
   std::map<double, ColorBin> myValues;
+};
+
+class LinearColorMap : public ColorMap
+{
+  virtual void
+  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const override;
 };
 }

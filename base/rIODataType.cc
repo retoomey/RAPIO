@@ -73,7 +73,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const URL& aURL,
   }
   Strings::toLower(f);
   std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
-  std::shared_ptr<XMLNode> dfs = ConfigIODataType::getSettings(factory);
+  std::shared_ptr<XMLNode> dfs = ConfigIODataType::getSettings(f);
   bool useSubDirs = ConfigIODataType::getUseSubDirs();
 
   std::shared_ptr<IODataType> encoder = Factory<IODataType>::get(f, "IODataType writer");
