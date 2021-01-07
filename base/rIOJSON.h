@@ -22,15 +22,20 @@ public:
 
   /** IODataType factory reader call */
   virtual std::shared_ptr<DataType>
-  createDataType(const URL& path) override;
+  createDataType(const std::string& params) override;
 
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const URL                              & path,
-    std::shared_ptr<XMLNode>               dfs) override;
+    const std::string                      & params,
+    std::shared_ptr<XMLNode>               dfs,
+    bool                                   directFile,
+    // Output for notifiers
+    std::vector<Record>                    & records,
+    std::vector<std::string>               & files
+  ) override;
 
   /** Write property tree to URL */
   static bool

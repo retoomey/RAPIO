@@ -143,6 +143,12 @@ public:
     std::vector<std::string> * setme,
     size_t                     restwidth,
     size_t                     firstwidth = 0);
+
+  /** Simple * based pattern match */
+  static bool
+  matchPattern(const std::string& pattern,
+    const std::string           & tocheck,
+    std::string                 & star);
 };
 
 /** A class for DFA parsing a word/token by character */

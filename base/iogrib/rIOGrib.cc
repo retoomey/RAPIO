@@ -1039,16 +1039,21 @@ IOGrib::readGribDataType(const URL& url)
 } // IOGrib::readGribDataType
 
 std::shared_ptr<DataType>
-IOGrib::createDataType(const URL& path)
+IOGrib::createDataType(const std::string& params)
 {
-  // virtual to static
-  return (IOGrib::readGribDataType(path));
+  // virtual to static, we only handle file/url
+  return (IOGrib::readGribDataType(URL(params)));
 }
 
 bool
 IOGrib::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                      & aURL,
-  std::shared_ptr<XMLNode>                       dfs)
+  const std::string                              & params,
+  std::shared_ptr<XMLNode>                       dfs,
+  bool                                           directFile,
+  // Output for notifiers
+  std::vector<Record>                            & records,
+  std::vector<std::string>                       & files
+)
 {
   return false;
 }

@@ -16,11 +16,14 @@ Information needed:
     same time.
  -->
 <datatype subdirs="true">
+
+<!-- Settings for the built in XML reader --> 
   <io names="xml W2ALGS">
     <output />
   </io>
-  <io names="netcdf">
-<!-- ncflags: Combined cmode flags for nc_create function. 
+
+<!-- Netcdf module settings
+     ncflags: Combined cmode flags for nc_create function. 
               Example: 4096 == 0x1000 == NC_NETCDF4
                        256  == 0x0100 == NC_CLASSIC_MODEL   (This is fast)
               We 'could' use strings but that would limit ability here.
@@ -28,23 +31,38 @@ Information needed:
      nc_def_var_deflate parameters
      deflate_level: 0 no compression to 9 max compression
 -->
+  <io names="netcdf netcdf3" module="librapionetcdf.so">
     <output ncflags="4096" deflate_level="3"/>
   </io>
-  <io names="image">
-<!-- cols: width of image
+
+<!-- Imagick module settings
+     cols: width of image
      rows: height of image
      suffix: Imagick magic file ending such as png, tif, jpg
              The suffix is how Imagick chooses its file output format 
+     FIXME: Add more settings and tile settings and ability
+     degrees: Degrees out from datatype center to create a Lat Lon coverage
 -->
+  <io names="image" module="librapioimage.so">
     <output suffix="png" cols="500" rows="500" degrees="1"/>
   </io>
-  <io names="gdal">
-<!-- cols: width of image
+
+<!-- GDAL module
+     cols: width of image
      rows: height of image
      suffix: added to the file ending.
      driver: Known GDAL driver string say from https://gdal.org/drivers/raster/index.html 
+     FIXME: Add more settings and tile settings and ability
+     degrees: Degrees out from datatype center to create a Lat Lon coverage
 -->
+  <io names="gdal" module="librapiogdal.so">
     <output driver="GTiff" suffix="tif" cols="1000" rows="1000" degrees="10" />
+  </io>
+
+<!-- GRIB module
+-->
+  <io names="grib" module="librapiogrib.so">
+    <output />
   </io>
 </datatype>
 

@@ -92,8 +92,10 @@ void
 RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
 {
   // These are the standard generic 'output' parameters we support
-  o.require("o", "/data", "The output directory for generated products or data");
+  o.require("o", "/data", "The output writers/directory for generated products or data");
   o.addGroup("o", "I/O");
+  o.addAdvancedHelp("o",
+    "Default is netcdf output folder, or the same as netcdf=/path.  Multiple writers with multiple or same folders can be chained.  For example, image=folder1 gdal=folder2.");
   o.optional("O",
     "*",
     "The output types patterns, controlling product names and writing");
@@ -136,24 +138,50 @@ void
 RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 {
   // Add output products wanted and name translation filters
-  std::string param = o.getString("O");
+  const std::string param = o.getString("O");
+
   addOutputProducts(param);
 
   // Gather notifier list and output directory
   myNotifierList = o.getString("n");
-  myOutputDir    = o.getString("o");
-}
+  const std::string write = o.getString("o");
+
+  // Gather output -o settings
+  std::vector<std::string> pieces;
+  Strings::splitWithoutEnds(write, ' ', &pieces);
+  for (auto& w:pieces) {
+    std::vector<std::string> pair;
+    Strings::splitWithoutEnds(w, '=', &pair);
+    const size_t aSize = pair.size();
+    if (aSize == 1) {
+      // Use blank factory, the system will try to guess from
+      // extension or the loaded datatype
+      myWriters.push_back(outputInfo("", pair[0]));
+
+      // FIXME: HACK this for moment, gonna have to refactor notifiers a bit
+      // since it was 1-to-1 with writer before
+      myOutputDir = pair[0];
+    } else if (aSize == 2) {
+      // Otherwise we have a factory attempt with this output info
+      // FIXME: Do we 'check' against registered to make sure we have it?
+      myWriters.push_back(outputInfo(pair[0], pair[1]));
+
+      // FIXME: HACK this for moment, gonna have to refactor notifiers a bit
+      // since it was 1-to-1 with writer before
+      if (pair[0] == "netcdf") {
+        myOutputDir = pair[1];
+      }
+    } else {
+      LogSevere("Can't understand your -o format for: '" << w << "', ignoring.\n");
+    }
+  }
+} // RAPIOAlgorithm::processOutputParams
 
 void
 RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
 {
   // Standard -i, -I -r handling of the input parameters,
   // most algorithms do it this way.
-  // FIXME: ok do we disable this for things that use the product=this model,
-  // such
-  // as w2qcnndp.  Or make those use this and keep it all the same...which I'm
-  // liking.
-  // Have to think about it some more...
   std::string indexes  = o.getString("i");
   std::string products = o.getString("I");
 
@@ -163,6 +191,8 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   // Add the inputs we want to handle, using history setting...
   float history = o.getFloat("h");
 
+  // We create the history flag for others, but we're not
+  // currently using it ourselves
   if (history < 0.001) {
     history = 15;
     LogSevere(
@@ -214,9 +244,7 @@ RAPIOAlgorithm::initializeBaseline()
   // Typically algorithms are run in realtime for operations and
   // core dumping will fill up disks and cause more issues.
   // We're usually running/restarting from w2algrun...
-  // FIXME: make configurable...more work here
-  // Either allow alg options to tweak how this work, a config file
-  // that defines it or something
+  // FIXME: flags for this and logging
   // Signals::initialize(enableStackTrace, wantCoreDumps);
 
   Config::introduceSelf();
@@ -233,40 +261,18 @@ RAPIOAlgorithm::initializeBaseline()
   // Notification support (Send xml records somewhere on processing)
   RecordNotifier::introduceSelf();
 
-  // -------------------------------------------------------------------
-  // NETCDF READ/WRITE FUNCTIONALITY BUILT IN ALWAYS
-
-  // FIXME: Add the configuration file having modules flags, what, etc...
-  // The point it that these only load on demand.
-
-  // Dynamic module registration.
-  std::string create = "createRAPIOIO";
-
-  std::string module = "librapionetcdf.so"; // does the name matter?
-  Factory<IODataType>::introduceLazy("netcdf", module, create);
-  Factory<IODataType>::introduceLazy("netcdf3", module, create);
-
-  module = "librapiogrib.so";
-  Factory<IODataType>::introduceLazy("grib", module, create);
-
-  module = "librapioimage.so";
-  Factory<IODataType>::introduceLazy("image", module, create);
-
-  module = "librapiogdal.so";
-  Factory<IODataType>::introduceLazy("gdal", module, create);
+  // Everything should be registered, try initial start up
+  if (!Config::initialize()) {
+    LogSevere("Failed to initialize\n");
+    exit(1);
+  }
+  Unit::initialize();
 
   /*
    * // Force immediate loading, maybe good for testing
-   * auto v = Factory<IODataType>::get("gdal");
-   * auto w = Factory<IODataType>::get("image");
+   * // dynamic modules
    * auto x = Factory<IODataType>::get("netcdf");
-   * auto y = Factory<IODataType>::get("netcdf3");
-   * auto z = Factory<IODataType>::get("grib");
    */
-
-  // Everything should be registered, try initial start up
-  Config::initialize();
-  Unit::initialize(); // Think this could be a ConfigType.  It reads xml
 } // RAPIOAlgorithm::initializeBaseline
 
 void
@@ -281,9 +287,7 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
   // Since this is called by a main function
   // wrap to catch any uncaught exception.
   try  {
-    // Do all stock algorithms have this pretty much?  For the moment I'm
-    // assuming yes...
-    // FIXME: a method or maybe just part of declareOptions...
+    // Default header for an algorithm, subclasses should override
     RAPIOOptions o;
     o.setHeader(Constants::RAPIOHeader + "Algorithm");
     o.setDescription(
@@ -366,13 +370,7 @@ RAPIOAlgorithm::addInputProduct(const std::string& product)
   Strings::splitWithoutEnds(product, ':', &pairs);
 
   // Add to our input info
-  productInputInfo info;
-  info.name = pairs[0];
-
-  if (pairs.size() > 1) {
-    info.subtype = pairs[1];
-  }
-  myProductInputInfo.push_back(info);
+  myProductInputInfo.push_back(productInputInfo(pairs[0], pairs.size() > 1 ? pairs[1] : ""));
 }
 
 void
@@ -457,12 +455,8 @@ RAPIOAlgorithm::addOutputProduct(const std::string& pattern)
   }
 
   // Add the new output product declaration
-  productOutputInfo info;
-  info.product   = productPattern;
-  info.subtype   = subtypePattern;
-  info.toProduct = toProductPattern;
-  info.toSubtype = toSubtypePattern;
-  myProductOutputInfo.push_back(info);
+  myProductOutputInfo.push_back(
+    productOutputInfo(productPattern, subtypePattern, toProductPattern, toSubtypePattern));
 
   LogInfo("Added output product pattern with key '" << pattern << "'\n");
 } // RAPIOAlgorithm::addOutputProduct
@@ -479,56 +473,38 @@ RAPIOAlgorithm::addOutputProducts(const std::string& intype)
 }
 
 void
-RAPIOAlgorithm::initOnStart(const IndexType& idx)
-{
-  // FIXME: method to set this on or off?
-  // Accumulator doesn't use this..some algorithms do though
-
-  /* initOnStart=false in algcreator XML file ...
-   *   for (size_t i=0; i < myInputs.size(); ++i){
-   *      std::vector<std::string> sel(1);
-   *      sel.insert( sel.end(), myInputs[i].begin(), myInputs[i].end() );
-   *      Record rec = idx.getMostCurrentRecord(sel);
-   *      if ( rec.isValid() ) processInputField( rec );
-   *   }
-   */
-}
-
-void
 RAPIOAlgorithm::addIndex(const std::string & index,
   const TimeDuration                       & maximumHistory)
 {
   // We don't actually create an index here...we wait until execute.
   LogDebug("Adding source index:'" << index << "'\n");
 
-  indexInputInfo info;
+  std::string protocol, indexparams;
 
   // For the new xml=/home/code_index.xml protocol passing
   std::vector<std::string> pieces;
 
   // Macro ldm to the feedme binary by default for convenience
   if (index == "ldm") {
-    info.protocol    = "exe";
-    info.indexparams = "feedme%-f%TEXT";
+    protocol    = "exe";
+    indexparams = "feedme%-f%TEXT";
   } else {
     // Split on = if able to get protocol, otherwise we'll try to guess
     Strings::split(index, '=', &pieces);
     const size_t aSize = pieces.size();
     if (aSize == 1) {
-      info.protocol    = "";
-      info.indexparams = pieces[0];
+      protocol    = "";
+      indexparams = pieces[0];
     } else if (aSize == 2) {
-      info.protocol    = pieces[0];
-      info.indexparams = pieces[1];
+      protocol    = pieces[0];
+      indexparams = pieces[1];
     } else {
       LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
       exit(1);
     }
   }
-  // info.protocol       = "xml";
-  // info.indexparams    = index;
-  info.maximumHistory = maximumHistory;
-  myIndexInputInfo.push_back(info);
+
+  myIndexInputInfo.push_back(indexInputInfo(protocol, indexparams, maximumHistory));
 } // RAPIOAlgorithm::addIndex
 
 void
@@ -543,130 +519,6 @@ RAPIOAlgorithm::addIndexes(const std::string & param,
     addIndex(pieces[p], maximumHistory);
   }
 }
-
-#if 0
-namespace rapio {
-class AlgorithmHeartbeat : public rapio::EventTimer {
-public:
-
-  AlgorithmHeartbeat(size_t milliseconds, size_t pulseSecs) : EventTimer(milliseconds, "Heartbeat"), myPulseSecs(
-      pulseSecs)
-  {
-    // S, M, H, D
-    // parse("*/5 * * *");
-    parse("5 * * *");
-  }
-
-  std::vector<int> v;  // values
-  std::vector<bool> m; // mode is slash or not
-
-  bool
-  parse(const std::string& cronlist)
-  {
-    // My baby cron format, except we have seconds as well
-    // I don't think a realtime alg would want time settings
-    // longer than week.  Can always expand/change format.
-    // "Seconds, Mins, Hours, Day of week"
-    // We need two time tweaks so far:
-    // 1.  a 'lag' time to allow data to get there first.
-    //     Basically allow say a 12:00 fire time to occur
-    //     at 12:00 + lag.  This is for latency adjusting.
-    // 2.  a 'min' time to keep restarting algorithms from
-    //     immediately firing (because they have no memory)
-    //     We could possibly use a marker file or something
-    //     for this too...
-    //
-    // "*/5 * * *" -- every 5 seconds on mod 5
-    // "0 * * * " -- on the 0 second.
-    // "0 */2 * * " -- Every 2 min on the 0 second
-    std::vector<std::string> fields;
-    Strings::splitWithoutEnds(cronlist, ' ', &fields);
-    while (fields.size() < 4) { fields.push_back("*"); }
-
-    for (size_t i = 0; i < fields.size(); i++) {
-      v.push_back(-1);
-      m.push_back(false);
-
-      std::vector<std::string> pairs;
-      Strings::splitWithoutEnds(fields[i], '/', &pairs);
-
-      if (pairs.size() == 2) { // Every mode
-        if (pairs[0] == "*") {
-          try{
-            int value = std::stoi(pairs[1]);
-            v[i] = value;
-            m[i] = true; // from /
-          } catch (...) {
-            LogSevere("Bad / format for '" << fields[i] << "'\n");
-            return false;
-          }
-        }
-      } else {
-        if (pairs[0] != "*") {
-          try{
-            int value = std::stoi(pairs[0]);
-            v[i] = value;
-          } catch (...) {
-            LogSevere("Bad format for '" << fields[i] << "'\n");
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  } // parse
-
-  virtual void
-  action() override
-  {
-    // Current time, or time of the 'system'
-    // FIXME: with archive will need artifical times
-    Time n = Time::CurrentTime();
-
-    auto newSecond = v[0];
-
-    // This is the */V every interval logic
-    if (m[0] == true) {
-      // LogSevere("/ logic: " << v[0] << "\n");
-      // Match mod of value
-      int syncSec = v[0];
-      if (syncSec < 0) { syncSec = 0; }
-      if (syncSec > 59) { syncSec = syncSec % 60; }
-      auto second = n.getSecond();
-      // auto newSecond = second-(second % syncSec);
-      newSecond = second - (second % syncSec);
-    } else {
-      // LogSevere("NO / logic: " << v[0] << "\n");
-      //    newSecond = v[0];  // match actual second value
-    }
-
-    // Calculate the sync time based on current
-    Time p = Time(n.getYear(), n.getMonth(), n.getDay(),
-        n.getHour(), n.getMinute(), newSecond, 0.0);
-
-    // Oh if actual less wanted, don't fire.
-
-    // Real time should be >= pulse wanted
-    // and not equal to the last pulsetime
-    // FIXME: minimum delay before first pulse to allow
-    // alg time to gather data.
-    if ((n >= p) && (p != myLastPulseTime)) {
-      // LogSevere("Pulse ("<<p<<") at actual time: " << n << "\n");
-      LogSevere(
-        "PULSE:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
-                 << "\n");
-      myLastPulseTime = p;
-    } else {
-      // LogSevere("T:" << n.getHour() << ":"<<n.getMinute()<<":"<<n.getSecond() << " and " << p.getHour() << ":"<<p.getMinute() << ":" <<p.getSecond() << "\n");
-    }
-  } // action
-
-  size_t myPulseSecs;
-  Time myLastPulseTime;
-};
-}
-
-#endif // if 0
 
 namespace rapio {
 class AlgRecordFilter : public RecordFilter
@@ -773,7 +625,10 @@ RAPIOAlgorithm::execute()
   const size_t rSize = q->size();
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
-  LogInfo("Output Directory is set to " << myOutputDir << "\n");
+  LogInfo("Outputs:\n");
+  for (auto& w:myWriters) {
+    LogInfo("   " << w.factory << "--> " << w.outputinfo << "\n");
+  }
 
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
@@ -790,51 +645,6 @@ RAPIOAlgorithm::execute()
   // Do event loop
   EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute
-
-namespace {
-/* Very simple end star support for the moment...this could probably be
- * coded more intelligently. */
-bool
-matchPattern(const std::string& pattern,
-  const std::string           & tocheck,
-  std::string                 & star)
-{
-  // "*"    "Velocity" YES "Velocity"
-  // "Vel*" "Velocity" YES "ocity"
-  // "Vel*" "Ref"      NO  ""
-  // "Vel*" "Vel"      YES ""
-  // ""     "Velocity" NO  ""
-  // "Velocity" "VelocityOther" NO ""
-  //
-  bool match      = true;
-  bool starFound  = false;
-  const size_t pm = pattern.size();
-  const size_t cm = tocheck.size();
-
-  star = "";
-
-  for (size_t i = 0; i < pm; i++) {
-    if (pattern[i] == '*') { // Star found...
-      starFound = true;
-      match     = true;
-
-      if (cm > i) { star = tocheck.substr(i); } break;
-    } else if (pattern[i] != tocheck[i]) { // character mismatch
-      match = false;
-      break;
-    }
-  }
-
-  // Ok if no star found should be _exact_ match
-  // ie "Velocity" shouldn't match "VelocityOther" or "VelocityOther2"
-  // but was good for "Velocity*" to match...
-  if (!starFound && (cm > pm)) { // We checked up to length already
-    match = false;
-  }
-
-  return (match);
-} // matchPattern
-}
 
 // FIXME: move it all into the RecordFilter.
 int
@@ -862,7 +672,7 @@ RAPIOAlgorithm::matches(const Record& rec)
     if (sel.size() > 1) {
       // Not sure we need this or why..it was in the old code though...
       if ((sel.back() != "vol") && (sel.back() != "all")) {
-        matchProduct = matchPattern(p.name, sel[1], star);
+        matchProduct = Strings::matchPattern(p.name, sel[1], star);
       }
     }
 
@@ -872,7 +682,7 @@ RAPIOAlgorithm::matches(const Record& rec)
       matchSubtype = true; // empty is pretty much '*'
     } else {
       if (matchProduct && (sel.size() > 2)) {
-        matchSubtype = matchPattern(p.subtype, sel[2], star);
+        matchSubtype = Strings::matchPattern(p.subtype, sel[2], star);
       }
     }
 
@@ -922,10 +732,6 @@ RAPIOAlgorithm::handleTimedEvent(const Time& n, const Time& p)
 }
 
 void
-RAPIOAlgorithm::processHeartbeat(const Time& n, const Time& p)
-{ }
-
-void
 RAPIOAlgorithm::addFeature(const std::string& key)
 {
   LogSevere(
@@ -948,7 +754,7 @@ RAPIOAlgorithm::productMatch(const std::string& key,
     std::string p2       = I.toProduct;
     std::string star;
 
-    if (matchPattern(p, key, star)) {
+    if (Strings::matchPattern(p, key, star)) {
       found = true;
 
       if (p2 == "") { // No translation key, match only, use original key
@@ -972,9 +778,6 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
   return (productMatch(key, newProductName));
 }
 
-// Read the usage example below if you're trying to understand how to write
-// outputs
-// using this class
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType>                         outputData)
@@ -988,20 +791,20 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     outputData->setTypeName(newProductName);
     std::vector<Record> records;
     std::vector<std::string> files;
-    // Can call write multiple times for each output wanted.
-    // FIXME: This is getting refactored to pass XML settings soon I think,
-    // the 'dfs' stuff isn't flexible enough
-    // IODataType::write(outputData, myOutputDir, true, records, files, "netcdf");
-    IODataType::write(outputData, myOutputDir, true, records, files, "");
-    // IODataType::write(outputData, myOutputDir, true, records, files, "image");
 
+    // Can call write multiple times for each output wanted.
+    for (auto& w:myWriters) {
+      IODataType::write(outputData, w.outputinfo, false, records, files, w.factory);
+    }
+
+    // Call notifiers
     for (auto& n:myNotifiers) {
       n->writeRecords(records, files);
     }
     outputData->setTypeName(typeName); // Restore old type name
-                                       // not overriden.  Probably
+                                       // not overridden.  Probably
                                        // doesn't matter.
   } else {
-    LogInfo("DID NOT FIND a match for  product key " << key << "\n");
+    LogInfo("DID NOT FIND a match for product key " << key << "\n");
   }
 }

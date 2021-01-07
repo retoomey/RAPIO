@@ -10,8 +10,11 @@ using namespace rapio;
 
 /** Read call */
 std::shared_ptr<DataType>
-IOXML::createDataType(const URL& url)
+IOXML::createDataType(const std::string& params)
 {
+  // We only read from file/url
+  const URL url(params);
+
   std::shared_ptr<DataType> datatype = nullptr;
   std::vector<char> buf;
 
@@ -65,10 +68,18 @@ IOXML::writeURL(
 
 bool
 IOXML::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                     & aURL,
-  std::shared_ptr<XMLNode>                      dfs)
+  const std::string                             & params,
+  std::shared_ptr<XMLNode>                      dfs,
+  bool                                          directFile,
+  // Output for notifiers
+  std::vector<Record>                           & records,
+  std::vector<std::string>                      & files
+)
 {
   bool successful = false;
+
+  bool useSubDirs = true; // Use subdirs
+  URL aURL        = IODataType::generateFileName(dt, params, "xml", directFile, useSubDirs);
 
   try{
     std::shared_ptr<XMLData> xml = std::dynamic_pointer_cast<XMLData>(dt);
@@ -76,6 +87,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
     if (xml != nullptr) {
       writeURL(aURL, xml, true, false);
       successful = true;
+      IODataType::generateRecord(dt, aURL, "xml", records, files);
     }
   }catch (std::exception& e) {
     LogSevere("XML create error: "

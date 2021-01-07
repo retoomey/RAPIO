@@ -132,14 +132,14 @@ operator < (const Record& a, const Record& b)
 } // <
 }
 
-URL
-Record::getFileName(const std::vector<std::string>& params)
+std::string
+Record::getParamString(const std::vector<std::string>& params)
 {
   const size_t tot_parts(params.size());
 
   if (tot_parts < 1) {
-    LogSevere("Params missing filename.\n");
-    return (URL());
+    LogSevere("Params missing everything but builder name.\n");
+    return "";
   }
 
   std::string p;
@@ -156,7 +156,7 @@ Record::getFileName(const std::vector<std::string>& params)
     p += "/" + s;
   }
 
-  return (URL(p));
+  return p;
 }
 
 std::shared_ptr<DataType>
@@ -175,8 +175,8 @@ Record::createObject(size_t i) const
   params.erase(params.begin());
 
   // Note param determines type here
-  const URL path = getFileName(params);
-  std::shared_ptr<DataType> dt = IODataType::readDataType(path, dataSourceType);
+  const std::string factoryparams = getParamString(params);
+  std::shared_ptr<DataType> dt    = IODataType::readDataType(factoryparams, dataSourceType);
 
   if (dt != nullptr) {
     // set sub-type

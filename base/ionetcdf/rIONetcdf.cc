@@ -119,116 +119,15 @@ IONetcdf::readNetcdfDataType(const URL& url)
   return (datatype);
 } // IONetcdf::readNetcdfDataType
 
-#if 0
-std::string
-IONetcdf::writeNetcdfDataType(std::shared_ptr<DataType> dt,
-  const std::string                                     & myDirectory,
-  std::shared_ptr<XMLNode>                              dfs,
-  std::vector<Record>                                   & records)
-{
-  // So myLookup "RadialSet" writer for example from the data type.
-  //  This allows algs etc to replace our IONetcdf with a custom if needed.
-  const std::string type = dt->getDataType();
-
-  std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
-  if (fmt == nullptr) {
-    fmt = IONetcdf::getIONetcdf("DataGrid");
-  }
-
-  if (fmt == nullptr) {
-    LogSevere("Can't create IO writer for " << type << "\n");
-    return ("");
-  }
-
-  // Generate the filepath/notification info for this datatype.
-  // Static encoded for now.  Could make it virtual in the formatter
-  std::vector<std::string> selections;
-  std::vector<std::string> params;
-  URL aURL = generateOutputInfo(*dt, myDirectory, dfs, "netcdf", params, selections);
-
-  // Ensure full path to output file exists
-  const std::string dir(aURL.getDirName());
-  if (!OS::isDirectory(dir) && !OS::mkdirp(dir)) {
-    LogSevere("Unable to create " << dir << "\n");
-    return ("");
-  }
-
-  // Open netcdf file
-  int ncid;
-
-  // FIXME: should speed test this...
-  try {
-    NETCDF(nc_create(aURL.path.c_str(), NC_NETCDF4, &ncid));
-  } catch (const NetcdfException& ex) {
-    nc_close(ncid);
-    LogSevere("Netcdf create error: "
-      << aURL.path << " " << ex.getNetcdfStr() << "\n");
-    return ("");
-  }
-
-  if (ncid == -1) { return (""); }
-
-  bool successful = false;
-
-  try {
-    successful = fmt->write(ncid, dt, dfs);
-  } catch (...) {
-    successful = false;
-    LogSevere("Failed to write netcdf file for DataType\n");
-  }
-
-  nc_close(ncid);
-
-  /* If we upgrade netcdf can play with this which could allow
-   * us to md5 checksum on the fly
-   * NC_memio finalmem;
-   * size_t initialsize = 65000;
-   * try {
-   *  // Interesting, might be able to pre size it to speed it up
-   *  NETCDF(nc_create_mem("testing", NC_NETCDF4, initialsize, &ncid));
-   * }catch(const NetcdfException& ex){
-   *  nc_close_memio(ncid, &finalmem);
-   *  LogSevere("Netcdf create error: " <<
-   *            fileName_url.path << " " << ex.getNetcdfStr() << "\n");
-   *  return "";
-   * }
-   * if (ncid == -1) return "";
-   * bool successful = false;
-   *
-   * try {
-   *  successful = fmt->write(ncid, dt);
-   * } catch (...) {
-   *  successful = false;
-   *  LogSevere("Failed to write netcdf file for DataType\n");
-   * }
-   *
-   * nc_close_memio(ncid, &finalmem);
-   * std::ofstream ofp(fileName_url.path.c_str());
-   * if (!ofp) {
-   *  LogSevere("Unable to create " << tmpname << "\n");
-   *  return;
-   * }
-   * ...write from mem to disk
-   * ofp.close();
-   */
-
-  // -------------------------------------------------------------
-  // Update records to match our written stuff...
-  if (successful) {
-    const rapio::Time rsTime = dt->getTime();
-    Record rec(params, selections, rsTime);
-    records.push_back(rec);
-    return (aURL.path);
-  }
-  return ("");
-} // IONetcdf::encodeStatic
-
-#endif // if 0
-
 bool
 IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                        & aURL,
-  std::shared_ptr<XMLNode>                         dfs)
+  const std::string                                & params,
+  std::shared_ptr<XMLNode>                         dfs,
+  bool                                             directFile,
+  // Output for notifiers
+  std::vector<Record>                              & records,
+  std::vector<std::string>                         & files
+)
 {
   /** So myLookup "RadialSet" writer for example from the data type.
    * This allows algs etc to replace our IONetcdf with a custom if needed. */
@@ -264,13 +163,21 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   LogInfo("Netcdf settings: cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << "\n");
 
   // Open netcdf file
-  int ncid;
+  int ncid = -1;
 
-  // FIXME: should speed test this...
+  // Probably should be per builder...
+  // Our params represent an output file...
+  // bool useSubDirs = ConfigIODataType::getUseSubDirs();
+  bool useSubDirs = true; // Use subdirs
+  // Our params are either a direct filename or a directory
+  URL aURL = IODataType::generateFileName(dt, params, "netcdf", directFile, useSubDirs);
+  // NC_memio finalmem;
+  // size_t initialsize = 65000;
   try {
-    // NETCDF(nc_create(aURL.getPath().c_str(), NC_NETCDF4, &ncid));
+    // NETCDF(nc_create_mem("testing", NC_NETCDF4, initialsize, &ncid));
     NETCDF(nc_create(aURL.getPath().c_str(), ncflags, &ncid));
   } catch (const NetcdfException& ex) {
+    // nc_close_memio(ncid, &finalmem);
     nc_close(ncid);
     LogSevere("Netcdf create error: "
       << aURL.getPath() << " " << ex.getNetcdfStr() << "\n");
@@ -283,21 +190,23 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   try {
     successful = fmt->write(ncid, dt, dfs);
+    IODataType::generateRecord(dt, aURL, "netcdf", records, files);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");
   }
 
   nc_close(ncid);
+
   return successful;
 } // IONetcdf::encodeDataType
 
 /** Read call */
 std::shared_ptr<DataType>
-IONetcdf::createDataType(const URL& path)
+IONetcdf::createDataType(const std::string& params)
 {
-  // virtual to static call..bleh
-  return (IONetcdf::readNetcdfDataType(path));
+  // virtual to static call.  We only understand file URLS
+  return (IONetcdf::readNetcdfDataType(URL(params)));
 }
 
 /** Add multiple dimension variable and assign a units to it */

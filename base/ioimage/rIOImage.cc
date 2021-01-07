@@ -66,17 +66,24 @@ IOImage::readImageDataType(const URL& url)
 } // IOImage::readImageDataType
 
 std::shared_ptr<DataType>
-IOImage::createDataType(const URL& path)
+IOImage::createDataType(const std::string& params)
 {
   // virtual to static
-  return (IOImage::readImageDataType(path));
+  return (IOImage::readImageDataType(URL(params)));
 }
 
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                       & aURL,
-  std::shared_ptr<XMLNode>                        dfs)
+  const std::string                               & params,
+  std::shared_ptr<XMLNode>                        dfs,
+  bool                                            directFile,
+  // Output for notifiers
+  std::vector<Record>                             & records,
+  std::vector<std::string>                        & files
+)
 {
+  URL aURL(params);
+
   // Settings
   size_t cols      = 500;
   size_t rows      = 500;
@@ -195,8 +202,12 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     }
     i.syncPixels();
 
-    i.write(aURL.toString() + "." + suffix);
-    // FIXME: record?
+    // Our params are either a direct filename or a directory
+    bool useSubDirs = true; // Use subdirs
+    URL aURL        = IODataType::generateFileName(dt, params, suffix, directFile, useSubDirs);
+    i.write(aURL.toString());
+    // Make record
+    IODataType::generateRecord(dt, aURL, "image", records, files);
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");

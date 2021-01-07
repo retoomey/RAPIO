@@ -62,16 +62,21 @@ IOGDAL::readGDALDataType(const URL& url)
 } // IOGDAL::readGDALDataType
 
 std::shared_ptr<DataType>
-IOGDAL::createDataType(const URL& path)
+IOGDAL::createDataType(const std::string& params)
 {
   // virtual to static
-  return (IOGDAL::readGDALDataType(path));
+  return (IOGDAL::readGDALDataType(URL(params)));
 }
 
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                      & aURL,
-  std::shared_ptr<XMLNode>                       dfs)
+  const std::string                              & params,
+  std::shared_ptr<XMLNode>                       dfs,
+  bool                                           directFile,
+  // Output for notifiers
+  std::vector<Record>                            & records,
+  std::vector<std::string>                       & files
+)
 {
   // Settings
   size_t cols      = 500;
@@ -127,8 +132,9 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
    * const ColorMap& test = *colormap;
    */
 
-  // Isn't this leaking?
-  std::string outfile = aURL.toString() + ".tif";
+  bool useSubDirs     = true;
+  URL aURL            = IODataType::generateFileName(dt, params, "tif", directFile, useSubDirs);
+  std::string outfile = aURL.toString();
 
   GDALDriver * driverGeotiff = GetGDALDriverManager()->GetDriverByName(driver.c_str());
   if (driverGeotiff == nullptr) {
@@ -203,6 +209,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     GDALClose(geotiffDataset);
     //   CPLFree(rowBuff);
 
+    IODataType::generateRecord(dt, aURL, "gdal", records, files);
     // GDALDestroyDriverManager(); leaking?
   }catch (const std::exception& e)
   {

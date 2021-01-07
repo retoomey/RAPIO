@@ -88,7 +88,11 @@ FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
   for (size_t i = 1; i < s.size(); ++i) {
     filename << '_' << s[i];
   }
-  filename << ".fml";
+  // First part of multi-write.  I'm gonna to append the factory
+  // to the end of the fml filename.  This won't work for multiple
+  // records from a single writer
+  const std::vector<std::string>& p = rec.getBuilderParams();
+  filename << '_' << p[0] << ".fml";
 
   // Write record to tmp .fml file ------------------------------
   const std::string tmpfilename = myTempDir + filename.str();

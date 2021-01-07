@@ -175,37 +175,37 @@ Config::readGlobalConfigFile()
   auto doc = huntXML(file); // or maybe json
 
   if (doc == nullptr) {
-    LogSevere("Failed to find global configuration file: " << file << "\n");
+    LogSevere("Failed to find/read global configuration file: " << file << "\n");
   }
   return doc;
 }
 
-void
+bool
 Config::initialize()
 {
   // Set up all search files to configuration files
-  if (!setUpSearchPaths()) { exit(1); }
+  bool success = false;
 
-  // Attempt to read the required global configuration file
-  auto doc = readGlobalConfigFile();
-  if (doc == nullptr) {
-    exit(1);
-  }
-
-  // Now let registered classes search for either nodes in the
-  // global file, or individual files...
-  auto configs = Factory<ConfigType>::getAll();
-  bool success = true;
-  for (auto& i:configs) {
-    success &= i.second->readConfig(doc);
+  if (setUpSearchPaths()) {
+    // Attempt to read the required global configuration file
+    auto doc = readGlobalConfigFile();
+    if (doc != nullptr) {
+      // Now let registered classes search for either nodes in the
+      // global file, or individual files...
+      auto configs = Factory<ConfigType>::getAll();
+      success = true;
+      for (auto& i:configs) {
+        success &= i.second->readConfig(doc);
+      }
+    }
   }
 
   if (success == false) {
     LogSevere("Failed to read initial configurations due to missing or bad file format.\n");
     LogSevere(
-      "Set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION to help RAPIO find your configuation files.\n");
-    exit(1);
+      "Set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION to help RAPIO find your configuration files.\n");
   }
+  return success;
 } // Config::initialize
 
 std::string

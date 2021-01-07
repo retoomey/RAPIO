@@ -142,7 +142,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const URL& path) override;
+  createDataType(const std::string& param) override;
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<Array<float, 2> >
@@ -162,8 +162,13 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const URL                              & path,
-    std::shared_ptr<XMLNode>               dfs) override;
+    const std::string                      & params,
+    std::shared_ptr<XMLNode>               dfs,
+    bool                                   directFile,
+    // Output for notifiers
+    std::vector<Record>                    & records,
+    std::vector<std::string>               & files
+  ) override;
 
   virtual
   ~IOGrib();

@@ -27,9 +27,9 @@ public:
     const std::vector<std::string>     & selects,
     const rapio::Time                  & productTime);
 
-  /** Standard get filename from param list */
-  static URL
-  getFileName(const std::vector<std::string>& params);
+  /** Standard get the parameter string, or the non-builder part of the param list */
+  static std::string
+  getParamString(const std::vector<std::string>& params);
 
   /**
    * Create the object referenced by this record.

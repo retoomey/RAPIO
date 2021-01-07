@@ -30,11 +30,17 @@ public:
   // Reader stuff
   //
 
+  /** Last attempt to guess the encoder factory for a given path */
+  static std::shared_ptr<IODataType>
+  getFactory(
+    std::string& factory, const std::string& path, std::shared_ptr<DataType> dt);
+
   /** Factory: Read a data file object */
   template <class T> static std::shared_ptr<T>
   read(const URL& path, const std::string& factory = "")
   {
-    std::shared_ptr<DataType> dt = readDataType(path, factory);
+    // Note: We make it a string for the actual factories that are generic
+    std::shared_ptr<DataType> dt = readDataType(path.toString(), factory);
     if (dt != nullptr) {
       std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
       return dr;
@@ -44,21 +50,38 @@ public:
 
   /** Factory: Figure out how to read DataType from given path */
   static std::shared_ptr<DataType>
-  readDataType(const URL& path, const std::string& factory = "");
+  readDataType(const std::string& factoryparams, const std::string& factory = "");
 
 protected:
 
   /**
    * Subclasses create various data objects in various ways.
-   * @param url The URL to the data location.
+   * @param params The string from params, meaning depending on the builder,
+   * typically but not always a file.
    */
   virtual std::shared_ptr<DataType>
-  createDataType(const URL& url) = 0;
+  createDataType(const std::string& params) = 0;
 
   // ------------------------------------------------------------------------------------
   // Writer stuff
 
 public:
+
+  /** Generate a file name URL from datatype attributes and given suffix */
+  static URL
+  generateFileName(std::shared_ptr<DataType> dt,
+    const std::string                        & outputinfo,
+    const std::string                        & suffix,
+    bool                                     directFile,
+    bool                                     useSubDirs);
+
+  /** Generate a record based on URL */
+  static void
+  generateRecord(std::shared_ptr<DataType> dt,
+    const URL                              & pathin,
+    const std::string                      & factory,
+    std::vector<Record>                    & records,
+    std::vector<std::string>               & files);
 
   /**
    *  Chooses the correct data encoder for the particular data type,
@@ -67,18 +90,18 @@ public:
    *  filename generation
    */
   static bool
-  write(std::shared_ptr<DataType> dt, const URL& path,
+  write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     bool generateFileName,
     std::vector<Record>              & records,
     std::vector<std::string>         & files,
     const std::string& factory = "");
 
   /**
-   *  Write out to a set given path, ignore records.
+   *  Write out a datatype using outputinfo and factory.
    */
   static bool
   write(std::shared_ptr<DataType> dt,
-    const URL                     & path,
+    const std::string             & outputinfo,
     const std::string             & factory = "");
 
 protected:
@@ -86,8 +109,13 @@ protected:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const URL                              & path,
-    std::shared_ptr<XMLNode>               dfs){ return false; }
+    const std::string                      & params,
+    std::shared_ptr<XMLNode>               dfs,
+    bool                                   directFile,
+    // Output for notifiers
+    std::vector<Record>                    & records,
+    std::vector<std::string>               & files
+  ){ return false; }
 
 public:
 

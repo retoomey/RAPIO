@@ -19,7 +19,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const URL& path) override;
+  createDataType(const std::string& params) override;
 
   /** Split an XML file that contains a <signed> signature
    * tag at the end of the file into message and signature parts*/
@@ -33,8 +33,13 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const URL                              & path,
-    std::shared_ptr<XMLNode>               dfs) override;
+    const std::string                      & params,
+    std::shared_ptr<XMLNode>               dfs,
+    bool                                   directFile,
+    // Output for notifiers
+    std::vector<Record>                    & records,
+    std::vector<std::string>               & files
+  ) override;
 
   /** Write property tree to URL */
   static bool

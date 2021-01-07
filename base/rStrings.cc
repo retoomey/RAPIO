@@ -347,3 +347,44 @@ Strings::wrap(const std::string & inputin,
 
   return (count);
 } // Strings::wrap
+
+bool
+Strings::matchPattern(const std::string& pattern,
+  const std::string                    & tocheck,
+  std::string                          & star)
+{
+  // "*"    "Velocity" YES "Velocity"
+  // "Vel*" "Velocity" YES "ocity"
+  // "Vel*" "Ref"      NO  ""
+  // "Vel*" "Vel"      YES ""
+  // ""     "Velocity" NO  ""
+  // "Velocity" "VelocityOther" NO ""
+  //
+  bool match      = true;
+  bool starFound  = false;
+  const size_t pm = pattern.size();
+  const size_t cm = tocheck.size();
+
+  star = "";
+
+  for (size_t i = 0; i < pm; i++) {
+    if (pattern[i] == '*') { // Star found...
+      starFound = true;
+      match     = true;
+
+      if (cm > i) { star = tocheck.substr(i); } break;
+    } else if (pattern[i] != tocheck[i]) { // character mismatch
+      match = false;
+      break;
+    }
+  }
+
+  // Ok if no star found should be _exact_ match
+  // ie "Velocity" shouldn't match "VelocityOther" or "VelocityOther2"
+  // but was good for "Velocity*" to match...
+  if (!starFound && (cm > pm)) { // We checked up to length already
+    match = false;
+  }
+
+  return (match);
+} // Strings::matchPattern

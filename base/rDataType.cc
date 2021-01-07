@@ -38,8 +38,8 @@ DataType::formatString(float spec,
   return (buf);
 }
 
-bool
-DataType::getSubType(std::string& result) const
+std::string
+DataType::getSubType() const
 {
   std::string subtype;
   // Record calls setDataAttributeValue to set value/unit,
@@ -51,13 +51,11 @@ DataType::getSubType(std::string& result) const
 
   if (!subtype.empty()) {
     if (subtype != "NoPRI") { // Special case
-      result = subtype;
-      return (true);
+      return subtype;
     }
   }
 
-  result = getGeneratedSubtype();
-  return (false);
+  return (getGeneratedSubtype());
 }
 
 void

@@ -11,8 +11,11 @@ using namespace rapio;
 
 /** Read call */
 std::shared_ptr<DataType>
-IOJSON::createDataType(const URL& url)
+IOJSON::createDataType(const std::string& params)
 {
+  // We only read file/url
+  const URL url(params);
+
   std::shared_ptr<DataType> datatype = nullptr;
   std::vector<char> buf;
 
@@ -39,10 +42,18 @@ IOJSON::writeURL(
 
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
-  const URL                                      & aURL,
-  std::shared_ptr<XMLNode>                       dfs)
+  const std::string                              & params,
+  std::shared_ptr<XMLNode>                       dfs,
+  bool                                           directFile,
+  // Output for notifiers
+  std::vector<Record>                            & records,
+  std::vector<std::string>                       & files
+)
 {
   bool successful = false;
+
+  bool useSubDirs = true; // Use subdirs
+  URL aURL        = IODataType::generateFileName(dt, params, "json", directFile, useSubDirs);
 
   try{
     std::shared_ptr<JSONData> json = std::dynamic_pointer_cast<JSONData>(dt);
@@ -50,6 +61,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
     if (json != nullptr) {
       writeURL(aURL, json, true, false);
       successful = true;
+      IODataType::generateRecord(dt, aURL, "json", records, files);
     }
   }catch (const std::exception& e) {
     LogSevere("JSON create error: "

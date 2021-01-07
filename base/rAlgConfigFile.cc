@@ -114,7 +114,7 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   root->addNode("w2algxml", w2algxml);
 
   // Write document tree
-  return (IODataType::write(tree, path));
+  return (IODataType::write(tree, path.toString()));
 } // AlgXMLConfigFile::writeConfigURL
 
 bool

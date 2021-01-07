@@ -42,7 +42,7 @@ public:
   introduceSelf();
 
   /** Initialize configuration by setting up search paths */
-  static void
+  static bool
   initialize();
 
   /** Initial set up of global configuration search paths */

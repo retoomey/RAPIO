@@ -81,8 +81,8 @@ public:
   }
 
   /** Get subtype for writing */
-  bool
-  getSubType(std::string& result) const;
+  std::string
+  getSubType() const;
 
   /** Generated subtype for outputting from empty */
   virtual std::string
