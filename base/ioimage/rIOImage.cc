@@ -7,14 +7,15 @@
 #include "rColorMap.h"
 #include "rImageDataTypeImp.h"
 
-// GraphicMagick in centos/fedora
-// Not 100% sure yet we'll stick to this library,
-// will expand a bit before making a requirement
-// /usr/include/GraphicsMagick/Magick++.h
-#include <GraphicsMagick/Magick++.h>
+// GraphicMagick or ImageMagick in centos/fedora
+#if HAVE_MAGICK
+# include <Magick++.h>
+using namespace Magick;
+#else
+# warning "GraphicsMagick or ImageMagick libraries not found, currently ioimage will be disabled"
+#endif
 
 using namespace rapio;
-using namespace Magick;
 
 // Library dynamic link to create this factory
 extern "C"
@@ -121,10 +122,15 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
   static bool setup = false;
   if (!setup) {
+    #if HAVE_MAGICK
     InitializeMagick(NULL);
+    #else
+    LogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out\n");
+    #endif
     setup = true;
   }
 
+  #if HAVE_MAGICK
   // For the moment, always have a color map, even if missing...
   static std::shared_ptr<ColorMap> colormap;
   if (colormap == nullptr) {
@@ -213,5 +219,6 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     LogSevere("Exception write testing image output " << e.what() << "\n");
   }
 
+  #endif // if HAVE_MAGICK
   return false;
 } // IOImage::encodeDataType

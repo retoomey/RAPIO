@@ -6,15 +6,17 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
-#!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!
-# Comment out the following line when make distribution
 AC_DISABLE_STATIC
 
 if test "x$CXXFLAGS" = "x"; then
     CXXFLAGS="-Wall -O2 -ftemplate-depth-1024 -finline-functions"
 fi
-
 AC_SUBST(CXXFLAGS)
+
+dnl ---------------------------------------------------------------------------
+dnl Check if GraphicsMagick library is available.
+dnl ---------------------------------------------------------------------------
+MAGICK_INIT()
 
 AC_PROG_CC
 AC_PROG_CXX
