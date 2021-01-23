@@ -7,7 +7,7 @@ lib_LTLIBRARIES =\
 # MRMS builder makes a lib folder one up from us with all the extra libraries
 # we use.
 librapio_la_LIBADD =\
-   -L@prefix@/lib -lboost_system
+   -L@prefix@/lib -lboost_system -lcurl -ludunits2 -lbz2 -ljasper -lpng -lboost_log -lboost_log_setup -lboost_thread -lpthread -lboost_filesystem -lboost_serialization -lboost_iostreams
 
 librapio_la_SOURCES =\
   rArray.cc\

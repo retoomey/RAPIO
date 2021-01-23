@@ -54,6 +54,8 @@ dnl if $1 is present, only use it.  Otherwise search all through $2
     wfl_search_path="$2"
   fi
 
+  found_suffix=''
+
 dnl  first try with wfl_suffix_1
   for lib in "$3"
   do
@@ -64,6 +66,7 @@ dnl  first try with wfl_suffix_1
       if test -n "$found_dir"
       then
         found_base=$file
+        found_suffix=$wfl_suffix_1
       fi
     fi
   done
@@ -80,6 +83,7 @@ dnl if not found with wfl_suffix_1, try wfl_suffix_2
         if test -n "$found_dir"
         then
           found_base=$file
+          found_suffix=$wfl_suffix_2
         fi
       fi
     done
@@ -87,7 +91,13 @@ dnl if not found with wfl_suffix_1, try wfl_suffix_2
 
   if test -n "$found_base"
   then
-    $4="$found_dir/$found_base"
+dnl  For dynamic librarys it doesn't work to do /path/lib.so
+    if [ test "$found_suffix" = ".so" ]
+    then
+      $4="-L$found_dir -l$3"
+    else
+      $4="$found_dir/$found_base"
+    fi
     echo "  $4: $$4"
   fi
 ])

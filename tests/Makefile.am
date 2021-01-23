@@ -10,5 +10,5 @@ testrapio_SOURCES =\
    rTestURL.cc
 
 testrapio_LDADD = \
-   -L../base/ -L../../lib -lboost_system -lrapio -lcurl -lnetcdf -ludunits2 -lbz2 -ljasper -lpng -lboost_system -lboost_log -lboost_log_setup -lboost_thread -lpthread -lboost_filesystem -lboost_serialization -lboost_iostreams -lboost_unit_test_framework
+   -L../base/ -L../../lib -lrapio -lboost_unit_test_framework
 
