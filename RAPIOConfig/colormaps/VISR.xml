@@ -1,0 +1,93 @@
+<colorMap>
+
+ <!-- transparent black for values less than 0 -->
+ <colorBin upperBound="0">
+   <color r="0x00" g="0x00" b="0x00" a="0x00"></color>
+ </colorBin>
+
+ <!-- linear interpolation of shades of gray -->
+ <colorBin upperBound="15">
+   <color r="0x00" g="0x00" b="0x00" a="0xff"></color>
+   <color r="0x11" g="0x11" b="0x11" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="31">
+   <color r="0x11" g="0x11" b="0x11" a="0xff"></color>
+   <color r="0x22" g="0x22" b="0x22" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="47">
+   <color r="0x22" g="0x22" b="0x22" a="0xff"></color>
+   <color r="0x33" g="0x33" b="0x33" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="63">
+   <color r="0x33" g="0x33" b="0x33" a="0xff"></color>
+   <color r="0x44" g="0x44" b="0x44" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="79">
+   <color r="0x44" g="0x44" b="0x44" a="0xff"></color>
+   <color r="0x55" g="0x55" b="0x55" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="95">
+   <color r="0x55" g="0x55" b="0x55" a="0xff"></color>
+   <color r="0x66" g="0x66" b="0x66" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="111">
+   <color r="0x66" g="0x66" b="0x66" a="0xff"></color>
+   <color r="0x77" g="0x77" b="0x77" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="127">
+   <color r="0x77" g="0x77" b="0x77" a="0xff"></color>
+   <color r="0x88" g="0x88" b="0x88" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="143">
+   <color r="0x88" g="0x88" b="0x88" a="0xff"></color>
+   <color r="0x99" g="0x99" b="0x99" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="159">
+   <color r="0x99" g="0x99" b="0x99" a="0xff"></color>
+   <color r="0xaa" g="0xaa" b="0xaa" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="175">
+   <color r="0xaa" g="0xaa" b="0xaa" a="0xff"></color>
+   <color r="0xbb" g="0xbb" b="0xbb" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="191">
+   <color r="0xbb" g="0xbb" b="0xbb" a="0xff"></color>
+   <color r="0xcc" g="0xcc" b="0xcc" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="207">
+   <color r="0xcc" g="0xcc" b="0xcc" a="0xff"></color>
+   <color r="0xdd" g="0xdd" b="0xdd" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="223">
+   <color r="0xdd" g="0xdd" b="0xdd" a="0xff"></color>
+   <color r="0xee" g="0xee" b="0xee" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="239">
+   <color r="0xee" g="0xee" b="0xee" a="0xff"></color>
+   <color r="0xff" g="0xff" b="0xff" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="255">
+   <color r="0xff" g="0xff" b="0xff" a="0xff"></color>
+ </colorBin>
+
+ <colorBin upperBound="infinity" name="&gt;256">
+   <color r="0x00" g="0x00" b="0x00" a="0xff"></color>
+ </colorBin>
+
+
+</colorMap>

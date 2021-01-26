@@ -4,8 +4,34 @@
 #include "rURL.h"
 #include "rIOXML.h"
 #include "rIOURL.h"
+#include "rConfig.h"
 
 using namespace rapio;
+
+std::map<std::string, std::shared_ptr<ColorMap> > ColorMap::myColorMaps;
+
+std::shared_ptr<ColorMap>
+ColorMap::getColorMap(const std::string& key)
+{
+  std::shared_ptr<ColorMap> colormap;
+
+  auto lookup = myColorMaps.find(key);
+  if (lookup == myColorMaps.end()) {
+    URL find = Config::getConfigFile("colormaps/" + key + ".xml");
+    if (find != "") {
+      colormap = ColorMap::readColorMap(find.toString());
+    }
+    if (colormap == nullptr) { // ALWAYS return a color map
+      LogSevere("LINEAR!\n");
+      exit(1);
+      colormap = std::make_shared<LinearColorMap>();
+    }
+    myColorMaps[key] = colormap;
+  } else {
+    colormap = lookup->second;
+  }
+  return colormap;
+}
 
 // Factory default color map read/creation
 std::shared_ptr<ColorMap>
@@ -68,15 +94,25 @@ ColorMap::readColorMap(const URL& url)
             // These will default to white if missing
             // I don't consider this super critical, since user will see it visually
             // and know to fix the color map
-            c1.r = colors[0].getAttr("r", (unsigned char) 0xff);
-            c1.g = colors[0].getAttr("g", (unsigned char) 0xff);
-            c1.b = colors[0].getAttr("b", (unsigned char) 0xff);
-            c1.a = colors[0].getAttr("a", (unsigned char) 0xff);
+            std::string s;
+            s    = colors[0].getAttr("r", (std::string) "0xFF");
+            c1.r = strtol(s.c_str(), NULL, 0);
+            s    = colors[0].getAttr("b", (std::string) "0xFF");
+            c1.b = strtol(s.c_str(), NULL, 0);
+            s    = colors[0].getAttr("g", (std::string) "0xFF");
+            c1.g = strtol(s.c_str(), NULL, 0);
+            s    = colors[0].getAttr("a", (std::string) "0xFF");
+            c1.a = strtol(s.c_str(), NULL, 0);
             if (colors.size() > 1) {
-              c2.r = colors[1].getAttr("r", (unsigned char) 0xff);
-              c2.g = colors[1].getAttr("g", (unsigned char) 0xff);
-              c2.b = colors[1].getAttr("b", (unsigned char) 0xff);
-              c2.a = colors[1].getAttr("a", (unsigned char) 0xff);
+              std::string s;
+              s    = colors[1].getAttr("r", (std::string) "0xFF");
+              c2.r = strtol(s.c_str(), NULL, 0);
+              s    = colors[1].getAttr("b", (std::string) "0xFF");
+              c2.b = strtol(s.c_str(), NULL, 0);
+              s    = colors[1].getAttr("g", (std::string) "0xFF");
+              c2.g = strtol(s.c_str(), NULL, 0);
+              s    = colors[1].getAttr("a", (std::string) "0xFF");
+              c2.a = strtol(s.c_str(), NULL, 0);
             } else {
               c2 = c1;
             }

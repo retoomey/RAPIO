@@ -223,3 +223,20 @@ RadialSet::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, c
   Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
   return true;
 }
+
+bool
+RadialSet::LLCoverageFull(size_t& numRows, size_t& numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // There isn't really a 'full' for radialset...so use some defaults
+  numRows = 1000;
+  numCols = 1000;
+  double degreeOut = 10;
+
+  // Our center location is the standard location
+  const auto lonc = myLocation.getLongitudeDeg();
+  const auto latc = myLocation.getLatitudeDeg();
+
+  Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
+  return true;
+}

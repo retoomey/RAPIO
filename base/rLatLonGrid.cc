@@ -1,4 +1,5 @@
 #include "rLatLonGrid.h"
+#include "rProject.h"
 
 using namespace rapio;
 using namespace std;
@@ -155,4 +156,56 @@ LatLonGrid::updateGlobalAttributes(const std::string& encoded_type)
   // LatLonGrid only global attributes
   myAttributes->put<double>("LatGridSpacing", myLatSpacing);
   myAttributes->put<double>("LonGridSpacing", myLonSpacing);
+}
+
+double
+LatLonGrid::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
+{
+  const auto latnw = myLocation.getLatitudeDeg();
+  double x         = (latnw - latDegs) / myLatSpacing;
+
+  if (x < 0) { return Constants::MissingData; }
+
+  const auto lonnw = myLocation.getLongitudeDeg();
+  double y         = (lonDegs - lonnw) / myLonSpacing;
+  if (y < 0) { return Constants::MissingData; }
+
+  const size_t i = (size_t) (abs(x));
+  if (i < getNumLats()) {
+    const size_t j = (size_t) (abs(y));
+    if (j < getNumLons()) {
+      auto& data = getFloat2D(layer.c_str())->ref();
+      return data[i][j];
+    }
+  }
+
+  return Constants::MissingData;
+}
+
+bool
+LatLonGrid::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // location is the top left, find the absolute center (for x, y > 0)
+  const auto lonc = (myLocation.getLongitudeDeg()) + (myLonSpacing * getNumLons() / 2.0);
+  const auto latc = (myLocation.getLatitudeDeg()) - (myLatSpacing * getNumLats() / 2.0);
+
+  Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
+  return true;
+}
+
+bool
+LatLonGrid::LLCoverageFull(size_t& numRows, size_t& numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // FIXME: Full is doing angle then back to index which is inefficient
+  // I could see this for doing scaling but maybe for a 'full' we have
+  // a wrapper of some sort  (we can just loop in x/y)
+  numRows      = getNumLats();
+  numCols      = getNumLons();
+  topDegs      = myLocation.getLatitudeDeg();
+  leftDegs     = myLocation.getLongitudeDeg();
+  deltaLatDegs = -myLatSpacing;
+  deltaLonDegs = myLonSpacing;
+  return true;
 }

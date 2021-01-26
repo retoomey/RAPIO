@@ -12,9 +12,8 @@
 #include <memory>
 
 namespace rapio {
-class Time;
 class TimeDuration;
-class LLH;
+class ColorMap;
 
 typedef NamedAnyList DataAttributeList;
 
@@ -156,6 +155,15 @@ public:
   virtual bool
   LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+
+  /** Calculate maximum suggested Lat Lon coverage marching grid */
+  virtual bool
+  LLCoverageFull(size_t& numRows, size_t& numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+
+  /** Get the ColorMap for converting values to colors */
+  virtual std::shared_ptr<ColorMap>
+  getColorMap();
 
 
 protected:

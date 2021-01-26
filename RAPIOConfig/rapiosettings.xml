@@ -41,10 +41,13 @@ Information needed:
      suffix: Imagick magic file ending such as png, tif, jpg
              The suffix is how Imagick chooses its file output format 
      FIXME: Add more settings and tile settings and ability
-     degrees: Degrees out from datatype center to create a Lat Lon coverage
+     mode:   "degrees" Degree out from center degrees
+                 degrees: The degrees out from center point of data
+             "full" Use full extent, row cols of data (For example, full LatLonGrid )
 -->
   <io names="image" module="librapioimage.so">
-    <output suffix="png" cols="500" rows="500" degrees="1"/>
+    <!--output mode="degree" suffix="png" cols="500" rows="500" degrees="1"-->
+    <output mode="full" suffix="png" />
   </io>
 
 <!-- GDAL module

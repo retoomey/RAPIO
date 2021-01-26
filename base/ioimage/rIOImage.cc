@@ -83,17 +83,20 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::vector<std::string>                        & files
 )
 {
-  URL aURL(params);
+  // ----------------------------------------------------
+  // FIXME: These settings duplicate a lot with other modules
+  // like the GDAL one.  But in theory each module can have
+  // completely unique settings. Debating on pulling this
+  // into common code
 
   // Settings
   size_t cols      = 500;
   size_t rows      = 500;
   size_t degreeOut = 10.0;
 
-  // The Imagick format/ending/etc.
-  // FIXME: IODatatype does directory/file naming stuff so
-  // we get a double ending at moment..will refactor
+  std::string mode   = "full";
   std::string suffix = "png";
+
   if (dfs != nullptr) {
     try{
       auto output = dfs->getChild("output");
@@ -103,22 +106,30 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
       // this will enhance or change for a static grid
       degreeOut = output.getAttr("degrees", size_t(degreeOut));
       suffix    = output.getAttr("suffix", suffix);
+      mode      = output.getAttr("mode", suffix);
     }catch (const std::exception& e) {
       LogSevere("Unrecognized settings, using defaults\n");
     }
   }
-  LogInfo(
-    "Image writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << " filetype:" << suffix << "\n");
 
   DataType& r = *dt;
   float top, left, deltaLat, deltaLon;
-  if (!r.LLCoverageCenterDegree(degreeOut, rows, cols,
-    top, left, deltaLat, deltaLon))
-  {
-    LogSevere("Don't know how to create a coverage grid for this datatype.\n");
+
+  bool optionSuccess = false;
+  if (mode == "full") {
+    optionSuccess = r.LLCoverageFull(rows, cols, top, left, deltaLat, deltaLon);
+  } else if (mode == "degrees") {
+    optionSuccess = r.LLCoverageCenterDegree(degreeOut, rows, cols, top, left, deltaLat, deltaLon);
+  }
+
+  if (!optionSuccess) {
+    LogSevere("Don't know how to create a coverage grid for this datatype using mode '" << mode << "'.\n");
     return false;
   }
   // ----------------------------------------------------
+
+  LogInfo(
+    "Image writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << " filetype:" << suffix << "\n");
 
   static bool setup = false;
   if (!setup) {
@@ -131,40 +142,10 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   #if HAVE_MAGICK
-  // For the moment, always have a color map, even if missing...
-  static std::shared_ptr<ColorMap> colormap;
-  if (colormap == nullptr) {
-    colormap = ColorMap::readColorMap("/home/dyolf/Reflectivity.xml");
-    if (colormap == nullptr) {
-      colormap = std::make_shared<LinearColorMap>();
-    }
-  }
+  auto colormap        = r.getColorMap();
   const ColorMap& test = *colormap;
 
-  // Calculate the lat lon 'box' of the image using sizes, etc.
-  // Kinda of a pain actually.
   const auto centerLLH = r.getLocation();
-
-  // DataType: getLatLonCoverage?  (default for RadialSet could be the degree thing?)
-
-  // North America.  FIXME: General lat/lon box creator function
-  // Latitude decreases as you go south
-  // Longitude decreases as you go east
-  // Ok we need a fixed aspect for non-square images...use the
-  // long for the actual width
-
-  /*  auto lon      = centerLLH.getLongitudeDeg();
-   * auto left     = lon - degreeOut;
-   * auto right    = lon + degreeOut;
-   * auto width    = right - left;
-   * auto deltaLon = width / cols;
-   *
-   * // To keep aspect ratio per cell, use deltaLon to back calculate
-   * auto deltaLat = -deltaLon; // keep the same square per pixel
-   * auto lat      = centerLLH.getLatitudeDeg();
-   * auto top      = lat - (deltaLat * rows / 2.0);
-   */
-
   try{
     // FIXME: Is there a way to create without 'begin' fill, would be faster
     // Magick::Image i(Magick::Geometry(cols, rows)); Fails missing file?
@@ -187,20 +168,15 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
         // We'll do API over speed very slightly here, allow generic lat/lon pull ability
         const double v = r.getValueAtLL(startLat, startLon);
 
-        // Current color mapping... FIXME: Full color map ability from wg2 ported next
-        if (v == Constants::MissingData) {
-          *pixel = Magick::Color("blue");
-        } else {
-          // Ok let's linearly map red to 'strength' of DbZ for POC
-          // working at moment with any fancy color mapping
-          // Magick::ColorRGB cc = Magick::ColorRGB(c.r/255.0, c.g/255.0, c.b/255.0);
-          // FIXME: Flush out color map ability
-          unsigned char r, g, b, a;
-          test.getColor(v, r, g, b, a);
-          Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
-          *pixel = cc;
-          // FIXME: transparent ability? if (transparent) {cc.alpha((255.0-c.a)/255.0); }
-        }
+        // if (v == Constants::MissingData) {
+        //  *pixel = Magick::Color("blue");
+        // } else {
+        unsigned char r, g, b, a;
+        test.getColor(v, r, g, b, a);
+        Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
+        *pixel = cc;
+        // FIXME: transparent ability? if (transparent) {cc.alpha((255.0-c.a)/255.0); }
+        // }
         startLon += deltaLon;
         pixel++;
       }

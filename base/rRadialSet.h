@@ -98,6 +98,11 @@ public:
   LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
 
+  /** Calculate maximum suggested Lat Lon coverage marching grid */
+  virtual bool
+  LLCoverageFull(size_t& numRows, size_t& numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
 protected:
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;

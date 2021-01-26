@@ -81,24 +81,12 @@ public:
 class ColorMap : public Utility
 {
 public:
-  // Should we link to datatype?  Or just a name?  Only certain datatypes
-  // have the attribute for a color map, some may be different than others.
-  // should a colormap function exist for ALL datatype objects?
-  // DataType right now is just 'data' with a location and time reference...
-  // but is this fundamental?  Could we generalize the usage of the time/
-  // location within the datatype, allowing different 'ways' of indexing...
 
-  // We need a 'cache' based on a key to colormap so we don't keep rereading it
-  // or do we cache by caller.  Humm
-  // std::map<std::string, ColorMap> myColormaps;
+  // Static ability for getting colormaps, etc.
 
-  // playing with ideas here
-  // datatype --> bool haveColorMapName(std::string& name);
-  //
-  // There's reading a URL vs having config hunt for it.  We need to
-  // generalize this I think.  There are cases for either one.
-  // Could be use a special URL format for configuration hunting? lol
-  // this could generalize it. Or a URL subsetting 'huntConfig = true'
+  /** Get cached color map from a key */
+  static std::shared_ptr<ColorMap>
+  getColorMap(const std::string& key);
 
   /** First attempt just read it */
   static std::shared_ptr<ColorMap>
@@ -109,6 +97,11 @@ public:
 
   // first hack
   std::map<double, ColorBin> myValues;
+
+  // We need a 'cache' based on a key to colormap so we don't keep rereading it
+  // or do we cache by caller.  Humm
+private:
+  static std::map<std::string, std::shared_ptr<ColorMap> > myColorMaps;
 };
 
 class LinearColorMap : public ColorMap

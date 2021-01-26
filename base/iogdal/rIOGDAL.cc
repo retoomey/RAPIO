@@ -83,8 +83,10 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   size_t rows      = 500;
   size_t degreeOut = 10.0;
 
+  std::string mode   = "full";
   std::string suffix = "tif";
   std::string driver = "GTiff";
+
   if (dfs != nullptr) {
     try{
       auto output = dfs->getChild("output");
@@ -95,20 +97,29 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
       degreeOut = output.getAttr("degrees", degreeOut);
       suffix    = output.getAttr("suffix", suffix);
       driver    = output.getAttr("driver", driver);
+      mode      = output.getAttr("mode", suffix);
     }catch (const std::exception& e) {
       LogSevere("Unrecognized settings, using defaults\n");
     }
   }
-  LogInfo("GDAL writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << "\n");
 
   DataType& r = *dt;
   float top, left, deltaLat, deltaLon;
-  if (!r.LLCoverageCenterDegree(degreeOut, rows, cols,
-    top, left, deltaLat, deltaLon))
-  {
-    LogSevere("Don't know how to create a coverage grid for this datatype.\n");
+
+  bool optionSuccess = false;
+  if (mode == "full") {
+    optionSuccess = r.LLCoverageFull(rows, cols, top, left, deltaLat, deltaLon);
+  } else if (mode == "degrees") {
+    optionSuccess = r.LLCoverageCenterDegree(degreeOut, rows, cols, top, left, deltaLat, deltaLon);
+  }
+
+  if (!optionSuccess) {
+    LogSevere("Don't know how to create a coverage grid for this datatype using mode '" << mode << "'.\n");
     return false;
   }
+  // ----------------------------------------------------
+
+  LogInfo("GDAL writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << "\n");
 
   static bool setup = false;
   if (!setup) {

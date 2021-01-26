@@ -92,6 +92,20 @@ public:
   virtual void
   updateGlobalAttributes(const std::string& encoded_type) override;
 
+  /** Get value at a lat lon for a given layer */
+  virtual double
+  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = "primary") override;
+
+  /** Calculate Lat Lon coverage marching grid from spatial center */
+  virtual bool
+  LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
+  /** Calculate maximum suggested Lat Lon coverage marching grid */
+  virtual bool
+  LLCoverageFull(size_t& numRows, size_t& numCols,
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
 protected:
 
   // This is projection information.  Basically HOW the 2D data

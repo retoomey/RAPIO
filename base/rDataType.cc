@@ -6,6 +6,7 @@
 #include "rUnit.h"
 #include "rLLH.h"
 #include "rStrings.h"
+#include "rColorMap.h"
 
 using namespace rapio;
 
@@ -126,3 +127,16 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
   }
   myAttributes->put<std::string>("attributes", attributes);
 } // DataType::updateGlobalAttributes
+
+std::shared_ptr<ColorMap>
+DataType::getColorMap()
+{
+  // First try the ColorMap-value attribute...Some MRMS netcdf files have this
+  auto f = myAttributes->get<std::string>("ColorMap-value");
+
+  if (f) {
+    return ColorMap::getColorMap(*f);
+  }
+  // Second go to typename such as Reflectivity
+  return ColorMap::getColorMap(getTypeName());
+}
