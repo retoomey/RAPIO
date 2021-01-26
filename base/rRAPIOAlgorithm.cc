@@ -153,6 +153,7 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
     std::vector<std::string> pair;
     Strings::splitWithoutEnds(w, '=', &pair);
     const size_t aSize = pair.size();
+
     if (aSize == 1) {
       // Use blank factory, the system will try to guess from
       // extension or the loaded datatype
@@ -789,18 +790,23 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
                         << "'\n");
     std::string typeName = outputData->getTypeName(); // Old one...
     outputData->setTypeName(newProductName);
-    std::vector<Record> records;
-    std::vector<std::string> files;
 
     // Can call write multiple times for each output wanted.
     for (auto& w:myWriters) {
-      IODataType::write(outputData, w.outputinfo, false, records, files, w.factory);
+      std::vector<Record> records;
+      std::vector<std::string> files;
+      IODataType::write(outputData, w.outputinfo, false, records, w.factory);
+
+      // Notify each notifier for each writer.
+      // FIXME: Need a filter in -n to allow not calling?
+      for (auto& n:myNotifiers) {
+        // FIXME: For now assuming outputinfo is always a directory.
+        // netcdf=/folder1 image=/folder2 gdal=/folder3
+        // fml=/override
+        n->writeRecords(w.outputinfo, records);
+      }
     }
 
-    // Call notifiers
-    for (auto& n:myNotifiers) {
-      n->writeRecords(records, files);
-    }
     outputData->setTypeName(typeName); // Restore old type name
                                        // not overridden.  Probably
                                        // doesn't matter.

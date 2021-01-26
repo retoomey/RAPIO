@@ -18,7 +18,7 @@ std::string
 EXERecordNotifier::getHelpString(const std::string& fkey)
 {
   return
-    "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with final filename.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
+    "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with the record param list.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
 }
 
 void
@@ -47,13 +47,19 @@ EXERecordNotifier::~EXERecordNotifier()
 { }
 
 void
-EXERecordNotifier::writeRecord(const Record& rec, const std::string& file)
+EXERecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
 {
   if (!rec.isValid()) { return; }
 
   // FIXME: More advanced ability at some point
   // I'm just calling system and background at moment
-  std::string command = myExe + ' ' + file;
-  command += " &"; // shell background
-  system(command.c_str());
+  auto params = rec.getBuilderParams();
+  if (params.size() > 1) {
+    std::string command = myExe;
+    for (auto p: params) { // Let the script/exe have all the params
+      command += ' ' + p;  // FIXME: Harden..what if param has a shell character in it.
+    }
+    command += " &"; // shell background
+    system(command.c_str());
+  }
 } // EXERecordNotifier::writeRecord

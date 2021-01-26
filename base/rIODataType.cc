@@ -118,8 +118,7 @@ void
 IODataType::generateRecord(std::shared_ptr<DataType> dt,
   const URL                                          & pathin,
   const std::string                                  & factory,
-  std::vector<Record>                                & records,
-  std::vector<std::string>                           & files
+  std::vector<Record>                                & records
 )
 {
   std::string dirpath   = pathin.getDirName();
@@ -162,10 +161,6 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
   }
   Record rec(params, selections, rsTime);
   records.push_back(rec);
-  // Final written file path.  Doing it this way
-  // in case we move or compress later
-  URL path = URL(filepath);
-  files.push_back(path.toString());
 } // IODataType::generateRecord
 
 // -----------------------------------------------------------------------------------------
@@ -177,7 +172,6 @@ IODataType::write(std::shared_ptr<DataType> dt,
   const std::string                         & outputinfo,
   bool                                      directFile,
   std::vector<Record>                       & records,
-  std::vector<std::string>                  & files,
   const std::string                         & factory)
 {
   // 1. Get the factory for this output
@@ -190,13 +184,12 @@ IODataType::write(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode> dfs = ConfigIODataType::getSettings(f);
 
   // 4. Output file and generate records
-  return (encoder->encodeDataType(dt, outputinfo, dfs, directFile, records, files));
+  return (encoder->encodeDataType(dt, outputinfo, dfs, directFile, records));
 } // IODataType::write
 
 bool
 IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, const std::string& factory)
 {
   std::vector<Record> blackHole;
-  std::vector<std::string> files;
-  return write(dt, outputinfo, true, blackHole, files, factory); // Default write single file
+  return write(dt, outputinfo, true, blackHole, factory); // Default write single file
 }

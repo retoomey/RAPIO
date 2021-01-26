@@ -23,7 +23,7 @@ std::string
 FMLRecordNotifier::getHelpString(const std::string& fkey)
 {
   return
-    "Write fml file to directory for each new record.\n  Example: fml=/output  Example: fml= Write to {OutputDir}/code_index.fam";
+    "Write fml file to directory for each new record.\n  Example: fml=/output to have ALL writers write fml records to that directory.\n  Example: fml= Write to {OutputDir}/code_index.fam for each writer's path.  So image=myimages would write to myimages/code_index.fam and netcdf=mynetcdf would write to mynetcdf/code_index.fam";
 }
 
 void
@@ -38,34 +38,30 @@ FMLRecordNotifier::introduceSelf()
 void
 FMLRecordNotifier::initialize(const std::string& params, const std::string& datalocation)
 {
-  // Default when given notify output location is empty
-  if (params.empty()) {
-    myOutputDir = URL(datalocation).getPath();
-    myIndexPath = IOIndex::getIndexPath(myOutputDir);
-    myOutputDir = myOutputDir + "/code_index.fam/";
-  } else {
+  if (!params.empty()) {
+    // Override with params as assumed directory.
+    // FIXME: override path will affect ALL writers.  We could extend the parameter
+    // to allow putting different writers in different places.
     myOutputDir = URL(params).getPath();
-    myIndexPath = IOIndex::getIndexPath(myOutputDir);
+  } else {
+    myOutputDir = ""; // Just to make it clear
   }
-
-  myTempDir = myOutputDir + "/.working/"; // For file 'locking'
-  myURL     = myOutputDir;
 }
 
 bool
-FMLRecordNotifier::makeDirectories()
+FMLRecordNotifier::makeDirectories(const std::string& outdir, const std::string& tempdir)
 {
   bool success = true;
 
   // Make sure directory created
-  if (!OS::mkdirp(myTempDir)) { // only one mkdirp since temp is subfolder
+  if (!OS::mkdirp(tempdir)) { // only one mkdirp since temp is subfolder
     LogSevere("Couldn't access/create fml directory: "
-      << myTempDir << " so we can't notify!\n");
+      << tempdir << " so we can't notify!\n");
     success = false;
   }
-  if (!Strings::beginsWith(myTempDir, myOutputDir)) { // Not a subfolder
-    if (!OS::mkdirp(myOutputDir)) {
-      LogSevere("Couldn't access/create fml directory: " << myOutputDir << " so we can't notify!\n");
+  if (!Strings::beginsWith(tempdir, outdir)) { // Not a subfolder
+    if (!OS::mkdirp(outdir)) {
+      LogSevere("Couldn't access/create fml directory: " << outdir << " so we can't notify!\n");
       success = false;
     }
   }
@@ -77,9 +73,31 @@ FMLRecordNotifier::~FMLRecordNotifier()
 
 
 void
-FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
+FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
 {
   if (!rec.isValid()) { return; }
+
+  // We assume the outputinfo is a directory.  Override with myOutputDir if requested
+  // on the notifier param line:
+  std::string outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
+  outputDir += "/";
+
+  // Find the macro indexLocation from cache or create it
+  // We have to check this each time because the output directory
+  // can be different for each writer.  We can cache per output path though
+  std::string indexLocation;
+  auto indexPath = myIndexPaths.find(outputDir);
+  if (indexPath == myIndexPaths.end()) {
+    indexLocation = myIndexPaths[outputDir] = IOIndex::getIndexPath(outputDir);
+  } else {
+    indexLocation = indexPath->second;
+  }
+
+  // Append code_index.fam if it's default directory
+  // FIXME: I think it's correct to add after the indexpath lookup...should confirm this
+  if (myOutputDir.empty()) {                   // Not a forced location to write to...
+    outputDir = outputDir + "code_index.fam/"; // ...then put in subfolder of default output
+  }
 
   // Construct fml filename from the selections string
   const std::vector<std::string>& s = rec.getSelections();
@@ -88,6 +106,7 @@ FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
   for (size_t i = 1; i < s.size(); ++i) {
     filename << '_' << s[i];
   }
+
   // First part of multi-write.  I'm gonna to append the factory
   // to the end of the fml filename.  This won't work for multiple
   // records from a single writer
@@ -95,13 +114,14 @@ FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
   filename << '_' << p[0] << ".fml";
 
   // Write record to tmp .fml file ------------------------------
-  const std::string tmpfilename = myTempDir + filename.str();
+  std::string tempDir = outputDir + ".working/"; // For file 'locking'
+  const std::string tmpfilename = tempDir + filename.str();
   std::ofstream ofp;
   ofp.open(tmpfilename.c_str());
 
   if (!ofp) {
     // Lazy try to make directories again...
-    if (makeDirectories()) {
+    if (makeDirectories(outputDir, tempDir)) {
       ofp.open(tmpfilename.c_str());
     }
 
@@ -119,13 +139,13 @@ FMLRecordNotifier::writeRecord(const Record& rec, const std::string& file)
   ofp << "</meta>\n";
 
   ofp << "<item>\n";
-  rec.constructXMLString(ofp, myIndexPath);
+  rec.constructXMLString(ofp, indexLocation);
   ofp << "</item>\n";
   ofp.close();
   // End write record to tmp .fml file --------------------------
 
   // Rename from tmp to final
-  const std::string outfilename = myOutputDir + filename.str();
+  const std::string outfilename = outputDir + filename.str();
   int result = rename(tmpfilename.c_str(), outfilename.c_str());
   if (result == 0) {
     LogDebug("FML Notify File -->>" << outfilename << "\n");

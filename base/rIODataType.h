@@ -80,8 +80,7 @@ public:
   generateRecord(std::shared_ptr<DataType> dt,
     const URL                              & pathin,
     const std::string                      & factory,
-    std::vector<Record>                    & records,
-    std::vector<std::string>               & files);
+    std::vector<Record>                    & records);
 
   /**
    *  Chooses the correct data encoder for the particular data type,
@@ -93,7 +92,6 @@ public:
   write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     bool generateFileName,
     std::vector<Record>              & records,
-    std::vector<std::string>         & files,
     const std::string& factory = "");
 
   /**
@@ -113,8 +111,7 @@ protected:
     std::shared_ptr<XMLNode>               dfs,
     bool                                   directFile,
     // Output for notifiers
-    std::vector<Record>                    & records,
-    std::vector<std::string>               & files
+    std::vector<Record>                    & records
   ){ return false; }
 
 public:

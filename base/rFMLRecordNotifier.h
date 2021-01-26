@@ -2,6 +2,8 @@
 
 #include <rRecordNotifier.h>
 
+#include <map>
+
 namespace rapio {
 /**
  * Subclasses are database-specific implementations.
@@ -30,7 +32,7 @@ public:
 
   /** Notify for a single record */
   virtual void
-  writeRecord(const Record& rec, const std::string& file) override;
+  writeRecord(const std::string& outputinfo, const Record& rec) override;
 
   /** Handle params for notifier */
   virtual void
@@ -38,21 +40,15 @@ public:
 
   /** Make the output fml directories needed */
   bool
-  makeDirectories();
+  makeDirectories(const std::string& outdir, const std::string& tempdir);
 
 protected:
 
-  /** Output directory for the FML notification */
+  /** Overridden output directory for the FML notification */
   std::string myOutputDir;
 
-  /** Temporary directory for async/move writing */
-  std::string myTempDir;
-
-  /** Full index path for substitution */
-  std::string myIndexPath;
-
-  /** URL to the output location for fml files */
-  URL myURL;
+  /** Output directory to indexLocation macro mapping */
+  std::map<std::string, std::string> myIndexPaths;
 }
 ;
 }

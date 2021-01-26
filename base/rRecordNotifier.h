@@ -3,7 +3,6 @@
 #include <rIO.h>
 
 #include <rRecord.h>
-#include <rURL.h>
 
 namespace rapio {
 /** Record notifier types registered */
@@ -18,12 +17,12 @@ public:
 
   /** Notify about this record. */
   virtual void
-  writeRecord(const Record& rec, const std::string& file) = 0;
+  writeRecord(const std::string& outputinfo, const Record& rec) = 0;
 
   /** The default implementation loops through the records,
    *  passing each to writeRecord(). */
   virtual void
-  writeRecords(const std::vector<Record>& rec, const std::vector<std::string>& files);
+  writeRecords(const std::string& outputinfo, const std::vector<Record>& rec);
 
   /** Set the initial params this record notifier */
   virtual void

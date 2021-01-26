@@ -72,8 +72,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode>                      dfs,
   bool                                          directFile,
   // Output for notifiers
-  std::vector<Record>                           & records,
-  std::vector<std::string>                      & files
+  std::vector<Record>                           & records
 )
 {
   bool successful = false;
@@ -87,7 +86,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
     if (xml != nullptr) {
       writeURL(aURL, xml, true, false);
       successful = true;
-      IODataType::generateRecord(dt, aURL, "xml", records, files);
+      IODataType::generateRecord(dt, aURL, "xml", records);
     }
   }catch (std::exception& e) {
     LogSevere("XML create error: "

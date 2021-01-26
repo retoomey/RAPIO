@@ -31,7 +31,7 @@ public:
 
   /** Notify for a single record */
   virtual void
-  writeRecord(const Record& rec, const std::string& file) override;
+  writeRecord(const std::string& outputinfo, const Record& rec) override;
 
   /** Handle params for notifier */
   virtual void

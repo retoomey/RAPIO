@@ -74,8 +74,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode>                       dfs,
   bool                                           directFile,
   // Output for notifiers
-  std::vector<Record>                            & records,
-  std::vector<std::string>                       & files
+  std::vector<Record>                            & records
 )
 {
   // Settings
@@ -220,7 +219,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     GDALClose(geotiffDataset);
     //   CPLFree(rowBuff);
 
-    IODataType::generateRecord(dt, aURL, "gdal", records, files);
+    IODataType::generateRecord(dt, aURL, "gdal", records);
     // GDALDestroyDriverManager(); leaking?
   }catch (const std::exception& e)
   {

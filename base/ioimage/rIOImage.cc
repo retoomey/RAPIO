@@ -79,8 +79,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode>                        dfs,
   bool                                            directFile,
   // Output for notifiers
-  std::vector<Record>                             & records,
-  std::vector<std::string>                        & files
+  std::vector<Record>                             & records
 )
 {
   // ----------------------------------------------------
@@ -189,7 +188,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     URL aURL        = IODataType::generateFileName(dt, params, suffix, directFile, useSubDirs);
     i.write(aURL.toString());
     // Make record
-    IODataType::generateRecord(dt, aURL, "image", records, files);
+    IODataType::generateRecord(dt, aURL, "image", records);
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");

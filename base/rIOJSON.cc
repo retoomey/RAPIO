@@ -46,8 +46,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode>                       dfs,
   bool                                           directFile,
   // Output for notifiers
-  std::vector<Record>                            & records,
-  std::vector<std::string>                       & files
+  std::vector<Record>                            & records
 )
 {
   bool successful = false;
@@ -61,7 +60,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
     if (json != nullptr) {
       writeURL(aURL, json, true, false);
       successful = true;
-      IODataType::generateRecord(dt, aURL, "json", records, files);
+      IODataType::generateRecord(dt, aURL, "json", records);
     }
   }catch (const std::exception& e) {
     LogSevere("JSON create error: "

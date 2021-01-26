@@ -104,9 +104,9 @@ RecordNotifier::getNotifier(const std::string& params, const std::string& output
 
 void
 RecordNotifierType::
-writeRecords(const std::vector<Record>& rec, const std::vector<std::string>& files)
+writeRecords(const std::string& outputinfo, const std::vector<Record>& rec)
 {
-  for (size_t i = 0; i < rec.size(); i++) {
-    writeRecord(rec[i], files[i]);
+  for (auto r:rec) {
+    writeRecord(outputinfo, r);
   }
 }

@@ -125,8 +125,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<XMLNode>                         dfs,
   bool                                             directFile,
   // Output for notifiers
-  std::vector<Record>                              & records,
-  std::vector<std::string>                         & files
+  std::vector<Record>                              & records
 )
 {
   /** So myLookup "RadialSet" writer for example from the data type.
@@ -190,7 +189,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   try {
     successful = fmt->write(ncid, dt, dfs);
-    IODataType::generateRecord(dt, aURL, "netcdf", records, files);
+    IODataType::generateRecord(dt, aURL, "netcdf", records);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");

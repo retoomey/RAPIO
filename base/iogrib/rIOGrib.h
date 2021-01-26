@@ -166,8 +166,7 @@ public:
     std::shared_ptr<XMLNode>               dfs,
     bool                                   directFile,
     // Output for notifiers
-    std::vector<Record>                    & records,
-    std::vector<std::string>               & files
+    std::vector<Record>                    & records
   ) override;
 
   virtual
