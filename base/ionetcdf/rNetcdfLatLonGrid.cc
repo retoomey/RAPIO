@@ -32,7 +32,7 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc)
 
 bool
 NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<XMLNode> dfs)
+  std::shared_ptr<PTreeNode> dfs)
 {
   // Generalize the writer maybe...
   // if (dfs->cdmcompliance || dfs->faacompliance) {

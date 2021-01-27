@@ -6,6 +6,7 @@
 #include "rIOURL.h"
 #include "rOS.h"
 #include "rRecordQueue.h"
+#include "rIODataType.h"
 
 #include <algorithm>
 #include <errno.h>
@@ -152,7 +153,7 @@ bool
 FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 {
   // For now, tell .fml to be parsed as xml builder
-  auto doc = IODataType::read<XMLData>(filename, "xml");
+  auto doc = IODataType::read<PTreeData>(filename, "xml");
 
   if (doc == nullptr) {
     // Error not needed, XML will complain

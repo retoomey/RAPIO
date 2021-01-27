@@ -65,9 +65,9 @@ public:
 
   /** Write DataType from given ncid (subclasses) */
   virtual bool
-  write(int                   ncid,
-    std::shared_ptr<DataType> dt,
-    std::shared_ptr<XMLNode>  dfs) = 0;
+  write(int                    ncid,
+    std::shared_ptr<DataType>  dt,
+    std::shared_ptr<PTreeNode> dfs) = 0;
 
   /** Read a DataType from given ncid */
   virtual std::shared_ptr<DataType>
@@ -122,21 +122,11 @@ public:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const std::string                      & params,
-    std::shared_ptr<XMLNode>               dfs,
+    std::shared_ptr<PTreeNode>             dfs,
     bool                                   directFile,
     // Output for notifiers
     std::vector<Record>                    & records
   ) override;
-
-  /** Encode a DataType for writing */
-
-  /*
-   * static std::string
-   * writeNetcdfDataType(std::shared_ptr<DataType> dt,
-   *  const std::string                           & dir,
-   *  std::shared_ptr<XMLData>                    dfs,
-   *  std::vector<Record>                         & records);
-   */
 
   /** Current compression level of netcdf files */
   static void

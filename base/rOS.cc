@@ -1,7 +1,7 @@
 #include "rOS.h"
 
 #include "rError.h"
-#include "rIOJSON.h"
+#include "rIODataType.h"
 
 #include <string>
 #include <iostream>
@@ -214,9 +214,9 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // ----------------------------------------------------
     // Write JSON out to shared for data process/python
     // We're not allowing write to attributes at moment.  FIXME?
-    std::shared_ptr<JSONData> theJson = IOJSON::createJSON(datagrid);
+    std::shared_ptr<PTreeData> theJson = datagrid->createMetadata();
     std::vector<char> buf; // FIXME: Buffer class instead?
-    size_t aLength = theJson->writeBuffer(buf);
+    size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
     shared_memory_object shdmem2 { open_or_create, jsonName.c_str(), read_write };
     shdmem2.truncate(aLength);
     mapped_region region3 { shdmem2, read_write }; // read only, read_write?

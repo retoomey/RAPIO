@@ -10,7 +10,7 @@
 using namespace rapio;
 
 bool ConfigIODataType::myUseSubDirs = true;
-std::map<std::string, std::shared_ptr<XMLNode> > ConfigIODataType::myDatabase;
+std::map<std::string, std::shared_ptr<PTreeNode> > ConfigIODataType::myDatabase;
 
 void
 ConfigIODataType::introduceSelf()
@@ -20,7 +20,7 @@ ConfigIODataType::introduceSelf()
 }
 
 bool
-ConfigIODataType::readSettings(std::shared_ptr<XMLData> d)
+ConfigIODataType::readSettings(std::shared_ptr<PTreeData> d)
 {
   try{
     // This should be done by config higher 'up' I think...
@@ -29,7 +29,7 @@ ConfigIODataType::readSettings(std::shared_ptr<XMLData> d)
     auto topTree  = d->getTree()->getChild("settings");
     auto datatype = topTree.getChildOptional("datatype");
 
-    // Handle the XMLNode we're given...
+    // Handle the PTreeNode we're given...
     if (datatype != nullptr) {
       // FIXME: Parse 'general' datatype settings into us.
       // the use sub directories flag is a general one, right?
@@ -70,7 +70,7 @@ ConfigIODataType::getUseSubDirs()
   return myUseSubDirs;
 }
 
-std::shared_ptr<XMLNode>
+std::shared_ptr<PTreeNode>
 ConfigIODataType::getSettings(const std::string& key)
 {
   return myDatabase[key];

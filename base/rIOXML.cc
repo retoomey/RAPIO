@@ -4,9 +4,51 @@
 #include "rStrings.h"
 #include "rError.h"
 #include "rIOURL.h"
+#include "rDataGrid.h"
 #include "rOS.h"
 
+#include <boost/property_tree/xml_parser.hpp>
+
 using namespace rapio;
+
+std::shared_ptr<DataType>
+IOXML::createDataTypeFromBuffer(std::vector<char>& buffer)
+{
+  return (readPTreeDataBuffer(buffer));
+}
+
+size_t
+IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+{
+  std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
+  if (ptree) {
+    return (writePTreeDataBuffer(ptree, buffer));
+  }
+  return 0;
+}
+
+std::shared_ptr<PTreeData>
+IOXML::readPTreeDataBuffer(std::vector<char>& buffer)
+{
+  try{
+    std::shared_ptr<PTreeData> d = std::make_shared<PTreeData>();
+    auto& n = d->getTree()->node;
+    // To keep sizes correct, only add a 0 iff there isn't one there already
+    if ((buffer.size() > 0) && (buffer[buffer.size() - 1] != 0)) {
+      buffer.push_back('\0');
+    }
+
+    std::istringstream is(&buffer.front());
+    // Need to trim white space, or when we write we gets tons of blank lines.
+    // Bug in boost or rapidxml I think.
+    boost::property_tree::read_xml(is, n, boost::property_tree::xml_parser::trim_whitespace);
+    return d;
+  }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
+    // We catch all to recover
+    LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
+  }
+  return nullptr;
+}
 
 /** Read call */
 std::shared_ptr<DataType>
@@ -19,8 +61,8 @@ IOXML::createDataType(const std::string& params)
   std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {
-    std::shared_ptr<XMLData> xml = std::make_shared<XMLData>();
-    if (xml->readBuffer(buf)) {
+    std::shared_ptr<PTreeData> xml = readPTreeDataBuffer(buf);
+    if (xml) {
       // Most likely we'll introduce subtypes like in the other readers
       // but how to do this generically..
       // TEMP hack for WDSS2 DataTable class.  Look for <datatable>
@@ -55,33 +97,82 @@ IOXML::createDataType(const std::string& params)
   return nullptr;
 } // IOXML::createDataType
 
+size_t
+IOXML::writePTreeDataBuffer(std::shared_ptr<PTreeData> d, std::vector<char>& buf)
+{
+  // We know that PTree hides a boost node...
+  const auto& n = d->getTree()->node;
+
+  std::stringstream ss;
+  boost::property_tree::xml_parser::write_xml(ss, n);
+  std::string out = ss.str();
+  buf = std::vector<char>(out.begin(), out.end());
+  // To keep sizes correct, only add a 0 iff there isn't one there already
+  if ((buf.size() > 0) && (buf[buf.size() - 1] != 0)) {
+    buf.push_back('\0');
+  }
+  return buf.size();
+}
+
 bool
 IOXML::writeURL(
-  const URL                & path,
-  std::shared_ptr<XMLData> tree,
-  bool                     shouldIndent,
-  bool                     console)
+  const URL                  & path,
+  std::shared_ptr<PTreeData> tree,
+  bool                       shouldIndent,
+  bool                       console)
 {
-  // Delegate to XML since it knows the internals
-  return (tree->writeURL(path, shouldIndent, console));
+  // We know that PTree hides a boost node...
+  const auto& n = tree->getTree()->node;
+
+  // Formatting for humans
+  auto settings = boost::property_tree::xml_writer_make_settings<std::string>(' ', shouldIndent ? 1 : 0);
+
+  // .xml means to console (can we pass this in)
+  std::string base = path.getBaseName();
+  Strings::toLower(base);
+  console = base == ".xml";
+
+  if (console) {
+    boost::property_tree::write_xml(std::cout, n, settings);
+  } else {
+    if (path.isLocal()) {
+      boost::property_tree::write_xml(path.toString(), n, std::locale(), settings);
+    } else {
+      LogSevere("Can't write to a remote URL at " << path << "\n");
+      return false;
+    }
+  }
+  return true;
 }
 
 bool
 IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string                             & params,
-  std::shared_ptr<XMLNode>                      dfs,
+  std::shared_ptr<PTreeNode>                    dfs,
   bool                                          directFile,
   // Output for notifiers
   std::vector<Record>                           & records
 )
 {
-  bool successful = false;
-
+  // Get settings
+  bool indent     = true;
   bool useSubDirs = true; // Use subdirs
-  URL aURL        = IODataType::generateFileName(dt, params, "xml", directFile, useSubDirs);
 
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      indent = output.getAttr("indent", indent);
+    }catch (const std::exception& e) {
+      LogSevere("Unrecognized settings, using defaults\n");
+    }
+  }
+  LogInfo("XML settings: indent: " << indent << " useSubDirs: " << useSubDirs << "\n");
+
+  URL aURL = IODataType::generateFileName(dt, params, "xml", directFile, useSubDirs);
+
+  bool successful = false;
   try{
-    std::shared_ptr<XMLData> xml = std::dynamic_pointer_cast<XMLData>(dt);
+    std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
     // FIXME: shouldIndent probably added to dfs
     if (xml != nullptr) {
       writeURL(aURL, xml, true, false);
@@ -94,52 +185,3 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   }
   return successful;
 }
-
-bool
-IOXML::splitSignedXMLFile(const std::string& signedxml,
-  std::string                              & outmsg,
-  std::string                              & outkey)
-{
-  // Get full .sxml file
-  std::ifstream xmlfile;
-  xmlfile.open(signedxml.c_str());
-  std::ostringstream str;
-  str << xmlfile.rdbuf();
-  std::string msg = str.str();
-  xmlfile.close();
-
-  // The last three lines should be of form:
-  // <signed>
-  // key
-  // </signed>
-  // where key may not be xml compliant.  We remove it before
-  // passing to xml parsing.
-  std::size_t found = msg.rfind("<signed>");
-  if (found == std::string::npos) {
-    LogSevere("Missing signed tag end of file\n");
-    return false;
-  }
-
-  // Split on the msg/signature
-  std::string onlymsg    = msg.substr(0, found);
-  std::string keywrapped = msg.substr(found);
-
-  // Remove the signed tags from the key
-  found = keywrapped.find("<signed>\n");
-  if (found == std::string::npos) {
-    LogSevere("Missing start <signed> tag end of file\n");
-    return false;
-  }
-  keywrapped.replace(found, 9, "");
-
-  found = keywrapped.find("</signed>\n");
-  if (found == std::string::npos) {
-    LogSevere("Missing end </signed> tag end of file\n");
-    return false;
-  }
-  keywrapped.replace(found, 10, "");
-
-  outmsg = onlymsg;
-  outkey = keywrapped;
-  return true;
-} // IOXML::splitSignedXMLFile

@@ -7,7 +7,7 @@
 #include <vector>
 #include <iostream>
 
-#include <rXMLData.h>
+#include <rPTreeData.h>
 
 namespace rapio {
 class IndexType;
@@ -142,9 +142,9 @@ public:
 
   /** Record can read contents of (typically) an <item> tag and fill itself */
   virtual bool
-  readXML(const XMLNode& item,
-    const std::string  &indexPath,
-    size_t             indexLabel);
+  readXML(const PTreeNode& item,
+    const std::string    &indexPath,
+    size_t               indexLabel);
 
   /** Record can generate file level meta data. Typically these go inside
    *  <meta> xml tags. */

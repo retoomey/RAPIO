@@ -4,6 +4,7 @@
 #include "rStrings.h"
 #include "rXMLIndex.h"
 #include "rRecordQueue.h"
+#include "rIODataType.h"
 
 #include <iostream>
 #include <algorithm>
@@ -155,7 +156,7 @@ WebIndex::readRemoteRecords()
   // The lastRead needs to be kept for next time to give the server a
   // point of reference of what "new" means for us.
   LogInfo("Web:" << tmpURL << "\n");
-  auto doc = IODataType::read<XMLData>(tmpURL, "xml");
+  auto doc = IODataType::read<PTreeData>(tmpURL.toString(), "xml");
 
   myReadOK = (doc != nullptr);
 

@@ -30,9 +30,9 @@ public:
 
   /** Write DataType from given ncid */
   virtual bool
-  write(int                   ncid,
-    std::shared_ptr<DataType> dt,
-    std::shared_ptr<XMLNode>  dfs)
+  write(int                    ncid,
+    std::shared_ptr<DataType>  dt,
+    std::shared_ptr<PTreeNode> dfs)
   override;
 
   virtual

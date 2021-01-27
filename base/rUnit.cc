@@ -66,7 +66,7 @@ ConfigUnit::introduceSelf()
 }
 
 bool
-ConfigUnit::readSettings(std::shared_ptr<XMLData> )
+ConfigUnit::readSettings(std::shared_ptr<PTreeData> )
 {
   // Udunits2 has xml configuration files
   // FIXME: We could look for every single file needed...

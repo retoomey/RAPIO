@@ -168,7 +168,7 @@ Config::setUpSearchPaths()
   return true;
 } // Config::setUpSearchPaths
 
-std::shared_ptr<XMLData>
+std::shared_ptr<PTreeData>
 Config::readGlobalConfigFile()
 {
   const std::string file = "rapiosettings.xml";
@@ -229,7 +229,7 @@ Config::setEnvVar(const std::string& envVarName, const std::string& value)
   LogInfo(envVarName << " = " << value << "\n");
 }
 
-std::shared_ptr<XMLData>
+std::shared_ptr<PTreeData>
 Config::huntXML(const std::string& pathName)
 {
   // FIXME: assuming always relative path?  Should
@@ -237,7 +237,7 @@ Config::huntXML(const std::string& pathName)
   const URL loc(getAbsoluteForRelative(pathName));
 
   if (!loc.empty()) {
-    return (IODataType::read<XMLData>(loc, "xml"));
+    return (IODataType::read<PTreeData>(loc.toString(), "xml"));
   }
   return (nullptr);
 }

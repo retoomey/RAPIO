@@ -47,6 +47,24 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
 }
 
 std::shared_ptr<DataType>
+IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
+{
+  std::string f = factory;
+  auto builder  = getFactory(f, "", nullptr);
+  if (builder != nullptr) {
+    // Create DataType and remember factory
+    std::shared_ptr<DataType> dt = builder->createDataTypeFromBuffer(buffer);
+    if (dt != nullptr) {
+      // Old W2ALGS is XML:
+      if (f == "W2ALGS") { f = "xml"; }
+      dt->setReadFactory(f);
+    }
+    return dt;
+  }
+  return nullptr;
+}
+
+std::shared_ptr<DataType>
 IODataType::readDataType(const std::string& factoryparams, const std::string& factory)
 {
   std::string f = factory;
@@ -181,7 +199,7 @@ IODataType::write(std::shared_ptr<DataType> dt,
 
   // 2. Try to get the rapiosettings info for the factory
   std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
-  std::shared_ptr<XMLNode> dfs = ConfigIODataType::getSettings(f);
+  std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings(f);
 
   // 4. Output file and generate records
   return (encoder->encodeDataType(dt, outputinfo, dfs, directFile, records));
@@ -192,4 +210,17 @@ IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, c
 {
   std::vector<Record> blackHole;
   return write(dt, outputinfo, true, blackHole, factory); // Default write single file
+}
+
+size_t
+IODataType::writeBuffer(std::shared_ptr<DataType> dt,
+  std::vector<char>& buffer, const std::string& factory)
+{
+  // 1. Get the factory for this output
+  std::string f = factory;
+  auto encoder  = getFactory(f, "", dt);
+  // FIXME: Pass settings?  For now just XML/JSON use I'll skip it
+  if (encoder == nullptr) { return 0; }
+  // 2. Output file and generate records
+  return (encoder->encodeDataTypeBuffer(dt, buffer));
 }

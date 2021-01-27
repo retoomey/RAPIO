@@ -149,6 +149,14 @@ public:
   matchPattern(const std::string& pattern,
     const std::string           & tocheck,
     std::string                 & star);
+
+  /** Split an XML file that contains a <signed> signature
+   * tag at the end of the file into message and signature parts.
+   * Technically this is a string operation*/
+  static bool
+  splitSignedXMLFile(const std::string& signedxml,
+    std::string                       & outmsg,
+    std::string                       & outkey);
 };
 
 /** A class for DFA parsing a word/token by character */

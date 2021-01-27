@@ -71,7 +71,7 @@ IOGDAL::createDataType(const std::string& params)
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string                              & params,
-  std::shared_ptr<XMLNode>                       dfs,
+  std::shared_ptr<PTreeNode>                     dfs,
   bool                                           directFile,
   // Output for notifiers
   std::vector<Record>                            & records

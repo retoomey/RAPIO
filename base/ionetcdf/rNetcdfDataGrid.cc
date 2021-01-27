@@ -233,7 +233,7 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
 
 bool
 NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<XMLNode> dfs)
+  std::shared_ptr<PTreeNode> dfs)
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();

@@ -41,14 +41,14 @@ RAPIOOptions::RAPIOOptions()
     "Input URL to read a configuration file. Command line overrides.");
   addGroup("iconfig", "CONFIG");
   addAdvancedHelp("iconfig",
-    "Can end with .xml for WDSS2 file, .config for HMET file. This will parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
+    "Can end with .xml for WDSS2 file, .config for HMET file, .json for JSON file. This will parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
 
   optional("oconfig",
     "",
     "Output URL to write a configuration file, using parameters from all sources.");
   addGroup("oconfig", "CONFIG");
   addAdvancedHelp("oconfig",
-    "Can end with .xml for WDSS2 file, .config for HMET file. This will all parameters if any from iconfig, override with command line arguments, then generate a new output file.  You can convert from one style to another as well.");
+    "Can end with .xml for WDSS2 file, .config for HMET file, .json for a JSON file. This will use all parameters if any from iconfig, override with command line arguments, then generate a new output file.  You can convert from one style to another as well.");
 
   // The help group
   boolean("help",

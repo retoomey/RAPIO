@@ -35,12 +35,12 @@ public:
   getFactory(
     std::string& factory, const std::string& path, std::shared_ptr<DataType> dt);
 
-  /** Factory: Read a data file object */
+  /** Read from a given factory and parameters for that factory */
   template <class T> static std::shared_ptr<T>
-  read(const URL& path, const std::string& factory = "")
+  read(const std::string& params, const std::string& factory = "")
   {
     // Note: We make it a string for the actual factories that are generic
-    std::shared_ptr<DataType> dt = readDataType(path.toString(), factory);
+    std::shared_ptr<DataType> dt = readDataType(params, factory);
     if (dt != nullptr) {
       std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
       return dr;
@@ -48,11 +48,37 @@ public:
     return nullptr;
   }
 
-  /** Factory: Figure out how to read DataType from given path */
+  /** Attempt to read from given factory from a buffer in memory.
+   * Note here you have to provide the factory always, we can't guess from chars */
+  template <class T> static std::shared_ptr<T>
+  readBuffer(std::vector<char>& buffer, const std::string& factory)
+  {
+    // Note: We make it a string for the actual factories that are generic
+    std::shared_ptr<DataType> dt = readBufferImp(buffer, factory);
+    if (dt != nullptr) {
+      std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
+      return dr;
+    }
+    return nullptr;
+  }
+
+  /** Create a new DataType object based on parameters and factory */
   static std::shared_ptr<DataType>
   readDataType(const std::string& factoryparams, const std::string& factory = "");
 
 protected:
+
+  /** Create a new DataType object based on buffer and given factory */
+  static std::shared_ptr<DataType>
+  readBufferImp(std::vector<char>& buffer, const std::string& factory);
+
+  /** Subclasses that can read from a character buffer can implement this.
+   * Since not everything can read from a buffer, we default to nullptr */
+  virtual std::shared_ptr<DataType>
+  createDataTypeFromBuffer(std::vector<char>& buffer)
+  {
+    return nullptr;
+  }
 
   /**
    * Subclasses create various data objects in various ways.
@@ -102,17 +128,32 @@ public:
     const std::string             & outputinfo,
     const std::string             & factory = "");
 
+  /** Attempt to write to a buffer, not all writers can
+   * do this */
+  static size_t
+  writeBuffer(std::shared_ptr<DataType> dt,
+    std::vector<char>                   & buf,
+    const std::string                   & factory = "");
+
 protected:
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const std::string                      & params,
-    std::shared_ptr<XMLNode>               dfs,
+    std::shared_ptr<PTreeNode>             dfs,
     bool                                   directFile,
     // Output for notifiers
     std::vector<Record>                    & records
   ){ return false; }
+
+  /** Subclasses that can write to a character buffer can implement this.
+   * Since not everything can write to a buffer, we default to nullptr */
+  virtual size_t
+  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+  {
+    return 0;
+  }
 
 public:
 

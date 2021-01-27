@@ -3,7 +3,7 @@
 #include <rUtility.h>
 #include <rURL.h>
 #include <rIO.h>
-#include <rXMLData.h>
+#include <rPTreeData.h>
 
 #include <vector>
 #include <memory>
@@ -22,7 +22,7 @@ public:
 
   /** Do the actual read/storage of configuration information */
   virtual bool
-  readConfig(std::shared_ptr<XMLData> global) = 0;
+  readConfig(std::shared_ptr<PTreeData> global) = 0;
 };
 
 /**
@@ -50,7 +50,7 @@ public:
   setUpSearchPaths();
 
   /** Initial read of global configuration file */
-  static std::shared_ptr<XMLData>
+  static std::shared_ptr<PTreeData>
   readGlobalConfigFile();
 
   /**
@@ -78,7 +78,7 @@ public:
   getAbsoluteForRelative(const std::string& relativePath);
 
   /* Read from a string, hunt in config */
-  static std::shared_ptr<XMLData>
+  static std::shared_ptr<PTreeData>
   huntXML(const std::string& pathname);
 
   /** Use this to introduce new subclasses. */

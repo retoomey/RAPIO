@@ -183,15 +183,6 @@ Record::createObject(size_t i) const
     if (this->getSelections().size() > 2) {
       dt->setDataAttributeValue("SubType", this->getSelections()[2]);
     }
-
-    /** RAPIO TOOMEY: Preprocess remapping lat lon grids, etc I think
-     * to the size needed.  We'll rewrite this
-     *  static AutoPreprocess autopreproc;
-     *  std::shared_ptr<DataType> ret = autopreproc.processIfNeeded(*dt);
-     *  if (ret != nullptr){
-     *    return ret;
-     *  }
-     */
   } else {
     LogSevere("Failed to create new datatype\n");
   }
@@ -263,9 +254,9 @@ Record::readParams(const std::string & params,
 } // Record::readParams
 
 bool
-Record::readXML(const XMLNode& item,
-  const std::string          & indexPath,
-  size_t                     indexLabel) // Not sure these should be passed
+Record::readXML(const PTreeNode& item,
+  const std::string            & indexPath,
+  size_t                       indexLabel) // Not sure these should be passed
 {
   // <item>
   // <time fractional="0.057"> 925767275 </time>

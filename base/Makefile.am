@@ -64,8 +64,7 @@ librapio_la_SOURCES =\
   rRadialSet.cc\
   rRadialSetLookup.cc\
   rDataType.cc\
-  rJSONData.cc\
-  rXMLData.cc\
+  rPTreeData.cc\
   rFileIndex.cc\
   rFMLIndex.cc\
   rFMLRecordNotifier.cc\
@@ -140,8 +139,7 @@ pkginclude_HEADERS =\
   rDataStore.h\
   rDataStore2D.h\
   rDataType.h\
-  rJSONData.h\
-  rXMLData.h\
+  rPTreeData.h\
   rDataGrid.h\
   rBinaryTable.h\
   rRadialSet.h\

@@ -1,6 +1,7 @@
 #include "rDataGrid.h"
 #include "rTime.h"
 #include "rLLH.h"
+#include "rOS.h"
 
 #include "rError.h"
 
@@ -201,3 +202,97 @@ DataGrid::replaceMissing(std::shared_ptr<Array<float, 2> > f, const float missin
    *  }
    */
 }
+
+namespace {
+void
+setAttributes(std::shared_ptr<PTreeData> json, std::shared_ptr<DataAttributeList> attribs)
+{
+  auto tree = json->getTree();
+
+  for (auto& i:*attribs) {
+    auto name = i.getName().c_str();
+    std::ostringstream out;
+    std::string value = "UNKNOWN";
+    if (i.is<std::string>()) {
+      auto field = *(i.get<std::string>());
+      out << field;
+    } else if (i.is<long>()) {
+      auto field = *(i.get<long>());
+      out << field;
+    } else if (i.is<float>()) {
+      auto field = *(i.get<float>());
+      out << field;
+    } else if (i.is<double>()) {
+      auto field = *(i.get<double>());
+      out << field;
+    }
+    tree->put(name, out.str());
+  }
+}
+}
+
+std::shared_ptr<PTreeData>
+DataGrid::createMetadata()
+{
+  // Create a JSON tree from datagrid.  Passed to python
+  // for the python experiment
+  std::shared_ptr<PTreeData> theJson = std::make_shared<PTreeData>();
+  auto tree = theJson->getTree();
+
+  // Store the data type
+  tree->put("DataType", getDataType());
+
+  // General Attributes to JSON
+  setAttributes(theJson, getGlobalAttributes());
+
+  // -----------------------------------
+  // Dimensions (only for DataGrids for moment)
+  auto theDims = getDims();
+  // auto dimArrays = theJson->getNode();
+  PTreeNode dimArrays;
+  for (auto& d:theDims) {
+    PTreeNode aDimArray;
+    // Order matters here...
+    // auto aDimArray = theJson->getNode();
+
+    aDimArray.put("name", d.name());
+    aDimArray.put("size", d.size());
+    dimArrays.addArrayNode(aDimArray);
+  }
+  tree->addNode("Dimensions", dimArrays);
+
+  // -----------------------------------
+  // Arrays
+  auto arrays = getArrays();
+  PTreeNode theArrays;
+  auto pid  = OS::getProcessID();
+  int count = 1;
+  for (auto& ar:arrays) {
+    // Individual array
+    PTreeNode anArray;
+
+    auto name    = ar->getName();
+    auto indexes = ar->getDimIndexes();
+    anArray.put("name", name);
+
+    // Create a unique array key for shared memory
+    // FIXME: Create shared_memory unique name
+    anArray.put("shm", "/dev/shm/" + std::to_string(pid) + "-array" + std::to_string(count));
+    count++;
+
+    // Dimension Index Arrays
+    PTreeNode aDimArrays;
+    for (auto& index:indexes) {
+      PTreeNode aDimArray;
+      aDimArray.put("", index);
+      aDimArrays.addArrayNode(aDimArray);
+    }
+    anArray.addNode("Dimensions", aDimArrays);
+    theArrays.addArrayNode(anArray);
+  }
+  tree->addNode("Arrays", theArrays);
+
+  // End arrays
+  // -----------------------------------
+  return theJson;
+} // DataGrid::createMetadata

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <rIndexType.h>
-#include <rIOXML.h>
 
 namespace rapio {
 /**

@@ -3,6 +3,7 @@
 #include <rDataType.h>
 #include <rDataStore2D.h>
 #include <rArray.h>
+#include <rPTreeData.h>
 
 #include <vector>
 
@@ -248,6 +249,10 @@ public:
   std::shared_ptr<DataAttributeList>
   getAttributes(
     const std::string& name);
+
+  /** Create metadata Ptree for sending to python */
+  std::shared_ptr<PTreeData>
+  createMetadata();
 
 protected:
 

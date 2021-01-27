@@ -7,15 +7,12 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
-// NOTE: with BOOST at least, this code
-// duplicates with XMLDataType.  Normally you'd
-// make a common superclass, but I want to keep it
-// separate in case we end up using separate XML/JSON
-// libraries
-
-/** Node in a tree, hides implementation */
-class XMLNode : public Data {
-  friend class XMLData;
+/** Property Tree holder class.  This is typically used
+ * for XML, JSON, YAML, etc.. We wrap BOOST here currently*/
+class PTreeNode : public Data {
+  friend class PTreeData;
+  friend class IOXML;
+  friend class IOJSON;
 
 protected:
 
@@ -23,6 +20,7 @@ protected:
   boost::property_tree::ptree node;
 
 public:
+
   /** Get data from node.  Uses the BOOST style . path  */
   template <class Type>
   Type
@@ -73,37 +71,37 @@ public:
 
   /** Add a child to the node */
   void
-  addNode(const std::string& path, const XMLNode& child)
+  addNode(const std::string& path, const PTreeNode& child)
   {
     node.add_child(path, child.node);
   }
 
   /** Add as array item to the node */
   void
-  addArrayNode(const XMLNode& child)
+  addArrayNode(const PTreeNode& child)
   {
     node.push_back(std::make_pair("", child.node));
   }
 
   /** Read child of node */
-  XMLNode
+  PTreeNode
   getChild(const std::string& path) const
   {
-    XMLNode child;
+    PTreeNode child;
 
     child.node = node.get_child(path);
     return child;
   }
 
   /** Read child of node */
-  std::shared_ptr<XMLNode>
+  std::shared_ptr<PTreeNode>
   getChildOptional(const std::string& path)
   {
-    // XMLNode child;
+    // PTreeNode child;
     auto thing = node.get_child_optional(path);
 
     if (thing != boost::none) {
-      std::shared_ptr<XMLNode> child = std::make_shared<XMLNode>();
+      std::shared_ptr<PTreeNode> child = std::make_shared<PTreeNode>();
       child->node = *thing;
       return child;
     }
@@ -112,13 +110,13 @@ public:
 
   /** BOOST is a dom so we just copy into our wrapper.
    * a SAX based XML would probably want pull iterator */
-  std::vector<XMLNode>
+  std::vector<PTreeNode>
   getChildren(const std::string& filter)
   {
-    std::vector<XMLNode> list;
+    std::vector<PTreeNode> list;
     for (auto r: node.get_child("")) {
       if (r.first == filter) {
-        XMLNode child;
+        PTreeNode child;
         child.node = r.second;
         list.push_back(child);
       }
@@ -126,14 +124,14 @@ public:
     return list;
   }
 
-  std::vector<std::shared_ptr<XMLNode> >
+  std::vector<std::shared_ptr<PTreeNode> >
   getChildrenPtr(const std::string& filter)
   {
-    std::vector<std::shared_ptr<XMLNode> > list;
+    std::vector<std::shared_ptr<PTreeNode> > list;
     for (auto r: node.get_child("")) {
       if (r.first == filter) {
         // Copy to a shared_ptr
-        std::shared_ptr<XMLNode> child = std::make_shared<XMLNode>();
+        std::shared_ptr<PTreeNode> child = std::make_shared<PTreeNode>();
         child->node = r.second;
         list.push_back(child);
       }
@@ -142,50 +140,33 @@ public:
   }
 };
 
-/** A wrapper to a XML tree.
+/** A wrapper to a property tree.
  * Currently using BOOST, though internally
- * we could add/swap rapidjson or another XML
+ * we could add/swap rapidjson or another tree
  * library under the hood if needed.  This probably
  * could happen, since BOOST doesn't seem to support
  * full types and there are debates over the speed.
  *
  * @author Robert Toomey
- * @see IOXML
+ * @see IOXML IOJSON
  */
 
-class XMLData : public DataType {
+class PTreeData : public DataType {
 public:
 
-  /** Construct XML tree */
-  XMLData();
+  /** Construct property tree */
+  PTreeData();
 
-  /** Get root of document tree, valid only while XMLTree is. */
-  XMLNode *
+  /** Get root of document tree, valid only while PTree is. */
+  PTreeNode *
   getTree()
   {
     return &myRoot;
   }
 
-  /** Write property tree to URL */
-  bool
-  writeURL(
-    const URL & path,
-    bool      shouldIndent = true,
-    bool      console = false);
-
-  // These 'could' go to node for finer control
-
-  /** Read from given buffer of text */
-  bool
-  readBuffer(std::vector<char>& buffer);
-
-  /** Write text out to buffer, return size */
-  size_t
-  writeBuffer(std::vector<char>& buffer);
-
 protected:
 
-  /** XML boost property tree */
-  XMLNode myRoot;
+  /** Root of the property tree */
+  PTreeNode myRoot;
 };
 }

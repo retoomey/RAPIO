@@ -7,7 +7,8 @@ check_PROGRAMS =\
 testrapio_SOURCES =\
    rTestMain.cc\
    rTestTime.cc\
-   rTestURL.cc
+   rTestURL.cc\
+   rTestIODataType.cc
 
 testrapio_LDADD = \
    -L../base/ -L../../lib -lrapio -lboost_unit_test_framework

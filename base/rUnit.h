@@ -13,7 +13,7 @@ class ConfigUnit : public ConfigType {
 public:
   /** Virtual object from config map to static for clarity. */
   virtual bool
-  readConfig(std::shared_ptr<XMLData> d) override { return readSettings(d); }
+  readConfig(std::shared_ptr<PTreeData> d) override { return readSettings(d); }
 
   /** Introduce self to configuration */
   static void
@@ -21,7 +21,7 @@ public:
 
   /** Actual work of reading/checking settings */
   static bool
-  readSettings(std::shared_ptr<XMLData> );
+  readSettings(std::shared_ptr<PTreeData> );
 };
 
 /**

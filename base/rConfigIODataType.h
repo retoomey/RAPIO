@@ -11,7 +11,7 @@ class ConfigIODataType : public ConfigType {
 public:
   /** Virtual object from config map to static for clarity. */
   virtual bool
-  readConfig(std::shared_ptr<XMLData> d) override { return readSettings(d); }
+  readConfig(std::shared_ptr<PTreeData> d) override { return readSettings(d); }
 
   /** Introduce self to configuration */
   static void
@@ -19,14 +19,14 @@ public:
 
   /** Actual work of reading/checking settings */
   static bool
-  readSettings(std::shared_ptr<XMLData> );
+  readSettings(std::shared_ptr<PTreeData> );
 
   /** Do we output with subdirs or combined file name? */
   static bool
   getUseSubDirs();
 
   /** Read NODE of settings for a key */
-  static std::shared_ptr<XMLNode>
+  static std::shared_ptr<PTreeNode>
   getSettings(const std::string& key);
 
 private:
@@ -34,6 +34,6 @@ private:
   static bool myUseSubDirs;
 
   /** Database of keys to settings */
-  static std::map<std::string, std::shared_ptr<XMLNode> > myDatabase;
+  static std::map<std::string, std::shared_ptr<PTreeNode> > myDatabase;
 };
 }

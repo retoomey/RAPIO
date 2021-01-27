@@ -12,9 +12,9 @@ class GDALType : public IO {
 public:
   /** Write DataType from given ncid (subclasses) */
   virtual bool
-  write(int                   ncid,
-    std::shared_ptr<DataType> dt,
-    std::shared_ptr<XMLNode>  dfs) = 0;
+  write(int                    ncid,
+    std::shared_ptr<DataType>  dt,
+    std::shared_ptr<PTreeNode> dfs) = 0;
 
   virtual std::shared_ptr<DataType>
   read(
@@ -64,7 +64,7 @@ public:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
     const std::string                      & params,
-    std::shared_ptr<XMLNode>               dfs,
+    std::shared_ptr<PTreeNode>             dfs,
     bool                                   directFile,
     // Output for notifiers
     std::vector<Record>                    & records

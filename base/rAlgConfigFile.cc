@@ -55,6 +55,7 @@ AlgXMLConfigFile::introduceSelf()
 {
   std::shared_ptr<AlgXMLConfigFile> newOne = std::make_shared<AlgXMLConfigFile>();
   Factory<AlgConfigFile>::introduce("xml", newOne);
+  Factory<AlgConfigFile>::introduce("json", newOne);
 }
 
 void
@@ -69,7 +70,7 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>               & optionlist,
   std::vector<std::string>               & valuelist)
 {
-  auto conf = IODataType::read<XMLData>(path);
+  auto conf = IODataType::read<PTreeData>(path.toString());
 
   try{
     if (conf != nullptr) {
@@ -99,14 +100,14 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
   std::vector<std::string>                & valuelist)
 {
   // Create document tree
-  auto tree = std::make_shared<XMLData>();
+  auto tree = std::make_shared<PTreeData>();
   auto root = tree->getTree();
-  XMLNode w2algxml;
+  PTreeNode w2algxml;
 
   w2algxml.putAttr("program", program);
 
   for (size_t i = 0; i < optionlist.size(); ++i) {
-    XMLNode option;
+    PTreeNode option;
     option.putAttr("letter", optionlist[i]);
     option.putAttr("value", valuelist[i]);
     w2algxml.addNode("option", option);

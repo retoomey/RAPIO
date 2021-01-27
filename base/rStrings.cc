@@ -388,3 +388,52 @@ Strings::matchPattern(const std::string& pattern,
 
   return (match);
 } // Strings::matchPattern
+
+bool
+Strings::splitSignedXMLFile(const std::string& signedxml,
+  std::string                                & outmsg,
+  std::string                                & outkey)
+{
+  // Get full .sxml file
+  std::ifstream xmlfile;
+  xmlfile.open(signedxml.c_str());
+  std::ostringstream str;
+  str << xmlfile.rdbuf();
+  std::string msg = str.str();
+  xmlfile.close();
+
+  // The last three lines should be of form:
+  // <signed>
+  // key
+  // </signed>
+  // where key may not be xml compliant.  We remove it before
+  // passing to xml parsing.
+  std::size_t found = msg.rfind("<signed>");
+  if (found == std::string::npos) {
+    LogSevere("Missing signed tag end of file\n");
+    return false;
+  }
+
+  // Split on the msg/signature
+  std::string onlymsg    = msg.substr(0, found);
+  std::string keywrapped = msg.substr(found);
+
+  // Remove the signed tags from the key
+  found = keywrapped.find("<signed>\n");
+  if (found == std::string::npos) {
+    LogSevere("Missing start <signed> tag end of file\n");
+    return false;
+  }
+  keywrapped.replace(found, 9, "");
+
+  found = keywrapped.find("</signed>\n");
+  if (found == std::string::npos) {
+    LogSevere("Missing end </signed> tag end of file\n");
+    return false;
+  }
+  keywrapped.replace(found, 10, "");
+
+  outmsg = onlymsg;
+  outkey = keywrapped;
+  return true;
+} // IOXML::splitSignedXMLFile

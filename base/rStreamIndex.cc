@@ -7,6 +7,7 @@
 #include "rRecordQueue.h"
 #include "rStrings.h"
 #include "rEXEWatcher.h"
+#include "rIODataType.h"
 
 #include <algorithm>
 
@@ -130,9 +131,9 @@ StreamIndex::handleNewEvent(WatchEvent * w)
               // }
               // std::cout << "\n";
 
-              std::shared_ptr<XMLData> xml = std::make_shared<XMLData>();
+              std::shared_ptr<PTreeData> xml = std::make_shared<PTreeData>();
               try{
-                if (xml->readBuffer(myLineCout)) {
+                if (IODataType::readBuffer<PTreeData>(myLineCout, "xml")) {
                   Record rec;
                   auto tree = xml->getTree();
                   auto item = tree->getChild("item");

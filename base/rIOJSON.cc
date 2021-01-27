@@ -1,5 +1,5 @@
 #include "rIOJSON.h"
-#include "rJSONData.h"
+#include "rPTreeData.h"
 
 #include "rFactory.h"
 #include "rStrings.h"
@@ -7,7 +7,45 @@
 #include "rIOURL.h"
 #include "rOS.h"
 
+#include <boost/property_tree/json_parser.hpp>
+
 using namespace rapio;
+
+std::shared_ptr<DataType>
+IOJSON::createDataTypeFromBuffer(std::vector<char>& buffer)
+{
+  return (readPTreeDataBuffer(buffer));
+}
+
+size_t
+IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+{
+  std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
+  if (ptree) {
+    return (writePTreeDataBuffer(ptree, buffer));
+  }
+  return 0;
+}
+
+std::shared_ptr<PTreeData>
+IOJSON::readPTreeDataBuffer(std::vector<char>& buffer)
+{
+  try{
+    std::shared_ptr<PTreeData> d = std::make_shared<PTreeData>();
+    auto& n = d->getTree()->node;
+    // To keep sizes correct, only add a 0 iff there isn't one there already
+    if ((buffer.size() > 0) && (buffer[buffer.size() - 1] != 0)) {
+      buffer.push_back('\0');
+    }
+    std::istringstream is(&buffer.front());
+    boost::property_tree::read_json(is, n);
+    return d;
+  }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
+    // We catch all to recover
+    LogSevere("Exception reading JSON data..." << e.what() << " ignoring\n");
+  }
+  return nullptr;
+}
 
 /** Read call */
 std::shared_ptr<DataType>
@@ -20,8 +58,8 @@ IOJSON::createDataType(const std::string& params)
   std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {
-    std::shared_ptr<JSONData> json = std::make_shared<JSONData>();
-    if (json->readBuffer(buf)) {
+    std::shared_ptr<PTreeData> json = readPTreeDataBuffer(buf);
+    if (json) {
       return json;
     }
   }
@@ -29,33 +67,81 @@ IOJSON::createDataType(const std::string& params)
   return nullptr;
 }
 
+size_t
+IOJSON::writePTreeDataBuffer(std::shared_ptr<PTreeData> d, std::vector<char>& buf)
+{
+  // We know that PTree hides a boost node...
+  const auto& n = d->getTree()->node;
+
+  std::stringstream ss;
+  boost::property_tree::json_parser::write_json(ss, n);
+  std::string out = ss.str();
+  buf = std::vector<char>(out.begin(), out.end());
+  // To keep sizes correct, only add a 0 iff there isn't one there already
+  if ((buf.size() > 0) && (buf[buf.size() - 1] != 0)) {
+    buf.push_back('\0');
+  }
+  return buf.size();
+}
+
 bool
 IOJSON::writeURL(
-  const URL                 & path,
-  std::shared_ptr<JSONData> tree,
-  bool                      shouldIndent,
-  bool                      console)
+  const URL                  & path,
+  std::shared_ptr<PTreeData> tree,
+  bool                       shouldIndent,
+  bool                       console)
 {
-  // Delegate to JSON since it knows the internals
-  return (tree->writeURL(path, shouldIndent, console));
+  // We know that PTree hides a boost node...
+  const auto& n = tree->getTree()->node;
+
+  // Formatting for humans
+  auto settings = shouldIndent ? true : false;
+
+  // .json means to console (can we pass this in)
+  std::string base = path.getBaseName();
+  Strings::toLower(base);
+  console = base == ".json";
+
+  if (console) {
+    boost::property_tree::write_json(std::cout, n, settings);
+  } else {
+    if (path.isLocal()) {
+      boost::property_tree::write_json(path.toString(), n, std::locale(), settings);
+    } else {
+      LogSevere("Can't write to a remote URL at " << path << "\n");
+      return false;
+    }
+  }
+  return true;
 }
 
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string                              & params,
-  std::shared_ptr<XMLNode>                       dfs,
+  std::shared_ptr<PTreeNode>                     dfs,
   bool                                           directFile,
   // Output for notifiers
   std::vector<Record>                            & records
 )
 {
-  bool successful = false;
-
+  // Get settings
+  bool indent     = true;
   bool useSubDirs = true; // Use subdirs
-  URL aURL        = IODataType::generateFileName(dt, params, "json", directFile, useSubDirs);
 
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      indent = output.getAttr("indent", indent);
+    }catch (const std::exception& e) {
+      LogSevere("Unrecognized settings, using defaults\n");
+    }
+  }
+  LogInfo("JSON settings: indent: " << indent << " useSubDirs: " << useSubDirs << "\n");
+  URL aURL = IODataType::generateFileName(dt, params, "json", directFile, useSubDirs);
+
+  bool successful = false;
   try{
-    std::shared_ptr<JSONData> json = std::dynamic_pointer_cast<JSONData>(dt);
+    std::shared_ptr<PTreeData> json = std::dynamic_pointer_cast<PTreeData>(dt);
     // FIXME: shouldIndent probably added to dfs
     if (json != nullptr) {
       writeURL(aURL, json, true, false);
@@ -68,100 +154,3 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   }
   return successful;
 }
-
-void
-IOJSON::setAttributes(std::shared_ptr<JSONData> json, std::shared_ptr<DataAttributeList> attribs)
-{
-  auto tree = json->getTree();
-
-  for (auto& i:*attribs) {
-    auto name = i.getName().c_str();
-    std::ostringstream out;
-    std::string value = "UNKNOWN";
-    if (i.is<std::string>()) {
-      auto field = *(i.get<std::string>());
-      out << field;
-    } else if (i.is<long>()) {
-      auto field = *(i.get<long>());
-      out << field;
-    } else if (i.is<float>()) {
-      auto field = *(i.get<float>());
-      out << field;
-    } else if (i.is<double>()) {
-      auto field = *(i.get<double>());
-      out << field;
-    }
-    tree->put(name, out.str());
-  }
-}
-
-std::shared_ptr<JSONData>
-IOJSON::createJSON(std::shared_ptr<DataGrid> datagrid)
-{
-  // Create a JSON tree from datagrid.  Passed to python
-  // for the python experiment
-
-  // --------------------------------------------------------
-  // DataGrid to JSON
-  // FIXME: How about general DataType?
-  //
-  std::shared_ptr<JSONData> theJson = std::make_shared<JSONData>();
-  auto tree = theJson->getTree();
-
-  // Store the data type
-  tree->put("DataType", datagrid->getDataType());
-
-  // General Attributes to JSON
-  IOJSON::setAttributes(theJson, datagrid->getGlobalAttributes());
-
-  // -----------------------------------
-  // Dimensions (only for DataGrids for moment)
-  auto theDims = datagrid->getDims();
-  // auto dimArrays = theJson->getNode();
-  JSONNode dimArrays;
-  for (auto& d:theDims) {
-    JSONNode aDimArray;
-    // Order matters here...
-    // auto aDimArray = theJson->getNode();
-
-    aDimArray.put("name", d.name());
-    aDimArray.put("size", d.size());
-    dimArrays.addArrayNode(aDimArray);
-  }
-  tree->addNode("Dimensions", dimArrays);
-
-  // -----------------------------------
-  // Arrays
-  auto arrays = datagrid->getArrays();
-  JSONNode theArrays;
-  auto pid  = OS::getProcessID();
-  int count = 1;
-  for (auto& ar:arrays) {
-    // Individual array
-    JSONNode anArray;
-
-    auto name    = ar->getName();
-    auto indexes = ar->getDimIndexes();
-    anArray.put("name", name);
-
-    // Create a unique array key for shared memory
-    // FIXME: Create shared_memory unique name
-    anArray.put("shm", "/dev/shm/" + std::to_string(pid) + "-array" + std::to_string(count));
-    count++;
-
-    // Dimension Index Arrays
-    JSONNode aDimArrays;
-    for (auto& index:indexes) {
-      JSONNode aDimArray;
-      aDimArray.put("", index);
-      aDimArrays.addArrayNode(aDimArray);
-    }
-    anArray.addNode("Dimensions", aDimArrays);
-    theArrays.addArrayNode(anArray);
-  }
-  tree->addNode("Arrays", theArrays);
-
-  // End arrays
-  // -----------------------------------
-  return theJson;
-} // IOJSON::createJSON

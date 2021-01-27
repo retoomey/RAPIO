@@ -4,6 +4,7 @@
 #include "rStrings.h"
 #include "rError.h"
 #include "rOS.h"
+#include "rIODataType.h"
 #include "rRecordQueue.h"
 #include "rCompression.h"
 
@@ -81,7 +82,7 @@ XMLIndex::createIndexType(
 bool
 XMLIndex::initialRead(bool realtime, bool archive)
 {
-  auto doc2 = IODataType::read<XMLData>(myURL);
+  auto doc2 = IODataType::read<PTreeData>(myURL.toString());
 
   if (doc2 != nullptr) {
     const auto indexPath  = IOIndex::getIndexPath(myURL);
