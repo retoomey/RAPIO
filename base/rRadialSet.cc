@@ -104,40 +104,34 @@ RadialSet::initFromGlobalAttributes()
   // missing this information.  Still thinking about it.
 
   // TypeName check, such as Reflectivity or Velocity
-  auto aTypeName = myAttributes->get<std::string>(Constants::TypeName);
-
-  if (!aTypeName) {
+  if (!getString(Constants::TypeName, myTypeName)) {
     LogSevere("Missing TypeName attribute such as Reflectivity.\n");
     success = false;
-  } else {
-    myTypeName = *aTypeName;
   }
 
   // -------------------------------------------------------
   // Location
-  auto lat = myAttributes->get<double>(Constants::Latitude);
-  if (!lat) { success = false; }
-  auto lon = myAttributes->get<double>(Constants::Longitude);
-  if (!lon) { success = false; }
-  auto ht = myAttributes->get<double>(Constants::Height);
-  if (!ht) { success = false; }
+  float latDegs  = 0;
+  float lonDegs  = 0;
+  float htMeters = 0;
+  success &= getFloat(Constants::Latitude, latDegs);
+  success &= getFloat(Constants::Longitude, lonDegs);
+  success &= getFloat(Constants::Height, htMeters);
   if (success) {
-    myLocation = LLH(*lat, *lon, *ht / 1000.0);
+    myLocation = LLH(latDegs, lonDegs, htMeters / 1000.0);
   } else {
     LogSevere("Missing Location attribute\n");
   }
 
   // -------------------------------------------------------
   // Time
-  auto timesecs = myAttributes->get<long>(Constants::Time);
-  if (timesecs) {
-    double f        = 0.0;
-    auto fractional = myAttributes->get<double>(Constants::FractionalTime);
-    if (fractional) {
-      f = *fractional;
-    }
+  long timesecs = 0;
+  if (getLong(Constants::Time, timesecs)) {
+    // optional
+    double f = 0.0;
+    getDouble(Constants::FractionalTime, f);
     // Cast long to time_t..hummm
-    myTime = Time(*timesecs, f);
+    myTime = Time(timesecs, f);
   } else {
     LogSevere("Missing Time attribute\n");
     success = false;
@@ -147,20 +141,14 @@ RadialSet::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Elevation
-  auto elev = myAttributes->get<double>("Elevation");
-  if (!elev) {
+  if (!getDouble("Elevation", myElevAngleDegs)) {
     LogSevere("Missing Elevation in degrees attribute\n");
     success = false;
-  } else {
-    myElevAngleDegs = *elev;
   }
 
   // -------------------------------------------------------
   // Range to first gate
-  auto range = myAttributes->get<double>("RangeToFirstGate");
-  if (range) {
-    myFirstGateDistanceM = *range;
-  } else {
+  if (!getDouble("RangeToFirstGate", myFirstGateDistanceM)) {
     LogInfo("Missing RangeToFirstGate attribute, will be zero.\n");
     myFirstGateDistanceM = 0;
   }
@@ -177,12 +165,12 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
 
   // Radial set only global attributes
   const double elevDegrees = getElevation();
-  myAttributes->put<double>("Elevation", elevDegrees);
-  myAttributes->put<std::string>("ElevationUnits", "Degrees");
+  setDouble("Elevation", elevDegrees);
+  setString("ElevationUnits", "Degrees");
 
   const double firstGateM = getDistanceToFirstGateM();
-  myAttributes->put<double>("RangeToFirstGate", firstGateM);
-  myAttributes->put<std::string>("RangeToFirstGateUnits", "Meters");
+  setDouble("RangeToFirstGate", firstGateM);
+  setString("RangeToFirstGateUnits", "Meters");
 }
 
 double

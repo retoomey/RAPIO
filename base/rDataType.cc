@@ -43,12 +43,7 @@ std::string
 DataType::getSubType() const
 {
   std::string subtype;
-  // Record calls setDataAttributeValue to set value/unit,
-  // is this correct..check the netcdf
-  auto f = myAttributes->get<std::string>("SubType-value");
-  if (f) {
-    subtype = *f;
-  }
+  getString("SubType-value", subtype);
 
   if (!subtype.empty()) {
     if (subtype != "NoPRI") { // Special case
@@ -57,6 +52,12 @@ DataType::getSubType() const
   }
 
   return (getGeneratedSubtype());
+}
+
+void
+DataType::setSubType(const std::string& s)
+{
+  setDataAttributeValue("SubType", s);
 }
 
 void
@@ -74,8 +75,8 @@ DataType::setDataAttributeValue(
   // Stick as a pair into attributes.
   auto one = key + "-unit";
   auto two = key + "-value";
-  myAttributes->put<std::string>(one, unit);
-  myAttributes->put<std::string>(two, value);
+  setString(one, unit);
+  setString(two, value);
 }
 
 bool
@@ -87,30 +88,25 @@ DataType::initFromGlobalAttributes()
 void
 DataType::updateGlobalAttributes(const std::string& encoded_type)
 {
-  // FIXME: Actually general DataGrids might not want to stick all
-  // this stuff in there.  Maybe a 'wdssii' flag or something here..
-  // the class tree might not be good design
-
-  myAttributes->put<std::string>(Constants::TypeName, getTypeName());
+  setString(Constants::TypeName, getTypeName());
 
   // This 'could' be placed by encoders, but we pass it in
-  myAttributes->put<std::string>(Constants::sDataType, encoded_type);
+  setString(Constants::sDataType, encoded_type);
 
-  // Store special time/location into global attributes
-  // Should we just do in in set time and location?
-  Time aTime    = getTime();
+  // Location
   LLH aLocation = getLocation();
+  setDouble(Constants::Latitude, aLocation.getLatitudeDeg());
+  setDouble(Constants::Longitude, aLocation.getLongitudeDeg());
+  setDouble(Constants::Height, aLocation.getHeightKM() * 1000.0);
 
-  myAttributes->put<double>(Constants::Latitude, aLocation.getLatitudeDeg());
-  myAttributes->put<double>(Constants::Longitude, aLocation.getLongitudeDeg());
-  myAttributes->put<double>(Constants::Height, aLocation.getHeightKM() * 1000.0);
-
-  myAttributes->put<long>(Constants::Time, aTime.getSecondsSinceEpoch());
-  myAttributes->put<double>(Constants::FractionalTime, aTime.getFractional());
+  // Time
+  Time aTime = getTime();
+  setLong(Constants::Time, aTime.getSecondsSinceEpoch());
+  setDouble(Constants::FractionalTime, aTime.getFractional());
 
   // Standard missing/range
-  myAttributes->put<float>("MissingData", Constants::MissingData);
-  myAttributes->put<float>("RangeFolded", Constants::RangeFolded);
+  setFloat("MissingData", Constants::MissingData);
+  setFloat("RangeFolded", Constants::RangeFolded);
 
   // Regenerate attributes global attribute string, representing
   // all the -unit -value pairs.  This is used by netcdf, etc...legacy storage
@@ -125,18 +121,17 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
       }
     }
   }
-  myAttributes->put<std::string>("attributes", attributes);
+  setString("attributes", attributes);
 } // DataType::updateGlobalAttributes
 
 std::shared_ptr<ColorMap>
 DataType::getColorMap()
 {
   // First try the ColorMap-value attribute...Some MRMS netcdf files have this
-  auto f = myAttributes->get<std::string>("ColorMap-value");
-
-  if (f) {
-    return ColorMap::getColorMap(*f);
+  // if not found use the type name such as Reflectivity
+  std::string colormap = "";
+  if (!getString("ColorMap-value", colormap)) {
+    colormap = getTypeName();
   }
-  // Second go to typename such as Reflectivity
-  return ColorMap::getColorMap(getTypeName());
+  return ColorMap::getColorMap(colormap);
 }

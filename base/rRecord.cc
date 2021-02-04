@@ -181,7 +181,7 @@ Record::createObject(size_t i) const
   if (dt != nullptr) {
     // set sub-type
     if (this->getSelections().size() > 2) {
-      dt->setDataAttributeValue("SubType", this->getSelections()[2]);
+      dt->setSubType(this->getSelections()[2]);
     }
   } else {
     LogSevere("Failed to create new datatype\n");
