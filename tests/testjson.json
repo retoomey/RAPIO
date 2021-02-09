@@ -1,0 +1,65 @@
+{
+    "DataType": "RadialSet",
+    "TypeName": "Reflectivity",
+    "Latitude": "35.333",
+    "Longitude": "-97.278",
+    "Height": "384",
+    "Time": "925767356",
+    "FractionalTime": "0.463",
+    "attributes": " Nyquist_Vel radarName vcp",
+    "Nyquist_Vel-unit": "MetersPerSecond",
+    "Nyquist_Vel-value": "28.19",
+    "radarName-unit": "dimensionless",
+    "radarName-value": "KTLX",
+    "vcp-unit": "dimensionless",
+    "vcp-value": "11",
+    "Elevation": "3.35",
+    "ElevationUnits": "Degrees",
+    "RangeToFirstGate": "0.023211",
+    "RangeToFirstGateUnits": "Meters",
+    "MissingData": "-99900",
+    "RangeFolded": "-99901",
+    "SubType-unit": "dimensionless",
+    "SubType-value": "03.35",
+    "Dimensions": [
+        {
+            "name": "Azimuth",
+            "size": "374"
+        },
+        {
+            "name": "Gate",
+            "size": "268"
+        }
+    ],
+    "Arrays": [
+        {
+            "name": "primary",
+            "shm": "\/dev\/shm\/875381-array1",
+            "Dimensions": [
+                "0",
+                "1"
+            ]
+        },
+        {
+            "name": "Azimuth",
+            "shm": "\/dev\/shm\/875381-array2",
+            "Dimensions": [
+                "0"
+            ]
+        },
+        {
+            "name": "BeamWidth",
+            "shm": "\/dev\/shm\/875381-array3",
+            "Dimensions": [
+                "0"
+            ]
+        },
+        {
+            "name": "GateWidth",
+            "shm": "\/dev\/shm\/875381-array4",
+            "Dimensions": [
+                "0"
+            ]
+        }
+    ]
+}

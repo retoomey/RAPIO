@@ -134,16 +134,22 @@ public:
   // 1D stuff ----------------------------------------------------------
 
   /** Get back object so can call methods on it */
-  std::shared_ptr<Array<float, 1> >
-  getFloat1D(const std::string& name);
+  inline std::shared_ptr<Array<float, 1> >
+  getFloat1D(const std::string& name)
+  {
+    return get<Array<float, 1> >(name);
+  }
 
   /** Add named float data with initial size and value (uninitialized) */
   std::shared_ptr<Array<float, 1> >
   addFloat1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
 
   /** Get a pointer data for quick transversing */
-  std::shared_ptr<Array<int, 1> >
-  getInt1D(const std::string& name);
+  inline std::shared_ptr<Array<int, 1> >
+  getInt1D(const std::string& name)
+  {
+    return get<Array<int, 1> >(name);
+  }
 
   /** Add named int data with initial size and value (uninitialized) */
   std::shared_ptr<Array<int, 1> >
@@ -152,8 +158,18 @@ public:
   // 2D stuff ----------------------------------------------------------
 
   /** Get back object so can call methods on it */
-  std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& name);
+  inline std::shared_ptr<Array<float, 2> >
+  getFloat2D(const std::string& name)
+  {
+    return get<Array<float, 2> >(name);
+  }
+
+  /** Get back primary (first) grid */
+  inline std::shared_ptr<Array<float, 2> >
+  getFloat2D()
+  {
+    return myNodes[0]->getSP<Array<float, 2> >();
+  }
 
   /** Add named float data with initial size and value */
   std::shared_ptr<Array<float, 2> >

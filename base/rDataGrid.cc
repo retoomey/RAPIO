@@ -115,12 +115,6 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
 //
 
 std::shared_ptr<Array<float, 1> >
-DataGrid::getFloat1D(const std::string& name)
-{
-  return get<Array<float, 1> >(name);
-}
-
-std::shared_ptr<Array<float, 1> >
 DataGrid::addFloat1D(const std::string& name,
   const std::string& units, const std::vector<size_t>& dimindexes)
 {
@@ -129,12 +123,6 @@ DataGrid::addFloat1D(const std::string& name,
   auto a = add<Array<float, 1> >(name, units, Array<float, 1>({ size }), FLOAT, dimindexes);
 
   return a;
-}
-
-std::shared_ptr<Array<int, 1> >
-DataGrid::getInt1D(const std::string& name)
-{
-  return get<Array<int, 1> >(name);
 }
 
 std::shared_ptr<Array<int, 1> >
@@ -150,12 +138,6 @@ DataGrid::addInt1D(const std::string& name,
 
 // 2D stuff ----------------------------------------------------------
 //
-
-std::shared_ptr<Array<float, 2> >
-DataGrid::getFloat2D(const std::string& name)
-{
-  return get<Array<float, 2> >(name);
-}
 
 std::shared_ptr<Array<float, 2> >
 DataGrid::addFloat2D(const std::string& name,

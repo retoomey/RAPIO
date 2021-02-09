@@ -5,6 +5,7 @@
 
 #include <string>
 #include <iostream>
+#include <fstream>
 
 #include <boost/asio.hpp>
 #include <boost/dll.hpp>
@@ -217,6 +218,11 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     std::shared_ptr<PTreeData> theJson = datagrid->createMetadata();
     std::vector<char> buf; // FIXME: Buffer class instead?
     size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
+    if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
+      LogSevere("DataGrid didn't generate JSON so aborting python call.\n");
+      return std::vector<std::string>();
+    }
+    aLength -= 1; // Remove the ending buffer 0
     shared_memory_object shdmem2 { open_or_create, jsonName.c_str(), read_write };
     shdmem2.truncate(aLength);
     mapped_region region3 { shdmem2, read_write }; // read only, read_write?
