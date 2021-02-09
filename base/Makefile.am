@@ -63,6 +63,8 @@ librapio_la_SOURCES =\
   rLatLonGrid.cc\
   rRadialSet.cc\
   rRadialSetLookup.cc\
+  rDataTypeHistory.cc\
+  rElevationVolume.cc\
   rDataType.cc\
   rPTreeData.cc\
   rFileIndex.cc\
@@ -144,6 +146,8 @@ pkginclude_HEADERS =\
   rBinaryTable.h\
   rRadialSet.h\
   rRadialSetLookup.h\
+  rDataTypeHistory.h\
+  rElevationVolume.h\
   rLatLonGrid.h\
   rFileIndex.h\
   rFMLIndex.h\

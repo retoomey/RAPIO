@@ -107,6 +107,12 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
     filename << '_' << s[i];
   }
 
+  // Add sourcename to avoid data stomping with multi-radar output
+  const std::string sourceName = rec.getSourceName();
+  if (!sourceName.empty()) {
+    filename << sourceName << '_';
+  }
+
   // First part of multi-write.  I'm gonna to append the factory
   // to the end of the fml filename.  This won't work for multiple
   // records from a single writer

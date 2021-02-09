@@ -105,6 +105,18 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
     // Get absolute path in input, make sure it's a directory
     URL forFull         = URL(outputinfo + "/up");
     std::string dirbase = forFull.getDirName();
+
+    // FIXME:  My temp hack for multi-radar output to avoid data overwrite stomping
+    // We should generalize file output ability with a smart configuration
+    // instead of hardcoding it here
+    // This is bug in mrms imo, so may have to change it there as well
+    std::string radar = "";
+    dt->getString("radarName-value", radar);
+
+    if (!radar.empty()) {
+      dirbase = dirbase + '/' + radar;
+    }
+
     if (useSubDirs) {
       // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
       const std::string extra = subType.empty() ? ("") : ('/' + subType);
@@ -178,6 +190,10 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
     selections.push_back(spec);
   }
   Record rec(params, selections, rsTime);
+  std::string radar;
+  if (dt->getString("radarName-value", radar)) {
+    rec.setSourceName(radar);
+  }
   records.push_back(rec);
 } // IODataType::generateRecord
 

@@ -133,6 +133,14 @@ public:
   void
   setIndexNumber(size_t i){ myIndexCount = i; }
 
+  /** Get the optional source */
+  std::string
+  getSourceName() const { return mySourceName; }
+
+  /** Set the optional source */
+  void
+  setSourceName(const std::string& s){ mySourceName = s; }
+
   /** Read param tag of record. */
   virtual void
   readParams(const std::string & params,
@@ -181,11 +189,13 @@ private:
   size_t myIndexCount;
 
   /** param string list */
-  // std::vector<std::vector<std::string> >myParams;
   std::vector<std::string> myParams;
 
   /** selection string list */
   std::vector<std::string> mySelections;
+
+  /** Optional source string, such as KTLX */
+  std::string mySourceName;
 
   /** Record time */
   Time myTime;

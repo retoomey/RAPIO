@@ -19,6 +19,7 @@
 #include "rFactory.h"
 #include "rSignals.h"
 #include "rHeartbeat.h"
+#include "rDataTypeHistory.h"
 
 // Default always loaded datatype creation factories
 #include "rIOXML.h"
@@ -30,6 +31,10 @@
 
 using namespace rapio;
 using namespace std;
+
+TimeDuration RAPIOAlgorithm::myMaximumHistory;
+Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
+std::string RAPIOAlgorithm::myReadMode;
 
 /** This listener class is connected to each index we create.
  * It does nothing but pass events onto the algorithm
@@ -198,8 +203,8 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
     history = 15;
     LogSevere(
       "History -h value set too small, changing to " << history << "minutes.\n");
-    myMaximumHistory = TimeDuration::Minutes(history);
   }
+  myMaximumHistory = TimeDuration::Minutes(history);
   addInputProducts(products);
   addIndexes(indexes, TimeDuration::Minutes(history));
 }
@@ -208,6 +213,19 @@ TimeDuration
 RAPIOAlgorithm::getMaximumHistory()
 {
   return (myMaximumHistory);
+}
+
+bool
+RAPIOAlgorithm::inTimeWindow(const Time& aTime)
+{
+  // For realtime use the now time?
+  // Problem is we have all mode AND archive which won't match 'now' always
+  // We'll try using the time of the latest received
+  // product (which probably jitters a little).  I'm thinking this should be ok for most products)
+  const TimeDuration window = myLastDataTime - aTime;
+
+  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << myLastDataTime << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
+  return (window <= myMaximumHistory);
 }
 
 bool
@@ -704,6 +722,15 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
     handleEndDatasetEvent();
   } else {
     // Give data to algorithm to process
+    // I've noticed some older indexes the record fractional
+    // isn't equal to the loaded product (netcdf) fractional,
+    // but unless we're doing indexed with nano data items probably
+    // don't have to worry here.
+    // FIXME: 'Maybe' adjust this post DataType creation?
+    myLastDataTime = rec.getTime();
+    // FIXME: this back calls to inTimeWindow..couldn't it be cleaner?
+    // FIXME: purge before or after adding newest?
+    DataTypeHistory::purgeTimeWindow(myLastDataTime);
     RAPIOData d(rec);
     processNewData(d);
   }

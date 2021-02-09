@@ -246,15 +246,19 @@ public:
     std::shared_ptr<DataType>         outputData);
 
   /** Get the maximum history specified by user */
-  TimeDuration
+  static TimeDuration
   getMaximumHistory();
 
+  /** Is given time in the time window from -h */
+  static bool
+  inTimeWindow(const Time& aTime);
+
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
-  bool
+  static bool
   isDaemon();
 
   /** Are we reading old records? */
-  bool
+  static bool
   isArchive();
 
 protected:
@@ -280,17 +284,23 @@ protected:
   /** Notifiers we are sending notification of new records to */
   std::vector<std::shared_ptr<RecordNotifierType> > myNotifiers;
 
-  /** History time for index storage */
-  TimeDuration myMaximumHistory;
-
-  /** The record read mode */
-  std::string myReadMode;
-
   /** The cronlist for heartbeat/sync if any */
   std::string myCronList;
 
   /** The list of writers to attempt */
   std::vector<outputInfo> myWriters;
+
+  // I believe these things will always be 'global', even
+  // if we have multiple algorithm modules.
+
+  /** History time for index storage */
+  static TimeDuration myMaximumHistory;
+
+  /** The time of last record received */
+  static Time myLastDataTime;
+
+  /** The record read mode */
+  static std::string myReadMode;
 };
 
 //  end class RAPIOAlgorithm

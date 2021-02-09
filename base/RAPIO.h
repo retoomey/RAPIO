@@ -11,6 +11,9 @@
 #include <rNetcdfDataType.h>
 #include <rImageDataType.h>
 
+// History access
+#include <rDataTypeHistory.h>
+
 // Generic data structures
 #include <rArray.h>
 #include <rPTreeData.h>
