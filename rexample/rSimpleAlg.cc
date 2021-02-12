@@ -85,6 +85,35 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
   // Look for any data the system knows how to read
   auto r = d.datatype<rapio::DataType>();
   if (r != nullptr) {
+    #if 0
+    // Example for processing groups of subtypes.
+
+    // Say you have data incoming where you
+    // require N moments to all exist in order to process them.  For example, you need
+    // 01.80 Reflectivity and 01.80 Velocity together to process your algorithm.
+
+    // First save to a collection of virtual volumes for each subtype:
+    DataTypeHistory::updateVolume(r); // Could save some memory just calling for your wanted moments
+
+    // Looking for an existing slice across volume cache.  Basically if you need to process N moments
+    // as soon as it is 'full' you can call this.  You can delete the slice afterwards for a clean slate,
+    // otherwise you'll get the same set again (expect for the newest added)
+    // You'll either get 0 size or types.size(), no inbetween.
+    const std::vector<std::string> types = { "Reflectivity", "Velocity" }; // The types we must have...
+    const std::string current = r->getSubType();                           // The current just added subtype
+    auto list = DataTypeHistory::getFullSubtypeGroup(current, types);      // Get FULL matching subtype, each moment
+
+    if (list.size() > 0) { // zero comes back if missing any of them.
+      // Process list[0], list[1], etc.
+      LogSevere(
+        ">>>>>>>>>>>>>>>>FULL GROUP: PROCESSING REFLECTIVITY, VELOCITY AT SUBTYPE " << current
+                                                                                    << "<<<<<<<<<<<<<<<<<<<<<<\n");
+      ProcessMyNewAlg(list[0], list[1], list[2]) // These will match the 'types' in.
+      // If processed now you can delete that slice if you don't want to chance processing this timeset again
+      DataTypeHistory::deleteSubtypeGroup(current, types);
+    }
+    #endif // if 0
+
     // Look for Grib2 data for Grib2
     // std::shared_ptr<rapio::GribDataType> grib2 = d.datatype<rapio::GribDataType>();
     auto grib2 = d.datatype<rapio::GribDataType>();
@@ -183,20 +212,18 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Look for a radial set
 
-    #if 0
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
       LogInfo("This is a radial set, do radial set stuff\n");
       size_t radials = radialSet->getNumRadials(); // x
       size_t gates   = radialSet->getNumGates();   // y
-      auto& data     = radialSet->getFloat2D("primary")->ref();
+      auto& data     = radialSet->getFloat2D()->ref();
       for (size_t r = 0; r < radials; ++r) {
         for (size_t g = 0; g < gates; ++g) {
           data[r][g] = 5.0; // Replace every gate with 5 dbz
         }
       }
     }
-    #endif // if 0
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");

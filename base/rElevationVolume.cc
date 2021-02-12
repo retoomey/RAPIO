@@ -76,6 +76,27 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
   printVolume();
 } // Volume::addDataType
 
+std::shared_ptr<DataType>
+Volume::getSubType(const std::string& subtype)
+{
+  for (auto v:myVolume) {
+    if (v->getSubType() == subtype) { return v; }
+  }
+  return nullptr;
+}
+
+bool
+Volume::deleteSubType(const std::string& subtype)
+{
+  for (size_t i = 0; i < myVolume.size(); ++i) {
+    if (myVolume[i]->getSubType() == subtype) {
+      myVolume.erase(myVolume.begin() + i);
+      return true;
+    }
+  }
+  return false;
+}
+
 void
 ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
 {

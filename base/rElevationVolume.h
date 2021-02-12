@@ -35,6 +35,14 @@ public:
   virtual void
   addDataType(std::shared_ptr<DataType> d);
 
+  /** Get DataType matching a given subtype */
+  std::shared_ptr<DataType>
+  getSubType(const std::string& subtype);
+
+  /** Delete DataTypes matching a given subtype */
+  bool
+  deleteSubType(const std::string& subtype);
+
 private:
 
   /** Unique key for volume used by history */

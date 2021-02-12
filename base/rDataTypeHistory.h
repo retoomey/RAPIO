@@ -33,6 +33,19 @@ public:
 
   // Any other type of history/storage we can have functions added here
 
+  /** Get a full slice of moments matching a given subtype.  An empty vector
+   * is returned if any moments are still missing.  Note this function doesn't work
+   * for multi-radar input since there could be say two subtypes of 01.80 degree for
+   * Reflectivity for two radars.  However for single radar processing with N moments
+   * that share subtypes, this allows processing those moments in group.  */
+  static std::vector<std::shared_ptr<DataType> >
+  getFullSubtypeGroup(const std::string& subtype, const std::vector<std::string>& keys);
+
+  /** Purge a given subtype from all stored volumes.  This can be used to make sure
+   * a processed SubtypeGroup is not processed again */
+  static size_t
+  deleteSubtypeGroup(const std::string& subtype, const std::vector<std::string>& keys);
+
   /** Purge history for volumes, collections, etc.  Called by
    * RAPIO automatically you don't need to call it.  Use the -h
    * option to determine max time window */

@@ -45,6 +45,42 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
   v->addDataType(data);
 }
 
+std::vector<std::shared_ptr<DataType> >
+DataTypeHistory::getFullSubtypeGroup(
+  const std::string             & subtype,
+  const std::vector<std::string>& keys)
+{
+  // Hunt volumes for the keys?
+  std::vector<std::shared_ptr<DataType> > out;
+  size_t counter = 0;
+  for (auto v:myVolumes) {
+    auto dt = v.second->getSubType(subtype);
+    out.push_back(dt);
+    if (dt != nullptr) { // We want FULL group
+      counter++;
+    }
+  }
+  if (counter == keys.size()) {
+    return out;
+  }
+  return std::vector<std::shared_ptr<DataType> >();
+}
+
+size_t
+DataTypeHistory::deleteSubtypeGroup(
+  const std::string             & subtype,
+  const std::vector<std::string>& keys)
+{
+  size_t counter = 0;
+
+  for (auto v:myVolumes) {
+    if (v.second->deleteSubType(subtype)) {
+      counter++;
+    }
+  }
+  return counter;
+}
+
 void
 DataTypeHistory::purgeTimeWindow(const Time& currentTime)
 {
