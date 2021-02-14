@@ -144,6 +144,7 @@ Record::getParamString(const std::vector<std::string>& params)
 
   std::string p;
 
+  bool first = true;
   for (auto& s:params) {
     // Some WDSSII xml indexes have a GzippedFile/xmldata randomly stuffed into params,
     // we don't want this to be part of the path.
@@ -153,6 +154,11 @@ Record::getParamString(const std::vector<std::string>& params)
     // W2ALGS GzippedFile {indexlocation} xmldata restofpath.xml.gz
     if (s == "GzippedFile") { continue; }
     if (s == "xmldata") { continue; }
+    if (first) {
+      p     = s; // http for example shouldn't have a first slash
+      first = false;
+      continue;
+    }
     p += "/" + s;
   }
 

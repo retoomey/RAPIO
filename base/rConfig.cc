@@ -91,9 +91,9 @@ Config::addSearchFromString(const std::string& pathgroup)
   std::vector<std::string> paths;
   Strings::splitWithoutEnds(pathgroup, ':', &paths);
   for (auto& it:paths) {
-    addSearchPath(URL(it));               // Direct path maybe given
-    addSearchPath(URL(it + "/rconfig"));  // RAPIO folder...
-    addSearchPath(URL(it + "/w2config")); // W2 folder...
+    addSearchPath(URL(it));                  // Direct path maybe given
+    addSearchPath(URL(it + "/RAPIOConfig")); // RAPIO folder...
+    addSearchPath(URL(it + "/w2config"));    // W2 folder...
   }
 }
 
@@ -146,6 +146,8 @@ Config::setUpSearchPaths()
 
   // Fall back to relative from binary when running example program
   auto path = OS::getProcessPath() + "/../../RAPIOConfig/";
+  addSearchFromString(path);
+  path = OS::getProcessPath() + "/../RAPIO/RAPIOConfig/"; // From bin folder to source
   addSearchFromString(path);
 
   // Fall back to home directory
