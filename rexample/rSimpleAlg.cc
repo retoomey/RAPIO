@@ -212,6 +212,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Look for a radial set
 
+    #if 0
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
       LogInfo("This is a radial set, do radial set stuff\n");
@@ -224,6 +225,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
         }
       }
     }
+    #endif // if 0
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");

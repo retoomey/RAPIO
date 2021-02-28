@@ -7,6 +7,8 @@
 import numpy as np
 import mmap, sys, json, os
 
+rapioBaseFileName="pythonoutput"
+
 class RAPIO_DataType:
   """ Create RAPIO DataType """
   def __init__(me):
@@ -15,6 +17,7 @@ class RAPIO_DataType:
     me.dimNames = []
     me.dimSizes = []
     me.readMetaJSON()
+    #print(me.jsonDict)
      
     # FIXME: To do, need to loop array list, pull each 
     # one based on array shared memory location
@@ -22,21 +25,22 @@ class RAPIO_DataType:
     # FIXME: Do we lazy load this?  Probably better
     ppid = os.getppid()
     key = "/dev/shm/"+str(ppid)+"-JSON"  # Match C++ code
-    x = int(me.getX())
-    y = int(me.getY())
+    x = me.getX()
+    y = me.getY()
     me.primary2D = RAPIO_2DF(x, y, "1")
     me.have2D = True
    
     pass
   def readMetaJSON(me):
     """ Read the metadata json for a passes in datatype """
+    # For now at least, read globals as part of the DataType
+    global rapioBaseFileName
     # ----------------------------------------------
     # Attempt to read JSON metadata information
 
     # Called from rapio c++, get parent ppid
     ppid = os.getppid()
     key = "/dev/shm/"+str(ppid)+"-JSON"  # Match C++ code
-
     #me.metammap = open("/dev/shm/BoostJSON", "r+b")
     try:
       me.metammap = open(key, "r+b")
@@ -48,12 +52,20 @@ class RAPIO_DataType:
       print("Cannot access JSON information at "+key)
       return
 
+    # Current metadata is global and 1 single datatype,
+    # we might make datatype 'separate' in the json at some point
+    try:
+      outputinfo = me.jsonDict["RAPIOOutput"] # Match C++
+      rapioBaseFileName=outputinfo["filebase"]
+    except:
+      print("))))))Wasn't able to parse RAPIO output helper information")
+
     # Gather dimension info
     try:
       dims = me.jsonDict["Dimensions"]
       for d in dims:
         me.dimNames.append(d["name"])
-        me.dimSizes.append(d["size"])
+        me.dimSizes.append(int(d["size"]))
         #print("Added "+str(d["name"])+ " == " +str(d["size"]))
     except:
       print("Wasn't able to parse JSON dimensions")
@@ -135,6 +147,16 @@ class RAPIO_2DF:
   pass
 
 def getDataType():
-  # Read the metadata, then create a DataType from it
-  #return RAPIO_2DF("/dev/shm/Boost")
+  """ Read the metadata, then create a DataType from it """
   return RAPIO_DataType()
+
+def getOutputBase():
+  """ Get output base file wanted by RAPIO """
+  global rapioBaseFileName
+  return rapioBaseFileName
+
+def notifyWrite(filename, factoryname):
+  """ Tell RAPIO we wrote something """
+  # Ultra cheese print to output we'll snag in RAPIO
+  print("RAPIO_FILE_OUT:"+filename)
+  print("RAPIO_FACTORY_OUT:"+factoryname)

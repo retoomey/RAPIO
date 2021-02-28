@@ -830,7 +830,15 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
         // FIXME: For now assuming outputinfo is always a directory.
         // netcdf=/folder1 image=/folder2 gdal=/folder3
         // fml=/override
-        n->writeRecords(w.outputinfo, records);
+        // FIXME: Ok python is using a comma.  We'll have to refactor the API
+        // a bit to clean this up.  Factories should control outputinfo --> output folder
+        std::string outputfolder = w.outputinfo;
+        std::vector<std::string> pieces;
+        Strings::splitWithoutEnds(w.outputinfo, ',', &pieces);
+        if (pieces.size() > 1) {
+          outputfolder = pieces[1];
+        }
+        n->writeRecords(outputfolder, records);
       }
     }
 
@@ -840,4 +848,4 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   } else {
     LogInfo("DID NOT FIND a match for product key " << key << "\n");
   }
-}
+} // RAPIOAlgorithm::writeOutputProduct

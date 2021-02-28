@@ -171,6 +171,7 @@ pkginclude_HEADERS =\
 
 SUBDIRS     =\
   ionetcdf\
+  iopython\
   iogrib\
   iogdal\
   ioimage

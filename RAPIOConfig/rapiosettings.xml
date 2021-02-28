@@ -35,6 +35,17 @@ Information needed:
     <output ncflags="4096" deflate_level="3"/>
   </io>
 
+<!-- Python module settings
+     bin: Path of python executable.  RAPIO will try to find your python
+          from your path, but you can force it here if it's unable or grabbing
+          the wrong python.
+          Example: <output bin="/usr/bin/python"/>
+     print: 'true' Log the print output of the python script
+-->
+  <io names="python" module="librapiopython.so">
+    <output print="true"/>
+  </io>
+
 <!-- Imagick module settings
      cols: width of image
      rows: height of image
