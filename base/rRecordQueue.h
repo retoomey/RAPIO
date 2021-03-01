@@ -55,5 +55,11 @@ public:
   /** Fired action.  Usually process a record from queue */
   virtual void
   action() override;
+
+  /** Simple counter of pushed records */
+  static long long pushedRecords;
+
+  /** Simple counter of popped records */
+  static long long poppedRecords;
 };
 }

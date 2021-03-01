@@ -15,6 +15,11 @@
 #include <boost/filesystem.hpp>
 
 namespace rapio {
+/** Enum class for log pattern tokens */
+enum class LogToken {
+  filler, time, timems, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off
+};
+
 /** Flushes the log on a timer in main event loop */
 class LogFlusher : public EventTimer {
 public:
@@ -39,6 +44,10 @@ public:
   URL
   getURL(){ return myURL; }
 
+  /** Set the URL we're watching */
+  void
+  setURL(const URL& aURL){ myURL = aURL; }
+
   /** Fire the action of checking/updating log settings */
   virtual void
   action() override;
@@ -55,13 +64,15 @@ protected:
  * <pre>
  * LogSevere( "Error: " << file_name << " not readable.\n");
  * </pre>
- * @see Error
  */
 class Log : public Utility {
 public:
 
-  /** The standard format string date of form [date UTC] we use for logging or xml, etc. */
+  /** The standard format string date of form [date UTC] we use for logging. */
   static std::string LOG_TIMESTAMP;
+
+  /** The standard format string date of form [date UTC] we use for logging with MS. */
+  static std::string LOG_TIMESTAMP_MS;
 
   /** Severity levels in decreasing order of printing */
   enum class Severity {
@@ -76,7 +87,7 @@ public:
   };
 
 
-  /** returns the singleton instance. */
+  /** Returns the singleton instance. */
   inline static Log *
   instance()
   {
@@ -112,30 +123,54 @@ public:
   static void
   flush();
 
-  /** Change the log settings from a log configuration watcher */
-  void
-  setInitialLogSettings(const std::string& levelOrURL,
-    int                                  flush);
+  /** Set the log severity level */
+  static void
+  setSeverity(Log::Severity severity);
 
-  /** Change the log settings from a log configuration watcher */
-  void
-  setLogSettings(Log::Severity severe,
-    int                        flush);
+  /** Set the log severity level from a string which can be a level or a URL */
+  static void
+  setSeverityString(const std::string& level);
 
-  /** Set log settings from a given URL location.  Called only from
-   * the log url watcher.  You should be doing this from command line.*/
-  bool
-  setFromURL(const URL& aURL);
+  /** Set the log flush update time */
+  static void
+  setLogFlushMilliSeconds(int newflush);
+
+  /** Set the log color output */
+  static void
+  setLogUseColors(bool flag);
+
+  /** Set the log pattern */
+  static void
+  setLogPattern(const std::string& pattern);
+
+  /** Print out the current logging settings being used */
+  static void
+  printCurrentLogSettings();
 
   /** Not virtual since you are not meant to derive from Log. */
   ~Log();
 
-  static long bytecounter;
-
-  /** Boost severity level */
+  /** Boost severity level, call this with macros only, public only because it has to be */
   static boost::log::sources::severity_logger<boost::log::trivial::severity_level> mySevLog;
 
+  /** Color setting, public only because it has to be */
+  static bool useColors;
+
+  /** Parsed Token number list for logging */
+  static std::vector<int> outputtokens;
+
+  /** Parsed Token number list for logging */
+  static std::vector<LogToken> outputtokensENUM;
+
+  /** Parsed between token filler strings for logging */
+  static std::vector<std::string> fillers;
+
 private:
+
+  /** The formatter callback for boost logging.
+   * Warning do not call Log functions here, you will crash. Use std::cout */
+  static void
+  BoostFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm);
 
   /** The current verbosity level. */
   Severity myCurrentLevel;

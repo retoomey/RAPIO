@@ -342,7 +342,8 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     // We're going to exit anyway at this point
     if (wantHelp) {
       // We don't have arguments for logging, use some defaults
-      Log::instance()->setInitialLogSettings("severe", 900);
+      // Don't need it, defaults are set already
+      // Log::setInitialLogSettings("severe", 900);
 
       // Load everything
       initializeBaseline();
@@ -357,13 +358,19 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
       bool success = o.finalizeArgs(wantHelp);
       if (!success) { exit(1); }
 
+      // Baseline uses default logging of info on start up since it may fail
+      initializeBaseline();
+
+      LogInfo("Algorithm initialized, executing " << OS::getProcessName() << "...\n");
+
+      // Config should have set everything by now
       // Now we should have log settings, etc.
       // 2.5 setup signals, etc..some stuff based upon arguments
-      const int logFlush        = o.getInteger("flush");
+      //   const int logFlush        = o.getInteger("flush");
       const std::string verbose = o.getString("verbose");
-      Log::instance()->setInitialLogSettings(verbose, logFlush);
-
-      initializeBaseline();
+      //  Log::setInitialLogSettings(verbose, logFlush);
+      Log::setSeverityString(verbose);
+      Log::printCurrentLogSettings();
     }
 
     // 3. Process options, inputs, outputs that were successfully parsed
@@ -477,7 +484,7 @@ RAPIOAlgorithm::addOutputProduct(const std::string& pattern)
   myProductOutputInfo.push_back(
     productOutputInfo(productPattern, subtypePattern, toProductPattern, toSubtypePattern));
 
-  LogInfo("Added output product pattern with key '" << pattern << "'\n");
+  LogDebug("Added output product pattern with key '" << pattern << "'\n");
 } // RAPIOAlgorithm::addOutputProduct
 
 void
@@ -644,9 +651,9 @@ RAPIOAlgorithm::execute()
   const size_t rSize = q->size();
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
-  LogInfo("Outputs:\n");
+  LogDebug("Outputs:\n");
   for (auto& w:myWriters) {
-    LogInfo("   " << w.factory << "--> " << w.outputinfo << "\n");
+    LogDebug("   " << w.factory << "--> " << w.outputinfo << "\n");
   }
 
   // Time until end of program.  Make it dynamic memory instead of heap or
@@ -742,8 +749,12 @@ RAPIOAlgorithm::handleEndDatasetEvent()
   if (!isDaemon()) {
     // Archive empty means end it all
     // FIXME: maybe just end event loop here, do a shutdown
+    Log::setSeverity(Log::Severity::INFO);
+    LogInfo(
+      "End of archive data set, " << RecordQueue::poppedRecords << " of " << RecordQueue::pushedRecords
+                                  << " processed.\n");
     Log::flush();
-    throw std::string("End of data set.");
+    exit(0);
   } else {
     // Realtime queue is empty, hey we're caught up...
   }

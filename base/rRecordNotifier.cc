@@ -76,7 +76,7 @@ RecordNotifier::createNotifiers(const std::string  & nstring,
 
     auto n = getNotifier(params, outputdir, protocol);
     if (n != nullptr) {
-      LogInfo("Added notifier: " << protocol << ":" << params << "\n");
+      LogDebug("Added notifier: " << protocol << ":" << params << "\n");
       v.push_back(n);
     } else {
       LogSevere("Format of passed notifier '" << protocol << " = " << params << "' is wrong, see help n\n");

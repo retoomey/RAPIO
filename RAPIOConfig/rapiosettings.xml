@@ -6,6 +6,45 @@
 
 <settings>
 
+<!-- Settings for logging output, colors, etc. Note: These settings
+     are read once on algorithm startup. Note logging verbosity is
+     always set on command line
+     flush: milliseconds between hard flushes of log.  The smaller this
+            number the slower things will be
+     color: Set to 'true' to show colors in logging.  Colors can be
+            nice but many capture utilities, etc. can freak out so
+            this allows turning off globally.
+     pattern: Logging pattern with following tokens:
+             %TIME% Current UTC time
+             %TIMEMS% Current UTC time with milliseconds
+             %LEVEL% The logging level of the message such as 'severe'
+             %MESSAGE% The raw logging message
+        Debugging support:
+             %FILE% The file name in code
+             %LINE% The line of the file name
+             %FUNCTION% Full function name and parameters currently in
+        Color support: (I'll probably come back later replace with general RGB)
+             %ECOLOR% Mark info green, debug cyan, error red
+             %RED% ansi red, iff color true
+             %GREEN% ansi red, iff color true
+             %BLUE% ansi red, iff color true
+             %YELLOW% ansi red, iff color true
+             %OFF% turn off current color
+
+        For MRMS w2algrun stuff, I recommand this pattern:
+            This is because the logger adds its own timestamp, etc.
+            pattern="%LEVEL%:%FILE%:%LINE%: %MESSAGE%"
+        General developers:
+            pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%YELLOW%%FILE%:%GREEN%%LINE%:%OFF% %MESSAGE%"
+        General operations:
+            pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
+-->
+<logging flush="900" 
+         color="true" 
+         pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
+>
+</logging>
+
 <!-- Settings for the individual datatype reader/writers. 
      Currently these are global for every algorithm
 Information needed:

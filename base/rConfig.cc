@@ -11,6 +11,7 @@
 #include "rUnit.h"
 #include "rConfigDirectoryMapping.h"
 #include "rConfigIODataType.h"
+#include "rConfigLogging.h"
 
 #include <set>
 #include <cstdlib>  // getenv()
@@ -59,7 +60,7 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
   URL ret;
   if (found) {
     ret = testMe;
-    LogInfo("Read: " << testMe.getPath() << "\n");
+    LogDebug("Read: " << testMe.getPath() << "\n");
   } else {
     LogDebug("WARNING! " << relativePath << " was not found.\n");
   }
@@ -114,6 +115,7 @@ Config::introduceSelf()
   ConfigIODataType::introduceSelf(); // all iodatatype reader/writer settings
   // FIXME: could become general index settings
   ConfigDirectoryMapping::introduceSelf(); // directory (used by index)
+  ConfigLogging::introduceSelf();          // logging, colors, etc.
 }
 
 namespace {
@@ -162,11 +164,13 @@ Config::setUpSearchPaths()
       "No valid global configuration path found in environment variables RAPIO_CONFIG_LOCATION, W2_CONFIG_LOCATION or home directory.\n");
     return false;
   }
-  std::string s;
-  for (auto& it:mySearchPaths) {
-    s += "\n\t[" + it.toString() + "]";
-  }
-  LogInfo("Global configuration search order:" << s << '\n');
+
+  /*std::string s;
+   * for (auto& it:mySearchPaths) {
+   * s += "\n\t[" + it.toString() + "]";
+   * }
+   * LogDebug("Global configuration search order:" << s << '\n');
+   */
   return true;
 } // Config::setUpSearchPaths
 
@@ -176,8 +180,15 @@ Config::readGlobalConfigFile()
   const std::string file = "rapiosettings.xml";
   auto doc = huntXML(file); // or maybe json
 
+  std::string s;
+  for (auto& it:mySearchPaths) {
+    s += "\n\t[" + it.toString() + "]";
+  }
   if (doc == nullptr) {
     LogSevere("Failed to find/read global configuration file: " << file << "\n");
+    LogSevere("Global configuration search order:" << s << '\n');
+  } else {
+    LogDebug("Global configuration search order:" << s << '\n');
   }
   return doc;
 }
@@ -197,7 +208,16 @@ Config::initialize()
       auto configs = Factory<ConfigType>::getAll();
       success = true;
       for (auto& i:configs) {
-        success &= i.second->readConfig(doc);
+        if (i.first != "logging") {
+          success &= i.second->readConfig(doc);
+        }
+      }
+      // Do logging after the others, let them all use the built in log settings
+      for (auto& i:configs) {
+        if (i.first == "logging") {
+          success &= i.second->readConfig(doc);
+          break;
+        }
       }
     }
   }
@@ -228,7 +248,7 @@ void
 Config::setEnvVar(const std::string& envVarName, const std::string& value)
 {
   setenv(envVarName.c_str(), value.c_str(), 1);
-  LogInfo(envVarName << " = " << value << "\n");
+  LogDebug(envVarName << " = " << value << "\n");
 }
 
 std::shared_ptr<PTreeData>

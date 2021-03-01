@@ -157,6 +157,17 @@ public:
   splitSignedXMLFile(const std::string& signedxml,
     std::string                       & outmsg,
     std::string                       & outkey);
+
+  /** Scan a single string for a give list of tokens.
+   * @param pattern The string we are scanning for tokens.
+   * @param tokens The list of tokens to match.
+   * @param outputtokens A number list where each number references the token number, or -1 if a filler string (non token match)
+   * @param outputfillers A list of non-matched strings represented by the ordered -1s in the outputtoken list */
+  static void
+  TokenScan(const std::string& pattern,
+    std::vector<std::string> & tokens,
+    std::vector<int>         & outputtokens,
+    std::vector<std::string> & outputfillers);
 };
 
 /** A class for DFA parsing a word/token by character */

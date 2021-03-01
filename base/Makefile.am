@@ -31,6 +31,7 @@ librapio_la_SOURCES =\
   rConfig.cc\
   rConfigDirectoryMapping.cc\
   rConfigIODataType.cc\
+  rConfigLogging.cc\
   rIODataType.cc\
   rNetcdfDataType.cc\
   rGribDataType.cc\
@@ -116,6 +117,7 @@ pkginclude_HEADERS =\
   rError.h\
   rConfig.h\
   rConfigIODataType.h\
+  rConfigLogging.h\
   rConfigDirectoryMapping.h\
   rOS.h\
   rIODataType.h\

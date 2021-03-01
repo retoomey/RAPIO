@@ -436,4 +436,74 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
   outmsg = onlymsg;
   outkey = keywrapped;
   return true;
-} // IOXML::splitSignedXMLFile
+} // Strings::splitSignedXMLFile
+
+void
+Strings::TokenScan(
+  const std::string       & pattern,
+  std::vector<std::string>& tokens,
+  std::vector<int>        & outputtokens,
+  std::vector<std::string>& outputfillers
+)
+{
+  // Simple multi-DFA token match replacer.  For each token we store a number
+  // representing a match.  We want this in a way for the logger
+  // to use quickly with min delay O(n).  Token -1 means the next filler
+  // string (between tokens), while numbers refer to the pattern list
+  // I always love making these because teachers told me compiler theory wasn't
+  // a useful class...lol
+
+  // DFA count array for each token
+  std::vector<size_t> ats;
+  ats.resize(tokens.size());
+
+  // For each character in pattern...
+  std::string fill;
+  for (auto s:pattern) {
+    // For each token in list...
+    fill += s;
+    for (size_t i = 0; i < tokens.size(); i++) {
+      auto& token = tokens[i];
+      auto& at    = ats[i];
+      // If character matches...progress token DFA forward...
+      if (token[at] == s) {
+        // Matched a token, remove from gathered string, this
+        // will be the unmatched part filler before the token
+        if (++at >= token.size()) {
+          // Add one filler string to log
+          Strings::removeSuffix(fill, token);
+          if (!fill.empty()) {
+            outputfillers.push_back(fill);
+            outputtokens.push_back(-1);
+            fill = "";
+          }
+          // Add one matched token to log and reset all DFAS
+          outputtokens.push_back(i);
+          for (auto& a:ats) {
+            a = 0;
+          }
+          break; // important
+        }
+        // Otherwise that single token resets
+      } else {
+        at = 0; // token failed match, reset
+      }
+    }
+  }
+
+  // Verification/debugging if the code ever fails
+  #if 0
+  std::cout << ">>>\"";
+  size_t fat = 0;
+  for (auto a:outputtokens) {
+    // std::cout << a << ":";
+    if (a == -1) { // handle filler
+      std::cout << outputfillers[fat++];
+    } else { // handle token
+      std::cout << "{" << tokens[a] << "}";
+    }
+  }
+  std::cout << "\"<<<\n";
+  std::cout << "filler size " << outputfillers.size() << " and token list " << outputtokens.size() << "\n";
+  #endif // if 0
+} // Strings::TokenScan

@@ -31,10 +31,11 @@ RAPIOOptions::RAPIOOptions()
 
   // grid2D("GridTest", "nw(34.5, 91.5) se(20.2, 109.5)", "Testing grid 2d");
 
-  optional("flush",
-    "900",
-    "Error log flush (force write) timer set in seconds.");
-  addGroup("flush", "LOGGING");
+  // Decided to make this global since it's probably rarely used
+  // optional("flush",
+  //  "900",
+  //  "Error log flush (force write) timer set in seconds.");
+  // addGroup("flush", "LOGGING");
 
   optional("iconfig",
     "",
@@ -819,11 +820,14 @@ RAPIOOptions::dumpHeaderLine()
   // Start outputting now...
   std::string header = "";
 
+  #if 0
   size_t myOutputWidth = ColorTerm::getOutputWidth();
   for (size_t i = 0; i < myOutputWidth; i++) {
     header += "-";
   }
   std::cout << header << "\n";
+  #endif
+
   ColorTerm::wrapWithIndent(0, 0, myHeader);
 
   // std::string built = ColorTerm::bold("Binary Built:"+std::string(__DATE__) + "
