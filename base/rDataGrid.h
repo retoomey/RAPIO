@@ -140,6 +140,13 @@ public:
     return get<Array<float, 1> >(name);
   }
 
+  /** Get back primary (first) grid reference */
+  inline boost::multi_array<float, 1>&
+  getFloat1DRef(const std::string& name)
+  {
+    return get<Array<float, 1> >(name)->ref();
+  }
+
   /** Add named float data with initial size and value (uninitialized) */
   std::shared_ptr<Array<float, 1> >
   addFloat1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
@@ -149,6 +156,13 @@ public:
   getInt1D(const std::string& name)
   {
     return get<Array<int, 1> >(name);
+  }
+
+  /** Get back primary (first) grid reference */
+  inline boost::multi_array<int, 1>&
+  getInt1DRef(const std::string& name)
+  {
+    return get<Array<int, 1> >(name)->ref();
   }
 
   /** Add named int data with initial size and value (uninitialized) */
@@ -164,11 +178,25 @@ public:
     return get<Array<float, 2> >(name);
   }
 
+  /** Get ref to a named 2d array */
+  inline boost::multi_array<float, 2>&
+  getFloat2DRef(const std::string& name)
+  {
+    return get<Array<float, 2> >(name)->ref();
+  }
+
   /** Get back primary (first) grid */
   inline std::shared_ptr<Array<float, 2> >
   getFloat2D()
   {
     return myNodes[0]->getSP<Array<float, 2> >();
+  }
+
+  /** Get back primary (first) grid reference */
+  inline boost::multi_array<float, 2>&
+  getFloat2DRef()
+  {
+    return myNodes[0]->getSP<Array<float, 2> >()->ref();
   }
 
   /** Add named float data with initial size and value */
