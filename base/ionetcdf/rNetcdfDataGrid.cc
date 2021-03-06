@@ -267,40 +267,35 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
     dataGrid->updateGlobalAttributes(dataType);
     IONetcdf::setAttributes(ncid, NC_GLOBAL, dataGrid->getGlobalAttributes()); // define
 
+    // ------------------------------------------------------------
+    // ARRAYS OF DATA
+    //
+    auto list = dataGrid->getArrays();
+
+    // For netcdf3 we have to declare attributes of the arrays BEFORE enddef
+    size_t count = 0;
+    for (auto l:list) {
+      // Put attributes for this var...
+      const int varid = datavars[count];
+      IONetcdf::setAttributes(ncid, varid, l->getAttributes());
+      count++;
+    }
+
     // Non netcdf-4/hdf5 require separation between define and data...
     // netcdf-4 doesn't care though
     NETCDF(nc_enddef(ncid));
 
-    // Write pass using datavars
-    size_t count = 0;
-
-    // For each array type in the data grid
-    auto list = dataGrid->getArrays();
+    // Now write data into each array in the data grid
+    count = 0;
     for (auto l:list) {
-      auto index = l->getDimIndexes();
-      // const size_t s = l->getDimIndexes().size();
-      void * data     = l->getRawDataPointer();
-      const int varid = datavars[count];
+      void * data = l->getRawDataPointer();
       if (data != nullptr) {
-        // Write output depending on the dimension?
-
-        /*        if (s == 2) {
-         *        const size_t start2[] = { 0, 0 };
-         *        const size_t count2[] = { dims[index[0]].size(), dims[index[1]].size() };
-         *        NETCDF(nc_put_vara(ncid, datavars[count], start2, count2, data));
-         *      } else if (s == 1) {
-         *        NETCDF(nc_put_var(ncid, datavars[count], data));
-         *      }
-         */
-        // Woh...mind blown.
+        // Woh...mind blown generically write everything
         NETCDF(nc_put_var(ncid, datavars[count], data));
       } else {
         LogSevere("Can't write variable " << l->getName() << " because data is empty!\n");
       }
       count++;
-
-      // Put attributes for this var...
-      IONetcdf::setAttributes(ncid, varid, l->getAttributes());
     }
   } catch (const NetcdfException& ex) {
     LogSevere("Netcdf write error with DataGrid: " << ex.getNetcdfStr() << "\n");
