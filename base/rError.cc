@@ -23,15 +23,27 @@ namespace src     = boost::log::sources;
 namespace expr    = boost::log::expressions;
 namespace sinks   = boost::log::sinks;
 
+std::shared_ptr<Log> Log::mySingleton;
+
 boost::log::sources::severity_logger<boost::log::trivial::severity_level> Log::mySevLog;
 
-bool Log::useColors = false;
+bool Log::useColors               = false;
+bool Log::useHelpColors           = false;
 std::string Log::LOG_TIMESTAMP    = "%Y %m/%d %H:%M:%S UTC";
 std::string Log::LOG_TIMESTAMP_MS = "%Y %m/%d %H:%M:%S.%/ms UTC";
 
 std::vector<int> Log::outputtokens;
 std::vector<LogToken> Log::outputtokensENUM;
 std::vector<std::string> Log::fillers;
+
+Log::Severity Log::myCurrentLevel = Log::Severity::INFO;
+Log::Severity Log::mode = Log::Severity::INFO;
+int Log::line             = 0;
+std::string Log::file     = "None";
+std::string Log::function = "None";
+std::stringstream Log::buffer;
+int Log::myPausedLevel = 0;
+int Log::engine        = 0; // cout
 
 namespace {
 /** Utility to convert from a string to a level */
@@ -87,14 +99,14 @@ struct empty_deleter {
 BOOST_LOG_CLOSE_NAMESPACE
 }
 
-void
-Log::BoostFormatter(logging::record_view const& rec, logging::formatting_ostream& strm)
+namespace {
+// Dump using a given stream
+template <class T> void
+dump(T& strm)
 {
-  // Allow pausing of logging in levels
-  if (Log::instance()->isPaused()) { return; }
-
   // Logging is configurable by pattern string
   size_t fat = 0;
+
   for (auto a:Log::outputtokensENUM) {
     switch (a) {
         case LogToken::filler:
@@ -107,37 +119,44 @@ Log::BoostFormatter(logging::record_view const& rec, logging::formatting_ostream
           strm << Time::CurrentTime().getString(Log::LOG_TIMESTAMP_MS);
           break;
         case LogToken::message:
-          strm << rec[expr::smessage];
+          // strm << rec[expr::smessage];
+          strm << Log::buffer.str();
           break;
         case LogToken::file: {
-          logging::value_ref<std::string> fullpath = logging::extract<std::string>("File", rec);
-          // strm << boost::format("%10s") % boost::filesystem::path(fullpath.get()).filename().string();
-          strm << boost::filesystem::path(fullpath.get()).filename().string();
+          //   logging::value_ref<std::string> fullpath = logging::extract<std::string>("File", rec);
+          //   strm << boost::format("%10s") % boost::filesystem::path(fullpath.get()).filename().string();
+          //   strm << boost::filesystem::path(fullpath.get()).filename().string();
+          strm << Log::file;
         }
         break;
         case LogToken::line:
-          strm << logging::extract<int>("Line", rec);
+          // strm << logging::extract<int>("Line", rec);
+          strm << Log::line;
           break;
         case LogToken::function:
-          strm << logging::extract<std::string>("Function", rec);
+          // strm << logging::extract<std::string>("Function", rec);
+          strm << Log::function;
           break;
         case LogToken::level:
           // strm << boost::format("%6s") % rec[logging::trivial::severity];
-          strm << rec[logging::trivial::severity];
+          // strm << rec[logging::trivial::severity];
+          //      strm << rec[logging::trivial::severity];
+          if (Log::mode == Log::Severity::INFO) { // Use enums I think...
+            strm << "info";
+          } else if (Log::mode == Log::Severity::SEVERE) {
+            strm << "error";
+          } else {
+            strm << "debug";
+          }
           break;
         case LogToken::ecolor: // Change depending on verbose level
           if (Log::useColors) {
-            std::stringstream ss;
-            ss << rec[logging::trivial::severity];
-            std::string s = ss.str();
-            if (s == "debug") {
-              strm << "\033[38;2;0;255;255;48;2;0;0;0m"; // cyan
-            } else if (s == "error") {
-              strm << "\033[38;2;255;0;0;48;2;0;0;0m"; // red
-            } else if (s == "info") {
+            if (Log::mode == Log::Severity::INFO) {    // Use enums I think...
               strm << "\033[38;2;0;255;0;48;2;0;0;0m"; // green
+            } else if (Log::mode == Log::Severity::SEVERE) {
+              strm << "\033[38;2;255;0;0;48;2;0;0;0m"; // red
             } else {
-              // no color
+              strm << "\033[38;2;0;255;255;48;2;0;0;0m"; // cyan
             }
           }
           break;
@@ -175,41 +194,85 @@ Log::BoostFormatter(logging::record_view const& rec, logging::formatting_ostream
           break;
     }
   }
+} // dump
+}
 
-  // FIXME: could add this?
-  // Get the LineID attribute value and put it into the stream
-  //  strm << logging::extract< unsigned int >("LineID", rec)  << ":";
+void
+Log::endgroup()
+{
+  // Called at end of a LogInfo, etc. to write to log
+  if ((Log::mode >= Log::myCurrentLevel) &&
+    !Log::isPaused())
+  {
+    // Check our message filter here...
+    // std::stringstream temp;
+    // buffer.swap(temp);
+
+    // Using BOOST logging setup
+    // which could do things like log rotation, etc. at some point
+    if (engine == 1) {
+      logging::record rec = Log::mySevLog.open_record();
+      if (rec) {
+        logging::record_ostream booststream(rec);
+        dump<logging::record_ostream>(booststream);
+        Log::mySevLog.push_record(boost::move(rec));
+      }
+
+      // Using std::cout/std::err
+      // which works better when using external log capturing
+    } else {
+      if (Log::mode == Log::Severity::SEVERE) {
+        dump<std::ostream>(std::cerr);
+      } else {
+        dump<std::ostream>(std::cout);
+      }
+    }
+  }
+  // Always clear the message for next one
+  std::stringstream temp;
+  buffer.swap(temp);
+} // Log::endgroup
+
+void
+Log::BoostFormatter(logging::record_view const& rec, logging::formatting_ostream& strm)
+{
+  // We do all the work ourselves in Log just send to boost sink
+  strm << rec[expr::smessage];
 } // Log::BoostFormatter
 
 void
 Log::pauseLogging()
 {
-  ++(instance()->myPausedLevel);
+  ++myPausedLevel;
 }
 
 void
 Log::restartLogging()
 {
-  --(instance()->myPausedLevel);
+  --myPausedLevel;
 }
 
 bool
 Log::isPaused()
 {
-  return (instance()->myPausedLevel > 0);
+  return (myPausedLevel > 0);
 }
 
 void
 Log::flush()
 {
+  // Engine might change..so flush all of them
   instance()->mySink->locked_backend()->flush();
+  std::cout << std::flush;
+  std::cerr << std::flush;
 }
 
 Log::Log()
-  :
-  myCurrentLevel(Severity::INFO),
-  myPausedLevel(0)
+  : std::ostream(this)
 {
+  // -----------------------------------------------------
+  // BOOST setup
+
   // init sink
   mySink = boost::make_shared<text_sink>();
 
@@ -226,17 +289,22 @@ Log::Log()
   mySink->locked_backend()->auto_flush(false);
   mySink->set_formatter(&BoostFormatter);
   logging::core::get()->add_sink(mySink);
+  // -----------------------------------------------------
 
-  logging::add_common_attributes();
+  // We use our own.
+  // logging::add_common_attributes();
+
+  // INFO implement/ start up logging before configuration
+  // We filter our own due to pause ability/etc.
+  // logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
+
+  // Set fallback log pattern
+  setLogPattern("[%TIME%] %MESSAGE%");
 
   // Set up a timer to auto flush logs, default for now until set by config
   auto flusher = make_shared<LogFlusher>(900);
   EventLoop::addTimer(flusher);
   myLogFlusher = flusher;
-
-  // INFO implement/ start up logging before configuration
-  logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
-  setLogPattern("[%TIME%] %MESSAGE%");
 }
 
 void
@@ -315,26 +383,9 @@ LogSettingURLWatcher::action()
 void
 Log::setSeverity(Log::Severity severity)
 {
-  auto& l = *(Log::instance());
-
   // Update severity level to given
-  if (severity != l.myCurrentLevel) {
-    l.myCurrentLevel = severity;
-
-    switch (l.myCurrentLevel) {
-        case Log::Severity::SEVERE:
-          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::error);
-          break;
-
-        case Log::Severity::INFO:
-          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
-          break;
-
-        case Log::Severity::DEBUG:
-          logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
-          break;
-          // We want compile fail so no default
-    }
+  if (severity != myCurrentLevel) {
+    myCurrentLevel = severity;
 
     const bool enableStackTrace = (severity == Severity::DEBUG);
     const bool wantCoreDumps    = (severity == Severity::DEBUG);
@@ -369,6 +420,17 @@ Log::setSeverityString(const std::string& level)
 }
 
 void
+Log::setLogEngine(const std::string& newengine)
+{
+  // We start up with the cout engine for messages 'before' log activated
+  if (newengine == "boost") {
+    engine = 1;
+  } else {
+    engine = 0;
+  }
+}
+
+void
 Log::setLogFlushMilliSeconds(int newflush)
 {
   // Update flush timer
@@ -381,6 +443,12 @@ void
 Log::setLogUseColors(bool useColor)
 {
   useColors = useColor;
+}
+
+void
+Log::setHelpColors(bool useColor)
+{
+  useHelpColors = useColor;
 }
 
 void

@@ -55,8 +55,6 @@ RAPIOOptions::RAPIOOptions()
   boolean("help",
     "Print out parameter help information. Can also just type the program without arguments.");
   addGroup("help", "HELP");
-  boolean("nf", "No ASCII formatting/colors in help output.");
-  addGroup("nf", "HELP");
 }
 
 void
@@ -630,7 +628,6 @@ allowInConfig(const std::string& o)
   if (o == "iconfig") { return false; }
   if (o == "oconfig") { return false; }
   if (o == "help") { return false; } // Don't let config file dump help lol
-  if (o == "nf") { return false; }   // nf right now only part of help
   return true;
 }
 }
@@ -802,15 +799,6 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
     readConfigFile(fileName);
   }
 
-  // Turn off color formatting if we have a nf format tag
-  bool useFormatting = ColorTerm::haveColorSupport();
-  if (isParsed("nf")) {
-    if (argc < 3) { haveHelp = true; } // 'alg nf' dumps help
-    useFormatting = false;
-  }
-
-  // Set if we want color output or not...
-  ColorTerm::setColors(useFormatting);
   return haveHelp;
 } // RAPIOOptions::processArgs
 
@@ -839,6 +827,9 @@ RAPIOOptions::dumpHeaderLine()
 bool
 RAPIOOptions::finalizeArgs(bool haveHelp)
 {
+  // Allow colors if possible and turned on in global config
+  ColorTerm::setColors(Log::useColors && ColorTerm::haveColorSupport());
+
   dumpHeaderLine();
 
   // Help dump

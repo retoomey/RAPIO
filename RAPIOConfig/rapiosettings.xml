@@ -9,11 +9,17 @@
 <!-- Settings for logging output, colors, etc. Note: These settings
      are read once on algorithm startup. Note logging verbosity is
      always set on command line
+     use:   The logging engine.  Most likely I'm going to want to log to AWS
+            or something at some point directly, so we have a choice of how to
+            log.  Currently there are two:
+            "cout"  Use std::cout direct printing. (works with more better)
+            "boost" Use boost logging.
      flush: milliseconds between hard flushes of log.  The smaller this
             number the slower things will be
      color: Set to 'true' to show colors in logging.  Colors can be
             nice but many capture utilities, etc. can freak out so
             this allows turning off globally.
+     helpcolor: Set to 'true' to show colors in alg help.
      pattern: Logging pattern with following tokens:
              %TIME% Current UTC time
              %TIMEMS% Current UTC time with milliseconds
@@ -39,8 +45,10 @@
         General operations:
             pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
 -->
-<logging flush="900" 
+<logging use="cout"
+         flush="900" 
          color="true" 
+         helpcolor="true" 
          pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
 >
 </logging>
@@ -71,7 +79,7 @@ Information needed:
      deflate_level: 0 no compression to 9 max compression
 -->
   <io names="netcdf netcdf3" module="librapionetcdf.so">
-    <output ncflags="4096" deflate_level="3"/>
+    <output ncflags="256" deflate_level="0"/>
   </io>
 
 <!-- Python module settings

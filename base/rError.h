@@ -65,14 +65,8 @@ protected:
  * LogSevere( "Error: " << file_name << " not readable.\n");
  * </pre>
  */
-class Log : public Utility {
+class Log : public std::ostream, std::streambuf, Utility {
 public:
-
-  /** The standard format string date of form [date UTC] we use for logging. */
-  static std::string LOG_TIMESTAMP;
-
-  /** The standard format string date of form [date UTC] we use for logging with MS. */
-  static std::string LOG_TIMESTAMP_MS;
 
   /** Severity levels in decreasing order of printing */
   enum class Severity {
@@ -86,19 +80,64 @@ public:
     SEVERE = 20
   };
 
+  // Fields for line buffering, everything inside a LogInfo(group) for example.
+  // because of logging macros/etc most of this is just public
+
+  /** Current log group severity mode */
+  static Log::Severity mode;
+
+  /** Current log group line number */
+  static int line;
+
+  /** Current log group file name */
+  static std::string file;
+
+  /** Current log group function inside name */
+  static std::string function;
+
+  /** Current log group buffer of output */
+  static std::stringstream buffer;
+
+  /** The standard format string date of form [date UTC] we use for logging. */
+  static std::string LOG_TIMESTAMP;
+
+  /** The standard format string date of form [date UTC] we use for logging with MS. */
+  static std::string LOG_TIMESTAMP_MS;
+
+  /** Log singleton */
+  static std::shared_ptr<Log> mySingleton;
 
   /** Returns the singleton instance. */
   inline static Log *
   instance()
   {
-    static std::shared_ptr<Log> mySingleton;
-
     if (mySingleton == 0) {
       // Not using make_shared here since Log() is private.
       mySingleton = std::shared_ptr<Log>(new Log());
     }
     return (mySingleton.get());
   }
+
+  /** Used by logger to be a bit faster, assumes log initialized */
+  inline static Log &
+  instanceref()
+  {
+    return *(mySingleton.get());
+  }
+
+  /** Called by logging macros to set current line settings */
+  inline static void
+  settings(Log::Severity m, int l, const std::string& f, const std::string& f2)
+  {
+    Log::mode     = m;
+    Log::line     = l;
+    Log::file     = f;
+    Log::function = f2;
+  }
+
+  /** Called at end of logging macro to finalize the output */
+  static void
+  endgroup();
 
   /**
    * Pause logging. This is useful when calling a function that you know
@@ -131,6 +170,10 @@ public:
   static void
   setSeverityString(const std::string& level);
 
+  /** Set the log color output */
+  static void
+  setLogEngine(const std::string& engine);
+
   /** Set the log flush update time */
   static void
   setLogFlushMilliSeconds(int newflush);
@@ -138,6 +181,10 @@ public:
   /** Set the log color output */
   static void
   setLogUseColors(bool flag);
+
+  /** Set the help color output */
+  static void
+  setHelpColors(bool flag);
 
   /** Set the log pattern */
   static void
@@ -147,14 +194,14 @@ public:
   static void
   printCurrentLogSettings();
 
-  /** Not virtual since you are not meant to derive from Log. */
-  ~Log();
-
   /** Boost severity level, call this with macros only, public only because it has to be */
   static boost::log::sources::severity_logger<boost::log::trivial::severity_level> mySevLog;
 
-  /** Color setting, public only because it has to be */
+  /** Color setting for basic log entries */
   static bool useColors;
+
+  /** Color setting for help */
+  static bool useHelpColors;
 
   /** Parsed Token number list for logging */
   static std::vector<int> outputtokens;
@@ -165,19 +212,25 @@ public:
   /** Parsed between token filler strings for logging */
   static std::vector<std::string> fillers;
 
+  /** The current verbosity level. */
+  static Severity myCurrentLevel;
+
+  /** Are we myPausedLevel? This is an int, rather than a bool to allow
+   *  nested calls ... */
+  static int myPausedLevel;
+
+  /** Simple number for engine for moment, could be enum */
+  static int engine;
+
+  /** Not virtual since you are not meant to derive from Log. */
+  ~Log();
+
 private:
 
   /** The formatter callback for boost logging.
    * Warning do not call Log functions here, you will crash. Use std::cout */
   static void
   BoostFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm);
-
-  /** The current verbosity level. */
-  Severity myCurrentLevel;
-
-  /** Are we myPausedLevel? This is an int, rather than a bool to allow
-   *  nested calls ... */
-  int myPausedLevel;
 
   /** Boost log sink */
   typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
@@ -191,16 +244,17 @@ private:
 
   /** A singleton; not meant to be instantiated by anyone else. */
   Log();
+};
+
+/** Templates to allow our custom log wrapper */
+template <class T> rapio::Log&
+operator << (rapio::Log& l, const T& x)
+{
+  Log::buffer << x;
+  return l;
 }
-;
 }
 
-#define MY_BOOST_LOGGER(sv) \
-  BOOST_LOG_SEV(rapio::Log::mySevLog, sv) \
-    << boost::log::add_value("Line", __LINE__)      \
-    << boost::log::add_value("File", __FILE__)       \
-    << boost::log::add_value("Function", BOOST_CURRENT_FUNCTION)
-
-#define LogDebug(x)  MY_BOOST_LOGGER(boost::log::trivial::debug) << x
-#define LogInfo(x)   MY_BOOST_LOGGER(boost::log::trivial::info) << x
-#define LogSevere(x) MY_BOOST_LOGGER(boost::log::trivial::error) << x
+#define LogDebug(x)  { rapio::Log::instanceref().settings(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x; rapio::Log::instanceref().endgroup(); }
+#define LogInfo(x)   { rapio::Log::instanceref().settings(rapio::Log::Severity::INFO, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  rapio::Log::instanceref().endgroup(); }
+#define LogSevere(x) { rapio::Log::instanceref().settings(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  rapio::Log::instanceref().endgroup(); }
