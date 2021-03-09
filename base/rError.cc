@@ -229,8 +229,11 @@ Log::endgroup()
     }
   }
   // Always clear the message for next one
-  std::stringstream temp;
-  buffer.swap(temp);
+  // Not implemented in some older libc
+  // std::stringstream temp;
+  // buffer.swap(temp);
+  buffer.clear();
+  buffer.str("");
 } // Log::endgroup
 
 void
