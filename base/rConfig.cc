@@ -254,8 +254,6 @@ Config::setEnvVar(const std::string& envVarName, const std::string& value)
 std::shared_ptr<PTreeData>
 Config::huntXML(const std::string& pathName)
 {
-  // FIXME: assuming always relative path?  Should
-  // we just hide it all from caller?
   const URL loc(getAbsoluteForRelative(pathName));
 
   if (!loc.empty()) {

@@ -23,8 +23,7 @@ public:
 };
 
 /** Class storing all information for a single parameter option such as '-r' for real time.
- * FIXME: 'Could' cleanup, do get/set for example here. This is mostly a simple storage
- * class for RAPIOOptions.
+ * This is mostly a simple storage class for RAPIOOptions, so there are no get/set here.
  * @see RAPIOOptions
  * @author Robert Toomey */
 class Option : public Algorithm {

@@ -125,6 +125,10 @@ public:
   processArgs(int & argc,
     char **       & argv);
 
+  /** Set anything from the global configuration settings */
+  void
+  initToSettings();
+
   /** Finalize command line arguments and print out of everything. */
   bool
   finalizeArgs(bool haveHelp);

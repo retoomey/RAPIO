@@ -823,13 +823,17 @@ RAPIOOptions::dumpHeaderLine()
   // wrapWithIndent(0, 0, built);
 }
 
+void
+RAPIOOptions::initToSettings()
+{
+  // Allow colors if possible and turned on in global config
+  ColorTerm::setColors(Log::useColors && ColorTerm::haveColorSupport());
+}
+
 /** Finalize args by dumping info to user and possiblity ending */
 bool
 RAPIOOptions::finalizeArgs(bool haveHelp)
 {
-  // Allow colors if possible and turned on in global config
-  ColorTerm::setColors(Log::useColors && ColorTerm::haveColorSupport());
-
   dumpHeaderLine();
 
   // Help dump

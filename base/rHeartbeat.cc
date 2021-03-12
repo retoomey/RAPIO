@@ -14,8 +14,6 @@ Heartbeat::Heartbeat(RAPIOAlgorithm * alg, size_t milliseconds) : EventTimer(mil
 bool
 Heartbeat::setCronList(const std::string& cronlist)
 {
-  // FIXME: maybe auto pack the list, checks etc before c call
-  // We could split, auto add * to make easier to use I think..
   const char * err = NULL;
 
   cron_parse_expr(cronlist.c_str(), &myCronExpr, &err);

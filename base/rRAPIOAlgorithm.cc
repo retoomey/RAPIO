@@ -335,43 +335,27 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     // Read/process arguments, don't react yet
     bool wantHelp = o.processArgs(argc, argv);
 
-    // If help requested by user, load system and dynamically append all
-    // the introducers/etc.  If not, just do finalize check.
-    // The reason is main system requires logging and other settings
-    // initialized in order to load up to get the advanced help dynamically
-    // We're going to exit anyway at this point
+    // Initial loading of logging, settings/modules
+    initializeBaseline();
+    o.initToSettings();
+
+    // Dump help and stop
     if (wantHelp) {
-      // We don't have arguments for logging, use some defaults
-      // Don't need it, defaults are set already
-      // Log::setInitialLogSettings("severe", 900);
-
-      // Load everything
-      initializeBaseline();
-
-      addPostLoadedHelp(o);
-
       // Dump advanced
+      addPostLoadedHelp(o);
       o.finalizeArgs(wantHelp);
       exit(1);
-    } else {
-      // Allow options final validatation of ALL arguments passed in.
-      bool success = o.finalizeArgs(wantHelp);
-      if (!success) { exit(1); }
-
-      // Baseline uses default logging of info on start up since it may fail
-      initializeBaseline();
-
-      LogInfo("Algorithm initialized, executing " << OS::getProcessName() << "...\n");
-
-      // Config should have set everything by now
-      // Now we should have log settings, etc.
-      // 2.5 setup signals, etc..some stuff based upon arguments
-      //   const int logFlush        = o.getInteger("flush");
-      const std::string verbose = o.getString("verbose");
-      //  Log::setInitialLogSettings(verbose, logFlush);
-      Log::setSeverityString(verbose);
-      Log::printCurrentLogSettings();
     }
+
+    // Allow options final validatation of ALL arguments passed in.
+    bool success = o.finalizeArgs(wantHelp);
+    if (!success) { exit(1); }
+
+    // Change final logging now to arguments passed in.
+    LogInfo("Algorithm initialized, executing " << OS::getProcessName() << "...\n");
+    const std::string verbose = o.getString("verbose");
+    Log::setSeverityString(verbose);
+    Log::printCurrentLogSettings();
 
     // 3. Process options, inputs, outputs that were successfully parsed
     processOptions(o);      // Process generic options declared above

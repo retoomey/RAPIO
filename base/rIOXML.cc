@@ -173,7 +173,6 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   bool successful = false;
   try{
     std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
-    // FIXME: shouldIndent probably added to dfs
     if (xml != nullptr) {
       writeURL(aURL, xml, true, false);
       successful = true;

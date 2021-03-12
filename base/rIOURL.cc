@@ -23,20 +23,8 @@ IOURL::read(const URL& url, std::vector<char>& buf)
   }
 
   //  ------------------------------------------------------------
-  // Choose a decompressor
-  const std::string suffix(url.getSuffixLC());
-  bool (* decompress)(std::vector<char>& in, std::vector<char>& out) = nullptr;
-  if (suffix == "gz") {
-    decompress = Compression::uncompressGzip;
-  } else if (suffix == "bz2") {
-    decompress = Compression::uncompressBzip2;
-  } else if (suffix == "lzma") {
-    decompress = Compression::uncompressLzma;
-  } else if (suffix == "z") {
-    decompress = Compression::uncompressZlib;
-  }
-
-  // No compression known, move rawData to output.
+  // Choose a decompressor or directly move buffer
+  auto decompress = Compression::fromSuffix(url.getSuffix());
   if (decompress == nullptr) {
     buf = std::move(rawData);
   } else {

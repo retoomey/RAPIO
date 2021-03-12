@@ -86,7 +86,6 @@ public:
   syncToDims()
   {
     // Have to use resize on the current array in our class
-    // FIXME: initial value set?
     myStorage.resize(myDims);
     return true;
   }
@@ -124,7 +123,7 @@ public:
 
   /** Get a raw void pointer to array data. Used by reader/writers.
    * You probably don't want this, see the example algorithm.
-   * FIXME: Maybe better as an optional */
+   */
   void *
   getRawDataPointer()
   {

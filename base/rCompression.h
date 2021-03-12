@@ -15,14 +15,19 @@ class Compression : public IO {
 public:
 
   // -----------------------------------------------------------
-  // Decompression routines.
+  // Figure out what decompressor to use routines
+  typedef bool (* decompressFunction)(std::vector<char>& in, std::vector<char>& out);
+
+  /** Return pointer to decompressor, or nullptr if none recognized */
+  static decompressFunction
+  fromSuffix(const std::string& suffix);
 
   /** Is suffix one of our supported file endings? */
   static bool
   suffixRecognized(const std::string& suffix);
 
-  // FIXME: Could introduce a class here to 'add' compression ability, but
-  // currently probably overkill
+  // -----------------------------------------------------------
+  // Decompression routines.
 
   /** Uncompress Gzip input to output, vectors should be different */
   static bool

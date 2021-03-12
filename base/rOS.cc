@@ -124,8 +124,7 @@ OS::mkdirp(const std::string& path)
 std::string
 OS::getUniqueTemporaryFile(const std::string& base_in)
 {
-  // FIXME: what's the best way to do this in boost?
-  // The '/' here is platform dependent
+  // The '/' here is platform dependent to linux
   auto UNIQUE = fs::unique_path();
   auto TMP    = fs::temp_directory_path();
   auto full   = TMP.native() + "/" + base_in + UNIQUE.native();
@@ -203,8 +202,7 @@ OS::runProcess(const std::string& command)
 std::vector<std::string>
 OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid)
 {
-  // FIXME: can we create boost arrays as shared to begin with?
-  // and thus avoid copies? Maybe
+  // FIXME: Rework/merge code properly with python module and write/filter ability
   auto pid = getProcessID();
 
   std::string jsonName = std::to_string(pid) + "-JSON";
@@ -214,7 +212,6 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
   try{
     // ----------------------------------------------------
     // Write JSON out to shared for data process/python
-    // We're not allowing write to attributes at moment.  FIXME?
     std::shared_ptr<PTreeData> theJson = datagrid->createMetadata();
     std::vector<char> buf; // FIXME: Buffer class instead?
     size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
@@ -247,7 +244,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // ref2[0][0] = 999.0;
     // ref2[1][1] = -99000.0;
 
-    std::string key = std::to_string(pid) + "-array" + std::to_string(1); // FIXME: loop
+    std::string key = std::to_string(pid) + "-array" + std::to_string(1);
     arrayNames.push_back(key);
     shared_memory_object shdmem { open_or_create, key.c_str(), read_write };
     shdmem.truncate(memsize);

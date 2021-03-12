@@ -44,12 +44,11 @@ LatLonGrid::Create(
     llgrid.setTypeName(TypeName);
     llgrid.setDataAttributeValue("Unit", "dimensionless", Units);
 
+    // Update primary grid to the given size
     llgrid.declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
-    // Old WDSS2 does this...FIXME: validate we're doing correctly
     std::vector<size_t> dimindexes;
     dimindexes.push_back(0);
     dimindexes.push_back(1);
-
     llgrid.addFloat2D(TypeName, Units, dimindexes);
   }
   return llgridsp;

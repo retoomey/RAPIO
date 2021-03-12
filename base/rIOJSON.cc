@@ -142,7 +142,6 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   bool successful = false;
   try{
     std::shared_ptr<PTreeData> json = std::dynamic_pointer_cast<PTreeData>(dt);
-    // FIXME: shouldIndent probably added to dfs
     if (json != nullptr) {
       writeURL(aURL, json, true, false);
       successful = true;

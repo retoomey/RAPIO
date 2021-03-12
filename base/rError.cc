@@ -112,7 +112,7 @@ dump(T& strm)
         case LogToken::filler:
           strm << Log::fillers[fat++];
           break;
-        case LogToken::time: // FIXME: 'Could' enum I guess at some point
+        case LogToken::time:
           strm << Time::CurrentTime().getString(Log::LOG_TIMESTAMP);
           break;
         case LogToken::timems:

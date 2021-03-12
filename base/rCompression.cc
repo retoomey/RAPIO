@@ -12,6 +12,24 @@
 
 using namespace rapio;
 
+Compression::decompressFunction
+Compression::fromSuffix(const std::string& suffix)
+{
+  auto s = Strings::makeLower(suffix);
+
+  Compression::decompressFunction decompress = nullptr;
+  if (s == "gz") {
+    decompress = Compression::uncompressGzip;
+  } else if (s == "bz2") {
+    decompress = Compression::uncompressBzip2;
+  } else if (s == "lzma") {
+    decompress = Compression::uncompressLzma;
+  } else if (s == "z") {
+    decompress = Compression::uncompressZlib;
+  }
+  return decompress;
+}
+
 bool
 Compression::suffixRecognized(const std::string& suffix)
 {
@@ -20,9 +38,6 @@ Compression::suffixRecognized(const std::string& suffix)
   return ((s == "gz") || (s == "bz2") || (s == "z") || (s == "lzma"));
 }
 
-// FIXME: might be able to group common code, but boost makes it difficult to
-// figure out common superclasses...looks like gzip_decompressor, bzip_decompressor,
-// etc. are unique structures
 bool
 Compression::uncompressGzip(std::vector<char>& input, std::vector<char>& output)
 {

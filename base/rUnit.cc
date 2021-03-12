@@ -9,7 +9,6 @@
 #include <cstdlib> // putenv()
 #include <iostream>
 #include <udunits.h>
-// #include <dlfcn.h> // dlsym
 
 using namespace rapio;
 
@@ -68,8 +67,7 @@ ConfigUnit::introduceSelf()
 bool
 ConfigUnit::readSettings(std::shared_ptr<PTreeData> )
 {
-  // Udunits2 has xml configuration files
-  // FIXME: We could look for every single file needed...
+  // Look for one of the neccessary udunits2 xml files
   URL url = Config::getConfigFile("misc/udunits2.xml");
 
   if (url.getPath() == "") {
@@ -84,22 +82,8 @@ ConfigUnit::readSettings(std::shared_ptr<PTreeData> )
 void
 Unit::initialize()
 {
-  // This should return a non-zero iff ut_read_xml from udunits2 is
-  // available...
-
-  /*  int *iptr;
-   * iptr = (int *)dlsym(0, "ut_read_xml");
-   * if (iptr == 0){  // FIXME: do we 'have' to have it? For now, yes
-   *  LogSevere("Udunits2 failed to initialize...\n");
-   *  exit(1);
-   * }
-   */
-
-  // Just initialize udunits2
-  // FIXME: Don't think we're actually using udunits yet anywhere
-  // in RAPIO directly.  But it will be used for algorithms/data
+  // Initialize udunits2
   utInit("");
-  // LogInfo("UDUNITS initialized successfully\n");
 }
 
 bool

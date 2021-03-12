@@ -48,8 +48,7 @@ ConfigIODataType::readSettings(std::shared_ptr<PTreeData> d)
           for (auto& n:pieces) {
             myDatabase[n] = io;
             if (!modulename.empty()) {
-              // Since it's lazy loaded we'll add it directly here
-              // FIXME: Maybe cleaner to pull/load in algorithm?
+              // Lazy load assign the module, it will be loaded on demand
               Factory<IODataType>::introduceLazy(n, modulename, "createRAPIOIO");
             }
           }
