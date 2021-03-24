@@ -19,6 +19,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
     // 1. If the datatype exists, try to get from the known read factory
     if (dt != nullptr) {
       const auto rf = dt->getReadFactory();
+      LogSevere("__________________READ FACTORY " << rf << "\n");
       if (rf != "default") {
         factory = rf; // Not default, use it (assumes readers can write)
       }
@@ -37,8 +38,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
     // FIXME: maybe a canHandle method for all registered encoders...
     // FIXME: or a table in settings.  A mapping could work
     if (factory.empty()) {
-      factory = OS::getFileExtension(path);
-      Strings::removePrefix(factory, ".");
+      factory = OS::getRootFileExtension(path);
     }
     Strings::toLower(factory);
   }

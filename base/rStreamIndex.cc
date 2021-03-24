@@ -14,7 +14,7 @@
 using namespace rapio;
 
 /** Default constant for an exe index */
-const std::string StreamIndex::STREAMINDEX = "exe";
+const std::string StreamIndex::STREAMINDEX = "iexe";
 
 StreamIndex::~StreamIndex()
 { }
@@ -33,8 +33,8 @@ StreamIndex::StreamIndex(
 std::string
 StreamIndex::getHelpString(const std::string& fkey)
 {
-  return
-    "Stream index watches a program, arguments separated by %.\n  Example: exe='feedme%-f%TXT' for ldm ingest of fml.";
+  return "Stream index watches a program, arguments separated by %.\n  Example: " + STREAMINDEX
+         + "='feedme%-f%TXT' for ldm ingest of fml.";
 }
 
 bool
@@ -56,8 +56,8 @@ StreamIndex::initialRead(bool realtime, bool archive)
   // Realtime
   //
   if (realtime) {
-    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher("exe");
-    bool ok = watcher->attach(myParams, this);
+    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(EXEWatcher::EXE_WATCH);
+    bool ok = watcher->attach(myParams, realtime, archive, this);
     if (!ok) { return false; }
   }
 

@@ -5,6 +5,9 @@
 
 using namespace rapio;
 
+/** Default constant for a web watcher */
+const std::string WebIndexWatcher::WEB_WATCH = "web";
+
 void
 WebIndexWatcher::action()
 {
@@ -20,6 +23,8 @@ WebIndexWatcher::action()
 
 bool
 WebIndexWatcher::attach(const std::string & dirname,
+  bool                                    realtime,
+  bool                                    archive,
   IOListener *                            l)
 {
   std::shared_ptr<WebInfo> newWatch = std::make_shared<WebInfo>(l, dirname);
@@ -31,5 +36,5 @@ void
 WebIndexWatcher::introduceSelf()
 {
   std::shared_ptr<WebIndexWatcher> io = std::make_shared<WebIndexWatcher>();
-  IOWatcher::introduce("web", io);
+  IOWatcher::introduce(WEB_WATCH, io);
 }

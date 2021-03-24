@@ -19,6 +19,9 @@ namespace rapio {
 class FAMWatcher : public WatcherType {
 public:
 
+  /** Default constant for a fam watcher */
+  static const std::string FAM_WATCH;
+
   FAMWatcher() : WatcherType(0, 1, "FAM Watcher"){ }
 
   /** Introduce this to the global factory */
@@ -52,7 +55,7 @@ public:
 
   /** Attach a FAM listener to us */
   virtual bool
-  attach(const std::string& dirname, IOListener *) override;
+  attach(const std::string& dirname, bool realtime, bool archive, IOListener *) override;
 
   /** Get some events.  Depending on watcher this can be a global process or
    * passed on the individual infos */

@@ -14,6 +14,9 @@ namespace rapio {
  */
 class WebIndexWatcher : public WatcherType {
 public:
+  /** Default constant for a web watcher */
+  static const std::string WEB_WATCH;
+
   WebIndexWatcher() : WatcherType(5000, 2, "Web index event handler"){ }
 
   /** Introduce this to the global factory */
@@ -33,7 +36,7 @@ public:
 
   /** Attach a pulse to web page for a given listener to us */
   virtual bool
-  attach(const std::string& dirname, IOListener *) override;
+  attach(const std::string& dirname, bool realtime, bool archive, IOListener *) override;
 
   /** Action to take on timer pulse */
   virtual void

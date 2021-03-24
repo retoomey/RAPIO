@@ -331,9 +331,10 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
           status = "(default=" + o.defaultValue + ")";
         }
       }
-      s << ColorTerm::fBlue;
+      // Import that status include the colors so fill spaces
+      // don't get them.
+      status = ColorTerm::fBlue + status + ColorTerm::fNormal;
       ColorTerm::wrapWithIndent(c1, c1, status);
-      s << ColorTerm::fNormal;
 
       // Usage, using our width wrapping output
       if (o.usage != "") {

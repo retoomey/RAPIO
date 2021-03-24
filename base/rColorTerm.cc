@@ -81,9 +81,17 @@ ColorTerm::setColors(bool flag)
     fBoldOff      = "\033[21m";
     fUnderline    = "\033[4m";
     fUnderlineOff = "\033[24m";
-    fGreen        = "\033[32m";
-    fRed  = "\033[31m";
-    fBlue = "\033[34m";
+    // Ok..we can use the LS_COLORS to maybe choose user preferred colors
+    // I think at some point that beats the hardcoded ones since
+    // different people have different backgrounds, etc.
+    fGreen = "\033[32m";
+    // fGreen =  "\033[38;2;0;255;0;48;2;0;0;0m";
+    // fRed  = "\033[31m";
+    fRed = "\033[1;31m";
+    // fRed = "\033[38;2;255;0;0;48;2;0;0;0m";
+    // fBlue = "\033[34m";
+    fBlue = "\033[1;34m";
+    // fBlue = "\033[38;2;0;0;255;48;2;0;0;0m";
   } else {
     fNormal       = "";
     fBold         = "";

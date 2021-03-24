@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rIndexType.h>
+#include <rFileIndex.h>
 #include <rFAMWatcher.h>
 
 namespace rapio {
@@ -10,7 +10,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  */
-class FMLIndex : public IndexType {
+class FMLIndex : public FileIndex {
 public:
 
   /** Default constant for a FAM index */
@@ -54,9 +54,13 @@ public:
   virtual bool
   initialRead(bool realtime, bool archive) override;
 
-  /** Handle a new file from a watcher.  We're allowed to do work here. */
+  /** Do we want to process this file? */
+  virtual bool
+  wantFile(const std::string& path) override;
+
+  /** Handle a file */
   virtual void
-  handleNewEvent(WatchEvent * w) override;
+  handleFile(const std::string& filename);
 
   /** Destroy a FMLIndex */
   virtual
@@ -64,24 +68,9 @@ public:
 
 protected:
 
-  /** Do we want to process this file? */
-  bool
-  wantFile(const std::string& path);
-
   /** The worker beast for turning a file into a record */
   bool
   fileToRecord(const std::string& filename, Record& rec);
-
-private:
-
-  /** Protocol used for polling the fml */
-  std::string myProtocol;
-
-  /** URL of the watched location */
-  URL myURL;
-
-  /** Resolved index path to the polled location */
-  std::string myIndexPath;
 }
 ;
 }

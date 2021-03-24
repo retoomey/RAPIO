@@ -19,6 +19,9 @@ public:
   /** Default constant for a polling File index */
   static const std::string FileINDEX_POLL;
 
+  /** Default constant for processing a single file */
+  static const std::string FileINDEX_ONE;
+
   /** Get help for us */
   virtual std::string
   getHelpString(const std::string& fkey) override;
@@ -50,6 +53,10 @@ public:
   virtual bool
   initialRead(bool readtime, bool archive) override;
 
+  /** Do we want to process this file? */
+  virtual bool
+  wantFile(const std::string& path);
+
   /** Handle a new file from a watcher.  We're allowed to do work here. */
   virtual void
   handleNewEvent(WatchEvent * w) override;
@@ -70,7 +77,7 @@ public:
   virtual
   ~FileIndex();
 
-private:
+protected:
 
   /** Protocol used for polling */
   std::string myProtocol;

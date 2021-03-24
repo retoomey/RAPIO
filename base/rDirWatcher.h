@@ -15,6 +15,9 @@ namespace rapio {
  */
 class DirWatcher : public WatcherType {
 public:
+  /** Default constant for a directory watcher */
+  static const std::string DIR_WATCH;
+
   DirWatcher() : WatcherType(5000, 10, "Directory time poll event handler"){ }
 
   static void
@@ -41,7 +44,7 @@ public:
 
   /** Attach a pulse to web page for a given listener to us */
   virtual bool
-  attach(const std::string& dirname, IOListener *) override;
+  attach(const std::string& dirname, bool realtime, bool archive, IOListener *) override;
 
   /** Get some events.  Depending on watcher this can be a global process or
    * passed on the individual infos */

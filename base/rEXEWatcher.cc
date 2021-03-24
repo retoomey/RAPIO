@@ -13,6 +13,9 @@
 
 using namespace rapio;
 
+/** Default constant for a exe watcher */
+const std::string EXEWatcher::EXE_WATCH = "exe";
+
 void
 EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 {
@@ -159,6 +162,8 @@ EXEWatcher::EXEInfo::connect()
 
 bool
 EXEWatcher::attach(const std::string & param,
+  bool                               realtime,
+  bool                               archive,
   IOListener *                       l)
 {
   // Guess we do the connection right?
@@ -179,5 +184,5 @@ void
 EXEWatcher::introduceSelf()
 {
   std::shared_ptr<EXEWatcher> io = std::make_shared<EXEWatcher>();
-  IOWatcher::introduce("exe", io);
+  IOWatcher::introduce(EXE_WATCH, io);
 }

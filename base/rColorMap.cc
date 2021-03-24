@@ -22,8 +22,7 @@ ColorMap::getColorMap(const std::string& key)
       colormap = ColorMap::readColorMap(find.toString());
     }
     if (colormap == nullptr) { // ALWAYS return a color map
-      LogSevere("LINEAR!\n");
-      exit(1);
+      LogSevere("Linear color map used for " << key << "\n");
       colormap = std::make_shared<LinearColorMap>();
     }
     myColorMaps[key] = colormap;

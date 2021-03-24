@@ -231,19 +231,13 @@ URL::setQuery(const std::string& key, int val)
 }
 
 std::string
-URL::getSuffix() const
-{
-  std::string suffix;
-  auto pos = path.rfind('.');
-
-  if (pos != path.npos) { suffix = path.substr(pos + 1); }
-  return (suffix);
-}
-
-std::string
 URL::getSuffixLC() const
 {
-  std::string suffix(getSuffix());
+  // FIXME: debating between this and the OS getRootFileExtension stuff
+  // Should it be a general string function or what?
+  std::string suffix;
+  auto pos = path.rfind('.');
+  if (pos != path.npos) { suffix = path.substr(pos + 1); }
   Strings::toLower(suffix);
   return (suffix);
 }

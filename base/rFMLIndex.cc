@@ -1,17 +1,11 @@
 #include "rFMLIndex.h"
 
 #include "rIOIndex.h"
-#include "rXMLIndex.h"
 #include "rError.h"
-#include "rIOURL.h"
-#include "rOS.h"
 #include "rRecordQueue.h"
 #include "rIODataType.h"
-
-#include <algorithm>
-#include <errno.h>
-
-#include <dirent.h>
+#include "rDirWatcher.h"
+#include "rOS.h"
 
 using namespace rapio;
 
@@ -22,42 +16,33 @@ const std::string FMLIndex::FMLINDEX_FAM = "ifam";
 const std::string FMLIndex::FMLINDEX_POLL = "ipoll";
 
 FMLIndex::~FMLIndex()
-{
-  /* Already destroyed.  Need a clean up exit caller
-   * std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher("fam");
-   * if (watcher != nullptr){
-   *  watcher->detach(this);
-   * }
-   */
-}
+{ }
 
 FMLIndex::FMLIndex(
   const std::string  & protocol,
   const URL          & aURL,
   const TimeDuration & maximumHistory) :
-  IndexType(maximumHistory),
-  myProtocol(protocol),
-  myURL(aURL),
-  myIndexPath(IOIndex::getIndexPath(aURL))
+  FileIndex(protocol, aURL, maximumHistory)
 { }
 
 std::string
 FMLIndex::getHelpString(const std::string& fkey)
 {
   if (fkey == FMLINDEX_FAM) {
-    return "Use inotify to watch a directory for .fml metadata files.\n  Example: ifam=code_index.fam";
+    return "Use inotify to watch a directory for .fml metadata files.\n  Example: " + FMLINDEX_FAM + "=code_index.fam";
   } else {
-    return "Use polling to watch a directory for .fml metadata files.\n  Example: pol=code_index.fam";
+    return "Use polling to watch a directory for .fml metadata files.\n  Example: " + FMLINDEX_POLL + "=code_index.fam";
   }
 }
 
 bool
 FMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
 {
-  // We'll claim any missing protocal with a .fam ending for legacy support
+  // We'll claim any missing protocol with a .fam ending for legacy support
   if (protocol.empty()) {
-    std::string suffix = url.getSuffixLC();
-    if (suffix == "fam") {
+    std::string suffix = OS::getRootFileExtension(url.toString());
+    //    std::string suffix = url.getSuffixLC();
+    if (suffix == "fam") { // Not a magic string, it's the end of code_index.fam, etc.
       protocol = FMLIndex::FMLINDEX_FAM;
       return true;
     }
@@ -92,61 +77,14 @@ FMLIndex::wantFile(const std::string& path)
 bool
 FMLIndex::initialRead(bool realtime, bool archive)
 {
-  if (!myURL.isLocal()) {
-    LogSevere("Can't do an FML index off a remote URL at moment\n");
-    return false;
+  // Change protocol to the file ones and let file
+  // index do the work
+  if (myProtocol == FMLIndex::FMLINDEX_FAM) {
+    myProtocol = FileIndex::FileINDEX_FAM;
+  } else if (myProtocol == FMLINDEX_POLL) {
+    myProtocol = FileIndex::FileINDEX_POLL;
   }
-  const std::string loc = myURL.getPath();
-
-  // ---------------------------------------------------------
-  // Archive
-  //
-  // Grab the list of files currently in the directory
-
-  if (archive) {
-    DIR * dirp = opendir(loc.c_str());
-    if (dirp == 0) {
-      LogSevere("Unable to read location " << loc << "\n");
-      return (false);
-    }
-    struct dirent * dp;
-    while ((dp = readdir(dirp)) != 0) {
-      if (wantFile(dp->d_name)) {
-        const std::string full = loc + "/" + dp->d_name;
-
-        if (!OS::isDirectory(full)) {
-          // Add record to queue
-          Record r;
-          if (fileToRecord(full, r)) {
-            Record::theRecordQueue->addRecord(r);
-          }
-        }
-      }
-    }
-    closedir(dirp);
-  }
-
-  // ---------------------------------------------------------
-  // Realtime
-  //
-  if (realtime) {
-    // Connect to FAM, we'll get notified of new files
-    std::string poll = "fam";
-    if (myProtocol == FMLIndex::FMLINDEX_FAM) {
-      poll = "fam";
-    } else if (myProtocol == FMLINDEX_POLL) {
-      poll = "dir"; // FIXME: Still magic string here
-    } else {
-      LogSevere("FML index doesn't recognize polling protocol '" << myProtocol << "', trying inotify\n");
-    }
-    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(poll);
-    bool ok = watcher->attach(loc, this);
-    // watcher->attach("/home/dyolf/FAM2/", this);
-    // watcher->attach("/home/dyolf/FAM3/", this);
-    if (!ok) { return false; }
-  }
-
-  return true;
+  return FileIndex::initialRead(realtime, archive);
 } // FMLIndex::initialRead
 
 bool
@@ -176,29 +114,15 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
 }
 
 void
-FMLIndex::handleNewEvent(WatchEvent * event)
+FMLIndex::handleFile(const std::string& filename)
 {
-  const auto& m = event->myMessage;
-  const auto& d = event->myData;
-
-  if (m == "newfile") {
-    const std::string& filename = d;
-    if (wantFile(filename)) {
-      Record rec;
-      if (fileToRecord(filename, rec)) {
-        // Add to the record queue.  Never process here directly.  The queue
-        // will call our addRecord when it's time to do the work
-        Record::theRecordQueue->addRecord(rec);
-      }
+  if (wantFile(filename)) {
+    Record rec;
+    if (fileToRecord(filename, rec)) {
+      // Add to the record queue.  Never process here directly.  The queue
+      // will call our addRecord when it's time to do the work
+      Record::theRecordQueue->addRecord(rec);
     }
-  } else if (m == "newdir") {
-    LogInfo("New directory was added: " << d << "\n");
-  } else if (m == "unmount") {
-    LogSevere("Our watch " << d << " was unmounted!\n");
-    LogSevere("Ending algorithm.\n");
-    exit(1);
-  } else if (m == "unmountr") {
-    // Nothing, our watcher will try to reconnect
   }
 }
 

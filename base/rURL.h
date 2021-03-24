@@ -150,10 +150,6 @@ public:
   std::string
   getDirName() const;
 
-  /** Returns path's suffix.  */
-  std::string
-  getSuffix() const;
-
   /**
    * Returns path's suffix in all lowercase.
    * For example, if path is \p /tmp/filename.txt.BZ2, then \p bz2 will be
@@ -205,7 +201,7 @@ public:
   void
   removeSuffix()
   {
-    path.resize(path.size() - getSuffix().size());
+    path.resize(path.size() - getSuffixLC().size());
   }
 
   /** Output a URL */

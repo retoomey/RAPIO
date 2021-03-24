@@ -3,6 +3,7 @@
 #include "rError.h"
 #include "rOS.h"
 #include "rIOURL.h"
+#include "rFileIndex.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -12,10 +13,15 @@
 #include <queue>
 #include <algorithm>
 
+#include <dirent.h>
+
 using namespace rapio;
 
 /** Global file instance for inotify */
 int FAMWatcher::theFAMID = -1;
+
+/** Default constant for a fam watcher */
+const std::string FAMWatcher::FAM_WATCH = "fam";
 
 void
 FAMWatcher::init()
@@ -85,18 +91,40 @@ FAMWatcher::attach(FAMInfo * w)
 
 bool
 FAMWatcher::attach(const std::string &dirname,
+  bool                               realtime,
+  bool                               archive,
   IOListener *                       l)
 {
-  std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, -1);
-  if (!attach(newWatch.get())) { // Failed initial attachment
-    // If not auto connect mode, die (no watch)
-    if (!myAutoReconnect) {
-      return false;
+  // On archive do initial scan of directory for any existing files
+  if (archive) {
+    DIR * dirp = opendir(dirname.c_str());
+    if (dirp == 0) {
+      LogSevere("Unable to read location " << dirname << "\n");
+      return (false);
     }
+    struct dirent * dp;
+    while ((dp = readdir(dirp)) != 0) {
+      // Humm adding string here might be wasteful...
+      const std::string full = dirname + "/" + dp->d_name;
+      if (!OS::isDirectory(full)) {
+        ((FileIndex *) l)->handleFile(full);
+      }
+    }
+    closedir(dirp);
   }
-  // Push broken or successful watch for checking
-  myWatches.push_back(newWatch);
-  LogDebug(dirname << " being monitored ... \n");
+
+  if (realtime) {
+    std::shared_ptr<FAMInfo> newWatch = std::make_shared<FAMInfo>(l, dirname, -1);
+    if (!attach(newWatch.get())) { // Failed initial attachment
+      // If not auto connect mode, die (no watch)
+      if (!myAutoReconnect) {
+        return false;
+      }
+    }
+    // Push broken or successful watch for checking
+    myWatches.push_back(newWatch);
+    LogDebug(dirname << " being monitored ... \n");
+  }
   return true;
 } // FAMWatcher::attach
 
@@ -236,7 +264,7 @@ void
 FAMWatcher::introduceSelf()
 {
   std::shared_ptr<WatcherType> io = std::make_shared<FAMWatcher>();
-  IOWatcher::introduce("fam", io);
+  IOWatcher::introduce(FAM_WATCH, io);
 }
 
 bool

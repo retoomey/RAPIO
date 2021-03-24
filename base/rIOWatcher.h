@@ -75,7 +75,7 @@ public:
 
   /** Attach this listener to given URL */
   virtual bool
-  attach(const std::string& dirname, IOListener * l){ return false; };
+  attach(const std::string& dirname, bool realtime, bool archive, IOListener * l){ return false; };
 
   /** Default action to take on timer pulse, filling and processing our queue */
   virtual void
@@ -123,7 +123,7 @@ protected:
 
   /** Process count.  Max events to process at once.  We hog the system
    * here.  Tweak based on what we're doing */
-  bool myProcessCount;
+  size_t myProcessCount;
 
   /** Try to auto reconnect a failed watcher */
   bool myAutoReconnect;

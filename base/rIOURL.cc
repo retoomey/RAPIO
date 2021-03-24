@@ -24,7 +24,7 @@ IOURL::read(const URL& url, std::vector<char>& buf)
 
   //  ------------------------------------------------------------
   // Choose a decompressor or directly move buffer
-  auto decompress = Compression::fromSuffix(url.getSuffix());
+  auto decompress = Compression::fromSuffix(url.getSuffixLC());
   if (decompress == nullptr) {
     buf = std::move(rawData);
   } else {

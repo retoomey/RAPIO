@@ -20,6 +20,7 @@
 #include "rSignals.h"
 #include "rHeartbeat.h"
 #include "rDataTypeHistory.h"
+#include "rStreamIndex.h"
 
 // Default always loaded datatype creation factories
 #include "rIOXML.h"
@@ -496,7 +497,7 @@ RAPIOAlgorithm::addIndex(const std::string & index,
 
   // Macro ldm to the feedme binary by default for convenience
   if (index == "ldm") {
-    protocol    = "exe";
+    protocol    = StreamIndex::STREAMINDEX;
     indexparams = "feedme%-f%TEXT";
   } else {
     // Split on = if able to get protocol, otherwise we'll try to guess

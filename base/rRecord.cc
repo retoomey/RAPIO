@@ -190,7 +190,7 @@ Record::createObject(size_t i) const
       dt->setSubType(this->getSelections()[2]);
     }
   } else {
-    LogSevere("Failed to create new datatype\n");
+    LogSevere("Failed to create new datatype, no IO module for type '" << dataSourceType << "'\n");
   }
   return (dt);
 } // Record::createObject

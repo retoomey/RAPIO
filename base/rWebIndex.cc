@@ -5,6 +5,7 @@
 #include "rXMLIndex.h"
 #include "rRecordQueue.h"
 #include "rIODataType.h"
+#include "rWebIndexWatcher.h"
 
 #include <iostream>
 #include <algorithm>
@@ -113,8 +114,9 @@ WebIndex::initialRead(bool realtime, bool archive)
     myLastReadNS = 0;
 
     // The pulse poll that updates for realtime. Not needed for archive mode
-    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher("web");
-    bool ok = watcher->attach(myURL.getPath(), this);
+    std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(WebIndexWatcher::WEB_WATCH);
+
+    bool ok = watcher->attach(myURL.getPath(), realtime, archive, this);
     if (!ok) { return false; }
   }
 

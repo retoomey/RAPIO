@@ -2,6 +2,8 @@
 
 #include "rError.h"
 #include "rIODataType.h"
+#include "rCompression.h"
+#include "rStrings.h"
 
 #include <string>
 #include <iostream>
@@ -133,9 +135,21 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 }
 
 std::string
-OS::getFileExtension(const std::string& path)
+OS::getRootFileExtension(const std::string& path)
 {
-  return (fs::extension(path));
+  // We want to auto remove the compression field
+  // .xml.gz --> 'xml' .xml --> 'xml'
+  std::string e = fs::extension(path);
+  Strings::toLower(e);
+  Strings::removePrefix(e, ".");
+  if (Compression::suffixRecognized(e)) {
+    std::string p = path;
+    Strings::removeSuffix(p, "." + e);
+    e = fs::extension(p);
+    Strings::toLower(e);
+    Strings::removePrefix(e, ".");
+  }
+  return (e);
 }
 
 std::string

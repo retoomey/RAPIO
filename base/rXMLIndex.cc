@@ -37,25 +37,33 @@ XMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexpar
 {
   // We'll claim any missing protocal with a .fam ending for legacy support
   if (protocol.empty()) {
-    std::string suffix = url.getSuffixLC();
-    // Anything with .xml we'll try to take...
+    std::string suffix = OS::getRootFileExtension(url.toString());
     if (suffix == "xml") {
       protocol = XMLIndex::XMLINDEX;
       return true;
-      // ...or .gz etc with .xml
-    } else if (Compression::suffixRecognized(suffix)) {
-      URL tmp(url);
-      tmp.removeSuffix(); // removes the suffix
-      std::string p = tmp.getPath();
-      p.resize(p.size() - 1); /// removes the dot
-      tmp.setPath(p);
-      suffix = tmp.getSuffixLC();
-
-      if (suffix == "xml") {
-        protocol = XMLIndex::XMLINDEX;
-        return true;
-      }
     }
+
+    /*
+     *  std::string suffix = url.getSuffixLC();
+     *  // Anything with .xml we'll try to take...
+     *  if (suffix == "xml") {
+     *    protocol = XMLIndex::XMLINDEX;
+     *    return true;
+     *    // ...or .gz etc with .xml
+     *  } else if (Compression::suffixRecognized(suffix)) {
+     *    URL tmp(url);
+     *    tmp.removeSuffix(); // removes the suffix
+     *    std::string p = tmp.getPath();
+     *    p.resize(p.size() - 1); /// removes the dot
+     *    tmp.setPath(p);
+     *    suffix = tmp.getSuffixLC();
+     *
+     *    if (suffix == "xml") {
+     *      protocol = XMLIndex::XMLINDEX;
+     *      return true;
+     *    }
+     *  }
+     */
   }
   return false;
 }

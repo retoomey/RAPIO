@@ -159,8 +159,8 @@ public:
 
     // Factory failed to find or load object
     if (ret == nullptr) {
-      LogSevere("No instance available for " << info << " and '" << name
-                                             << "' size: " << myLookup.size() << "\n");
+      LogDebug("No instance available for " << info << " and '" << name
+                                            << "' size: " << myLookup.size() << "\n");
     }
 
     return (ret);

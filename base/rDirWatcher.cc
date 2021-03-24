@@ -10,6 +10,9 @@
 
 using namespace rapio;
 
+/** Default constant for a directory watcher */
+const std::string DirWatcher::DIR_WATCH = "dir";
+
 namespace
 {
 /** Time filter test for file/directory stats */
@@ -88,6 +91,8 @@ DirWatcher::DirInfo::createEvents(WatcherType * w)
 
   // Latest low threshhold filter
 
+  // Arrgh doesn't this need to be PER directory?
+  // yeah I think so
   struct stat newLast = myLastStat;
   // auto lastnanos = w.myLastStat.st_ctim.tv_nsec;
   // auto lastsecs = w.myLastStat.st_ctim.tv_sec;
@@ -110,17 +115,51 @@ DirWatcher::getEvents()
 
 bool
 DirWatcher::attach(const std::string & dirname,
+  bool                               realtime,
+  bool                               archive,
   IOListener *                       l)
 {
+  // Always make a watch even for archive since we want to use our scan function
   std::shared_ptr<DirInfo> newWatch = std::make_shared<DirInfo>(l, dirname);
-  myWatches.push_back(newWatch);
+
+  // On archive do initial scan of directory for files to push into the
+  // event list and get the latest creation time
+  if (archive) {
+    LogInfo("Doing initial scan of directory " + dirname + "\n");
+    struct stat newLast = newWatch->myLastStat;
+    scan(l, dirname.c_str(), newWatch->myLastStat, newLast);
+    newWatch->myLastStat = newLast;
+
+    // Go ahead and process the original files all at once...
+    // This will process archived directories fully before processing another
+    // one, which 'maybe' is an issue.  We'd want to use the time from one to
+    // process all others so data comes in order.  I won't implement this for now
+    // since users doing archives will probably use an index anyway which solves this
+    // time order issue.  Ingestors will typically process a root directory
+    LogInfo("Initial processing of all files as archive.\n");
+    while (!myEvents.empty()) {
+      auto e = myEvents.front();
+      myEvents.pop();
+      e.handleEvent();
+    }
+  } else {
+    // Not archive..so use NOW time to skip old files
+    Time now = Time::CurrentTime();
+    newWatch->myLastStat.st_ctim.tv_sec  = now.getSecondsSinceEpoch();
+    newWatch->myLastStat.st_ctim.tv_nsec = 0;
+  }
+
+  if (realtime) {
+    // Allow event polling to grab files periodically
+    myWatches.push_back(newWatch);
+  }
 
   return true;
-}
+} // DirWatcher::attach
 
 void
 DirWatcher::introduceSelf()
 {
   std::shared_ptr<DirWatcher> io = std::make_shared<DirWatcher>();
-  IOWatcher::introduce("dir", io);
+  IOWatcher::introduce(DIR_WATCH, io);
 }
