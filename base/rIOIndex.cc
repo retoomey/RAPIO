@@ -36,9 +36,10 @@ IOIndex::introduceSelf()
   StreamIndex::introduceSelf(); // Stream index
 }
 
-void
-IOIndex::introduceHelp(std::string& help)
+std::string
+IOIndex::introduceHelp()
 {
+  std::string help;
   help += "Indexes ingest data into the system, either with metadata notifications, or direct files.\n";
   help += "Default no protocol ending in .xml is an xml index.\n";
   help += "Default no protocol ending in .fam is an ifam index.\n";
@@ -48,6 +49,7 @@ IOIndex::introduceHelp(std::string& help)
   for (auto i: e) {
     help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
   }
+  return help;
 }
 
 IOIndex::~IOIndex()

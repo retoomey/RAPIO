@@ -35,7 +35,7 @@ public:
 
   /** Handle params for notifier */
   virtual void
-  initialize(const std::string& params, const std::string& outputdir) override;
+  initialize(const std::string& params) override;
 
 protected:
 

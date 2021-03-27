@@ -877,6 +877,14 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
   return true;
 } // myseekgbbuf
 
+std::string
+IOGrib::getHelpString(const std::string& key)
+{
+  std::string help;
+  help += "builder that uses the grib/grib2 library to read grib data files.";
+  return help;
+}
+
 void
 IOGrib::initialize()
 { }

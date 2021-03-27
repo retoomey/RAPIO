@@ -25,6 +25,14 @@ createRAPIOIO(void)
 }
 };
 
+std::string
+IOGDAL::getHelpString(const std::string& key)
+{
+  std::string help;
+  help += "builder that uses the GDAL library and supported formats.";
+  return help;
+}
+
 void
 IOGDAL::initialize()
 { }

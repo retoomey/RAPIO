@@ -1,12 +1,48 @@
 #include "rIODataType.h"
 
 #include "rConfigIODataType.h"
+#include "rColorTerm.h"
 #include "rFactory.h"
 #include "rDataType.h"
 #include "rStrings.h"
 #include "rOS.h"
 
 using namespace rapio;
+
+std::string
+IODataType::introduceHelp()
+{
+  std::string help;
+  help +=
+    "Default is netcdf output folder, or the same as netcdf=/path.  Multiple writers with multiple or same folders can be chained.  For example, image=folder1 gdal=folder2.";
+  help +=
+    "  The key= part is the builder, these are typically in metadata files (index, fml) as the first part of the <params> section.";
+  help += "  Some builders are static, some are dynamically loaded from rapiosettings.xml on demand.\n";
+  help += ColorTerm::fBlue + "Static built-in builders:" + ColorTerm::fNormal + "\n";
+  auto full = Factory<IODataType>::getAll();
+  for (auto a:full) {
+    help += " " + ColorTerm::fRed + a.first + ColorTerm::fNormal + " : " + a.second->getHelpString(a.first) + "\n";
+    // shouldn't be null, rightmyList.push_back(ele.second);
+  }
+  help += ColorTerm::fBlue + "Dynamic loaded builders:" + ColorTerm::fBlue + "\n";
+  // We're fully loading now...but that's ok help dies afterwards
+  auto fulld = Factory<IODataType>::getAllDynamic();
+  for (auto ele:fulld) {
+    auto& f = ele.second;
+    help += ColorTerm::fRed + " ";
+    for (auto& s:f.alias) {
+      help += s + " ";
+    }
+    help += ColorTerm::fNormal + " : ";
+    if (f.stored == nullptr) {
+      help += " couldn't find/load this module!!!";
+    } else {
+      help += f.stored->getHelpString("");
+    }
+    help += "\n";
+  }
+  return help;
+}
 
 // -----------------------------------------------------------------------------------------
 // Reader stuff
@@ -19,7 +55,6 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
     // 1. If the datatype exists, try to get from the known read factory
     if (dt != nullptr) {
       const auto rf = dt->getReadFactory();
-      LogSevere("__________________READ FACTORY " << rf << "\n");
       if (rf != "default") {
         factory = rf; // Not default, use it (assumes readers can write)
       }
@@ -31,11 +66,6 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
     // maybe xml, netcdf..not for more advanced classes.
     // xml --> xml
     // netcdf --> netcdf
-    // png --> image
-    // png.tar.gz --> image
-    // jpg --> image
-    // tif --> image or gdal for example
-    // FIXME: maybe a canHandle method for all registered encoders...
     // FIXME: or a table in settings.  A mapping could work
     if (factory.empty()) {
       factory = OS::getRootFileExtension(path);
@@ -211,7 +241,10 @@ IODataType::write(std::shared_ptr<DataType> dt,
   // 1. Get the factory for this output
   std::string f = factory;
   auto encoder  = getFactory(f, outputinfo, dt);
-  if (encoder == nullptr) { return false; }
+  if (encoder == nullptr) {
+    LogSevere("Unable to write using unknown factory '" << f << "'\n");
+    return false;
+  }
 
   // 2. Try to get the rapiosettings info for the factory
   std::string suffix = f; // This won't be true with extra compression, such as .xml.gz

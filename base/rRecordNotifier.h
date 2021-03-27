@@ -26,7 +26,7 @@ public:
 
   /** Set the initial params this record notifier */
   virtual void
-  initialize(const std::string& params, const std::string& outputdir) = 0;
+  initialize(const std::string& params) = 0;
 };
 
 /** Factory container/helper for RecordNotifierType */
@@ -41,22 +41,20 @@ public:
 
   /** Introduce base notifier classes help on startup.  Note that
    * introduceSelf may have not been called yet. */
-  static void
-  introduceHelp(std::string& help);
+  static std::string
+  introduceHelp();
 
   /** Process definition string for RAPIOAlgorithm.  Return
    * vector of created notifiers */
   static bool
   createNotifiers(const std::string                  & nstring,
-    const std::string                                & outputdir,
     std::vector<std::shared_ptr<RecordNotifierType> >& n);
 
-  /** Returns a notifier that will notify data. */
+  /** Create a new notifier for notifying new data. */
   static std::shared_ptr<RecordNotifierType>
-  getNotifier(
-    const std::string & params,
-    const std::string & outputdir,
-    const std::string & type);
+  createNotifier(
+    const std::string & type,
+    const std::string & params);
 }
 ;
 }

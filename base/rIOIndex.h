@@ -31,8 +31,8 @@ public:
   ~IOIndex();
 
   /** Introduce dynamic help */
-  static void
-  introduceHelp(std::string& help);
+  static std::string
+  introduceHelp();
 
   /**
    * Returns a URL fragment that specifies a file's location.

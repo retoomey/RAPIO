@@ -16,6 +16,10 @@ class URL;
 class IOXML : public IODataType {
 public:
 
+  /** Help for XML */
+  virtual std::string
+  getHelpString(const std::string& key) override;
+
   // READING ------------------------------------------------------------
 
   /** Read from a buffer as XML data */

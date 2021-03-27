@@ -88,6 +88,10 @@ public:
   static float MISSING_DATA;
   static float RANGE_FOLDED;
 
+  /** Help for netcdf module */
+  virtual std::string
+  getHelpString(const std::string& key);
+
   // Registering of classes ---------------------------------------------
 
   virtual void

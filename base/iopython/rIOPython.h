@@ -15,6 +15,9 @@ namespace rapio {
 class IOPython : public IODataType {
 public:
 
+  /** Help for python module */
+  virtual std::string getHelpString(const std::string& key);
+
   // Registering of classes ---------------------------------------------
   virtual void
   initialize() override;

@@ -124,6 +124,10 @@ public:
   toCatalog(gribfield * gfld,
     std::string& productName, std::string& levelName);
 
+  /** Help for grib module */
+  virtual std::string
+  getHelpString(const std::string& key);
+
   // Registering of classes ---------------------------------------------
 
   virtual void

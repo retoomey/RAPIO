@@ -22,6 +22,14 @@ class IndexType;
 class IODataType : public IO {
 public:
 
+  /** Introduce dynamic help */
+  static std::string
+  introduceHelp();
+
+  /** Help for this particular instance of IODataType */
+  virtual std::string
+  getHelpString(const std::string& key){ return "Help for " + key; }
+
   /** Initialize a loaded IODataType */
   virtual void
   initialize(){ };

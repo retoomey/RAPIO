@@ -91,11 +91,35 @@ public:
     }
   }
 
-  /** Get all the children for iteration */
+  /** Get all currently loaded children for iteration */
   static MapType
   getAll()
   {
     return myLookup;
+  }
+
+  /** Force load dynamic modules, typically this is called by the
+   * help system or debugging, say for help for the -o builders.
+   * Errors aren't outputted since we're doing help  */
+  static MapType2
+  getAllDynamic()
+  {
+    for (auto& ele: myDynamicInfo) {
+      auto& f = ele.second;
+      for (auto& s:f.alias) {
+        // Try to load once if not loaded already...
+        if (!f.loaded) {
+          std::shared_ptr<X> dynamicLoad = OS::loadDynamic<X>(f.module, f.methodname);
+          f.stored = dynamicLoad;
+          f.loaded = true; // Only try once
+        }
+        // ...and make sure object cached for the next call since it's not there
+        if (f.stored != nullptr) {
+          myLookup[s] = f.stored;
+        }
+      }
+    }
+    return myDynamicInfo;
   }
 
   /** Is this type known to the factory? */

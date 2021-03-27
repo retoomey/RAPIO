@@ -275,9 +275,6 @@ protected:
   /** Indexes we are successfully attached to */
   std::vector<std::shared_ptr<IndexType> > myConnectedIndexes;
 
-  /** Directory or output from "o" option */
-  std::string myOutputDir;
-
   /** Hold the "n" list of notifiers */
   std::string myNotifierList;
 

@@ -11,6 +11,14 @@
 
 using namespace rapio;
 
+std::string
+IOJSON::getHelpString(const std::string & key)
+{
+  std::string help;
+  help = "builder for reading json formatted data.\n";
+  return help;
+}
+
 std::shared_ptr<DataType>
 IOJSON::createDataTypeFromBuffer(std::vector<char>& buffer)
 {

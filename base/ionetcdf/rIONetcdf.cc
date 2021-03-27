@@ -38,6 +38,14 @@ float IONetcdf::MISSING_DATA = Constants::MissingData;
 float IONetcdf::RANGE_FOLDED = Constants::RangeFolded;
 int IONetcdf::GZ_LEVEL       = 6;
 
+std::string
+IONetcdf::getHelpString(const std::string& key)
+{
+  std::string help;
+  help += "builder that uses the netcdf C library to read DataGrids or MRMS RadialSets, etc.";
+  return help;
+}
+
 void
 IONetcdf::initialize()
 {

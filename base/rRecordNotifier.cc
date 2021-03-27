@@ -18,22 +18,19 @@ RecordNotifier::introduceSelf()
   EXERecordNotifier::introduceSelf();
 }
 
-void
-RecordNotifier::introduceHelp(std::string& help)
+std::string
+RecordNotifier::introduceHelp()
 {
-  // Bleh first attempt, so horrible.  Need to spend some
-  // time on dynamic module help, etc. For now just need to
-  // document in the help.
-  // FIXME: thinking about writing a custom html style stream class
+  std::string help;
   help +=
     "If blank, set to {OutputDir}/code_index.fam, while if set to 'disable' then turned off (could speed up archive processing.)\n";
   help += " " + ColorTerm::fRed + "fml" + ColorTerm::fNormal + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
   help += " " + ColorTerm::fRed + "exe" + ColorTerm::fNormal + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
+  return help;
 }
 
 bool
 RecordNotifier::createNotifiers(const std::string  & nstring,
-  const std::string                                & outputdir,
   std::vector<std::shared_ptr<RecordNotifierType> >& v)
 {
   if (nstring == "disable") {
@@ -74,7 +71,7 @@ RecordNotifier::createNotifiers(const std::string  & nstring,
       exit(1);
     }
 
-    auto n = getNotifier(params, outputdir, protocol);
+    auto n = createNotifier(protocol, params);
     if (n != nullptr) {
       LogDebug("Added notifier: " << protocol << ":" << params << "\n");
       v.push_back(n);
@@ -88,14 +85,14 @@ RecordNotifier::createNotifiers(const std::string  & nstring,
 } // RecordNotifier::createNotifiers
 
 std::shared_ptr<RecordNotifierType>
-RecordNotifier::getNotifier(const std::string& params, const std::string& outputdir, const std::string& type)
+RecordNotifier::createNotifier(const std::string& type, const std::string& params)
 {
   auto p = StaticMethodFactory<RecordNotifierType>::get(type, "Notifier");
 
   if (p != nullptr) {
     std::shared_ptr<RecordNotifierType> z = (*p)(); // Call the static method
     if (z != nullptr) {
-      z->initialize(params, outputdir);
+      z->initialize(params);
       return (z);
     }
   }

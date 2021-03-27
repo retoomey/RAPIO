@@ -36,6 +36,14 @@ createRAPIOIO(void)
 }
 };
 
+std::string
+IOPython::getHelpString(const std::string& key)
+{
+  std::string help;
+  help += "builder that allows sending data to a python script for filtering or output.";
+  return help;
+}
+
 void
 IOPython::initialize()
 { }

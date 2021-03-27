@@ -36,7 +36,7 @@ FMLRecordNotifier::introduceSelf()
 }
 
 void
-FMLRecordNotifier::initialize(const std::string& params, const std::string& datalocation)
+FMLRecordNotifier::initialize(const std::string& params)
 {
   if (!params.empty()) {
     // Override with params as assumed directory.

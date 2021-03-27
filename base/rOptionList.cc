@@ -335,6 +335,10 @@ void
 OptionList::addAdvancedHelp(const std::string& sourceopt,
   const std::string                          & help)
 {
+  if (help.empty()) {
+    return;
+  }
+
   Option * have = getOption(sourceopt);
 
   if (have) {

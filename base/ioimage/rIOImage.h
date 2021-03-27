@@ -31,6 +31,10 @@ public:
 class IOImage : public IODataType {
 public:
 
+  /** Help for ioimage module */
+  virtual std::string
+  getHelpString(const std::string& key);
+
   // Registering of classes ---------------------------------------------
   virtual void
   initialize() override;

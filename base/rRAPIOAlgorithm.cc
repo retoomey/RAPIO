@@ -100,8 +100,6 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
   // These are the standard generic 'output' parameters we support
   o.require("o", "/data", "The output writers/directory for generated products or data");
   o.addGroup("o", "I/O");
-  o.addAdvancedHelp("o",
-    "Default is netcdf output folder, or the same as netcdf=/path.  Multiple writers with multiple or same folders can be chained.  For example, image=folder1 gdal=folder2.");
   o.optional("O",
     "*",
     "The output types patterns, controlling product names and writing");
@@ -117,27 +115,10 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
 void
 RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
 {
-  // FIXME: Refactor as we clean up advanced dynamic help
-  // First pass just putting in the framework.  Each
-  // factory introducer will gather help from dynamically
-  // introduced subobjects.
-  // Humm maybe a common superclass more automation here
-
-  // Some advanced help is pulled from the introduced objects,
-  // this allows new objects to contain their own help.
-  std::string test;
-  IOIndex::introduceHelp(test);
-  if (!test.empty()) {
-    o.addAdvancedHelp("i", test);
-  }
-
-  // Let the helper class do advanced help?
-  // FIXME: Previously done statically here, need to refactor
-  std::string help = "";
-  RecordNotifier::introduceHelp(help);
-  if (!help.empty()) {
-    o.addAdvancedHelp("n", help);
-  }
+  // Dispatch advanced help to the mega static classes
+  o.addAdvancedHelp("i", IOIndex::introduceHelp());
+  o.addAdvancedHelp("n", RecordNotifier::introduceHelp());
+  o.addAdvancedHelp("o", IODataType::introduceHelp());
 }
 
 void
@@ -150,9 +131,9 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 
   // Gather notifier list and output directory
   myNotifierList = o.getString("n");
-  const std::string write = o.getString("o");
 
   // Gather output -o settings
+  const std::string write = o.getString("o");
   std::vector<std::string> pieces;
   Strings::splitWithoutEnds(write, ' ', &pieces);
   for (auto& w:pieces) {
@@ -164,20 +145,9 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
       // Use blank factory, the system will try to guess from
       // extension or the loaded datatype
       myWriters.push_back(outputInfo("", pair[0]));
-
-      // FIXME: HACK this for moment, gonna have to refactor notifiers a bit
-      // since it was 1-to-1 with writer before
-      myOutputDir = pair[0];
     } else if (aSize == 2) {
       // Otherwise we have a factory attempt with this output info
-      // FIXME: Do we 'check' against registered to make sure we have it?
       myWriters.push_back(outputInfo(pair[0], pair[1]));
-
-      // FIXME: HACK this for moment, gonna have to refactor notifiers a bit
-      // since it was 1-to-1 with writer before
-      if (pair[0] == "netcdf") {
-        myOutputDir = pair[1];
-      }
     } else {
       LogSevere("Can't understand your -o format for: '" << w << "', ignoring.\n");
     }
@@ -562,7 +532,7 @@ void
 RAPIOAlgorithm::setUpRecordNotifier()
 {
   // Let record notifier factory create them, we will hold them though
-  RecordNotifier::createNotifiers(myNotifierList, myOutputDir, myNotifiers);
+  RecordNotifier::createNotifiers(myNotifierList, myNotifiers);
 }
 
 void

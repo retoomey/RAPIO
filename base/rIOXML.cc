@@ -11,6 +11,18 @@
 
 using namespace rapio;
 
+std::string
+IOXML::getHelpString(const std::string & key)
+{
+  std::string help;
+  if (key == "W2ALGS") {
+    help = "alias of XML builder for MRMS algorithms and records.\n";
+  } else {
+    help = "builder for reading xml formatted data.\n";
+  }
+  return help;
+}
+
 std::shared_ptr<DataType>
 IOXML::createDataTypeFromBuffer(std::vector<char>& buffer)
 {

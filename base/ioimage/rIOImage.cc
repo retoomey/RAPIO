@@ -30,6 +30,14 @@ createRAPIOIO(void)
 }
 };
 
+std::string
+IOImage::getHelpString(const std::string& key)
+{
+  std::string help;
+  help += "builder that uses the ImageMagick/GraphicsMagick library to output supported formats.";
+  return help;
+}
+
 void
 IOImage::initialize()
 { }

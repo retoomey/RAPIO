@@ -31,6 +31,10 @@ public:
 class IOGDAL : public IODataType {
 public:
 
+  /** Help for netcdf module */
+  virtual std::string
+  getHelpString(const std::string& key);
+
   // Registering of classes ---------------------------------------------
   virtual void
   initialize() override;

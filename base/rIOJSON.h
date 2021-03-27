@@ -17,6 +17,10 @@ class URL;
 class IOJSON : public IODataType {
 public:
 
+  /** Help for JSON */
+  virtual std::string
+  getHelpString(const std::string& key) override;
+
   // READING ------------------------------------------------------------
 
   /** Read from a buffer as XML data */
