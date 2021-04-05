@@ -213,11 +213,4 @@ public:
   /** Global priority queue used to process Records  */
   static std::shared_ptr<RecordQueue> theRecordQueue;
 };
-
-class RecordFilter : public Data
-{
-public:
-  virtual bool
-  wanted(const Record& rec){ return true; }
-};
 }

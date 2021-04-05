@@ -5,6 +5,7 @@
 #include "rXMLIndex.h"
 #include "rStrings.h"
 #include "rRecordQueue.h"
+#include "rRecordFilter.h"
 
 #include <cassert>
 #include <algorithm>

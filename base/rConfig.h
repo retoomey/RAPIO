@@ -20,9 +20,13 @@ public:
   virtual bool
   onStartUp(){ return true; }
 
-  /** Do the actual read/storage of configuration information */
+  /** Read configuration information from xml/json data. */
   virtual bool
-  readConfig(std::shared_ptr<PTreeData> global) = 0;
+  readConfig(std::shared_ptr<PTreeData> global){ return true; };
+
+  /** Read configuration information from a command line string */
+  virtual bool
+  readString(const std::string& param){ return true; };
 };
 
 /**

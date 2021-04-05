@@ -24,6 +24,7 @@ librapio_la_SOURCES =\
   rSecure.cc\
   rSignals.cc\
   rRecord.cc\
+  rRecordFilter.cc\
   rRecordQueue.cc\
   rRecordNotifier.cc\
   rIOIndex.cc\
@@ -32,6 +33,7 @@ librapio_la_SOURCES =\
   rConfigDirectoryMapping.cc\
   rConfigIODataType.cc\
   rConfigLogging.cc\
+  rConfigParamGroup.cc\
   rIODataType.cc\
   rNetcdfDataType.cc\
   rGribDataType.cc\
@@ -119,6 +121,7 @@ pkginclude_HEADERS =\
   rConfigIODataType.h\
   rConfigLogging.h\
   rConfigDirectoryMapping.h\
+  rConfigParamGroup.h\
   rOS.h\
   rIODataType.h\
   rNetcdfDataType.h\
@@ -163,6 +166,7 @@ pkginclude_HEADERS =\
   rOptionList.h\
   rSentinelDouble.h\
   rRecord.h\
+  rRecordFilter.h\
   rRecordQueue.h\
   rRecordNotifier.h\
   rUtility.h\

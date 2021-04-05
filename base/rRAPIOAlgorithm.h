@@ -5,85 +5,19 @@
 #include <rRAPIOData.h>
 #include <rIndexType.h>
 #include <rRecordNotifier.h>
+#include <rConfigParamGroup.h>
 
 #include <string>
 #include <vector>
 
 namespace rapio {
 /**
- *  Bring the common code we do all the time in the algorithms into
- *  a standard location.
+ *  The stock default algorithm and all its options and processing
  *
- *  Routines to handle the standard -I index URL(s).
- *  Routines to handle the standard -i product declarations.
- *  This means all the basic index connections and product filtering
- *  that is duplicated among algorithms.
- *
- *  Some algorithms break down the -I into unique fields, these can
- *  be added using the addInputProduct method directly.
  *  @author Robert Toomey
  *
- *  FIXME: Clean up protect/public.  Right now they should be sticking
- *  to the functions declared in the example algorithm.
  */
 class RAPIOAlgorithm : public Algorithm {
-protected:
-
-  /** Store database of product information before creation */
-  class productInputInfo : public Algorithm {
-public:
-    /* Constructor to make sure no fields missed */
-    productInputInfo(const std::string& n, const std::string& s)
-      : name(n), subtype(s){ }
-
-    std::string name;
-    std::string subtype;
-  };
-
-  /** Store database of output information before creation */
-  class productOutputInfo : public Algorithm {
-public:
-    /* Constructor to make sure no fields missed */
-    productOutputInfo(const std::string& p, const std::string& s,
-      const std::string& toP, const std::string& toS)
-      : product(p), subtype(s), toProduct(toP), toSubtype(toS){ }
-
-    /** The product key matcher such as '*', "Reflectivity*" */
-    std::string product;
-
-    /** The subtype key matcher, if any */
-    std::string subtype;
-
-    /** The product key to translate into */
-    std::string toProduct;
-
-    /** The subtype key to translate into, if any */
-    std::string toSubtype;
-  };
-
-  /** Store database of index information before creation */
-  class indexInputInfo : public Algorithm {
-public:
-    /* Constructor to make sure no fields missed */
-    indexInputInfo(const std::string& p, const std::string& i,
-      const TimeDuration& h) : protocol(p), indexparams(i), maximumHistory(h){ }
-
-    std::string protocol;
-    std::string indexparams;
-    TimeDuration maximumHistory;
-  };
-
-  /** Store -o output information for the writers */
-  class outputInfo : public Algorithm {
-public:
-    /* Constructor to make sure no fields missed */
-    outputInfo(const std::string& f, const std::string o)
-      : factory(f), outputinfo(o){ }
-
-    std::string factory;
-    std::string outputinfo;
-  };
-
 public:
   /** Construct a stock algorithm */
   RAPIOAlgorithm();
@@ -136,27 +70,6 @@ public:
   executeFromArgs(int argc,
     char *            argv[]);
 
-  /** Add a single input of the form Name:Subtype, where Subtype is optional */
-  void
-  addInputProduct(const std::string& product);
-
-  /** Add product inputs, usually from a -I string on command line, separated by
-   * spaces */
-  void
-  addInputProducts(const std::string& aList);
-
-  /** How many input products were there? */
-  size_t
-  getInputNumber();
-
-  /** Add a single output product name */
-  void
-  addOutputProduct(const std::string& product);
-
-  /** Add output products */
-  void
-  addOutputProducts(const std::string& aList);
-
   /** Should write product? Subclasses can use this bypass generation of
    * storage/cpu
    *  for a given product. Possibly another product in same algorithm depends on
@@ -173,17 +86,6 @@ public:
    *  so optimizing depends on coder. */
   bool
   isProductWanted(const std::string& key);
-
-  /** Add single index from url */
-  void
-  addIndex(const std::string & index,
-    const TimeDuration       & maximumHistory);
-
-  /** Add indexes, usually from a -i string on command line, separated by spaces
-   */
-  void
-  addIndexes(const std::string & aList,
-    const TimeDuration         & maximumHistory);
 
   /** Do any required processing on start if needed. */
   virtual void
@@ -203,10 +105,6 @@ public:
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
   execute();
-
-  /** Does this record match a pattern on the -I? */
-  virtual int
-  matches(const Record& rec);
 
   /** Handle new record, usually from event queue */
   virtual void
@@ -263,15 +161,6 @@ public:
 
 protected:
 
-  /** Database of added input products we want from any index */
-  std::vector<productInputInfo> myProductInputInfo;
-
-  /** Database of added output products we can generate */
-  std::vector<productOutputInfo> myProductOutputInfo;
-
-  /** Database of added indexes we look for products in */
-  std::vector<indexInputInfo> myIndexInputInfo;
-
   /** Indexes we are successfully attached to */
   std::vector<std::shared_ptr<IndexType> > myConnectedIndexes;
 
@@ -283,9 +172,6 @@ protected:
 
   /** The cronlist for heartbeat/sync if any */
   std::string myCronList;
-
-  /** The list of writers to attempt */
-  std::vector<outputInfo> myWriters;
 
   // I believe these things will always be 'global', even
   // if we have multiple algorithm modules.

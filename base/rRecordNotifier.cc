@@ -3,6 +3,7 @@
 #include "rStaticMethodFactory.h"
 #include "rStrings.h"
 #include "rColorTerm.h"
+#include "rConfigParamGroup.h"
 
 // Subclasses we introduce
 #include "rFMLRecordNotifier.h"
@@ -29,59 +30,22 @@ RecordNotifier::introduceHelp()
   return help;
 }
 
-bool
-RecordNotifier::createNotifiers(const std::string  & nstring,
-  std::vector<std::shared_ptr<RecordNotifierType> >& v)
+std::vector<std::shared_ptr<RecordNotifierType> >
+RecordNotifier::createNotifiers()
 {
-  if (nstring == "disable") {
-    LogInfo("Notifiers disabled\n");
-    return true;
-  }
-
-  // Split n param by spaces
-  std::vector<std::string> pieces;
-  Strings::splitWithoutEnds(nstring, ' ', &pieces);
-
-  // For each split piece
-  for (auto& s: pieces) {
-    std::string protocol;
-    std::string params;
-
-    // FIXME: dup code, The whole ' ' and then '=' code matches the index stuff
-    // maybe can combine it...
-    std::vector<std::string> pair;
-    Strings::splitWithoutEnds(s, '=', &pair);
-    const size_t aSize = pair.size();
-    std::string path   = "";
-    if (aSize == 1) {
-      // Something like 'fml=' or 'test=', a type missing a parameter string
-      if (Strings::endsWith(s, "=")) {
-        protocol = pair[0];
-        params   = "";
-      } else {
-        // Something like "/test", etc..try to read as location
-        protocol = "fml";
-        params   = pair[0];
-      }
-    } else if (aSize == 2) {
-      protocol = pair[0];
-      params   = pair[1];
-    } else {
-      LogSevere("Format of passed notifier '" << s << "' is wrong, see help n\n");
-      exit(1);
-    }
-
-    auto n = createNotifier(protocol, params);
+  std::vector<std::shared_ptr<RecordNotifierType> > v;
+  const auto& notifiers = ConfigParamGroupn::getNotifierInfo();
+  for (auto& ni:notifiers) {
+    auto n = createNotifier(ni.protocol, ni.params);
     if (n != nullptr) {
-      LogDebug("Added notifier: " << protocol << ":" << params << "\n");
+      LogDebug("Added notifier: " << ni.protocol << ":" << ni.params << "\n");
       v.push_back(n);
     } else {
-      LogSevere("Format of passed notifier '" << protocol << " = " << params << "' is wrong, see help n\n");
+      LogSevere("Format of passed notifier '" << ni.protocol << " = " << ni.params << "' is wrong, see help n\n");
       exit(1);
     }
   }
-
-  return true;
+  return v;
 } // RecordNotifier::createNotifiers
 
 std::shared_ptr<RecordNotifierType>

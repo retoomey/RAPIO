@@ -21,6 +21,7 @@
 #include "rHeartbeat.h"
 #include "rDataTypeHistory.h"
 #include "rStreamIndex.h"
+#include "rRecordFilter.h"
 
 // Default always loaded datatype creation factories
 #include "rIOXML.h"
@@ -126,45 +127,24 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 {
   // Add output products wanted and name translation filters
   const std::string param = o.getString("O");
+  ConfigParamGroupO paramO;
 
-  addOutputProducts(param);
+  paramO.readString(param);
 
   // Gather notifier list and output directory
   myNotifierList = o.getString("n");
+  ConfigParamGroupn paramn;
+  paramn.readString(myNotifierList);
 
   // Gather output -o settings
   const std::string write = o.getString("o");
-  std::vector<std::string> pieces;
-  Strings::splitWithoutEnds(write, ' ', &pieces);
-  for (auto& w:pieces) {
-    std::vector<std::string> pair;
-    Strings::splitWithoutEnds(w, '=', &pair);
-    const size_t aSize = pair.size();
-
-    if (aSize == 1) {
-      // Use blank factory, the system will try to guess from
-      // extension or the loaded datatype
-      myWriters.push_back(outputInfo("", pair[0]));
-    } else if (aSize == 2) {
-      // Otherwise we have a factory attempt with this output info
-      myWriters.push_back(outputInfo(pair[0], pair[1]));
-    } else {
-      LogSevere("Can't understand your -o format for: '" << w << "', ignoring.\n");
-    }
-  }
+  ConfigParamGroupo paramo;
+  paramo.readString(write);
 } // RAPIOAlgorithm::processOutputParams
 
 void
 RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
 {
-  // Standard -i, -I -r handling of the input parameters,
-  // most algorithms do it this way.
-  std::string indexes  = o.getString("i");
-  std::string products = o.getString("I");
-
-  myReadMode = o.getString("r");
-  myCronList = o.getString("sync");
-
   // Add the inputs we want to handle, using history setting...
   float history = o.getFloat("h");
 
@@ -176,8 +156,17 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
       "History -h value set too small, changing to " << history << "minutes.\n");
   }
   myMaximumHistory = TimeDuration::Minutes(history);
-  addInputProducts(products);
-  addIndexes(indexes, TimeDuration::Minutes(history));
+
+  // Standard -i, -I -r handling of the input parameters,
+  // most algorithms do it this way.
+  ConfigParamGroupi parami;
+  parami.readString(o.getString("i"));
+
+  ConfigParamGroupI paramI;
+  paramI.readString(o.getString("I"));
+
+  myReadMode = o.getString("r");
+  myCronList = o.getString("sync");
 }
 
 TimeDuration
@@ -343,204 +332,17 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 } // RAPIOAlgorithm::executeFromArgs
 
 void
-RAPIOAlgorithm::addInputProduct(const std::string& product)
-{
-  // inputs will be like this:
-  // Reflectivity:00.50 VIL:00.50 etc.
-  std::vector<std::string> pairs;
-  Strings::splitWithoutEnds(product, ':', &pairs);
-
-  // Add to our input info
-  myProductInputInfo.push_back(productInputInfo(pairs[0], pairs.size() > 1 ? pairs[1] : ""));
-}
-
-void
-RAPIOAlgorithm::addInputProducts(const std::string& intype)
-{
-  // inputs will be like this:
-  // Reflectivity:00.50 VIL:00.50 etc.
-  std::vector<std::string> inputs;
-  Strings::splitWithoutEnds(intype, ' ', &inputs);
-
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    addInputProduct(inputs[i]);
-  }
-}
-
-size_t
-RAPIOAlgorithm::getInputNumber()
-{
-  return (myProductInputInfo.size());
-}
-
-void
-RAPIOAlgorithm::addOutputProduct(const std::string& pattern)
-{
-  // Outputs will be like this:
-  // Reflectivity:00.50 VIL:00.50 etc.
-  // Reflectivity:00.50=MyRef1:00.50,  etc.
-  // Reflectivity*=MyRef1*
-  // I'm only supporting a single '*' match at moment...
-  std::string fullproduct;
-  std::string fullproductto;
-  std::string productPattern   = "*"; // Match everything
-  std::string subtypePattern   = "*";
-  std::string toProductPattern = ""; // No conversion
-  std::string toSubtypePattern = "";
-
-  std::vector<std::string> pairs;
-  Strings::splitWithoutEnds(pattern, '=', &pairs);
-
-  if (pairs.size() > 1) { // X = Y form.  Remapping product/subtype names
-    fullproduct   = pairs[0];
-    fullproductto = pairs[1];
-
-    pairs.clear();
-    Strings::splitWithoutEnds(fullproductto, ':', &pairs);
-
-    if (pairs.size() > 1) {
-      toProductPattern = pairs[0];
-      toSubtypePattern = pairs[1];
-    } else {
-      toProductPattern = pairs[0];
-    }
-  } else { // X form.  No remapping pattern...
-    fullproduct = pairs[0];
-  }
-
-  // Split up the X full product pattern into pattern/subtype
-  pairs.clear();
-  Strings::splitWithoutEnds(fullproduct, ':', &pairs);
-
-  if (pairs.size() > 1) {
-    productPattern = pairs[0];
-    subtypePattern = pairs[1];
-  } else {
-    productPattern = pairs[0];
-    subtypePattern = "NOT FOUND";
-  }
-
-  //  LogInfo("Product pattern is " << productPattern << "\n");
-  //  LogInfo("Subtype pattern is " << subtypePattern << "\n");
-  //  LogInfo("Product2 pattern is " << toProductPattern << "\n");
-  //  LogInfo("Subtype2 pattern is " << toSubtypePattern << "\n");
-
-  // Make sure unique enough
-  for (size_t i = 0; i < myProductOutputInfo.size(); i++) {
-    if (productPattern == myProductOutputInfo[i].product) {
-      LogInfo(
-        "Already added output product with pattern '" << productPattern
-                                                      << "', ignoring..\n");
-      return;
-    }
-  }
-
-  // Add the new output product declaration
-  myProductOutputInfo.push_back(
-    productOutputInfo(productPattern, subtypePattern, toProductPattern, toSubtypePattern));
-
-  LogDebug("Added output product pattern with key '" << pattern << "'\n");
-} // RAPIOAlgorithm::addOutputProduct
-
-void
-RAPIOAlgorithm::addOutputProducts(const std::string& intype)
-{
-  std::vector<std::string> outputs;
-  Strings::splitWithoutEnds(intype, ' ', &outputs);
-
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    addOutputProduct(outputs[i]);
-  }
-}
-
-void
-RAPIOAlgorithm::addIndex(const std::string & index,
-  const TimeDuration                       & maximumHistory)
-{
-  // We don't actually create an index here...we wait until execute.
-  LogDebug("Adding source index:'" << index << "'\n");
-
-  std::string protocol, indexparams;
-
-  // For the new xml=/home/code_index.xml protocol passing
-  std::vector<std::string> pieces;
-
-  // Macro ldm to the feedme binary by default for convenience
-  if (index == "ldm") {
-    protocol    = StreamIndex::STREAMINDEX;
-    indexparams = "feedme%-f%TEXT";
-  } else {
-    // Split on = if able to get protocol, otherwise we'll try to guess
-    Strings::split(index, '=', &pieces);
-    const size_t aSize = pieces.size();
-    if (aSize == 1) {
-      protocol    = "";
-      indexparams = pieces[0];
-    } else if (aSize == 2) {
-      protocol    = pieces[0];
-      indexparams = pieces[1];
-    } else {
-      LogSevere("Format of passed index '" << index << "' is wrong, see help i\n");
-      exit(1);
-    }
-  }
-
-  myIndexInputInfo.push_back(indexInputInfo(protocol, indexparams, maximumHistory));
-} // RAPIOAlgorithm::addIndex
-
-void
-RAPIOAlgorithm::addIndexes(const std::string & param,
-  const TimeDuration                         & maximumHistory)
-{
-  // Split indexes by spaces
-  std::vector<std::string> pieces;
-  Strings::splitWithoutEnds(param, ' ', &pieces);
-
-  for (size_t p = 0; p < pieces.size(); ++p) {
-    addIndex(pieces[p], maximumHistory);
-  }
-}
-
-namespace rapio {
-class AlgRecordFilter : public RecordFilter
-{
-public:
-  RAPIOAlgorithm * myAlg;
-
-  void
-  setAlg(RAPIOAlgorithm * m){ myAlg = m; }
-
-  virtual bool
-  wanted(const Record& rec) override
-  {
-    // FIXME: We also want to time filter in the time window,
-    // expecially on startup reading..
-    // Hack a time window for testing..
-    //    TimeDuration dur = Time::CurrentTime() - rec.getTime();
-    //    if (dur > TimeDuration::Seconds(180)){
-    //     LogSevere("Record ignored due to age turn off hack...\n");
-    //      return false;
-    //    }
-    int matchProduct = myAlg->matches(rec);
-
-    return (matchProduct > -1);
-  }
-};
-}
-
-void
 RAPIOAlgorithm::setUpRecordNotifier()
 {
   // Let record notifier factory create them, we will hold them though
-  RecordNotifier::createNotifiers(myNotifierList, myNotifiers);
+  myNotifiers = RecordNotifier::createNotifiers();
 }
 
 void
 RAPIOAlgorithm::setUpRecordFilter()
 {
-  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
+  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>(this);
   Record::theRecordFilter = f;
-  f->setAlg(this);
 }
 
 void
@@ -570,19 +372,20 @@ RAPIOAlgorithm::execute()
   // FIXME: Archive should probably skip queue in case of giant archive cases,
   // otherwise we load a lot of memory.  We need better handling of this..
   // though for small archives we load all and sort, which is a nice ability
-  size_t count     = 0;
-  size_t wanted    = myIndexInputInfo.size();
-  bool daemon      = isDaemon();
-  bool archive     = isArchive();
-  std::string what = daemon ? "daemon" : "archive";
+  size_t count      = 0;
+  const auto& infos = ConfigParamGroupi::getIndexInputInfo();
+  size_t wanted     = infos.size();
+  bool daemon       = isDaemon();
+  bool archive      = isArchive();
+  std::string what  = daemon ? "daemon" : "archive";
   if (daemon && archive) { what = "allrecords"; }
 
   for (size_t p = 0; p < wanted; ++p) {
-    const indexInputInfo& i = myIndexInputInfo[p];
+    const auto& i = infos[p];
     std::shared_ptr<IndexType> in;
 
     bool success = false;
-    in = IOIndex::createIndex(i.protocol, i.indexparams, i.maximumHistory);
+    in = IOIndex::createIndex(i.protocol, i.indexparams, myMaximumHistory);
     myConnectedIndexes.push_back(in);
 
     if (in != nullptr) {
@@ -607,7 +410,8 @@ RAPIOAlgorithm::execute()
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
   LogDebug("Outputs:\n");
-  for (auto& w:myWriters) {
+  const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
+  for (auto& w:writers) {
     LogDebug("   " << w.factory << "--> " << w.outputinfo << "\n");
   }
 
@@ -626,56 +430,6 @@ RAPIOAlgorithm::execute()
   // Do event loop
   EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute
-
-// FIXME: move it all into the RecordFilter.
-int
-RAPIOAlgorithm::matches(const Record& rec)
-{
-  // sel is a set of strings like this: time datatype subtype
-  // myType is a set of strings like  :      datatype subtype
-  //                              or  :      datatype
-  // i.e. we need to match sel[1] with myType[0]
-  // and maybe sel[2] with myType[1]
-  std::vector<std::string> sel = rec.getSelections();
-
-  for (size_t i = 0; i < myProductInputInfo.size(); ++i) {
-    const productInputInfo& p = myProductInputInfo[i];
-
-    // If no subtype, just match the product pattern. For example, something
-    // like
-    // Vel* will match Velocity
-    std::string star;
-    bool matchProduct = false;
-    bool matchSubtype = false;
-
-    // -----------------------------------------------------------
-    // Match product pattern if selections have it
-    if (sel.size() > 1) {
-      // Not sure we need this or why..it was in the old code though...
-      if ((sel.back() != "vol") && (sel.back() != "all")) {
-        matchProduct = Strings::matchPattern(p.name, sel[1], star);
-      }
-    }
-
-    // -----------------------------------------------------------
-    // Match subtype pattern if we have one (and product already matched)
-    if (p.subtype == "") {
-      matchSubtype = true; // empty is pretty much '*'
-    } else {
-      if (matchProduct && (sel.size() > 2)) {
-        matchSubtype = Strings::matchPattern(p.subtype, sel[2], star);
-      }
-    }
-
-    // Return on matched product/subtype
-    if (matchProduct && matchSubtype) {
-      //    matchedPattern = p.name;
-      return (i);
-    }
-  }
-  // matchedPattern = "";
-  return (-1);
-} // RAPIOAlgorithm::matches
 
 void
 RAPIOAlgorithm::handleRecordEvent(const Record& rec)
@@ -742,10 +496,11 @@ RAPIOAlgorithm::productMatch(const std::string& key,
 
   std::string newProductName = "";
 
-  for (size_t i = 0; i < myProductOutputInfo.size(); i++) {
-    productOutputInfo& I = myProductOutputInfo[i];
-    std::string p        = I.product;
-    std::string p2       = I.toProduct;
+  const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
+
+  for (auto& I:outputs) {
+    std::string p  = I.product;
+    std::string p2 = I.toProduct;
     std::string star;
 
     if (Strings::matchPattern(p, key, star)) {
@@ -785,7 +540,8 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     outputData->setTypeName(newProductName);
 
     // Can call write multiple times for each output wanted.
-    for (auto& w:myWriters) {
+    const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
+    for (auto& w:writers) {
       std::vector<Record> records;
       std::vector<std::string> files;
       IODataType::write(outputData, w.outputinfo, false, records, w.factory);

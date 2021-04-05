@@ -44,11 +44,9 @@ public:
   static std::string
   introduceHelp();
 
-  /** Process definition string for RAPIOAlgorithm.  Return
-   * vector of created notifiers */
-  static bool
-  createNotifiers(const std::string                  & nstring,
-    std::vector<std::shared_ptr<RecordNotifierType> >& n);
+  /** Return vector of created notifiers */
+  static std::vector<std::shared_ptr<RecordNotifierType> >
+  createNotifiers();
 
   /** Create a new notifier for notifying new data. */
   static std::shared_ptr<RecordNotifierType>
