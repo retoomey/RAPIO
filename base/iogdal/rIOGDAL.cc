@@ -85,48 +85,40 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   std::vector<Record>                            & records
 )
 {
-  // Settings
-  size_t cols      = 500;
-  size_t rows      = 500;
-  size_t degreeOut = 10.0;
+  DataType& r = *dt;
 
-  std::string mode   = "full";
+  // For now at least, every image requires a projection.  I
+  // could see modes where no projection is required
+  auto project = r.getProjection(); // primary layer
+
+  if (project == nullptr) {
+    LogSevere("No projection ability for this datatype.\n");
+    return false;
+  }
+  auto& p = *project;
+
+  LLCoverage cover;
   std::string suffix = "tif";
   std::string driver = "GTiff";
+  bool optionSuccess = false;
 
   if (dfs != nullptr) {
     try{
       auto output = dfs->getChild("output");
-      cols = output.getAttr("cols", cols);
-      rows = output.getAttr("rows", cols);
-      // At least for now use the delta degree thing.  I'm sure
-      // this will enhance or change for a static grid
-      degreeOut = output.getAttr("degrees", degreeOut);
-      suffix    = output.getAttr("suffix", suffix);
-      driver    = output.getAttr("driver", driver);
-      mode      = output.getAttr("mode", suffix);
+      suffix        = output.getAttr("suffix", suffix);
+      driver        = output.getAttr("driver", driver);
+      optionSuccess = p.getLLCoverage(output, cover);
     }catch (const std::exception& e) {
       LogSevere("Unrecognized settings, using defaults\n");
     }
   }
 
-  DataType& r = *dt;
-  float top, left, deltaLat, deltaLon;
-
-  bool optionSuccess = false;
-  if (mode == "full") {
-    optionSuccess = r.LLCoverageFull(rows, cols, top, left, deltaLat, deltaLon);
-  } else if (mode == "degrees") {
-    optionSuccess = r.LLCoverageCenterDegree(degreeOut, rows, cols, top, left, deltaLat, deltaLon);
-  }
-
   if (!optionSuccess) {
-    LogSevere("Don't know how to create a coverage grid for this datatype using mode '" << mode << "'.\n");
     return false;
   }
-  // ----------------------------------------------------
 
-  LogInfo("GDAL writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << "\n");
+  // ----------------------------------------------------
+  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << ", " << cover << "\n");
 
   static bool setup = false;
   if (!setup) {
@@ -134,6 +126,14 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     CPLPushErrorHandler(CPLQuietErrorHandler);
     setup = true;
   }
+
+  // Pull back settings in coverage for marching
+  const size_t rows    = cover.rows;
+  const size_t cols    = cover.cols;
+  const float top      = cover.topDegs;
+  const float left     = cover.leftDegs;
+  const float deltaLat = cover.deltaLatDegs;
+  const float deltaLon = cover.deltaLonDegs;
 
   // For the moment, always have a color map, even if missing...
   // Only needed if we are doing artificial color bands in the data such as in
@@ -210,7 +210,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     for (size_t y = 0; y < rows; y++) {
       auto startLon = left;
       for (size_t x = 0; x < cols; x++) {
-        const double v = r.getValueAtLL(startLat, startLon);
+        const double v = p.getValueAtLL(startLat, startLon);
         // rowBuff[x] = v;
         rowBuff[index++] = v; // Data value band
         startLon        += deltaLon;

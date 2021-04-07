@@ -6,6 +6,7 @@
 #include <rConstants.h>
 #include <rError.h>
 #include <rNamedAny.h>
+#include <rDataProjection.h>
 
 #include <map>
 #include <string>
@@ -157,6 +158,10 @@ public:
   std::shared_ptr<DataAttributeList>
   getGlobalAttributes(){ return myAttributes; }
 
+  /** Projection for data type */
+  virtual std::shared_ptr<DataProjection>
+  getProjection(const std::string& layer = "primary"){ return nullptr; }
+
   /** Get a string from global attributes */
   inline bool
   getString(const std::string& name, std::string& out) const
@@ -237,27 +242,6 @@ public:
 
   // End global attribute API
   // ------------------------------------------------------------------
-
-  // ------------------------------------------------------------------
-  // SpaceTime, ColorMap API.  FIXME: SpaceTime stuff maybe should go
-  // lower down.  Certain data types this stuff is meaningless
-
-  /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
-  virtual double
-  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = "primary")
-  {
-    return Constants::MissingData;
-  }
-
-  /** Calculate Lat Lon coverage marching grid from spatial center */
-  virtual bool
-  LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
-
-  /** Calculate maximum suggested Lat Lon coverage marching grid */
-  virtual bool
-  LLCoverageFull(size_t& numRows, size_t& numCols,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
 
   /** Get the ColorMap for converting values to colors */
   virtual std::shared_ptr<ColorMap>

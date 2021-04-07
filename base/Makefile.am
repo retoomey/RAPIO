@@ -69,6 +69,7 @@ librapio_la_SOURCES =\
   rDataTypeHistory.cc\
   rElevationVolume.cc\
   rDataType.cc\
+  rDataProjection.cc\
   rPTreeData.cc\
   rFileIndex.cc\
   rFMLIndex.cc\
@@ -146,6 +147,7 @@ pkginclude_HEADERS =\
   rDataStore.h\
   rDataStore2D.h\
   rDataType.h\
+  rDataProjection.h\
   rPTreeData.h\
   rDataGrid.h\
   rBinaryTable.h\

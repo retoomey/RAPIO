@@ -90,53 +90,39 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::vector<Record>                             & records
 )
 {
-  // ----------------------------------------------------
-  // FIXME: These settings duplicate a lot with other modules
-  // like the GDAL one.  But in theory each module can have
-  // completely unique settings. Debating on pulling this
-  // into common code
+  DataType& r = *dt;
 
-  // Settings
-  size_t cols      = 500;
-  size_t rows      = 500;
-  size_t degreeOut = 10.0;
+  // For now at least, every image requires a projection.  I
+  // could see modes where no projection is required
+  auto project = r.getProjection(); // primary layer
 
-  std::string mode   = "full";
+  if (project == nullptr) {
+    LogSevere("No projection ability for this datatype.\n");
+    return false;
+  }
+  auto& p = *project;
+
+  LLCoverage cover;
   std::string suffix = "png";
+  bool optionSuccess = false;
 
   if (dfs != nullptr) {
     try{
       auto output = dfs->getChild("output");
-      cols = output.getAttr("cols", cols);
-      rows = output.getAttr("rows", cols);
-      // At least for now use the delta degree thing.  I'm sure
-      // this will enhance or change for a static grid
-      degreeOut = output.getAttr("degrees", size_t(degreeOut));
-      suffix    = output.getAttr("suffix", suffix);
-      mode      = output.getAttr("mode", suffix);
+      suffix        = output.getAttr("suffix", suffix);
+      optionSuccess = p.getLLCoverage(output, cover);
     }catch (const std::exception& e) {
       LogSevere("Unrecognized settings, using defaults\n");
     }
   }
 
-  DataType& r = *dt;
-  float top, left, deltaLat, deltaLon;
-
-  bool optionSuccess = false;
-  if (mode == "full") {
-    optionSuccess = r.LLCoverageFull(rows, cols, top, left, deltaLat, deltaLon);
-  } else if (mode == "degrees") {
-    optionSuccess = r.LLCoverageCenterDegree(degreeOut, rows, cols, top, left, deltaLat, deltaLon);
-  }
-
   if (!optionSuccess) {
-    LogSevere("Don't know how to create a coverage grid for this datatype using mode '" << mode << "'.\n");
     return false;
   }
   // ----------------------------------------------------
 
   LogInfo(
-    "Image writer settings: (" << cols << "x" << rows << ") degrees:" << degreeOut << " filetype:" << suffix << "\n");
+    "Image writer settings: (filetype: " << suffix << ", " << cover << ")\n");
 
   static bool setup = false;
   if (!setup) {
@@ -153,6 +139,14 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   const ColorMap& test = *colormap;
 
   const auto centerLLH = r.getLocation();
+  // Pull back settings in coverage for marching
+  const size_t rows    = cover.rows;
+  const size_t cols    = cover.cols;
+  const float top      = cover.topDegs;
+  const float left     = cover.leftDegs;
+  const float deltaLat = cover.deltaLatDegs;
+  const float deltaLon = cover.deltaLonDegs;
+
   try{
     // FIXME: Is there a way to create without 'begin' fill, would be faster
     // Magick::Image i(Magick::Geometry(cols, rows)); Fails missing file?
@@ -173,7 +167,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
       auto startLon = left;
       for (size_t x = 0; x < cols; x++) {
         // We'll do API over speed very slightly here, allow generic lat/lon pull ability
-        const double v = r.getValueAtLL(startLat, startLon);
+        const double v = p.getValueAtLL(startLat, startLon);
 
         // if (v == Constants::MissingData) {
         //  *pixel = Magick::Color("blue");

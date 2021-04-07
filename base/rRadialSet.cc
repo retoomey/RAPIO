@@ -4,7 +4,6 @@
 #include "rUnit.h"
 #include "rIJK.h"
 #include "rLLH.h"
-#include "rProject.h"
 
 #include <cassert>
 
@@ -173,58 +172,8 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
   setString("RangeToFirstGateUnits", "Meters");
 }
 
-double
-RadialSet::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
+std::shared_ptr<DataProjection>
+RadialSet::getProjection(const std::string& layer)
 {
-  // We can cache for getting data values I 'think'
-  if (myLookup == nullptr) {
-    myLookup = std::make_shared<RadialSetLookup>(*this); // Bin azimuths.
-  }
-
-  float azDegs, rangeMeters;
-  int radial, gate;
-
-  const auto lonc = myLocation.getLongitudeDeg();
-  const auto latc = myLocation.getLatitudeDeg();
-
-  // Translate from Lat Lon to az/range
-  Project::LatLonToAzRange(latc, lonc, latDegs, lonDegs, azDegs, rangeMeters);
-  bool good = myLookup->getRadialGate(azDegs, rangeMeters, &radial, &gate);
-  if (good) {
-    auto& data = getFloat2D(layer.c_str())->ref();
-    return data[radial][gate];
-  } else {
-    return Constants::MissingData;
-  }
-  // auto& data    = getFloat2D(layer.c_str())->ref();
-  // double v = good ? data[radial][gate] : Constants::MissingData;
-}
-
-bool
-RadialSet::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
-  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
-{
-  // Our center location is the standard location
-  const auto lonc = myLocation.getLongitudeDeg();
-  const auto latc = myLocation.getLatitudeDeg();
-
-  Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
-  return true;
-}
-
-bool
-RadialSet::LLCoverageFull(size_t& numRows, size_t& numCols,
-  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
-{
-  // There isn't really a 'full' for radialset...so use some defaults
-  numRows = 1000;
-  numCols = 1000;
-  double degreeOut = 10;
-
-  // Our center location is the standard location
-  const auto lonc = myLocation.getLongitudeDeg();
-  const auto latc = myLocation.getLatitudeDeg();
-
-  Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
-  return true;
+  return std::make_shared<RadialSetProjection>(layer, this);
 }
