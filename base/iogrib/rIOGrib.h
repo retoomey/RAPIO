@@ -154,7 +154,7 @@ public:
 
   /** Do a buffer read of a 3D field using 2D and input vector of levels */
   static std::shared_ptr<Array<float, 3> >
-  get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string> levelsStringVec, size_t& x,
+  get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string>& levelsStringVec, size_t& x,
     size_t& y, size_t& z, float missing = -999.0);
 
   /** Do a full read from a param list */

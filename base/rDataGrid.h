@@ -31,9 +31,9 @@ public:
   /** Construct a DataArray with needed storage parameters */
   DataArray(const std::string& name, const std::string& units,
     const DataArrayType& type, const std::vector<size_t>& dimindexes)
-    : NamedAny(name), myUnits(units), myStorageType(type), myDimIndexes(dimindexes)
+    : NamedAny(name), myAttributes(std::make_shared<DataAttributeList>()), myUnits(units), myStorageType(type),
+    myDimIndexes(dimindexes)
   {
-    myAttributes = std::make_shared<DataAttributeList>();
     myAttributes->put<std::string>("Units", units);
   }
 

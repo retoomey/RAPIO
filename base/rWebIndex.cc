@@ -27,7 +27,6 @@ WebIndex::WebIndex(const URL & aURL,
   IndexType(maximumHistory),
   myLastRead(0),
   myLastReadNS(0),
-  myReadOK(false),
   myURL(aURL),
   indexDataPath(aURL)
 {
@@ -134,7 +133,7 @@ WebIndex::handlePoll()
 bool
 WebIndex::readRemoteRecords()
 {
-  myFoundNew = false;
+  bool myFoundNew = false;
 
   if (myURL.empty()) { // Don't crash on a bad config just inform
     LogDebug("Empty URL for web index, nothing to read or poll\n");
@@ -160,7 +159,7 @@ WebIndex::readRemoteRecords()
   LogInfo("Web:" << tmpURL << "\n");
   auto doc = IODataType::read<PTreeData>(tmpURL.toString(), "xml");
 
-  myReadOK = (doc != nullptr);
+  const bool myReadOK = (doc != nullptr);
 
   if (myReadOK) {
     auto tree    = doc->getTree();

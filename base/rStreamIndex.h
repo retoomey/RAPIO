@@ -35,7 +35,7 @@ public:
     const TimeDuration & maximumHistory) override;
 
   /** Create a new empty StreamIndex, probably as main factory */
-  StreamIndex() : myItemStart(""), myItemEnd(""){ }
+  StreamIndex() : myParams(), myDFAState(0), myItemStart(""), myItemEnd(""){ }
 
   /** Specialized constructor */
   StreamIndex(

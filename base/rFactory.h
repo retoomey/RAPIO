@@ -29,10 +29,8 @@ public:
 
     /** Construct with default keys */
     FactoryLookup(const std::string& m, const std::string& mname)
-      : module(m), methodname(mname), loaded(false)
-    {
-      stored = nullptr;
-    }
+      : module(m), methodname(mname), loaded(false), stored(nullptr)
+    { }
 
     /** Dynamic library lib.so */
     std::string module;

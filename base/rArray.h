@@ -33,9 +33,8 @@ public:
   }
 
   /** Create array from vector of dimension sizes */
-  Array(std::vector<size_t> dims, C value = 0)
+  Array(const std::vector<size_t>& dims, C value = 0) : myDims(dims)
   {
-    myDims = dims;
     syncToDims();
   }
 
@@ -52,7 +51,7 @@ public:
 
   /** Resize using a vector list of dimensions */
   void
-  resize(std::vector<size_t> dims)
+  resize(const std::vector<size_t>& dims)
   {
     myDims = dims;
     syncToDims();

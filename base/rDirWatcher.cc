@@ -127,7 +127,7 @@ DirWatcher::attach(const std::string & dirname,
   if (archive) {
     LogInfo("Doing initial scan of directory " + dirname + "\n");
     struct stat newLast = newWatch->myLastStat;
-    scan(l, dirname.c_str(), newWatch->myLastStat, newLast);
+    scan(l, dirname, newWatch->myLastStat, newLast);
     newWatch->myLastStat = newLast;
 
     // Go ahead and process the original files all at once...

@@ -31,22 +31,27 @@ public:
   /** Store the watch for a particular directory */
   class FAMInfo : public WatchInfo {
 public:
-    std::string myDirectory;
-    int myWatchID;
+    friend FAMWatcher;
 
-    /** Approximate time of latest connection */
-    Time myTime;
-
+    /** Construct a FAM info */
     FAMInfo(IOListener * l, const std::string& dir, int wd)
-      : myDirectory(dir), myWatchID(wd)
-    {
-      myListener = l;
-      myTime     = Time::CurrentTime();
-    }
+      : WatchInfo(l), myDirectory(dir), myWatchID(wd), myTime(Time::CurrentTime())
+    { }
 
     /** Handle detach of watch */
     virtual bool
     handleDetach(WatcherType * owner) override;
+
+protected:
+
+    /** Directory being watched by this FAM ID */
+    std::string myDirectory;
+
+    /** The internal kernel FAM ID for the watch */
+    int myWatchID;
+
+    /** Approximate time of latest connection */
+    Time myTime;
   };
 
   /** Attach/update a FAMInfo with FAM connection */

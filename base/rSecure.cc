@@ -36,7 +36,7 @@ Secure::sign(const std::string& key, const std::string& message)
 }
 
 std::string
-Secure::hexdigest(const std::string bytes)
+Secure::hexdigest(const std::string& bytes)
 {
   std::stringstream ss;
   for (size_t i = 0; i < bytes.length(); i++) {
@@ -71,7 +71,7 @@ Secure::decode64(const std::string& input)
 }
 
 std::string
-Secure::sha256(const std::string str)
+Secure::sha256(const std::string& str)
 {
   unsigned char hash[SHA256_DIGEST_LENGTH];
   SHA256_CTX sha256;

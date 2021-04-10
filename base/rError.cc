@@ -271,13 +271,10 @@ Log::flush()
 }
 
 Log::Log()
-  : std::ostream(this)
+  : std::ostream(this), mySink(boost::make_shared<text_sink>())
 {
   // -----------------------------------------------------
   // BOOST setup
-
-  // init sink
-  mySink = boost::make_shared<text_sink>();
 
   // We could do files and autorotation all with boost if wanted...
   // ..but we use our runner scripting

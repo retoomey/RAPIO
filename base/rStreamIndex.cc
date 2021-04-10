@@ -23,11 +23,9 @@ StreamIndex::StreamIndex(
   const std::string  & protocol,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory) :
-  IndexType(maximumHistory), myItemStart("<item>"), myItemEnd("</item>")
+  IndexType(maximumHistory), myParams(indexparams), myDFAState(0), myItemStart("<item>"), myItemEnd("</item>")
 {
   // Using % to space separate exe, quotes and other stuff mess with the shell
-  myParams   = indexparams;
-  myDFAState = 0;
 }
 
 std::string

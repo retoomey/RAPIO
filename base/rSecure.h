@@ -36,7 +36,7 @@ public:
 
   /** Sha256 of a string */
   static std::string
-  sha256(const std::string str);
+  sha256(const std::string& str);
 
   /** Decode a binary base64 into ascii text */
   static std::vector<uint8_t>
@@ -44,7 +44,7 @@ public:
 
   /** Hex digest of bytes */
   static std::string
-  hexdigest(const std::string bytes);
+  hexdigest(const std::string& bytes);
 
   // Signature checking, etc.
 

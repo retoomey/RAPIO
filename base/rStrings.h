@@ -176,11 +176,8 @@ class DFAWord : public Utility
 public:
 
   /** Create a word to parse */
-  DFAWord(const std::string& t)
-  {
-    text = t;
-    at   = 0;
-  }
+  DFAWord(const std::string& t) : at(0), text(t)
+  { }
 
   /** Parse another character */
   bool

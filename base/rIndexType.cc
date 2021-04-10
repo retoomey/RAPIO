@@ -14,7 +14,7 @@ IndexType::~IndexType()
 
 IndexType::IndexType(
   const TimeDuration & cutoffInterval)
-  : myAgeOffInterval(cutoffInterval)
+  : myAgeOffInterval(cutoffInterval), myIndexLabel()
 { }
 
 std::string

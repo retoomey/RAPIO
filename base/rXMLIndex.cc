@@ -17,10 +17,8 @@ const std::string XMLIndex::XMLINDEX = "ixml";
 
 XMLIndex::XMLIndex(const URL & xmlURL,
   const TimeDuration         & maximumHistory)
-  : IndexType(maximumHistory)
-{
-  myURL = xmlURL;
-}
+  : IndexType(maximumHistory), myURL(xmlURL)
+{ }
 
 XMLIndex::~XMLIndex()
 { }

@@ -33,6 +33,23 @@ public:
   /** Information for a particular EXE watch */
   class EXEInfo : public WatchInfo {
 public:
+    friend EXEWatcher;
+
+    EXEInfo(IOListener * l, const std::string& params) : WatchInfo(l), myParams(params)
+    {
+      myConnected   = false;
+      myCoutPipe[0] = myCoutPipe[1] = -1;
+      myCerrPipe[0] = myCoutPipe[1] = -1;
+    }
+
+    /** Spawn and connect to the exe */
+    bool
+    connect();
+
+    /** Create the events to be processed later */
+    virtual void
+    createEvents(WatcherType * w) override;
+protected:
 
     /** Pipe for cout for exe */
     int myCoutPipe[2];
@@ -46,25 +63,10 @@ public:
     /** Are we connected to the EXE? */
     bool myConnected;
 
-    EXEInfo(IOListener * l, const std::string& params)
-    //   : myParams(params)
-    {
-      myListener  = l;
-      myParams    = params;
-      myConnected = false;
-    }
-
-    /** Spawn and connect to the exe */
-    bool
-    connect();
-
-    /** Create the events to be processed later */
-    virtual void
-    createEvents(WatcherType * w) override;
-protected:
     /** Child pid */
     pid_t myPid;
 
+    /** Parameters used for calling the executable */
     std::string myParams;
   };
 

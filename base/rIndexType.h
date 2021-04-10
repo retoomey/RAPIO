@@ -88,7 +88,7 @@ protected:
   /** How long to keep back history, if any */
   TimeDuration myAgeOffInterval;
 
-  /** Our index label used to mark recrods */
+  /** Our index label used to mark records */
   size_t myIndexLabel;
 };
 }

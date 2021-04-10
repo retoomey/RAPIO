@@ -137,6 +137,9 @@ class WatchInfo : public IO {
 public:
   IOListener * myListener;
 
+  /** Create watch info using given listener */
+  WatchInfo(IOListener * l) : myListener(l){ }
+
   /** Handle detach of this WatchInfo, return true to remove */
   virtual bool
   handleDetach(WatcherType * owner){ return true; }
@@ -144,6 +147,10 @@ public:
   /** Create the events to be processed later */
   virtual void
   createEvents(WatcherType * w){ };
+
+  /** Send poll to listener */
+  void
+  handlePoll(){ myListener->handlePoll(); }
 };
 
 class IOWatcher : public IO {

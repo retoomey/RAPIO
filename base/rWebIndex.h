@@ -61,13 +61,16 @@ public:
 
 private:
 
+  /** A time marker for web index records so we don't reread older records */
   long long myLastRead;
+
+  /** A time marker (extra nanoseconds) for web index records so we don't reread older records */
   long myLastReadNS;
-  bool myReadOK;
-  bool myFoundNew;
+
+  /** The base URL for pulling web records */
   URL myURL;
+
+  /** The URL for pulling web records */
   URL indexDataPath;
-  // long long myLastPollTime;
-  // int myThrottleSecs;
 };
 }

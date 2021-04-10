@@ -10,10 +10,9 @@
 
 using namespace rapio;
 
-DataType::DataType() : myTime(Time::CurrentTime()), myReadFactory("default"), myTypeName("not set")
-{
-  myAttributes = std::make_shared<DataAttributeList>();
-}
+DataType::DataType() : myAttributes(std::make_shared<DataAttributeList>()), myTime(Time::CurrentTime()), myReadFactory(
+    "default"), myTypeName("not set")
+{ }
 
 std::string
 DataType::formatString(float spec,

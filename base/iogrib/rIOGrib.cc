@@ -578,7 +578,7 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x
 } // IOGrib::get2DData
 
 std::shared_ptr<Array<float, 3> >
-IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string> levelsStringVec,
+IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string>& levelsStringVec,
   size_t& x, size_t&y, size_t& z, float missing)
 {
   size_t zVecSize = levelsStringVec.size();

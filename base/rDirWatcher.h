@@ -26,13 +26,11 @@ public:
   /** Information for a particular watch */
   class DirInfo : public WatchInfo {
 public:
-    URL myURL;
-    struct stat myLastStat;
+    friend DirWatcher;
 
     DirInfo(IOListener * l, const std::string& dir)
-      : myURL(dir)
+      : WatchInfo(l), myURL(dir)
     {
-      myListener = l;
       myLastStat.st_ctim.tv_sec  = 0; // good enough
       myLastStat.st_ctim.tv_nsec = 0;
     }
@@ -40,6 +38,12 @@ public:
     /** Create the events to be processed later */
     virtual void
     createEvents(WatcherType * w) override;
+protected:
+    /** The URL of the directory being watched */
+    URL myURL;
+
+    /** Stat memory of the latest file checked */
+    struct stat myLastStat;
   };
 
   /** Attach a pulse to web page for a given listener to us */

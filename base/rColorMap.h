@@ -15,34 +15,16 @@ public:
   ColorBin(){ }; // STL wants for map, but we'll never call it directly
 
   ColorBin(const std::string& label, double u, unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_)
-  {
-    // Actually should be constructor init
-    myLabel  = label;
-    upper    = lower = u;
-    myLinear = false;
-    r1       = r2 = r_;
-    g2       = g1 = g_;
-    b2       = b1 = b_;
-    a2       = a1 = a_;
-  }
+    : myLinear(false), r1(r_), g1(g_), b1(b_), a1(a_), r2(r_), g2(g_), b2(b_), a2(a_), upper(u), lower(u),
+    myLabel(label)
+  { }
 
   ColorBin(const std::string& label, double u, double l, unsigned char r_, unsigned char g_, unsigned char b_,
     unsigned char a_,
     unsigned char r2_, unsigned char g2_, unsigned char b2_, unsigned char a2_)
-  {
-    myLabel  = label;
-    upper    = u;
-    lower    = l;
-    myLinear = true;
-    r1       = r_;
-    r2       = r2_;
-    g1       = g_;
-    g2       = g2_;
-    b1       = b_;
-    b2       = b2_;
-    a2       = a_;
-    a2       = a2_;
-  }
+    : myLinear(true), r1(r_), g1(g_), b1(b_), a1(a_), r2(r2_), g2(g2_), b2(b2_), a2(a2_), upper(u), lower(l), myLabel(
+      label)
+  { }
 
   void
   getColor(double value, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const

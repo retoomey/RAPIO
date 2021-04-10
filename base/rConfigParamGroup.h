@@ -102,7 +102,7 @@ public:
   class outputInfo : public Data {
 public:
     /* Constructor to make sure no fields missed */
-    outputInfo(const std::string& f, const std::string o)
+    outputInfo(const std::string& f, const std::string& o)
       : factory(f), outputinfo(o){ }
 
     std::string factory;
@@ -173,14 +173,14 @@ public:
   class notifierInfo : public Data {
 public:
     /* Constructor to make sure no fields missed */
-    notifierInfo(const std::string& proto, const std::string p)
+    notifierInfo(const std::string& proto, const std::string& p)
       : protocol(proto), params(p){ }
 
     std::string protocol;
     std::string params;
   };
 
-  ConfigParamGroupn(){ };
+  ConfigParamGroupn() : myDisabled(false){ };
 
   /** Get product info database */
   static const std::vector<notifierInfo>&

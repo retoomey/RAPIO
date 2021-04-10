@@ -43,7 +43,7 @@ WatcherType::action()
 {
   // Notify watches of our poll
   for (auto&w:myWatches) {
-    w->myListener->handlePoll();
+    w->handlePoll();
   }
 
   // Humm should we get events first or process events first to

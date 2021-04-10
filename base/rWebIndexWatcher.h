@@ -25,13 +25,13 @@ public:
 
   class WebInfo : public WatchInfo {
 public:
-    URL myURL;
 
     WebInfo(IOListener * l, const std::string& dir)
-      : myURL(dir)
-    {
-      myListener = l;
-    }
+      : WatchInfo(l), myURL(dir)
+    { }
+
+protected:
+    URL myURL;
   };
 
   /** Attach a pulse to web page for a given listener to us */

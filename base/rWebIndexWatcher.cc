@@ -17,7 +17,8 @@ WebIndexWatcher::action()
   // We don't need to store anything extra ourselves like FAMWatcher, for example
   // FIXME: Maybe generate events here too
   for (auto&w:myWatches) {
-    w->myListener->handlePoll();
+    // w->myListener->handlePoll();
+    w->handlePoll();
   }
 }
 

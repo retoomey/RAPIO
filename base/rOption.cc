@@ -128,10 +128,8 @@ FilterRequired::show(const Option& opt)
   return (opt.required && !opt.system);
 }
 
-FilterName::FilterName(const std::string& name)
-{
-  myName = name;
-}
+FilterName::FilterName(const std::string& name) : myName(name)
+{ }
 
 bool
 FilterName::show(const Option& opt)
@@ -139,10 +137,8 @@ FilterName::show(const Option& opt)
   return (opt.opt == myName);
 }
 
-FilterGroup::FilterGroup(const std::string& group)
-{
-  myGroup = group;
-}
+FilterGroup::FilterGroup(const std::string& group) : myGroup(group)
+{ }
 
 bool
 FilterGroup::show(const Option& opt)
