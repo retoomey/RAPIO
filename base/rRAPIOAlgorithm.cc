@@ -529,7 +529,8 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
 
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
-  std::shared_ptr<DataType>                         outputData)
+  std::shared_ptr<DataType> outputData,
+  const std::map<std::string, std::string>& outputParams)
 {
   std::string newProductName = "";
 
@@ -544,7 +545,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     for (auto& w:writers) {
       std::vector<Record> records;
       std::vector<std::string> files;
-      IODataType::write(outputData, w.outputinfo, false, records, w.factory);
+      IODataType::write(outputData, w.outputinfo, false, records, w.factory, outputParams);
 
       // Notify each notifier for each writer.
       // FIXME: Need a filter in -n to allow not calling?

@@ -18,7 +18,8 @@ rapio::operator << (ostream& os, const LLCoverage& p)
     os << ", degreeOut: " << p.degreeOut;
   } else if (p.mode == "tile") {
     os << ", zoomlevel: " << p.zoomlevel << ", centerLatDegs: " << p.centerLatDegs
-       << ", centerLonDegs: " << p.centerLonDegs;
+       << ", centerLonDegs: " << p.centerLonDegs << ", deltaLatDegs: " << p.deltaLatDegs
+       << ", deltaLonDegs: " << p.deltaLonDegs;
   }
 
   return (os);
@@ -229,7 +230,7 @@ LatLonGridProjection::LLCoverageTile(
   // Open street map uses earth radius of 6372.7982 km
 
   // Use half degree calculation as the 'degreeout'
-  const double degWidth  = 360.0 / (2 ^ zoomLevel);
+  const double degWidth  = 360.0 / pow(2, zoomLevel); // lol I wrote 2 ^ zoomlevel which is not c++
   const double halfDeg   = degWidth / 2.0;
   const double degreeOut = halfDeg;
 

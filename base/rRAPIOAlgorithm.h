@@ -141,7 +141,8 @@ public:
    * addOutputProduct */
   virtual void
   writeOutputProduct(const std::string& key,
-    std::shared_ptr<DataType>         outputData);
+    std::shared_ptr<DataType> outputData,
+    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
 
   /** Get the maximum history specified by user */
   static TimeDuration

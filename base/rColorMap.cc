@@ -128,7 +128,6 @@ ColorMap::readColorMap(const URL& url)
         name = label;
       }
 
-      LogSevere(upper << " Got colors " << colors.size() << " " << name << "\n");
       // const std::string nameAttr (binElement.attribute( "name" ));
       // bin = ColorMap::ColorBin( *color, *color2, lowerBound, upperBound, nameAttr);
       // Do we use a color bin object.  Hummm.

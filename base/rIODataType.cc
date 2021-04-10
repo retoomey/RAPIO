@@ -233,10 +233,11 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
 
 bool
 IODataType::write(std::shared_ptr<DataType> dt,
-  const std::string                         & outputinfo,
-  bool                                      directFile,
-  std::vector<Record>                       & records,
-  const std::string                         & factory)
+  const std::string & outputinfo,
+  bool directFile,
+  std::vector<Record> & records,
+  const std::string & factory,
+  const std::map<std::string, std::string>  & outputParams)
 {
   // 1. Get the factory for this output
   std::string f = factory;
@@ -246,11 +247,25 @@ IODataType::write(std::shared_ptr<DataType> dt,
     return false;
   }
 
-  // 2. Try to get the rapiosettings info for the factory
+  // 2. Settings for the writer come from xml
   std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
   std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings(f);
 
-  // 4. Output file and generate records
+  if (outputParams.size() > 0) {
+    // 2-1 Create new one for 'output' line only
+    dfs = std::make_shared<PTreeNode>(); // make a temp one
+    PTreeNode child;
+    for (auto& x:outputParams) {
+      child.putAttr(x.first, x.second);
+    }
+    dfs->addNode("output", child);
+  } else {
+    // 2-2 Try to get the rapiosettings info for the factory
+    std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
+    dfs = ConfigIODataType::getSettings(f);
+  }
+
+  // 3. Output file and generate records
   return (encoder->encodeDataType(dt, outputinfo, dfs, directFile, records));
 } // IODataType::write
 

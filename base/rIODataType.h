@@ -126,7 +126,8 @@ public:
   write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     bool generateFileName,
     std::vector<Record>              & records,
-    const std::string& factory = "");
+    const std::string& factory = "",
+    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
 
   /**
    *  Write out a datatype using outputinfo and factory.
