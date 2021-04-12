@@ -11,6 +11,7 @@ using namespace rapio;
 
 bool ConfigIODataType::myUseSubDirs = true;
 std::map<std::string, std::shared_ptr<PTreeNode> > ConfigIODataType::myDatabase;
+std::map<std::string, std::string> ConfigIODataType::mySuffixes;
 
 void
 ConfigIODataType::introduceSelf()
@@ -28,12 +29,21 @@ ConfigIODataType::readSettings(std::shared_ptr<PTreeData> d)
     // This should be first thing passed to us I think....
     auto topTree  = d->getTree()->getChild("settings");
     auto datatype = topTree.getChildOptional("datatype");
-
-    // Handle the PTreeNode we're given...
     if (datatype != nullptr) {
-      // FIXME: Parse 'general' datatype settings into us.
-      // the use sub directories flag is a general one, right?
-      //
+      // ----------------------------------------------------------
+      // <suffixes> database
+      auto suffixes = datatype->getChildOptional("suffixes");
+      if (suffixes != nullptr) {
+        auto files = suffixes->getChildrenPtr("file"); // Actual nodes...
+        for (auto f: files) {
+          const auto suffix = f->getAttr("suffix", std::string(""));
+          const auto io     = f->getAttr("io", std::string(""));
+          mySuffixes[suffix] = io;
+        }
+      }
+
+      // ----------------------------------------------------------
+      // <io> database
       const std::string create = "createRAPIOIO";
       // Children know their own settings, we just keep the node for them.
       auto ioset = datatype->getChildrenPtr("io"); // Actual nodes...
@@ -73,4 +83,10 @@ std::shared_ptr<PTreeNode>
 ConfigIODataType::getSettings(const std::string& key)
 {
   return myDatabase[key];
+}
+
+std::string
+ConfigIODataType::getIODataTypeFromSuffix(const std::string& suffix)
+{
+  return mySuffixes[suffix];
 }

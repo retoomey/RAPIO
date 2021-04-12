@@ -144,8 +144,15 @@ public:
     std::vector<char>                   & buf,
     const std::string                   & factory = "");
 
-protected:
+  /** Default write out handling for files */
+  virtual bool
+  writeout(std::shared_ptr<DataType> dt, const std::string& outputinfo,
+    bool generateFileName,
+    std::vector<Record>              & records,
+    const std::string& factory = "",
+    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
 
+protected:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,

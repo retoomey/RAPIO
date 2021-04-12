@@ -41,6 +41,7 @@ librapio_la_SOURCES =\
   rGDALDataType.cc\
   rIndexType.cc\
   rError.cc\
+  rIOFile.cc\
   rIOXML.cc\
   rIOJSON.cc\
   rIOURL.cc\
@@ -129,6 +130,7 @@ pkginclude_HEADERS =\
   rGribDataType.h\
   rImageDataType.h\
   rGDALDataType.h\
+  rIOFile.h\
   rIOXML.h\
   rIOJSON.h\
   rIndexType.h\

@@ -51,28 +51,29 @@ IODataType::introduceHelp()
 std::shared_ptr<IODataType>
 IODataType::getFactory(std::string& factory, const std::string& path, std::shared_ptr<DataType> dt)
 {
+  // 1. Use the suffix lookup table for empty factory
   if (factory.empty()) {
-    // 1. If the datatype exists, try to get from the known read factory
+    const std::string suffix = OS::getRootFileExtension(path);
+    factory = ConfigIODataType::getIODataTypeFromSuffix(suffix);
+  }
+
+  // 2. If still no factory, and the datatype exists, try to use the read factory for output
+  if (factory.empty()) {
     if (dt != nullptr) {
       const auto rf = dt->getReadFactory();
       if (rf != "default") {
         factory = rf; // Not default, use it (assumes readers can write)
       }
     }
-
-    // 2. Try the suffix of file we might get lucky
-
-    // For the moment hard use the suffix.  This will work for
-    // maybe xml, netcdf..not for more advanced classes.
-    // xml --> xml
-    // netcdf --> netcdf
-    // FIXME: or a table in settings.  A mapping could work
-    if (factory.empty()) {
-      factory = OS::getRootFileExtension(path);
-    }
-    Strings::toLower(factory);
   }
 
+  // 3. If STILL empty, try the suffix as a factory...might get lucky
+  if (factory.empty()) {
+    factory = OS::getRootFileExtension(path);
+    LogSevere("Using file suffix as builder guess, might put this in configuration file\n");
+  }
+
+  Strings::toLower(factory);
   return Factory<IODataType>::get(factory, "IODataType:" + factory);
 }
 
@@ -239,18 +240,29 @@ IODataType::write(std::shared_ptr<DataType> dt,
   const std::string & factory,
   const std::map<std::string, std::string>  & outputParams)
 {
+  // The static method grabs the first factory and sends to it to handle
+  // This is assuming outputinfo is a file name?
   // 1. Get the factory for this output
-  std::string f = factory;
+  std::string f = factory; // either passed in, or blank or suffix guess stuff.
   auto encoder  = getFactory(f, outputinfo, dt);
   if (encoder == nullptr) {
     LogSevere("Unable to write using unknown factory '" << f << "'\n");
     return false;
   }
+  return encoder->writeout(dt, outputinfo, directFile, records, f, outputParams);
+} // IODataType::write
 
+bool
+IODataType::writeout(std::shared_ptr<DataType> dt,
+  const std::string & outputinfo,
+  bool directFile,
+  std::vector<Record> & records,
+  const std::string & knownfactory,
+  const std::map<std::string, std::string>  & outputParams)
+{
+  // We are the known factory at this point.
   // 2. Settings for the writer come from xml
-  std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
-  std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings(f);
-
+  std::shared_ptr<PTreeNode> dfs;
   if (outputParams.size() > 0) {
     // 2-1 Create new one for 'output' line only
     dfs = std::make_shared<PTreeNode>(); // make a temp one
@@ -261,13 +273,12 @@ IODataType::write(std::shared_ptr<DataType> dt,
     dfs->addNode("output", child);
   } else {
     // 2-2 Try to get the rapiosettings info for the factory
-    std::string suffix = f; // This won't be true with extra compression, such as .xml.gz
-    dfs = ConfigIODataType::getSettings(f);
+    dfs = ConfigIODataType::getSettings(knownfactory);
   }
 
   // 3. Output file and generate records
-  return (encoder->encodeDataType(dt, outputinfo, dfs, directFile, records));
-} // IODataType::write
+  return encodeDataType(dt, outputinfo, dfs, directFile, records);
+}
 
 bool
 IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, const std::string& factory)

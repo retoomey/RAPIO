@@ -64,6 +64,19 @@ Information needed:
  -->
 <datatype subdirs="true">
 
+<!-- Lookup table from file endings to io type.  Typically used with the
+   file index or file output for direct read/write.  This information is
+   normally in the metadata of the index.  Don't worry about compression
+   endings like .gz, those are auto recognized by RAPIO -->
+  <suffixes>
+    <file suffix="nc" io="netcdf"/>
+    <file suffix="netcdf" io="netcdf"/>
+    <file suffix="png" io="image"/>
+    <file suffix="jpg" io="image"/>
+    <file suffix="xml" io="xml"/>
+    <file suffix="json" io="json"/>
+  </suffixes>
+
 <!-- Settings for the built in XML reader --> 
   <io names="xml W2ALGS">
     <output />

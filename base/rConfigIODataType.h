@@ -29,11 +29,18 @@ public:
   static std::shared_ptr<PTreeNode>
   getSettings(const std::string& key);
 
+  /** Lookup suffix to builder */
+  static std::string
+  getIODataTypeFromSuffix(const std::string& suffix);
+
 private:
   /** Do we output with subdirs or combined file name? */
   static bool myUseSubDirs;
 
   /** Database of keys to settings */
   static std::map<std::string, std::shared_ptr<PTreeNode> > myDatabase;
+
+  /** Database of suffixes to IODatatypes */
+  static std::map<std::string, std::string> mySuffixes;
 };
 }

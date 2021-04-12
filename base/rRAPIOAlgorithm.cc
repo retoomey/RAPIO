@@ -26,7 +26,7 @@
 // Default always loaded datatype creation factories
 #include "rIOXML.h"
 #include "rIOJSON.h"
-
+#include "rIOFile.h"
 
 #include <iostream>
 #include <string>
@@ -215,6 +215,9 @@ RAPIOAlgorithm::initializeBaseParsers()
 
   std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
   Factory<IODataType>::introduce("json", json);
+
+  std::shared_ptr<IOFile> file = std::make_shared<IOFile>();
+  Factory<IODataType>::introduce("file", file);
 }
 
 void
