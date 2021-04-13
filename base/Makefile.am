@@ -1,13 +1,11 @@
 AM_CPPFLAGS = -I@prefix@/include
-AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 -DBOOST_LOG_DYN_LINK -lproj
+AM_CXXFLAGS = -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 $(RAPIOBASE_CFLAGS)
 
 lib_LTLIBRARIES =\
   librapio.la
 
-# MRMS builder makes a lib folder one up from us with all the extra libraries
-# we use.
 librapio_la_LIBADD =\
-   -L@prefix@/lib -lboost_system -lcurl -ludunits2 -lbz2 -ljasper -lpng -lboost_log -lboost_log_setup -lboost_thread -lpthread -lboost_filesystem -lboost_serialization -lboost_iostreams
+   $(RAPIOBASE_LIBS)
 
 librapio_la_SOURCES =\
   rArray.cc\

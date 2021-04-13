@@ -20,6 +20,11 @@ fi
 
 AC_SUBST(CXXFLAGS)
 
+dnl ---------------------------------------------------------------------------
+dnl Check RAPIOBASE third party libraries
+dnl ---------------------------------------------------------------------------
+RAPIOBASE_INIT()
+
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL

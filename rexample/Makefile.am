@@ -1,4 +1,4 @@
-AM_CXXFLAGS = -I../base -I../../include -std=c++11 -Wall -O2 -ftemplate-depth-50 -finline-functions -DBOOST_LOG_DYN_LINK
+AM_CXXFLAGS = -I../base -I../../include -std=c++11 -Wall -O2 -ftemplate-depth-50 -finline-functions 
 
 bin_PROGRAMS =\
  rsimplealg rtile
