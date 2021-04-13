@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I../ -I@prefix@/include 
-AM_CXXFLAGS = -I../base -I../../include -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 -DBOOST_LOG_DYN_LINK 
+AM_CXXFLAGS = -I../base -std=c++11 -Wall -O2 -ftemplate-depth-1024 -finline-functions -ggdb -g3 $(RAPIO_CFLAGS)
 
 check_PROGRAMS =\
   testrapio
@@ -11,5 +11,5 @@ testrapio_SOURCES =\
    rTestIODataType.cc
 
 testrapio_LDADD = \
-   -L../base/ -L../../lib -lrapio -lboost_unit_test_framework
+   $(RAPIO_LIBS) -L../base/ -lrapio -lboost_unit_test_framework
 

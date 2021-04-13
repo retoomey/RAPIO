@@ -20,6 +20,11 @@ fi
 
 AC_SUBST(CXXFLAGS)
 
+dnl ---------------------------------------------------------------------------
+dnl Check RAPIO third party libraries
+dnl ---------------------------------------------------------------------------
+RAPIO_INIT()
+
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
