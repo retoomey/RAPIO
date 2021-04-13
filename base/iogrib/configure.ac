@@ -16,6 +16,11 @@ fi
 
 AC_SUBST(CXXFLAGS)
 
+dnl ---------------------------------------------------------------------------
+dnl Check GDAL paths based on how we build it.
+dnl ---------------------------------------------------------------------------
+GRIB_INIT()
+
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
