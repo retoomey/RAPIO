@@ -168,6 +168,10 @@ public:
     std::vector<std::string> & tokens,
     std::vector<int>         & outputtokens,
     std::vector<std::string> & outputfillers);
+
+  /** Remove up to a prefix off a source string */
+  static std::string
+  peel(std::string& s, const char * delimiter);
 };
 
 /** A class for DFA parsing a word/token by character */

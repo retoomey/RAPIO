@@ -27,6 +27,14 @@ namespace rapio {
 class URL : public Data {
 public:
 
+  /** Guess a default port for a given scheme, return 0 if not known */
+  static int
+  defaultPort(const std::string& scheme);
+
+  /** Convert a string to one with HTTP url encoded */
+  static std::string
+  encodeURL(const std::string& in);
+
   URL() : port(0){ }
 
   ~URL(){ }
@@ -41,24 +49,32 @@ public:
     *this = s;
   }
 
+  // Operator functions
+
+  /** Set URL from a std::string */
   URL      &
   operator = (const std::string&);
 
+  /** Set URL from a const char * */
   URL      &
   operator = (const char * s);
 
+  /** Is URL < another URL (string comparison) */
   bool
   operator < (const URL& that) const
   {
     return (toString() < that.toString());
   }
 
+  /** Compare if two URL are equal */
   bool
   operator == (const URL&) const;
 
+  /** Compare if two URL are not equal */
   bool
   operator != (const URL&) const;
 
+  /** Add string to a URL */
   URL       &
   operator += (const std::string& add);
 
@@ -69,68 +85,91 @@ public:
   std::string
   toString() const;
 
+  /** Parse subpart of a URL string */
+  void
+  parseAfterHost(const std::string& url_fragment);
+
   /** Return the scheme part of URL, if any */
   std::string
-  getScheme() const
-  {
-    return scheme;
-  }
+  getScheme() const;
+
+  /** Set the scheme of the URL, passing true trys to set port if scheme matches known. */
+  void
+  setScheme(const std::string& s, bool tryPort = true);
 
   /** Return the user part of URL, if any */
   std::string
-  getUser() const
-  {
-    return user;
-  }
+  getUser() const;
+
+  /** Set the user part of URL */
+  void
+  setUser(const std::string& u);
 
   /** Return the password part of URL, if any */
   std::string
-  getPassword() const
-  {
-    return pass;
-  }
+  getPassword() const;
 
-  /** Return the fragment of URL, if any */
-  std::string
-  getFragment() const
-  {
-    return fragment;
-  }
+  /** Set the password part of URL */
+  void
+  setPassword(const std::string& p);
 
   /** Return the host part of URL, if any */
   std::string
-  getHost() const
-  {
-    return host;
-  }
+  getHost() const;
+
+  /** Set the host of URL */
+  void
+  setHost(const std::string& p);
 
   /** Return the port of URL */
   unsigned short
-  getPort() const
-  {
-    return port;
-  }
+  getPort() const;
+
+  /** Set the port of the URL */
+  void
+  setPort(const unsigned short p);
 
   /** Return the path part of URL, if any */
   std::string
-  getPath() const
-  {
-    return path;
-  }
+  getPath() const;
 
-  /** Force set the path of URL */
+  /** Set the path of URL */
   void
-  setPath(const std::string& p)
-  {
-    path = p;
-  }
+  setPath(const std::string& p);
 
-  /** Force set the host of URL */
+  /** Return the fragment of URL, if any */
+  std::string
+  getFragment() const;
+
+  /** Set the fragment of URL */
   void
-  setHost(const std::string& p)
-  {
-    host = p;
-  }
+  setFragment(const std::string& f);
+
+  // Query functions
+
+  /** Get a query key */
+  std::string
+  getQuery(const std::string& key) const;
+
+  /** Set a query key to string */
+  void
+  setQuery(const std::string& key, const std::string& val);
+
+  /** Clear all query items */
+  void
+  clearQuery();
+
+  /** Do we have this query key? */
+  bool
+  hasQuery(const std::string& key) const;
+
+  /** Is this URL empty? */
+  bool
+  empty() const;
+
+  /** Is this URL a local file? */
+  bool
+  isLocal() const;
 
   /**
    * Gets path's basename.
@@ -158,51 +197,6 @@ public:
    */
   std::string
   getSuffixLC() const;
-
-  /** Get a query key */
-  std::string
-  getQuery(const std::string& key) const;
-
-  /** Set a query key to integer */
-  void
-  setQuery(const std::string& key,
-    int                     val);
-
-  /** Set a query key to string */
-  void
-  setQuery(const std::string& key, const std::string& val)
-  {
-    query[key] = val;
-  }
-
-  /** Clear all query items */
-  void
-  clearQuery()
-  {
-    query.clear();
-  }
-
-  /** Do we have this query key? */
-  bool
-  hasQuery(const std::string& key) const
-  {
-    return (query.find(key) != query.end());
-  }
-
-  /** Is this URL empty? */
-  bool
-  empty() const;
-
-  /** Is this URL a local file? */
-  bool
-  isLocal() const;
-
-  /** Remove suffix of the URL */
-  void
-  removeSuffix()
-  {
-    path.resize(path.size() - getSuffixLC().size());
-  }
 
   /** Output a URL */
   friend std::ostream&

@@ -507,3 +507,13 @@ Strings::TokenScan(
   std::cout << "filler size " << outputfillers.size() << " and token list " << outputtokens.size() << "\n";
   #endif // if 0
 } // Strings::TokenScan
+
+std::string
+Strings::peel(std::string& s, const char * delimiter)
+{
+  auto p     = s.find(delimiter);
+  auto token = s.substr(0, p);
+
+  if (p == std::string::npos) { s.clear(); } else { s.erase(0, p + strlen(delimiter)); }
+  return (token);
+}

@@ -6,38 +6,16 @@
 
 #include <cstring>  // strlen()
 #include <cstdlib>  // atoi()
-#include <cstdio>   // snprintf()
 #include <libgen.h> // dirname
-
-#include "rProcessTimer.h"
 
 using namespace rapio;
 
-namespace {
-const std::string::size_type npos = std::string::npos;
-
-std::string
-peel(std::string& s, const char * delimiter)
-{
-  auto p     = s.find(delimiter);
-  auto token = s.substr(0, p);
-
-  if (p == std::string::npos) { s.clear(); } else { s.erase(0, p + strlen(delimiter)); }
-  return (token);
-}
-
-/*
- * http://joe:blow@example.com:81/loc/script.php?var=val&foo=bar#here
- */
 void
-parseAfterHost(const std::string& url_fragment,
-  std::string& path,
-  std::map<std::string, std::string>& query,
-  std::string& fragment)
+URL::parseAfterHost(const std::string& url_fragment)
 {
   auto w(url_fragment);
 
-  path = peel(w, "?");
+  path = Strings::peel(w, "?");
 
   // special case to handle this beauty:
   // file:///n:\ckerr\KINX\code_index.xml?protocol=xml"
@@ -49,74 +27,17 @@ parseAfterHost(const std::string& url_fragment,
   }
 
   // query
-  std::string q(peel(w, "#"));
+  std::string q(Strings::peel(w, "#"));
 
   while (!q.empty()) {
-    auto first = peel(q, "&");
-    auto key   = peel(first, "=");
+    auto first = Strings::peel(q, "&");
+    auto key   = Strings::peel(first, "=");
     auto val   = first;
     query[key] = val;
   }
 
   // fragment
   fragment = w;
-}
-
-int
-defaultPort(const std::string& scheme)
-{
-  if (scheme == "http") { return (80); }
-
-  if (scheme == "https") { return (443); }
-
-  if (scheme == "ftp") { return (21); }
-
-  if (scheme == "sftp") { return (22); }
-
-  return (0);
-}
-
-void
-parseAfterScheme(const std::string& url,
-  const std::string& scheme,
-  std::string& user, std::string& pass,
-  std::string& host, unsigned short& port,
-  std::string& path,
-  std::map<std::string, std::string>& query,
-  std::string& fragment)
-{
-  auto w = url;
-  auto p = w.find("/");
-
-  // username:password@host:port
-  auto authority = w.substr(0, p);
-
-  if (authority.find('@') != npos) {
-    pass = peel(authority, "@");
-    user = peel(pass, ":");
-  }
-
-  host = peel(authority, ":");
-  port = authority.empty() ? defaultPort(scheme) : atoi(authority.c_str());
-
-  w = p == npos ? "" : w.substr(p);
-
-  parseAfterHost(w, path, query, fragment);
-}
-
-void
-parseURL(const std::string& url,
-  std::string& scheme, std::string& user,
-  std::string& pass, std::string& host, unsigned short& port,
-  std::string& path,
-  std::map<std::string, std::string>& query,
-  std::string& fragment)
-{
-  auto w(url);
-
-  scheme = peel(w, "://");
-  parseAfterScheme(w, scheme, user, pass, host, port, path, query, fragment);
-}
 }
 
 URL&
@@ -132,6 +53,39 @@ URL::operator += (const std::string& s)
   return (*this);
 }
 
+int
+URL::defaultPort(const std::string& scheme)
+{
+  if (scheme == "http") { return (80); }
+
+  if (scheme == "https") { return (443); }
+
+  if (scheme == "ftp") { return (21); }
+
+  if (scheme == "sftp") { return (22); }
+
+  return (0);
+}
+
+std::string
+URL::encodeURL(const std::string& in)
+{
+  // RFC 3986
+  // https://en.wikipedia.org/wiki/Percent-encoding
+  std::string o;
+  for (auto c:in) {
+    if (isalnum(c) || (c == '-') || (c == '_') || (c == '.') || (c == '~')) {
+      o += c;
+    } else {
+      char buf[32];
+      snprintf(buf, sizeof(buf), "%X", (int ((unsigned char) c)));
+      o += "%";
+      o += buf;
+    }
+  }
+  return o;
+}
+
 URL&
 URL::operator = (const std::string& s)
 {
@@ -143,12 +97,27 @@ URL::operator = (const std::string& s)
   if (s.empty())
   { } else if (s == "-") { // stdin
     path = s;
-  } else if (s.find("://") != s.npos) { // this is a url
-    parseURL(s, scheme, user, pass, host, port, path, query, fragment);
+  } else if (s.find("://") != std::string::npos) { // this is a url
+    auto w(s);                                     // Lots of copying of strings going on, we could do string_view or something
+
+    // Grab scheme first
+    scheme = Strings::peel(w, "://");
+
+    // Grab username:password@host:port
+    auto p         = w.find("/");
+    auto authority = w.substr(0, p); // could be until the end of the string right?
+    if (authority.find('@') != std::string::npos) {
+      pass = Strings::peel(authority, "@");
+      user = Strings::peel(pass, ":");
+    }
+    host = Strings::peel(authority, ":");
+    port = authority.empty() ? URL::defaultPort(scheme) : atoi(authority.c_str());
+    w    = p == std::string::npos ? "" : w.substr(p);
+    parseAfterHost(w);
   } else if (isalpha(s[0]) && (s[1] == ':') && ((s[2] == '\\') || (s[2] == '/'))) {
-    parseAfterHost(s, path, query, fragment);
+    parseAfterHost(s);
   } else if (s[0] == '/') { // this is a local file format in Unix
-    parseAfterHost(s, path, query, fragment);
+    parseAfterHost(s);
   } else { // treat it as a file with a relative path...
     *this = OS::getCurrentDirectory() + "/" + s;
   }
@@ -156,7 +125,6 @@ URL::operator = (const std::string& s)
   if (((host == "xml") || (host == "webindex")) &&
     !query.count("protocol")) { std::swap(host, query["protocol"]); }
 
-  //  LogDebug ("Parsed \"" << s << "\" to " << toString() << '\n');
   return (*this);
 } // =
 
@@ -164,7 +132,6 @@ std::string
 URL::toString() const
 {
   std::string s;
-  s.reserve(2048);
 
   if (!empty()) {
     if (!scheme.empty()) {
@@ -172,14 +139,16 @@ URL::toString() const
       s += "://";
 
       if (!user.empty() || !pass.empty()) {
-        s += user;
+        s += URL::encodeURL(user);
         s += ':';
-        s += pass;
+        s += URL::encodeURL(pass);
         s += '@';
       }
-      s += host;
+      s += URL::encodeURL(host);
 
-      if ((port != 0) && (port != defaultPort(scheme))) {
+      if ((port != 0) && (port != URL::defaultPort(scheme))) {
+        // s += ":";  Think printf is quite a bit faster actually
+        // s += std::to_string(port);
         char buf[32];
         snprintf(buf, sizeof(buf), ":%d", port);
         s += buf;
@@ -195,9 +164,9 @@ URL::toString() const
       auto end(query.end());
 
       do {
-        s += it->first;
+        s += URL::encodeURL(it->first);
         s += '=';
-        s += it->second;
+        s += URL::encodeURL(it->second);
 
         if (++it != end) { s += '&'; }
       } while (it != end);
@@ -205,7 +174,7 @@ URL::toString() const
 
     if (!fragment.empty()) {
       s += '#';
-      s += fragment;
+      s += URL::encodeURL(fragment);
     }
   }
   return (s);
@@ -222,19 +191,26 @@ URL::getQuery(const std::string& key) const
 }
 
 void
-URL::setQuery(const std::string& key, int val)
+URL::setQuery(const std::string& key, const std::string& val)
 {
-  char buf[32];
+  query[key] = val;
+}
 
-  std::snprintf(buf, sizeof(buf), "%d", val);
-  query[key] = buf;
+void
+URL::clearQuery()
+{
+  query.clear();
+}
+
+bool
+URL::hasQuery(const std::string& key) const
+{
+  return (query.find(key) != query.end());
 }
 
 std::string
 URL::getSuffixLC() const
 {
-  // FIXME: debating between this and the OS getRootFileExtension stuff
-  // Should it be a general string function or what?
   std::string suffix;
   auto pos = path.rfind('.');
   if (pos != path.npos) { suffix = path.substr(pos + 1); }
@@ -292,11 +268,101 @@ URL::empty() const
 bool
 URL::isLocal() const
 {
-  if (host.empty() || (host == "localhost")) { return (true); }
+  return (host.empty() || (host == "localhost") || (OS::getHostName() == host));
+}
 
-  if (OS::getHostName() == host) { return (true); }
+std::string
+URL::getScheme() const
+{
+  return scheme;
+}
 
-  return (false);
+void
+URL::setScheme(const std::string& s, bool tryPort)
+{
+  scheme = s;
+  if (tryPort) {
+    int p = defaultPort(s);
+    if (p != 0) { port = p; }
+  }
+}
+
+std::string
+URL::getUser() const
+{
+  return user;
+}
+
+void
+URL::setUser(const std::string& u)
+{
+  // Going to assume can't have empty user with a password
+  if (u.empty()) {
+    user = "";
+    pass = "";
+  } else {
+    user = u;
+  }
+}
+
+std::string
+URL::getPassword() const
+{
+  return pass;
+}
+
+void
+URL::setPassword(const std::string& p)
+{
+  pass = p;
+}
+
+std::string
+URL::getHost() const
+{
+  return host;
+}
+
+void
+URL::setHost(const std::string& p)
+{
+  host = p;
+}
+
+unsigned short
+URL::getPort() const
+{
+  return port;
+}
+
+void
+URL::setPort(const unsigned short p)
+{
+  port = p;
+}
+
+std::string
+URL::getPath() const
+{
+  return path;
+}
+
+void
+URL::setPath(const std::string& p)
+{
+  path = p;
+}
+
+std::string
+URL::getFragment() const
+{
+  return fragment;
+}
+
+void
+URL::setFragment(const std::string& f)
+{
+  fragment = f;
 }
 
 namespace rapio {
