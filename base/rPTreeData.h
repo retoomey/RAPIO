@@ -158,15 +158,15 @@ public:
   PTreeData();
 
   /** Get root of document tree, valid only while PTree is. */
-  PTreeNode *
+  std::shared_ptr<PTreeNode>
   getTree()
   {
-    return &myRoot;
+    return myRoot;
   }
 
 protected:
 
   /** Root of the property tree */
-  PTreeNode myRoot;
+  std::shared_ptr<PTreeNode> myRoot;
 };
 }

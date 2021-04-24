@@ -87,10 +87,12 @@ IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
     std::shared_ptr<DataType> dt = builder->createDataTypeFromBuffer(buffer);
     if (dt != nullptr) {
       // Old W2ALGS is XML:
-      if (f == "W2ALGS") { f = "xml"; }
+      if (f == "w2algs") { f = "xml"; }
       dt->setReadFactory(f);
     }
     return dt;
+  } else {
+    LogSevere("No builder IO module loaded for type '" << f << "'\n");
   }
   return nullptr;
 }
@@ -106,10 +108,12 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
     std::shared_ptr<DataType> dt = builder->createDataType(factoryparams);
     if (dt != nullptr) {
       // Old W2ALGS is XML:
-      if (f == "W2ALGS") { f = "xml"; }
+      if (f == "w2algs") { f = "xml"; }
       dt->setReadFactory(f);
     }
     return dt;
+  } else {
+    LogSevere("No builder IO module loaded for type '" << f << "'\n");
   }
   return nullptr;
 }

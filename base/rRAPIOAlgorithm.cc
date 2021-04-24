@@ -211,7 +211,7 @@ RAPIOAlgorithm::initializeBaseParsers()
   // introduced later as system ramps up.
   std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
   Factory<IODataType>::introduce("xml", xml);
-  Factory<IODataType>::introduce("W2ALGS", xml);
+  Factory<IODataType>::introduce("w2algs", xml);
 
   std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
   Factory<IODataType>::introduce("json", json);
