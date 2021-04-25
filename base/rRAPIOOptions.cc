@@ -199,7 +199,9 @@ RAPIOOptions::getGrid(const std::string& name,
     // std::cout << "Grid setting  " << i << " is '"<<fields[i]<<"'\n";
 
     // Looking for name(value)....
-    std::string name, value;
+    // FIXME: Noticed name duplicated..we're not using grid yet
+    // here..but need to come back and test this
+    std::string name2, value;
     bool invalue = false;
 
     for (size_t j = 0; j < fields[i].size(); j++) {
@@ -214,14 +216,14 @@ RAPIOOptions::getGrid(const std::string& name,
           }
 
           default:
-            invalue ? value += c : name += c;
+            invalue ? value += c : name2 += c;
             break;
       }
     }
 
     // ALIAS
-    if (name == "t") { name = "nw"; }
-    if (name == "b") { name = "se"; } lookup[name] = value;
+    if (name2 == "t") { name2 = "nw"; }
+    if (name2 == "b") { name2 = "se"; } lookup[name2] = value;
   }
 
   std::string top     = getMapString(lookup, "nw");
@@ -275,8 +277,8 @@ RAPIOOptions::getGrid(const std::string& name,
 
 /** Count a list of arguments with a given filter */
 size_t
-RAPIOOptions::countArgs(std::vector<Option>& options,
-  OptionFilter                             & a)
+RAPIOOptions::countArgs(const std::vector<Option>& options,
+  OptionFilter                                   & a)
 {
   size_t counter = 0;
 
@@ -371,9 +373,9 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
         int d = 5;
         s << ColorTerm::bold("DETAILED HELP:\n");
         s << setw(d) << left << ""; // Indent 1 column
-        for (auto& s:lines) {
+        for (auto& l:lines) {
           // ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
-          ColorTerm::wrapWithIndent(d, 0, s);
+          ColorTerm::wrapWithIndent(d, 0, l);
         }
         s << "\n";
 
@@ -550,11 +552,10 @@ RAPIOOptions::processArg(std::vector<std::string>& args, unsigned int j,
 {
   unsigned int count = 0;
 
-  std::string c = "";
   std::string v = "";
 
   if (j < args.size()) {
-    c = args[j];
+    std::string c = args[j];
 
     bool haveOpt = false;
 
@@ -604,18 +605,11 @@ RAPIOOptions::processArg(std::vector<std::string>& args, unsigned int j,
   // Erase the argument so we can dump the unprocessed stuff later
   if (count == 0) { // String where we don't expect it...move j forward..
     j++;
-  }
-
-  if (count == 1) { // Single arg like "K=stuff"  Delete item, leave J alone
+  } else if (count == 1) { // Single arg like "K=stuff"  Delete item, leave J alone
     args.erase(args.begin() + j);
-    j = j;
-  }
-
-  if (count == 2) { // Double arg like "-K stuff" Delete two items, leave J
-                    // alone
+  } else if (count == 2) { // Double arg like "-K stuff" Delete two items, leave J alone
     args.erase(args.begin() + j);
     args.erase(args.begin() + j);
-    j = j;
   }
   return (j);
 } // RAPIOOptions::processArg
@@ -748,7 +742,7 @@ RAPIOOptions::dumpHelp()
 } // RAPIOOptions::dumpHelp
 
 bool
-RAPIOOptions::processArgs(int& argc, char **& argv)
+RAPIOOptions::processArgs(const int& argc, char **& argv)
 {
   // Just make args a string vector, less C more C++, not as efficient
   // but a whole lot easier to work with.
@@ -806,10 +800,9 @@ RAPIOOptions::processArgs(int& argc, char **& argv)
 void
 RAPIOOptions::dumpHeaderLine()
 {
-  // Start outputting now...
-  std::string header = "";
-
   #if 0
+  // Start outputting now...
+  std::string header   = "";
   size_t myOutputWidth = ColorTerm::getOutputWidth();
   for (size_t i = 0; i < myOutputWidth; i++) {
     header += "-";

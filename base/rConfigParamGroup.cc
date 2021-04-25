@@ -158,7 +158,6 @@ ConfigParamGroupn::process1(const std::string& param)
   std::string protocol;
   std::string params;
   const size_t aSize = pair.size();
-  std::string path   = "";
   if (aSize == 1) {
     // Something like 'fml=' or 'test=', a type missing a parameter string
     if (Strings::endsWith(param, "=")) {

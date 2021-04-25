@@ -66,16 +66,10 @@ NetcdfRadialSet::getTestObject(
 
   // std::string nyq_unit("MetersPerSecond");
 
-  std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>(location, time);
+  float firstGateDistanceMeters = 1000.0;
+  auto radialSetSP = RadialSet::Create("Reflectivity", "dbZ", location, time,
+      elev_angle, firstGateDistanceMeters, num_radials, num_gates);
   RadialSet& radialSet = *radialSetSP;
-
-  radialSet.setTypeName("Reflectivity");
-  radialSet.setElevation(elev_angle);
-
-  // Allow in-line vector storage to work and not crash
-  // radialSet.resize(num_radials, num_gates);
-  // radialSet.declareDims({ num_radials, num_gates }, {"Azimuth", "Gates"});
-  radialSet.init(num_radials, num_gates);
   // radialSet.setNyquistVelocityUnit(nyq_unit);
 
   auto azimuthsA   = radialSet.getFloat1D("Azimuth");
@@ -87,6 +81,7 @@ NetcdfRadialSet::getTestObject(
 
   auto array = radialSet.getFloat2D("primary");
   auto& data = array->ref();
+
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree
     azimuths[i]   = start_az;
@@ -97,6 +92,6 @@ NetcdfRadialSet::getTestObject(
     }
   }
 
-  radialSet.setDataAttributeValue("Unit", "dimensionless", "MetersPerSecond");
+  // radialSet.setDataAttributeValue("Unit", "dimensionless", "MetersPerSecond");
   return (radialSetSP);
 } // NetcdfRadialSet::getTestObject

@@ -8,7 +8,7 @@ using namespace rapio;
 using namespace std;
 
 Heartbeat::Heartbeat(RAPIOAlgorithm * alg, size_t milliseconds) : EventTimer(milliseconds, "Heartbeat"), myAlg(alg),
-  myFirstPulse(true), myParsed(false)
+  myFirstPulse(true), myParsed(false), myCronExpr(cron_expr())
 { }
 
 bool
@@ -16,6 +16,7 @@ Heartbeat::setCronList(const std::string& cronlist)
 {
   const char * err = NULL;
 
+  myParsed = false; // In case we call it again, disable current one
   cron_parse_expr(cronlist.c_str(), &myCronExpr, &err);
   if (err) {
     LogSevere("Failed to parse cron expression: '" << cronlist << "' Err: " << err << "\n");

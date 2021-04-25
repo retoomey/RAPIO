@@ -2,30 +2,12 @@
 
 #include "rError.h"
 #include "rUnit.h"
-#include "rIJK.h"
 #include "rLLH.h"
 
-#include <cassert>
+// #include <cassert>
 
 using namespace rapio;
 using namespace std;
-
-RadialSet::RadialSet()
-{
-  myDataType = "RadialSet";
-  init(0, 0);
-}
-
-RadialSet::RadialSet(const LLH& location,
-  const Time                  & time)
-{
-  // Lookup for read/write factories
-  myDataType = "RadialSet";
-  myLocation = location;
-  myTime     = time;
-  myFirstGateDistanceM = 0;
-  init(0, 0);
-}
 
 std::string
 RadialSet::getGeneratedSubtype() const
@@ -33,24 +15,80 @@ RadialSet::getGeneratedSubtype() const
   return (formatString(getElevation(), 5, 2)); // RadialSet
 }
 
-double
-RadialSet::getElevation() const
+RadialSet::RadialSet() : myElevAngleDegs(0), myFirstGateDistanceM(0), myLookup(nullptr)
 {
-  return (myElevAngleDegs);
+  myDataType = "RadialSet";
+}
+
+std::shared_ptr<RadialSet>
+RadialSet::Create(
+  const std::string& TypeName,
+  const std::string& Units,
+  const LLH        & center,
+  const Time       & datatime,
+  const float      elevationDegrees,
+  const float      firstGateDistanceMeters,
+  const size_t     num_radials,
+  const size_t     num_gates,
+  const float      value)
+{
+  auto r = std::make_shared<RadialSet>();
+
+  if (r == nullptr) {
+    LogSevere("Couldn't create RadialSet.\n");
+  } else {
+    // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
+    r->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters, num_radials, num_gates,
+      value);
+
+    // FIXME: Do filling of default value here...
+
+    /*
+     * auto array = radialSet.getFloat2D("primary");
+     * auto& data = array->ref();
+     * for (size_t i = 0; i < num_radials; ++i) {
+     *  for (size_t j = 0; j < num_gates; ++j) {
+     *    azimuths[i]   = start_az;
+     *    beamwidths[i] = beam_width;
+     *    gatewidths[i] = gate_width;
+     *    data[i][j] = value;
+     *  }
+     * }
+     * auto azimuthsA   = radialSet.getFloat1D("Azimuth");
+     * auto& azimuths   = azimuthsA->ref();
+     * auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
+     * auto& beamwidths = beamwidthsA->ref();
+     * auto gatewidthsA = radialSet.getFloat1D("GateWidth");
+     * auto& gatewidths = gatewidthsA->ref();
+     *
+     */
+  }
+
+  return r;
 }
 
 void
-RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
+RadialSet::init(
+  const std::string& TypeName,
+  const std::string& Units,
+  const LLH        & center,
+  const Time       & time,
+  const float      elevationDegrees,
+  const float      firstGateDistanceMeters,
+  const size_t     num_radials,
+  const size_t     num_gates,
+  const float      fill)
 {
   /** Declare/update the dimensions */
+  setTypeName(TypeName);
+  setDataAttributeValue("Unit", "dimensionless", Units);
+  myLocation           = center;
+  myTime               = time;
+  myElevAngleDegs      = elevationDegrees;
+  myFirstGateDistanceM = firstGateDistanceMeters;
+
   declareDims({ num_radials, num_gates }, { "Azimuth", "Gate" });
-
-  // Fill values are meaningless since we start off 0,0 for now...
-  // FIXME: On a resize maybe fill in the default arrays?
-
-  /** As a grid of data */
-  // addFloat2D("primary", "Dimensionless", {0,1}, fill);
-  addFloat2D("primary", "Dimensionless", { 0, 1 });
+  addFloat2D("primary", Units, { 0, 1 });
 
   // These are the only ones we force...
 
@@ -65,32 +103,6 @@ RadialSet::init(size_t num_radials, size_t num_gates, const float fill)
   /** Gate width per radial */
   // addFloat1D("GateWidth", "Meters", {0}, 1000.0f);
   addFloat1D("GateWidth", "Meters", { 0 });
-}
-
-/*
- * void
- * RadialSet::resize(size_t num_radials, size_t num_gates, const float fill)
- * {
- * declareDims({num_radials, num_gates});
- * }
- */
-
-size_t
-RadialSet::getNumGates()
-{
-  return myDims[1].size();
-}
-
-size_t
-RadialSet::getNumRadials()
-{
-  return myDims[0].size();
-}
-
-void
-RadialSet::setElevation(const double& targetElev)
-{
-  myElevAngleDegs = targetElev;
 }
 
 bool

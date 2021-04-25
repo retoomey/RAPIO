@@ -316,9 +316,9 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
     double atLon = nwLon;
     for (size_t y = 0; y < num_lons; ++y) {
       // Border/band debugging
-      if ((x >= 0) && (x <= 10)) { data2DF[x][y] = 53; continue; }
+      if (x <= 10) { data2DF[x][y] = 53; continue; }
       if ((x <= num_lats - 1) && (x >= num_lats - 10)) { data2DF[x][y] = 53; continue; }
-      if ((y >= 0) && (y <= 11)) { data2DF[x][y] = 53; continue; }
+      if (y <= 11) { data2DF[x][y] = 53; continue; }
       if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
 
       double radLat = atLat * DEG_TO_RAD;

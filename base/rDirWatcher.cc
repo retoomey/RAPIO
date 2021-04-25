@@ -17,7 +17,7 @@ namespace
 {
 /** Time filter test for file/directory stats */
 bool
-greaterStat(struct stat& a, struct stat& b)
+greaterStat(const struct stat& a, const struct stat& b)
 {
   if (a.st_ctim.tv_sec > b.st_ctim.tv_sec) {
     return true;

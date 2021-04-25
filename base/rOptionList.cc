@@ -147,8 +147,6 @@ OptionList::getOption(const std::string& opt)
 {
   auto i = optionMap.find(opt);
 
-  std::string s = "";
-
   if (i != optionMap.end()) {
     return (&i->second);
   }
@@ -180,9 +178,7 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
       o->parsed = true;
 
       if (o->boolean) {
-        o->parsedValue = "true"; // Because it is there...ignore any value not
-                                 // "false"
-
+        // Because it is there...ignore any value not "false"
         if (value == "false") {
           o->parsedValue = "false";
         } else {
@@ -197,21 +193,21 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
   } else {
     // We were giving an option we don't know about...
     // FIXME: Hide the internals of option, right?
-    Option o;
-    o.opt         = arg;
-    o.parsedValue = value;
-    o.parsed      = true;
+    Option o2;
+    o2.opt         = arg;
+    o2.parsedValue = value;
+    o2.parsed      = true;
     // Just set them, not used in unused
-    o.required = false;
-    o.boolean  = false;
-    o.system   = false;
-    o.enforceSuboptions = false;
-    o.suboptionmax      = 0;
+    o2.required = false;
+    o2.boolean  = false;
+    o2.system   = false;
+    o2.enforceSuboptions = false;
+    o2.suboptionmax      = 0;
 
     if (enforceStrict) {
-      unusedOptionMap[arg] = o;
+      unusedOptionMap[arg] = o2;
     } else {
-      addOption(o);
+      addOption(o2);
     }
   }
 } // OptionList::storeParsedArg

@@ -400,8 +400,8 @@ IOGrib::getLevelName(gribfield * gfld)
   std::string value2str;
   // g2int scale2 = -1;
 
-  g2int timeUnit        = -1;
-  std::string timeunits = "";
+  // Humm we aren't using time units?
+  // std::string timeunits = "";
   // g2int timeForecast = -1;
 
   // FIXME: We could make a class tree of the templates to enforce bounds
@@ -417,11 +417,12 @@ IOGrib::getLevelName(gribfield * gfld)
     // scale2 = gfld->ipdtmpl[13]; // Octet 30    Scale factor of second fixed surface
     value2 = gfld->ipdtmpl[14]; // Octet 31-34 Scaled value of the second fixed surface
 
-    timeUnit = gfld->ipdtmpl[7]; // Octet 18 Indicator of unit of time range table 4.4
-    std::string l = table4dot4.get(timeUnit);
-    if (!l.empty()) {
-      timeunits = l;
-    }
+    // FIXME: use time units?
+    // g2int timeUnit = gfld->ipdtmpl[7]; // Octet 18 Indicator of unit of time range table 4.4
+    // std::string l = table4dot4.get(timeUnit);
+    // if (!l.empty()) {
+    //  timeunits = l;
+    // }
     // timeForecast = gfld->ipdtmpl[8];  // Octet 19-22 Forecast time
   }
 
@@ -566,9 +567,9 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x
   auto newOne = Arrays::CreateFloat2D(numX, numY);
   auto& data  = newOne->ref();
 
-  for (size_t x = 0; x < numX; ++x) {
-    for (size_t y = 0; y < numY; ++y) {
-      data[x][y] = (float) (g2grid[y * numX + x]);
+  for (size_t xf = 0; xf < numX; ++xf) {
+    for (size_t yf = 0; yf < numY; ++yf) {
+      data[xf][yf] = (float) (g2grid[yf * numX + xf]);
     }
   }
 
@@ -582,10 +583,10 @@ IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vecto
   size_t& x, size_t&y, size_t& z, float missing)
 {
   size_t zVecSize = levelsStringVec.size();
-  size_t nz       = (zVecSize <= 0) ? 40 : (size_t) zVecSize;
+  size_t nz       = (zVecSize == 0) ? 40 : (size_t) zVecSize;
 
-  size_t nx   = (x <= 0) ? 1 : x;
-  size_t ny   = (y <= 0) ? 1 : y;
+  size_t nx   = (x == 0) ? 1 : x;
+  size_t ny   = (y == 0) ? 1 : y;
   auto newOne = Arrays::CreateFloat3D(nx, ny, nz);
   auto &data  = newOne->ref();
 
@@ -623,9 +624,9 @@ IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vecto
 
       g2float * g2grid = gfld->fld;
 
-      for (size_t x = 0; x < numX; ++x) {
-        for (size_t y = 0; y < numY; ++y) {
-          data[x][y][k] = (float) (g2grid[y * numX + x]);
+      for (size_t xf = 0; xf < numX; ++xf) {
+        for (size_t yf = 0; yf < numY; ++yf) {
+          data[xf][yf][k] = (float) (g2grid[yf * numX + xf]);
         }
       }
 
@@ -637,9 +638,9 @@ IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vecto
       // FIXME: The desired situation has to be confirmed - exit, which will help ensure the mistake is corrected, or a log
       // exit(1);
 
-      for (size_t x = 0; x < nx; ++x) {
-        for (size_t y = 0; y < ny; ++y) {
-          data[x][y][k] = missing;
+      for (size_t xf = 0; xf < nx; ++xf) {
+        for (size_t yf = 0; yf < ny; ++yf) {
+          data[xf][yf][k] = missing;
         }
       }
     }

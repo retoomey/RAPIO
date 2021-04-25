@@ -168,7 +168,7 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
           // LogDebug("---> Adding data to column  "<< name << ", data type is
           // '" << type << "'\n");
           // Created in step two
-          int varid = vars[atVar];
+          varid = vars[atVar];
           atVar++;
 
           // Handle our stock types.  Type checking usually a bad design,
@@ -200,8 +200,8 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
             int retval = nc_put_var_string(ncid, varid, vc2);
 
             // Clean up c strings
-            for (size_t i = 0; i < vc.size(); i++) {
-              delete[] vc[i];
+            for (size_t z = 0; z < vc.size(); z++) {
+              delete[] vc[z];
             }
 
             if (retval) {

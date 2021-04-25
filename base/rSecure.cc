@@ -106,7 +106,6 @@ Secure::validateSigned(
   const std::string& signature,
   bool             base64) // convert from base64 or not (binary already)
 {
-  int ret;
   const char * hold = publickey.c_str();
 
   // Memory stuff
@@ -140,7 +139,7 @@ Secure::validateSigned(
     mdctx = EVP_MD_CTX_create();
 
     const EVP_MD * md = EVP_sha256();
-    ret = EVP_DigestVerifyInit(mdctx, NULL, md, NULL, evp_key);
+    int ret = EVP_DigestVerifyInit(mdctx, NULL, md, NULL, evp_key);
     if (ret != 1) {
       break;
     }

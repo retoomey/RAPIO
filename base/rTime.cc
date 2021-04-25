@@ -12,7 +12,7 @@
 using namespace rapio;
 
 std::chrono::system_clock::time_point
-Time::toTimepoint(timeval& src)
+Time::toTimepoint(const timeval& src)
 {
   /*  Clipping to XXX000 micro to milli... */
 
@@ -306,9 +306,8 @@ Time::putString(const std::string& value,
   std::string usevalue  = value;
   int ms = 0;
   if (Strings::removeSuffix(useformat, "%/ms")) {
-    std::string millistr = "000";
     if (value.length() >= 3) { // Digits required for milli
-      millistr = usevalue.substr(usevalue.size() - 3);
+      std::string millistr = usevalue.substr(usevalue.size() - 3);
       usevalue = usevalue.substr(0, usevalue.size() - 3);
       try{
         ms = std::stoi(millistr.c_str());

@@ -94,20 +94,20 @@ public:
 
   /** Initialize the projection system */
   virtual bool
-  initialize();
+  initialize() override;
 
   /** Get the X/Y kilometer coordinate origin for the raster grid center */
   virtual bool
-  getXYCenter(double& centerXKm, double& centerYKm);
+  getXYCenter(double& centerXKm, double& centerYKm) override;
 
   /** Get Lat Lon from given X/Y kilometer coordinates */
   virtual bool
-  xyToLatLon(double& x, double&y, double &lat, double&lon);
+  xyToLatLon(double& x, double&y, double &lat, double&lon) override;
 
   /** Project array to lat lon grid primary.  This isn't super generic. */
   virtual void
   toLatLonGrid(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<LatLonGrid>           out);
+    std::shared_ptr<LatLonGrid>           out) override;
 private:
 
   /** Source projection string in Proj library language */

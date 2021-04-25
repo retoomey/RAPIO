@@ -60,7 +60,6 @@ Signals::handleSignal(int signum)
       default:
         std::cout << "\nUnknown signal number " << signum << "\n";
         break;
-        break;
   }
   printTrace();
   exit(signum);

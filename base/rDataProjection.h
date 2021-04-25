@@ -99,10 +99,7 @@ public:
   virtual bool
   LLCoverageTile(const size_t zoomLevel, const size_t& numRows, const size_t& numCols,
     const float centerLatDegs, const float centerLonDegs,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
-
-  /** Do we even need this? */
-  LatLonGrid * myLatLonGrid;
+    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs) override;
 
   /** Cache current set 2D layer */
   std::shared_ptr<Array<float, 2> > my2DLayer;

@@ -711,8 +711,6 @@ IONetcdf::readSparse2D(int ncid,
       return (false);
     }
 
-    if (num_pixels == 0) { return (true); }
-
     // Memory: Read it all in at once.
     // This way is much much faster than the var1 netcdf calls.  It eats up more
     // ram though

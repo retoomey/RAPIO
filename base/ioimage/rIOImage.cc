@@ -90,11 +90,11 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::vector<Record>                             & records
 )
 {
-  DataType& r = *dt;
+  DataType& dtr = *dt;
 
   // For now at least, every image requires a projection.  I
   // could see modes where no projection is required
-  auto project = r.getProjection(); // primary layer
+  auto project = dtr.getProjection(); // primary layer
 
   if (project == nullptr) {
     LogSevere("No projection ability for this datatype.\n");
@@ -135,10 +135,10 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   #if HAVE_MAGICK
-  auto colormap        = r.getColorMap();
+  auto colormap        = dtr.getColorMap();
   const ColorMap& test = *colormap;
 
-  const auto centerLLH = r.getLocation();
+  const auto centerLLH = dtr.getLocation();
   // Pull back settings in coverage for marching
   const size_t rows    = cover.rows;
   const size_t cols    = cover.cols;

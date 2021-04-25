@@ -32,6 +32,7 @@ public:
   Time();
 
   /** Construct from epoch and fractional time */
+  explicit
   Time(time_t s, double f = 0);
 
   /**  Make a Time from a list of integers (wrt UTC).
@@ -202,7 +203,7 @@ public:
 
   /** Static from timeval to chrono time point conversion */
   static std::chrono::system_clock::time_point
-  toTimepoint(timeval& src);
+  toTimepoint(const timeval& src);
 
   /** Static from chrono time point to timeval conversion */
   static timeval

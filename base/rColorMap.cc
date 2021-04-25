@@ -98,7 +98,6 @@ ColorMap::readColorMap(const URL& url)
         s    = colors[0].getAttr("a", (std::string) "0xFF");
         c1.a = strtol(s.c_str(), NULL, 0);
         if (colors.size() > 1) {
-          std::string s;
           s    = colors[1].getAttr("r", (std::string) "0xFF");
           c2.r = strtol(s.c_str(), NULL, 0);
           s    = colors[1].getAttr("b", (std::string) "0xFF");

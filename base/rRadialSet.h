@@ -1,32 +1,42 @@
 #pragma once
 
-#include <rData.h>
-#include <rConstants.h>
-#include <rLLH.h>
-#include <rDataType.h>
-#include <rTime.h>
 #include <rDataGrid.h>
+#include <rLLH.h>
+#include <rTime.h>
 #include <rRadialSetLookup.h>
-
-#include <vector>
 
 namespace rapio {
 /** A Radial set is a collection of radials containing gates.  This makes
  * it a 2D data structure.  It stores 1D information for each radials.
  * It can store multiple bands of 2D data.
  *
- * @author Robert Toomey */
+ * @author Robert Toomey
+ */
 class RadialSet : public DataGrid {
 public:
   friend RadialSetProjection;
 
   /** Construct uninitialized RadialSet, usually for
-   * factories */
+   * factories.  You probably want the Create method */
   RadialSet();
 
-  /** Construct a radial set */
-  RadialSet(const LLH& location,
-    const Time       & time);
+  /** Public API for users to create a single band RadialSet quickly,
+   * note gates are padded with missing data as a grid. */
+  static std::shared_ptr<RadialSet>
+  Create(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & center,
+    const Time       & datatime,
+    const float      elevationDegrees,
+    const float      firstGateDistanceMeters,
+    const size_t     num_radials,
+    const size_t     num_gates,
+    const float      value = Constants::MissingData);
+
+  // ------------------------------------------------------
+  // Getting the 'data' of the 2d array...
+  // @see DataGrid for accessing the various raster layers
 
   /** Return the location of the radar. */
   const LLH&
@@ -38,11 +48,17 @@ public:
 
   /** Elevation of radial set */
   double
-  getElevation() const;
+  getElevation() const
+  {
+    return (myElevAngleDegs);
+  };
 
   /** Set the target elevation of this sweep. */
   void
-  setElevation(const double& targetElev);
+  setElevation(const double& targetElev)
+  {
+    myElevAngleDegs = targetElev;
+  };
 
   // -----------------------
   // Vector access
@@ -59,13 +75,19 @@ public:
   std::shared_ptr<Array<float, 1> >
   getGateWidthVector(){ return getFloat1D("GateWidth"); }
 
-  /** Get number of gates for radial set */
-  size_t
-  getNumGates();
-
   /** Get number of radials for radial set */
   size_t
-  getNumRadials();
+  getNumRadials()
+  {
+    return myDims.size() > 0 ? myDims[0].size() : 0;
+  };
+
+  /** Get number of gates for radial set */
+  size_t
+  getNumGates()
+  {
+    return myDims.size() > 1 ? myDims[1].size() : 0;
+  };
 
   /** Distance from radar center to the first gate */
   double
@@ -74,25 +96,45 @@ public:
     return myFirstGateDistanceM;
   };
 
+  /** Generated default string for subtype from the data */
   virtual std::string
   getGeneratedSubtype() const override;
 
-  /** Resize the data structure */
-  void
-  init(size_t rows, size_t cols, const float fill = 0);
+  /** Projection for data type */
+  virtual std::shared_ptr<DataProjection>
+  getProjection(const std::string& layer = "primary") override;
 
-  /** Sync any internal stuff to data from current attribute list,
-   * return false on fail. */
-  virtual bool
-  initFromGlobalAttributes() override;
+  // ------------------------------------------------------------
+  // Methods for factories, etc. to fill in data post creation
+  // Normally you don't call these directly unless you are making
+  // a factory
+
+private:
+
+  /** Post creation initialization of fields
+   * Resize can change data size. */
+  void
+  init(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & location,
+    const Time       & time,
+    const float      elevationDegrees,
+    const float      firstGateDistanceMeters,
+    const size_t     num_radials,
+    const size_t     num_gates,
+    const float      fill = Constants::MissingData);
+
+public:
 
   /** Update global attribute list for RadialSet */
   virtual void
   updateGlobalAttributes(const std::string& encoded_type) override;
 
-  /** Projection for data type */
-  virtual std::shared_ptr<DataProjection>
-  getProjection(const std::string& layer = "primary");
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
 
 protected:
   /** The elevation angle of radial set in degrees */

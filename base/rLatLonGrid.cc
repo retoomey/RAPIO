@@ -10,10 +10,9 @@ LatLonGrid::getGeneratedSubtype() const
   return (formatString(myLocation.getHeightKM(), 5, 2));
 }
 
-LatLonGrid::LatLonGrid()
+LatLonGrid::LatLonGrid() : myLatSpacing(0), myLonSpacing(0)
 {
   myDataType = "LatLonGrid";
-  // init(LLH(), Time::CurrentTime(), 1, 1);
 }
 
 std::shared_ptr<LatLonGrid>
@@ -38,29 +37,31 @@ LatLonGrid::Create(
   if (llgridsp == nullptr) {
     LogSevere("Couldn't create LatLonGrid\n");
   } else {
-    // Initialize default band
-    LatLonGrid& llgrid = *llgridsp;
-    llgrid.init(location, time, lat_spacing, lon_spacing);
-    llgrid.setTypeName(TypeName);
-    llgrid.setDataAttributeValue("Unit", "dimensionless", Units);
-
-    // Update primary grid to the given size
-    llgrid.declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
-    std::vector<size_t> dimindexes;
-    dimindexes.push_back(0);
-    dimindexes.push_back(1);
-    llgrid.addFloat2D(TypeName, Units, dimindexes);
+    // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
+    llgridsp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons, value);
   }
+
+  // FIXME: Do filling of default value here...
+
   return llgridsp;
 }
 
-/** Set what defines the lat lon grid in spacetime */
 void
 LatLonGrid::init(
-  const LLH& location,
-  const Time& time,
-  const float lat_spacing, const float lon_spacing)
+  const std::string& TypeName,
+  const std::string& Units,
+  const LLH        & location,
+  const Time       & time,
+  const float      lat_spacing,
+  const float      lon_spacing,
+  size_t           num_lats,
+  size_t           num_lons,
+  float            value
+)
 {
+  setTypeName(TypeName);
+  setDataAttributeValue("Unit", "dimensionless", Units);
+
   myLocation   = location;
   myTime       = time;
   myLatSpacing = lat_spacing;
@@ -73,6 +74,10 @@ LatLonGrid::init(
     LogSevere("*** WARNING *** non-positive element in grid spacing\n"
       << "(" << lat_spacing << "," << lon_spacing << ")\n");
   }
+
+  // Update primary grid to the given size
+  declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
+  addFloat2D("primary", Units, { 0, 1 });
 }
 
 bool

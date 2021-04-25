@@ -27,9 +27,8 @@ ProcessTimer::getElapsedTime()
 int
 ProcessTimer::getProgramSize()
 {
-  int result(-1);
+  int result(0);
 
-  result = 0;
   std::ifstream fp("/proc/self/statm");
 
   if (fp) { // first number in the file

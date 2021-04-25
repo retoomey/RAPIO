@@ -33,9 +33,6 @@ EventLoop::doEventLoop()
   }
 
   while (1) {
-    // What time at start of loop?  We'll update timers
-    start = std::chrono::high_resolution_clock::now();
-
     // Check if any timer ready during our 'idle'.  If so,
     // we short circuit our idle to min timer ready time.
     // We might not need this level of accuracy for timers

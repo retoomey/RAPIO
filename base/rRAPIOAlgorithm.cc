@@ -547,7 +547,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
     for (auto& w:writers) {
       std::vector<Record> records;
-      std::vector<std::string> files;
       IODataType::write(outputData, w.outputinfo, false, records, w.factory, outputParams);
 
       // Notify each notifier for each writer.

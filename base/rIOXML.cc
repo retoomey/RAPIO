@@ -69,7 +69,6 @@ IOXML::createDataType(const std::string& params)
   // We only read from file/url
   const URL url(params);
 
-  std::shared_ptr<DataType> datatype = nullptr;
   std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {

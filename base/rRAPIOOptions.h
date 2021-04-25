@@ -46,8 +46,8 @@ public:
 
   /** Count arguments that match a given filter */
   size_t
-  countArgs(std::vector<Option>& options,
-    OptionFilter               & a);
+  countArgs(const std::vector<Option>& options,
+    OptionFilter                     & a);
 
   /** Output arguments that match a given filter */
   void
@@ -122,8 +122,8 @@ public:
 
   /** Process command line arguments, no printing. */
   bool
-  processArgs(int & argc,
-    char **       & argv);
+  processArgs(const int & argc,
+    char **             & argv);
 
   /** Set anything from the global configuration settings */
   void

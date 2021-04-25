@@ -60,7 +60,7 @@ public:
 
   /** Handle a file */
   virtual void
-  handleFile(const std::string& filename);
+  handleFile(const std::string& filename) override;
 
   /** Destroy a FMLIndex */
   virtual

@@ -155,16 +155,14 @@ OS::getRootFileExtension(const std::string& path)
 std::string
 OS::validateExe(const std::string& path)
 {
-  bool isExecute = false;
-
   try {
     const auto boostpath = fs::absolute(path);
     const auto s         = fs::status(boostpath);
 
     // Check if regular file and executable
     if (fs::is_regular_file(s)) {
-      const auto p = s.permissions();
-      isExecute = ((p & fs::perms::owner_exe) != fs::perms::no_perms);
+      const auto p   = s.permissions();
+      bool isExecute = ((p & fs::perms::owner_exe) != fs::perms::no_perms);
       if (isExecute) {
         return (boostpath.string());
       }
