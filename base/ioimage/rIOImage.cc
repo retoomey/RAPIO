@@ -148,14 +148,14 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   const float deltaLon = cover.deltaLonDegs;
 
   try{
-    // FIXME: Is there a way to create without 'begin' fill, would be faster
-    // Magick::Image i(Magick::Geometry(cols, rows)); Fails missing file?
-    Magick::Image i(Magick::Geometry(cols, rows), "white");
+    Magick::Image i;
+    i.size(Magick::Geometry(cols, rows));
+    i.magick("RGBA");
+    i.opacity(false); // Our colormaps support alpha, so we want it
 
     // Determine if Warning exceptions are thrown.
     // Use is optional.  Set to true to block Warning exceptions.
     // image.quiet( false );
-    i.opacity(true); // Breaks for me without this at moment.
 
     i.modifyImage();
 
@@ -169,15 +169,11 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
         // We'll do API over speed very slightly here, allow generic lat/lon pull ability
         const double v = p.getValueAtLL(startLat, startLon);
 
-        // if (v == Constants::MissingData) {
-        //  *pixel = Magick::Color("blue");
-        // } else {
         unsigned char r, g, b, a;
         test.getColor(v, r, g, b, a);
         Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
-        *pixel = cc;
-        // FIXME: transparent ability? if (transparent) {cc.alpha((255.0-c.a)/255.0); }
-        // }
+        cc.alpha(1.0 - (a / 255.0));
+        *pixel    = cc;
         startLon += deltaLon;
         pixel++;
       }
