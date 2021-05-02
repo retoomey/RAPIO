@@ -45,6 +45,7 @@ AC_SUBST(ac_aux_dir)
 
 AC_CONFIG_FILES([
  Makefile
+ webserver/Makefile
  rexample/Makefile
  PYTHON/Makefile
  tests/Makefile]

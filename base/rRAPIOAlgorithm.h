@@ -11,6 +11,8 @@
 #include <vector>
 
 namespace rapio {
+class WebMessage;
+
 /**
  *  The stock default algorithm and all its options and processing
  *
@@ -22,13 +24,7 @@ public:
   /** Construct a stock algorithm */
   RAPIOAlgorithm();
 
-  /** Declare stock algorithm feature or abilities wanted */
-  virtual void
-  declareFeatures(){ }
-
-  /** Post load, advanced help request.  This help requires the system to be initialized */
-  virtual void
-  addPostLoadedHelp(RAPIOOptions& o);
+  // Public intended open API -----------------------
 
   /** Declare all algorithm options algorithm needs */
   virtual void
@@ -37,6 +33,27 @@ public:
   /** Process/setup from the given algorithm options */
   virtual void
   processOptions(RAPIOOptions& o){ };
+
+  /** Process a matched new record (occurs as the records come in)  Index number
+   * is index into declared order */
+  virtual void
+  processNewData(RAPIOData&);
+
+  /** Process heartbeat in subclasses.
+   * @param at The actual now time triggering the event.
+   * @param sync The pinned sync time we're firing for. */
+  virtual void
+  processHeartbeat(const Time& n, const Time& p){ };
+
+  /** Process a web request message when running with a REST webserver mode */
+  virtual void
+  processWebMessage(std::shared_ptr<WebMessage> message);
+
+  // End Public intended open API -----------------------
+
+  /** Post load, advanced help request.  This help requires the system to be initialized */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o);
 
   /** Declare input parameter options (Called before option parse) */
   virtual void
@@ -120,23 +137,6 @@ public:
   virtual void
   handleTimedEvent(const Time& at, const Time& sync);
 
-  /** Process heartbeat in subclasses.
-   * @param at The actual now time triggering the event.
-   * @param sync The pinned sync time we're firing for. */
-  virtual void
-  processHeartbeat(const Time& n, const Time& p){ };
-
-  /** Process a matched new record (occurs as the records come in)  Index number
-   * is index into declared order */
-  virtual void
-  processNewData(RAPIOData&){ };
-
-  // 'Features' I'll probably generalize later
-
-  /** Request a added feature to the algorithm by key */
-  virtual void
-  addFeature(const std::string& featureKey);
-
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
@@ -173,6 +173,9 @@ protected:
 
   /** The cronlist for heartbeat/sync if any */
   std::string myCronList;
+
+  /** The mode of web server, if any */
+  std::string myWebServerMode;
 
   // I believe these things will always be 'global', even
   // if we have multiple algorithm modules.

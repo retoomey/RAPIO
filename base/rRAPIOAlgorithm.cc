@@ -24,6 +24,7 @@
 #include "rRecordFilter.h"
 
 // Default always loaded datatype creation factories
+#include "rWebServer.h"
 #include "rIOXML.h"
 #include "rIOJSON.h"
 #include "rIOFile.h"
@@ -38,10 +39,6 @@ TimeDuration RAPIOAlgorithm::myMaximumHistory;
 Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
 std::string RAPIOAlgorithm::myReadMode;
 
-/** This listener class is connected to each index we create.
- * It does nothing but pass events onto the algorithm
- */
-
 RAPIOAlgorithm::RAPIOAlgorithm()
 { }
 
@@ -53,16 +50,10 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
     "/data/radar/KTLX/code_index.xml",
     "The input sources");
   o.addGroup("i", "I/O");
-  o.addAdvancedHelp("i",
-    "Use quotes and spaces to have multiple sources.  For example, -i \"//vmrms-sr20/KTLX /data/radar/code_index.xml\" means connect to two input sources, where the first is a web index, the second a xml index.");
-
   o.optional("I", "*", "The input type filter patterns");
   o.addGroup("I", "I/O");
-  o.addAdvancedHelp("I",
-    "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
 
-  // All stock algorithms support this
-  // o.boolean("r", "Realtime mode for algorithm.");
+  // The realtime option for reading archive, realtime, etc.
   const std::string r = "r";
   o.optional(r, "old", "Read mode for algorithm.");
   o.addGroup(r, "TIME");
@@ -73,16 +64,12 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
 
   o.optional("sync", "", "Sync data option. Cron format style algorithm heartbeat.");
   o.addGroup("sync", "TIME");
-  o.addAdvancedHelp("sync",
-    "In daemon/realtime sends heartbeat to algorithm.  Note if your algorithm lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
 
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
   // if more precision is needed.
   o.optional("h", "15", "History in minutes kept for inputs source(s).");
   o.addGroup("h", "TIME");
-  o.addAdvancedHelp("h",
-    "For indexes, this will be the global time in minutes for all indexes provided.");
 
   // Feature to add all 'GRID' options for cutting lat lon grid data...
   // FIXME: Design Grid API that handles 2d and 3d and multiple grid options.
@@ -105,12 +92,14 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "*",
     "The output types patterns, controlling product names and writing");
   o.addGroup("O", "I/O");
-  o.addAdvancedHelp("O",
-    "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
   o.optional("n",
     "",
     "The notifier for newly created files/records.");
   o.addGroup("n", "I/O");
+  o.optional("web",
+    "off",
+    "Web server ability for REST pull algorithms. Use a number to assign a port.");
+  o.addGroup("web", "I/O");
 }
 
 void
@@ -120,6 +109,18 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   o.addAdvancedHelp("i", IOIndex::introduceHelp());
   o.addAdvancedHelp("n", RecordNotifier::introduceHelp());
   o.addAdvancedHelp("o", IODataType::introduceHelp());
+
+  // Static advanced on demand (lazy add)
+  o.addAdvancedHelp("I",
+    "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
+  o.addAdvancedHelp("sync",
+    "In daemon/realtime sends heartbeat to algorithm.  Note if your algorithm lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
+  o.addAdvancedHelp("h",
+    "For indexes, this will be the global time in minutes for all indexes provided.");
+  o.addAdvancedHelp("O",
+    "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
+  o.addAdvancedHelp("web",
+    "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
 }
 
 void
@@ -140,6 +141,8 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   const std::string write = o.getString("o");
   ConfigParamGroupo paramo;
   paramo.readString(write);
+
+  myWebServerMode = o.getString("web");
 } // RAPIOAlgorithm::processOutputParams
 
 void
@@ -223,12 +226,6 @@ RAPIOAlgorithm::initializeBaseParsers()
 void
 RAPIOAlgorithm::initializeBaseline()
 {
-  // Typically algorithms are run in realtime for operations and
-  // core dumping will fill up disks and cause more issues.
-  // We're usually running/restarting from w2algrun...
-  // FIXME: flags for this and logging
-  // Signals::initialize(enableStackTrace, wantCoreDumps);
-
   Config::introduceSelf();
 
   // -------------------------------------------------------------------
@@ -261,9 +258,6 @@ void
 RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
 {
   // Make sure initial logging setup
-  // FIXME: chicken-egg problem.  We want configured logging from config,
-  // but things print to log before config read, etc.
-  // Need more work on ordering
   Log::instance();
 
   // Since this is called by a main function
@@ -282,7 +276,6 @@ RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
     // of events may be critical:
     //
     // 1. Declare step
-    declareFeatures();      // Declare extra features wanted...
     declareInputParams(o);  // Declare the input parameters used, default of
                             // i, I, l...
     declareOutputParams(o); // Declare the output parameters, default of o,
@@ -426,12 +419,24 @@ RAPIOAlgorithm::execute()
   // Add RecordQueue
   EventLoop::addTimer(q);
 
+  // Add heartbeat
   if (heart != nullptr) {
     EventLoop::addTimer(heart);
   }
 
-  // Do event loop
-  EventLoop::doEventLoop();
+  // Launch event loop, either along with web server, or solo
+  const bool wantWeb = (myWebServerMode != "off");
+  if (wantWeb) {
+    // Create web message queue
+    std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
+    WebMessageQueue::theWebMessageQueue = wmq;
+
+    EventLoop::addTimer(wmq);
+    WebServer::startWebServer(myWebServerMode);
+  } else {
+    // Do event loop solo
+    EventLoop::doEventLoop();
+  }
 } // RAPIOAlgorithm::execute
 
 void
@@ -453,6 +458,27 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
     RAPIOData d(rec);
     processNewData(d);
   }
+}
+
+void
+RAPIOAlgorithm::processNewData(RAPIOData&)
+{
+  LogInfo("Received data, ignoring.\n");
+}
+
+void
+RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
+{
+  static int counter = 0;
+
+  std::stringstream stream;
+  stream << "<h1>Web request call number: " << ++counter << "</h1>";
+  stream << "Path is: " << w->myPath << "<br>";
+  stream << "There are " << w->myMap.size() << " fields.<br>";
+  for (auto& a:w->myMap) {
+    stream << "Field: " << a.first << " == " << a.second << "<br>";
+  }
+  w->message = stream.str();
 }
 
 void
@@ -480,15 +506,6 @@ RAPIOAlgorithm::handleTimedEvent(const Time& n, const Time& p)
     "sync heartbeat:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and for: " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
                       << "\n");
   processHeartbeat(n, p);
-}
-
-void
-RAPIOAlgorithm::addFeature(const std::string& key)
-{
-  LogSevere(
-    "Code programming error.  Request for unknown feature addition by key " << key
-                                                                            << "\n");
-  exit(1);
 }
 
 bool

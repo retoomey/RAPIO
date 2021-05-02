@@ -10,6 +10,7 @@ AUTOMAKE_OPTIONS   = foreign
 
 SUBDIRS     =\
   base\
+  webserver\
   rexample\
   PYTHON\
   tests

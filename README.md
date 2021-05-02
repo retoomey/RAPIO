@@ -22,13 +22,20 @@ At the [National Severe Storms Laboratory](https://www.nssl.noaa.gov) big data i
 ## Some third party requirements.
 #### Core dependencies
 * [BOOST C++](https://www.boost.org) Lots of stuff here, we tend to wrap these libraries to simplify algorithm development and to allow for possibility of swap out.
-* [cURL](https://curl.haxx.se) (as web ingest (though maybe BOOST asio later)
-* [UCAR udunits](https://www.unidata.ucar.edu/software/udunits) 
 
-#### Advanced data ingest libraries
-* [G2CLib](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/g2clib.html) Grib2 ingest
-* [HDF5](https://support.hdfgroup.org/HDF5/) HDF5 data ingest 
-* [Netcdf](https://www.unidata.ucar.edu/software/netcdf/) Netcdf data ingest 
+#### Helper dependencies
+* [UCAR udunits](https://www.unidata.ucar.edu/software/udunits) Unit translation ability.
+* [Cron Expression](https://github.com/staticlibs/ccronexpr) A simple c library for parsing CRON expressions (for algorithm cron firing).
+* [Simple-Web-Server](https://gitlab.com/eidheim/Simple-Web-Server) A HTTP and HTTPS server and client library implementation using BOOST headers (for algorithm REST interface support).
+* [cURL](https://curl.haxx.se) (as web ingest (though maybe BOOST asio later)).
+
+#### IO libraries (modules for ingesting/outputting data)
+* [G2CLib](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/g2clib.html) Grib2.
+* [Netcdf](https://www.unidata.ucar.edu/software/netcdf/) Netcdf.
+* [HDF5](https://support.hdfgroup.org/HDF5/) HDF5.
+* [GDAL](https://gdal.org/) Geospatial Data Abstraction Library supported formats.
+* [GraphicsMagick](http://www.graphicsmagick.org/) GraphicsMagick when available
+* [ImageMagick](https://imagemagick.org/) or ImageMagick.
 
 #### Projection libraries
 * [PROJ](https://proj.org/) Projection abilities for data

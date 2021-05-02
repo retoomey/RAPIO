@@ -21,10 +21,10 @@ void
 EventLoop::doEventLoop()
 {
   // This is our event loop.  We use a poll/delay loop
-  LogInfo("Starting MAIN loop...." << myTimers.size() << "\n");
-  // for (auto& i:myTimers) {
-  //  LogSevere("TIMER: " << i->myName << "\n");
-  // }
+  LogInfo("Starting MAIN loop with " << myTimers.size() << " EventTimers.\n");
+  for (auto& i:myTimers) {
+    LogDebug("  EventTimer: " << i->myName << " (" << i->myDelayMS << " ms)\n");
+  }
 
   // Start all registered timer objects
   auto start = std::chrono::high_resolution_clock::now();
