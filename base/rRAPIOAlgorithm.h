@@ -137,6 +137,17 @@ public:
   virtual void
   handleTimedEvent(const Time& at, const Time& sync);
 
+  /** Write data based on suffix directly to a given file key,
+   * without notification.  You normally want to call writeOutputProduct
+   * which will autogenerate file names, multi-output and notify, etc.
+   * I'm using this for tiles at moment..I may refactor these two write
+   * functions at some point
+   */
+  virtual bool
+  writeDirectOutput(const URL& path,
+    std::shared_ptr<DataType> outputData,
+    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
+
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
@@ -153,12 +164,16 @@ public:
   inTimeWindow(const Time& aTime);
 
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
-  static bool
+  bool
   isDaemon();
 
   /** Are we reading old records? */
-  static bool
+  bool
   isArchive();
+
+  /** Are we running a web server? */
+  bool
+  isWebServer();
 
 protected:
 
@@ -177,9 +192,6 @@ protected:
   /** The mode of web server, if any */
   std::string myWebServerMode;
 
-  // I believe these things will always be 'global', even
-  // if we have multiple algorithm modules.
-
   /** History time for index storage */
   static TimeDuration myMaximumHistory;
 
@@ -187,7 +199,10 @@ protected:
   static Time myLastDataTime;
 
   /** The record read mode */
-  static std::string myReadMode;
+  std::string myReadMode;
+
+  /** The web server mode */
+  bool myWebServerOn;
 };
 
 //  end class RAPIOAlgorithm

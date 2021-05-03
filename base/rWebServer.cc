@@ -11,8 +11,36 @@
 #include "../webserver/server_http.hpp"
 
 using namespace rapio;
+using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 std::shared_ptr<WebMessageQueue> rapio::WebMessageQueue::theWebMessageQueue;
+
+// Copying the example given in simple web server
+// FIXME: This could just be a method in the WebServer
+class FileServer : public Utility {
+public:
+
+  static void
+  read_and_send(const shared_ptr<HttpServer::Response> &response, const shared_ptr<ifstream> &ifs)
+  {
+    // Read and send 128 KB at a time
+    static vector<char> buffer(131072); // Safe when server is running on one thread
+    streamsize read_length;
+
+    if ((read_length = ifs->read(&buffer[0], static_cast<streamsize>(buffer.size())).gcount()) > 0) {
+      response->write(&buffer[0], read_length);
+      if (read_length == static_cast<streamsize>(buffer.size())) {
+        response->send([response, ifs](const SimpleWeb::error_code &ec){
+          if (!ec) {
+            read_and_send(response, ifs); // FIXME: I kinda hate tail end recursion...just loop and save your stack, lol
+          } else {
+            std::cerr << "Connection interrupted" << endl;
+          }
+        });
+      }
+    }
+  }
+};
 
 WebMessageQueue::WebMessageQueue(
   RAPIOAlgorithm * alg
@@ -51,8 +79,6 @@ WebMessageQueue::action()
 void
 WebServer::startWebServer(const std::string& params)
 {
-  using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
-
   // HTTP-server at give port using 1 thread
   // Unless you do more heavy non-threaded processing in the resources,
   // 1 thread is usually faster than several threads
@@ -60,6 +86,7 @@ WebServer::startWebServer(const std::string& params)
   // and one main worker for simplicity.  If this ability becomes super
   // useful we could expand on it
   int port;
+
   try{
     port = std::stoi(params);
   }catch (const std::exception& e) {
@@ -104,9 +131,36 @@ WebServer::startWebServer(const std::string& params)
         // FIXME: I'm gonna want file/MIME support here, etc.
         // First pass just doing text..lots of glue work left to do.
         if (result) {
-          std::stringstream stream;
-          stream << web->message;
-          response->write(stream);
+          // How to send an error properly...
+          // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
+
+          if (web->message == "file") { // magic?
+            // Simple attempt to send a file
+            // static vector<char> buffer(131072); // Safe when server is running on one thread
+            auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
+            ifs->open(web->file, ifstream::in | ios::binary | ios::ate);
+            if (*ifs) {
+              // Ok get the length of the file we're gonna send, let the client know
+              auto length = ifs->tellg();
+              ifs->seekg(0, ios::beg);
+              SimpleWeb::CaseInsensitiveMultimap header;
+              header.emplace("Content-Length", to_string(length));
+              response->write(header);
+
+              FileServer::read_and_send(response, ifs);
+            } else {
+              LogSevere("Failed to open filename " << web->file << "\n");
+              web->message = "Failed to open filename " + web->file;
+              std::stringstream stream;
+              stream << web->message;
+              response->write(stream);
+            }
+          } else {
+            LogSevere("Not 'file', sending text\n");
+            std::stringstream stream;
+            stream << web->message;
+            response->write(stream);
+          }
         } else {
           // Algorithm basically reported an error maybe?
         }

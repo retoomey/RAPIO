@@ -37,7 +37,6 @@ using namespace std;
 
 TimeDuration RAPIOAlgorithm::myMaximumHistory;
 Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
-std::string RAPIOAlgorithm::myReadMode;
 
 RAPIOAlgorithm::RAPIOAlgorithm()
 { }
@@ -203,6 +202,12 @@ RAPIOAlgorithm::isArchive()
 {
   // If we are missing -r, -r=old or -r=all we read archive
   return (myReadMode == "old") || (myReadMode == "all");
+}
+
+bool
+RAPIOAlgorithm::isWebServer()
+{
+  return myWebServerOn;
 }
 
 void
@@ -426,6 +431,7 @@ RAPIOAlgorithm::execute()
 
   // Launch event loop, either along with web server, or solo
   const bool wantWeb = (myWebServerMode != "off");
+  myWebServerOn = wantWeb;
   if (wantWeb) {
     // Create web message queue
     std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
@@ -545,6 +551,16 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
 {
   std::string newProductName = "";
   return (productMatch(key, newProductName));
+}
+
+bool
+RAPIOAlgorithm::writeDirectOutput(const URL& path,
+  std::shared_ptr<DataType> outputData,
+  const std::map<std::string, std::string>& outputParams)
+{
+  // return (IODataType::write(outputData, path.toString()));
+  std::vector<Record> blackHole;
+  return IODataType::write(outputData, path.toString(), true, blackHole, "", outputParams); // Default write single file
 }
 
 void

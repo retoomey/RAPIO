@@ -17,6 +17,11 @@
 // Generic data structures
 #include <rArray.h>
 #include <rPTreeData.h>
+#include <rWebServer.h>
+
+// General utility
+#include <rStrings.h>
+#include <rOS.h>
 
 // Experimental AWS calls..
 #include <rAWS.h>

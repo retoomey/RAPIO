@@ -13,7 +13,7 @@ class WebMessage : public Utility
 {
 public:
   WebMessage(const std::string& path, const std::map<std::string, std::string>& map)
-    : myPath(path), myMap(map), message("NOTSETYET"){ }
+    : myPath(path), myMap(map), message("NOTSETYET"), file(""){ }
 
   /** Promise set by main worker when work complete */
   std::promise<bool> result;
@@ -26,6 +26,23 @@ public:
 
   /** Test message, set before promise result */
   std::string message;
+
+  /** File path */
+  std::string file;
+
+  /** Get the response message */
+  std::string
+  getMessage()
+  {
+    return message;
+  }
+
+  /** Set the response message */
+  void
+  setMessage(const std::string& m)
+  {
+    message = m;
+  }
 };
 
 /** Web queue holds message from a webserver thread for the main thread to
