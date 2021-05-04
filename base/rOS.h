@@ -44,6 +44,10 @@ public:
   static bool
   isDirectory(const std::string& path);
 
+  /** Test if path is a regular file */
+  static bool
+  isRegularFile(const std::string& path);
+
   /** Canonicalize a path (remove ../, etc. ) */
   static std::string
   canonical(const std::string& path);

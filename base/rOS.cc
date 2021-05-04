@@ -88,6 +88,22 @@ OS::isDirectory(const std::string& path)
   return isDir;
 }
 
+bool
+OS::isRegularFile(const std::string& path)
+{
+  bool isRegularFile = false;
+
+  try {
+    fs::file_status status = fs::status(path);
+    isRegularFile = fs::is_regular_file(status);
+  }
+  catch (const fs::filesystem_error &e)
+  {
+    // Just assume it's not a regular file then
+  }
+  return isRegularFile;
+}
+
 std::string
 OS::canonical(const std::string& path)
 {

@@ -13,22 +13,27 @@ class WebMessage : public Utility
 {
 public:
   WebMessage(const std::string& path, const std::map<std::string, std::string>& map)
-    : myPath(path), myMap(map), message("NOTSETYET"), file(""){ }
+    : myPath(path), myMap(map), message(""), file(""){ }
 
   /** Promise set by main worker when work complete */
   std::promise<bool> result;
 
-  /** Path of the URL request */
-  std::string myPath;
+  // Keeping separate from our URL class for the moment
+  // but 'maybe' merge later. IE the path and map of params
 
-  /** Map of params to values */
-  std::map<std::string, std::string> myMap;
+  /** Get the path */
+  std::string
+  getPath() const
+  {
+    return myPath;
+  }
 
-  /** Test message, set before promise result */
-  std::string message;
-
-  /** File path */
-  std::string file;
+  /** Get the param map */
+  const std::map<std::string, std::string>&
+  getMap() const
+  {
+    return myMap;
+  }
 
   /** Get the response message */
   std::string
@@ -37,12 +42,48 @@ public:
     return message;
   }
 
+  /** Get the file */
+  std::string
+  getFile()
+  {
+    return file;
+  }
+
+  /** Get the file */
+  void
+  setFile(const std::string& f)
+  {
+    file    = f;
+    message = "file"; // hack for moment, need http codes too
+  }
+
+  /** Is this a file message */
+  bool
+  isFile()
+  {
+    return (message == "file");
+  }
+
   /** Set the response message */
   void
   setMessage(const std::string& m)
   {
     message = m;
   }
+
+protected:
+
+  /** Path of the URL request */
+  std::string myPath;
+
+  /** Map of params to values */
+  std::map<std::string, std::string> myMap;
+
+  /** Message response for web server */
+  std::string message;
+
+  /** File path, if any */
+  std::string file;
 };
 
 /** Web queue holds message from a webserver thread for the main thread to

@@ -1,0 +1,24 @@
+Some of my notes on git usage
+
+###################################################
+Cloning when you are using PEM keys (public/private) with github:
+
+  #git clone git@github.com:retoomey/RAPIO.git
+
+###################################################
+Using git subtree for third party repos
+Used git subtree for the simple-web-server project (this is done only once):
+
+Git subtree notes, since it's not done much and could forget
+To use subtree, might need to add an extra linux package like git-subtree.
+Basically add another repo as a subtree.  This copies and marks the files
+in the log so that git can update it properly with doing a 'normal' copy.
+
+  #git subtree add --prefix=webserver --squash https://gitlab.com/eidheim/Simple-Web-Server.git master
+
+Which gives as log entries of 'merged'
+To update:
+
+  #git subtree merge -P webserver --squash (git checkin ID number)
+  #git subtree merge -P webserver --squash master
+###################################################

@@ -230,11 +230,30 @@ LatLonGridProjection::LLCoverageTile(
   // Open street map uses earth radius of 6372.7982 km
 
   // Use half degree calculation as the 'degreeout'
+  // Ok this should be correct even for spherical mercator..since the east-west
+  // matches geodetic.  North-south is where the stretching is.
   const double degWidth  = 360.0 / pow(2, zoomLevel); // lol I wrote 2 ^ zoomlevel which is not c++
   const double halfDeg   = degWidth / 2.0;
   const double degreeOut = halfDeg;
 
-  Project::createLatLonGrid(centerLatDegs, centerLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs,
-    deltaLonDegs);
+  //  Project::createLatLonGrid(centerLatDegs, centerLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs,
+  //    deltaLonDegs);
+  auto lon = centerLonDegs;
+
+  // These 'should' project back to x1/x2
+  leftDegs = lon - degreeOut;
+  auto rightDegs = lon + degreeOut;
+
+  // All these are meaningless I think...we need to project left and
+  // right to X, then use _that_ width I think
+  auto width = rightDegs - leftDegs;
+  deltaLonDegs = width / numCols;
+
+  // To keep aspect ratio per cell, use deltaLon to back calculate
+  deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
+  auto lat = centerLatDegs;
+
+  topDegs = lat - (deltaLatDegs * numRows / 2.0);
+
   return true;
-}
+} // LatLonGridProjection::LLCoverageTile

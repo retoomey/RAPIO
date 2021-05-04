@@ -103,45 +103,14 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
   auto& p = *project;
 
-  LLCoverage cover;
-  std::string suffix = "png";
-  bool optionSuccess = false;
-
-  std::string bbox = "";
-  if (dfs != nullptr) {
-    try{
-      auto output = dfs->getChild("output");
-      suffix        = output.getAttr("suffix", suffix);
-      optionSuccess = p.getLLCoverage(output, cover);
-
-      // Web tile mode, currently only passed by tiler
-      try {
-        bbox = output.getAttr("BBOX", bbox);
-      }catch (const std::exception& e) { }
-    }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
-    }
-  }
-
-  if (!optionSuccess) {
-    return false;
-  }
-
-  if (bbox.empty()) {
-    LogInfo(
-      "Image writer settings: (filetype: " << suffix << ", " << cover << ")\n");
-  } else {
-    LogInfo(
-      "Image writer tile:" << bbox << "\n");
-  }
-
+  // Setup projection and magic
   static std::shared_ptr<ProjLibProject> project2;
   static bool setup = false;
   if (!setup) {
     // Force merc for first pass (matching standard tiles)
     project2 = std::make_shared<ProjLibProject>(
-      "+proj=merc +units=m +resolution=1", // standard google tile spherical mercator
-      // WDSSII default (probably doesn't even need to be parameter)
+      // Web mercator
+      "+proj=webmerc +datum=WGS84 +units=m +resolution=1",
       "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
       );
     project2->initialize();
@@ -154,37 +123,154 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     setup = true;
   }
 
+  // Read settings
+  LLCoverage cover;
+  std::string suffix = "png";
+  bool optionSuccess = false;
+
+  std::string bbox   = "";
+  std::string bboxsr = "3857"; // Spherical Mercator
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      suffix        = output.getAttr("suffix", suffix);
+      optionSuccess = p.getLLCoverage(output, cover);
+
+      // Web tile mode, currently only passed by tiler
+      try {
+        bbox   = output.getAttr("BBOX", bbox);
+        bboxsr = output.getAttr("BBOXSR", bboxsr);
+      }catch (const std::exception& e) { }
+    }catch (const std::exception& e) {
+      LogSevere("Unrecognized settings, using defaults\n");
+    }
+  }
+
+  if (!optionSuccess) {
+    return false;
+  }
+
+  // Default is old way...pull back coverage.  We'll replace
+  // them all with bbox calculation?
+  size_t rows     = cover.rows;
+  size_t cols     = cover.cols;
+  double top      = cover.topDegs;
+  double left     = cover.leftDegs;
+  double deltaLat = cover.deltaLatDegs;
+  double deltaLon = cover.deltaLonDegs;
+  bool transform  = false;
+
+  // New stuff for moment...trying to project correctly...
+  // We'll create bbox from the zoom level...
+  // FIXME: Sooo much cleanup will happen later..right now just want
+  // things to start working.  I'm thinking projection library
+  // will deal with lat/lon bboxes only..which will then be projected
+  // to correct coordinate system..
+  // Let's get center of the datatype...
+  auto centerthing   = dt->getCenterLocation();
+  double myCenterLat = centerthing.getLatitudeDeg();
+  double myCenterLon = centerthing.getLongitudeDeg();
+
+  if (bbox.empty()) { // New auto tile mode
+    std::string mode     = "";
+    int zoomLevel        = 0;
+    double centerLatDegs = myCenterLat; // 35.22;
+    double centerLonDegs = myCenterLon; // -97.44;
+    try {
+      auto output = dfs->getChild("output");
+      mode      = output.getAttr("mode", mode);
+      zoomLevel = output.getAttr("zoom", zoomLevel);
+      centerLatDegs = output.getAttr("centerLatDegs", double(centerLatDegs));
+      centerLonDegs = output.getAttr("centerLonDegs", double(centerLonDegs));
+      // read rows, cols...
+
+      // This 'should' be width in degrees of the tile at zoom level, everything else
+      // has to be calculated in the projected space I think.  Basically divide the width
+      // of the map (the earth)
+      double halfDegWidth = 180.0 / pow(2, zoomLevel);
+
+      // Project left and right sides to projected system..
+      double xOutLeft, yOutLeft;
+
+      double source1 = centerLonDegs - halfDegWidth;
+      double source2 = centerLonDegs + halfDegWidth;
+
+      project2->LatLonToXY(centerLatDegs, source1, xOutLeft, yOutLeft);
+      double xOutRight, yOutRight;
+      project2->LatLonToXY(centerLatDegs, source2, xOutRight, yOutRight);
+
+      double widthx = abs(xOutRight - xOutLeft); // width of tile
+
+      left      = xOutLeft;
+      deltaLon  = widthx / cols;                      // March per pixel left to right
+      deltaLat  = -(widthx / rows);                   // going 'down' decreases in lat and y
+      top       = yOutLeft - (deltaLat * rows / 2.0); // Lat here is actually delta x
+      transform = true;                               // go from x to lat lon for data lookup right?
+    }catch (const std::exception& e) { }
+
+    LogInfo(
+      "Image writer settings: (filetype: " << suffix << ", " << cover << ")\n");
+  } else {
+    LogInfo(
+      "Image writer tile:" << bbox << "\n");
+  }
+
   #if HAVE_MAGICK
   auto colormap        = dtr.getColorMap();
   const ColorMap& test = *colormap;
 
-  const auto centerLLH = dtr.getLocation();
-  // Pull back settings in coverage for marching
-  size_t rows    = cover.rows;
-  size_t cols    = cover.cols;
-  float top      = cover.topDegs;
-  float left     = cover.leftDegs;
-  float deltaLat = cover.deltaLatDegs;
-  float deltaLon = cover.deltaLonDegs;
+  // const auto centerLLH = dtr.getLocation();
 
-  float right  = 0;
-  float bottom = 0;
+  double right  = 0;
+  double bottom = 0;
 
   // Note here the variables are in the projection space
-  bool transform = false;
   if (!bbox.empty()) {
     std::vector<std::string> pieces;
     Strings::splitWithoutEnds(bbox, ',', &pieces);
     if (pieces.size() == 4) {
-      left      = std::stod(pieces[0]);  // lon
-      top       = std::stod(pieces[3]);  // lat
-      right     = std::stod(pieces[2]);  // lon
-      bottom    = std::stod(pieces[1]);  // lat
+      // I think with projected it's upside down? or I've double flipped somewhere
+      left   = std::stod(pieces[0]); // lon
+      bottom = std::stod(pieces[1]); // lat // is it flipped in the y?? must be
+      right  = std::stod(pieces[2]); // lon
+      top    = std::stod(pieces[3]); // lat
+
+      // Transform the points from lat/lon to merc if BBOXSR set to "4326"
+      if (bboxsr == "4326") {
+        double xout1, xout2, yout1, yout2;
+
+
+        // test and die
+
+        /*
+         * double lattest = 30; double lontest = -80;
+         * project2->LatLonToXY(lattest, lontest, xout1, yout1);
+         * LogSevere("FIRST: 30, -80 " << xout1 << ", " << yout1 << "\n");
+         *
+         * double inx = xout1; double iny = yout1;
+         * double latback, lonback;
+         * project2->xyToLatLon(inx, iny, latback, lonback);
+         * LogSevere("REVERSE: " << latback << ", " << lonback << "\n");
+         */
+
+        project2->LatLonToXY(bottom, left, xout1, yout1);
+        project2->LatLonToXY(top, right, xout2, yout2);
+        // project2->xyToLatLon(inx, iny, aLat, aLon);
+        left   = xout1;
+        bottom = yout1;
+        right  = xout2;
+        top    = yout2;
+
+        // LogSevere("TRANSFORM TO " << top << ", " << left << ", " << bottom << ", " << right << "\n");
+      }
+
       deltaLat  = (bottom - top) / rows; // good
       deltaLon  = (right - left) / cols;
       transform = true;
     }
   }
+
+  // Final rendering
   try{
     Magick::Image i;
     i.size(Magick::Geometry(cols, rows));
@@ -215,21 +301,40 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
           project2->xyToLatLon(inx, iny, aLat, aLon);
           const double v = p.getValueAtLL(aLat, aLon);
           test.getColor(v, r, g, b, a);
+
+          # if 0
+          double v  = abs(myCenterLon - aLon);
+          double v2 = abs(myCenterLat - aLat);
+          a = 255;
+          r = 0;
+          g = 0;
+          b = 0;
+          if (v < 2) { r = 255.0; } else { r = 0.0; }
+          if (v2 < 2) { b = 255.0; } else { b = 0.0; }
+          if ((v >= 2) && (v2 >= 2)) {
+            const double vg = p.getValueAtLL(aLat, aLon);
+            test.getColor(vg, r, g, b, a);
+          }
+          # endif // if 0
         } else {
           const double v = p.getValueAtLL(startLat, startLon);
           test.getColor(v, r, g, b, a);
         }
 
         // border
+        # if 0
         if ((x < 2) || (y < 2) || (x > cols - 2) || (y > rows - 2)) {
           Magick::ColorRGB cc = Magick::ColorRGB(1.0, 0.0, 0.0);
           cc.alpha(0.0);
           *pixel = cc;
         } else {
-          Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
-          cc.alpha(1.0 - (a / 255.0));
-          *pixel = cc;
-        }
+        # endif
+        Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
+        cc.alpha(1.0 - (a / 255.0));
+        *pixel = cc;
+        # if 0
+      }
+        # endif
         startLon += deltaLon;
         pixel++;
       }

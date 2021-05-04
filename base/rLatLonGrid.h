@@ -63,6 +63,16 @@ public:
     return myDims.size() > 1 ? myDims[1].size() : 0;
   }
 
+  /** Return the location considered the 'center' location of the datatype */
+  virtual LLH
+  getCenterLocation() override
+  {
+    const double lat = myLocation.getLatitudeDeg() - myLatSpacing * (getNumLats() / 2.0);
+    const double lon = myLocation.getLongitudeDeg() + myLonSpacing * (getNumLons() / 2.0);
+
+    return LLH(lat, lon, myLocation.getHeightKM());
+  }
+
   /** Generated default string for subtype from the data */
   virtual std::string
   getGeneratedSubtype() const override;

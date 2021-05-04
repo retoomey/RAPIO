@@ -104,7 +104,7 @@ public:
 
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH
-  getCenterLocation() const
+  getCenterLocation()
   {
     return myLocation;
   }

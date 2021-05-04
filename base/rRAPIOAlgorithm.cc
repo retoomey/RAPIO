@@ -479,12 +479,13 @@ RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
 
   std::stringstream stream;
   stream << "<h1>Web request call number: " << ++counter << "</h1>";
-  stream << "Path is: " << w->myPath << "<br>";
-  stream << "There are " << w->myMap.size() << " fields.<br>";
-  for (auto& a:w->myMap) {
+  stream << "Path is: " << w->getPath() << "<br>";
+  auto& map = w->getMap();
+  stream << "There are " << map.size() << " fields.<br>";
+  for (auto& a:map) {
     stream << "Field: " << a.first << " == " << a.second << "<br>";
   }
-  w->message = stream.str();
+  w->setMessage(stream.str());
 }
 
 void

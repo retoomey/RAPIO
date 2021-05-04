@@ -134,11 +134,11 @@ WebServer::startWebServer(const std::string& params)
           // How to send an error properly...
           // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
 
-          if (web->message == "file") { // magic?
+          if (web->isFile()) {
             // Simple attempt to send a file
             // static vector<char> buffer(131072); // Safe when server is running on one thread
             auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
-            ifs->open(web->file, ifstream::in | ios::binary | ios::ate);
+            ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
             if (*ifs) {
               // Ok get the length of the file we're gonna send, let the client know
               auto length = ifs->tellg();
@@ -149,16 +149,16 @@ WebServer::startWebServer(const std::string& params)
 
               FileServer::read_and_send(response, ifs);
             } else {
-              LogSevere("Failed to open filename " << web->file << "\n");
-              web->message = "Failed to open filename " + web->file;
+              LogSevere("Failed to open filename " << web->getFile() << "\n");
+              web->setMessage("Failed to open filename " + web->getFile());
               std::stringstream stream;
-              stream << web->message;
+              stream << web->getMessage();
               response->write(stream);
             }
           } else {
             LogSevere("Not 'file', sending text\n");
             std::stringstream stream;
-            stream << web->message;
+            stream << web->getMessage();
             response->write(stream);
           }
         } else {

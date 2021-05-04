@@ -71,6 +71,12 @@ Project::xyToLatLon(double& x, double&y, double &lat, double&lon)
   return false;
 }
 
+bool
+Project::LatLonToXY(double& lat, double&lon, double &x, double&y)
+{
+  return false;
+}
+
 int
 Project::createLookup(
   // Output information
@@ -242,6 +248,18 @@ ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
   lon = x * RAD_TO_DEG;
   lat = y * RAD_TO_DEG;
   return true;
+}
+
+bool
+ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
+{
+  double radLat = lat * DEG_TO_RAD;
+  double radLon = lon * DEG_TO_RAD;
+  int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
+
+  x = radLon;
+  y = radLat;
+  return (k == 0);
 }
 
 void

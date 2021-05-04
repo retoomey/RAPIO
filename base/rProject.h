@@ -42,6 +42,10 @@ public:
   virtual bool
   xyToLatLon(double& x, double&y, double &lat, double&lon);
 
+  /** Get X/Y from given Lat Lon coordinates */
+  virtual bool
+  LatLonToXY(double& lat, double&lon, double &x, double&y);
+
   /** Create a lookup grid that has an index for a WDSSII lat lon grid.
    *  I'm suspecting we can do this generically
    * The basic technique is find the X/Y coordinates of the projected center,
@@ -103,6 +107,10 @@ public:
   /** Get Lat Lon from given X/Y kilometer coordinates */
   virtual bool
   xyToLatLon(double& x, double&y, double &lat, double&lon) override;
+
+  /** Get X/Y from given Lat Lon coordinates */
+  virtual bool
+  LatLonToXY(double& lat, double&lon, double &x, double&y) override;
 
   /** Project array to lat lon grid primary.  This isn't super generic. */
   virtual void
