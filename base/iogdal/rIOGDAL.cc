@@ -78,17 +78,12 @@ IOGDAL::createDataType(const std::string& params)
 
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                              & params,
-  std::shared_ptr<PTreeNode>                     dfs,
-  bool                                           directFile,
-  // Output for notifiers
-  std::vector<Record>                            & records
+  std::map<std::string, std::string>              & keys
 )
 {
   DataType& r = *dt;
 
-  // For now at least, every image requires a projection.  I
-  // could see modes where no projection is required
+  // DataType LLH to data cell projection
   auto project = r.getProjection(); // primary layer
 
   if (project == nullptr) {
@@ -97,9 +92,96 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   }
   auto& p = *project;
 
-  LLCoverage cover;
-  std::string suffix = "tif";
-  std::string driver = "GTiff";
+  // Setup projection and magic
+  // This is destination projection
+  static std::shared_ptr<ProjLibProject> project2;
+  static bool setup = false;
+  if (!setup) {
+    // Force merc for first pass (matching standard tiles)
+    project2 = std::make_shared<ProjLibProject>(
+      // Web mercator
+      "+proj=webmerc +datum=WGS84 +units=m +resolution=1",
+      "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+      );
+    project2->initialize();
+
+    GDALAllRegister(); // Register/introduce all GDAL drivers
+    CPLPushErrorHandler(CPLQuietErrorHandler);
+  }
+
+  // ----------------------------------------------------------------------
+  // Read settings
+  //
+  std::string filename = keys["filename"];
+  if (filename.empty()) {
+    LogSevere("Need a filename to output\n");
+    return false;
+  }
+  std::string suffix = keys["suffix"];
+  if (suffix.empty()) {
+    suffix = ".tif";
+  }
+  std::string driver = keys["GTiff"];
+  if (driver.empty()) {
+    driver = "GTiff";
+  }
+
+  std::string bbox, bboxsr;
+  size_t rows;
+  size_t cols;
+  p.getBBOX(keys, rows, cols, bbox, bboxsr);
+  std::string mode = keys["mode"];
+
+  // FIXME: still need to cleanup suffix stuff
+  if (keys["directfile"] == "false") {
+    // We let writers control final suffix
+    filename         = filename + "." + suffix;
+    keys["filename"] = filename;
+  }
+
+  // ----------------------------------------------------------------------
+  // Calculate bounding box for generating image
+  // Leave code here for now...need to merge handle multiprojection
+  // probably...but I want to prevent creating the projection over and over
+  bool transform = false;
+  if (bboxsr == "3857") { // if bbox in mercator need to project to lat lon for data lookup
+    transform = true;
+  }
+
+  // Box settings
+  double top      = 0;
+  double left     = 0;
+  double deltaLat = 0;
+  double deltaLon = 0;
+  if (!bbox.empty()) {
+    std::vector<std::string> pieces;
+    Strings::splitWithoutEnds(bbox, ',', &pieces);
+    if (pieces.size() == 4) {
+      // I think with projected it's upside down? or I've double flipped somewhere
+      left = std::stod(pieces[0]);          // lon
+      double bottom = std::stod(pieces[1]); // lat // is it flipped in the y?? must be
+      double right  = std::stod(pieces[2]); // lon
+      top = std::stod(pieces[3]);           // lat
+
+      // Transform the points from lat/lon to merc if BBOXSR set to "4326"
+      if (bboxsr == "4326") {
+        double xout1, xout2, yout1, yout2;
+        project2->LatLonToXY(bottom, left, xout1, yout1);
+        project2->LatLonToXY(top, right, xout2, yout2);
+        left      = xout1;
+        bottom    = yout1;
+        right     = xout2;
+        top       = yout2;
+        transform = true; // yes go from mer to lat for data
+      }
+      deltaLat = (bottom - top) / rows; // good
+      deltaLon = (right - left) / cols;
+    }
+  }
+
+  // std::string suffix = "tif";
+  // std::string driver = "GTiff";
+  #if 0
   bool optionSuccess = false;
 
   if (dfs != nullptr) {
@@ -116,24 +198,30 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   if (!optionSuccess) {
     return false;
   }
+  #endif // if 0
 
   // ----------------------------------------------------
-  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << ", " << cover << "\n");
+  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << " " << bbox << "\n");
 
-  static bool setup = false;
-  if (!setup) {
-    GDALAllRegister(); // Register/introduce all GDAL drivers
-    CPLPushErrorHandler(CPLQuietErrorHandler);
-    setup = true;
-  }
+  /*
+   * static bool setup = false;
+   * if (!setup) {
+   *  GDALAllRegister(); // Register/introduce all GDAL drivers
+   *  CPLPushErrorHandler(CPLQuietErrorHandler);
+   *  setup = true;
+   * }
+   */
 
   // Pull back settings in coverage for marching
-  const size_t rows    = cover.rows;
-  const size_t cols    = cover.cols;
-  const float top      = cover.topDegs;
-  const float left     = cover.leftDegs;
-  const float deltaLat = cover.deltaLatDegs;
-  const float deltaLon = cover.deltaLonDegs;
+
+  /*
+   * const size_t rows    = cover.rows;
+   * const size_t cols    = cover.cols;
+   * const float top      = cover.topDegs;
+   * const float left     = cover.leftDegs;
+   * const float deltaLat = cover.deltaLatDegs;
+   * const float deltaLon = cover.deltaLonDegs;
+   */
 
   // For the moment, always have a color map, even if missing...
   // Only needed if we are doing artificial color bands in the data such as in
@@ -150,9 +238,10 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
    * const ColorMap& test = *colormap;
    */
 
-  bool useSubDirs     = true;
-  URL aURL            = IODataType::generateFileName(dt, params, "tif", directFile, useSubDirs);
-  std::string outfile = aURL.toString();
+  // bool useSubDirs     = true;
+  // URL aURL            = IODataType::generateFileName(dt, params, "tif", directFile, useSubDirs);
+  // aURL.toString();
+  std::string outfile = filename;
 
   GDALDriver * driverGeotiff = GetGDALDriverManager()->GetDriverByName(driver.c_str());
   if (driverGeotiff == nullptr) {
@@ -197,6 +286,8 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string tiffTime = dt->getTime().getString("%Y:%m:%d %H:%M:%S");
   geotiffDataset->SetMetadataItem("TIFFTAG_DATETIME", tiffTime.c_str());
 
+  // ----------------------------------------------------------------------
+  // Final rendering using the BBOX
   try{
     auto& band1 = *(geotiffDataset->GetRasterBand(1));
     band1.SetNoDataValue(Constants::MissingData);
@@ -210,10 +301,18 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     for (size_t y = 0; y < rows; y++) {
       auto startLon = left;
       for (size_t x = 0; x < cols; x++) {
-        const double v = p.getValueAtLL(startLat, startLon);
-        // rowBuff[x] = v;
-        rowBuff[index++] = v; // Data value band
-        startLon        += deltaLon;
+        if (transform) {
+          double aLat, aLon;
+          double inx = startLon; // actually from XY to lat lon (src/dst)
+          double iny = startLat;
+          project2->xyToLatLon(inx, iny, aLat, aLon);
+          const double v = p.getValueAtLL(aLat, aLon);
+          rowBuff[index++] = v; // Data value band
+        } else {
+          const double v = p.getValueAtLL(startLat, startLon);
+          rowBuff[index++] = v; // Data value band
+        }
+        startLon += deltaLon;
       }
       // Write per row
       // CPLErr err = band1.RasterIO(GF_Write, 0, y, cols, 1, &rowBuff[0], cols, 1, GDT_Float32, 0, 0);
@@ -227,8 +326,9 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     GDALClose(geotiffDataset);
     //   CPLFree(rowBuff);
 
-    IODataType::generateRecord(dt, aURL, "gdal", records);
+    // IODataType::generateRecord(dt, aURL, "gdal", records);
     // GDALDestroyDriverManager(); leaking?
+    return true;
   }catch (const std::exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");

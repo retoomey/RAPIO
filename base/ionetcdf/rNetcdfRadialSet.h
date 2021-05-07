@@ -22,9 +22,9 @@ public:
 
   /** Write DataType from given ncid */
   virtual bool
-  write(int                    ncid,
-    std::shared_ptr<DataType>  dt,
-    std::shared_ptr<PTreeNode> dfs)
+  write(int ncid,
+    std::shared_ptr<DataType> dt,
+    std::map<std::string, std::string>& keys)
   override;
 
   /** Get number of test objects we provide for read/write tests */

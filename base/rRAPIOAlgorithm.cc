@@ -557,7 +557,7 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
 bool
 RAPIOAlgorithm::writeDirectOutput(const URL& path,
   std::shared_ptr<DataType> outputData,
-  const std::map<std::string, std::string>& outputParams)
+  std::map<std::string, std::string>& outputParams)
 {
   // return (IODataType::write(outputData, path.toString()));
   std::vector<Record> blackHole;
@@ -567,7 +567,7 @@ RAPIOAlgorithm::writeDirectOutput(const URL& path,
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType> outputData,
-  const std::map<std::string, std::string>& outputParams)
+  std::map<std::string, std::string>& outputParams)
 {
   std::string newProductName = "";
 
@@ -583,20 +583,10 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       std::vector<Record> records;
       IODataType::write(outputData, w.outputinfo, false, records, w.factory, outputParams);
 
-      // Notify each notifier for each writer.
-      // FIXME: Need a filter in -n to allow not calling?
+      // Get back the output folder for notifications
+      // and notify each notifier for this writer.
+      const std::string outputfolder = outputParams["outputfolder"];
       for (auto& n:myNotifiers) {
-        // FIXME: For now assuming outputinfo is always a directory.
-        // netcdf=/folder1 image=/folder2 gdal=/folder3
-        // fml=/override
-        // FIXME: Ok python is using a comma.  We'll have to refactor the API
-        // a bit to clean this up.  Factories should control outputinfo --> output folder
-        std::string outputfolder = w.outputinfo;
-        std::vector<std::string> pieces;
-        Strings::splitWithoutEnds(w.outputinfo, ',', &pieces);
-        if (pieces.size() > 1) {
-          outputfolder = pieces[1];
-        }
         n->writeRecords(outputfolder, records);
       }
     }

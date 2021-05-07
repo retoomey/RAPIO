@@ -126,8 +126,8 @@ public:
   write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     bool generateFileName,
     std::vector<Record>              & records,
-    const std::string& factory = "",
-    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
+    const std::string& factory,
+    std::map<std::string, std::string>& outputParams);
 
   /**
    *  Write out a datatype using outputinfo and factory.
@@ -144,23 +144,27 @@ public:
     std::vector<char>                   & buf,
     const std::string                   & factory = "");
 
+  /** Handle parsing the command line param.  For example
+   * factory=outputfolder, or factory= script, outputfolder.
+   * This turns the command line into the param map values */
+  virtual void
+  handleCommandParam(const std::string& command,
+    std::map<std::string, std::string> &outputParams);
+
   /** Default write out handling for files */
   virtual bool
   writeout(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     bool generateFileName,
     std::vector<Record>              & records,
-    const std::string& factory = "",
-    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
+    const std::string& factory,
+    std::map<std::string, std::string>& outputParams);
 
 protected:
+
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const std::string                      & params,
-    std::shared_ptr<PTreeNode>             dfs,
-    bool                                   directFile,
-    // Output for notifiers
-    std::vector<Record>                    & records
+    std::map<std::string, std::string>     & lookup
   ){ return false; }
 
   /** Subclasses that can write to a character buffer can implement this.

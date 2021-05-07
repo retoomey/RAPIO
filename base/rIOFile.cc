@@ -36,7 +36,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   bool directFile,
   std::vector<Record> & records,
   const std::string & knownfactory,
-  const std::map<std::string, std::string>  & outputParams)
+  std::map<std::string, std::string>  & outputParams)
 {
   // Get the proxy factory off the file name
   // knownfactory is 'file' of course, but we want to send onto our
@@ -70,11 +70,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 
 bool
 IOFile::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                              & params,
-  std::shared_ptr<PTreeNode>                     dfs,
-  bool                                           directFile,
-  // Output for notifiers
-  std::vector<Record>                            & records
+  std::map<std::string, std::string>     & keys
 )
 {
   LogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().\n");

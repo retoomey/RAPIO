@@ -52,7 +52,7 @@ if a is not None:
   if ((maxx > 0) and (maxy > 0)):
 
     # Stupidly just making a text file.  Make whatever you want
-    myfile = basefile+"txt"
+    myfile = basefile+".txt"
     f = open(myfile, "w")
     f.write("Last cell of DataType is:"+str(a[maxx-1,maxy-1]))
     f.close()

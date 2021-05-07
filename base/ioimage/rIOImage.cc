@@ -83,18 +83,12 @@ IOImage::createDataType(const std::string& params)
 
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                               & params,
-  std::shared_ptr<PTreeNode>                      dfs,
-  bool                                            directFile,
-  // Output for notifiers
-  std::vector<Record>                             & records
+  std::map<std::string, std::string>              & keys
 )
 {
   DataType& dtr = *dt;
 
-  // For now at least, every image requires a projection.  I
-  // could see modes where no projection is required
-  // The projection is geodetic
+  // DataType LLH to data cell projection
   auto project = dtr.getProjection(); // primary layer
 
   if (project == nullptr) {
@@ -104,6 +98,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   auto& p = *project;
 
   // Setup projection and magic
+  // This is destination projection
   static std::shared_ptr<ProjLibProject> project2;
   static bool setup = false;
   if (!setup) {
@@ -123,155 +118,78 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     setup = true;
   }
 
+  // ----------------------------------------------------------------------
   // Read settings
-  LLCoverage cover;
-  std::string suffix = "png";
-  bool optionSuccess = false;
-
-  std::string bbox   = "";
-  std::string bboxsr = "3857"; // Spherical Mercator
-  if (dfs != nullptr) {
-    try{
-      auto output = dfs->getChild("output");
-      suffix        = output.getAttr("suffix", suffix);
-      optionSuccess = p.getLLCoverage(output, cover);
-
-      // Web tile mode, currently only passed by tiler
-      try {
-        bbox   = output.getAttr("BBOX", bbox);
-        bboxsr = output.getAttr("BBOXSR", bboxsr);
-      }catch (const std::exception& e) { }
-    }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
-    }
-  }
-
-  if (!optionSuccess) {
+  //
+  std::string filename = keys["filename"];
+  if (filename.empty()) {
+    LogSevere("Need a filename to output\n");
     return false;
   }
-
-  // Default is old way...pull back coverage.  We'll replace
-  // them all with bbox calculation?
-  size_t rows     = cover.rows;
-  size_t cols     = cover.cols;
-  double top      = cover.topDegs;
-  double left     = cover.leftDegs;
-  double deltaLat = cover.deltaLatDegs;
-  double deltaLon = cover.deltaLonDegs;
-  bool transform  = false;
-
-  // New stuff for moment...trying to project correctly...
-  // We'll create bbox from the zoom level...
-  // FIXME: Sooo much cleanup will happen later..right now just want
-  // things to start working.  I'm thinking projection library
-  // will deal with lat/lon bboxes only..which will then be projected
-  // to correct coordinate system..
-  // Let's get center of the datatype...
-  auto centerthing   = dt->getCenterLocation();
-  double myCenterLat = centerthing.getLatitudeDeg();
-  double myCenterLon = centerthing.getLongitudeDeg();
-
-  if (bbox.empty()) { // New auto tile mode
-    std::string mode     = "";
-    int zoomLevel        = 0;
-    double centerLatDegs = myCenterLat; // 35.22;
-    double centerLonDegs = myCenterLon; // -97.44;
-    try {
-      auto output = dfs->getChild("output");
-      mode      = output.getAttr("mode", mode);
-      zoomLevel = output.getAttr("zoom", zoomLevel);
-      centerLatDegs = output.getAttr("centerLatDegs", double(centerLatDegs));
-      centerLonDegs = output.getAttr("centerLonDegs", double(centerLonDegs));
-      // read rows, cols...
-
-      // This 'should' be width in degrees of the tile at zoom level, everything else
-      // has to be calculated in the projected space I think.  Basically divide the width
-      // of the map (the earth)
-      double halfDegWidth = 180.0 / pow(2, zoomLevel);
-
-      // Project left and right sides to projected system..
-      double xOutLeft, yOutLeft;
-
-      double source1 = centerLonDegs - halfDegWidth;
-      double source2 = centerLonDegs + halfDegWidth;
-
-      project2->LatLonToXY(centerLatDegs, source1, xOutLeft, yOutLeft);
-      double xOutRight, yOutRight;
-      project2->LatLonToXY(centerLatDegs, source2, xOutRight, yOutRight);
-
-      double widthx = abs(xOutRight - xOutLeft); // width of tile
-
-      left      = xOutLeft;
-      deltaLon  = widthx / cols;                      // March per pixel left to right
-      deltaLat  = -(widthx / rows);                   // going 'down' decreases in lat and y
-      top       = yOutLeft - (deltaLat * rows / 2.0); // Lat here is actually delta x
-      transform = true;                               // go from x to lat lon for data lookup right?
-    }catch (const std::exception& e) { }
-
-    LogInfo(
-      "Image writer settings: (filetype: " << suffix << ", " << cover << ")\n");
-  } else {
-    LogInfo(
-      "Image writer tile:" << bbox << "\n");
+  std::string suffix = keys["suffix"];
+  if (suffix.empty()) {
+    suffix = ".png";
   }
 
-  #if HAVE_MAGICK
-  auto colormap        = dtr.getColorMap();
-  const ColorMap& test = *colormap;
+  std::string bbox, bboxsr;
+  size_t rows;
+  size_t cols;
+  p.getBBOX(keys, rows, cols, bbox, bboxsr);
+  std::string mode = keys["mode"];
 
-  // const auto centerLLH = dtr.getLocation();
+  // FIXME: still need to cleanup suffix stuff
+  if (keys["directfile"] == "false") {
+    // We let writers control final suffix
+    filename         = filename + "." + suffix;
+    keys["filename"] = filename;
+  }
 
-  double right  = 0;
-  double bottom = 0;
+  // ----------------------------------------------------------------------
+  // Calculate bounding box for generating image
+  // Leave code here for now...need to merge handle multiprojection
+  // probably...but I want to prevent creating the projection over and over
+  bool transform = false;
+  if (bboxsr == "3857") { // if bbox in mercator need to project to lat lon for data lookup
+    transform = true;
+  }
 
-  // Note here the variables are in the projection space
+  // Box settings
+  double top      = 0;
+  double left     = 0;
+  double deltaLat = 0;
+  double deltaLon = 0;
   if (!bbox.empty()) {
     std::vector<std::string> pieces;
     Strings::splitWithoutEnds(bbox, ',', &pieces);
     if (pieces.size() == 4) {
       // I think with projected it's upside down? or I've double flipped somewhere
-      left   = std::stod(pieces[0]); // lon
-      bottom = std::stod(pieces[1]); // lat // is it flipped in the y?? must be
-      right  = std::stod(pieces[2]); // lon
-      top    = std::stod(pieces[3]); // lat
+      left = std::stod(pieces[0]);          // lon
+      double bottom = std::stod(pieces[1]); // lat // is it flipped in the y?? must be
+      double right  = std::stod(pieces[2]); // lon
+      top = std::stod(pieces[3]);           // lat
 
       // Transform the points from lat/lon to merc if BBOXSR set to "4326"
       if (bboxsr == "4326") {
         double xout1, xout2, yout1, yout2;
-
-
-        // test and die
-
-        /*
-         * double lattest = 30; double lontest = -80;
-         * project2->LatLonToXY(lattest, lontest, xout1, yout1);
-         * LogSevere("FIRST: 30, -80 " << xout1 << ", " << yout1 << "\n");
-         *
-         * double inx = xout1; double iny = yout1;
-         * double latback, lonback;
-         * project2->xyToLatLon(inx, iny, latback, lonback);
-         * LogSevere("REVERSE: " << latback << ", " << lonback << "\n");
-         */
-
         project2->LatLonToXY(bottom, left, xout1, yout1);
         project2->LatLonToXY(top, right, xout2, yout2);
-        // project2->xyToLatLon(inx, iny, aLat, aLon);
-        left   = xout1;
-        bottom = yout1;
-        right  = xout2;
-        top    = yout2;
-
-        // LogSevere("TRANSFORM TO " << top << ", " << left << ", " << bottom << ", " << right << "\n");
+        left      = xout1;
+        bottom    = yout1;
+        right     = xout2;
+        top       = yout2;
+        transform = true; // yes go from mer to lat for data
       }
-
-      deltaLat  = (bottom - top) / rows; // good
-      deltaLon  = (right - left) / cols;
-      transform = true;
+      deltaLat = (bottom - top) / rows; // good
+      deltaLon = (right - left) / cols;
     }
   }
 
-  // Final rendering
+  // ----------------------------------------------------------------------
+  // Final rendering using the BBOX
+  #if HAVE_MAGICK
   try{
+    auto colormap        = dtr.getColorMap();
+    const ColorMap& test = *colormap;
     Magick::Image i;
     i.size(Magick::Geometry(cols, rows));
     i.magick("RGBA");
@@ -357,12 +275,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     i.draw(text);
     # endif // if 0
 
-    // Our params are either a direct filename or a directory
-    bool useSubDirs = true; // Use subdirs
-    URL aURL        = IODataType::generateFileName(dt, params, suffix, directFile, useSubDirs);
-    i.write(aURL.toString());
-    // Make record
-    IODataType::generateRecord(dt, aURL, "image", records);
+    i.write(filename);
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");

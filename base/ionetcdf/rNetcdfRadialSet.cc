@@ -41,11 +41,11 @@ NetcdfRadialSet::read(const int ncid, const URL& loc)
 
 bool
 NetcdfRadialSet::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<PTreeNode> dfs)
+  std::map<std::string, std::string>& keys)
 {
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Azimuth", "Gate"
-  return (NetcdfDataGrid::write(ncid, dt, dfs));
+  return (NetcdfDataGrid::write(ncid, dt, keys));
 } // NetcdfRadialSet::write
 
 std::shared_ptr<DataType>

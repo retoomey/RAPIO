@@ -146,14 +146,24 @@ public:
   virtual bool
   writeDirectOutput(const URL& path,
     std::shared_ptr<DataType> outputData,
-    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
+    std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
   writeOutputProduct(const std::string& key,
     std::shared_ptr<DataType> outputData,
-    const std::map<std::string, std::string>& outputParams = std::map<std::string, std::string>());
+    std::map<std::string, std::string>& outputParams);
+
+  /** Write data to given key.  Key must exist/match the keys from
+   * addOutputProduct */
+  virtual void
+  writeOutputProduct(const std::string& key,
+    std::shared_ptr<DataType>         outputData)
+  {
+    std::map<std::string, std::string> outputParams;
+    writeOutputProduct(key, outputData, outputParams);
+  }
 
   /** Get the maximum history specified by user */
   static TimeDuration

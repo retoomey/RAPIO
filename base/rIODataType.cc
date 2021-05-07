@@ -155,10 +155,10 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
     if (useSubDirs) {
       // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
       const std::string extra = subType.empty() ? ("") : ('/' + subType);
-      filepath = dirbase + '/' + dataType + extra + '/' + time_string + '.' + suffix;
+      filepath = dirbase + '/' + dataType + extra + '/' + time_string; //  + '.' + suffix;
     } else {
       // Example: dirName/TIMESTRING_Reflectivity_00.50.netcdf
-      const std::string extra = subType.empty() ? ('.' + suffix) : ('_' + subType + '.' + suffix);
+      const std::string extra = subType.empty() ? ('.' + suffix) : ('_' + subType); //  + '.' + suffix);
       filepath = dirbase + '/' + time_string + '_' + dataType + extra;
     }
     path = URL(filepath);
@@ -242,7 +242,7 @@ IODataType::write(std::shared_ptr<DataType> dt,
   bool directFile,
   std::vector<Record> & records,
   const std::string & factory,
-  const std::map<std::string, std::string>  & outputParams)
+  std::map<std::string, std::string>  & outputParams)
 {
   // The static method grabs the first factory and sends to it to handle
   // This is assuming outputinfo is a file name?
@@ -256,39 +256,81 @@ IODataType::write(std::shared_ptr<DataType> dt,
   return encoder->writeout(dt, outputinfo, directFile, records, f, outputParams);
 } // IODataType::write
 
+void
+IODataType::handleCommandParam(const std::string& command,
+  std::map<std::string, std::string> &outputParams)
+{
+  // The default is factory=outputfolder.  Python for example splits
+  // the command param into script,outputfolder
+  outputParams["outputfolder"] = command;
+}
+
 bool
 IODataType::writeout(std::shared_ptr<DataType> dt,
   const std::string & outputinfo,
   bool directFile,
   std::vector<Record> & records,
   const std::string & knownfactory,
-  const std::map<std::string, std::string>  & outputParams)
+  std::map<std::string, std::string>  & outputParams)
 {
-  // We are the known factory at this point.
-  // 2. Settings for the writer come from xml
-  std::shared_ptr<PTreeNode> dfs;
-  if (outputParams.size() > 0) {
-    // 2-1 Create new one for 'output' line only
-    dfs = std::make_shared<PTreeNode>(); // make a temp one
-    PTreeNode child;
-    for (auto& x:outputParams) {
-      child.putAttr(x.first, x.second);
+  // Add any output fields not explicitly set by caller
+  // Basically outputParams overrides settings from rapiosettings.xml
+  // I think this design is simplier in long run.
+  std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings(knownfactory);
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      auto map    = output.getAttrMap();
+      for (auto& x:map) {
+        if (outputParams.count(x.first) == 0) {
+          outputParams[x.first] = x.second;
+        }
+      }
+    }catch (const std::exception& e) {
+      // it's ok, use the passed params
     }
-    dfs->addNode("output", child);
-  } else {
-    // 2-2 Try to get the rapiosettings info for the factory
-    dfs = ConfigIODataType::getSettings(knownfactory);
   }
 
-  // 3. Output file and generate records
-  return encodeDataType(dt, outputinfo, dfs, directFile, records);
-}
+  // We'll handle generating filename and paths required here.
+  // Why does this require suffix?
+  bool useSubDirs = true; // Use subdirs (should be a flag on us right?)
+  // I don't think we 'need' the suffix here...
+  // Writer should modify the filename....
+  std::string suffix = "";
+
+  // Parse/get output folder for writing directory
+  handleCommandParam(outputinfo, outputParams);
+  const std::string folder = outputParams["outputfolder"];
+  URL aURL = generateFileName(dt, folder, suffix, directFile, useSubDirs);
+
+  // Here we go right?  Chicken egg issue with suffix I think...
+  outputParams["filename"] = aURL.toString(); // base filename.  Writer determines ending unless directFile right?
+
+  // FIXME: direct files vs generated..bleh. One has suffix, one doesn't
+  // I still need to 'fix' this I think
+  outputParams["directfile"] = directFile ? "true" : "false"; // don't like this right now it's a suffix flag
+
+  // Pass map to children.  Note: children can use the map to reply back to caller as well
+  bool success = encodeDataType(dt, outputParams);
+
+  // Generate a notification record on successful write of output file
+  if (success) {
+    const std::string finalFile = outputParams["filename"];
+    if (!finalFile.empty()) {
+      // FIXME: ok so we could not create record in first place if not wanted, right?
+      IODataType::generateRecord(dt, finalFile, knownfactory, records);
+    }
+  }
+
+  return success;
+} // IODataType::writeout
 
 bool
 IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, const std::string& factory)
 {
   std::vector<Record> blackHole;
-  return write(dt, outputinfo, true, blackHole, factory); // Default write single file
+  std::map<std::string, std::string> empty;
+  return write(dt, outputinfo, true, blackHole, factory, empty); // Default write single file
 }
 
 size_t

@@ -146,47 +146,42 @@ IOPython::runDataProcess(const std::string& command,
   return output;
 }
 
-bool
-IOPython::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                               & params,
-  std::shared_ptr<PTreeNode>                      dfs,
-  bool                                            directFile,
-  // Output for notifiers
-  std::vector<Record>                             & records
-)
+void
+IOPython::handleCommandParam(const std::string& command,
+   std::map<std::string, std::string> &outputParams)
 {
-  // Param format is scriptpath,outputfolder
-  // unlike others that are typically just outputfolder
+  // The default is factory=outputfolder.  Python for example splits
+  // the command param into script,outputfolder
   std::vector<std::string> pieces;
-  Strings::splitWithoutEnds(params, ',', &pieces);
+  Strings::splitWithoutEnds(command, ',', &pieces);
   if (pieces.size() < 2){
     LogSevere("PYTHON= format should be scriptpath,outputfolder\n");
-    LogSevere("        Tried to parse from '"<<params<<"'\n");
-    return false;
+    LogSevere("        Tried to parse from '"<<command<<"'\n");
   }
-  std::string pythonScript = pieces[0];
-  std::string outputFolder = pieces[1];
+  outputParams["scriptname"] = pieces[0];
+  outputParams["outputfolder"] = pieces[1];
+}
 
+bool
+IOPython::encodeDataType(std::shared_ptr<DataType> dt,
+  std::map<std::string, std::string>              & keys
+)
+{
   // -------------------------------------------------------------------
   // Settings
-  static bool havePython = false;
-  static std::string python = "/usr/bin/python";
-
-  bool outputPython = false;
-  if (dfs != nullptr) {
-    try{
-      auto output = dfs->getChild("output");
-      python = output.getAttr("bin", python);
-      std::string outPython = "";
-      outPython = output.getAttr("print", outPython);
-      outputPython = (outPython == "true");
-    }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
-    }
+  bool outputPython = (keys["print"] == "true");
+  const std::string pythonScript = keys["scriptname"];
+  const std::string outputFolder = keys["outputfolder"];
+  std::string  filename = keys["filename"];
+  if (filename.empty()){
+    LogSevere("Need a filename to output\n");
+    return false;
   }
 
   // Try a first time hunt for python...assuming which installed
   // FIXME: Could be OS routine..
+  static bool havePython = false;
+  static std::string python = "/usr/bin/python";
   if (!havePython){
     // Try to find python...because of python2, 3, etc. This isn't clear-cut
     // which needs to be installed
@@ -204,30 +199,32 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
     }
     havePython = true;
   }
+  auto p = keys["bin"]; // force override the python with setting.  Check for it?
+  if (!p.empty()){ python = p; }
   // -------------------------------------------------------------------
 
   // FIXME: Ok at the moment only DataGrid supported, though I can see
   // expanding this to be general DataType
+  bool success = false;
   auto dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   if (dataGrid != nullptr){
-    //
-    bool useSubDirs = true; // Use subdirs
-    URL aURL        = IODataType::generateFileName(dt, outputFolder, "", directFile, useSubDirs);
-
     std::string pythonCommand = python+" "+pythonScript;
-    LogInfo("RUN PYTHON:" << pythonCommand << "\n");
-    auto output = runDataProcess(pythonCommand, aURL.toString(), dataGrid);
+    LogInfo("RUN PYTHON:" << pythonCommand << " BASEURL: " << filename << "\n");
+    auto output = runDataProcess(pythonCommand, filename, dataGrid);
 
     // Hunt python output for RAPIO tags
-    std::string fileout, factory;
+    bool haveFileBack = false;
+    bool haveFactoryBack = false;
     for (auto v:output) {
       // We'll always use RAPIO to mark returns.  I want it to fail as soon as possible for speed
       if ((v.size() > 4) && (v[0] == 'R') && (v[1] == 'A') && (v[2] == 'P') && (v[3] == 'I') && (v[4] == 'O')){
           if (Strings::removePrefix(v, "RAPIO_FILE_OUT:")){
-             fileout = v;
+             keys["filename"] = v;
+             haveFileBack = true;
              continue;
           }else if (Strings::removePrefix(v, "RAPIO_FACTORY_OUT:")){
-             factory = v;
+             keys["factory"] = v;
+             haveFactoryBack = true;
              continue;
           }
       }
@@ -236,14 +233,11 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
         LogInfo("PYTHON:"<<v<<"\n");
       }
     }
+    success = haveFileBack && haveFactoryBack;
 
-    // Make record using output from python...
-    if (fileout != ""){
-      IODataType::generateRecord(dt, URL(fileout), factory, records);
-    }
   }else{
     LogSevere("This is not a DataGrid or subclass, can't call Python yet with this\n");
   }
 
-  return false;
+  return success;
 } // IOPython::encodeDataType

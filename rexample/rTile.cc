@@ -185,6 +185,8 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
         // We'll have to enhance this for time and multi product at some point
         pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile.png";
+        LogInfo("WMS_BBOX:" << myOverride["BBOX"] << "\n");
+        myOverride["BBOXSR"] = "3857"; // isn't this passed in somewhere?
 
         // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
         // This divides the world into equal spherical mercator squares.  We'll translate to bbox
@@ -214,14 +216,11 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         const double lat1 = tiley2lat(y, z);
         const double lon2 = tilex2long(x + 1, z);
         const double lat2 = tiley2lat(y + 1, z);
-        myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat1) + "," + std::to_string(lon2) + ","
-          + std::to_string(lat2);
-        LogSevere("Calculated " << myOverride["BBOX"] << "\n");
+        myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
+          + std::to_string(lat1);
         myOverride["BBOXSR"] = "4326"; // Lat/Lon
-        // Wow you'd think all the documentation it would be standard or something lol,
-        // FIXME: come back to this
-        LogSevere("TMS tiles not working yet :( use WMS, havan't gotten the projection math correct here...\n");
-        return;
+
+        LogInfo("TMS_BBOX:" << myOverride["BBOX"] << "\n");
       } else {
         LogSevere("Expected either wms or tms server types. http://servername/wms/... \n");
         return;

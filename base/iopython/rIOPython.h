@@ -35,14 +35,16 @@ public:
   std::vector<std::string> runDataProcess(const std::string& command, 
     const std::string& filename, std::shared_ptr<DataGrid> datagrid);
 
+  /** Handle parsing the command line param.  For example
+  * factory=outputfolder, or factory= script, outputfolder.
+  * This turns the command line into the param map values */
+  virtual void handleCommandParam(const std::string& command,
+   std::map<std::string, std::string> &outputParams) override;
+
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const std::string                      & params,
-    std::shared_ptr<PTreeNode>             dfs,
-    bool                                   directFile,
-    // Output for notifiers
-    std::vector<Record>                    & records
+    std::map<std::string, std::string>     & keys
   ) override;
 
   virtual

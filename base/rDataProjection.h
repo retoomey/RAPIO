@@ -53,6 +53,11 @@ public:
     return Constants::MissingData;
   }
 
+  /** Calculate BBOX and BBOXSR */
+  virtual bool
+  getBBOX(std::map<std::string, std::string>& keys,
+    size_t& rows, size_t& cols, std::string& bbox, std::string& bboxsr);
+
   /** Create projection based on standard fields passed in */
   virtual bool
   getLLCoverage(const PTreeNode& fields, LLCoverage& c);

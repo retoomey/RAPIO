@@ -125,39 +125,29 @@ IOJSON::writeURL(
 
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                              & params,
-  std::shared_ptr<PTreeNode>                     dfs,
-  bool                                           directFile,
-  // Output for notifiers
-  std::vector<Record>                            & records
+  std::map<std::string, std::string>     & keys
 )
 {
   // Get settings
-  bool indent     = true;
-  bool useSubDirs = true; // Use subdirs
+  const bool indent = (keys["indent"] == "true");
 
-  if (dfs != nullptr) {
-    try{
-      auto output = dfs->getChild("output");
-      indent = output.getAttr("indent", indent);
-    }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
-    }
+  LogInfo("JSON settings: indent: " << indent << "\n");
+  std::string filename = keys["filename"];
+  if (keys["directfile"] == "false") {
+    filename         = filename + ".xml";
+    keys["filename"] = filename;
   }
-  LogInfo("JSON settings: indent: " << indent << " useSubDirs: " << useSubDirs << "\n");
-  URL aURL = IODataType::generateFileName(dt, params, "json", directFile, useSubDirs);
 
   bool successful = false;
   try{
     std::shared_ptr<PTreeData> json = std::dynamic_pointer_cast<PTreeData>(dt);
     if (json != nullptr) {
-      writeURL(aURL, json, true, false);
+      writeURL(filename, json, true, false);
       successful = true;
-      IODataType::generateRecord(dt, aURL, "json", records);
     }
   }catch (const std::exception& e) {
     LogSevere("JSON create error: "
-      << aURL.getPath() << " " << e.what() << "\n");
+      << filename << " " << e.what() << "\n");
   }
   return successful;
 }

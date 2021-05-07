@@ -32,7 +32,7 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc)
 
 bool
 NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
-  std::shared_ptr<PTreeNode> dfs)
+  std::map<std::string, std::string>& keys)
 {
   // Generalize the writer maybe...
   // if (dfs->cdmcompliance || dfs->faacompliance) {
@@ -40,7 +40,7 @@ NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
   // }
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Lat", "Lon"
-  return (NetcdfDataGrid::write(ncid, dt, dfs));
+  return (NetcdfDataGrid::write(ncid, dt, keys));
 } // NetcdfLatLonGrid::write
 
 std::shared_ptr<DataType>

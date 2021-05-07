@@ -37,6 +37,20 @@ public:
     return (node.get_value<Type>());
   }
 
+  /** Simple get all attributes, if any as a string map */
+  std::map<std::string, std::string>
+  getAttrMap()
+  {
+    std::map<std::string, std::string> attrList;
+    auto attrs = node.get_child_optional("<xmlattr>");
+    if (attrs != boost::none) {
+      for (auto& c: *attrs) {
+        attrList[c.first] = c.second.get_value<std::string>();
+      }
+    }
+    return attrList;
+  }
+
   /** Get attr from node, or default if missing */
   template <class Type>
   Type

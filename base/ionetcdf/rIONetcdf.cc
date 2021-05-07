@@ -129,11 +129,7 @@ IONetcdf::readNetcdfDataType(const URL& url)
 
 bool
 IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
-  const std::string                                & params,
-  std::shared_ptr<PTreeNode>                       dfs,
-  bool                                             directFile,
-  // Output for notifiers
-  std::vector<Record>                              & records
+  std::map<std::string, std::string>              & keys
 )
 {
   /** So myLookup "RadialSet" writer for example from the data type.
@@ -157,37 +153,43 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // Get general netcdf settings
-  int ncflags = NC_NETCDF4;
-  if (dfs != nullptr) {
-    try{
-      auto output = dfs->getChild("output");
-      ncflags = output.getAttr("ncflags", ncflags);
-      IONetcdf::GZ_LEVEL = output.getAttr("deflate_level", IONetcdf::GZ_LEVEL);
-    }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
-    }
+  int ncflags;
+  try{
+    ncflags = std::stoi(keys["ncflags"]);
+  }catch (const std::exception& e) {
+    ncflags = NC_NETCDF4;
+  }
+  try{
+    IONetcdf::GZ_LEVEL = std::stoi(keys["deflate_level"]);
+  }catch (const std::exception& e) {
+    IONetcdf::GZ_LEVEL = 6;
+  }
+  std::string filename = keys["filename"];
+  if (filename.empty()) {
+    LogSevere("Need a filename to output\n");
+    return false;
+  }
+  // FIXME: still need to cleanup suffix stuff
+  if (keys["directfile"] == "false") {
+    // We let writers control final suffix
+    filename         = filename + ".netcdf";
+    keys["filename"] = filename;
   }
   LogInfo("Netcdf settings: cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << "\n");
 
   // Open netcdf file
   int ncid = -1;
 
-  // Probably should be per builder...
-  // Our params represent an output file...
-  // bool useSubDirs = ConfigIODataType::getUseSubDirs();
-  bool useSubDirs = true; // Use subdirs
-  // Our params are either a direct filename or a directory
-  URL aURL = IODataType::generateFileName(dt, params, "netcdf", directFile, useSubDirs);
   // NC_memio finalmem;
   // size_t initialsize = 65000;
   try {
     // NETCDF(nc_create_mem("testing", NC_NETCDF4, initialsize, &ncid));
-    NETCDF(nc_create(aURL.getPath().c_str(), ncflags, &ncid));
+    NETCDF(nc_create(filename.c_str(), ncflags, &ncid));
   } catch (const NetcdfException& ex) {
     // nc_close_memio(ncid, &finalmem);
     nc_close(ncid);
     LogSevere("Netcdf create error: "
-      << aURL.getPath() << " " << ex.getNetcdfStr() << "\n");
+      << filename << " " << ex.getNetcdfStr() << "\n");
     return false;
   }
 
@@ -196,8 +198,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   bool successful = false;
 
   try {
-    successful = fmt->write(ncid, dt, dfs);
-    IODataType::generateRecord(dt, aURL, "netcdf", records);
+    successful = fmt->write(ncid, dt, keys);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");

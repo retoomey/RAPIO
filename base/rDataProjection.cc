@@ -4,6 +4,7 @@
 #include "rRadialSetLookup.h"
 #include "rLatLonGrid.h"
 #include "rProject.h"
+#include "rStrings.h"
 
 #include <iostream>
 
@@ -26,8 +27,89 @@ rapio::operator << (ostream& os, const LLCoverage& p)
 }
 
 bool
+DataProjection::getBBOX(
+  std::map<std::string, std::string>& keys,
+  size_t& rows,
+  size_t& cols,
+  std::string& bbox,
+  std::string& bboxsr)
+{
+  // Look for the standard bbox, bboxsr, rows, cols
+  bbox   = keys["BBOX"];
+  bboxsr = keys["BBOXSR"];
+  std::string mode = keys["mode"];
+  if (mode.empty()) {
+    mode         = "tile";
+    keys["mode"] = mode;
+  }
+
+  try{
+    rows = std::stoi(keys["rows"]); // could except
+    cols = std::stoi(keys["cols"]);
+  }catch (const std::exception& e) {
+    LogSevere("Unrecognized rows/cols settings, using defaults\n");
+    rows = 256;
+    cols = 256;
+  }
+
+  // ----------------------------------------------------------------------
+  // Calculate bounding box for generating image
+  //
+
+  // Check if center, width, height set, create bbox from extent?
+  if (bbox.empty()) { // New auto tile mode
+    // Try zoom, center ability based on web mercator
+    size_t zoom;
+    double centerLatDegs, centerLonDegs;
+
+    try{
+      zoom = std::stoi(keys["zoom"]);
+      centerLatDegs = std::stod(keys["centerLatDegs"]);
+      centerLonDegs = std::stod(keys["centerLonDegs"]);
+    }catch (const std::exception& e) {
+      LogSevere("Require zoom, centerLatDegs and centerLonDegs to create image.\n");
+      return false;
+    }
+
+    // MRMS tile math for moment for 'giant' tiles.
+    // Probably giving up on this for a while...bounding box works best
+    // for generating images, not zoom/centers
+    zoom += 2;
+    const double deg_to_rad = (2.0 * M_PI) / 360.0; // should be in math somewhere
+    const double rad_to_deg = 360 / (2.0 * M_PI);
+    const double powz       = pow(2, zoom);
+    const size_t pix_c      = 256 * powz;
+    const double pix_radius = 256 * powz / (2.0 * M_PI);
+
+    double raw_lonW = (centerLonDegs + 360 * ((-1.0 * cols / 2.0) / pix_c));
+    double raw_lonE = (centerLonDegs + 360 * ((1.0 * cols / 2.0) / pix_c));
+    if (raw_lonW > 180) {    raw_lonW = raw_lonW - 360; }
+    if (raw_lonW <= -180) {  raw_lonW = raw_lonW + 360; }
+    if (raw_lonE > 180) {    raw_lonE = raw_lonE - 360; }
+    if (raw_lonE <= -180) {  raw_lonE = raw_lonE + 360; }
+
+    double cLatRad       = centerLatDegs * deg_to_rad;
+    double old_pix_to_eq = pix_radius * log((1.0 + sin(cLatRad)) / cos(cLatRad));
+    double pixN     = rows / 2.0;
+    double raw_latN = (rad_to_deg) * (2.0 * atan(pow(M_E, (old_pix_to_eq + pixN) / pix_radius))) - 90.0;
+    double raw_latS = (rad_to_deg) * (2.0 * atan(pow(M_E, (old_pix_to_eq - pixN) / pix_radius))) - 90.0;
+
+    bbox = std::to_string(raw_lonW) + "," + std::to_string(raw_latS) + ","
+      + std::to_string(raw_lonE) + "," + std::to_string(raw_latN);
+    bboxsr = "4326"; // translate to web merc
+  } else {
+    LogInfo(
+      "Image writer tile:" << bbox << "\n");
+  }
+
+  return false;
+} // DataProjection::getBBOX
+
+bool
 DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
 {
+  // Retiring?
+
   // Factory for reading our XML projection settings
   // a bit messy this first pass, probably will refactor more
   bool optionSuccess = false;

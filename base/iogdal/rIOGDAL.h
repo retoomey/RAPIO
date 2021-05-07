@@ -67,11 +67,7 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    const std::string                      & params,
-    std::shared_ptr<PTreeNode>             dfs,
-    bool                                   directFile,
-    // Output for notifiers
-    std::vector<Record>                    & records
+    std::map<std::string, std::string>     & keys
   ) override;
 
   virtual
