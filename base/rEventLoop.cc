@@ -15,38 +15,62 @@ using namespace std;
 
 using namespace std::chrono;
 
-vector<std::shared_ptr<EventTimer> > EventLoop::myTimers;
+vector<std::shared_ptr<EventHandler> > EventLoop::myEventHandlers;
+
+// Thread sync to main loop
+// Would be nice to hide these with functions...maybe we can?
+std::mutex EventLoop::theEventLock;
+std::condition_variable EventLoop::theEventCheckVariable;
+bool EventLoop::theReady;
+
+void
+EventLoop::threadWatcher()
+{
+  while (true) {
+    std::unique_lock<std::mutex> lck(theEventLock);
+    theEventCheckVariable.wait(lck, [] { return theReady;
+      });
+
+    // We're now locked, so turn off flag so another timer can trigger it again.
+    // However, we can't 'do' anything while locked or any thread trying to retrigger will
+    // deadlock. Copy the list of currently 'ready' timers.
+    theReady = false;
+    std::vector<std::shared_ptr<EventHandler> > isReady;
+    for (auto& a:myEventHandlers) {
+      if (a->isReady()) {
+        isReady.push_back(a);
+      }
+    }
+    lck.unlock(); // actions might turn on dataReady again from either the called threads,
+                  // or others that go off while we're working
+
+    // Now we can tell them all to do work.  Also, firing now will clear flags safely
+    for (auto&a:isReady) {
+      a->actionMainThread();
+    }
+  }
+}
 
 void
 EventLoop::doEventLoop()
 {
-  // This is our event loop.  We use a poll/delay loop
-  LogInfo("Starting MAIN loop with " << myTimers.size() << " EventTimers.\n");
-  for (auto& i:myTimers) {
-    LogDebug("  EventTimer: " << i->myName << " (" << i->myDelayMS << " ms)\n");
+  LogInfo("Starting MAIN loop with " << myEventHandlers.size() << " Event handlers.\n");
+  for (auto& i:myEventHandlers) {
+    LogDebug("  EventHandler: " << i->getName() << "\n");
   }
 
-  // Start all registered timer objects
-  auto start = std::chrono::high_resolution_clock::now();
-  for (auto& i:myTimers) {
-    i->start(start);
+  // Create any timer threads wanted, these will fire on timers
+  std::vector<std::thread> theThreads;
+  for (auto& i:myEventHandlers) {
+    i->createTimerThread(theThreads);
   }
 
-  while (1) {
-    // Check if any timer ready during our 'idle'.  If so,
-    // we short circuit our idle to min timer ready time.
-    // We might not need this level of accuracy for timers
-    // Handle timers.  Each one gets a chance.  Since we don't use
-    // interrupts it's up to me to write classes that yield
-    for (auto& i:myTimers) {
-      // Keep time fetches IN loop, timers take time to do stuff
-      auto atNow  = std::chrono::high_resolution_clock::now();
-      double here = i->readyInMS(atNow);
-      if (here <= 0.0) {
-        i->action(); // takes time
-        auto newNow = std::chrono::high_resolution_clock::now();
-        i->start(newNow); // reset very close to now, or then... ;)
-      }
-    }
+  // Main watcher thread
+  std::thread mainloop(&EventLoop::threadWatcher);
+
+  // Have to join threads at the very end
+  for (auto& t:theThreads) {
+    t.join();
   }
+  mainloop.join();
 } // EventLoop::doEventLoop

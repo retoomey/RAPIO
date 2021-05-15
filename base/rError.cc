@@ -303,7 +303,7 @@ Log::Log()
 
   // Set up a timer to auto flush logs, default for now until set by config
   auto flusher = make_shared<LogFlusher>(900);
-  EventLoop::addTimer(flusher);
+  EventLoop::addEventHandler(flusher);
   myLogFlusher = flusher;
 }
 
@@ -408,7 +408,7 @@ Log::setSeverityString(const std::string& level)
       // FIXME: No way to configure timer at moment.  We need to balance
       // between hammering OS and taking too long to update.  For now change every 30 seconds
       std::shared_ptr<LogSettingURLWatcher> watcher = std::make_shared<LogSettingURLWatcher>(level, 30000);
-      EventLoop::addTimer(watcher);
+      EventLoop::addEventHandler(watcher);
       l.myLogURLWatcher = watcher;
     } else {
       l.myLogURLWatcher->setURL(level);

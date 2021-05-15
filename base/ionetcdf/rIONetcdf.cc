@@ -148,7 +148,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   if (fmt == nullptr) {
-    LogSevere("Can't create IO writer for " << type << "\n");
+    LogSevere("Can't create a netcdf IO writer for datatype " << type << "\n");
     return false;
   }
 

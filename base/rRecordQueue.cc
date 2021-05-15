@@ -14,7 +14,7 @@ long long RecordQueue::poppedRecords = 0;
 
 RecordQueue::RecordQueue(
   RAPIOAlgorithm * alg
-) : EventTimer(0, "RecordQueue") // Run me as fast as you can
+) : EventHandler("RecordQueue") // Run me as fast as you can
 {
   myAlg = alg; // Only for archive stop...hummm
 }
@@ -24,6 +24,8 @@ RecordQueue::addRecord(Record& record)
 {
   myQueue.push(record);
   pushedRecords++;
+  // Record pushed, notify ready for action
+  setReady();
 }
 
 void
@@ -34,17 +36,28 @@ RecordQueue::addRecords(std::vector<Record>& records)
     myQueue.push(r); // copy or move?  We should switch to pointers I think...
     pushedRecords++;
   }
+  // Have more available to process
+  if (!myQueue.empty()) {
+    setReady();
+  }
 }
 
 void
 RecordQueue::action()
 {
-  if (myQueue.empty()) {
-    myAlg->handleEndDatasetEvent();
-  } else {
+  // Process one record if there...
+  if (!myQueue.empty()) {
     Record r = myQueue.top();
     myQueue.pop();
     poppedRecords++;
     myAlg->handleRecordEvent(r);
+  }
+
+  // If queue empty (possibly post processing one, fire end event)
+  if (myQueue.empty()) {
+    myAlg->handleEndDatasetEvent();
+  } else {
+    // ...otherwise we want to fire again
+    setReady();
   }
 }

@@ -20,7 +20,7 @@ IOWatcher::introduce(const string & protocol,
   std::shared_ptr<WatcherType>    factory)
 {
   Factory<WatcherType>::introduce(protocol, factory);
-  EventLoop::addTimer(factory);
+  EventLoop::addEventHandler(factory);
 }
 
 void

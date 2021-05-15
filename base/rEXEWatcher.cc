@@ -151,7 +151,7 @@ EXEWatcher::EXEInfo::connect()
   // I think checking ret once at end is enough for our purposes,
   // since the final spawn should fail if anything in pipeline did.
   if (ret) {
-    LogSevere("Spawned EXE watcher failed to call external process\n");
+    LogSevere("Spawned EXE watcher failed to call external process. Is the executable in path?\n");
     return false;
   }
 

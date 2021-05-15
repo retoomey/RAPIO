@@ -4,9 +4,11 @@
 
 #include <vector>
 #include <memory>
+#include <condition_variable>
+#include <mutex>
 
 namespace rapio {
-class EventTimer;
+class EventHandler;
 
 /** Main event loop of the running application,
  * which polls registered synchronous timers to do all our work.
@@ -19,10 +21,18 @@ public:
   /** Add timer to list.  No mechanism for searching/replacing
   * deleting here, but we can add that easy later if wanted */
   static void
-  addTimer(std::shared_ptr<EventTimer> t)
+  addEventHandler(std::shared_ptr<EventHandler> t)
   {
-    myTimers.push_back(t);
+    myEventHandlers.push_back(t);
   }
+
+  /** Called by threads to notify action is required */
+  static void
+  notifyReady(){ }
+
+  /** Main thread watcher thread */
+  static void
+  threadWatcher();
 
   /** Start the application main loop */
   static void
@@ -34,9 +44,21 @@ public:
   /** Destroy an event loop */
   virtual ~EventLoop(){ }
 
+  // Humm maybe hide these better.  The timers will use these to
+  // sync with event loop
+
+  /** Lock for check thread variable and for pulling thread ready states */
+  static std::mutex theEventLock;
+
+  /** Conditional variable marking some thread is ready */
+  static std::condition_variable theEventCheckVariable;
+
+  /** Ready flag  */
+  static bool theReady;
+
 private:
 
   /** Timer/heartbeats in main loop */
-  static std::vector<std::shared_ptr<EventTimer> > myTimers;
+  static std::vector<std::shared_ptr<EventHandler> > myEventHandlers;
 };
 }

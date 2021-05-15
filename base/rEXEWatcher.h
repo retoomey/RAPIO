@@ -49,6 +49,7 @@ public:
     /** Create the events to be processed later */
     virtual void
     createEvents(WatcherType * w) override;
+
 protected:
 
     /** Pipe for cout for exe */

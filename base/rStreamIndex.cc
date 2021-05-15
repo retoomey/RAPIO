@@ -99,7 +99,6 @@ StreamIndex::handleNewEvent(WatchEvent * w)
      */
 
     // only work for one now
-
     // DFA style parsing the stream for <item> </item> groups...
     for (size_t i = 0; i < bytes_read; i++) {
       const char& c = b[i]; // lower case it?  only for tags though
@@ -123,15 +122,10 @@ StreamIndex::handleNewEvent(WatchEvent * w)
             // get a start tag and never get an end tag
             if (myItemEnd.parse(c)) {
               myDFAState = 0;
-              // Here we parse the XML record, create a new record for record queue
-              // for(size_t z=0; z<myLineCout.size(); z++){
-              //   std::cout << myLineCout[z];
-              // }
-              // std::cout << "\n";
 
-              std::shared_ptr<PTreeData> xml = std::make_shared<PTreeData>();
               try{
-                if (IODataType::readBuffer<PTreeData>(myLineCout, "xml")) {
+                auto xml = IODataType::readBuffer<PTreeData>(myLineCout, "xml");
+                if (xml) {
                   Record rec;
                   auto tree = xml->getTree();
                   auto item = tree->getChild("item");
@@ -142,7 +136,7 @@ StreamIndex::handleNewEvent(WatchEvent * w)
                   LogSevere("Failed record XML from stream, can't parse.\n");
                 }
               }catch (const std::exception& e) {
-                LogSevere("Failed record XML from stream, record invalid.\n");
+                LogSevere("Failed record XML from stream, record invalid: " << e.what() << "\n");
               }
               myLineCout.clear();
             }

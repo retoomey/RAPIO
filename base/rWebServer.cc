@@ -44,10 +44,8 @@ public:
 
 WebMessageQueue::WebMessageQueue(
   RAPIOAlgorithm * alg
-) : EventTimer(0, "WebMessageQueue") // Run me as fast as you can
-{
-  myAlg = alg;
-}
+) : EventHandler("WebMessageQueue"), myAlg(alg)
+{ }
 
 void
 WebMessageQueue::addRecord(std::shared_ptr<WebMessage> record)
@@ -56,6 +54,7 @@ WebMessageQueue::addRecord(std::shared_ptr<WebMessage> record)
   myQueueLock.lock();
   myQueue.push(record);
   myQueueLock.unlock();
+  setReady();
 }
 
 void
@@ -74,6 +73,11 @@ WebMessageQueue::action()
     r->result.set_value(true);
   }
   myQueueLock.unlock();
+
+  // process another web message when we can
+  if (!myQueue.empty()) {
+    setReady();
+  }
 }
 
 void

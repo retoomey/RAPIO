@@ -23,22 +23,12 @@ public:
 /** Record queue holds Records that will be sent to be processed when able.
  * @author Robert Toomey
  */
-class RecordQueue : public EventTimer
+class RecordQueue : public EventHandler
 {
 public:
   RecordQueue(
     RAPIOAlgorithm * alg
   );
-
-  /** The algorithm we send records to */
-  RAPIOAlgorithm * myAlg;
-
-  /** Records.  Stored in time order by record operator < */
-  std::priority_queue<Record, std::vector<Record>, RecordQueueSort> myQueue;
-
-  /** Run full speed.  Not sure we need to override this... */
-  virtual double
-  readyInMS(std::chrono::time_point<std::chrono::high_resolution_clock> at) override { return 0.0; }
 
   /** Add given record to queue */
   void
@@ -61,5 +51,13 @@ public:
 
   /** Simple counter of popped records */
   static long long poppedRecords;
+
+protected:
+
+  /** The algorithm we send records to */
+  RAPIOAlgorithm * myAlg;
+
+  /** Records.  Stored in time order by record operator < */
+  std::priority_queue<Record, std::vector<Record>, RecordQueueSort> myQueue;
 };
 }

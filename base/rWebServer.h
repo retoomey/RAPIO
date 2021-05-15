@@ -94,7 +94,7 @@ protected:
  *
  * @author Robert Toomey
  */
-class WebMessageQueue : public EventTimer
+class WebMessageQueue : public EventHandler
 {
 public:
   std::mutex myQueueLock;
@@ -102,16 +102,6 @@ public:
   WebMessageQueue(
     RAPIOAlgorithm * alg
   );
-
-  /** The algorithm we send records to */
-  RAPIOAlgorithm * myAlg;
-
-  /** Records.  We'll need a lock here I think.  Webserver will push, Main will pull. */
-  std::queue<std::shared_ptr<rapio::WebMessage> > myQueue;
-
-  /** Run full speed.  Not sure we need to override this... */
-  virtual double
-  readyInMS(std::chrono::time_point<std::chrono::high_resolution_clock> at) override { return 0.0; }
 
   /** Add given record to queue */
   void
@@ -123,6 +113,14 @@ public:
 
   /** Global priority queue used to process Web messages  */
   static std::shared_ptr<WebMessageQueue> theWebMessageQueue;
+
+protected:
+
+  /** The algorithm we send records to */
+  RAPIOAlgorithm * myAlg;
+
+  /** Records.  We'll need a lock here I think.  Webserver will push, Main will pull. */
+  std::queue<std::shared_ptr<rapio::WebMessage> > myQueue;
 };
 
 /** Main WebServer interface for passing to algorithms

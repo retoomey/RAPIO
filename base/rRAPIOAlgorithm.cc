@@ -422,22 +422,33 @@ RAPIOAlgorithm::execute()
     new ProcessTimer("Algorithm total runtime"));
 
   // Add RecordQueue
-  EventLoop::addTimer(q);
+  EventLoop::addEventHandler(q);
 
   // Add heartbeat
   if (heart != nullptr) {
-    EventLoop::addTimer(heart);
+    EventLoop::addEventHandler(heart);
   }
 
   // Launch event loop, either along with web server, or solo
   const bool wantWeb = (myWebServerMode != "off");
   myWebServerOn = wantWeb;
+
+  /*
+   * if (wantWeb) {
+   *  std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
+   *  WebMessageQueue::theWebMessageQueue = wmq;
+   *  EventLoop::addEventHandler(wmq);
+   * }
+   *
+   * EventLoop::doEventLoop();
+   */
+
   if (wantWeb) {
     // Create web message queue
     std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
     WebMessageQueue::theWebMessageQueue = wmq;
 
-    EventLoop::addTimer(wmq);
+    EventLoop::addEventHandler(wmq);
     WebServer::startWebServer(myWebServerMode);
   } else {
     // Do event loop solo
