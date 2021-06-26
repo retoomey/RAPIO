@@ -101,13 +101,11 @@ protected:
 
 public:
 
-  /** Generate a file name URL from datatype attributes and given suffix */
+  /** Generate a file name URL from datatype attributes */
   static URL
   generateFileName(std::shared_ptr<DataType> dt,
     const std::string                        & outputinfo,
-    const std::string                        & suffix,
-    bool                                     directFile,
-    bool                                     useSubDirs);
+    const std::string                        & basepattern);
 
   /** Generate a record based on URL */
   static void
@@ -124,7 +122,6 @@ public:
    */
   static bool
   write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
-    bool generateFileName,
     std::vector<Record>              & records,
     const std::string& factory,
     std::map<std::string, std::string>& outputParams);
@@ -154,7 +151,6 @@ public:
   /** Default write out handling for files */
   virtual bool
   writeout(std::shared_ptr<DataType> dt, const std::string& outputinfo,
-    bool generateFileName,
     std::vector<Record>              & records,
     const std::string& factory,
     std::map<std::string, std::string>& outputParams);

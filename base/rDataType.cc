@@ -10,6 +10,12 @@
 
 using namespace rapio;
 
+// Example: dirName/Reflectivity/00.50/TIMESTRING plus writer suffix such as .netcdf
+std::string DataType::DATATYPE_PREFIX = "{base}/{datatype}{/subtype}/{time}";
+
+// Example: dirName/TIMESTRING_Reflectivity_00.50 plus writer suffix (the subdirs flat flag from WDSS2)
+std::string DataType::DATATYPE_PREFIX_FLAT = "{base}/{time}_{datatype}{_subtype}";
+
 DataType::DataType() : myAttributes(std::make_shared<DataAttributeList>()), myTime(Time::CurrentTime()), myReadFactory(
     "default"), myTypeName("not set")
 { }

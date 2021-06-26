@@ -44,6 +44,10 @@ public:
   static bool
   isDirectory(const std::string& path);
 
+  /** Ensure full directory path exists, try to create as well */
+  static bool
+  ensureDirectory(const std::string& path);
+
   /** Test if path is a regular file */
   static bool
   isRegularFile(const std::string& path);

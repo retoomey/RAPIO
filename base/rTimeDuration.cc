@@ -17,12 +17,12 @@ TimeDuration::operator + (const Time& t) const
 TimeDuration
 operator * (double s, const TimeDuration& t)
 {
-  return (s * t.seconds());
+  return TimeDuration(s * t.milliseconds());
 }
 
 std::ostream&
 operator << (std::ostream& os, const TimeDuration& t)
 {
-  return (os << "[" << t.seconds() << " s]");
+  return (os << "[" << t.milliseconds() / 1000.0 << " s]");
 }
 }

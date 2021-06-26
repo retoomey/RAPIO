@@ -572,7 +572,8 @@ RAPIOAlgorithm::writeDirectOutput(const URL& path,
 {
   // return (IODataType::write(outputData, path.toString()));
   std::vector<Record> blackHole;
-  return IODataType::write(outputData, path.toString(), true, blackHole, "", outputParams); // Default write single file
+  outputParams["filepathmode"] = "direct";
+  return IODataType::write(outputData, path.toString(), blackHole, "", outputParams); // Default write single file
 }
 
 void
@@ -580,8 +581,9 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType> outputData,
   std::map<std::string, std::string>& outputParams)
 {
-  std::string newProductName = "";
+  outputParams["filepathmode"] = "datatype";
 
+  std::string newProductName = "";
   if (productMatch(key, newProductName)) {
     LogInfo("Writing '" << key << "' as product name '" << newProductName
                         << "'\n");
@@ -592,7 +594,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
     for (auto& w:writers) {
       std::vector<Record> records;
-      IODataType::write(outputData, w.outputinfo, false, records, w.factory, outputParams);
+      IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
 
       // Get back the output folder for notifications
       // and notify each notifier for this writer.

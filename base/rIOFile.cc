@@ -33,7 +33,6 @@ IOFile::createDataType(const std::string& params)
 bool
 IOFile::writeout(std::shared_ptr<DataType> dt,
   const std::string & outputinfo,
-  bool directFile,
   std::vector<Record> & records,
   const std::string & knownfactory,
   std::map<std::string, std::string>  & outputParams)
@@ -59,7 +58,8 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   }
 
   // We are going to proxy to another IODataType
-  bool success = encoder->writeout(dt, outputinfo, true, records, f, outputParams);
+  outputParams["filepathmode"] = "direct";
+  bool success = encoder->writeout(dt, outputinfo, records, f, outputParams);
 
   // Notification currently has default paths and things, if we do want notification for single
   // files we'll have to tweek that code some.  FIXME: I can see doing this

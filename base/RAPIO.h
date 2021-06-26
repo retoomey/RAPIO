@@ -5,6 +5,7 @@
 #include <rProcessTimer.h>
 
 // DataType objects provided by RAPIO
+#include <rIODataType.h>
 #include <rRadialSet.h>
 #include <rLatLonGrid.h>
 #include <rGribDataType.h>

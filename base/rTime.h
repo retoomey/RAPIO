@@ -114,9 +114,9 @@ public:
   TimeDuration
   operator - (const Time& b) const
   {
-    auto delta = std::chrono::duration_cast<std::chrono::seconds>(myTimepoint - b.myTimepoint);
+    auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(myTimepoint - b.myTimepoint);
 
-    return TimeDuration::Seconds(delta.count());
+    return TimeDuration::MilliSeconds(delta.count());
   }
 
   /** Additive assignment */

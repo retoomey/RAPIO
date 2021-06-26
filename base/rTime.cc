@@ -178,10 +178,11 @@ Time::getString(const std::string& pattern) const
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
   tm a = *gmtime(&t);
 
-  char buf [80];
+  const size_t MAXLENGTH = 512;
+  char buf [MAXLENGTH];
 
   buf[0] = 0; // just to be safe
-  strftime(buf, 80, pattern.c_str(), &a);
+  strftime(buf, MAXLENGTH, pattern.c_str(), &a);
   std::string output = std::string(buf);
 
   // We use %/ms for our special legacy 3 millisecond number
@@ -203,7 +204,7 @@ std::ostream&
 rapio::operator << (std::ostream& os, const Time& t)
 {
   return (os << "(" << t.getSecondsSinceEpoch() << "."
-             << t.getFractional()
+             << (int) (1000.0 * t.getFractional() + 0.5)
              << " epoch secs "
              << ")");
 }

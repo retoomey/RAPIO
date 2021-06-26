@@ -66,11 +66,11 @@ BOOST_AUTO_TEST_CASE(_Time_Change_Operators_)
   BOOST_CHECK(Arith::feq(ti.seconds(), 90));
   Time t = TimeDuration::Seconds(60) + Time::SecondsSinceEpoch(100);
   BOOST_CHECK(t.getSecondsSinceEpoch() == 160);
-  ti += 30;
+  ti += TimeDuration::Seconds(30);
   BOOST_CHECK(Arith::feq(ti.seconds(), 120));
-  ti -= 30;
+  ti -= TimeDuration::Seconds(30);
   BOOST_CHECK(Arith::feq(ti.seconds(), 90));
-  ti = TimeDuration::Seconds(60) - 30;
+  ti = TimeDuration::Seconds(60) - TimeDuration::Seconds(30);
   BOOST_CHECK(Arith::feq(ti.seconds(), 30));
 }
 

@@ -121,61 +121,53 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
 URL
 IODataType::generateFileName(std::shared_ptr<DataType> dt,
   const std::string                                    & outputinfo,
-  const std::string                                    & suffix,
-  bool                                                 directFile,
-  bool                                                 useSubDirs)
+  const std::string                                    & basepattern)
 {
-  URL path;
+  const rapio::Time rsTime   = dt->getTime();
+  const std::string dataType = dt->getTypeName();
+  const std::string subType  = dt->getSubType();
 
-  std::string filepath;  // Full file path  // Why not just generate this?
-  std::string sfilepath; // short file path (aren't these pullable from full?, yes)
-  std::string dirpath;   // directory path
+  // Get absolute path in input, make sure it's in directory format
+  // This might break for non-existent paths need to check
+  URL forFull = URL(outputinfo + "/up");
 
-  if (!directFile) {
-    const rapio::Time rsTime      = dt->getTime();
-    const std::string time_string = rsTime.getString(Record::RECORD_TIMESTAMP);
-    const std::string dataType    = dt->getTypeName();
-    const std::string subType     = dt->getSubType();
+  std::string dirbase = forFull.getDirName();
 
-    // Get absolute path in input, make sure it's a directory
-    URL forFull         = URL(outputinfo + "/up");
-    std::string dirbase = forFull.getDirName();
+  // FIXME:  My temp hack for multi-radar output to avoid data overwrite stomping
+  // We should generalize file output ability with a smart configuration
+  // instead of hardcoding it here
+  // This is bug in mrms imo, so may have to change it there as well
+  std::string radar = "";
+  dt->getString("radarName-value", radar);
 
-    // FIXME:  My temp hack for multi-radar output to avoid data overwrite stomping
-    // We should generalize file output ability with a smart configuration
-    // instead of hardcoding it here
-    // This is bug in mrms imo, so may have to change it there as well
-    std::string radar = "";
-    dt->getString("radarName-value", radar);
-
-    if (!radar.empty()) {
-      dirbase = dirbase + '/' + radar;
-    }
-
-    if (useSubDirs) {
-      // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
-      const std::string extra = subType.empty() ? ("") : ('/' + subType);
-      filepath = dirbase + '/' + dataType + extra + '/' + time_string; //  + '.' + suffix;
-    } else {
-      // Example: dirName/TIMESTRING_Reflectivity_00.50.netcdf
-      const std::string extra = subType.empty() ? ('.' + suffix) : ('_' + subType); //  + '.' + suffix);
-      filepath = dirbase + '/' + time_string + '_' + dataType + extra;
-    }
-    path = URL(filepath);
-  } else {
-    path = URL(outputinfo);
+  if (!radar.empty()) {
+    dirbase = dirbase + '/' + radar;
   }
 
-  // Final output?
-  dirpath   = path.getDirName();
-  filepath  = path.toString();
-  sfilepath = path.getBaseName();
+  // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
+  // How about a PATTERN instead, let's try it out
+  // First replace meta datatype terms with datatype values,
+  // then pass on to the pickier time filter
+  // std::string p = "{base}/{datatype}{/subtype}/{time}";
+  std::string p = basepattern;
 
-  // Directory must exist. We need getDirName to get added subdirs
-  // const std::string dir(URL(filepath).getDirName()); // isn't this dirpath??
-  if (!OS::isDirectory(dirpath) && !OS::mkdirp(dirpath)) {
-    LogSevere("Unable to create directory: " << dirpath << "\n");
-  }
+  // Example: dirName/TIMESTRING_Reflectivity_00.50.netcdf (the subdirs from WDSS2)
+  // std::string p = "{base}/{time}_{datatype}{_subtype}";
+
+  Strings::replace(p, "{base}", dirbase);
+  Strings::replace(p, "{datatype}", dataType);
+  // Specials for subtype where we don't want blank delimiter.  Maybe there's a
+  // cleaner way, can explore in the future.  We support / and _ for optional subtype
+  Strings::replace(p, "{/subtype}", subType.empty() ? ("") : ('/' + subType));
+  Strings::replace(p, "{_subtype}", subType.empty() ? ("") : ('_' + subType));
+  Strings::replace(p, "{subtype}", subType);
+  Strings::replace(p, "{time}", Record::RECORD_TIMESTAMP); // Note you could use the time fields independently
+  URL path = URL(rsTime.getString(p));
+
+  // Ensure directory tree exists for this path.  Should be done by caller I think...because this might
+  // be a bucket prefix instead..muahhahhaa
+  OS::ensureDirectory(path.getDirName());
+
   return path;
 } // IODataType::generateFileName
 
@@ -239,7 +231,6 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
 bool
 IODataType::write(std::shared_ptr<DataType> dt,
   const std::string & outputinfo,
-  bool directFile,
   std::vector<Record> & records,
   const std::string & factory,
   std::map<std::string, std::string>  & outputParams)
@@ -253,7 +244,16 @@ IODataType::write(std::shared_ptr<DataType> dt,
     LogSevere("Unable to write using unknown factory '" << f << "'\n");
     return false;
   }
-  return encoder->writeout(dt, outputinfo, directFile, records, f, outputParams);
+
+  bool directFile = false;
+  // Temp hack
+  if (directFile) {
+    outputParams["filepathmode"] = "direct";
+  } else {
+    outputParams["filepathmode"] = "datatype";
+  }
+
+  return encoder->writeout(dt, outputinfo, records, f, outputParams);
 } // IODataType::write
 
 void
@@ -268,7 +268,6 @@ IODataType::handleCommandParam(const std::string& command,
 bool
 IODataType::writeout(std::shared_ptr<DataType> dt,
   const std::string & outputinfo,
-  bool directFile,
   std::vector<Record> & records,
   const std::string & knownfactory,
   std::map<std::string, std::string>  & outputParams)
@@ -291,17 +290,44 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
     }
   }
 
-  // We'll handle generating filename and paths required here.
-  // Why does this require suffix?
-  bool useSubDirs = true; // Use subdirs (should be a flag on us right?)
-  // I don't think we 'need' the suffix here...
-  // Writer should modify the filename....
-  std::string suffix = "";
-
-  // Parse/get output folder for writing directory
+  // Parse the command line options, such as
+  // PYTHON=folder,scriptname or
+  // NETCDF=folder
+  // Note: This means currently output folder/factory is always forced by command line
   handleCommandParam(outputinfo, outputParams);
   const std::string folder = outputParams["outputfolder"];
-  URL aURL = generateFileName(dt, folder, suffix, directFile, useSubDirs);
+
+  // New idea, file path mode for generalizing.  I want to expand for 'other' paths like S3
+  // The code for ensuring directory need to not use with S3 obviously
+  std::string filePathMode = outputParams["filepathmode"];
+  URL aURL;
+  bool directFile;
+  bool ensureDir = false;
+  if (filePathMode == "datatype") { // default datatype tree pathing
+    std::string prefix = outputParams["fileprefix"];
+    if (prefix.empty()) { prefix = DataType::DATATYPE_PREFIX; }
+    // Generate a path/base filename using timestamps of datatype in a subtype tree
+    aURL       = generateFileName(dt, folder, prefix);
+    ensureDir  = true;
+    directFile = false;
+  } else if (filePathMode == "direct") {
+    // Write a direct file name (folder here assumed to the the actual full file path)
+    aURL       = URL(folder);
+    ensureDir  = true;
+    directFile = true;
+  } else {
+    LogSevere("Unrecognized file pathing mode: '" << filePathMode << "', cannot write output\n");
+    return false;
+  }
+
+  // For local files we need directory tree for writing
+  if (ensureDir) {
+    std::string dirpath = aURL.getDirName();
+    if (!OS::ensureDirectory(dirpath)) {
+      LogSevere("Cannot create output directory: '" << dirpath << "', cannot write output\n");
+      return false;
+    }
+  }
 
   // Here we go right?  Chicken egg issue with suffix I think...
   outputParams["filename"] = aURL.toString(); // base filename.  Writer determines ending unless directFile right?
@@ -328,9 +354,12 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
 bool
 IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, const std::string& factory)
 {
+  // Called to directly write single file by system to xml/json/txt, this is writing
+  // without notification, etc.
   std::vector<Record> blackHole;
-  std::map<std::string, std::string> empty;
-  return write(dt, outputinfo, true, blackHole, factory, empty); // Default write single file
+  std::map<std::string, std::string> outputParams;
+  outputParams["filepathmode"] = "direct";
+  return write(dt, outputinfo, blackHole, factory, outputParams); // Default write single file
 }
 
 size_t

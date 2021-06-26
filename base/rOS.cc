@@ -89,6 +89,18 @@ OS::isDirectory(const std::string& path)
 }
 
 bool
+OS::ensureDirectory(const std::string& dirpath)
+{
+  // Directory must exist. We need getDirName to get added subdirs
+  // const std::string dir(URL(filepath).getDirName()); // isn't this dirpath??
+  if (!isDirectory(dirpath) && !mkdirp(dirpath)) {
+    LogSevere("Unable to create directory: " << dirpath << "\n");
+    return false;
+  }
+  return true;
+}
+
+bool
 OS::isRegularFile(const std::string& path)
 {
   bool isRegularFile = false;

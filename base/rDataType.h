@@ -247,6 +247,22 @@ public:
   virtual std::shared_ptr<ColorMap>
   getColorMap();
 
+  /** The default prefix pattern (or local path) for writing datatype files,
+   * this is a tree using datatable, subtype and timestamp name.
+   *
+   * {base} Calculated base prefix, usually based on parameters.
+   * {datatype} Datatype string.
+   * {/subtype} If subtype not empty adds a '/' and subtype.
+   * {_subtype} If subtype not empty, add a '_' and subtype.
+   * {subtype}  Adds a subtype always.
+   * {time}     Shortcut for a stock time string pattern.
+   */
+  static std::string DATATYPE_PREFIX;
+
+  /** The default prefix pattern for the subdirs flat path from WDSS2, this
+   * puts more files into a single directory */
+  static std::string DATATYPE_PREFIX_FLAT;
+
 protected:
 
   /** Global attributes for data type */

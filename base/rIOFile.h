@@ -34,7 +34,6 @@ public:
   /** Our write out sends data onto a proxy based on file suffix */
   virtual bool
   writeout(std::shared_ptr<DataType> dt, const std::string& outputinfo,
-    bool generateFileName,
     std::vector<Record>              & records,
     const std::string& factory,
     std::map<std::string, std::string>& outputParams) override;
