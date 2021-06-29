@@ -313,3 +313,31 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
   }
   return output;
 } // OS::runDataProcess
+
+void
+OS::getProcessSize(double& vm_usage, double& resident_set)
+{
+  // https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
+  // Credited to Don Wakefield
+  vm_usage     = 0.0;
+  resident_set = 0.0;
+  std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);
+
+  // Fields we might want later actually...
+  std::string pid, comm, state, ppid, pgrp, session, tty_nr,
+    tpgid, flags, minflt, cminflt, majflt, cmajflt,
+    utime, stime, cutime, cstime, priority, nice, O, itrealvalue, starttime;
+
+  unsigned long vsize;
+  long rss;
+
+  stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+  >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+  >> utime >> stime >> cutime >> cstime >> priority >> nice
+  >> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
+  stat_stream.close();
+
+  long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
+  vm_usage     = vsize / 1024.0;
+  resident_set = rss * page_size_kb;
+}

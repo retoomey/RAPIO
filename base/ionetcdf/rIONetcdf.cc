@@ -4,7 +4,6 @@
 #include "rIOURL.h"
 #include "rOS.h"
 #include "rStrings.h"
-#include "rProcessTimer.h"
 
 // Default built in DataType support
 #include "rNetcdfDataGrid.h"
@@ -80,6 +79,7 @@ IONetcdf::~IONetcdf()
 std::shared_ptr<DataType>
 IONetcdf::readNetcdfDataType(const URL& url)
 {
+  LogInfo("Netcdf reader: " << url << "\n");
   std::shared_ptr<DataType> datatype = nullptr;
 
   // Note, in RAPIO we can read a netcdf file remotely too
@@ -175,7 +175,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     filename         = filename + ".netcdf";
     keys["filename"] = filename;
   }
-  LogInfo("Netcdf settings: cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << "\n");
+  LogInfo("Netcdf writer: " << filename << " (cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << ")\n");
 
   // Open netcdf file
   int ncid = -1;

@@ -53,7 +53,7 @@ AC_DEFUN([RAPIO_INIT],[
   fi
 
   dnl # Final set of variables
-  RAPIO_LIBS="${BOOST_LIBS} -lboost_system -lboost_log -lboost_log_setup -lboost_thread -lboost_filesystem -lboost_serialization -lboost_iostreams -ludunits2"
+  RAPIO_LIBS="${BOOST_LIBS} -lboost_system -lboost_log -lboost_log_setup -lboost_thread -lboost_filesystem -lboost_serialization -lboost_iostreams -lboost_timer -ludunits2"
   RAPIO_CFLAGS="${BOOST_CFLAGS} -DBOOST_LOG_DYN_LINK"
 ])
 

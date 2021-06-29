@@ -61,7 +61,13 @@ Signals::handleSignal(int signum)
         std::cout << "\nUnknown signal number " << signum << "\n";
         break;
   }
-  printTrace();
+  // Ok try to avoid infinite loop on any possibility of printTrace signaling here
+  // exit itself is smart enough for double call
+  static bool firstTime = true;
+  if (firstTime) {
+    firstTime = false;
+    printTrace();
+  }
   exit(signum);
 }
 

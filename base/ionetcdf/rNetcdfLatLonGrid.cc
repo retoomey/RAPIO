@@ -3,7 +3,6 @@
 #include "rLatLonGrid.h"
 #include "rError.h"
 #include "rConstants.h"
-#include "rProcessTimer.h"
 
 using namespace rapio;
 using namespace std;

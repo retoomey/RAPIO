@@ -4,7 +4,6 @@
 #include "rError.h"
 #include "rUnit.h"
 #include "rConstants.h"
-#include "rProcessTimer.h"
 
 #include <netcdf.h>
 

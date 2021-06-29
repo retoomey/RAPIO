@@ -34,24 +34,17 @@ RAPIONetcdfTestAlg::processOptions(RAPIOOptions& o)
 void
 RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
 {
-  static bool firstFile = true;
-
-  if (firstFile) {
-    totalCount = 0;
-    firstFile  = false;
-  }
-
   // Look for any data the system knows how to read...
   auto r = d.datatype<rapio::DataType>();
 
-  // Override output params for image output
-  std::map<std::string, std::string> flags;
-
-  // Prefix pattern for standard datatype/subtype/time
-  const std::string prefix = DataType::DATATYPE_PREFIX;
-  const std::string key    = r->getTypeName();
-
   if (r != nullptr) {
+    // Override output params for image output
+    std::map<std::string, std::string> flags;
+
+    // Prefix pattern for standard datatype/subtype/time
+    const std::string prefix = DataType::DATATYPE_PREFIX;
+    const std::string key    = r->getTypeName();
+
     // Standard echo of data to output, but for multiple
     LogInfo("-->Writing multiple netcdf files for: " << r->getTypeName() << "\n");
 
@@ -61,29 +54,35 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
     flags["fileprefix"] = prefix + "_n3";
     ProcessTimer z("");
     writeOutputProduct(key, r, flags);
-    totalTimes[0] += z.getElapsedTime();
+    totalSums[0].add(z);
 
     // ------------------------------------------------------------------------
     // Write multiple netcdf4 files with different compression settings
     flags["ncflags"] = "4096"; // cmode for netcdf4 (see ucar netcdf docs)
     for (size_t i = 0; i < 10; i++) {
-      ProcessTimer p("");
+      ProcessTimer p("writing");
       const std::string s = std::to_string(i);
       flags["fileprefix"]    = prefix + "_n4_c" + s + "_";
       flags["deflate_level"] = s;
       //  std::this_thread::sleep_for(std::chrono::milliseconds(2400));
       writeOutputProduct(key, r, flags);
-      totalTimes[i + 1] += p.getElapsedTime();
+      totalSums[i + 1].add(p);
+      // LogInfo(p << "\n");
     }
-    totalCount += 1;
   }
 
   std::cout << "------------------------------------------------------------\n";
-  std::cout << "totalfiles           : " << totalCount << "\n";
-  std::cout << "netcdf3              : " << totalTimes[0] << "\n";
+  std::cout << "totalfiles           : " << totalSums[0].getCount() << "\n";
+  std::cout << "netcdf3              : " << totalSums[0] << "\n";
   for (size_t i = 0; i < 10; i++) {
-    std::cout << "netcdf4 compression " << i << ": " << totalTimes[i + 1] << "\n";
+    std::cout << "netcdf4 compression " << i << ": " << totalSums[i + 1] << "\n";
   }
+
+  // Dump current memory usage
+  double vm_usage, resident_set;
+  OS::getProcessSize(vm_usage, resident_set);
+
+  std::cout << "Virtual Memory: " << vm_usage << " KB Resident: " << resident_set << " KB\n";
 } // RAPIONetcdfTestAlg::processNewData
 
 int

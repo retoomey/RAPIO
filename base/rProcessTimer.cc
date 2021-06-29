@@ -1,63 +1,76 @@
 #include "rProcessTimer.h"
-#include "rOS.h"
-#include "rTime.h"
 #include "rTimeDuration.h"
-
-#include <fstream>
-
-#include <iostream>
-#include <thread>
 
 using namespace rapio;
 
 ProcessTimer::ProcessTimer(const std::string& message) : myMsg(message),
-  myStartTime(Time::CurrentTime()),
-  myCPUTime(Time::getElapsedCPUTimeMSec())
+  myTimer()
 { }
 
-TimeDuration
-ProcessTimer::getElapsedTime()
+void
+ProcessTimer::reset()
 {
-  // std::this_thread::sleep_for(std::chrono::seconds(1));
-  //  std::cout << Time::CurrentTime() << "\n";
-  //  std::cout << myStartTime << "\n";
-  return (Time::CurrentTime() - myStartTime);
+  myTimer = boost::timer::cpu_timer();
 }
 
-int
-ProcessTimer::getProgramSize()
+TimeDuration
+ProcessTimer::getWallTime()
 {
-  int result(0);
+  boost::timer::cpu_times elapsed = myTimer.elapsed();
+  return (TimeDuration::MilliSeconds((elapsed.wall) / 1e6));
+}
 
-  std::ifstream fp("/proc/self/statm");
+TimeDuration
+ProcessTimer::getUserTime()
+{
+  boost::timer::cpu_times elapsed = myTimer.elapsed();
+  return (TimeDuration::MilliSeconds(elapsed.user / 1e6));
+}
 
-  if (fp) { // first number in the file
-    fp >> result;
-  }
-
-  return (result);
+TimeDuration
+ProcessTimer::getSystemTime()
+{
+  boost::timer::cpu_times elapsed = myTimer.elapsed();
+  return (TimeDuration::MilliSeconds((elapsed.system) / 1e6));
 }
 
 TimeDuration
 ProcessTimer::getCPUTime()
 {
-  unsigned long cpu_msec = Time::getElapsedCPUTimeMSec() - myCPUTime;
-
-  return (TimeDuration::Seconds(cpu_msec / 1000.0));
-}
-
-void
-ProcessTimer::print()
-{
-  if (myMsg != "") {
-    LogInfo(myMsg << " : "
-                  << getElapsedTime() << " wall-clock time, "
-                  << getCPUTime() << " cpu-time, "
-                  << getProgramSize() << " pages\n");
-  }
+  boost::timer::cpu_times elapsed = myTimer.elapsed();
+  return (TimeDuration::MilliSeconds((elapsed.user + elapsed.system) / 1e6));
 }
 
 ProcessTimer::~ProcessTimer()
 {
-  print();
+  if (myMsg != "") {
+    LogInfo(*this << "\n");
+  }
+}
+
+void
+ProcessTimerSum::
+add(const ProcessTimer& timer)
+{
+  // Get all the info at once
+  boost::timer::cpu_times elapsed = timer.myTimer.elapsed();
+  myWall   += TimeDuration::MilliSeconds((elapsed.wall) / 1e6);
+  myUser   += TimeDuration::MilliSeconds((elapsed.user) / 1e6);
+  mySystem += TimeDuration::MilliSeconds((elapsed.system) / 1e6);
+  myCounter++;
+}
+
+namespace rapio {
+std::ostream&
+operator << (std::ostream& os, const rapio::ProcessTimer& t)
+{
+  return (os << t.myMsg << " : " << t.myTimer.format(6, "[%w s] wall [%u s] user + [%s s] system = [%t s] CPU (%p%)"));
+}
+
+std::ostream&
+operator << (std::ostream& os, const rapio::ProcessTimerSum& t)
+{
+  return (os << t.myWall << " Wall " << t.myUser << " User + " << t.mySystem << " System = " << t.myUser + t.mySystem
+             << " CPU");
+}
 }

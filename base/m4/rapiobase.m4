@@ -15,7 +15,7 @@ AC_DEFUN([RAPIOBASE_INIT],[
   # BOOST library stuff
   # Boost rpms are in stock location or prefix, for now not searching
   # FIXME: search and error
-  BOOST_LIBS="-lboost_system -lboost_log -lboost_log_setup -lboost_thread -lboost_filesystem -lboost_serialization -lboost_iostreams"
+  BOOST_LIBS="-lboost_system -lboost_log -lboost_log_setup -lboost_thread -lboost_filesystem -lboost_serialization -lboost_iostreams -lboost_timer"
   BOOST_CFLAGS="-DBOOST_LOG_DYN_LINK"
 
   ########################################################################

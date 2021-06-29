@@ -585,8 +585,11 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
 
   std::string newProductName = "";
   if (productMatch(key, newProductName)) {
-    LogInfo("Writing '" << key << "' as product name '" << newProductName
-                        << "'\n");
+    const bool changeProductName = (key != newProductName);
+    if (changeProductName) {
+      LogInfo("Writing '" << key << "' as product name '" << newProductName
+                          << "'\n");
+    }
     std::string typeName = outputData->getTypeName(); // Old one...
     outputData->setTypeName(newProductName);
 
@@ -604,9 +607,11 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       }
     }
 
-    outputData->setTypeName(typeName); // Restore old type name
-                                       // not overridden.  Probably
-                                       // doesn't matter.
+    if (changeProductName) {
+      outputData->setTypeName(typeName); // Restore old type name
+                                         // not overridden.  Probably
+                                         // doesn't matter.
+    }
   } else {
     LogInfo("DID NOT FIND a match for product key " << key << "\n");
   }

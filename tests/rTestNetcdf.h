@@ -22,10 +22,7 @@ public:
   virtual void
   processNewData(rapio::RAPIOData& d) override;
 
-  /** Total files we processed */
-  size_t totalCount;
-
-  /** Total time for each file type */
-  TimeDuration totalTimes[11];
+  /** Summeries of process times */
+  ProcessTimerSum totalSums[11];
 };
 }

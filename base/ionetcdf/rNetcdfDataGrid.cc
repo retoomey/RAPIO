@@ -4,7 +4,6 @@
 #include "rError.h"
 #include "rUnit.h"
 #include "rConstants.h"
-#include "rProcessTimer.h"
 
 #include "rSignals.h"
 #include <netcdf.h>
@@ -26,8 +25,6 @@ NetcdfDataGrid::introduceSelf()
 std::shared_ptr<DataType>
 NetcdfDataGrid::read(const int ncid, const URL& loc)
 {
-  ProcessTimer("Reading general netcdf data file\n");
-
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
   if (readDataGrid(ncid, dataGridSP, loc)) {
@@ -237,7 +234,6 @@ NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();
-  ProcessTimer("Writing " + dataType + " (general writer) to netcdf");
 
   try {
     // ------------------------------------------------------------

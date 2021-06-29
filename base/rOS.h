@@ -129,5 +129,11 @@ public:
     }
     return nullptr;
   }
+
+  /**
+   * The current virtual memory and resident set size in KB for this program.
+   */
+  static void
+  getProcessSize(double& vm, double& rss);
 };
 }
