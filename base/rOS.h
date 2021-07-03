@@ -135,5 +135,17 @@ public:
    */
   static void
   getProcessSize(double& vm, double& rss);
+
+  /**
+   * Rename a file path, even between different file systems
+   */
+  static bool
+  moveFile(const std::string& from, const std::string& to);
+
+  /**
+   * Delete a file
+   */
+  static bool
+  deleteFile(const std::string& file);
 };
 }

@@ -11,6 +11,7 @@ librapio_la_SOURCES =\
   rArray.cc\
   rColor.cc\
   rColorMap.cc\
+  rDataFilter.cc\
   rRAPIOAlgorithm.cc\
   rRAPIOOptions.cc\
   rRAPIOData.cc\
@@ -18,7 +19,6 @@ librapio_la_SOURCES =\
   rCurlConnection.cc\
   rEventTimer.cc\
   rEventLoop.cc\
-  rCompression.cc\
   rSecure.cc\
   rSignals.cc\
   rRecord.cc\
@@ -91,6 +91,7 @@ pkginclude_HEADERS =\
   rArray.h\
   rColor.h\
   rColorMap.h\
+  rDataFilter.h\
   rRapio.h\
   rRAPIOAlgorithm.h\
   rRAPIOOptions.h\
@@ -107,7 +108,6 @@ pkginclude_HEADERS =\
   rStaticMethodFactory.h\
   rXMLIndex.h\
   rStreamIndex.h\
-  rCompression.h\
   rURL.h\
   rProcessTimer.h\
   rWebIndex.h\

@@ -6,7 +6,6 @@
 #include "rOS.h"
 #include "rRecordQueue.h"
 #include "rDirWatcher.h"
-#include "rCompression.h"
 #include "rStrings.h"
 
 #include <algorithm>

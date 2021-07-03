@@ -2,7 +2,8 @@
 
 #include "rError.h"
 #include "rIODataType.h"
-#include "rCompression.h"
+#include "rDataFilter.h"
+#include "rFactory.h"
 #include "rStrings.h"
 
 #include <string>
@@ -170,7 +171,8 @@ OS::getRootFileExtension(const std::string& path)
   std::string e = fs::extension(path);
   Strings::toLower(e);
   Strings::removePrefix(e, ".");
-  if (Compression::suffixRecognized(e)) {
+  std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(e, "OS");
+  if (f != nullptr) {
     std::string p = path;
     Strings::removeSuffix(p, "." + e);
     e = fs::extension(p);
@@ -340,4 +342,44 @@ OS::getProcessSize(double& vm_usage, double& resident_set)
   long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
   vm_usage     = vsize / 1024.0;
   resident_set = rss * page_size_kb;
+}
+
+bool
+OS::moveFile(const std::string& from, const std::string& to)
+{
+  // On same file system, rename is fine, on two different you need to copy instead.
+  // Would it be quicker to check if from/to is same filesystem?
+  bool ok = false;
+
+  try {
+    fs::rename(from, to);
+    ok = true;
+  }
+  catch (const fs::filesystem_error &e)
+  {
+    // Error might be cross file system reason, try a copy now
+    try {
+      fs::copy_file(from, to, fs::copy_option::overwrite_if_exists);
+      fs::remove(from);
+      ok = true;
+    }catch (const fs::filesystem_error &e)
+    {
+      LogSevere("Failed to move/copy " << from << " to " << to << ": " << e.what() << "\n");
+    }
+  }
+  return ok;
+}
+
+bool
+OS::deleteFile(const std::string& file)
+{
+  bool ok = false;
+
+  try {
+    fs::remove(file);
+    ok = true;
+  }
+  catch (const fs::filesystem_error &e)
+  { }
+  return ok;
 }

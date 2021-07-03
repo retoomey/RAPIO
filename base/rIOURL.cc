@@ -1,7 +1,7 @@
 #include "rIOURL.h"
 
 #include "rFactory.h"
-#include "rCompression.h"
+#include "rDataFilter.h"
 #include "rError.h"
 #include "rStrings.h"
 
@@ -24,13 +24,13 @@ IOURL::read(const URL& url, std::vector<char>& buf)
 
   //  ------------------------------------------------------------
   // Choose a decompressor or directly move buffer
-  auto decompress = Compression::fromSuffix(url.getSuffixLC());
-  if (decompress == nullptr) {
+  std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(url.getSuffixLC(), "IOURL");
+  if (f == nullptr) {
     buf = std::move(rawData);
   } else {
     // Try to decompress with the choosen decompressor
     std::vector<char> output;
-    if (!(*decompress)(rawData, output)) {
+    if (!f->apply(rawData, output)) {
       return -1;
     }
     buf = std::move(output);

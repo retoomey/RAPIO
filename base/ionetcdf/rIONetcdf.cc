@@ -4,6 +4,7 @@
 #include "rIOURL.h"
 #include "rOS.h"
 #include "rStrings.h"
+#include "rDataFilter.h"
 
 // Default built in DataType support
 #include "rNetcdfDataGrid.h"
@@ -180,11 +181,22 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   // Open netcdf file
   int ncid = -1;
 
+
+  // Doing some work here to deal with partial files on network drives, etc.
+  // Basically for a disk write, always do tmp first and move into final
+  // position.
+
+  bool successful = false;
+
+  // Get a tmp file to write to
+  std::string tmp = OS::getUniqueTemporaryFile("netcdf-");
+
   // NC_memio finalmem;
   // size_t initialsize = 65000;
   try {
     // NETCDF(nc_create_mem("testing", NC_NETCDF4, initialsize, &ncid));
-    NETCDF(nc_create(filename.c_str(), ncflags, &ncid));
+    // NETCDF(nc_create(filename.c_str(), ncflags, &ncid));
+    NETCDF(nc_create(tmp.c_str(), ncflags, &ncid));
   } catch (const NetcdfException& ex) {
     // nc_close_memio(ncid, &finalmem);
     nc_close(ncid);
@@ -195,8 +207,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   if (ncid == -1) { return false; }
 
-  bool successful = false;
-
+  // Write netcdf to a disk file here
   try {
     successful = fmt->write(ncid, dt, keys);
   } catch (...) {
@@ -205,6 +216,28 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   nc_close(ncid);
+
+  // Post compression pass if wanted
+  const std::string compress = keys["compression"];
+  if (!compress.empty()) {
+    std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(compress, "Netcdf writer");
+    if (f != nullptr) {
+      std::string tmpgz = OS::getUniqueTemporaryFile(compress + "-");
+      filename += ("." + compress); // direct once again might be an issue. I think
+      // even with direct we will add compression suffix
+      keys["filename"] = filename;
+      if (f->applyURL(tmp, tmpgz, keys)) { // filter worked
+        OS::deleteFile(tmp);
+        tmp = tmpgz; // now use the new tmp
+      }
+    }
+  }
+
+  // Migrate file async to final location
+  if (successful) {
+    // LogInfo("Attempt to migrate " << tmp << " to " << filename << "\n");
+    OS::moveFile(tmp, filename);
+  }
 
   return successful;
 } // IONetcdf::encodeDataType

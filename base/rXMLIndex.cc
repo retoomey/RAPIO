@@ -6,7 +6,6 @@
 #include "rOS.h"
 #include "rIODataType.h"
 #include "rRecordQueue.h"
-#include "rCompression.h"
 
 #include <iostream>
 

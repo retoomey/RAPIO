@@ -24,12 +24,15 @@ RAPIONetcdfTestAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription("RAPIO Netcdf Test Algorithm");
   o.setAuthors("Robert Toomey");
+  o.optional("maxcount", "0", "Maximum files to process before stopping, or 0 forever.");
 }
 
 /** RAPIOAlgorithms process options on start up */
 void
 RAPIONetcdfTestAlg::processOptions(RAPIOOptions& o)
-{ }
+{
+  myMaxCount = o.getInteger("maxcount");
+}
 
 void
 RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
@@ -56,6 +59,13 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
     writeOutputProduct(key, r, flags);
     totalSums[0].add(z);
 
+    // Write a xz file, curious on speed vs native netcdf compression
+    flags["compression"] = "xz";
+    ProcessTimer zp("");
+    writeOutputProduct(key, r, flags);
+    totalSums[1].add(zp);
+    flags["compression"] = "";
+
     // ------------------------------------------------------------------------
     // Write multiple netcdf4 files with different compression settings
     flags["ncflags"] = "4096"; // cmode for netcdf4 (see ucar netcdf docs)
@@ -66,7 +76,7 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
       flags["deflate_level"] = s;
       //  std::this_thread::sleep_for(std::chrono::milliseconds(2400));
       writeOutputProduct(key, r, flags);
-      totalSums[i + 1].add(p);
+      totalSums[i + 2].add(p);
       // LogInfo(p << "\n");
     }
   }
@@ -74,8 +84,9 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
   std::cout << "------------------------------------------------------------\n";
   std::cout << "totalfiles           : " << totalSums[0].getCount() << "\n";
   std::cout << "netcdf3              : " << totalSums[0] << "\n";
+  std::cout << "netcdf3+lz           : " << totalSums[1] << "\n";
   for (size_t i = 0; i < 10; i++) {
-    std::cout << "netcdf4 compression " << i << ": " << totalSums[i + 1] << "\n";
+    std::cout << "netcdf4 compression " << i << ": " << totalSums[i + 2] << "\n";
   }
 
   // Dump current memory usage
@@ -83,6 +94,13 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
   OS::getProcessSize(vm_usage, resident_set);
 
   std::cout << "Virtual Memory: " << vm_usage << " KB Resident: " << resident_set << " KB\n";
+
+  if (myMaxCount > 0) {
+    if (totalSums[0].getCount() >= myMaxCount) {
+      LogInfo("Ending test due to maxcount of " << myMaxCount << "\n");
+      exit(0);
+    }
+  }
 } // RAPIONetcdfTestAlg::processNewData
 
 int

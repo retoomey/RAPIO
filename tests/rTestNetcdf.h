@@ -23,6 +23,10 @@ public:
   processNewData(rapio::RAPIOData& d) override;
 
   /** Summeries of process times */
-  ProcessTimerSum totalSums[11];
+  ProcessTimerSum totalSums[12];
+
+private:
+  /** Max files to process before stopping */
+  size_t myMaxCount;
 };
 }

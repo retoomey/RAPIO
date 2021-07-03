@@ -29,6 +29,8 @@
 #include "rIOJSON.h"
 #include "rIOFile.h"
 
+#include "rDataFilter.h"
+
 #include <iostream>
 #include <string>
 
@@ -232,6 +234,10 @@ void
 RAPIOAlgorithm::initializeBaseline()
 {
   Config::introduceSelf();
+
+  // -------------------------------------------------------------------
+  // Data filter support
+  DataFilter::introduceSelf();
 
   // -------------------------------------------------------------------
   // IO watch support
