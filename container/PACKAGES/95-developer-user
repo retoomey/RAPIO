@@ -1,0 +1,10 @@
+# /etc/sudo.d file allowing developer sudo on container
+
+# User rules for developer
+developer ALL=(ALL) NOPASSWD:ALL
+
+# User rules for developer
+developer ALL=(ALL) NOPASSWD:ALL
+
+# User rules for developer
+developer ALL=(ALL) NOPASSWD:ALL

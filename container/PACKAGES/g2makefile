@@ -1,0 +1,6 @@
+# Robert Toomey.  Override g2clib make for our own purposes.
+# in particular, we NEED the -fPIC for C++
+include makefileBASE
+INC=-I/BUILD/include
+CFLAGS= -fPIC -O3 -g -m64 $(INC) $(DEFS)
+
