@@ -245,14 +245,6 @@ IODataType::write(std::shared_ptr<DataType> dt,
     return false;
   }
 
-  bool directFile = false;
-  // Temp hack
-  if (directFile) {
-    outputParams["filepathmode"] = "direct";
-  } else {
-    outputParams["filepathmode"] = "datatype";
-  }
-
   return encoder->writeout(dt, outputinfo, records, f, outputParams);
 } // IODataType::write
 

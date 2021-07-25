@@ -2,6 +2,7 @@
 
 #include <rData.h>
 #include <rDataType.h>
+#include <rRecord.h>
 #include <rElevationVolume.h>
 
 #include <memory>
@@ -52,6 +53,9 @@ public:
   static void
   purgeTimeWindow(const Time& time);
 
+  /** New record stuff for now */
+  static void
+  addRecord(Record& rec);
 protected:
 
   // Storage for volumes

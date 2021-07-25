@@ -42,6 +42,13 @@ public:
     return message;
   }
 
+  /** Get the header map */
+  const std::map<std::string, std::string>&
+  getHeaderMap() const
+  {
+    return myHeaders;
+  }
+
   /** Get the file */
   std::string
   getFile()
@@ -66,9 +73,11 @@ public:
 
   /** Set the response message */
   void
-  setMessage(const std::string& m)
+  setMessage(const std::string& m, const std::string& type = "text/plain")
   {
     message = m;
+    myHeaders.clear();
+    myHeaders["Content-Type"] = type;
   }
 
 protected:
@@ -78,6 +87,9 @@ protected:
 
   /** Map of params to values */
   std::map<std::string, std::string> myMap;
+
+  /** Map of header values */
+  std::map<std::string, std::string> myHeaders;
 
   /** Message response for web server */
   std::string message;

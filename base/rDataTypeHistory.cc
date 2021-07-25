@@ -92,3 +92,36 @@ DataTypeHistory::purgeTimeWindow(const Time& currentTime)
     s.second->purgeTimeWindow(currentTime);
   }
 }
+
+void
+DataTypeHistory::addRecord(Record& rec)
+{
+  // History is stored by an ordered tree of selections.
+  // Records internal to the tree would be inefficient, so we convert
+  // to a new data structure here.
+  LogSevere("Adding record: \n");
+  // for(auto& p:rec.getBuilderParams()){
+  //  std::cout << "   " << p << "\n";
+  // }
+  auto& sels   = rec.getSelections();
+  size_t aSize = sels.size();
+
+  // There should always be at least three selections
+  if (aSize <= 3) {
+    // The last selection is assumed to be the time string, we don't store that
+    // We 'could' do maps of maps but that would be so memory intensive...
+
+    // Index number is const for a particular algorithm run..
+    // This corresponds to the 'source' for the moment.  We need a 'name'
+    // for a source to refer to it actually. The display does this with a name
+    // to index location lookup which as a direct algorithm we don't have currently.
+    const size_t i = rec.getIndexNumber();
+    std::cout << "Index in is " << i << "\n";
+
+    for (int i = aSize - 2; i >= 0; i--) {
+      std::cout << "   " << sels[i] << "\n";
+    }
+  } else {
+    LogSevere("Trying to add record to history with a selections size of " << aSize << " which is unknown.\n");
+  }
+}

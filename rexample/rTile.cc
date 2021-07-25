@@ -2,6 +2,9 @@
 #include <iostream>
 #include <sys/stat.h>
 
+#include <dirent.h>
+#include <sys/stat.h>
+
 using namespace rapio;
 
 /*
@@ -105,6 +108,161 @@ tiley2lat(int y, int z)
 
   return 180.0 / M_PI * atan(0.5 * (exp(n) - exp(-n)));
 }
+}
+
+std::vector<std::string>
+getProductList()
+{
+  std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/";
+  if (rootdisk[rootdisk.size() - 1] != '/') {
+    rootdisk += '/';
+  }
+
+  std::vector<std::string> products;
+
+  DIR * dirp = opendir(rootdisk.c_str()); // close?
+  if (dirp == 0) {
+    return products;
+  }
+
+  if (dirp != 0) {
+    struct dirent * dp;
+    while ((dp = readdir(dirp)) != 0) {
+      const std::string full = rootdisk + dp->d_name;
+      // Always ignore files starting with . (0 terminated so don't need length check)
+      if (dp->d_name[0] == '.') { continue; }
+      if (OS::isDirectory(full)) { // maybe inline here faster or we go the getdents rabbithole
+        products.push_back(dp->d_name);
+      }
+    }
+    closedir(dirp);
+    //     for(int i =0; i<100; i++){
+    //       products.push_back("Another"+std::to_string(i));
+    //     }
+  }
+  sort(products.begin(), products.end(), std::less<std::string>());
+  return products;
+}
+
+std::vector<std::string>
+getSubtypeList(const std::string& product)
+{
+  std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/" + product;
+  if (rootdisk[rootdisk.size() - 1] != '/') {
+    rootdisk += '/';
+  }
+
+  std::vector<std::string> subtypes;
+
+  // Duplicate the code..I think we'll have to sort the subtypes...
+  // We could sort the products too right?
+  DIR * dirp = opendir(rootdisk.c_str()); // close?
+  if (dirp == 0) {
+    return subtypes;
+  }
+
+  if (dirp != 0) {
+    struct dirent * dp;
+    while ((dp = readdir(dirp)) != 0) {
+      const std::string full = rootdisk + dp->d_name;
+      // Always ignore files starting with . (0 terminated so don't need length check)
+      if (dp->d_name[0] == '.') { continue; }
+      LogSevere("Checking subtype " << full << "\n");
+      if (OS::isDirectory(full)) { // maybe inline here faster or we go the getdents rabbithole
+        subtypes.push_back(dp->d_name);
+      }
+    }
+    closedir(dirp);
+  }
+  sort(subtypes.begin(), subtypes.end(), std::greater<std::string>());
+  return subtypes;
+}
+
+std::vector<std::string>
+getTimeList(const std::string& product, const std::string& subtype)
+{
+  std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/" + product + "/" + subtype;
+  if (rootdisk[rootdisk.size() - 1] != '/') {
+    rootdisk += '/';
+  }
+  LogSevere("Checking root: " << rootdisk << "\n");
+
+  std::vector<std::string> times;
+
+  // Duplicate the code..I think we'll have to sort the subtypes...
+  // We could sort the products too right?
+  DIR * dirp = opendir(rootdisk.c_str()); // close?
+  if (dirp == 0) {
+    return times;
+  }
+
+  if (dirp != 0) {
+    struct dirent * dp;
+    while ((dp = readdir(dirp)) != 0) {
+      const std::string full = rootdisk + dp->d_name;
+      // Always ignore files starting with . (0 terminated so don't need length check)
+      if (dp->d_name[0] == '.') { continue; }
+      if (OS::isRegularFile(full)) { // maybe inline here faster or we go the getdents rabbithole
+        // FIXME: check ending?
+        times.push_back(dp->d_name);
+      }
+    }
+    closedir(dirp);
+  }
+  sort(times.begin(), times.end(), std::greater<std::string>());
+  return times;
+}
+
+// These will become part of the 'navigator' class I think...
+// There's duplicate code in these functions, but don't
+// replace with a generic vector..if anything macro the shared
+// code
+std::string
+getJSONProductList()
+{
+  auto l = getProductList();
+
+  std::stringstream json;
+  json << "{\"products\":[";
+  std::string add = "";
+  for (auto& p:l) {
+    json << add << "\"" << p << "\"";
+    add = ",";
+  }
+  json << "]}";
+  return json.str();
+}
+
+std::string
+getJSONSubtypeList(const std::string& product)
+{
+  auto l = getSubtypeList(product);
+
+  std::stringstream json;
+  json << "{\"subtypes\":[";
+  std::string add = "";
+  for (auto& p:l) {
+    json << add << "\"" << p << "\"";
+    add = ",";
+  }
+  json << "]}";
+  return json.str();
+}
+
+std::string
+getJSONTimeList(const std::string& product, const std::string& subtype)
+{
+  auto l = getTimeList(product, subtype);
+
+  std::stringstream json;
+  json << "{\"times\":[";
+  std::string add = "";
+  for (auto& p:l) {
+    json << add << "\"" << p << "\"";
+    add = ",";
+  }
+  json << "]}";
+  return json.str();
 }
 
 void
@@ -221,6 +379,96 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         myOverride["BBOXSR"] = "4326"; // Lat/Lon
 
         LogInfo("TMS_BBOX:" << myOverride["BBOX"] << "\n");
+      } else if (type == "UI") {
+        LogSevere("Woooh...something calling our json stuff\n");
+
+        // Ok for now make json by hand.  We need to get the javascript to react
+        std::stringstream json;
+        json << "{";
+        json << " \"top\": ";
+        static bool toggle = false;
+        toggle = !toggle;
+
+        json << (toggle ? " \"red\" " : " \"green\" ");
+        json << "}";
+
+        // w->setMessage("{ \"date\": \"05-16-2021\", \"milliseconds_since_epoch\": 1621193354208, \"time\": \"07:29:14 PM\" }", "application/json");
+        w->setMessage(json.str(), "application/json");
+        return;
+      } else if (type == "DATA") {
+        // We have to create a RECORD from the stuff passed in.
+        // Then create a RAPIOData?  Have to cache the datatype somehow or it will be snail slow
+        // From record we want 'up' and 'down' for example...navigation directions
+
+        /*
+         *    if (pieces.size() < 2){
+         *      w->setMessage("{ \"ERROR\": \"Unknown\"}", "application/json");
+         *      return;
+         *    }
+         *    // S3 requires the year top path added, right?
+         *    std::string rootproduct = pieces[1];
+         */
+
+        /*        // We could map this from say 'KTLX' to this path...a source lookup basically...
+         *      // So pieces[0] = ktlx --> this
+         *      std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/";
+         *      // FIXME: ensure ends with "/";
+         *
+         *      // Navigator::getProductList()
+         *      // s3 maybe?
+         *      // ls the product folder or s3 aws python call the list back, right?
+         *      //
+         *      // Open directory
+         *      DIR * dirp = opendir(rootdisk.c_str());
+         *      if (dirp == 0){
+         *        w->setMessage("{ \"ERROR\": \"Unknown\"", "application/json");
+         *        return;
+         *      }
+         *
+         *      // ----------------------------------------------------------------
+         *      // Create json from directory list.  We could create a PTree
+         *      std::stringstream json;
+         *      json << "{\"products\":[";
+         *      struct dirent * dp;
+         *      std::string add = "";
+         *      while ((dp = readdir(dirp)) != 0) {
+         *        const std::string full = rootdisk + dp->d_name;
+         *        //const std::string full = rootdisk + "/" + dp->d_name;
+         *        // Always ignore files starting with . (0 terminated so don't need length check)
+         *        if (dp->d_name[0] == '.') { continue; }
+         *        if (OS::isDirectory(full)) {
+         *          //json << add << "\"file\": \""<<dp->d_name<<"\"";
+         *          json << add << "\""<<dp->d_name<<"\"";
+         *          add = ","; // future adds need comma
+         *        }
+         *      }
+         *      json << "]}";
+         *      // ----------------------------------------------------------------
+         *      // */
+
+        /*
+         *      for(size_t i=1; i<pieces.size(); i++){
+         *        json << " \"value" << i  << "\": \"" << pieces[i] << "\"";
+         *        if (i != pieces.size()-1){
+         *          json << ", ";
+         *        }
+         *      }
+         */
+        if (pieces.size() < 2) {
+          w->setMessage(getJSONProductList(), "application/json");
+        } else {
+          if (pieces.size() < 3) {
+            const std::string s = pieces[1];
+            LogSevere("Getting subtypes for " << s << "\n");
+            w->setMessage(getJSONSubtypeList(s), "application/json");
+          } else {
+            const std::string s = pieces[1];
+            const std::string t = pieces[2];
+            LogSevere("Getting times for " << s << "\n");
+            w->setMessage(getJSONTimeList(s, t), "application/json");
+          }
+        }
+        return;
       } else {
         LogSevere("Expected either wms or tms server types. http://servername/wms/... \n");
         return;

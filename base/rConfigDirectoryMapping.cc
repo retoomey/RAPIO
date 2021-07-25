@@ -25,7 +25,7 @@ ConfigDirectoryMapping::readInSettings()
     if (doc != nullptr) {
       auto tree = doc->getTree();
       auto maps = tree->getChildren("directoryMapping");
-      for (const auto r: maps) {
+      for (const auto& r: maps) {
         // Snag attributes
         const auto from = r.getAttr("from", std::string(""));
         const auto to   = r.getAttr("to", std::string(""));

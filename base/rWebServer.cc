@@ -160,10 +160,24 @@ WebServer::startWebServer(const std::string& params)
               response->write(stream);
             }
           } else {
-            LogSevere("Not 'file', sending text\n");
+            LogSevere("Sending text:\n");
+            //    response->write(SimpleWeb::StatusCode::client_error_bad_request, "Testing error");
+            //         // FIXME: need to check message was ever set
+
+            auto aSize = web->getMessage().size();
+
+            // Fill in header from web message
+            SimpleWeb::CaseInsensitiveMultimap header;
+            for (auto& a:web->getHeaderMap()) {
+              header.emplace(a.first, a.second);
+            }
+            header.emplace("Content-Length", to_string(aSize));
+            header.emplace("Access-Control-Allow-Origin", "*");
+
             std::stringstream stream;
             stream << web->getMessage();
-            response->write(stream);
+            LogSevere(web->getMessage());
+            response->write(stream, header);
           }
         } else {
           // Algorithm basically reported an error maybe?
