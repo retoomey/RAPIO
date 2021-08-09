@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rUtility.h>
+#include <rDataType.h>
 #include <rColor.h>
 #include <rURL.h>
 
@@ -60,7 +60,7 @@ public:
 };
 
 /** Color map converts values to colors */
-class ColorMap : public Utility
+class ColorMap : public DataType
 {
 public:
 

@@ -16,22 +16,23 @@ NetcdfRadialSet::~NetcdfRadialSet()
 { }
 
 void
-NetcdfRadialSet::introduceSelf()
+NetcdfRadialSet::introduceSelf(IONetcdf * owner)
 {
-  std::shared_ptr<NetcdfType> io = std::make_shared<NetcdfRadialSet>();
+  std::shared_ptr<IOSpecializer> io = std::make_shared<NetcdfRadialSet>();
 
   // NOTE: We read in polar grids and turn them into full radialsets
-  IONetcdf::introduce("RadialSet", io);
-  IONetcdf::introduce("PolarGrid", io);
-  IONetcdf::introduce("SparseRadialSet", io);
-  IONetcdf::introduce("SparsePolarGrid", io);
+  owner->introduce("RadialSet", io);
+  owner->introduce("PolarGrid", io);
+  owner->introduce("SparseRadialSet", io);
+  owner->introduce("SparsePolarGrid", io);
 }
 
 std::shared_ptr<DataType>
-NetcdfRadialSet::read(const int ncid, const URL& loc)
+NetcdfRadialSet::read(
+  std::map<std::string, std::string>& keys)
 {
   std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>();
-  if (readDataGrid(ncid, radialSetSP, loc)) {
+  if (readDataGrid(radialSetSP, keys)) {
     return radialSetSP;
   } else {
     return nullptr;
@@ -39,12 +40,12 @@ NetcdfRadialSet::read(const int ncid, const URL& loc)
 } // NetcdfRadialSet::read
 
 bool
-NetcdfRadialSet::write(int ncid, std::shared_ptr<DataType> dt,
+NetcdfRadialSet::write(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>& keys)
 {
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Azimuth", "Gate"
-  return (NetcdfDataGrid::write(ncid, dt, keys));
+  return (NetcdfDataGrid::write(dt, keys));
 } // NetcdfRadialSet::write
 
 std::shared_ptr<DataType>

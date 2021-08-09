@@ -12,6 +12,28 @@ class DataType;
 class IndexType;
 
 /**
+ * IOSpecializer
+ *
+ * Specializers handle a particular class of a data format.
+ * For example, netcdf can read in generic netcdf, but this can
+ * specialize into a RadialSet, which is no longer netcdf data.
+ *
+ * @author Robert Toomey
+ */
+class IOSpecializer : public IO {
+public:
+  /** Write a given DataType */
+  virtual bool
+  write(std::shared_ptr<DataType> dt,
+    std::map<std::string, std::string>& keys) = 0;
+
+  /** Read a DataType from given information */
+  virtual std::shared_ptr<DataType>
+  read(
+    std::map<std::string, std::string>& keys) = 0;
+};
+
+/**
  * IODataType has the ability to read and write some group of objects,
  * such as netcdf output, xml, etc.
  * We group reader and writer ability into a single object since typically
@@ -180,5 +202,8 @@ protected:
 
   /** Create a IO DataType */
   IODataType(){ }
+
+  /** Specializers */
+  std::map<std::string, std::shared_ptr<IOSpecializer> > mySpecializers;
 };
 }

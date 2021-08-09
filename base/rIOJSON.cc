@@ -15,7 +15,7 @@ std::string
 IOJSON::getHelpString(const std::string & key)
 {
   std::string help;
-  help = "builder for reading json formatted data.\n";
+  help = "builder for reading JSON formatted data.\n";
   return help;
 }
 

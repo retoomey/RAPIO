@@ -11,18 +11,19 @@ NetcdfLatLonGrid::~NetcdfLatLonGrid()
 { }
 
 void
-NetcdfLatLonGrid::introduceSelf()
+NetcdfLatLonGrid::introduceSelf(IONetcdf * owner)
 {
-  std::shared_ptr<NetcdfType> io = std::make_shared<NetcdfLatLonGrid>();
-  IONetcdf::introduce("LatLonGrid", io);
-  IONetcdf::introduce("SparseLatLonGrid", io);
+  std::shared_ptr<IOSpecializer> io = std::make_shared<NetcdfLatLonGrid>();
+  owner->introduce("LatLonGrid", io);
+  owner->introduce("SparseLatLonGrid", io);
 }
 
 std::shared_ptr<DataType>
-NetcdfLatLonGrid::read(const int ncid, const URL& loc)
+NetcdfLatLonGrid::read(
+  std::map<std::string, std::string>& keys)
 {
   std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>();
-  if (readDataGrid(ncid, LatLonGridSP, loc)) {
+  if (readDataGrid(LatLonGridSP, keys)) {
     return LatLonGridSP;
   } else {
     return nullptr;
@@ -30,7 +31,7 @@ NetcdfLatLonGrid::read(const int ncid, const URL& loc)
 } // NetcdfLatLonGrid::read
 
 bool
-NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
+NetcdfLatLonGrid::write(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>& keys)
 {
   // Generalize the writer maybe...
@@ -39,7 +40,7 @@ NetcdfLatLonGrid::write(int ncid, std::shared_ptr<DataType> dt,
   // }
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Lat", "Lon"
-  return (NetcdfDataGrid::write(ncid, dt, keys));
+  return (NetcdfDataGrid::write(dt, keys));
 } // NetcdfLatLonGrid::write
 
 std::shared_ptr<DataType>

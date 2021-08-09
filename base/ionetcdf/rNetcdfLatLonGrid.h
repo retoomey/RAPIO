@@ -12,7 +12,7 @@ public:
 
   /** Write DataType from given ncid */
   virtual bool
-  write(int ncid,
+  write(
     std::shared_ptr<DataType> dt,
     std::map<std::string, std::string>& keys)
   override;
@@ -22,8 +22,8 @@ public:
    *  prms   Only the file name (first param) is needed.
    */
   virtual std::shared_ptr<DataType>
-  read(const int ncid,
-    const URL    & loc)
+  read(
+    std::map<std::string, std::string>& keys)
   override;
 
   /** Get number of test objects we provide for read/write tests */
@@ -55,7 +55,7 @@ public:
   ~NetcdfLatLonGrid();
 
   static void
-  introduceSelf();
+  introduceSelf(IONetcdf * owner);
 
 private:
 

@@ -4,7 +4,6 @@
 #include "rStrings.h"
 #include "rError.h"
 #include "rIOURL.h"
-#include "rDataGrid.h"
 #include "rOS.h"
 
 #include <boost/property_tree/xml_parser.hpp>
@@ -18,7 +17,7 @@ IOXML::getHelpString(const std::string & key)
   if (key == "W2ALGS") {
     help = "alias of XML builder for MRMS algorithms and records.\n";
   } else {
-    help = "builder for reading xml formatted data.\n";
+    help = "builder for reading XML formatted data.\n";
   }
   return help;
 }

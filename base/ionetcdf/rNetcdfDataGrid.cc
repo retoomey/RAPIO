@@ -15,30 +15,32 @@ NetcdfDataGrid::~NetcdfDataGrid()
 { }
 
 void
-NetcdfDataGrid::introduceSelf()
+NetcdfDataGrid::introduceSelf(IONetcdf * owner)
 {
-  std::shared_ptr<NetcdfType> io = std::make_shared<NetcdfDataGrid>();
+  std::shared_ptr<IOSpecializer> io = std::make_shared<NetcdfDataGrid>();
 
-  IONetcdf::introduce("DataGrid", io);
+  owner->introduce("DataGrid", io);
 }
 
 std::shared_ptr<DataType>
-NetcdfDataGrid::read(const int ncid, const URL& loc)
+NetcdfDataGrid::read(std::map<std::string, std::string>& keys)
 {
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
-  if (readDataGrid(ncid, dataGridSP, loc)) {
+  if (readDataGrid(dataGridSP, keys)) {
     return dataGridSP;
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 bool
-NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridSP, const URL& loc)
+NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
+  std::map<std::string, std::string>& keys)
 {
   try {
     DataGrid& dataGrid = *dataGridSP;
+    const int ncid     = std::stoi(keys["NETCDF_NCID"]);
+    const URL loc      = URL(keys["NETCDF_URL"]);
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -229,13 +231,15 @@ NetcdfDataGrid::readDataGrid(const int ncid, std::shared_ptr<DataGrid> dataGridS
 } // NetcdfDataGrid::read
 
 bool
-NetcdfDataGrid::write(int ncid, std::shared_ptr<DataType> dt,
+NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>& keys)
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();
 
   try {
+    const int ncid = std::stoi(keys["NETCDF_NCID"]);
+
     // ------------------------------------------------------------
     // DIMENSIONS
     //

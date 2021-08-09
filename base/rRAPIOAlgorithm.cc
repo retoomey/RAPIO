@@ -222,12 +222,15 @@ RAPIOAlgorithm::initializeBaseParsers()
   std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
   Factory<IODataType>::introduce("xml", xml);
   Factory<IODataType>::introduce("w2algs", xml);
+  xml->initialize();
 
   std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
   Factory<IODataType>::introduce("json", json);
+  json->initialize();
 
   std::shared_ptr<IOFile> file = std::make_shared<IOFile>();
   Factory<IODataType>::introduce("file", file);
+  file->initialize();
 }
 
 void

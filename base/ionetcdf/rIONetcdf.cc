@@ -50,36 +50,34 @@ void
 IONetcdf::initialize()
 {
   // Add the default classes we handle...
-  // Note: These could be replaced by algorithms with subclasses
-  // for example to add or replace functionality
-  // FIXME: This means some of the creation path/filename stuff
-  // needs to be run through the NetcdfType class...
-  NetcdfRadialSet::introduceSelf();
-  NetcdfLatLonGrid::introduceSelf();
-  NetcdfBinaryTable::introduceSelf();
+  NetcdfRadialSet::introduceSelf(this);
+  NetcdfLatLonGrid::introduceSelf(this);
+  NetcdfBinaryTable::introduceSelf(this);
   // Generic netcdf reader class
-  NetcdfDataGrid::introduceSelf();
+  NetcdfDataGrid::introduceSelf(this);
 }
 
 void
 IONetcdf::introduce(const std::string & name,
-  std::shared_ptr<NetcdfType>         new_subclass)
+  std::shared_ptr<IOSpecializer>      new_subclass)
 {
-  Factory<NetcdfType>::introduce(name, new_subclass);
+  mySpecializers[name] = new_subclass;
 }
 
-std::shared_ptr<NetcdfType>
+std::shared_ptr<IOSpecializer>
 IONetcdf::getIONetcdf(const std::string& name)
 {
-  return (Factory<NetcdfType>::get(name, "Netcdf builder"));
+  return mySpecializers[name];
 }
 
 IONetcdf::~IONetcdf()
 { }
 
 std::shared_ptr<DataType>
-IONetcdf::readNetcdfDataType(const URL& url)
+IONetcdf::createDataType(const std::string& params)
 {
+  URL url(params);
+
   LogInfo("Netcdf reader: " << url << "\n");
   std::shared_ptr<DataType> datatype = nullptr;
 
@@ -110,13 +108,17 @@ IONetcdf::readNetcdfDataType(const URL& url)
         type = "DataGrid";
       }
 
-      std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+      std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIONetcdf(type);
       if (fmt == nullptr) {
         LogSevere("No netcdf reader for DataType '" << type << "', using generic reader\n");
         fmt = IONetcdf::getIONetcdf("DataGrid");
       }
       if (fmt != nullptr) {
-        datatype = fmt->read(ncid, url);
+        std::map<std::string, std::string> keys;
+        keys["NETCDF_NCID"] = to_string(ncid);
+        keys["NETCDF_URL"]  = url.toString();
+        // datatype = fmt->read(ncid, url);
+        datatype = fmt->read(keys);
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
@@ -137,7 +139,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
    * This allows algs etc to replace our IONetcdf with a custom if needed. */
   const std::string type = dt->getDataType();
 
-  std::shared_ptr<NetcdfType> fmt = IONetcdf::getIONetcdf(type);
+  std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIONetcdf(type);
 
   // Default base class for now at least is DataGrid, so if doesn't cast
   // we have no methods to write this
@@ -209,7 +211,8 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   // Write netcdf to a disk file here
   try {
-    successful = fmt->write(ncid, dt, keys);
+    keys["NETCDF_NCID"] = to_string(ncid);
+    successful = fmt->write(dt, keys);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");
@@ -241,14 +244,6 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   return successful;
 } // IONetcdf::encodeDataType
-
-/** Read call */
-std::shared_ptr<DataType>
-IONetcdf::createDataType(const std::string& params)
-{
-  // virtual to static call.  We only understand file URLS
-  return (IONetcdf::readNetcdfDataType(URL(params)));
-}
 
 /** Add multiple dimension variable and assign a units to it */
 int

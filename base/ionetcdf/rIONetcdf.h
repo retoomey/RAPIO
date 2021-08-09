@@ -58,25 +58,6 @@ private:
   std::string command;
 };
 
-/** Worker classes that handle read and write of individual datatypes.
- * These can be overriden by users of the library. */
-class NetcdfType : public IO {
-public:
-
-  /** Write DataType from given ncid (subclasses) */
-  virtual bool
-  write(int ncid,
-    std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>& keys) = 0;
-
-  /** Read a DataType from given ncid */
-  virtual std::shared_ptr<DataType>
-  read(
-    const int ncid,
-    const URL & loc
-  ) = 0;
-};
-
 /**
  * The base class of all Netcdf formatters.
  *
@@ -98,16 +79,16 @@ public:
   initialize() override;
 
   /** Use this to introduce new subclasses. */
-  static void
-  introduce(const std::string   & dataType,
-    std::shared_ptr<NetcdfType> new_subclass);
+  void
+  introduce(const std::string      & dataType,
+    std::shared_ptr<IOSpecializer> new_subclass);
 
   /** Returns the appropriate IO given the type encoded in the
    *  netcdf file. IO objects read and write a particular DataType.
    *
    *  @return 0 if we don't know about this type.
    */
-  static std::shared_ptr<NetcdfType>
+  std::shared_ptr<IOSpecializer>
   getIONetcdf(const std::string& type);
 
   // READING ------------------------------------------------------------
@@ -116,10 +97,6 @@ public:
   virtual std::shared_ptr<DataType>
   createDataType(const std::string& params) override;
 
-  /** Do a full read from a param list */
-  static std::shared_ptr<DataType>
-  readNetcdfDataType(const URL& path);
-
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
@@ -127,19 +104,6 @@ public:
   encodeDataType(std::shared_ptr<DataType> dt,
     std::map<std::string, std::string>     & params
   ) override;
-
-  /** Current compression level of netcdf files */
-  static void
-  setGZLevel(int level)
-  {
-    GZ_LEVEL = level;
-  }
-
-  static int
-  getGZLevel()
-  {
-    return (GZ_LEVEL);
-  }
 
   // --------------------------------------------------------
   // ADD utilities

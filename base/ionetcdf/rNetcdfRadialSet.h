@@ -7,7 +7,6 @@
 
 namespace rapio {
 /** Handles the read/write of RadialSet DataType from a netcdf file.  */
-// class NetcdfRadialSet : public NetcdfType {
 class NetcdfRadialSet : public NetcdfDataGrid {
 public:
 
@@ -16,13 +15,13 @@ public:
    *  prms   Only the file name (first param) is needed.
    */
   virtual std::shared_ptr<DataType>
-  read(const int ncid,
-    const URL    & loc)
+  read(
+    std::map<std::string, std::string>& keys)
   override;
 
   /** Write DataType from given ncid */
   virtual bool
-  write(int ncid,
+  write(
     std::shared_ptr<DataType> dt,
     std::map<std::string, std::string>& keys)
   override;
@@ -44,8 +43,9 @@ public:
   virtual
   ~NetcdfRadialSet();
 
+  /** Initial introduction of NetcdfRadialSet specializer to IONetcdf */
   static void
-  introduceSelf();
+  introduceSelf(IONetcdf * owner);
 }
 ;
 }

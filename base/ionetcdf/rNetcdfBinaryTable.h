@@ -7,46 +7,31 @@ class NcVar;
 namespace rapio {
 class BinaryTable;
 
-/** Handles the construction of BinaryTable object from the netcdf file.
- *  @see NetcdfBuilder
+/** Handles the construction of BinaryTable object from the netcdf data,
+ *  @see IONetcdf
  */
-class NetcdfBinaryTable : public NetcdfType {
+class NetcdfBinaryTable : public IOSpecializer {
 public:
 
-  /** Write DataType from given ncid */
+  /** Write BinaryTable DataType */
   virtual bool
-  write(int ncid,
+  write(
     std::shared_ptr<DataType> dt,
     std::map<std::string, std::string>& keys)
   override;
 
-  /** The way to obtain the object.
-   *  @params ncfile An open NetcdfFile object.
-   *  prms   Only the file name (first param) is needed.
-   */
+  /** Read a BinaryTable DataType */
   virtual std::shared_ptr<DataType>
-  read(const int ncid,
-    const URL    & loc)
+  read(
+    std::map<std::string, std::string>& keys)
   override;
 
+  /** Destroy this NetcdfBinaryTable */
   virtual
   ~NetcdfBinaryTable();
 
+  /** Initial introduction of BinaryTable specializer to IONetcdf */
   static void
-  introduceSelf();
-
-  /** Write out a BinaryTable. */
-  static bool
-  write(int     ncid,
-    BinaryTable & binaryTable,
-    const float missing,
-    const float rangeFolded);
-
-private:
-
-  std::string filename;
-
-  // void fillData( LatLonHeightGrid& grid,
-  //               NcVar* data_var, int dim1, int dim2 , int dim3 );
+  introduceSelf(IONetcdf * owner);
 };
 }

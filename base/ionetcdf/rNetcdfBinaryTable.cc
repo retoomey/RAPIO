@@ -44,15 +44,15 @@ NetcdfBinaryTable::~NetcdfBinaryTable()
 { }
 
 void
-NetcdfBinaryTable::introduceSelf()
+NetcdfBinaryTable::introduceSelf(IONetcdf * owner)
 {
   std::shared_ptr<NetcdfBinaryTable> newOne = std::make_shared<NetcdfBinaryTable>();
-  IONetcdf::introduce("BinaryTable", newOne);
+  owner->introduce("BinaryTable", newOne);
 }
 
 std::shared_ptr<DataType>
-NetcdfBinaryTable::read(const int ncid,
-  const URL                       & loc)
+NetcdfBinaryTable::read(
+  std::map<std::string, std::string>& keys)
 {
   LogSevere("Unimplemented raw table, returning empty table\n");
 
@@ -61,21 +61,16 @@ NetcdfBinaryTable::read(const int ncid,
 }
 
 bool
-NetcdfBinaryTable::write(int ncid, std::shared_ptr<DataType> dt,
+NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>& keys)
 {
-  std::shared_ptr<BinaryTable> binaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
-
-  return (write(ncid, *binaryTable, IONetcdf::MISSING_DATA,
-         IONetcdf::RANGE_FOLDED));
-}
-
-/** Write routing using c library */
-bool
-NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
-  const float missing, const float rangeFolded)
-{
   try {
+    std::shared_ptr<BinaryTable> pBinaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
+    BinaryTable& binaryTable = *pBinaryTable;
+    const int ncid          = std::stoi(keys["NETCDF_NCID"]);
+    const float missing     = IONetcdf::MISSING_DATA; // Could be keys
+    const float rangeFolded = IONetcdf::RANGE_FOLDED;
+
     // Generically write a binary table's stuff to netcdf.  This uses an API
     // within the binary table to avoid coupling and to allow dynamic expansion
     std::vector<BinaryTable::TableInfo> infos = binaryTable.getTableInfo();
@@ -132,7 +127,7 @@ NetcdfBinaryTable::write(int ncid, BinaryTable& binaryTable,
           // int shuffle = NC_SHUFFLE; needs chunk size array in var_chunking..
           const int shuffle       = NC_CONTIGUOUS;
           const int deflate       = 1;
-          const int deflate_level = IONetcdf::getGZLevel();
+          const int deflate_level = IONetcdf::GZ_LEVEL;
 
           // New var.  Use '1' here because we create a vector variable
           NETCDF(nc_def_var(ncid, name.c_str(), aNcType, 1, &dims[i], &varid));
