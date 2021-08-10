@@ -39,3 +39,15 @@ html
 latex
 # Ignore the RAPIOBuilder rebuild script
 rebuild.sh
+# Ignoring generated inplace CMAKE files --------------
+CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
+*.so
+*-prefix
+tests/CTestTestfile.cmake
+install_manifest.txt
+# ---Ignored generated inplace CMAKE files --------------
+# ---Ignoring binaries
+rsimplealg
+rtile
