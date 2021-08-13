@@ -1,0 +1,70 @@
+# Fedora34 Makefile Toomey July 2021
+# This Static makefile is ok in this case because the container paths/libraries are preset
+# When container OS version changes these will have to be checked
+
+##########################################################################################
+# 99% of the time, this will be enough to set these flags here:
+#
+# Name your algorithm
+MYALGNAME=rTEMPLATE
+
+# List the .cc files of your algorithm
+MAIN_SRC=\
+  rTEMPLATE.cc
+
+# Debug options for g++
+CXXDEBUGFLAGS = -g
+
+# C++ option extras
+CXXOPTIONS = -Wall -O3
+
+##########################################################################################
+
+# Flags for container build of RAPIO library
+RAPIO_LIBS="-lboost_system -lboost_log -lboost_log_setup -lboost_thread -lboost_filesystem -lboost_serialization -lboost_iostreams -lboost_timer -ludunits2"
+RAPIO_CFLAGS="-DBOOST_LOG_DYN_LINK"
+
+# The directory on container where RAPIO was installed
+RAPIODIR=/usr
+ 
+# Libraries
+LIBRARIES =\
+        -L$(RAPIODIR)/lib64 -L$(RAPIODIR)/lib -lrapio
+
+# Includes
+INCLUDES =\
+	-I./\
+	-I$(RAPIODIR)/include/rapiobase
+
+# Settings for compiling
+.cc.o:
+	$(CXX) $(CXXFLAGS) -c $<
+
+              CXX = g++
+      CXXINCLUDES = $(INCLUDES)
+         CXXFLAGS = $(CXXDEBUGFLAGS) $(CXXOPTIONS) $(CXXINCLUDES)
+
+MV = mv
+CP = cp
+RM = rm -f
+
+MAIN_OBJS=${MAIN_SRC:.cc=.o}
+
+PROGRAMS = ${MYALGNAME}
+
+all:: $(PROGRAMS)
+
+${MYALGNAME}: $(MAIN_OBJS)
+	$(RM) $@
+	$(CXX) -o $@ $(CXXFLAGS) $(MAIN_OBJS) $(LIBRARIES)
+
+# Install our bin into the container bin.  Oops we can't do this.  Needs to be local to this folder
+install:: $(PROGRAMS)
+	test -d $(RAPIODIR)/bin || mkdir $(RAPIODIR)/bin
+	install $< $(RAPIODIR)/bin
+
+# Make clean, remove bins and .o
+clean::
+	$(RM) $(PROGRAMS)
+	$(RM) *.o
+

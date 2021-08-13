@@ -17,6 +17,7 @@ yum install svn git -y
 # gcc-toolset-9-gcc-c++ is on here too, we'll go with stock
 # libtool 'should' snag autoconf, automake, m4
 yum install gcc-c++ gdb make libtool -y
+yum install cmake -y
 
 # Compression/Decompression libraries
 yum install unzip xz-devel bzip2-devel -y
@@ -68,7 +69,8 @@ echo "   Substep Build/Install RAPIO Development Library..."
 cd /BUILD
 git clone https://github.com/retoomey/RAPIO/
 cd RAPIO
-./autogen.sh --prefix=/usr
+# Migrating to cmake...
+./autogen.sh --prefix=/usr --usecmake
 
 # Too high a j here can freak the container (out of memory), we'll try 3
 # if you have issues, safest is -j 1

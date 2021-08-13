@@ -28,7 +28,8 @@ cd $1
 
 echo "Modifying template files..."
 SUB="s/TEMPLATE/$1/g"
-sed -i $SUB Makefile
+sed -i $SUB MakefileTemplate
+mv MakefileTemplate Makefile
 sed -i $SUB runme.sh
 sed -i $SUB rTEMPLATE.h
 mv rTEMPLATE.h r$1.h
