@@ -184,9 +184,32 @@ add_library(rapio SHARED
     "${SOURCE_FILES}"
 )
 
+# container /usr/include/udunits2
+# /usr/lib64/libudunits2.so
+
+##################################################################################################
+# Hunt for udunits2, priority is the MRMS third party folder
+find_path( UDUNITS_HEADERS NAMES udunits.h
+  HINTS ${CMAKE_PREFIX_INSTALL}/include /usr/include/udunits2
+)
+
+find_library( UDUNITS_LIBS NAMES udunits2
+  PATHS ${CMAKE_PREFIX_INSTALL}/lib /usr/lib64
+)
+
+if (UDUNITS_LIBS AND UDUNITS_HEADERS)
+  include_directories(${UDUNITS_HEADERS})
+  message(STATUS "Udunits2: ${UDUNITS_HEADERS} ${UDUNITS_LIBS}")
+else(
+  message(FATAL_ERROR "Couldn't find udunits2 library.")
+)
+endif(UDUNITS_LIBS AND UDUNITS_HEADERS)
+##################################################################################################
+
 # Yeah I know we need to check these libraries
 # I'm just starting out with cmake
 target_link_libraries(rapio
+  ${UDUNITS_LIBS}
   proj
   curl
   bz2
@@ -201,7 +224,6 @@ target_link_libraries(rapio
   boost_serialization
   boost_iostreams
   boost_timer
-  udunits2
 )
 
 set_target_properties(rapio PROPERTIES

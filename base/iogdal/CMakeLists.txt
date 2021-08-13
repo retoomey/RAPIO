@@ -11,9 +11,27 @@ add_library(rapiogdal SHARED
   rIOGDAL.cc
 )
 
+##################################################################################################
+# Hunt for GDAL, we prioritize the MRMS third party build
+find_path( GDAL_HEADERS NAMES gdal_priv.h
+  HINTS ${CMAKE_PREFIX_INSTALL}/include /usr/include/gdal
+)
+find_library( GDAL_LIBS NAMES gdal
+  PATHS ${CMAKE_PREFIX_INSTALL}/lib /usr/lib64
+)
+
+if (GDAL_LIBS AND GDAL_HEADERS)
+  include_directories(${GDAL_HEADERS})
+  message(STATUS "GDAL: ${GDAL_HEADERS} ${GDAL_LIBS}")
+else(
+  message(FATAL_ERROR "Couldn't find GDAL library.")
+)
+endif(GDAL_LIBS AND GDAL_HEADERS)
+##################################################################################################
+
 # Link to other libraries
 target_link_libraries(rapiogdal
-  gdal
+  ${GDAL_LIBS}
 )
 
 # Install the module
