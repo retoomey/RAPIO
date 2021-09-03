@@ -1,4 +1,4 @@
-# We wants headers in the current directory, even if bracketed. FIXME: Maybe we shouldn't bracket
+# We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
 # Get headers from core above us, or where ever RAPIO headers are
@@ -16,12 +16,15 @@ add_library(rapionetcdf SHARED
   rNetcdfDataTypeImp.cc
 )
 
+# Include headers and libraries
+include_directories(${Netcdf_INCLUDE_DIR})
 target_link_libraries(rapionetcdf
-  boost_system
-  netcdf
+  #boost_system
+  ${Boost_LIBRARIES}
+  ${Netcdf_LIBRARIES}
 )
 
 # Install the module
 install(TARGETS rapionetcdf
-   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+   LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
 )

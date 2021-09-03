@@ -33,18 +33,11 @@ if [ "$USEAUTOTOOLS" = "true" ]; then
   echo "Using autotools to build"
   autoreconf -vi
   ./configure "$@"
+  echo "Now type 'make ' to compile RAPIO."
 else
   echo "CMAKE defaulting install prefix to $CMAKEPREFIX"
-
-  # This will conflict with scripts using autogen.sh autotools, for
-  # now we'll do an inplace build which cmake doesn't recommend
-  # once I drop autotools completely we can use a dedicated build folder
-  cmake -DCMAKE_INSTALL_PREFIX=$CMAKEPREFIX .
-  #mkdir -p build
-  #cd build
-  #cmake -DCMAKE_INSTALL_PREFIX=$CMAKEPREFIX ../.
-  #echo "cd to build and make"
-  #cmake --build .
+  rm ./BUILD/CMakeCache.txt
+  cmake -DCMAKE_INSTALL_PREFIX=$CMAKEPREFIX -S. -B./BUILD
+  echo "Now type 'cd BUILD; make ' to compile RAPIO."
 fi
 
-echo "Now type 'make ' to compile RAPIO."

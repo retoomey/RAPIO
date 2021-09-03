@@ -1,11 +1,8 @@
-# link to our custom build path.
-link_directories(${CMAKE_INSTALL_PREFIX}/lib)
+# Toomey Sept 2021
+# RAPIO base cmake file
+#
 
-include_directories(. ${CMAKE_INSTALL_PREFIX}/include)
-
-# Need this to add the BOOST setting or the rError.cc will complain about v2
-add_definitions(-DBOOST_LOG_DYN_LINK)
-
+# Set variable of all headers we use
 set(HEADER_FILES
   RAPIO.h
   rArray.h
@@ -100,6 +97,7 @@ set(HEADER_FILES
   rNamedAny.h
 )
 
+# Set variable of all sources we use
 set(SOURCE_FILES
   rArray.cc
   rColor.cc
@@ -180,60 +178,57 @@ set(SOURCE_FILES
   ccronexpr.c
 )
 
+# Create RAPIO shared library
 add_library(rapio SHARED
     "${SOURCE_FILES}"
 )
 
-# container /usr/include/udunits2
-# /usr/lib64/libudunits2.so
+# Add link to our custom build path.
+link_directories(${RAPIO_INSTALL_LIB})
 
-##################################################################################################
-# Hunt for udunits2, priority is the MRMS third party folder
-find_path( UDUNITS_HEADERS NAMES udunits.h
-  HINTS ${CMAKE_PREFIX_INSTALL}/include /usr/include/udunits2
+include_directories(. 
+  ${CMAKE_INSTALL_PREFIX}/include 
+  ${Boost_INCLUDE_DIR}
+  ${UDUnits2_INCLUDE_DIR} 
+  ${JASPER_INCLUDE_DIR} 
+  ${Proj_INCLUDE_DIR} 
+  ${PNG_INCLUDE_DIRS}
+  ${BZip2_INCLUDE_DIRS}
 )
 
-find_library( UDUNITS_LIBS NAMES udunits2
-  PATHS ${CMAKE_PREFIX_INSTALL}/lib /usr/lib64
-)
-
-if (UDUNITS_LIBS AND UDUNITS_HEADERS)
-  include_directories(${UDUNITS_HEADERS})
-  message(STATUS "Udunits2: ${UDUNITS_HEADERS} ${UDUNITS_LIBS}")
-else(
-  message(FATAL_ERROR "Couldn't find udunits2 library.")
-)
-endif(UDUNITS_LIBS AND UDUNITS_HEADERS)
+# Need this to add the BOOST setting or the rError.cc will complain about v2
+add_definitions(-DBOOST_LOG_DYN_LINK)
 ##################################################################################################
 
-# Yeah I know we need to check these libraries
-# I'm just starting out with cmake
+# Link libraries
 target_link_libraries(rapio
-  ${UDUNITS_LIBS}
-  proj
-  curl
-  bz2
-  jasper
-  png
-  pthread
-  boost_system
-  boost_log
-  boost_log_setup
-  boost_thread
-  boost_filesystem
-  boost_serialization
-  boost_iostreams
-  boost_timer
-)
-
-set_target_properties(rapio PROPERTIES
-  PUBLIC_HEADER "${HEADER_FILES}"
+  -lpthread
+  ${CURL_LIBRARIES}
+  ${UDUnits2_LIBRARIES}
+  ${JASPER_LIBRARIES}
+  ${JPEG_LIBRARIES}
+  ${Proj_LIBRARIES}
+  ${BZip2_LIBRARIES}
+  ${PNG_LIBRARIES}
+  ${Boost_LIBRARIES}
+#  boost_system
+#  boost_log
+#  boost_log_setup
+#  boost_thread
+#  boost_filesystem
+#  boost_serialization
+#  boost_iostreams
+#  boost_timer
 )
 
 # Install the RAPIO headers
+set_target_properties(rapio PROPERTIES
+  PUBLIC_HEADER "${HEADER_FILES}"
+)
 install(TARGETS rapio
-  PUBLIC_HEADER
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/rapiobase
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/rapiobase
+  #LIBRARY DESTINATION 
+  #RUNTIME DESTINATION 
 )
 
 # Create the modules.  They could be built on the top layer actually?

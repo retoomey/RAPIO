@@ -1,4 +1,8 @@
-include_directories(. ../)
+# We wants headers in the current directory, even if bracketed.
+include_directories(.)
+
+# Get headers from core above us, or where ever RAPIO headers are
+include_directories(../)
 
 # We're building a standalone shared library
 add_library(rapioimage SHARED
@@ -6,27 +10,21 @@ add_library(rapioimage SHARED
   rIOImage.cc
 )
 
-##################################################################################################
-# FIXME: This is supposed to be a module 'find_package' or something.  I'm learning cmake
-find_path( MAGICK_HEADERS NAMES Magick++.h
-  HINTS ${CMAKE_PREFIX_INSTALL}/include /usr/include/GraphicsMagick /usr/include/ImageMagick
-)
-find_library( MAGICK_LIBS NAMES GraphicsMagick++ Magick++-6.Q16
-  PATHS ${CMAKE_PREFIX_INSTALL}/lib /usr/lib64
-)
-
-if (MAGICK_LIBS AND MAGICK_HEADERS)
+# Add conditional flag
+if (Magick_LIBRARIES AND Magick_INCLUDE_DIR)
   add_definitions(-DHAVE_MAGICK)
-  include_directories(${MAGICK_HEADERS})
-  message(STATUS "Magick++: ${MAGICK_HEADERS} ${MAGICK_LIBS}")
 else(
   message(WARNING "Couldn't find GraphicsMagick or ImageMagick, You should install if you want the rapioimage module to work.")
 )
-endif(MAGICK_LIBS AND MAGICK_HEADERS)
+endif(Magick_LIBRARIES AND Magick_INCLUDE_DIR)
 
-# Link found magic library to code
+# Include headers and libraries
+include_directories(${Magick_INCLUDE_DIR})
 target_link_libraries(rapioimage
-  ${MAGICK_LIBS}
+  ${Magick_LIBRARIES}
 )
-# End our ImagicMagick hunt
-##################################################################################################
+
+# Install the module
+install(TARGETS rapioimage
+   DESTINATION ${RAPIO_INSTALL_LIB}
+)

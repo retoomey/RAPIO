@@ -13,5 +13,5 @@ add_library(rapiopython SHARED
 
 # Install the module
 install(TARGETS rapiopython
-   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+   DESTINATION ${RAPIO_INSTALL_LIB}
 )

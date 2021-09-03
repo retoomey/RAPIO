@@ -1,6 +1,8 @@
-# We wants headers in the current directory, even if bracketed. FIXME: Maybe we shouldn't bracket
+# We wants headers in the current directory, even if bracketed.
+include_directories(.)
+
 # Get headers from core above us, or where ever RAPIO headers are
-include_directories(. ../)
+include_directories(../)
 
 add_library(rapiogrib SHARED
   rGribDataTypeImp.cc
@@ -13,5 +15,5 @@ target_link_libraries(rapiogrib
 
 # Install the module
 install(TARGETS rapiogrib
-   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+   DESTINATION ${RAPIO_INSTALL_LIB}
 )
