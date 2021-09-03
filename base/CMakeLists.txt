@@ -227,8 +227,7 @@ set_target_properties(rapio PROPERTIES
 )
 install(TARGETS rapio
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/rapiobase
-  #LIBRARY DESTINATION 
-  #RUNTIME DESTINATION 
+  LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
 )
 
 # Create the modules.  They could be built on the top layer actually?

@@ -76,7 +76,9 @@ find_package(Boost 1.71 REQUIRED COMPONENTS
 # jasper.  Either it's bugged or I'm still learning cmake
 find_package(Jasper REQUIRED)
 if (JASPER_FOUND)
-  set(JASPER_LIBRARIES "${JASPER_LIBRARY}/libjasper.so")
+  if (NOT "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
+    set(JASPER_LIBRARIES "${JASPER_LIBRARY}/libjasper.so")
+  endif()
 endif()
 find_package(ZLIB REQUIRED)
 find_package(PNG REQUIRED)

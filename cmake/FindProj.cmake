@@ -17,6 +17,6 @@ find_third_party(
   REQUIRED
   HEADER proj.h
   LIBRARY proj
-  HEADER_PATHS ${Proj_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include
+  HEADER_PATHS ${Proj_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include
   LIBRARY_PATHS ${Proj_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
 )
