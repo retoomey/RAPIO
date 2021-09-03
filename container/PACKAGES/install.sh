@@ -64,25 +64,6 @@ make
 cp *.h /usr/include/.
 cp libg2c_v1.6.3.a /usr/lib64/libgrib2c.a
 
-# -------------------------------------------------------------
-echo "   Substep Build/Install RAPIO Development Library..."
-cd /BUILD
-git clone https://github.com/retoomey/RAPIO/
-cd RAPIO
-# Migrating to cmake...
-./autogen.sh --prefix=/usr --usecmake
-
-# Too high a j here can freak the container (out of memory), we'll try 3
-# if you have issues, safest is -j 1
-make -j 3 install
-
-# Finally change ownership to developer so they can play, but not install
-if id -u "developer" >/dev/null 2>&1; then
-  echo "    Changing /BUILD to developer ownership."
-  # Allow developer passwordless sudo here (probably not wanted in production)
-  cp /tmp/PACKAGES/95-developer-user /etc/sudoers.d/.
-  chown developer:developer -R /BUILD
-else
-  echo "    developer user doesn't exist, root on container not recommended."
-fi
+# Allow developer passwordless sudo here (probably not wanted in production)
+cp /tmp/PACKAGES/95-developer-user /etc/sudoers.d/.
 

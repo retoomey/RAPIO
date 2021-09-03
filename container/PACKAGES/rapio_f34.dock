@@ -1,34 +1,10 @@
 #Docker/Podman for building a RAPIO development box
-FROM fedora:34
+FROM mrmsbase:f34
 
 ##############################################################################
-# Non root user to run as.  We try to use the user you are running
-# this as.  We don't want algs building, etc. writing as root user
-# which causes a mess.  At least linux/linux it does.
-# This is one thing that is handled better with Podman.
-# FIXME: How to tweak this for windows user? You could try 0:0 for root there.
-ARG RUNID
-ARG RUNGROUP
-RUN groupadd -g $RUNGROUP developer
-RUN useradd -u $RUNID -g $RUNGROUP developer
-
-# Add to wheel group if you want to experiment with adding packages, etc.
-# on the container (sudo root).  This isn't recommended for a production docker.
-RUN usermod -a -G wheel developer
-##############################################################################
-
-# Get all static data from PACKAGE onto the machine in one copy
-# We will move things to proper locations using a script, this saves
-# layers/size.  install.sh then does the heavy work in one step
-# Downside to this is less feedback in 'steps'. Upside
-# is that it's a lot smaller
-COPY PACKAGES /tmp/PACKAGES
+# Add current RAPIO git build
 WORKDIR /tmp/PACKAGES
-RUN ./install.sh
-
+RUN ./buildrapio.sh
 # Use the RAPIOConfig for RAPIO algorithms by default
 ENV RAPIO_CONFIG_LOCATION="/BUILD/MYALGS/RAPIOConfig"
-
-# Make the binaries the default (we install to /usr/bin not needed)
-#ENV PATH="/BUILD/bin:${PATH}"
 WORKDIR /BUILD/
