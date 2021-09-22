@@ -57,35 +57,46 @@ Signals::printTrace()
 void
 Signals::handleSignal(int signum)
 {
+  // The exit code magic numbers are out on the web.  We'll try
+  // to send the correct ones, normally it's just 1 for error 0 for success
+  int exitcode = 1;
+
   // Our safe print info on signal. It's not recommended
   // to print from signals but I find this so handy in operations
   switch (signum) {
       case SIGTERM: {
         PRINTSIGNAL("SIGTERM", " received.");
+        exitcode = 0;
       }
       break;
       case SIGSEGV: {
         PRINTSIGNAL("SIGSEGV", " received.");
+        exitcode = 139;
       }
       break;
       case SIGINT: {
         PRINTSIGNAL("SIGINT", " received.");
+        exitcode = 130;
       }
       break;
       case SIGILL: {
         PRINTSIGNAL("SIGILL", " received.");
+        exitcode = 132;
       }
       break;
       case SIGABRT: {
         PRINTSIGNAL("SIGABRT", " received.");
+        exitcode = 134;
       }
       break;
       case SIGFPE: {
         PRINTSIGNAL("SIGFPE", " Bad math, divide by zero?");
+        exitcode = 136;
       }
       break;
       default: {
         PRINTSIGNAL("UNKNOWN", " signal number.");
+        exitcode = 2;
       }
       break;
   }
@@ -107,7 +118,11 @@ Signals::handleSignal(int signum)
     enabledStackTrace = false;
     printTrace();
   }
-  kill(getpid(), signum);
+  // Frustrating, still not working in docker, maybe because I'm multithreaded?
+  // possibly I'm building container entry point incorrect..but the signal is lost
+  // and algorithm refuses to die.  Exit appears to work correctly so we'll use it for now.
+  // kill(getpid(), signum);
+  exit(exitcode);
 } // Signals::handleSignal
 
 void
