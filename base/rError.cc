@@ -384,12 +384,15 @@ void
 Log::setSeverity(Log::Severity severity)
 {
   // Update severity level to given
-  if (severity != myCurrentLevel) {
+  static bool firstTime = true;
+
+  if (firstTime || (severity != myCurrentLevel)) {
     myCurrentLevel = severity;
 
     const bool enableStackTrace = (severity == Severity::DEBUG);
     const bool wantCoreDumps    = (severity == Severity::DEBUG);
     Signals::initialize(enableStackTrace, wantCoreDumps);
+    firstTime = false;
   }
 }
 

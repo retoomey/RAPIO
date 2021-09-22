@@ -12,6 +12,8 @@
 
 using namespace rapio;
 
+static bool enabledStackTrace = false;
+
 /** Designed by nobar on stackoverflow,
  * doesn't work with valgrind or when running within gdb */
 void
@@ -41,42 +43,79 @@ Signals::printTrace()
  * SIGABRT	abnormal termination condition, as is e.g. initiated by abort()
  * SIGFPE	erroneous arithmetic operation such as divide by zero
  */
+
+#define PRINTSIGNAL(X, Y)                              \
+  do {                                                  \
+    char signal[]      = X;                                  \
+    char msg[]         = Y;                                     \
+    const char stock[] = " Terminating algorithm.\n";    \
+    write(STDOUT_FILENO, signal, sizeof(signal));       \
+    write(STDOUT_FILENO, msg, sizeof(msg));             \
+    write(STDOUT_FILENO, stock, sizeof(stock));         \
+  } while (0)
+
 void
 Signals::handleSignal(int signum)
 {
+  // Our safe print info on signal. It's not recommended
+  // to print from signals but I find this so handy in operations
   switch (signum) {
-      case SIGTERM: std::cout << "\nTERMinated " << signum << "\n";
-        break;
-      case SIGSEGV: std::cout << "\nEGC: Invalid memory " << signum << "\n";
-        break;
-      case SIGINT: std::cout << "\nINT: External interrupt " << signum << "\n";
-        break;
-      case SIGILL: std::cout << "\nILL: Invalid program image " << signum << "\n";
-        break;
-      case SIGABRT: std::cout << "\nABRT: Abnormal termination " << signum << "\n";
-        break;
-      case SIGFPE: std::cout << "\nFPE: Bad math, divide by zero? " << signum << "\n";
-        break;
-      default:
-        std::cout << "\nUnknown signal number " << signum << "\n";
-        break;
+      case SIGTERM: {
+        PRINTSIGNAL("SIGTERM", " received.");
+      }
+      break;
+      case SIGSEGV: {
+        PRINTSIGNAL("SIGSEGV", " received.");
+      }
+      break;
+      case SIGINT: {
+        PRINTSIGNAL("SIGINT", " received.");
+      }
+      break;
+      case SIGILL: {
+        PRINTSIGNAL("SIGILL", " received.");
+      }
+      break;
+      case SIGABRT: {
+        PRINTSIGNAL("SIGABRT", " received.");
+      }
+      break;
+      case SIGFPE: {
+        PRINTSIGNAL("SIGFPE", " Bad math, divide by zero?");
+      }
+      break;
+      default: {
+        PRINTSIGNAL("UNKNOWN", " signal number.");
+      }
+      break;
   }
+
+  // Found stackoverflow recommendations on removing the signal handlers
+  // and then self calling kill.  We also want this behavior because
+  // in containers we don't necessarily have a shell to handle SIGINT
+  // properly for us.
+  signal(SIGTERM, SIG_DFL);
+  signal(SIGSEGV, SIG_DFL);
+  signal(SIGINT, SIG_DFL);
+  signal(SIGILL, SIG_DFL);
+  signal(SIGABRT, SIG_DFL);
+  signal(SIGFPE, SIG_DFL);
+
   // Ok try to avoid infinite loop on any possibility of printTrace signaling here
   // exit itself is smart enough for double call
-  static bool firstTime = true;
-  if (firstTime) {
-    firstTime = false;
+  if (enabledStackTrace) {
+    enabledStackTrace = false;
     printTrace();
   }
-  exit(signum);
-}
+  kill(getpid(), signum);
+} // Signals::handleSignal
 
 void
 Signals::initialize(bool enableStackTrace, bool wantCoreDumps)
 {
-  auto aSignal = SIG_DFL;
+  auto aSignal = handleSignal;
 
-  if (enableStackTrace) { aSignal = handleSignal; }
+  enabledStackTrace = enableStackTrace;
 
   // Set or remove signal handling depending on flags
   signal(SIGTERM, aSignal);
