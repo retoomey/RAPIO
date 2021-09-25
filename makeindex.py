@@ -13,19 +13,24 @@ import shutil
 # that defines it 0 is product, 1 subtype, 2 the file:
 # The 'GzippedFile' thing is non-consistent in wdss2
 paramlines = { 
+# Netcdf files
  ".netcdf": " <params>netcdf {{indexlocation}} {0} {1} {2} </params>",
  ".netcdf.gz": " <params>netcdf {{indexlocation}} {0} {1} {2} </params>",
  ".nc": " <params>netcdf {{indexlocation}} {0} {1} {2} </params>",
  ".nc.gz": " <params>netcdf {{indexlocation}} {0} {1} {2} </params>",
+# XML and JSON files
  ".xml": " <params>W2ALGS GzippedFile {{indexlocation}} xmldata {0}/{1}/{2} </params>",
  ".xml.gz": " <params>W2ALGS GzippedFile {{indexlocation}} xmldata {0}/{1}/{2} </params>",
  ".raw": " <params>w2merger {{indexlocation}} {0}/{1}/{2} </params>",
  ".json": " <params>json {{indexlocation}} xmldata {0}/{1}/{2} </params>",
  ".json.gz": " <params>json {{indexlocation}} xmldata {0}/{1}/{2} </params>",
+# Grib2 files
  ".grib2": " <params>grib {{indexlocation}} {0} {1} {2} </params>",
  ".grib2.gz": " <params>grib {{indexlocation}} {0} {1} {2} </params>",
  ".grb2": " <params>grib {{indexlocation}} {0} {1} {2} </params>",
- ".grb2.gz": " <params>grib {{indexlocation}} {0} {1} {2} </params>"
+ ".grb2.gz": " <params>grib {{indexlocation}} {0} {1} {2} </params>",
+# Merger stage 1 files
+ ".raw": " <params>w2merger {{indexlocation}} {0} {1} {2} </params>"
 }
 suffix=list(paramlines.keys())
 

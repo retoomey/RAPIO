@@ -165,4 +165,99 @@ protected:
    * same value) */
   static const size_t BLOCK_LEVEL;
 };
+
+// for now here, refactoring... these are two classes in MRMS for the raw, I think we
+// don't need them
+
+class WObsBinaryTable : public BinaryTable
+{
+public:
+
+  /** Our block level...which is level 1 and the first always.  Every subclass
+   * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */
+  static size_t BLOCK_LEVEL;
+
+  /** Typename of the data such as Reflectivity */
+  std::string typeName;
+
+  /** Units of the data (use attribute of datatype to store) */
+  std::string unit;
+
+  /** Optional marked lines cache filename, blank if not used.
+   * I'm wondering if this is ever used currently in MRMS. */
+  std::string markedLinesCacheFile;
+
+  /** Origin of the data: radar center or the nw corner of domain for example. */
+  float lat, lon, ht;
+
+  /** The global time of all the data */
+  time_t data_time;
+
+  /** The global valid time of all the data */
+  time_t valid_time;
+
+  // Arrays
+  struct Line {
+    unsigned short x, y, z, len;
+  };
+  std::vector<Line> markedLines;
+  std::vector<unsigned short> x, y, z;
+  std::vector<float> newvalue;
+  std::vector<unsigned short> scaled_dist;
+  std::vector<char> elevWeightScaled;
+
+  /** Get the block level magic vector for this class.  Subclasses MUST override
+   * to call their
+   * superclass and then push back their level identifier. */
+  virtual void
+  getBlockLevels(std::vector<std::string>& levels) override;
+
+  /** Read our block from file if it exists at current location */
+  virtual bool
+  readBlock(FILE * fp) override;
+};
+
+class RObsBinaryTable : public WObsBinaryTable
+{
+public:
+
+  /** Our block level...which is level 1 and the first always.  Every subclass
+   * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */
+  static size_t BLOCK_LEVEL;
+
+
+  /** Radar name these observations belong to */
+  std::string radarName;
+
+  /** VCP number of the radar */
+  int vcp;
+
+  /** Elevation of the radar */
+  float elev;
+
+  /** Azimuth values */
+  std::vector<unsigned short> azimuth;
+
+  /** Ouch, MRMS using the code::Time here.  For a 'general' format
+   * I'm gonna have to change that.  Try to make a structure with same size.
+   * FIXME: modify WDSSII raw format to use standard variables
+   */
+  struct mrmstime {
+    time_t epoch_sec;
+    double frac_sec;
+  };
+
+  /** Azimuth values */
+  std::vector<mrmstime> aztime;
+
+  /** Get the block level magic vector for this class.  Subclasses MUST override
+   * to call their
+   * superclass and then push back their level identifier. */
+  virtual void
+  getBlockLevels(std::vector<std::string>& levels) override;
+
+  /** Read our block from file if it exists at current location */
+  virtual bool
+  readBlock(FILE * fp) override;
+};
 }

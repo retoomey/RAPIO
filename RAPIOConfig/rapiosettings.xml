@@ -75,6 +75,7 @@ Information needed:
     <file suffix="jpg" io="image"/>
     <file suffix="xml" io="xml"/>
     <file suffix="json" io="json"/>
+    <file suffix="raw" io="raw"/>
   </suffixes>
 
 <!-- Settings for the built in XML reader --> 
@@ -138,6 +139,14 @@ Information needed:
   <io names="grib" module="librapiogrib.so">
     <output />
   </io>
+
+<!-- RAW module settings
+     This reads a binary table from MRMS merger stage 1 output
+-->
+  <io names="raw w2merger" module="librapioraw.so">
+    <output />
+  </io>
+
 </datatype>
 
 </settings>

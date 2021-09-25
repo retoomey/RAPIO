@@ -7,7 +7,13 @@
 using namespace rapio;
 using namespace std;
 
+// Bleh we _really_ need to check the signature, BEFORE
+// creating the object.  Thus a factory.
 const size_t BinaryTable::BLOCK_LEVEL = 1;
+
+// Subclasses of BinaryTable
+size_t WObsBinaryTable::BLOCK_LEVEL;
+size_t RObsBinaryTable::BLOCK_LEVEL;
 
 void
 BinaryTable::getBlockLevels(std::vector<std::string>& levels)
@@ -168,4 +174,112 @@ BinaryTable::writeBlock(FILE * fp)
   write_string8(test2, fp);
 
   return (true);
+}
+
+// Weighted  ----------------------------------------
+//
+void
+WObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+{
+  // Level stack
+  BinaryTable::getBlockLevels(levels);
+  levels.push_back("W");
+  WObsBinaryTable::BLOCK_LEVEL = levels.size();
+}
+
+bool
+WObsBinaryTable::readBlock(FILE * fp)
+{
+  // Blocks have to be ordered by magic string
+  // If superclass was able to read its block, then...
+  if (BinaryTable::readBlock(fp) &&
+    matchBlockLevel(WObsBinaryTable::BLOCK_LEVEL))
+  {
+    // ----------------------------------------------------------
+    // Read our data block if available (match with write below)
+    read_string8(typeName, fp);
+    myTypeName = typeName;
+
+    // Handle units
+    std::string unit;
+    read_string8(unit, fp);
+    setDataAttributeValue("Unit", "dimensionless", unit);
+    read_type<float>(lat, fp);
+    read_type<float>(lon, fp);
+    read_type<float>(ht, fp);
+    myLocation = LLH(lat, lon, ht / 1000.0);
+    read_type<time_t>(data_time, fp);
+    read_type<time_t>(valid_time, fp);
+
+    LogInfo(
+      "RAW INFO: " << typeName << "/" << unit << "," << lat << "," << lon << "," << ht << "," << data_time << "," << valid_time
+                   << "\n");
+
+    // Handle the marked lines reading in...
+    read_string8(markedLinesCacheFile, fp);
+    std::vector<Line> markedLines;
+    if (markedLinesCacheFile == "") {
+      read_vector(markedLines, fp);
+      size_t aSize = markedLines.size();
+      LogInfo("SIZE OF LINES IS " << aSize << "\n");
+      if (aSize > 5) { aSize = 5; }
+      for (int i = 0; i < aSize; i++) {
+        std::cout << "      line: " << i << "(" << markedLines[i].len << ") ( " << markedLines[i].x << ","
+                  << markedLines[i].y << "," << markedLines[i].z << ")\n";
+      }
+    } else {
+      LogSevere("RAWERROR: RAW File wants us to read a cached file, not supported.\n");
+    }
+
+    // Read the six default arrays that always read
+    read_vector(x, fp);
+    read_vector(y, fp);
+    read_vector(z, fp);
+    read_vector(newvalue, fp);
+    read_vector(scaled_dist, fp);
+    read_vector(elevWeightScaled, fp);
+
+    // ----------------------------------------------------------
+    return true;
+  } else {
+    LogSevere("WObsBinaryTable Missing our data block in .raw file\n");
+  }
+  return false;
+} // WObsBinaryTable::readBlock
+
+void
+RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+{
+  // Level stack
+  WObsBinaryTable::getBlockLevels(levels);
+  levels.push_back("R");
+  RObsBinaryTable::BLOCK_LEVEL = levels.size();
+}
+
+bool
+RObsBinaryTable::readBlock(FILE * fp)
+{
+  // Blocks have to be ordered by magic string
+  // If superclass was able to read its block, then...
+  if (WObsBinaryTable::readBlock(fp) &&
+    matchBlockLevel(RObsBinaryTable::BLOCK_LEVEL))
+  {
+    // ----------------------------------------------------------
+    // Read our data block if available (match with write below)
+
+    // More header for us....
+    read_string8(radarName, fp);
+    read_type<int>(vcp, fp);    // fread( &vcp, sizeof(int), 1, fp );
+    read_type<float>(elev, fp); // fread( &elev, sizeof(float), 1, fp );
+
+    // And our arrays
+    read_vector(azimuth, fp);
+    read_vector<mrmstime>(aztime, fp);
+
+    // ----------------------------------------------------------
+    return true;
+  } else {
+    LogSevere("RObsBinaryTable: Missing our data in .raw file\n");
+  }
+  return false;
 }
