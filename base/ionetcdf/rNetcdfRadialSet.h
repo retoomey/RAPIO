@@ -10,10 +10,7 @@ namespace rapio {
 class NetcdfRadialSet : public NetcdfDataGrid {
 public:
 
-  /** The way to obtain the object.
-   *  @params ncfile An open NetcdfFile object.
-   *  prms   Only the file name (first param) is needed.
-   */
+  /** Read a RadialSet with given keys */
   virtual std::shared_ptr<DataType>
   read(
     std::map<std::string, std::string>& keys,

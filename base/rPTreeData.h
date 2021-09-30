@@ -196,7 +196,6 @@ public:
   void
   Move(std::shared_ptr<PTreeData> to)
   {
-    LogSevere("MOVE IN PTREE CALLED\n");
     DataType::Move(to);
     to->myRoot = myRoot;
   }

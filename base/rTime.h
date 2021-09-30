@@ -37,26 +37,26 @@ public:
 
   /**  Make a Time from a list of integers (wrt UTC).
    *
-   *   @param int             year of "common era"
+   *   @param year             year of "common era"
    *
-   *   @param unsigned_short  month  (1--12) of the year
-   *   @param unsigned_short  day    (1--31) of the month
-   *   @param unsigned_short  hour   (0--23) of the day
-   *   @param unsigned_short  minute (0--59) of the hour
+   *   @param month  (1--12) of the year
+   *   @param day    (1--31) of the month
+   *   @param hour   (0--23) of the day
+   *   @param minute (0--59) of the hour
    *
-   *   @param unsigned_short  second (0--61) of the minute.  Values
+   *   @param second (0--61) of the minute.  Values
    *        beyond 59 allow for leap seconds.
    *
-   *   @param optional milliseconds, defaults to 0.0
+   *   @param fractional optional milliseconds, defaults to 0.0
    */
   Time(
-    int,
-    unsigned short,
-    unsigned short,
-    unsigned short,
-    unsigned short,
-    unsigned short,
-    double = 0.0
+    int            year,
+    unsigned short month,
+    unsigned short day,
+    unsigned short hour,
+    unsigned short minute,
+    unsigned short second,
+    double         fractional = 0.0
   );
 
   /** Create from a string pattern. Use %Y, %m, %d, etc. from man page of strftime.

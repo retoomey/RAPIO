@@ -83,6 +83,7 @@ public:
   /** Get data directly two dimension (Row-major order)
    * @param i row number
    * @param j col number
+   * @param k height number
    */
   inline T
   get(size_t i, size_t j, size_t k) const { return this->d[(i * myY) + j]; }

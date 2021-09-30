@@ -40,8 +40,8 @@ public:
   processNewData(RAPIOData&);
 
   /** Process heartbeat in subclasses.
-   * @param at The actual now time triggering the event.
-   * @param sync The pinned sync time we're firing for. */
+   * @param n The actual now time triggering the event.
+   * @param p The pinned sync time we're firing for. */
   virtual void
   processHeartbeat(const Time& n, const Time& p){ };
 

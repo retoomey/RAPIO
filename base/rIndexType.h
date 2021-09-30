@@ -60,14 +60,15 @@ public:
    * mapped. Uses only the criteria in the range [offset1,offset2)
    * (the second not inclusive).
    *
-   * @param selection the selection criteria
-   * @param offset [optional] which criteria to use. By default, start
+   * @param sel the selection criteria
+   * @param begin [optional] which criteria to use. By default, start
    * at zero (use all).
+   * @param end the last index of search.
    */
   virtual std::string
   formKey(const selections_t& sel,
-    size_t                  offset1 = 0,
-    size_t                  offset2 = ~0) const;
+    size_t                  begin = 0,
+    size_t                  end = ~0) const;
 
   /**
    * Users will normally create a subclass of Index, such

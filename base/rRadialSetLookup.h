@@ -21,11 +21,12 @@ public:
   /** Will pre-compute the radial number within this radial set
    *  that corresponds to every azimuth and provide access to
    *  this information.
-   *  @param myAccuracy How accurate do you want the conversion to be?
-   *  Larger numbers denote greater myAccuracy. Use at least 5. This
-   *  is the myAccuracy of the radial lookup.
+   *  @param rs RadialSet we are generating a look up for.
+   *  @param ac How accurate do you want the conversion to be?
+   *  Larger numbers denote greater accuracy. Use at least 5. This
+   *  is the accuracy of the radial lookup.
    */
-  RadialSetLookup(RadialSet&, int myAccuracy = 10);
+  RadialSetLookup(RadialSet& rs, int ac = 10);
 
   /*** Initialize an existing lookup to a given RadialSet. This can
    * be faster by reusing memory */

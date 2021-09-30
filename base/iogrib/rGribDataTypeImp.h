@@ -32,7 +32,6 @@ public:
 
   /** Read the GRIB2 data and put it in a 3-D pointer.
    *    @param key - GRIB2 parameter "TMP"
-   *    @param levelstr -
    *    @param x - if 0 then the dimension's size will be returned, otherwise use the one given
    *    @param y - if 0 then the dimension's size will be returned, otherwise use the one given
    *    @param z - if 0 then the dimension's size will be returned, otherwise use the one given

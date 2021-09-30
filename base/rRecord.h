@@ -148,19 +148,19 @@ public:
     std::vector<std::string>   & v,
     const std::string          & indexPath);
 
-  /** Record can read contents of (typically) an <item> tag and fill itself */
+  /** Record can read contents of (typically) an \<item\> tag and fill itself */
   virtual bool
   readXML(const PTreeNode& item,
     const std::string    &indexPath,
     size_t               indexLabel);
 
   /** Record can generate file level meta data. Typically these go inside
-   *  <meta> xml tags. */
+   *  \<meta\> xml tags. */
   virtual void
   constructXMLMeta(std::ostream&) const;
 
   /** Record can generate an XML representation of itself for storage.  Typically
-   * these go inside <item> xml tags. */
+   * these go inside \<item\> xml tags. */
   virtual void
   constructXMLString(std::ostream&, const std::string& indexPath) const;
 

@@ -21,10 +21,10 @@ public:
 
   /** Constuct a LL
    *
-   *   @param double&  latitude in degrees
-   *   @param double&  longitude in degrees
+   *   @param lat  latitude in degrees
+   *   @param lon  longitude in degrees
    */
-  LL(const double&, const double&);
+  LL(const double& lat, const double& lon);
 
   /**  Return the latitude angle. */
   const double&

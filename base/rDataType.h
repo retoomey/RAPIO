@@ -270,7 +270,6 @@ public:
   void
   Move(std::shared_ptr<DataType> to)
   {
-    LogSevere("MOVE CALLED ON DATATYPE\n");
     to->myAttributes  = myAttributes;
     to->myTime        = myTime;
     to->myLocation    = myLocation;

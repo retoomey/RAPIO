@@ -25,10 +25,10 @@ public:
 
   /** Build from a reference point and a list of differences.
    *
-   *  @param LLH&  reference point
-   *  @param double&  difference in latitude
-   *  @param double&  difference in longitude
-   *  @param Length&  difference in height
+   *  @param ref  reference point
+   *  @param del_lat  difference in latitude
+   *  @param del_lon  difference in longitude
+   *  @param del_ht  difference in height
    */
   IJK(
     const LLH    & ref,
@@ -55,16 +55,16 @@ public:
    *
    *  (5) something else?
    *
-   *  @param LLH&     reference point
-   *  @param Length&  distance east
-   *  @param Length&  distance north
-   *  @param Length&  difference in height
+   *  @param ref     reference point
+   *  @param dist_east  distance east
+   *  @param dist_north  distance north
+   *  @param del_ht  difference in height
    */
   IJK(
-    const LLH&,
-    const Length&,
-    const Length&,
-    const Length&
+    const LLH   & ref,
+    const Length& dist_east,
+    const Length& dist_north,
+    const Length& del_ht
   );
 
   /**  Negation operator.

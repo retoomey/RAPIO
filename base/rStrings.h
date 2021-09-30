@@ -59,7 +59,7 @@ public:
 
   /**
    * Split a string on whitespace and put the pieces into a vector.
-   * @param splitme string to split
+   * @param in string to split
    * @param setme split strings are stored here
    * @return number of strings added to `setme'
    */
@@ -69,7 +69,7 @@ public:
 
   /** Split a string on a character and put the pieces into a vector.
    *
-   *  @param splitme the string to split
+   *  @param in the string to split
    *  @param delimiter split token to search for in `splitme'
    *  @param setme result
    *
@@ -86,7 +86,7 @@ public:
 
   /** Split a string on a character and put the pieces into a vector.
    *
-   *  @param splitme the string to split
+   *  @param in the string to split
    *  @param delimiter split token to search for in `splitme'
    *  @param setme result
    *
@@ -112,7 +112,7 @@ public:
    *  absence of the sep character, no pieces are added to the vector,
    *  and zero is returned.
    *
-   *  @param splitme the string to split
+   *  @param in the string to split
    *  @param delimiter split token to search for in `splitme'
    *  @param setme result
    *  @return number of fields
@@ -150,7 +150,7 @@ public:
     const std::string           & tocheck,
     std::string                 & star);
 
-  /** Split an XML file that contains a <signed> signature
+  /** Split an XML file that contains a \<signed\> signature
    * tag at the end of the file into message and signature parts.
    * Technically this is a string operation*/
   static bool

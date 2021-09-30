@@ -24,20 +24,20 @@ public:
 
   /** Build location from latitude, longitude and height.
    *
-   *  @param const_double&   latitude degrees
-   *  @param const_double&   longitude degrees
-   *  @param const_Length&  height in kilometers
+   *  @param latitude   latitude degrees
+   *  @param longitude   longitude degrees
+   *  @param height  height in kilometers
    */
-  LLH(const double&,
-    const double&,
-    const double&);
+  LLH(const double& latitude,
+    const double  & longitude,
+    const double  & height);
 
   /** Build Location from LatLon and height.
    *
-   *  @param LL&  angular location about earth center
-   *  @param Length&  height above earth surface
+   *  @param a  angular location about earth center
+   *  @param height  height above earth surface
    */
-  LLH(const LL&, const double&);
+  LLH(const LL& a, const double& height);
 
   /** Do-nothing destructor. */
   ~LLH(){ }

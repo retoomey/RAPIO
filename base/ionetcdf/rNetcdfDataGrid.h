@@ -11,17 +11,14 @@ namespace rapio {
 class NetcdfDataGrid : public IOSpecializer {
 public:
 
-  /** The way to obtain the object.
-   *  @params ncfile An open NetcdfFile object.
-   *  prms   Only the file name (first param) is needed.
-   */
+  /** Read DataType with given keys */
   virtual std::shared_ptr<DataType>
   read(
     std::map<std::string, std::string>& keys,
     std::shared_ptr<DataType> dt)
   override;
 
-  /** Write DataType from given ncid */
+  /** Write DataType with given keys */
   virtual bool
   write(
     std::shared_ptr<DataType> dt,
