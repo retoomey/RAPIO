@@ -263,6 +263,22 @@ public:
    * puts more files into a single directory */
   static std::string DATATYPE_PREFIX_FLAT;
 
+  /** Move this datatype contexts to another.
+   * Shared pointers are just referenced, raw types are copied.
+   * Used for example by specializers to specialize DataTypes into subclasses where
+   * typically the original DataType class is let expire. */
+  void
+  Move(std::shared_ptr<DataType> to)
+  {
+    LogSevere("MOVE CALLED ON DATATYPE\n");
+    to->myAttributes  = myAttributes;
+    to->myTime        = myTime;
+    to->myLocation    = myLocation;
+    to->myReadFactory = myReadFactory;
+    to->myDataType    = myDataType;
+    to->myTypeName    = myTypeName;
+  }
+
 protected:
 
   /** Global attributes for data type */

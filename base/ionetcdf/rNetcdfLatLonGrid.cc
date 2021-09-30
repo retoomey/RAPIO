@@ -20,7 +20,8 @@ NetcdfLatLonGrid::introduceSelf(IONetcdf * owner)
 
 std::shared_ptr<DataType>
 NetcdfLatLonGrid::read(
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>& keys,
+  std::shared_ptr<DataType> dt)
 {
   std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>();
   if (readDataGrid(LatLonGridSP, keys)) {

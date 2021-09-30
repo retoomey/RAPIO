@@ -20,6 +20,10 @@ public:
   virtual std::string
   getHelpString(const std::string& key) override;
 
+  /** Special setup of XML */
+  virtual void
+  initialize() override;
+
   // READING ------------------------------------------------------------
 
   /** Read from a buffer as XML data */

@@ -9,6 +9,7 @@ set(HEADER_FILES
   rColor.h
   rColorMap.h
   rDataFilter.h
+  rDataTable.h
   rRapio.h
   rRAPIOAlgorithm.h
   rRAPIOOptions.h
@@ -103,6 +104,7 @@ set(SOURCE_FILES
   rColor.cc
   rColorMap.cc
   rDataFilter.cc
+  rDataTable.cc
   rRAPIOAlgorithm.cc
   rRAPIOOptions.cc
   rRAPIOData.cc

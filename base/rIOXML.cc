@@ -6,6 +6,9 @@
 #include "rIOURL.h"
 #include "rOS.h"
 
+// Default built in DataType support
+#include "rDataTable.h"
+
 #include <boost/property_tree/xml_parser.hpp>
 
 using namespace rapio;
@@ -22,6 +25,14 @@ IOXML::getHelpString(const std::string & key)
   return help;
 }
 
+void
+IOXML::initialize()
+{
+  // PTreeDataTable::introduceSelf(this);
+  std::shared_ptr<IOSpecializer> d = std::make_shared<PTreeDataTable>();
+  this->introduce("datatable", d);
+}
+
 std::shared_ptr<DataType>
 IOXML::createDataTypeFromBuffer(std::vector<char>& buffer)
 {
@@ -34,6 +45,8 @@ IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buf
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
   if (ptree) {
     return (writePTreeDataBuffer(ptree, buffer));
+  } else {
+    LogSevere("NOT A PTREE, FAILED TO WRITE\n");
   }
   return 0;
 }
@@ -73,36 +86,25 @@ IOXML::createDataType(const std::string& params)
   if (IOURL::read(url, buf) > 0) {
     std::shared_ptr<PTreeData> xml = readPTreeDataBuffer(buf);
     if (xml) {
-      // Most likely we'll introduce subtypes like in the other readers
-      // but how to do this generically..
-      // TEMP hack for WDSS2 DataTable class.  Look for <datatable>
-      // and the <stref> tags for time/location and set in the datatype
-      auto datatable = xml->getTree()->getChildOptional("datatable");
-      if (datatable != nullptr) {
-        auto datatype = datatable->getChildOptional("datatype");
-        if (datatype != nullptr) {
-          try{
-            // The type (for folder writing)
-            const auto theDataType = datatype->getAttr("name", std::string(""));
-            xml->setTypeName(theDataType);
-
-            auto time = datatype->getChild("stref.time");
-            // Units, bleh.  Assume for now to epoch.  FIXME: Use the units convert if needed
-            // const auto units = time.getAttr("units", std::string(""));
-            const auto value = time.getAttr("value", (time_t) (0));
-            xml->setTime(Time::SecondsSinceEpoch(value));
-
-            // FIXME: Need location too...
-            // LogSevere("GOT: " << value << "\n");
-          }catch (const std::exception& e) {
-            LogSevere("Tried to read stref tag in datatable and failed: " << e.what() << "\n");
-          }
+      // Specialize by passing original PTreeData datatype to the specializer
+      // that will create the datatype such a DataTable or ColorMap, etc.
+      try{
+        auto firsttag = xml->getTree()->getFirstChildName();
+        auto fmt      = getIOSpecializer(firsttag);
+        if (fmt != nullptr) {
+          std::map<std::string, std::string> keys;
+          keys["XML_URL"] = url.toString(); // Maybe some classes find useful?
+          return (fmt->read(keys, xml));
         }
+      }catch (const std::exception& e)
+      {
+        LogSevere("Failure specializing PTreeData at " << url << ".  Class is generalized to PTreeData.\n");
       }
 
-      return xml;
+      return xml; // unspecialized but usuable
     }
   }
+
   LogSevere("Unable to create XML from " << url << "\n");
   return nullptr;
 } // IOXML::createDataType

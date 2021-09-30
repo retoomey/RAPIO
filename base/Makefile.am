@@ -12,6 +12,7 @@ librapio_la_SOURCES =\
   rColor.cc\
   rColorMap.cc\
   rDataFilter.cc\
+  rDataTable.cc\
   rRAPIOAlgorithm.cc\
   rRAPIOOptions.cc\
   rRAPIOData.cc\
@@ -92,6 +93,7 @@ pkginclude_HEADERS =\
   rColor.h\
   rColorMap.h\
   rDataFilter.h\
+  rDataTable.h\
   rRapio.h\
   rRAPIOAlgorithm.h\
   rRAPIOOptions.h\

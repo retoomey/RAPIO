@@ -23,7 +23,8 @@ public:
    */
   virtual std::shared_ptr<DataType>
   read(
-    std::map<std::string, std::string>& keys)
+    std::map<std::string, std::string>& keys,
+    std::shared_ptr<DataType> dt)
   override;
 
   /** Get number of test objects we provide for read/write tests */

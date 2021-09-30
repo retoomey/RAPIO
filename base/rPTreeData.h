@@ -122,6 +122,20 @@ public:
     return nullptr;
   }
 
+  /** Get the name of first real tag, used for factories based off
+   * tag identification.  Ignore comments */
+  std::string
+  getFirstChildName()
+  {
+    for (auto r: node.get_child("")) {
+      if (r.first == "<xmlcomment>") {
+        continue;
+      }
+      return r.first;
+    }
+    return "";
+  }
+
   /** BOOST is a dom so we just copy into our wrapper.
    * a SAX based XML would probably want pull iterator */
   std::vector<PTreeNode>
@@ -176,6 +190,15 @@ public:
   getTree()
   {
     return myRoot;
+  }
+
+  /** Move this datatype contents to another. */
+  void
+  Move(std::shared_ptr<PTreeData> to)
+  {
+    LogSevere("MOVE IN PTREE CALLED\n");
+    DataType::Move(to);
+    to->myRoot = myRoot;
   }
 
 protected:

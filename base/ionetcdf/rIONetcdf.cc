@@ -57,19 +57,6 @@ IONetcdf::initialize()
   NetcdfDataGrid::introduceSelf(this);
 }
 
-void
-IONetcdf::introduce(const std::string & name,
-  std::shared_ptr<IOSpecializer>      new_subclass)
-{
-  mySpecializers[name] = new_subclass;
-}
-
-std::shared_ptr<IOSpecializer>
-IONetcdf::getIONetcdf(const std::string& name)
-{
-  return mySpecializers[name];
-}
-
 IONetcdf::~IONetcdf()
 { }
 
@@ -108,17 +95,16 @@ IONetcdf::createDataType(const std::string& params)
         type = "DataGrid";
       }
 
-      std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIONetcdf(type);
+      std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIOSpecializer(type);
       if (fmt == nullptr) {
         LogSevere("No netcdf reader for DataType '" << type << "', using generic reader\n");
-        fmt = IONetcdf::getIONetcdf("DataGrid");
+        fmt = IONetcdf::getIOSpecializer("DataGrid");
       }
       if (fmt != nullptr) {
         std::map<std::string, std::string> keys;
         keys["NETCDF_NCID"] = to_string(ncid);
         keys["NETCDF_URL"]  = url.toString();
-        // datatype = fmt->read(ncid, url);
-        datatype = fmt->read(keys);
+        datatype = fmt->read(keys, nullptr);
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
@@ -139,14 +125,14 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
    * This allows algs etc to replace our IONetcdf with a custom if needed. */
   const std::string type = dt->getDataType();
 
-  std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIONetcdf(type);
+  std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIOSpecializer(type);
 
   // Default base class for now at least is DataGrid, so if doesn't cast
   // we have no methods to write this
   if (fmt == nullptr) {
     auto dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
     if (dataGrid != nullptr) {
-      fmt = IONetcdf::getIONetcdf("DataGrid");
+      fmt = IONetcdf::getIOSpecializer("DataGrid");
     }
   }
 

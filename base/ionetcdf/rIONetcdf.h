@@ -78,19 +78,6 @@ public:
   virtual void
   initialize() override;
 
-  /** Use this to introduce new subclasses. */
-  void
-  introduce(const std::string      & dataType,
-    std::shared_ptr<IOSpecializer> new_subclass);
-
-  /** Returns the appropriate IO given the type encoded in the
-   *  netcdf file. IO objects read and write a particular DataType.
-   *
-   *  @return 0 if we don't know about this type.
-   */
-  std::shared_ptr<IOSpecializer>
-  getIONetcdf(const std::string& type);
-
   // READING ------------------------------------------------------------
 
   /** Reader call back */

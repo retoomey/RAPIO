@@ -30,7 +30,8 @@ public:
   /** Read a DataType from given information */
   virtual std::shared_ptr<DataType>
   read(
-    std::map<std::string, std::string>& keys) = 0;
+    std::map<std::string, std::string>& keys,
+    std::shared_ptr<DataType> optionalOriginal) = 0;
 };
 
 /**
@@ -55,6 +56,19 @@ public:
   /** Initialize a loaded IODataType */
   virtual void
   initialize(){ };
+
+  /** Specializers are readers that specialize the reading into a type.
+   * For example, reading netcdf might turn into a RadialSet which is
+   * no longer a netcdf object.  XML might create a DataTable. */
+  virtual void
+  introduce(const std::string      & dataType,
+    std::shared_ptr<IOSpecializer> new_subclass);
+
+  /** Returns a named specializer
+   *  @return 0 if we don't know about this type.
+   */
+  std::shared_ptr<IOSpecializer>
+  getIOSpecializer(const std::string& type);
 
   // ------------------------------------------------------------------------------------
   // Reader stuff

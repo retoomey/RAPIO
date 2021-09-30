@@ -44,6 +44,19 @@ IODataType::introduceHelp()
   return help;
 }
 
+void
+IODataType::introduce(const std::string & name,
+  std::shared_ptr<IOSpecializer>        new_subclass)
+{
+  mySpecializers[name] = new_subclass;
+}
+
+std::shared_ptr<IOSpecializer>
+IODataType::getIOSpecializer(const std::string& name)
+{
+  return mySpecializers[name];
+}
+
 // -----------------------------------------------------------------------------------------
 // Reader stuff
 //

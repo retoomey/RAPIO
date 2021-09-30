@@ -23,7 +23,8 @@ NetcdfDataGrid::introduceSelf(IONetcdf * owner)
 }
 
 std::shared_ptr<DataType>
-NetcdfDataGrid::read(std::map<std::string, std::string>& keys)
+NetcdfDataGrid::read(std::map<std::string, std::string>& keys,
+  std::shared_ptr<DataType> dt)
 {
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();

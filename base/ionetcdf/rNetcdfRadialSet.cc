@@ -29,7 +29,8 @@ NetcdfRadialSet::introduceSelf(IONetcdf * owner)
 
 std::shared_ptr<DataType>
 NetcdfRadialSet::read(
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>& keys,
+  std::shared_ptr<DataType> dt)
 {
   std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>();
   if (readDataGrid(radialSetSP, keys)) {
