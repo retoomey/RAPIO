@@ -3,7 +3,8 @@ FROM mrmsbase:f34
 
 ##############################################################################
 # Add current RAPIO git build
-WORKDIR /tmp/PACKAGES
+COPY PACKAGES/RAPIO /tmp/PACKAGES/RAPIO
+WORKDIR /tmp/PACKAGES/RAPIO
 RUN ./buildrapio.sh
 # Use the RAPIOConfig for RAPIO algorithms by default
 ENV RAPIO_CONFIG_LOCATION="/BUILD/MYALGS/RAPIOConfig"

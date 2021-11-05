@@ -16,6 +16,10 @@ function run(){
   fi
 }
 
+# -------------------------------------------------------------
+echo "   Substep Install RAPIO motd..."
+run "mv /tmp/PACKAGES/RAPIO/motd.sh /etc/profile.d/motd.sh"
+
 echo "   Substep Build/Install RAPIO Development Library..."
 run "cd /BUILD"
 run "git clone https://github.com/retoomey/RAPIO/"

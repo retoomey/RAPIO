@@ -14,9 +14,9 @@ EOF
 # Set up template folder in myalgs if not already there
 if [ ! -d "/BUILD/MYALGS/TEMPLATE" ]; then
   echo "...Setting up TEMPLATE into /BUILD/MYALGS"
-  cp -r /tmp/PACKAGES/TEMPLATE/ /BUILD/MYALGS/.
-  cp -f /tmp/PACKAGES/makealgdir.sh /BUILD/MYALGS/.
-  cp -f /tmp/PACKAGES/makedocs.sh /BUILD/MYALGS/.
+  cp -r /tmp/PACKAGES/RAPIO/TEMPLATE/ /BUILD/MYALGS/.
+  cp -f /tmp/PACKAGES/RAPIO/makealgdir.sh /BUILD/MYALGS/.
+  cp -f /tmp/PACKAGES/RAPIO/makedocs.sh /BUILD/MYALGS/.
 fi
 
 if [ ! -d "/BUILD/MYALGS/RAPIOConfig" ]; then

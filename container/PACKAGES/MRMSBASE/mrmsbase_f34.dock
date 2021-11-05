@@ -22,8 +22,8 @@ RUN usermod -a -G wheel developer
 # layers/size.  install.sh then does the heavy work in one step
 # Downside to this is less feedback in 'steps'. Upside
 # is that it's a lot smaller
-COPY PACKAGES /tmp/PACKAGES
-WORKDIR /tmp/PACKAGES
+COPY PACKAGES/MRMSBASE /tmp/PACKAGES/MRMSBASE
+WORKDIR /tmp/PACKAGES/MRMSBASE
 RUN ./install.sh
 
 # Make the binaries the default (we install to /usr/bin not needed)

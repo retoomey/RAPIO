@@ -5,7 +5,7 @@
 # using same user name. I'm not sure how to do this for windows native yet, you need the 'id' command.
 
 # First stage, build the base container for RAPIO and/or MRMS building 
-docker build --build-arg RUNID=`id -u` --build-arg RUNGROUP=`id -g` --tag mrmsbase:f34 -f PACKAGES/mrmsbase_f34.dock .
+docker build --build-arg RUNID=`id -u` --build-arg RUNGROUP=`id -g` --tag mrmsbase:f34 -f PACKAGES/MRMSBASE/mrmsbase_f34.dock .
 
 # Second stage, build RAPIO on base 
-docker build --no-cache --tag rapio:f34 -f PACKAGES/rapio_f34.dock .
+docker build --no-cache --tag rapio:f34 -f PACKAGES/RAPIO/rapio_f34.dock .

@@ -5,7 +5,7 @@ Requirements: Docker
 Differences: This uses RPMS for ALL third party, except for g2clib which has been upgraded from source.
 TODO: It's quite possible to svn checkout build MRMS/HMET on top of this container,
       probably I can see trying that in future.  It will probably take some tweaking.
-NOTE: FAM input probably doesn't work...polling should though.  New notification methods should be in the works.
+NOTE: FAM actually works inside a container due to FUSEFS
 NOTE: The building user id/group is used internally to the container when running.  So if you build as fred
       and move to another computer it tries to run as that user.
 
