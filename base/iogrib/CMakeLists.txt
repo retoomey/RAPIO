@@ -4,16 +4,24 @@ include_directories(.)
 # Get headers from core above us, or where ever RAPIO headers are
 include_directories(../)
 
-add_library(rapiogrib SHARED
-  rGribDataTypeImp.cc
-  rIOGrib.cc
-)
+# Add conditional flag
+if (Grib2C_LIBRARIES AND Grib2C_INCLUDE_DIR)
+  add_library(rapiogrib SHARED
+    rGribDataTypeImp.cc
+    rIOGrib.cc
+  )
 
-target_link_libraries(rapiogrib
-  grib2c
+  #add_definitions(-DHAVE_GRIB2C)
+  # Include headers and libraries
+  include_directories(${Grib2C_INCLUDE_DIR})
+  target_link_libraries(rapiogrib
+  ${Grib2C_LIBRARIES}
+  )
+  # Install the module
+  install(TARGETS rapiogrib
+    DESTINATION ${RAPIO_INSTALL_LIB}
+  )
+else(
+  message(WARNING "Couldn't find GRIBC library, You should install if you want the rapiogrib module to build.")
 )
-
-# Install the module
-install(TARGETS rapiogrib
-   DESTINATION ${RAPIO_INSTALL_LIB}
-)
+endif(Grib2C_LIBRARIES AND Grib2C_INCLUDE_DIR)

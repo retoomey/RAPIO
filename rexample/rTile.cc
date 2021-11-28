@@ -25,12 +25,16 @@ RAPIOTileAlg::declareOptions(RAPIOOptions& o)
   o.setDescription("RAPIO Tile Algorithm");
   o.setAuthors("Robert Toomey");
 
-  // Require zoom level, center lat and center lon
-  o.require("zoom", "0", "Tile zoom level from 0 (whole world) up to 20 or more");
-  o.require("center-latitude", "38", "Latitude degrees for tile center");
-  o.require("center-longitude", "-98", "Longitude degrees for tile center");
-  o.require("image-height", "500", "Height or rows of the image in pixels");
-  o.require("image-width", "500", "Width or cols of the image in pixels");
+  // Optional zoom level, center lat and center lon
+  // Note: Running as tile server you don't need any of these
+  o.optional("zoom", "0", "Tile zoom level from 0 (whole world) up to 20 or more");
+  o.optional("center-latitude", "38", "Latitude degrees for tile center");
+  o.optional("center-longitude", "-98", "Longitude degrees for tile center");
+  o.optional("image-height", "256", "Height or rows of the image in pixels");
+  o.optional("image-width", "256", "Width or cols of the image in pixels");
+
+  // Optional flags (my debugging stuff, or maybe future filters/etc.)
+  o.optional("flags", "", "Extra flags for determining tile drawing");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -47,6 +51,12 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   myOverride["rows"] = o.getString("image-width");
   myOverride["centerLatDegs"] = o.getString("center-latitude");
   myOverride["centerLonDegs"] = o.getString("center-longitude");
+  myOverride["flags"] = o.getString("flags");
+
+  // Steal the normal output location as suggested cache folder
+  // This will probably work unless someone deliberately tries to break it by passing
+  // our other crazier output options
+  myOverride["tilecachefolder"] = o.getString("o");
 }
 
 void
@@ -68,7 +78,6 @@ RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
       // For the first pass, simple use this data for ANY future tiles.
       // So for file= input option, we'll map that data file.
       // FIXME: More advanced ability
-      LogSevere("We're a web server...replacing data used for tile generation\n");
       myTileData         = r;
       myOverride["mode"] = "tile"; // We want tile mode for output
       // None of these matter, we'll use BBOX from WMS (refactor)
@@ -276,7 +285,10 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
   const bool debuglog = false;
 
   myOverride["debug"] = debuglog;
-  const std::string cache = "CACHE";
+  std::string cache = myOverride["tilecachefolder"];
+  if (cache.empty()){
+    cache = "CACHE";
+  }
 
   std::ofstream myfile;
   if (debuglog) {
@@ -288,18 +300,22 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
     if (debuglog) {
       myfile << a.first << "=" << a.second << ":";
     }
+    myOverride[a.first] = a.second;
+
+    // Leaflet WMS fields to ours...
     if (a.first == "bbox") {
       myOverride["BBOX"] = a.second;
-    } else {
-      myOverride[a.first] = a.second;
-    }
-    // yeah yeah yeah..alpha steps
-    if (a.first == "height") {
+    }else if (a.first == "height") {
       myOverride["rows"] = a.second;
-    }
-    if (a.first == "width") {
+    }else if (a.first == "width") {
       myOverride["cols"] = a.second;
-    }
+    }else if (a.first == "srs"){ // wms source
+     if (a.second == "EPSG:4326"){ // lat lon
+        myOverride["BBOXSR"] = "4326";
+     }else if (a.second == "EPSG:3857"){
+        myOverride["BBOXSR"] = "3857";
+     }
+    } // wms "format=image/jpeg" should probably handle it
     // LogSevere("Field " << a.first << " == " << a.second << "\n");
   }
   if (debuglog) {
@@ -344,7 +360,7 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         // We'll have to enhance this for time and multi product at some point
         pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile.png";
         LogInfo("WMS_BBOX:" << myOverride["BBOX"] << "\n");
-        myOverride["BBOXSR"] = "3857"; // isn't this passed in somewhere?
+        myOverride["TILETEXT"] = "";
 
         // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
         // This divides the world into equal spherical mercator squares.  We'll translate to bbox
@@ -353,13 +369,18 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         // Verify the z/y/x and that it's integers
         if (pieces.size() < 4) {
           LogSevere("Expected http://tms/z/x/y for start of tms path\n");
+          for(auto k:pieces){
+             std::cout << "PIECE " << k << "\n";
+          }
           return;
         }
         int x, y, z;
         try{
           z = std::stoi(pieces[1]);
           x = std::stoi(pieces[2]);
-          y = std::stoi(pieces[3]);
+          // Google vs TMS can flip this.  Usually fixable with -y or y passed into URL
+          // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
+          y = std::stoi(pieces[3]); 
         }catch (const std::exception& e) {
           LogSevere("Non number passed for z, x or y? " << pieces[1] << ", " << pieces[2] << ", " << pieces[3] << "\n");
           return;
@@ -377,8 +398,9 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
           + std::to_string(lat1);
         myOverride["BBOXSR"] = "4326"; // Lat/Lon
+        myOverride["TILETEXT"] = "X:"+std::to_string(x)+",Y:" + std::to_string(y)+",Z:"+std::to_string(z);
 
-        LogInfo("TMS_BBOX:" << myOverride["BBOX"] << "\n");
+	LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
       } else if (type == "UI") {
         LogSevere("Woooh...something calling our json stuff\n");
 

@@ -180,10 +180,13 @@ public:
     }
 
     // Factory failed to find or load object
-    if (ret == nullptr) {
-      LogDebug("No instance available for " << info << " and '" << name
-                                            << "' size: " << myLookup.size() << "\n");
-    }
+    // Lots of things optionally 'check' for a factory such as extension resolution, so
+    // this can be kinda over talkative. Prefer checking nullptr yourself
+    // after calling this and erroring if needed
+    //if (ret == nullptr) {
+    //  LogDebug("No instance available for " << info << " and '" << name
+    //                                        << "' size: " << myLookup.size() << "\n");
+    //}
 
     return (ret);
   } // get

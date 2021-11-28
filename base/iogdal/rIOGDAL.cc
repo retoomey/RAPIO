@@ -92,19 +92,10 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   }
   auto& p = *project;
 
-  // Setup projection and magic
-  // This is destination projection
+  // Setup gdal
   static std::shared_ptr<ProjLibProject> project2;
   static bool setup = false;
   if (!setup) {
-    // Force merc for first pass (matching standard tiles)
-    project2 = std::make_shared<ProjLibProject>(
-      // Web mercator
-      "+proj=webmerc +datum=WGS84 +units=m +resolution=1",
-      "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-      );
-    project2->initialize();
-
     GDALAllRegister(); // Register/introduce all GDAL drivers
     CPLPushErrorHandler(CPLQuietErrorHandler);
   }
@@ -126,11 +117,14 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     driver = "GTiff";
   }
 
-  std::string bbox, bboxsr;
+  // Box settings from given BBOX string
   size_t rows;
   size_t cols;
-  p.getBBOX(keys, rows, cols, bbox, bboxsr);
-  std::string mode = keys["mode"];
+  double top      = 0;
+  double left     = 0;
+  double bottom   = 0;
+  double right    = 0;
+  auto proj = p.getBBOX(keys, rows, cols, left, bottom, right, top);
 
   // FIXME: still need to cleanup suffix stuff
   if (keys["directfile"] == "false") {
@@ -141,43 +135,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
 
   // ----------------------------------------------------------------------
   // Calculate bounding box for generating image
-  // Leave code here for now...need to merge handle multiprojection
-  // probably...but I want to prevent creating the projection over and over
-  bool transform = false;
-  if (bboxsr == "3857") { // if bbox in mercator need to project to lat lon for data lookup
-    transform = true;
-  }
-
-  // Box settings
-  double top      = 0;
-  double left     = 0;
-  double deltaLat = 0;
-  double deltaLon = 0;
-  if (!bbox.empty()) {
-    std::vector<std::string> pieces;
-    Strings::splitWithoutEnds(bbox, ',', &pieces);
-    if (pieces.size() == 4) {
-      // I think with projected it's upside down? or I've double flipped somewhere
-      left = std::stod(pieces[0]);          // lon
-      double bottom = std::stod(pieces[1]); // lat // is it flipped in the y?? must be
-      double right  = std::stod(pieces[2]); // lon
-      top = std::stod(pieces[3]);           // lat
-
-      // Transform the points from lat/lon to merc if BBOXSR set to "4326"
-      if (bboxsr == "4326") {
-        double xout1, xout2, yout1, yout2;
-        project2->LatLonToXY(bottom, left, xout1, yout1);
-        project2->LatLonToXY(top, right, xout2, yout2);
-        left      = xout1;
-        bottom    = yout1;
-        right     = xout2;
-        top       = yout2;
-        transform = true; // yes go from mer to lat for data
-      }
-      deltaLat = (bottom - top) / rows; // good
-      deltaLon = (right - left) / cols;
-    }
-  }
+  bool transform = (proj != nullptr);
 
   // std::string suffix = "tif";
   // std::string driver = "GTiff";
@@ -201,7 +159,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   #endif // if 0
 
   // ----------------------------------------------------
-  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << " " << bbox << "\n");
+  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << "\n");
 
   /*
    * static bool setup = false;
@@ -269,6 +227,8 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   oSRS.SetWellKnownGeogCS("WGS84");
 
   // Transformation of data from grid to actual coordinates
+  auto deltaLat = (bottom - top) / rows; 
+  auto deltaLon = (right - left) / cols;
   double geoTransform[6] = { left, deltaLon, 0, top, 0, deltaLat };
   CPLErr terr = geotiffDataset->SetGeoTransform(geoTransform);
   if (terr != 0) {
@@ -303,9 +263,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
       for (size_t x = 0; x < cols; x++) {
         if (transform) {
           double aLat, aLon;
-          double inx = startLon; // actually from XY to lat lon (src/dst)
-          double iny = startLat;
-          project2->xyToLatLon(inx, iny, aLat, aLon);
+          project2->xyToLatLon(startLon, startLat, aLat, aLon);
           const double v = p.getValueAtLL(aLat, aLon);
           rowBuff[index++] = v; // Data value band
         } else {

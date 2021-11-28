@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.9.0/css/ol.css" type="text/css">
+    <style>
+      .map {
+        height: 1000px;
+        width: 100%;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.9.0/build/ol.js"></script>
+    <title>OpenLayers example</title>
+  </head>
+  <body>
+    <h2>Using Openlayers TMS</h2>
+    <div id="map" class="map"></div>
+    <script type="text/javascript">
+    var projExtent = ol.proj.get('EPSG:3857').getExtent();
+    var startResolution = ol.extent.getWidth(projExtent) / 256;
+    var resolutions = new Array(21);
+    for (var i = 0, ii = resolutions.length; i < ii; ++i) {
+       resolutions[i] = startResolution / Math.pow(2, i);
+    }
+    var tileGrid = new ol.tilegrid.TileGrid({extent: projExtent, resolutions: resolutions});
+      var map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM()
+          }),
+            new ol.layer.Tile({
+                title: 'TMS: Recent Imagery',
+                source: new ol.source.TileImage({
+                    crossOrigin: null, extent: projExtent,
+                    tileGrid: tileGrid,
+                    url: 'http://localhost:8080/tms/{z}/{x}/{y}'
+                })
+            })
+        ],
+        view: new ol.View({
+          //center: ol.proj.fromLonLat([37.41, 8.82]),
+          center: ol.proj.fromLonLat([-97.4294777, 35.2225668]),
+          zoom: 4
+        })
+      });
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 #include "rProject.h"
+
 #include "rError.h"
-#include "rArray.h"
+#include "rLatLonGrid.h"
 
 using namespace rapio;
 
@@ -179,20 +180,7 @@ ProjLibProject::ProjLibProject(const std::string& src, const std::string& dst)
 bool
 ProjLibProject::initialize()
 {
-  // Proj4:
   bool success = true;
-
-  if (!(pj_src = pj_init_plus(mySrc.c_str())) ) {
-    LogSevere("Couldn't create Proj Library source coordinate system.\n");
-    LogSevere("'" << mySrc << "'\n");
-    success = false;
-  }
-
-  if (!(pj_dst = pj_init_plus(myDst.c_str())) ) {
-    LogSevere("Couldn't create Proj Library destination coordinate system.\n");
-    LogSevere("'" << myDst << "'\n");
-    success = false;
-  }
 
   /* NOTE: the use of PROJ strings to describe CRS is strongly discouraged
    * in PROJ 6, as PROJ strings are a poor way of describing a CRS, and
@@ -203,9 +191,10 @@ ProjLibProject::initialize()
    * two CRS.
    */
   myP = proj_create_crs_to_crs(PJ_DEFAULT_CTX,
-      mySrc.c_str(),
-      myDst.c_str(),
+      mySrc.c_str(), // xy web merc
+      myDst.c_str(), // mrms/wsr84/etc
       NULL);
+
   if (myP == 0) {
     LogSevere("Couldn't create Proj Library projection.\n");
     success = false;
@@ -242,24 +231,35 @@ ProjLibProject::getXYCenter(double& centerXKm, double& centerYKm)
 bool
 ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
 {
-  int k = pj_transform(pj_src, pj_dst, 1, 1, &x, &y, NULL); // Change to Lat/Lon.
-
-  if (k != 0) { return false; }
-  lon = x * RAD_TO_DEG;
-  lat = y * RAD_TO_DEG;
-  return true;
+  /* For reliable geographic <--> geocentric conversions, z shall not */
+  /* be some random value. Also t shall be initialized to HUGE_VAL to */
+  /* allow for proper selection of time-dependent operations if one of */
+  /* the CRS is dynamic. */
+  // Not sure why they have a PJ_XY since this leaves fields undefined, it's just a 4 array of double
+  // Eh?  This could break if they change the union later...
+  PJ_COORD c{x,y,0.0, HUGE_VAL};
+  //c.xyzt.x = x;
+  //c.xyzt.y = y;
+  //c.xyzt.z = 0.0;
+  //c.xyzt.t = HUGE_VAL; // time
+  PJ_COORD c_out = proj_trans(myP, PJ_FWD, c);
+  lon = c_out.lpzt.lam; // * 180.0 / M_PI;  It's giving me degrees not radians currently
+  lat = c_out.lpzt.phi; // * 180.0 / M_PI;
+  return (!proj_errno(myP));
 }
 
 bool
 ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
 {
-  double radLat = lat * DEG_TO_RAD;
-  double radLon = lon * DEG_TO_RAD;
-  int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
-
-  x = radLon;
-  y = radLat;
-  return (k == 0);
+  PJ_COORD c{lon, lat, 0.0, HUGE_VAL}; // as PJ_LPZT
+  //c.lpzt.lam = lon; //  * M_PI/180.0; 
+  //c.lpzt.phi = lat; // * M_PI/180.0;
+  //c.lpzt.z = 0.0;
+  //c.lpzt.t = HUGE_VAL;
+  PJ_COORD c_out = proj_trans(myP, PJ_INV, c);
+  x = c_out.xy.x;
+  y = c_out.xy.y;
+  return (!proj_errno(myP));
 }
 
 void
@@ -339,11 +339,21 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
       if (y <= 11) { data2DF[x][y] = 53; continue; }
       if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
 
-      double radLat = atLat * DEG_TO_RAD;
-      double radLon = atLon * DEG_TO_RAD;
-      int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
+      //double radLat = atLat * DEG_TO_RAD;
+      //double radLon = atLon * DEG_TO_RAD;
+      //int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
+      //LatLonToXY
+      //PJ_COORD c;
+      PJ_COORD c{atLon, atLat, 0.0, HUGE_VAL}; // as PJ_LPZT
+      //c.lpzt.lam = atLon; //  * M_PI/180.0;
+      //c.lpzt.phi = atLat; //  * M_PI/180.0;
+      //c.lpzt.z = 0.0;
+      //c.lpzt.t = HUGE_VAL;
+      PJ_COORD c_out = proj_trans(myP, PJ_INV, c);
+      double radLat = c_out.xy.x; // Argh..should be x,y values
+      double radLon = c_out.xy.y;
 
-      if (k != 0) {
+      if (proj_errno(myP)) {
         data2DF[x][y] = Constants::MissingData;
       } else {
         if (radLat < lowestX) { lowestX = radLat; }

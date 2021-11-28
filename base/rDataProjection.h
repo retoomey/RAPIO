@@ -3,6 +3,7 @@
 #include <rUtility.h>
 #include <rConstants.h>
 #include <rArray.h>
+#include <rProject.h>
 
 #include <string>
 
@@ -53,10 +54,10 @@ public:
     return Constants::MissingData;
   }
 
-  /** Calculate BBOX and BBOXSR */
-  virtual bool
+  /** Calculate marching box for generating square images */
+  virtual std::shared_ptr<ProjLibProject>
   getBBOX(std::map<std::string, std::string>& keys,
-    size_t& rows, size_t& cols, std::string& bbox, std::string& bboxsr);
+    size_t& rows, size_t& cols, double& left, double& bottom, double& right, double& top);
 
   /** Create projection based on standard fields passed in */
   virtual bool
@@ -77,6 +78,9 @@ public:
   LLCoverageTile(const size_t zoomLevel, const size_t& numRows, const size_t& numCols,
     const float centerLatDegs, const float centerLonDegs,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+
+  /** On demand projector from webmerc to lat lon */
+  static std::shared_ptr<ProjLibProject> theWebMercToLatLon;
 };
 
 class LatLonGridProjection : public DataProjection
@@ -159,5 +163,6 @@ public:
 
   /** Reference to Radial set lookup */
   std::shared_ptr<RadialSetLookup> myLookup;
+
 };
 }

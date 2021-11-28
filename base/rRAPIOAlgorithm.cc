@@ -170,6 +170,13 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   paramI.readString(o.getString("I"));
 
   myReadMode = o.getString("r");
+  std::string web = o.getString("web");
+  if (!web.empty()){
+    if (!isDaemon()){
+       LogInfo("Changing -r option to new since archive makes no sense for webserver mode\n");
+       myReadMode = "new";
+    }
+  }
   myCronList = o.getString("sync");
 }
 

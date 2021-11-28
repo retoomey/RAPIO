@@ -40,12 +40,12 @@ else()
 
   # Use the ZLIB built in module and tell it to hunt local
   set(ZLIB_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
-  cmake_policy(SET CMP0074 OLD)
+  cmake_policy(SET CMP0074 NEW)
   set(ZLIB_ROOT "${CMAKE_INSTALL_PREFIX}/lib")
 
   # Use Jasper built in module
-  set(JASPER_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
-  set(JASPER_LIBRARY_RELEASE "${CMAKE_INSTALL_PREFIX}/lib")
+  #set(JASPER_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include;/usr/include")
+  #set(JASPER_LIBRARY_RELEASE "${CMAKE_INSTALL_PREFIX}/lib;/usr/lib64")
 
   # BOOST we tell directly since we got a common cmake module
   set(BOOST_ROOT "${CMAKE_INSTALL_PREFIX}/boost")
@@ -59,9 +59,17 @@ endif()
 find_package(UDUnits2 REQUIRED)
 find_package(Proj REQUIRED)
 find_package(Netcdf REQUIRED)
-find_package(Magick)
 # There's a cmake one but it doesn't seem to allow me to force a library path
 find_package(CURL REQUIRED)   # FIXME:  I 'might' go pure boost ASIO at some point here
+# The FindJasper module is giving me paths and semicolons not the actual
+# jasper.  Either it's bugged or I'm still learning cmake.
+# Seems to also fail falling back to OS in Fedora 35.  Using my own searcher for now
+find_package(Jasper REQUIRED)
+
+# Optional for submodules.  FIXME: Move checks to modules and have flags for
+# conditional building
+find_package(Magick)
+find_package(Grib2C)
 ###########################################################################
 
 
@@ -74,12 +82,13 @@ find_package(Boost 1.71 REQUIRED COMPONENTS
 )
 # The FindJasper module is giving me paths and semicolons not the actual
 # jasper.  Either it's bugged or I'm still learning cmake
-find_package(Jasper REQUIRED)
-if (JASPER_FOUND)
-  if (NOT "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
-    set(JASPER_LIBRARIES "${JASPER_LIBRARY}/libjasper.so")
-  endif()
-endif()
+#find_package(Jasper REQUIRED)
+#if (JASPER_FOUND)
+#  message(STATUS "Jasper was found... ${JASPER_LIBRARY}")
+#  if (NOT "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
+#    set(JASPER_LIBRARIES "${JASPER_LIBRARY}/libjasper.so")
+#  endif()
+#endif()
 find_package(ZLIB REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BZip2 REQUIRED)

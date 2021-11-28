@@ -20,5 +20,5 @@ find_third_party(
   HEADER curl.h
   LIBRARY curl
   HEADER_PATHS ${CURL_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include/curl /usr/include/curl
-  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib
+  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
 )

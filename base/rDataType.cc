@@ -7,6 +7,7 @@
 #include "rLLH.h"
 #include "rStrings.h"
 #include "rColorMap.h"
+#include "rDataProjection.h"
 
 using namespace rapio;
 

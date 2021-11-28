@@ -1,17 +1,17 @@
 #pragma once
 
 #include <rUtility.h>
-#include <rDataGrid.h>
-#include <rLatLonGrid.h>
+
+#include <rArray.h>
 
 #include <string>
 #include <memory>
 
-#define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H
 #include <proj.h>
-#include <proj_api.h>
 
 namespace rapio {
+class LatLonGrid;
+
 /** Create a generic projection API wrapper
  *
  * @author Robert Toomey
@@ -123,12 +123,6 @@ private:
 
   /** Destination projection string in Proj library language */
   std::string myDst;
-
-  /** Proj library object to handle source projection */
-  projPJ pj_src;
-
-  /** Proj library object to handle destination projection */
-  projPJ pj_dst;
 
   /** Proj6 object */
   PJ * myP;
