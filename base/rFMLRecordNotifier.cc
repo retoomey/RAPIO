@@ -16,6 +16,7 @@ std::shared_ptr<RecordNotifierType>
 FMLRecordNotifier::create()
 {
   std::shared_ptr<FMLRecordNotifier> result = std::make_shared<FMLRecordNotifier>();
+
   return (result);
 }
 
@@ -80,6 +81,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // We assume the outputinfo is a directory.  Override with myOutputDir if requested
   // on the notifier param line:
   std::string outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
+
   outputDir += "/";
 
   // Find the macro indexLocation from cache or create it
@@ -87,6 +89,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // can be different for each writer.  We can cache per output path though
   std::string indexLocation;
   auto indexPath = myIndexPaths.find(outputDir);
+
   if (indexPath == myIndexPaths.end()) {
     indexLocation = myIndexPaths[outputDir] = IOIndex::getIndexPath(outputDir);
   } else {
@@ -102,6 +105,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // Construct fml filename from the selections string
   const std::vector<std::string>& s = rec.getSelections();
   std::stringstream filename;
+
   filename << s[0];
   for (size_t i = 1; i < s.size(); ++i) {
     filename << '_' << s[i];
@@ -109,6 +113,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
 
   // Add sourcename to avoid data stomping with multi-radar output
   const std::string sourceName = rec.getSourceName();
+
   if (!sourceName.empty()) {
     filename << sourceName << '_';
   }
@@ -117,12 +122,14 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // to the end of the fml filename.  This won't work for multiple
   // records from a single writer
   const std::vector<std::string>& p = rec.getBuilderParams();
+
   filename << '_' << p[0] << ".fml";
 
   // Write record to tmp .fml file ------------------------------
   std::string tempDir = outputDir + ".working/"; // For file 'locking'
   const std::string tmpfilename = tempDir + filename.str();
   std::ofstream ofp;
+
   ofp.open(tmpfilename.c_str());
 
   if (!ofp) {
@@ -153,6 +160,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // Rename from tmp to final
   const std::string outfilename = outputDir + filename.str();
   int result = rename(tmpfilename.c_str(), outfilename.c_str());
+
   if (result == 0) {
     LogDebug("FML Notify File -->>" << outfilename << "\n");
   } else {

@@ -232,6 +232,7 @@ DataGrid::createMetadata()
   auto theDims = getDims();
   // auto dimArrays = theJson->getNode();
   PTreeNode dimArrays;
+
   for (auto& d:theDims) {
     PTreeNode aDimArray;
     // Order matters here...
@@ -249,6 +250,7 @@ DataGrid::createMetadata()
   PTreeNode theArrays;
   auto pid  = OS::getProcessID();
   int count = 1;
+
   for (auto& ar:arrays) {
     // Individual array
     PTreeNode anArray;

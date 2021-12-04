@@ -81,6 +81,7 @@ IJK::IJK(
 
   LLH target_loc(target_lat, target_lon, target_htKM);
   IJK a = XYZ(target_loc) - XYZ(ref);
+
   x = a.x;
   y = a.y;
   z = a.z;

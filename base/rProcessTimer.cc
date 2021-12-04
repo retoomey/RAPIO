@@ -17,6 +17,7 @@ TimeDuration
 ProcessTimer::getWallTime()
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
+
   return (TimeDuration::MilliSeconds((elapsed.wall) / 1e6));
 }
 
@@ -24,6 +25,7 @@ TimeDuration
 ProcessTimer::getUserTime()
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
+
   return (TimeDuration::MilliSeconds(elapsed.user / 1e6));
 }
 
@@ -31,6 +33,7 @@ TimeDuration
 ProcessTimer::getSystemTime()
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
+
   return (TimeDuration::MilliSeconds((elapsed.system) / 1e6));
 }
 
@@ -38,6 +41,7 @@ TimeDuration
 ProcessTimer::getCPUTime()
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
+
   return (TimeDuration::MilliSeconds((elapsed.user + elapsed.system) / 1e6));
 }
 
@@ -54,6 +58,7 @@ add(const ProcessTimer& timer)
 {
   // Get all the info at once
   boost::timer::cpu_times elapsed = timer.myTimer.elapsed();
+
   myWall   += TimeDuration::MilliSeconds((elapsed.wall) / 1e6);
   myUser   += TimeDuration::MilliSeconds((elapsed.user) / 1e6);
   mySystem += TimeDuration::MilliSeconds((elapsed.system) / 1e6);

@@ -131,6 +131,7 @@ FMLIndex::introduceSelf()
 {
   // input FAM ingestor
   std::shared_ptr<IndexType> newOne = std::make_shared<FMLIndex>();
+
   // Handle a fml index getting stuff from fam
   IOIndex::introduce(FMLINDEX_FAM, newOne);
   // Handle a fml index getting stuff from a directory poll
@@ -147,5 +148,6 @@ FMLIndex::createIndexType(
     protocol,
     URL(indexparams),
     maximumHistory);
+
   return (result); // Factory handles isValid now...
 }

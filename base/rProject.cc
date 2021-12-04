@@ -52,11 +52,13 @@ Project::createLatLonGrid(
   leftDegs = lon - degreeOut;
   auto rightDegs = lon + degreeOut;
   auto width     = rightDegs - leftDegs;
+
   deltaLonDegs = width / numCols;
 
   // To keep aspect ratio per cell, use deltaLon to back calculate
   deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
   auto lat = centerLatDegs;
+
   topDegs = lat - (deltaLatDegs * numRows / 2.0);
 }
 
@@ -81,9 +83,9 @@ Project::LatLonToXY(double& lat, double&lon, double &x, double&y)
 int
 Project::createLookup(
   // Output information
-  int   imageRows, // rows of output projection
-  int   imageCols, // cols of output projection
-  int   mCell,     // Kilometers per cell (sample rate)
+  int imageRows, // rows of output projection
+  int imageCols, // cols of output projection
+  int mCell,     // Kilometers per cell (sample rate)
 
   // Input lat lon grid information for projecting lat/lon to index
   // Should we pass the lat lon grid?
@@ -115,6 +117,7 @@ Project::createLookup(
                           << mCell << "\n");
   // In kilometers from CENTER projected
   int currentY = startY;
+
   for (int i = 0; i < imageRows; ++i) {
     int currentX = startX;
     for (int j = 0; j < imageCols; ++j) {
@@ -237,12 +240,13 @@ ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
   /* the CRS is dynamic. */
   // Not sure why they have a PJ_XY since this leaves fields undefined, it's just a 4 array of double
   // Eh?  This could break if they change the union later...
-  PJ_COORD c{x,y,0.0, HUGE_VAL};
-  //c.xyzt.x = x;
-  //c.xyzt.y = y;
-  //c.xyzt.z = 0.0;
-  //c.xyzt.t = HUGE_VAL; // time
+  PJ_COORD c{ x, y, 0.0, HUGE_VAL };
+  // c.xyzt.x = x;
+  // c.xyzt.y = y;
+  // c.xyzt.z = 0.0;
+  // c.xyzt.t = HUGE_VAL; // time
   PJ_COORD c_out = proj_trans(myP, PJ_FWD, c);
+
   lon = c_out.lpzt.lam; // * 180.0 / M_PI;  It's giving me degrees not radians currently
   lat = c_out.lpzt.phi; // * 180.0 / M_PI;
   return (!proj_errno(myP));
@@ -251,12 +255,13 @@ ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
 bool
 ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
 {
-  PJ_COORD c{lon, lat, 0.0, HUGE_VAL}; // as PJ_LPZT
-  //c.lpzt.lam = lon; //  * M_PI/180.0; 
-  //c.lpzt.phi = lat; // * M_PI/180.0;
-  //c.lpzt.z = 0.0;
-  //c.lpzt.t = HUGE_VAL;
+  PJ_COORD c{ lon, lat, 0.0, HUGE_VAL }; // as PJ_LPZT
+  // c.lpzt.lam = lon; //  * M_PI/180.0;
+  // c.lpzt.phi = lat; // * M_PI/180.0;
+  // c.lpzt.z = 0.0;
+  // c.lpzt.t = HUGE_VAL;
   PJ_COORD c_out = proj_trans(myP, PJ_INV, c);
+
   x = c_out.xy.x;
   y = c_out.xy.y;
   return (!proj_errno(myP));
@@ -264,7 +269,7 @@ ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
 
 void
 ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
-  std::shared_ptr<LatLonGrid>                           out)
+  std::shared_ptr<LatLonGrid>                                  out)
 {
   auto data2DFA = out->getFloat2D("primary"); // size could be nice right?
   auto& data2DF = data2DFA->ref();
@@ -303,6 +308,7 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   double endY        = centerYKm + halfR;
   double rangeX      = endX - startX;
   double rangeY      = endY - startY;
+
   if (rangeX < 0) { rangeX = -rangeX; }
   if (rangeY < 0) { rangeY = -rangeY; }
   double scaleX = rangeX / (imageCols); // per cell size
@@ -330,6 +336,7 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
 
   // For each point in output lat lon
   double atLat = nwLat;
+
   for (size_t x = 0; x < num_lats; ++x) { // x,y in the space of LatLonGrid
     double atLon = nwLon;
     for (size_t y = 0; y < num_lons; ++y) {
@@ -339,19 +346,19 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
       if (y <= 11) { data2DF[x][y] = 53; continue; }
       if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
 
-      //double radLat = atLat * DEG_TO_RAD;
-      //double radLon = atLon * DEG_TO_RAD;
-      //int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
-      //LatLonToXY
-      //PJ_COORD c;
-      PJ_COORD c{atLon, atLat, 0.0, HUGE_VAL}; // as PJ_LPZT
-      //c.lpzt.lam = atLon; //  * M_PI/180.0;
-      //c.lpzt.phi = atLat; //  * M_PI/180.0;
-      //c.lpzt.z = 0.0;
-      //c.lpzt.t = HUGE_VAL;
+      // double radLat = atLat * DEG_TO_RAD;
+      // double radLon = atLon * DEG_TO_RAD;
+      // int k         = pj_transform(pj_dst, pj_src, 1, 1, &radLon, &radLat, NULL);
+      // LatLonToXY
+      // PJ_COORD c;
+      PJ_COORD c{ atLon, atLat, 0.0, HUGE_VAL }; // as PJ_LPZT
+      // c.lpzt.lam = atLon; //  * M_PI/180.0;
+      // c.lpzt.phi = atLat; //  * M_PI/180.0;
+      // c.lpzt.z = 0.0;
+      // c.lpzt.t = HUGE_VAL;
       PJ_COORD c_out = proj_trans(myP, PJ_INV, c);
-      double radLat = c_out.xy.x; // Argh..should be x,y values
-      double radLon = c_out.xy.y;
+      double radLat  = c_out.xy.x; // Argh..should be x,y values
+      double radLon  = c_out.xy.y;
 
       if (proj_errno(myP)) {
         data2DF[x][y] = Constants::MissingData;

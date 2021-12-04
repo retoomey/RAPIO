@@ -68,7 +68,7 @@ public:
   virtual std::string
   formKey(const selections_t& sel,
     size_t                  begin = 0,
-    size_t                  end = ~0) const;
+    size_t                  end   = ~0) const;
 
   /**
    * Users will normally create a subclass of Index, such

@@ -38,6 +38,7 @@ Option::addSuboption(const std::string& opt, const std::string& description)
 
   // FIXME: Should check for already existing and returning, we're duplicating
   Suboption s;
+
   s.opt         = opt;
   s.description = description;
   suboptions.push_back(s);

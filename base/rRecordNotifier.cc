@@ -23,6 +23,7 @@ std::string
 RecordNotifier::introduceHelp()
 {
   std::string help;
+
   help +=
     "If blank, set to {OutputDir}/code_index.fam, while if set to 'disable' then turned off (could speed up archive processing.)\n";
   help += " " + ColorTerm::fRed + "fml" + ColorTerm::fNormal + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
@@ -35,6 +36,7 @@ RecordNotifier::createNotifiers()
 {
   std::vector<std::shared_ptr<RecordNotifierType> > v;
   const auto& notifiers = ConfigParamGroupn::getNotifierInfo();
+
   for (auto& ni:notifiers) {
     auto n = createNotifier(ni.protocol, ni.params);
     if (n != nullptr) {

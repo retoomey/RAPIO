@@ -47,23 +47,25 @@ void
 NetcdfBinaryTable::introduceSelf(IONetcdf * owner)
 {
   std::shared_ptr<NetcdfBinaryTable> newOne = std::make_shared<NetcdfBinaryTable>();
+
   owner->introduce("BinaryTable", newOne);
 }
 
 std::shared_ptr<DataType>
 NetcdfBinaryTable::read(
   std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType> dt)
+  std::shared_ptr<DataType>         dt)
 {
   LogSevere("Unimplemented raw table, returning empty table\n");
 
   std::shared_ptr<BinaryTable> newOne = std::make_shared<BinaryTable>();
+
   return (newOne);
 }
 
 bool
 NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>               & keys)
 {
   try {
     std::shared_ptr<BinaryTable> pBinaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);

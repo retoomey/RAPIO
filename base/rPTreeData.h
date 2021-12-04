@@ -43,6 +43,7 @@ public:
   {
     std::map<std::string, std::string> attrList;
     auto attrs = node.get_child_optional("<xmlattr>");
+
     if (attrs != boost::none) {
       for (auto& c: *attrs) {
         attrList[c.first] = c.second.get_value<std::string>();
@@ -142,6 +143,7 @@ public:
   getChildren(const std::string& filter)
   {
     std::vector<PTreeNode> list;
+
     for (auto r: node.get_child("")) {
       if (r.first == filter) {
         PTreeNode child;
@@ -156,6 +158,7 @@ public:
   getChildrenPtr(const std::string& filter)
   {
     std::vector<std::shared_ptr<PTreeNode> > list;
+
     for (auto r: node.get_child("")) {
       if (r.first == filter) {
         // Copy to a shared_ptr

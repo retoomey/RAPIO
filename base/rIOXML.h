@@ -63,6 +63,6 @@ protected:
     const URL                  & path,
     std::shared_ptr<PTreeData> tree,
     bool                       shouldIndent = true,
-    bool                       console = false);
+    bool                       console      = false);
 };
 }

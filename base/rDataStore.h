@@ -55,6 +55,7 @@ public:
     long oldbyte = Log::bytecounter;
 
     std::string pluss = " + ";
+
     if (plus) {
       Log::bytecounter += (sizeof(T) * v);
     } else {
@@ -153,7 +154,7 @@ public:
    * C++ standard copy constructor will just value copy
    * each field, causing our d pointer to be double deleted
    * ...so we need to make sure our memory is unique */
-  DataStore<T>( const DataStore<T> &o)
+  DataStore<T>(const DataStore<T> &o)
   {
     if (o.s > 0) {
       d = (T *) malloc(sizeof(T) * o.s);

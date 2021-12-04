@@ -63,6 +63,7 @@ FileIndex::initialRead(bool realtime, bool archive)
 
   // Choose FAM or POLL watcher depending on protocol
   std::string poll = FAMWatcher::FAM_WATCH;
+
   if (myProtocol == FileIndex::FileINDEX_FAM) {
     poll = FAMWatcher::FAM_WATCH;
   } else if (myProtocol == FileINDEX_POLL) {
@@ -79,6 +80,7 @@ FileIndex::initialRead(bool realtime, bool archive)
 
   std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(poll);
   bool ok = watcher->attach(loc, realtime, archive, this);
+
   // watcher->attach("/home/dyolf/FAM2/", this);
   // watcher->attach("/home/dyolf/FAM3/", this);
   if (!ok) { return false; }
@@ -164,6 +166,7 @@ void
 FileIndex::introduceSelf()
 {
   std::shared_ptr<IndexType> newOne = std::make_shared<FileIndex>();
+
   // Handle from FAM and POLL
   IOIndex::introduce(FileINDEX_FAM, newOne);
   IOIndex::introduce(FileINDEX_POLL, newOne);
@@ -180,5 +183,6 @@ FileIndex::createIndexType(
     protocol,
     URL(indexparams),
     maximumHistory);
+
   return (result); // Factory handles isValid now...
 }

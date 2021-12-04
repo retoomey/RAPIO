@@ -251,21 +251,21 @@ public:
     int *               dim1,
     size_t *            dim1size,
     const char *        dim2Name = "",
-    int *               dim2 = 0,
+    int *               dim2     = 0,
     size_t *            dim2size = 0,
     const char *        dim3Name = "",
-    int *               dim3 = 0,
+    int *               dim3     = 0,
     size_t *            dim3size = 0);
 
   /** Read sparse 2D.  Template for the 'set_val(x,y)' and 'fill' methods for
    * DataType classes */
   static bool
-  readSparse2D(int ncid,
-    int data_var,
-    int num_x,
-    int num_y,
-    float fileMissing,
-    float fileRangeFolded,
+  readSparse2D(int  ncid,
+    int             data_var,
+    int             num_x,
+    int             num_y,
+    float           fileMissing,
+    float           fileRangeFolded,
     Array<float, 2> & dt);
 
   // static bool readSparse3D(int   ncid,

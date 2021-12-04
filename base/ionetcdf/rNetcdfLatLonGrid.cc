@@ -14,6 +14,7 @@ void
 NetcdfLatLonGrid::introduceSelf(IONetcdf * owner)
 {
   std::shared_ptr<IOSpecializer> io = std::make_shared<NetcdfLatLonGrid>();
+
   owner->introduce("LatLonGrid", io);
   owner->introduce("SparseLatLonGrid", io);
 }
@@ -21,9 +22,10 @@ NetcdfLatLonGrid::introduceSelf(IONetcdf * owner)
 std::shared_ptr<DataType>
 NetcdfLatLonGrid::read(
   std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType> dt)
+  std::shared_ptr<DataType>         dt)
 {
   std::shared_ptr<LatLonGrid> LatLonGridSP = std::make_shared<LatLonGrid>();
+
   if (readDataGrid(LatLonGridSP, keys)) {
     return LatLonGridSP;
   } else {
@@ -33,7 +35,7 @@ NetcdfLatLonGrid::read(
 
 bool
 NetcdfLatLonGrid::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>              & keys)
 {
   // Generalize the writer maybe...
   // if (dfs->cdmcompliance || dfs->faacompliance) {

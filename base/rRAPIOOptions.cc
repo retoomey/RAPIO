@@ -115,6 +115,7 @@ RAPIOOptions::getLocation(
   const bool       is3D)
 {
   std::vector<std::string> pieces;
+
   Strings::split(data, ',', &pieces);
   size_t expected = is3D ? 3 : 2;
 
@@ -127,6 +128,7 @@ RAPIOOptions::getLocation(
   LLH loc(atof(pieces[0].c_str()),
     atof(pieces[1].c_str()),
     heightKMs);
+
   return (loc);
 }
 
@@ -137,6 +139,7 @@ getMapString(
 {
   std::map<std::string, std::string>::iterator iter;
   std::string s = "";
+
   iter = lookup.find(name);
 
   if (iter != lookup.end()) {
@@ -193,6 +196,7 @@ RAPIOOptions::getGrid(const std::string& name,
   // Now break up the f(v) pairs into f --> v
   std::map<std::string, std::string> lookup;
   std::vector<std::string> fields;
+
   Strings::split(grid, ' ', &fields);
 
   for (size_t i = 0; i < fields.size(); i++) {
@@ -240,6 +244,7 @@ RAPIOOptions::getGrid(const std::string& name,
   //   sec.setHeight( nwc.getHeight() ); // set them to same height ...
 
   std::vector<std::string> pieces2;
+
   Strings::split(spacing, ',', &pieces2);
 
   if (pieces2.size() < 2) {
@@ -394,6 +399,7 @@ RAPIOOptions::verifyRequired()
   FilterMissingRequired r;
 
   std::vector<Option> allOptions;
+
   sortOptions(allOptions, r);
 
   if (allOptions.size() > 0) {
@@ -415,6 +421,7 @@ RAPIOOptions::verifySuboptions()
   FilterBadSuboption r;
 
   std::vector<Option> allOptions;
+
   sortOptions(allOptions, r);
 
   if (allOptions.size() > 0) {
@@ -446,6 +453,7 @@ RAPIOOptions::verifyAllRecognized()
   }
 
   bool good = true;
+
   // Ok, so on unrecognized options we need to exit
   if (unusedOptionMap.size() > 0) {
     std::map<std::string, Option>::iterator i;
@@ -472,6 +480,7 @@ RAPIOOptions::dumpArgs()
   OptionFilter all;
 
   std::vector<Option> allOptions;
+
   sortOptions(allOptions, all);
 
   // Dump description, if given..
@@ -516,6 +525,7 @@ RAPIOOptions::dumpArgs()
   // Get all groups not matching preordered, sort and insert
   // into position wanted.
   std::vector<std::string> user;
+
   for (const auto& o:allOptions) {
     for (const auto& g: o.groups) {
       // If not in our predefined group...
@@ -642,6 +652,7 @@ RAPIOOptions::readConfigFile(const std::string& string)
   // Get the option/value pairs from the configuration file...
   std::vector<std::string> options;
   std::vector<std::string> values;
+
   if (config->readConfigURL(aURL, options, values)) {
     if (options.size() != values.size()) {
       LogSevere("Bad configuration file reader, options not equal to values\n");
@@ -678,6 +689,7 @@ RAPIOOptions::writeConfigFile(const std::string& string)
   // Create a list of option/value pairs for configuration writer
   std::vector<std::string> options;
   std::vector<std::string> values;
+
   for (auto& i: optionMap) {
     if (allowInConfig(i.second.opt)) {
       options.push_back(i.second.opt);
@@ -753,6 +765,7 @@ RAPIOOptions::processArgs(const int& argc, char **& argv)
   }
   // Grab the name from the main program argument
   std::vector<std::string> pathbreaks;
+
   Strings::split(std::string(argv[0]), '/', &pathbreaks);
 
   if (pathbreaks.size() > 0) {
@@ -784,12 +797,14 @@ RAPIOOptions::processArgs(const int& argc, char **& argv)
 
   // Help first incase of help iconfig
   bool haveHelp = false;
+
   if (isParsed("help") || (argc < 2)) { // 'alg help' or 'alg' dumps help
     haveHelp = true;
   }
 
   // Read in given configuration file, if any
   std::string fileName = getString("iconfig");
+
   if ((!haveHelp) && (!fileName.empty())) {
     readConfigFile(fileName);
   }
@@ -847,6 +862,7 @@ RAPIOOptions::finalizeArgs(bool haveHelp)
 
   // Check for configuration output and write out now...
   std::string ofileName = getString("oconfig");
+
   if (!ofileName.empty()) { // help already processed now
     writeConfigFile(ofileName);
     return false;

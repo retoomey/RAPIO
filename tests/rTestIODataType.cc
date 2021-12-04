@@ -25,25 +25,30 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
   // to the builder to parse
   std::ostringstream buf;
   std::ifstream input("testxml.xml");
+
   buf << input.rdbuf();
   std::string gotit = buf.str().c_str();
   std::vector<char> buffer;
+
   for (auto x:gotit) {
     buffer.push_back(x);
   }
   // Code fixes this now buffer.push_back('\0');
   auto outREADBUFFER = IODataType::readBuffer<PTreeData>(buffer, "xml");
+
   BOOST_CHECK_EQUAL((outREADBUFFER != nullptr), true);
 
   // 2. Read a URL to a PTreeData using xml parser
   const URL loc("testxml.xml");
   // std::cerr << loc.toString() << "\n";
   auto outREADFILE = IODataType::read<PTreeData>(loc.toString(), "xml");
+
   BOOST_CHECK_EQUAL((outREADFILE != nullptr), true);
   // FIXME: could check actual nodes.  If it failed it should be zero
 
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
+
   IODataType::writeBuffer(outREADFILE, bufferout, "xml");
   // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
   // for(auto x:bufferout){
@@ -57,6 +62,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
 
   // 4. Create a new PTreeData item from the new char buffer
   auto newone = IODataType::readBuffer<PTreeData>(bufferout, "xml");
+
   BOOST_CHECK_EQUAL((newone != nullptr), true);
 
   BOOST_CHECK_EQUAL((bufferout.size() > 0), true);
@@ -68,11 +74,13 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
 
   // 5. Read back URL to a PTreeData using xml parser
   auto outREADFILE2 = IODataType::read<PTreeData>(loc.toString(), "xml");
+
   BOOST_CHECK_EQUAL((outREADFILE2 != nullptr), true);
   // FIXME: could check actual nodes.  If it failed it should be zero
 
   // 6. Write the PTreeData out to a char buffer
   std::vector<char> bufferout2;
+
   IODataType::writeBuffer(outREADFILE2, bufferout2, "xml");
   // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
 
@@ -112,25 +120,30 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
   // to the builder to parse
   std::ostringstream buf;
   std::ifstream input("testjson.json");
+
   buf << input.rdbuf();
   std::string gotit = buf.str().c_str();
   std::vector<char> buffer;
+
   for (auto x:gotit) {
     buffer.push_back(x);
   }
   // Code fixes this now buffer.push_back('\0');
   auto outREADBUFFER = IODataType::readBuffer<PTreeData>(buffer, "json");
+
   BOOST_CHECK_EQUAL((outREADBUFFER != nullptr), true);
 
   // 2. Read a URL to a PTreeData using xml parser
   const URL loc("testjson.json");
   // std::cerr << loc.toString() << "\n";
   auto outREADFILE = IODataType::read<PTreeData>(loc.toString(), "json");
+
   BOOST_CHECK_EQUAL((outREADFILE != nullptr), true);
   // FIXME: could check actual nodes.  If it failed it should be zero
 
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
+
   IODataType::writeBuffer(outREADFILE, bufferout, "json");
   // std::cerr << "Writing buffer to json gives -------------------------------------\n";
   // for(auto x:bufferout){
@@ -144,6 +157,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
 
   // 4. Create a new PTreeData item from the new char buffer
   auto newone = IODataType::readBuffer<PTreeData>(bufferout, "json");
+
   BOOST_CHECK_EQUAL((newone != nullptr), true);
 
   BOOST_CHECK_EQUAL((bufferout.size() > 0), true);
@@ -155,11 +169,13 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
 
   // 5. Read back URL to a PTreeData using xml parser
   auto outREADFILE2 = IODataType::read<PTreeData>(loc.toString(), "json");
+
   BOOST_CHECK_EQUAL((outREADFILE2 != nullptr), true);
   // FIXME: could check actual nodes.  If it failed it should be zero
 
   // 6. Write the PTreeData out to a char buffer
   std::vector<char> bufferout2;
+
   IODataType::writeBuffer(outREADFILE2, bufferout2, "json");
   // std::cerr << "Writing buffer to json gives -------------------------------------\n";
 

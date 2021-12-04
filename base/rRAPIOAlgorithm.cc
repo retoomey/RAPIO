@@ -56,6 +56,7 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
 
   // The realtime option for reading archive, realtime, etc.
   const std::string r = "r";
+
   o.optional(r, "old", "Read mode for algorithm.");
   o.addGroup(r, "TIME");
   o.addSuboption(r, "old", "Only process existing old records and stop.");
@@ -136,11 +137,13 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   // Gather notifier list and output directory
   myNotifierList = o.getString("n");
   ConfigParamGroupn paramn;
+
   paramn.readString(myNotifierList);
 
   // Gather output -o settings
   const std::string write = o.getString("o");
   ConfigParamGroupo paramo;
+
   paramo.readString(write);
 
   myWebServerMode = o.getString("web");
@@ -164,21 +167,24 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   // Standard -i, -I -r handling of the input parameters,
   // most algorithms do it this way.
   ConfigParamGroupi parami;
+
   parami.readString(o.getString("i"));
 
   ConfigParamGroupI paramI;
+
   paramI.readString(o.getString("I"));
 
   myReadMode = o.getString("r");
   std::string web = o.getString("web");
-  if (!web.empty()){
-    if (!isDaemon()){
-       LogInfo("Changing -r option to new since archive makes no sense for webserver mode\n");
-       myReadMode = "new";
+
+  if (!web.empty()) {
+    if (!isDaemon()) {
+      LogInfo("Changing -r option to new since archive makes no sense for webserver mode\n");
+      myReadMode = "new";
     }
   }
   myCronList = o.getString("sync");
-}
+} // RAPIOAlgorithm::processInputParams
 
 TimeDuration
 RAPIOAlgorithm::getMaximumHistory()
@@ -229,14 +235,17 @@ RAPIOAlgorithm::initializeBaseParsers()
   std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
   Factory<IODataType>::introduce("xml", xml);
   Factory<IODataType>::introduce("w2algs", xml);
+
   xml->initialize();
 
   std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
   Factory<IODataType>::introduce("json", json);
+
   json->initialize();
 
   std::shared_ptr<IOFile> file = std::make_shared<IOFile>();
   Factory<IODataType>::introduce("file", file);
+
   file->initialize();
 }
 
@@ -359,6 +368,7 @@ void
 RAPIOAlgorithm::setUpRecordFilter()
 {
   std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>(this);
+
   Record::theRecordFilter = f;
 }
 
@@ -367,6 +377,7 @@ RAPIOAlgorithm::execute()
 {
   // Add Heartbeat (if wanted)
   std::shared_ptr<Heartbeat> heart = nullptr;
+
   if (!myCronList.empty()) { // None required, don't make it
     LogInfo("Attempting to create heartbeat for " << myCronList << "\n");
     heart = std::make_shared<Heartbeat>(this, 1000);
@@ -378,6 +389,7 @@ RAPIOAlgorithm::execute()
 
   // Create record queue and record filter/notifier
   std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
+
   Record::theRecordQueue = q;
 
   setUpRecordNotifier();
@@ -395,6 +407,7 @@ RAPIOAlgorithm::execute()
   bool daemon       = isDaemon();
   bool archive      = isArchive();
   std::string what  = daemon ? "daemon" : "archive";
+
   if (daemon && archive) { what = "allrecords"; }
 
   for (size_t p = 0; p < wanted; ++p) {
@@ -428,6 +441,7 @@ RAPIOAlgorithm::execute()
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
   LogDebug("Outputs:\n");
   const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
+
   for (auto& w:writers) {
     LogDebug("   " << w.factory << "--> " << w.outputinfo << "\n");
   }
@@ -447,6 +461,7 @@ RAPIOAlgorithm::execute()
 
   // Launch event loop, either along with web server, or solo
   const bool wantWeb = (myWebServerMode != "off");
+
   myWebServerOn = wantWeb;
 
   /*
@@ -505,9 +520,11 @@ RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
   static int counter = 0;
 
   std::stringstream stream;
+
   stream << "<h1>Web request call number: " << ++counter << "</h1>";
   stream << "Path is: " << w->getPath() << "<br>";
   auto& map = w->getMap();
+
   stream << "There are " << map.size() << " fields.<br>";
   for (auto& a:map) {
     stream << "Field: " << a.first << " == " << a.second << "<br>";
@@ -578,28 +595,31 @@ bool
 RAPIOAlgorithm::isProductWanted(const std::string& key)
 {
   std::string newProductName = "";
+
   return (productMatch(key, newProductName));
 }
 
 bool
 RAPIOAlgorithm::writeDirectOutput(const URL& path,
-  std::shared_ptr<DataType> outputData,
-  std::map<std::string, std::string>& outputParams)
+  std::shared_ptr<DataType>                outputData,
+  std::map<std::string, std::string>       & outputParams)
 {
   // return (IODataType::write(outputData, path.toString()));
   std::vector<Record> blackHole;
+
   outputParams["filepathmode"] = "direct";
   return IODataType::write(outputData, path.toString(), blackHole, "", outputParams); // Default write single file
 }
 
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
-  std::shared_ptr<DataType> outputData,
-  std::map<std::string, std::string>& outputParams)
+  std::shared_ptr<DataType>                         outputData,
+  std::map<std::string, std::string>                & outputParams)
 {
   outputParams["filepathmode"] = "datatype";
 
   std::string newProductName = "";
+
   if (productMatch(key, newProductName)) {
     const bool changeProductName = (key != newProductName);
     if (changeProductName) {

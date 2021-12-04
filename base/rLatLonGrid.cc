@@ -21,15 +21,15 @@ LatLonGrid::Create(
   const std::string& Units,
 
   // Projection information (metadata of the 2D)
-  const LLH        & location,
-  const Time       & time,
-  const float      lat_spacing,
-  const float      lon_spacing,
+  const LLH   & location,
+  const Time  & time,
+  const float lat_spacing,
+  const float lon_spacing,
 
   // Basically the 2D array and initial value
-  size_t           num_lats,
-  size_t           num_lons,
-  float            value
+  size_t num_lats,
+  size_t num_lons,
+  float  value
 )
 {
   auto llgridsp = std::make_shared<LatLonGrid>();
@@ -100,6 +100,7 @@ LatLonGrid::initFromGlobalAttributes()
   float latDegs  = 0;
   float lonDegs  = 0;
   float htMeters = 0;
+
   success &= getFloat(Constants::Latitude, latDegs);
   success &= getFloat(Constants::Longitude, lonDegs);
   success &= getFloat(Constants::Height, htMeters);
@@ -112,6 +113,7 @@ LatLonGrid::initFromGlobalAttributes()
   // -------------------------------------------------------
   // Time
   long timesecs = 0;
+
   if (getLong(Constants::Time, timesecs)) {
     // optional
     double f = 0.0;

@@ -13,6 +13,7 @@ void
 ConfigDirectoryMapping::introduceSelf()
 {
   std::shared_ptr<ConfigDirectoryMapping> d = std::make_shared<ConfigDirectoryMapping>();
+
   Config::introduce("directorymapping", d);
 }
 

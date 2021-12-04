@@ -62,6 +62,6 @@ private:
 
   /** Recursive scan for new files during a poll */
   void
-  scan(IOListener * l, const std::string& dir, struct stat& lowtime, struct stat& newlowtime);
+  scan(IOListener * l, const std::string& dir, struct stat & lowtime, struct stat & newlowtime);
 };
 }

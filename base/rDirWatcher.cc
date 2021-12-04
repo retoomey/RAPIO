@@ -17,7 +17,7 @@ namespace
 {
 /** Time filter test for file/directory stats */
 bool
-greaterStat(const struct stat& a, const struct stat& b)
+greaterStat(const struct stat & a, const struct stat & b)
 {
   if (a.st_ctim.tv_sec > b.st_ctim.tv_sec) {
     return true;
@@ -31,7 +31,7 @@ greaterStat(const struct stat& a, const struct stat& b)
 }
 
 void
-DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat& lowtime, struct stat& newlowtime)
+DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lowtime, struct stat & newlowtime)
 {
   // Open directory
   DIR * dirp = opendir(dir.c_str());
@@ -41,6 +41,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat& low
     // Do a unmount event? return (false);
   }
   struct dirent * dp;
+
   while ((dp = readdir(dirp)) != 0) {
     const std::string full = dir + "/" + dp->d_name;
 
@@ -94,6 +95,7 @@ DirWatcher::DirInfo::createEvents(WatcherType * w)
   // Arrgh doesn't this need to be PER directory?
   // yeah I think so
   struct stat newLast = myLastStat;
+
   // auto lastnanos = w.myLastStat.st_ctim.tv_nsec;
   // auto lastsecs = w.myLastStat.st_ctim.tv_sec;
   // LogSevere("CURRENT LOW: " << lastsecs <<"."<<lastnanos<<"\n");
@@ -161,5 +163,6 @@ void
 DirWatcher::introduceSelf()
 {
   std::shared_ptr<DirWatcher> io = std::make_shared<DirWatcher>();
+
   IOWatcher::introduce(DIR_WATCH, io);
 }

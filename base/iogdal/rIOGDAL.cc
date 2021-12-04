@@ -29,6 +29,7 @@ std::string
 IOGDAL::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that uses the GDAL library and supported formats.";
   return help;
 }
@@ -57,6 +58,7 @@ std::shared_ptr<DataType>
 IOGDAL::readGDALDataType(const URL& url)
 {
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -78,7 +80,7 @@ IOGDAL::createDataType(const std::string& params)
 
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
+  std::map<std::string, std::string>             & keys
 )
 {
   DataType& r = *dt;
@@ -95,6 +97,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   // Setup gdal
   static std::shared_ptr<ProjLibProject> project2;
   static bool setup = false;
+
   if (!setup) {
     GDALAllRegister(); // Register/introduce all GDAL drivers
     CPLPushErrorHandler(CPLQuietErrorHandler);
@@ -104,15 +107,18 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   // Read settings
   //
   std::string filename = keys["filename"];
+
   if (filename.empty()) {
     LogSevere("Need a filename to output\n");
     return false;
   }
   std::string suffix = keys["suffix"];
+
   if (suffix.empty()) {
     suffix = ".tif";
   }
   std::string driver = keys["GTiff"];
+
   if (driver.empty()) {
     driver = "GTiff";
   }
@@ -120,11 +126,11 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   // Box settings from given BBOX string
   size_t rows;
   size_t cols;
-  double top      = 0;
-  double left     = 0;
-  double bottom   = 0;
-  double right    = 0;
-  auto proj = p.getBBOX(keys, rows, cols, left, bottom, right, top);
+  double top    = 0;
+  double left   = 0;
+  double bottom = 0;
+  double right  = 0;
+  auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
 
   // FIXME: still need to cleanup suffix stuff
   if (keys["directfile"] == "false") {
@@ -227,7 +233,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   oSRS.SetWellKnownGeogCS("WGS84");
 
   // Transformation of data from grid to actual coordinates
-  auto deltaLat = (bottom - top) / rows; 
+  auto deltaLat = (bottom - top) / rows;
   auto deltaLon = (right - left) / cols;
   double geoTransform[6] = { left, deltaLon, 0, top, 0, deltaLat };
   CPLErr terr = geotiffDataset->SetGeoTransform(geoTransform);

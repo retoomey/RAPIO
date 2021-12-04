@@ -15,6 +15,7 @@ AlgRecordFilter::wanted(const Record& rec)
   std::vector<std::string> sel = rec.getSelections();
 
   auto info = ConfigParamGroupI::getProductInputInfo();
+
   for (auto& p:info) {
     // If no subtype, just match the product pattern. For example, something
     // like

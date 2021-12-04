@@ -56,6 +56,7 @@ EventHandler::setReady()
   // Only update ready and notify on event lock
   // We could probably pass our ready flag let event loop handle locking?
   std::lock_guard<std::mutex> lck(EventLoop::theEventLock);
+
   // We're already ready, event will turn us off when it has the lock
   // So we don't need to do anything...
   if (myIsReady == true) {

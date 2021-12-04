@@ -153,6 +153,7 @@ StreamIndex::introduceSelf()
 {
   // Handle a stream index
   std::shared_ptr<IndexType> newOne = std::make_shared<StreamIndex>();
+
   IOIndex::introduce(STREAMINDEX, newOne);
 }
 
@@ -166,5 +167,6 @@ StreamIndex::createIndexType(
     protocol,
     indexparams,
     maximumHistory);
+
   return (result); // Factory handles isValid now...
 }

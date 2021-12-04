@@ -27,7 +27,7 @@ public:
 
   /** We don't read from XML, algorithm will send us a string from command line */
   virtual bool
-  readConfig(std::shared_ptr<PTreeData> ) override { return true; }
+  readConfig(std::shared_ptr<PTreeData>) override { return true; }
 
   /** Read configuration information from a command line string */
   virtual bool

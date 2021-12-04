@@ -58,9 +58,9 @@ public:
   virtual int
   createLookup(
     // Output information
-    int   desired_rows, // rows of output projection
-    int   desired_cols, // cols of output projection
-    int   mCell,        // Kilometers per cell (sample rate)
+    int desired_rows, // rows of output projection
+    int desired_cols, // cols of output projection
+    int mCell,        // Kilometers per cell (sample rate)
 
     // Input lat lon grid information for projecting lat/lon to index
     // Should we pass the lat lon grid?
@@ -74,7 +74,7 @@ public:
   /** Project array to lat lon grid.  This isn't super generic */
   virtual void
   toLatLonGrid(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<LatLonGrid>           out){ };
+    std::shared_ptr<LatLonGrid> out){ };
 };
 
 /* The only subclass for now, projects using the
@@ -115,7 +115,7 @@ public:
   /** Project array to lat lon grid primary.  This isn't super generic. */
   virtual void
   toLatLonGrid(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<LatLonGrid>           out) override;
+    std::shared_ptr<LatLonGrid> out) override;
 private:
 
   /** Source projection string in Proj library language */

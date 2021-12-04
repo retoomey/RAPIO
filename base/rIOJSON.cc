@@ -15,6 +15,7 @@ std::string
 IOJSON::getHelpString(const std::string & key)
 {
   std::string help;
+
   help = "builder for reading JSON formatted data.\n";
   return help;
 }
@@ -29,6 +30,7 @@ size_t
 IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
+
   if (ptree) {
     return (writePTreeDataBuffer(ptree, buffer));
   }
@@ -82,8 +84,10 @@ IOJSON::writePTreeDataBuffer(std::shared_ptr<PTreeData> d, std::vector<char>& bu
   const auto& n = d->getTree()->node;
 
   std::stringstream ss;
+
   boost::property_tree::json_parser::write_json(ss, n);
   std::string out = ss.str();
+
   buf = std::vector<char>(out.begin(), out.end());
   // To keep sizes correct, only add a 0 iff there isn't one there already
   if ((buf.size() > 0) && (buf[buf.size() - 1] != 0)) {
@@ -107,6 +111,7 @@ IOJSON::writeURL(
 
   // .json means to console (can we pass this in)
   std::string base = path.getBaseName();
+
   Strings::toLower(base);
   console = base == ".json";
 
@@ -125,7 +130,7 @@ IOJSON::writeURL(
 
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>     & keys
+  std::map<std::string, std::string>             & keys
 )
 {
   // Get settings
@@ -133,12 +138,14 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
 
   LogInfo("JSON settings: indent: " << indent << "\n");
   std::string filename = keys["filename"];
+
   if (keys["directfile"] == "false") {
     filename         = filename + ".xml";
     keys["filename"] = filename;
   }
 
   bool successful = false;
+
   try{
     std::shared_ptr<PTreeData> json = std::dynamic_pointer_cast<PTreeData>(dt);
     if (json != nullptr) {

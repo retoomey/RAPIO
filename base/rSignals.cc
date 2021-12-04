@@ -23,8 +23,10 @@ Signals::printTrace()
 
   sprintf(pid_buf, "%d", getpid());
   char name_buf[512];
+
   name_buf[readlink("/proc/self/exe", name_buf, 511)] = 0;
   int child_pid = fork();
+
   if (!child_pid) {
     dup2(2, 1); // redirect output to stderr
     fprintf(stdout, "stack trace for %s pid=%s\n", name_buf, pid_buf);

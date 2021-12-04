@@ -81,8 +81,8 @@ public:
    */
   static size_t
   splitWithoutEnds(const std::string & in,
-    char                             delimiter,
-    std::vector<std::string> *       setme);
+    char                       delimiter,
+    std::vector<std::string> * setme);
 
   /** Split a string on a character and put the pieces into a vector.
    *
@@ -119,12 +119,12 @@ public:
    */
   static size_t
   splitOnFirst(const std::string & in,
-    char                         delimiter,
-    std::vector<std::string> *   setme);
+    char                       delimiter,
+    std::vector<std::string> * setme);
 
   /** Replace all occurences of `from' with `to' in string `s'. */
   static void
-  replace(std::string & in,
+    replace(std::string & in,
     const std::string & from,
     const std::string & to);
 

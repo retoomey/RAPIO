@@ -31,6 +31,7 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
   const size_t MAXPASS = 5;
 
   std::vector<char> buffer;
+
   buffer.resize(POLL_BUFFER_SIZE);
 
   // Could store this in class maybe
@@ -40,6 +41,7 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
   bool ended     = false;
 
   WatchEvent aCoutEvent(myListener, "pipe", "");
+
   // WatchEvent aCerrEvent(myListener); // want or not? Ignoring fix pass
 
   for (int rval; (rval = poll(&plist[0], plist.size(), TIMEOUT)) > 0;) {
@@ -112,6 +114,7 @@ EXEWatcher::EXEInfo::connect()
 
   // Using % to separate arguments since ", ' and / are already used heavily for grouping
   std::vector<std::string> argsin;
+
   Strings::splitWithoutEnds(myParams, '%', &argsin);
 
   // Create our own pipes
@@ -121,6 +124,7 @@ EXEWatcher::EXEInfo::connect()
   }
 
   int ret;
+
   ret = posix_spawn_file_actions_init(&myFA);
 
   // Make child send stuff to us
@@ -137,6 +141,7 @@ EXEWatcher::EXEInfo::connect()
   // I need args dynamic for general ability obviously
   std::vector<std::string> args; // FIXME: Does posix_spawnp need this memory preserved?
   std::vector<char *> cargs;
+
   for (size_t i = 0; i < argsin.size(); i++) {
     args.push_back(argsin[i]);
     cargs.push_back(&args[i][0]);
@@ -184,5 +189,6 @@ void
 EXEWatcher::introduceSelf()
 {
   std::shared_ptr<EXEWatcher> io = std::make_shared<EXEWatcher>();
+
   IOWatcher::introduce(EXE_WATCH, io);
 }

@@ -115,6 +115,7 @@ public:
   {
     std::vector<TableInfo> info;
     TableInfo i;
+
     i.name = "rows"; // First 'colllection' of data called rows
     i.size = 0;      // Subclasses should fill in with data size
     info.push_back(i);

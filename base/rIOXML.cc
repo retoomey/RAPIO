@@ -17,6 +17,7 @@ std::string
 IOXML::getHelpString(const std::string & key)
 {
   std::string help;
+
   if (key == "W2ALGS") {
     help = "alias of XML builder for MRMS algorithms and records.\n";
   } else {
@@ -30,6 +31,7 @@ IOXML::initialize()
 {
   // PTreeDataTable::introduceSelf(this);
   std::shared_ptr<IOSpecializer> d = std::make_shared<PTreeDataTable>();
+
   this->introduce("datatable", d);
 }
 
@@ -43,6 +45,7 @@ size_t
 IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
+
   if (ptree) {
     return (writePTreeDataBuffer(ptree, buffer));
   } else {
@@ -116,8 +119,10 @@ IOXML::writePTreeDataBuffer(std::shared_ptr<PTreeData> d, std::vector<char>& buf
   const auto& n = d->getTree()->node;
 
   std::stringstream ss;
+
   boost::property_tree::xml_parser::write_xml(ss, n);
   std::string out = ss.str();
+
   buf = std::vector<char>(out.begin(), out.end());
   // To keep sizes correct, only add a 0 iff there isn't one there already
   if ((buf.size() > 0) && (buf[buf.size() - 1] != 0)) {
@@ -141,6 +146,7 @@ IOXML::writeURL(
 
   // .xml means to console (can we pass this in)
   std::string base = path.getBaseName();
+
   Strings::toLower(base);
   console = base == ".xml";
 
@@ -159,7 +165,7 @@ IOXML::writeURL(
 
 bool
 IOXML::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>     & keys
+  std::map<std::string, std::string>            & keys
 )
 {
   // Get settings
@@ -167,12 +173,14 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
 
   LogInfo("XML settings: indent: " << indent << "\n");
   std::string filename = keys["filename"];
+
   if (keys["directfile"] == "false") {
     filename         = filename + ".xml";
     keys["filename"] = filename;
   }
 
   bool successful = false;
+
   try{
     std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
     if (xml != nullptr) {

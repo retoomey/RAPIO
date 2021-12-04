@@ -36,6 +36,7 @@ std::string
 add_colon(const std::vector<std::string>& sel)
 {
   std::string result = sel[1];
+
   result += ':';
   result += sel[2];
   return (result);
@@ -73,6 +74,7 @@ Record::getDataType() const
 
   LogDebug("Record does not have a data type set in the mySelections ... \n");
   static std::string Unknown("Unknown");
+
   return (Unknown);
 }
 
@@ -129,6 +131,7 @@ operator < (const Record& a, const Record& b)
 
   const std::string& a_dt = a.getSelections()[1];
   const std::string& b_dt = b.getSelections()[1];
+
   return (a_dt < b_dt);
 } // <
 }
@@ -146,6 +149,7 @@ Record::getParamString(const std::vector<std::string>& params)
   std::string p;
 
   bool first = true;
+
   for (auto& s:params) {
     // Some WDSSII xml indexes have a GzippedFile/xmldata randomly stuffed into params,
     // we don't want this to be part of the path.
@@ -179,6 +183,7 @@ Record::createObject(size_t i) const
 
   // pop the data type off the params list...
   const std::string dataSourceType(params.front());
+
   params.erase(params.begin());
 
   // Note param determines type here
@@ -239,6 +244,7 @@ Record::readParams(const std::string & params,
 
   // Replace first {IndexLocation} with index location
   auto it = std::find(v.begin(), v.end(), Constants::IndexPathReplace);
+
   if (it != v.end()) {
     *it = indexPath; // quicker if only one
   } else {
@@ -291,6 +297,7 @@ Record::readXML(const PTreeNode& item,
 
   // Selections tag
   const auto selections = item.get("selections", std::string(""));
+
   Strings::split(selections, &mySelections);
 
   if (myParams.empty() || mySelections.empty()) {

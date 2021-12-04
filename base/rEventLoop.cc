@@ -28,8 +28,9 @@ EventLoop::threadWatcher()
 {
   while (true) {
     std::unique_lock<std::mutex> lck(theEventLock);
-    theEventCheckVariable.wait(lck, [] { return theReady;
-      });
+    theEventCheckVariable.wait(lck, [] {
+      return theReady;
+    });
 
     // We're now locked, so turn off flag so another timer can trigger it again.
     // However, we can't 'do' anything while locked or any thread trying to retrigger will
@@ -61,6 +62,7 @@ EventLoop::doEventLoop()
 
   // Create any timer threads wanted, these will fire on timers
   std::vector<std::thread> theThreads;
+
   for (auto& i:myEventHandlers) {
     i->createTimerThread(theThreads);
   }

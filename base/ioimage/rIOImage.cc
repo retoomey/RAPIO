@@ -34,6 +34,7 @@ std::string
 IOImage::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that uses the ImageMagick/GraphicsMagick library to output supported formats.";
   return help;
 }
@@ -62,6 +63,7 @@ std::shared_ptr<DataType>
 IOImage::readImageDataType(const URL& url)
 {
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -88,6 +90,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 {
   // Setup magic
   static bool setup = false;
+
   if (!setup) {
     #if HAVE_MAGICK
     InitializeMagick(NULL);
@@ -98,12 +101,13 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
   #if HAVE_MAGICK
   #else
-    return false;
+  return false;
+
   #endif
 
   // Get DataType Array info to LatLon projection
   DataType& dtr = *dt;
-  auto project = dtr.getProjection(); // primary layer
+  auto project  = dtr.getProjection(); // primary layer
   if (project == nullptr) {
     LogSevere("No projection ability for this datatype.\n");
     return false;
@@ -127,11 +131,11 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   // Bounding Box settings from given BBOX string
   size_t rows;
   size_t cols;
-  double top      = 0;
-  double left     = 0;
-  double bottom   = 0;
-  double right    = 0;
-  auto proj = p.getBBOX(keys, rows, cols, left, bottom, right, top);
+  double top    = 0;
+  double left   = 0;
+  double bottom = 0;
+  double right  = 0;
+  auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
 
   // FIXME: still need to cleanup suffix stuff
   if (keys["directfile"] == "false") {
@@ -148,7 +152,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
   #if HAVE_MAGICK
   try{
-    auto colormap        = dtr.getColorMap();
+    auto colormap         = dtr.getColorMap();
     const ColorMap& color = *colormap;
     Magick::Image i;
     i.size(Magick::Geometry(cols, rows));
@@ -184,10 +188,10 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
         // Box allows box around which is useful for debugging
         if (box && ((x < 2) || (y < 2) || (x > cols - 2) || (y > rows - 2))) {
-           Magick::ColorRGB cc = Magick::ColorRGB(1.0, 0.0, 0.0);
-           cc.alpha(0.0);
-           *pixel = cc;
-        }else{
+          Magick::ColorRGB cc = Magick::ColorRGB(1.0, 0.0, 0.0);
+          cc.alpha(0.0);
+          *pixel = cc;
+        } else {
           Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
           cc.alpha(1.0 - (a / 255.0));
           *pixel = cc;
@@ -200,7 +204,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     i.syncPixels();
 
     // Debug draw text on tile
-    if (box){
+    if (box) {
       std::list<Drawable> text;
       text.push_back(DrawablePointSize(20));
       text.push_back(DrawableStrokeColor("black"));

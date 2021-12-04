@@ -63,6 +63,7 @@ BOOST_AUTO_TEST_CASE(_URL_FIELDS_)
   v.setScheme("https");
   v.setPath("newpath.asp");
   std::string host = v.getHost();
+
   BOOST_CHECK_EQUAL(v.getHost(), "vm-aws-mr@ms-sr1d");
   BOOST_CHECK_EQUAL(
     v.toString(), "https://vm-aws-mr%40ms-sr1d/newpath.asp?again=somevalue&username=peter%40nable.com#fragment");
@@ -70,11 +71,13 @@ BOOST_AUTO_TEST_CASE(_URL_FIELDS_)
 
   // Base name stuff
   URL file = URL("/path/path2/path3/file.tar.gz");
+
   BOOST_CHECK_EQUAL(file.getBaseName(), "file.tar.gz");
   BOOST_CHECK_EQUAL(file.getDirName(), "/path/path2/path3");
   BOOST_CHECK_EQUAL(file.isLocal(), true);
 
   URL file2 = URL("http://localhost/path/path2/path3/file.tar.gz");
+
   BOOST_CHECK_EQUAL(file2.getBaseName(), "file.tar.gz");
   BOOST_CHECK_EQUAL(file2.getDirName(), "/path/path2/path3");
   BOOST_CHECK_EQUAL(file2.isLocal(), true);

@@ -30,9 +30,10 @@ NetcdfRadialSet::introduceSelf(IONetcdf * owner)
 std::shared_ptr<DataType>
 NetcdfRadialSet::read(
   std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType> dt)
+  std::shared_ptr<DataType>         dt)
 {
   std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>();
+
   if (readDataGrid(radialSetSP, keys)) {
     return radialSetSP;
   } else {
@@ -42,7 +43,7 @@ NetcdfRadialSet::read(
 
 bool
 NetcdfRadialSet::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>             & keys)
 {
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Azimuth", "Gate"

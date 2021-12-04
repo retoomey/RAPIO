@@ -73,6 +73,7 @@ URL::encodeURL(const std::string& in)
   // RFC 3986
   // https://en.wikipedia.org/wiki/Percent-encoding
   std::string o;
+
   for (auto c:in) {
     if (isalnum(c) || (c == '-') || (c == '_') || (c == '.') || (c == '~')) {
       o += c;
@@ -213,6 +214,7 @@ URL::getSuffixLC() const
 {
   std::string suffix;
   auto pos = path.rfind('.');
+
   if (pos != path.npos) { suffix = path.substr(pos + 1); }
   Strings::toLower(suffix);
   return (suffix);
@@ -223,6 +225,7 @@ URL::getBaseName() const
 {
   std::string scratch_copy(path);
   std::string retval = ::basename(&scratch_copy[0]);
+
   return retval;
 }
 
@@ -231,6 +234,7 @@ URL::getDirName() const
 {
   std::string scratch(path);
   std::string retval = ::dirname(&scratch[0]);
+
   return retval;
 }
 

@@ -31,9 +31,10 @@ namespace {
 size_t
 processData(void * ptr, size_t sz, size_t n, void * obj)
 {
-  std::vector<char> * data = (std::vector<char> *)obj;
+  std::vector<char> * data = (std::vector<char> *) obj;
   char * start = (char *) ptr;
   char * end   = start + sz * n;
+
   data->insert(data->end(), start, end);
   return (end - start);
 }
@@ -135,6 +136,7 @@ CurlConnection::read(const std::string& url, std::vector<char>& buf)
 
   URL urlb      = url;
   std::string p = urlb.getPath();
+
   Strings::replace(p, "//", "/");
   urlb.setPath(p);
 
@@ -172,6 +174,7 @@ CurlConnection::read1(const std::string& url, std::vector<char>& buf)
   //                                                                     // seconds
   // ok = ok && curl_easy_setopt(connection(), CURLOPT_CONNECTTIMEOUT, 30) == 0;
   CURLcode ret = curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+
   if (ret != 0) {
     LogSevere("Opening " << url << " failed with err=" << ret << "\n");
     return (-1);
@@ -202,6 +205,7 @@ CurlConnection::get1(const std::string& url, const std::vector<std::string>& hea
 
   // Initialize headers
   curl_slist * httpHeaders = NULL;
+
   for (auto h:headers) {
     httpHeaders = curl_slist_append(httpHeaders, h.c_str());
     if (httpHeaders == NULL) {

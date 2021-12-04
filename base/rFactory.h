@@ -79,6 +79,7 @@ public:
     // Look for an existing record of this lazy loader...
     std::string key = libname + ":" + methodname;
     auto cur        = myDynamicInfo.find(key);
+
     if (cur != myDynamicInfo.end()) {
       auto& f = cur->second;
       f.alias.push_back(name);
@@ -132,6 +133,7 @@ public:
   toList(std::vector<std::string>& names)
   {
     std::vector<std::shared_ptr<X> > myList;
+
     for (auto ele: myLookup) {
       names.push_back(ele.first);
       myList.push_back(ele.second);
@@ -147,6 +149,7 @@ public:
   get(const std::string& name, const std::string& info = "")
   {
     std::shared_ptr<X> ret;
+
     typename MapType::const_iterator cur = myLookup.find(name);
 
     if (cur != myLookup.end()) { // Normally fairly quick...
@@ -183,10 +186,10 @@ public:
     // Lots of things optionally 'check' for a factory such as extension resolution, so
     // this can be kinda over talkative. Prefer checking nullptr yourself
     // after calling this and erroring if needed
-    //if (ret == nullptr) {
+    // if (ret == nullptr) {
     //  LogDebug("No instance available for " << info << " and '" << name
     //                                        << "' size: " << myLookup.size() << "\n");
-    //}
+    // }
 
     return (ret);
   } // get

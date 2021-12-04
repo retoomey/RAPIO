@@ -19,7 +19,7 @@ public:
 
   /** Actual work of reading/checking settings */
   static bool
-  readSettings(std::shared_ptr<PTreeData> );
+  readSettings(std::shared_ptr<PTreeData>);
 
   /** Do we output with subdirs or combined file name? */
   static bool

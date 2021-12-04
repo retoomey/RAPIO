@@ -17,6 +17,7 @@ void
 ConfigIODataType::introduceSelf()
 {
   std::shared_ptr<ConfigIODataType> t = std::make_shared<ConfigIODataType>();
+
   Config::introduce("datatype", t);
 }
 

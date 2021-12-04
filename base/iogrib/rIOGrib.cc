@@ -242,6 +242,7 @@ std::string
 IOGrib::getGrib2Error(g2int ierr)
 {
   std::string err = "No Error";
+
   switch (ierr) {
       case 0:
         break;
@@ -282,6 +283,7 @@ std::string
 GribAction::getDateString()
 {
   std::stringstream ss;
+
   //                listsec1[5]=Reference Time - Year (4 digits)
   //                listsec1[6]=Reference Time - Month
   //                listsec1[7]=Reference Time - Day
@@ -317,12 +319,14 @@ IOGrib::match(gribfield * gfld,
 {
   // Product name is simplest
   std::string pn = getProductName(gfld);
+
   if (pn != productName) {
     return false;
   }
 
   // Now go for level
   std::string level = getLevelName(gfld);
+
   if (level != levelName) {
     return false;
   }
@@ -367,6 +371,7 @@ IOGrib::getProductName(gribfield * gfld)
   GribLookup * l = huntDatabase(disc, -1, cntr, localTable, pcat, pnum, "", "");
 
   std::string pn;
+
   if (l != nullptr) {
     pn = l->key;
   } else {
@@ -398,6 +403,7 @@ IOGrib::getLevelName(gribfield * gfld)
   // g2int scale1 = -1;
   g2int value2 = -1;
   std::string value2str;
+
   // g2int scale2 = -1;
 
   // Humm we aren't using time units?
@@ -431,6 +437,7 @@ IOGrib::getLevelName(gribfield * gfld)
 
   // We'll call this the level/layer string.
   std::string levelStr = "no_level";
+
   if (level < 192) {
     std::string l = levels.get(level);
     if (l.empty()) {
@@ -716,10 +723,12 @@ GribMessageMatcher::action(gribfield * gfld, size_t fieldNumber)
   // int pdtn = gfld->ipdtnum;
   // Key 2: Category  Section 4, Octet 10 (For all Templates 4.X)
   g2int pcat = gfld->ipdtmpl[0];
+
   if (pcat != myCategoryNumber) { return false; }
 
   // Key 3: Parameter Number.  Section 4, Octet 11
   g2int pnum = gfld->ipdtmpl[1];
+
   if (pnum != myParameterNumber) { return false; }
 
   // Grib2 Grid Definition Template (GDT) number.  This tells how the grid is projected...
@@ -882,6 +891,7 @@ std::string
 IOGrib::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that uses the grib/grib2 library to read grib data files.";
   return help;
 }
@@ -909,11 +919,13 @@ readGribDatabase()
   readTable4dot4();      // Indicator of unit of time range
 
   const URL url = Config::getConfigFile("gribtab.dat");
+
   if (url == "") {
     LogSevere("Grib2 reader requires a gribtab.dat file in your configuration\n");
     exit(1);
   }
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -1031,6 +1043,7 @@ IOGrib::readGribDataType(const URL& url)
 
   // Note, in RAPIO we can read a grib file remotely too
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -1056,7 +1069,7 @@ IOGrib::createDataType(const std::string& params)
 
 bool
 IOGrib::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>     & params
+  std::map<std::string, std::string>             & params
 )
 {
   return false;

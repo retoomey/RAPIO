@@ -255,6 +255,15 @@ operator << (rapio::Log& l, const T& x)
 }
 }
 
-#define LogDebug(x)  { rapio::Log::instanceref().settings(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x; rapio::Log::instanceref().endgroup(); }
-#define LogInfo(x)   { rapio::Log::instanceref().settings(rapio::Log::Severity::INFO, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  rapio::Log::instanceref().endgroup(); }
-#define LogSevere(x) { rapio::Log::instanceref().settings(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  rapio::Log::instanceref().endgroup(); }
+#define LogDebug(x) \
+  { rapio::Log::instanceref().settings(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, \
+      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x; \
+    rapio::Log::instanceref().endgroup(); }
+#define LogInfo(x) \
+  { rapio::Log::instanceref().settings(rapio::Log::Severity::INFO, __LINE__, __FILE__, \
+      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  \
+    rapio::Log::instanceref().endgroup(); }
+#define LogSevere(x) \
+  { rapio::Log::instanceref().settings(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, \
+      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  \
+    rapio::Log::instanceref().endgroup(); }

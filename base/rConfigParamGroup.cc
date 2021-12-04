@@ -55,6 +55,7 @@ ConfigParamGroupI::process1(const std::string& param)
   // inputs will be like this:
   // Reflectivity:00.50 VIL:00.50 etc.
   std::vector<std::string> pairs;
+
   Strings::splitWithoutEnds(param, ':', &pairs);
 
   // Add to our input info
@@ -77,6 +78,7 @@ ConfigParamGroupO::process1(const std::string& param)
   std::string toSubtypePattern = "";
 
   std::vector<std::string> pairs;
+
   Strings::splitWithoutEnds(param, '=', &pairs);
 
   if (pairs.size() > 1) { // X = Y form.  Remapping product/subtype names
@@ -134,6 +136,7 @@ void
 ConfigParamGroupo::process1(const std::string& param)
 {
   std::vector<std::string> pair;
+
   Strings::splitWithoutEnds(param, '=', &pair);
   const size_t aSize = pair.size();
 
@@ -153,11 +156,13 @@ void
 ConfigParamGroupn::process1(const std::string& param)
 {
   std::vector<std::string> pair;
+
   Strings::splitWithoutEnds(param, '=', &pair);
 
   std::string protocol;
   std::string params;
   const size_t aSize = pair.size();
+
   if (aSize == 1) {
     // Something like 'fml=' or 'test=', a type missing a parameter string
     if (Strings::endsWith(param, "=")) {
@@ -196,6 +201,7 @@ ConfigParamGroup::process(const std::string& param)
 {
   // All the -i, -I, -O, -n, etc. all split first on ' '
   std::vector<std::string> pieces;
+
   Strings::splitWithoutEnds(param, ' ', &pieces);
 
   for (auto& p:pieces) {

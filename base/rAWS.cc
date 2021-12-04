@@ -83,6 +83,7 @@ AWS::test_REST_API_Get(
 
   // std::string payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
   const std::string payload_hash = Secure::hexdigest(Secure::sha256("")); // guessing here
+
   LogInfo("Payload_hash: " << payload_hash << "\n");
 
   // Step 7: Combine elements to create canonical request
@@ -94,12 +95,14 @@ AWS::test_REST_API_Get(
   // SHA-256 (recommended)
   std::string algorithm        = "AWS4-HMAC-SHA256";
   std::string credential_scope = datestamp + "/" + region + "/" + service + "/" + "aws4_request";
+
   LogInfo("SCOPE:" << credential_scope << "\n");
   LogInfo("ALGORITHM:" << algorithm << "\n");
   LogInfo("AMZDATE:" << amzdate << "\n");
   std::string string_to_sign = algorithm + "\n" + amzdate + "\n"
     + credential_scope + "\n" + Secure::hexdigest(Secure::sha256(canonical_request));
   std::string testcan = Secure::hexdigest(Secure::sha256(canonical_request));
+
   LogInfo("CAN:" << testcan << "\n");
 
   // ************* TASK 3: CALCULATE THE SIGNATURE *************
@@ -113,6 +116,7 @@ AWS::test_REST_API_Get(
   //   LogInfo("Got this thing: " << testing << "\n");
   // }
   std::string signing_key = getSignatureKey(secret_key, datestamp, region, service);
+
   for (size_t i = 0; i < signing_key.length(); i++) {
     std::cout << (int) (signing_key[i]) << ",";
   }
@@ -121,6 +125,7 @@ AWS::test_REST_API_Get(
   // Sign the string_to_sign using the signing_key
   // signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'), hashlib.sha256).hexdigest()
   std::string signature = Secure::hexdigest(Secure::sign(signing_key, string_to_sign));
+
   LogInfo("SIGN:" << signature << "\n");
 
   // ************* TASK 4: ADD SIGNING INFORMATION TO THE REQUEST *************
@@ -133,6 +138,7 @@ AWS::test_REST_API_Get(
   LogInfo("AUTH:" << authorization_header << "\n");
 
   std::vector<std::string> headers;
+
   headers.push_back("x-amz-date: " + amzdate);
   headers.push_back("Authorization: " + authorization_header);
 

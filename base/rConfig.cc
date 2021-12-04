@@ -58,6 +58,7 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
   }
 
   URL ret;
+
   if (found) {
     ret = testMe;
     LogDebug("Read: " << testMe.getPath() << "\n");
@@ -90,6 +91,7 @@ void
 Config::addSearchFromString(const std::string& pathgroup)
 {
   std::vector<std::string> paths;
+
   Strings::splitWithoutEnds(pathgroup, ':', &paths);
   for (auto& it:paths) {
     addSearchPath(URL(it));                  // Direct path maybe given
@@ -148,6 +150,7 @@ Config::setUpSearchPaths()
 
   // Fall back to relative from binary when running example program
   auto path = OS::getProcessPath() + "/../../RAPIOConfig/";
+
   addSearchFromString(path);
   path = OS::getProcessPath() + "/../RAPIO/RAPIOConfig/"; // From bin folder to source
   addSearchFromString(path);
@@ -181,6 +184,7 @@ Config::readGlobalConfigFile()
   auto doc = huntXML(file); // or maybe json
 
   std::string s;
+
   for (auto& it:mySearchPaths) {
     s += "\n\t[" + it.toString() + "]";
   }

@@ -13,6 +13,7 @@ std::string
 IOFile::getHelpString(const std::string & key)
 {
   std::string help;
+
   help = "hands off to another writer using a lookup table of suffixes.\n";
   return help;
 }
@@ -32,10 +33,10 @@ IOFile::createDataType(const std::string& params)
 
 bool
 IOFile::writeout(std::shared_ptr<DataType> dt,
-  const std::string & outputinfo,
-  std::vector<Record> & records,
-  const std::string & knownfactory,
-  std::map<std::string, std::string>  & outputParams)
+  const std::string                        & outputinfo,
+  std::vector<Record>                      & records,
+  const std::string                        & knownfactory,
+  std::map<std::string, std::string>       & outputParams)
 {
   // Get the proxy factory off the file name
   // knownfactory is 'file' of course, but we want to send onto our
@@ -43,6 +44,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   const std::string suffix = OS::getRootFileExtension(outputinfo);
 
   std::string factory = ConfigIODataType::getIODataTypeFromSuffix(suffix);
+
   if (factory == "file") {
     // We don't want to proxy to ourselves and make an infinite loop.
     LogSevere("File builder cannot proxy to file builder (itself), so cannot write.\n");
@@ -52,6 +54,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   // Get the new proxy factory for this output
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
   auto encoder  = getFactory(f, outputinfo, dt);
+
   if (encoder == nullptr) {
     LogSevere("Unable to write using unknown factory '" << f << "'\n");
     return false;
@@ -66,11 +69,11 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   LogInfo("Ignoring " << records.size() << " record notifications since you're using single file builder.\n");
   records.clear();
   return success;
-}
+} // IOFile::writeout
 
 bool
 IOFile::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>     & keys
+  std::map<std::string, std::string>             & keys
 )
 {
   LogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().\n");

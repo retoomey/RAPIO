@@ -67,6 +67,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
   // an example
   std::string s = "Data received: ";
   auto sel      = d.record().getSelections();
+
   for (auto& s1:sel) {
     s = s + s1 + " ";
   }
@@ -84,6 +85,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
   // Look for any data the system knows how to read
   auto r = d.datatype<rapio::DataType>();
+
   if (r != nullptr) {
     #if 0
     // Example for processing groups of subtypes.
@@ -171,7 +173,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
         lon_spacing,
         num_lats, // X
         num_lons  // Y
-        );
+      );
 
       // ALPHA: For moment just make one without caching or anything.
       // This is slow on first call, but we'd be able to cache in a
@@ -182,7 +184,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
         "+proj=lcc +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3",
         // WDSSII default (probably doesn't even need to be parameter)
         "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-        );
+      );
       bool success = project->initialize();
 
       LogInfo("Created projection:  " << success << "\n");

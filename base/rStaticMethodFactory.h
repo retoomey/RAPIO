@@ -23,7 +23,7 @@ private:
 
   /** Define what the create function will return, a shared ptr to
    * the created object */
-  typedef std::shared_ptr<X>(*FuncPointer)();
+  typedef std::shared_ptr<X> (* FuncPointer)();
 
   /** The map is a name to static method lookup */
   typedef typename std::map<std::string, FuncPointer> MapType;

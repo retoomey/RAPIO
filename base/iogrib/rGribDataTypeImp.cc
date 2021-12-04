@@ -19,6 +19,7 @@ GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr,
 
   IOGrib::scanGribData(myBuf, &test);
   size_t at, fieldNumber;
+
   if (test.getMatch(at, fieldNumber)) {
     return IOGrib::get2DData(myBuf, at, fieldNumber, x, y);
   }

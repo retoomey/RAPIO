@@ -40,12 +40,14 @@ std::string
 IOIndex::introduceHelp()
 {
   std::string help;
+
   help += "Indexes ingest data into the system, either with metadata notifications, or direct files.\n";
   help += "Default no protocol ending in .xml is an xml index.\n";
   help += "Default no protocol ending in .fam is an ifam index.\n";
   help += "Default url with 'source' or web macro is a web index.\n";
   help += "Indexes ingest data into the system.  The following types are registered:\n";
   auto e = Factory<IndexType>::getAll();
+
   for (auto i: e) {
     help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
   }
@@ -68,6 +70,7 @@ IOIndex::createIndex(
   // ---------------------------------------------------------
   // Let the indexes check in order for missing protocol support
   URL url(indexparams);
+
   WebIndex::canHandle(url, protocol, indexparams);
   FMLIndex::canHandle(url, protocol, indexparams);
   XMLIndex::canHandle(url, protocol, indexparams);

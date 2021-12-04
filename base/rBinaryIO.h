@@ -25,6 +25,7 @@ compressZLIB(
   unsigned char temp_buffer[BUFSIZE];
 
   z_stream strm;
+
   strm.zalloc    = 0;
   strm.zfree     = 0;
   strm.next_in   = reinterpret_cast<unsigned char *>(&input[0]);
@@ -221,6 +222,7 @@ read_vector(std::vector<T>& vec, FILE * fp)
 
   /** Read the full length of the vector */
   size_t len;
+
   fread(&len, sizeof(len), 1, fp);
 
   // LogSevere("Length of vector is  " << len << "units ("<<len*sizeof(T) <<"

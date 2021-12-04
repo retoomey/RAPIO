@@ -20,15 +20,18 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
   auto typeName = data->getTypeName(); // Reflectivity
 
   std::string radar = "None";
+
   data->getString("radarName-value", radar);
 
   // KTLX_Reflectivity_RadialSet for RadialSets
   std::string key = radar + '_' + typeName + '_' + dataType;
+
   LogInfo("Adding DataType to history volume cache: " << key << "\n");
 
   // Volume
   std::shared_ptr<Volume> v;
   auto lookup = myVolumes.find(key);
+
   if (lookup == myVolumes.end()) {
     // Ahh bleh we need to differentiate by type.
     // FIXME: Probably get the volume subtype from the datatype
@@ -43,7 +46,7 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
     v = lookup->second;
   }
   v->addDataType(data);
-}
+} // DataTypeHistory::updateVolume
 
 std::vector<std::shared_ptr<DataType> >
 DataTypeHistory::getFullSubtypeGroup(
@@ -53,6 +56,7 @@ DataTypeHistory::getFullSubtypeGroup(
   // Hunt volumes for the keys?
   std::vector<std::shared_ptr<DataType> > out;
   size_t counter = 0;
+
   for (auto v:myVolumes) {
     auto dt = v.second->getSubType(subtype);
     out.push_back(dt);

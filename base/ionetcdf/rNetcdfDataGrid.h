@@ -15,13 +15,13 @@ public:
   virtual std::shared_ptr<DataType>
   read(
     std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType> dt)
+    std::shared_ptr<DataType>         dt)
   override;
 
   /** Write DataType with given keys */
   virtual bool
   write(
-    std::shared_ptr<DataType> dt,
+    std::shared_ptr<DataType>         dt,
     std::map<std::string, std::string>& keys)
   override;
 
@@ -29,7 +29,7 @@ public:
    * DataGrid */
   virtual bool
   readDataGrid(
-    std::shared_ptr<DataGrid> dt,
+    std::shared_ptr<DataGrid>         dt,
     std::map<std::string, std::string>& keys);
 
   virtual

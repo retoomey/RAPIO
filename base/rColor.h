@@ -10,9 +10,9 @@ class Color : public Data
 public:
   /** Construct a color with defaults */
   Color(
-    unsigned char red = 255,
-    unsigned char green = 255,
-    unsigned char blue = 255,
+    unsigned char red     = 255,
+    unsigned char green   = 255,
+    unsigned char blue    = 255,
     unsigned char opacity = 255
   );
   /** Destroy a color */

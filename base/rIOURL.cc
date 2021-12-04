@@ -18,6 +18,7 @@ IOURL::read(const URL& url, std::vector<char>& buf)
 
   // Pull raw data into rawData buffer
   std::vector<char> rawData;
+
   if (readRaw(url, rawData) == -1) {
     return (-1);
   }
@@ -25,6 +26,7 @@ IOURL::read(const URL& url, std::vector<char>& buf)
   //  ------------------------------------------------------------
   // Choose a decompressor or directly move buffer
   std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(url.getSuffixLC(), "IOURL");
+
   if (f == nullptr) {
     buf = std::move(rawData);
   } else {

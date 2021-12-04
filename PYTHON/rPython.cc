@@ -43,6 +43,7 @@ public:
     // FIXME: General method I think.  This is useful to print out
     std::string s = "Data received: ";
     auto sel      = d.record().getSelections();
+
     for (auto& s1:sel) {
       s = s + s1 + " ";
     }
@@ -50,6 +51,7 @@ public:
 
     // FIXME: Only handling DataGrids at moment
     auto r = d.datatype<rapio::DataGrid>();
+
     if (r != nullptr) {
       LogInfo("Incoming data grid, sending to python...\n");
       auto output = OS::runDataProcess(myPythonPath + " " + myPythonScript + " " + myPythonArgs, r);

@@ -264,6 +264,7 @@ void
 FAMWatcher::introduceSelf()
 {
   std::shared_ptr<WatcherType> io = std::make_shared<FAMWatcher>();
+
   IOWatcher::introduce(FAM_WATCH, io);
 }
 

@@ -9,6 +9,7 @@ void
 ConfigLogging::introduceSelf()
 {
   std::shared_ptr<ConfigLogging> t = std::make_shared<ConfigLogging>();
+
   Config::introduce("logging", t);
 }
 

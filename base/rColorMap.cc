@@ -16,6 +16,7 @@ ColorMap::getColorMap(const std::string& key)
   std::shared_ptr<ColorMap> colormap;
 
   auto lookup = myColorMaps.find(key);
+
   if (lookup == myColorMaps.end()) {
     URL find = Config::getConfigFile("colormaps/" + key + ".xml");
     if (find != "") {
@@ -183,6 +184,7 @@ LinearColorMap::getColor(double v,
   if (v > 200) { v = 200; }
   if (v < -50.0) { v = -50.0; }
   float weight = (250 - v) / 250.0;
+
   r = weight;
   g = 0;
   b = 0;

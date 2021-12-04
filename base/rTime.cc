@@ -32,10 +32,10 @@ Time::toTimepoint(const timeval& src)
 
   // Microsecond
   using dest_timepoint_type = std::chrono::time_point<
-      std::chrono::system_clock, std::chrono::microseconds>;
+    std::chrono::system_clock, std::chrono::microseconds>;
   dest_timepoint_type converted {
     std::chrono::microseconds {
-      src.tv_sec *1000000 + src.tv_usec
+      src.tv_sec * 1000000 + src.tv_usec
     }
   };
 
@@ -45,6 +45,7 @@ Time::toTimepoint(const timeval& src)
   std::chrono::system_clock::time_point recovered =
     std::chrono::time_point_cast<std::chrono::system_clock::duration>(converted)
   ;
+
   return recovered;
 }
 
@@ -110,8 +111,10 @@ Time::Time(
   // Read the timegm manpage if we need to port to non-linux which
   // I'm not planning on
   time_t retval = timegm(&a);
+
   myTimepoint = std::chrono::system_clock::from_time_t(retval);
   int m = (int) (fractional * 1000000);
+
   myTimepoint += std::chrono::microseconds(m);
 }
 
@@ -179,7 +182,7 @@ Time::getString(const std::string& pattern) const
   tm a = *gmtime(&t);
 
   const size_t MAXLENGTH = 512;
-  char buf [MAXLENGTH];
+  char buf[MAXLENGTH];
 
   buf[0] = 0; // just to be safe
   strftime(buf, MAXLENGTH, pattern.c_str(), &a);
@@ -189,6 +192,7 @@ Time::getString(const std::string& pattern) const
   // NOTE: since we do this last here, make sure % symbol isn't in
   // strftime, think / is safe from any implementation.
   std::string newoutput = output;
+
   Strings::replace(newoutput, "%/ms", "%03d");
   if (newoutput != output) { // Only if found to prevent snprintf error
     int millisec = (int) (1000.0 * getFractional() + 0.5);
@@ -306,6 +310,7 @@ Time::putString(const std::string& value,
   std::string useformat = format;
   std::string usevalue  = value;
   int ms = 0;
+
   if (Strings::removeSuffix(useformat, "%/ms")) {
     if (value.length() >= 3) { // Digits required for milli
       std::string millistr = usevalue.substr(usevalue.size() - 3);
@@ -323,9 +328,11 @@ Time::putString(const std::string& value,
 
   // Try to convert everything else
   tm a;
+
   strptime(usevalue.c_str(), useformat.c_str(), &a);
   a.tm_isdst = -1;
   time_t retval = timegm(&a);
+
   myTimepoint  = std::chrono::system_clock::from_time_t(retval);
   myTimepoint += std::chrono::milliseconds(ms);
 

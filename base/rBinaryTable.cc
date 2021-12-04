@@ -58,6 +58,7 @@ BinaryTable::matchBlockLevel(size_t level)
   // Virtual.  Get the FULL available block level stack
   // based on current subclass we are
   std::vector<std::string> classLevels;
+
   getBlockLevels(classLevels);
 
   // We need to match every one up to the level we ask for...
@@ -74,6 +75,7 @@ BinaryTable::matchBlockLevel(size_t level)
 
   // Match every level top down...
   bool match = true;
+
   level--; // shift to zero base
 
   for (size_t i = 0; i < level; i++) {
@@ -124,6 +126,7 @@ BinaryTable::readBlock(FILE * fp)
 {
   // 1. Read the magic marker name...
   std::string disk_magic;
+
   read_string8(disk_magic, fp);
   magicToBlockLevels(disk_magic, myLastFileBlockLevels);
 
@@ -138,6 +141,7 @@ BinaryTable::readBlock(FILE * fp)
 
   // 2. Read the file version number...
   size_t file_version;
+
   read_type<size_t>(file_version, fp);
   myLastFileVersion = file_version;
 
@@ -151,6 +155,7 @@ BinaryTable::readBlock(FILE * fp)
   }
 
   std::string test2;
+
   read_string8(test2, fp);
 
   return (true);
@@ -162,15 +167,18 @@ BinaryTable::writeBlock(FILE * fp)
   // 1. Write the magic marker name...
   std::string magic;
   std::vector<std::string> classLevels;
+
   getBlockLevels(classLevels); // Virtual so full subclass name
   blockLevelsToMagic(classLevels, magic);
   write_string8(magic, fp);
 
   // 2. Write the file version number...
   const size_t version = getVersion();
+
   write_type<size_t>(version, fp);
 
   std::string test2 = "Toomey was here";
+
   write_string8(test2, fp);
 
   return (true);

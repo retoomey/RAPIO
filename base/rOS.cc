@@ -70,6 +70,7 @@ OS::getCurrentDirectory()
 {
   fs::path boostpath(fs::current_path());
   std::string fullcwd = boostpath.string();
+
   return fullcwd;
 }
 
@@ -169,9 +170,11 @@ OS::getRootFileExtension(const std::string& path)
   // We want to auto remove the compression field
   // .xml.gz --> 'xml' .xml --> 'xml'
   std::string e = fs::extension(path);
+
   Strings::toLower(e);
   Strings::removePrefix(e, ".");
   std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(e, "OS");
+
   if (f != nullptr) {
     std::string p = path;
     Strings::removeSuffix(p, "." + e);
@@ -340,6 +343,7 @@ OS::getProcessSize(double& vm_usage, double& resident_set)
   stat_stream.close();
 
   long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
+
   vm_usage     = vsize / 1024.0;
   resident_set = rss * page_size_kb;
 }

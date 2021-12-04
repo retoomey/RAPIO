@@ -38,6 +38,7 @@ ColorTerm::wrapWithIndent(size_t currentIndent,
   bool test;
 
   std::string noansii = Strings::removeANSII(input);
+
   test = (noansii.length() > leftover);
 
   if (test) {

@@ -11,6 +11,7 @@ std::shared_ptr<RecordNotifierType>
 EXERecordNotifier::create()
 {
   std::shared_ptr<EXERecordNotifier> result = std::make_shared<EXERecordNotifier>();
+
   return (result);
 }
 
@@ -34,6 +35,7 @@ void
 EXERecordNotifier::initialize(const std::string& params)
 {
   std::string checkExe = OS::validateExe(params);
+
   if (checkExe.empty()) {
     LogSevere("Given exe at '" << params << "' does not exist or needs permissions.\n");
     exit(1); // Abort or ignore?
@@ -54,6 +56,7 @@ EXERecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // FIXME: More advanced ability at some point
   // I'm just calling system and background at moment
   auto params = rec.getBuilderParams();
+
   if (params.size() > 1) {
     std::string command = myExe;
     for (auto p: params) { // Let the script/exe have all the params

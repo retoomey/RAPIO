@@ -49,6 +49,7 @@ std::string
 DataType::getSubType() const
 {
   std::string subtype;
+
   getString("SubType-value", subtype);
 
   if (!subtype.empty()) {
@@ -81,6 +82,7 @@ DataType::setDataAttributeValue(
   // Stick as a pair into attributes.
   auto one = key + "-unit";
   auto two = key + "-value";
+
   setString(one, unit);
   setString(two, value);
 }
@@ -101,12 +103,14 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
 
   // Location
   LLH aLocation = getLocation();
+
   setDouble(Constants::Latitude, aLocation.getLatitudeDeg());
   setDouble(Constants::Longitude, aLocation.getLongitudeDeg());
   setDouble(Constants::Height, aLocation.getHeightKM() * 1000.0);
 
   // Time
   Time aTime = getTime();
+
   setLong(Constants::Time, aTime.getSecondsSinceEpoch());
   setDouble(Constants::FractionalTime, aTime.getFractional());
 
@@ -117,6 +121,7 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
   // Regenerate attributes global attribute string, representing
   // all the -unit -value pairs.  This is used by netcdf, etc...legacy storage
   std::string attributes;
+
   for (auto& a:*myAttributes) {
     auto name = a.getName();
     if (Strings::removeSuffix(name, "-value")) {
@@ -136,6 +141,7 @@ DataType::getColorMap()
   // First try the ColorMap-value attribute...Some MRMS netcdf files have this
   // if not found use the type name such as Reflectivity
   std::string colormap = "";
+
   if (!getString("ColorMap-value", colormap)) {
     colormap = getTypeName();
   }

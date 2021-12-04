@@ -230,10 +230,12 @@ public:
     // Move new data
     std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<T>(aT));
     auto newNode = std::make_shared<DataArray>(name, units, type, dims);
+
     newNode->set(ptr);
 
     // Add or replace the named node
     int at = getNodeIndex(name);
+
     if (at < 0) {
       myNodes.push_back(newNode);
     } else {

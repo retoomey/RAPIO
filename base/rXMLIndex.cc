@@ -47,6 +47,7 @@ void
 XMLIndex::introduceSelf()
 {
   std::shared_ptr<IndexType> newOne = std::make_shared<XMLIndex>();
+
   IOIndex::introduce(XMLINDEX, newOne);
 }
 
@@ -58,6 +59,7 @@ XMLIndex::createIndexType(
 {
   std::shared_ptr<XMLIndex> result = std::make_shared<XMLIndex>(URL(indexparams),
       maximumHistory);
+
   return (result);
 }
 

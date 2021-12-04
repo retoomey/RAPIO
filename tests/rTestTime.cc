@@ -65,6 +65,7 @@ BOOST_AUTO_TEST_CASE(_Time_Change_Operators_)
   ti = TimeDuration::Seconds(60) + TimeDuration::Seconds(30);
   BOOST_CHECK(Arith::feq(ti.seconds(), 90));
   Time t = TimeDuration::Seconds(60) + Time::SecondsSinceEpoch(100);
+
   BOOST_CHECK(t.getSecondsSinceEpoch() == 160);
   ti += TimeDuration::Seconds(30);
   BOOST_CHECK(Arith::feq(ti.seconds(), 120));
@@ -146,6 +147,7 @@ BOOST_AUTO_TEST_CASE(_Time_Current_)
   std::string logcurrent2 = t5.getString(test1);
   std::string filename2   = t5.getString(rec1);
   long epoch2 = t5.getSecondsSinceEpoch();
+
   BOOST_CHECK(tnow.getYear() == t5.getYear());
   BOOST_CHECK(tnow.getMonth() == t5.getMonth());
   BOOST_CHECK(tnow.getDay() == t5.getDay());
@@ -160,6 +162,7 @@ BOOST_AUTO_TEST_CASE(_Time_Current_)
   BOOST_CHECK(epoch1 == epoch2);
 
   Time t4(1562292000, 0); // 7/5/2019 2:00:00 am GMT/UTC
+
   BOOST_CHECK(t4.getYear() == 2019);
   BOOST_CHECK(t4.getMonth() == 7);
   BOOST_CHECK(t4.getDay() == 5);

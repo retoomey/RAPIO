@@ -19,6 +19,7 @@ void
 WebIndex::introduceSelf()
 {
   std::shared_ptr<IndexType> newOne = std::make_shared<WebIndex>();
+
   IOIndex::introduce(WEBINDEX, newOne);
 }
 
@@ -45,6 +46,7 @@ WebIndex::WebIndex(const URL & aURL,
   // the data comes via static links from the same server, but we need to append
   // the source
   std::string source = indexDataPath.getQuery("source");
+
   indexDataPath.setPath(indexDataPath.getPath() + '/' + source);
   indexDataPath.clearQuery();
 }
@@ -232,5 +234,6 @@ WebIndex::createIndexType(
 {
   std::shared_ptr<WebIndex> result = std::make_shared<WebIndex>(URL(indexparams),
       maximumHistory);
+
   return (result);
 }

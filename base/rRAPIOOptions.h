@@ -53,7 +53,7 @@ public:
   void
   dumpArgs(std::vector<Option>& options,
     OptionFilter              & a,
-    bool                      postParse = false,
+    bool                      postParse    = false,
     bool                      advancedHelp = false);
 
   /** Do the standard dump of help when nothing passed in */

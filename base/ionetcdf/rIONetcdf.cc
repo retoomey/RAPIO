@@ -42,6 +42,7 @@ std::string
 IONetcdf::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that uses the netcdf C library to read DataGrids or MRMS RadialSets, etc.";
   return help;
 }
@@ -70,6 +71,7 @@ IONetcdf::createDataType(const std::string& params)
 
   // Note, in RAPIO we can read a netcdf file remotely too
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
@@ -118,7 +120,7 @@ IONetcdf::createDataType(const std::string& params)
 
 bool
 IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
+  std::map<std::string, std::string>               & keys
 )
 {
   /** So myLookup "RadialSet" writer for example from the data type.
@@ -143,6 +145,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   // Get general netcdf settings
   int ncflags;
+
   try{
     ncflags = std::stoi(keys["ncflags"]);
   }catch (const std::exception& e) {
@@ -154,6 +157,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     IONetcdf::GZ_LEVEL = 6;
   }
   std::string filename = keys["filename"];
+
   if (filename.empty()) {
     LogSevere("Need a filename to output\n");
     return false;
@@ -208,6 +212,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   // Post compression pass if wanted
   const std::string compress = keys["compression"];
+
   if (!compress.empty()) {
     std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(compress, "Netcdf writer");
     if (f != nullptr) {
@@ -647,12 +652,12 @@ IONetcdf::readDimensionInfo(int ncid,
 
 bool
 IONetcdf::readSparse2D(int ncid,
-  int data_var,
-  int num_x,
-  int num_y,
-  float fileMissing,
-  float fileRangeFolded,
-  Array<float, 2>           & array)
+  int                      data_var,
+  int                      num_x,
+  int                      num_y,
+  float                    fileMissing,
+  float                    fileRangeFolded,
+  Array<float, 2>          & array)
 {
   // Background fill for value....
   // since sparse not all points touched..have to prefill.
@@ -674,6 +679,7 @@ IONetcdf::readSparse2D(int ncid,
   // We should have a pixel dimension for sparse data...
   int pixel_dim;
   size_t num_pixels;
+
   NETCDF(nc_inq_dimid(ncid, "pixel", &pixel_dim));
   NETCDF(nc_inq_dimlen(ncid, pixel_dim, &num_pixels));
 
@@ -1022,6 +1028,7 @@ IONetcdf::declareGridVars(
 
   // gotta be careful to write in same order as declare...
   std::vector<int> datavars;
+
   for (auto l:list) {
     auto theName = l->getName();
     // auto theUnits = l->getUnits();
@@ -1077,6 +1084,7 @@ IONetcdf::getDimensions(int ncid,
   // Find the number of dimension ids
   NETCDF(nc_inq_ndims(ncid, &ndimsp));
   size_t numdims = ndimsp < 0 ? 0 : (size_t) (ndimsp);
+
   // LogSevere("Number of dimensions: " << ndimsp << "\n");
 
   // Find the dimension ids
@@ -1095,6 +1103,7 @@ IONetcdf::getDimensions(int ncid,
   dimsizes.resize(numdims);
   dimnames.resize(numdims);
   char name[NC_MAX_NAME + 1];
+
   for (size_t d = 0; d < numdims; ++d) {
     // LogSevere("For dim " << d << " value is " << dimids[d] << "\n");
     // NETCDF(nc_inq_dim(ncid, dimids[d], name, &length));      // id from name
@@ -1123,6 +1132,7 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
 
   // For each attribute...
   size_t nattsp2 = nattsp < 0 ? 0 : nattsp;
+
   for (size_t v = 0; v < nattsp2; ++v) {
     NETCDF(nc_inq_attname(ncid, varid, v, name_in));
     std::string attname    = std::string(name_in);

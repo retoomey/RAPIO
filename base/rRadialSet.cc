@@ -125,6 +125,7 @@ RadialSet::initFromGlobalAttributes()
   float latDegs  = 0;
   float lonDegs  = 0;
   float htMeters = 0;
+
   success &= getFloat(Constants::Latitude, latDegs);
   success &= getFloat(Constants::Longitude, lonDegs);
   success &= getFloat(Constants::Height, htMeters);
@@ -137,6 +138,7 @@ RadialSet::initFromGlobalAttributes()
   // -------------------------------------------------------
   // Time
   long timesecs = 0;
+
   if (getLong(Constants::Time, timesecs)) {
     // optional
     double f = 0.0;
@@ -176,10 +178,12 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
 
   // Radial set only global attributes
   const double elevDegrees = getElevation();
+
   setDouble("Elevation", elevDegrees);
   setString("ElevationUnits", "Degrees");
 
   const double firstGateM = getDistanceToFirstGateM();
+
   setDouble("RangeToFirstGate", firstGateM);
   setString("RangeToFirstGateUnits", "Meters");
 }

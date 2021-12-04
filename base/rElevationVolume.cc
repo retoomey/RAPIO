@@ -102,6 +102,7 @@ ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
 {
   // For elevation check it's a RadialSet, do any 'extra' required
   std::shared_ptr<RadialSet> rs = std::dynamic_pointer_cast<RadialSet>(dt);
+
   if (rs != nullptr) {
     Volume::addDataType(dt);
   }

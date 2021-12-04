@@ -101,6 +101,7 @@ void
 GZIPDataFilter::introduceSelf()
 {
   std::shared_ptr<DataFilter> f = std::make_shared<GZIPDataFilter>();
+
   DataFilter::introduce("gz", f);
 }
 
@@ -108,6 +109,7 @@ bool
 GZIPDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
 {
   bi::filtering_ostream os;
+
   os.push(bi::gzip_decompressor());
   return (applyBOOSTOstream(input, output, os));
 }
@@ -119,6 +121,7 @@ GZIPDataFilter::applyURL(const URL& infile, const URL& outfile,
   bi::filtering_streambuf<bi::output> outbuf;
   // to do, settings, etc, right?
   const std::string level = params["gziplevel"];
+
   if (level.empty()) {
     outbuf.push(bi::gzip_compressor());
   } else {
@@ -141,6 +144,7 @@ void
 BZIP2DataFilter::introduceSelf()
 {
   std::shared_ptr<DataFilter> f = std::make_shared<BZIP2DataFilter>();
+
   DataFilter::introduce("bz2", f);
 }
 
@@ -148,6 +152,7 @@ bool
 BZIP2DataFilter::apply(std::vector<char>& input, std::vector<char>& output)
 {
   bi::filtering_ostream os;
+
   os.push(bi::bzip2_decompressor());
   return (applyBOOSTOstream(input, output, os));
 }
@@ -157,6 +162,7 @@ BZIP2DataFilter::applyURL(const URL& infile, const URL& outfile,
   std::map<std::string, std::string> &params)
 {
   bi::filtering_streambuf<bi::output> outbuf;
+
   // to do, settings, etc, right?
   outbuf.push(bi::bzip2_compressor());
   return (applyBOOSTURL(infile, outfile, outbuf));
@@ -166,6 +172,7 @@ void
 ZLIBDataFilter::introduceSelf()
 {
   std::shared_ptr<DataFilter> f = std::make_shared<ZLIBDataFilter>();
+
   DataFilter::introduce("z", f);
 }
 
@@ -173,6 +180,7 @@ bool
 ZLIBDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
 {
   bi::filtering_ostream os;
+
   os.push(bi::zlib_decompressor());
   return (applyBOOSTOstream(input, output, os));
 }
@@ -182,6 +190,7 @@ ZLIBDataFilter::applyURL(const URL& infile, const URL& outfile,
   std::map<std::string, std::string> &params)
 {
   bi::filtering_streambuf<bi::output> outbuf;
+
   // to do, settings, etc, right?
   outbuf.push(bi::zlib_compressor());
   return (applyBOOSTURL(infile, outfile, outbuf));
@@ -191,6 +200,7 @@ void
 LZMADataFilter::introduceSelf()
 {
   std::shared_ptr<DataFilter> f = std::make_shared<LZMADataFilter>();
+
   DataFilter::introduce("lzma", f);
   DataFilter::introduce("xz", f);
 }
@@ -199,6 +209,7 @@ bool
 LZMADataFilter::apply(std::vector<char>& input, std::vector<char>& output)
 {
   bi::filtering_ostream os;
+
   os.push(bi::lzma_decompressor());
   return (applyBOOSTOstream(input, output, os));
 }
@@ -208,6 +219,7 @@ LZMADataFilter::applyURL(const URL& infile, const URL& outfile,
   std::map<std::string, std::string> &params)
 {
   bi::filtering_streambuf<bi::output> outbuf;
+
   outbuf.push(bi::lzma_compressor());
   return (applyBOOSTURL(infile, outfile, outbuf));
 }
@@ -217,6 +229,7 @@ void
 SnappyDataFilter::introduceSelf()
 {
   std::shared_ptr<DataFilter> f = std::make_shared<SnappyDataFilter>();
+
   DataFilter::introduce("sz", f);
 }
 

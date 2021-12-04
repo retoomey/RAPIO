@@ -24,10 +24,11 @@ NetcdfDataGrid::introduceSelf(IONetcdf * owner)
 
 std::shared_ptr<DataType>
 NetcdfDataGrid::read(std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType> dt)
+  std::shared_ptr<DataType>                            dt)
 {
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
+
   if (readDataGrid(dataGridSP, keys)) {
     return dataGridSP;
   }
@@ -36,7 +37,7 @@ NetcdfDataGrid::read(std::map<std::string, std::string>& keys,
 
 bool
 NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>                   & keys)
 {
   try {
     DataGrid& dataGrid = *dataGridSP;
@@ -159,7 +160,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       // If we had pixel dimension, check the sparse
       if (sparse) {
         if (name == aTypeName) {
-          if ((ndimsp2 == 1)and(xtypep == NC_FLOAT)) {
+          if ((ndimsp2 == 1) and (xtypep == NC_FLOAT)) {
             // SPARSE DATA READ
             // Expand it to 2D float array from sparse...
             // We're assuming it's using first two dimensions on 2D sparse...
@@ -233,7 +234,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
 bool
 NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>            & keys)
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();

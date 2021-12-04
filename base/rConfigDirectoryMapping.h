@@ -17,7 +17,7 @@ public:
 
   /** Virtual object from config map to static for clarity. */
   virtual bool
-  readConfig(std::shared_ptr<PTreeData> ) override { return readInSettings(); }
+  readConfig(std::shared_ptr<PTreeData>) override { return readInSettings(); }
 
   /** Introduce self to configuration */
   static void

@@ -163,6 +163,5 @@ public:
 
   /** Reference to Radial set lookup */
   std::shared_ptr<RadialSetLookup> myLookup;
-
 };
 }

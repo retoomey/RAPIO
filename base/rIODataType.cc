@@ -13,6 +13,7 @@ std::string
 IODataType::introduceHelp()
 {
   std::string help;
+
   help +=
     "Default is netcdf output folder, or the same as netcdf=/path.  Multiple writers with multiple or same folders can be chained.  For example, image=folder1 gdal=folder2.";
   help +=
@@ -20,6 +21,7 @@ IODataType::introduceHelp()
   help += "  Some builders are static, some are dynamically loaded from rapiosettings.xml on demand.\n";
   help += ColorTerm::fBlue + "Static built-in builders:" + ColorTerm::fNormal + "\n";
   auto full = Factory<IODataType>::getAll();
+
   for (auto a:full) {
     help += " " + ColorTerm::fRed + a.first + ColorTerm::fNormal + " : " + a.second->getHelpString(a.first) + "\n";
     // shouldn't be null, rightmyList.push_back(ele.second);
@@ -27,6 +29,7 @@ IODataType::introduceHelp()
   help += ColorTerm::fBlue + "Dynamic loaded builders:" + ColorTerm::fBlue + "\n";
   // We're fully loading now...but that's ok help dies afterwards
   auto fulld = Factory<IODataType>::getAllDynamic();
+
   for (auto ele:fulld) {
     auto& f = ele.second;
     help += ColorTerm::fRed + " ";
@@ -42,7 +45,7 @@ IODataType::introduceHelp()
     help += "\n";
   }
   return help;
-}
+} // IODataType::introduceHelp
 
 void
 IODataType::introduce(const std::string & name,
@@ -95,6 +98,7 @@ IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
 {
   std::string f = factory;
   auto builder  = getFactory(f, "", nullptr);
+
   if (builder != nullptr) {
     // Create DataType and remember factory
     std::shared_ptr<DataType> dt = builder->createDataTypeFromBuffer(buffer);
@@ -151,6 +155,7 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
   // instead of hardcoding it here
   // This is bug in mrms imo, so may have to change it there as well
   std::string radar = "";
+
   dt->getString("radarName-value", radar);
 
   if (!radar.empty()) {
@@ -231,6 +236,7 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
   }
   Record rec(params, selections, rsTime);
   std::string radar;
+
   if (dt->getString("radarName-value", radar)) {
     rec.setSourceName(radar);
   }
@@ -243,16 +249,17 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
 
 bool
 IODataType::write(std::shared_ptr<DataType> dt,
-  const std::string & outputinfo,
-  std::vector<Record> & records,
-  const std::string & factory,
-  std::map<std::string, std::string>  & outputParams)
+  const std::string                         & outputinfo,
+  std::vector<Record>                       & records,
+  const std::string                         & factory,
+  std::map<std::string, std::string>        & outputParams)
 {
   // The static method grabs the first factory and sends to it to handle
   // This is assuming outputinfo is a file name?
   // 1. Get the factory for this output
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
   auto encoder  = getFactory(f, outputinfo, dt);
+
   if (encoder == nullptr) {
     LogSevere("Unable to write using unknown factory '" << f << "'\n");
     return false;
@@ -263,7 +270,7 @@ IODataType::write(std::shared_ptr<DataType> dt,
 
 void
 IODataType::handleCommandParam(const std::string& command,
-  std::map<std::string, std::string> &outputParams)
+  std::map<std::string, std::string>            &outputParams)
 {
   // The default is factory=outputfolder.  Python for example splits
   // the command param into script,outputfolder
@@ -272,15 +279,16 @@ IODataType::handleCommandParam(const std::string& command,
 
 bool
 IODataType::writeout(std::shared_ptr<DataType> dt,
-  const std::string & outputinfo,
-  std::vector<Record> & records,
-  const std::string & knownfactory,
-  std::map<std::string, std::string>  & outputParams)
+  const std::string                            & outputinfo,
+  std::vector<Record>                          & records,
+  const std::string                            & knownfactory,
+  std::map<std::string, std::string>           & outputParams)
 {
   // Add any output fields not explicitly set by caller
   // Basically outputParams overrides settings from rapiosettings.xml
   // I think this design is simplier in long run.
   std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings(knownfactory);
+
   if (dfs != nullptr) {
     try{
       auto output = dfs->getChild("output");
@@ -308,6 +316,7 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   URL aURL;
   bool directFile;
   bool ensureDir = false;
+
   if (filePathMode == "datatype") { // default datatype tree pathing
     std::string prefix = outputParams["fileprefix"];
     if (prefix.empty()) { prefix = DataType::DATATYPE_PREFIX; }
@@ -363,6 +372,7 @@ IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, c
   // without notification, etc.
   std::vector<Record> blackHole;
   std::map<std::string, std::string> outputParams;
+
   outputParams["filepathmode"] = "direct";
   return write(dt, outputinfo, blackHole, factory, outputParams); // Default write single file
 }
@@ -374,6 +384,7 @@ IODataType::writeBuffer(std::shared_ptr<DataType> dt,
   // 1. Get the factory for this output
   std::string f = factory;
   auto encoder  = getFactory(f, "", dt);
+
   // FIXME: Pass settings?  For now just XML/JSON use I'll skip it
   if (encoder == nullptr) { return 0; }
   // 2. Output file and generate records

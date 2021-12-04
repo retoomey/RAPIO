@@ -41,7 +41,7 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>              & keys
+    std::map<std::string, std::string>     & keys
   ) override;
 
   /** Write data type to a buffer */

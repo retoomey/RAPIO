@@ -98,6 +98,7 @@ WebServer::startWebServer(const std::string& params)
     exit(1);
   }
   HttpServer server;
+
   server.config.port = port;
 
   // Can for instance be used to retrieve an HTML 5 client that uses REST-resources on this server
@@ -120,10 +121,12 @@ WebServer::startWebServer(const std::string& params)
 
       // Copy just in case they change their type later
       std::map<std::string, std::string> theFields;
+
       for (auto f:query_fields) {
         theFields[f.first] = f.second;
       }
       auto web = std::make_shared<WebMessage>(request->path, theFields);
+
       WebMessageQueue::theWebMessageQueue->addRecord(web);
       auto fut = web->result.get_future();
 
@@ -193,9 +196,10 @@ WebServer::startWebServer(const std::string& params)
   thread server_thread([&server, &server_port](){
     // Start server
     server.start([&server_port](unsigned short port){
-      server_port.set_value(port);
+    server_port.set_value(port);
+      });
     });
-  });
+
   LogInfo("Algorithm Web Server Initialized on port: " << server_port.get_future().get() << "\n");
 
   // Wait until server shutsdown

@@ -12,14 +12,14 @@ class PTreeDataTable : public IOSpecializer
 {
   /** Write a given DataType */
   virtual bool
-  write(std::shared_ptr<DataType> dt,
+  write(std::shared_ptr<DataType>     dt,
     std::map<std::string, std::string>& keys) override;
 
   /** Read a DataType from given information */
   virtual std::shared_ptr<DataType>
   read(
     std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType> optionalOriginal) override;
+    std::shared_ptr<DataType>         optionalOriginal) override;
 };
 
 /** DataTable

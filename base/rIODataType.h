@@ -24,14 +24,14 @@ class IOSpecializer : public IO {
 public:
   /** Write a given DataType */
   virtual bool
-  write(std::shared_ptr<DataType> dt,
+  write(std::shared_ptr<DataType>     dt,
     std::map<std::string, std::string>& keys) = 0;
 
   /** Read a DataType from given information */
   virtual std::shared_ptr<DataType>
   read(
     std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType> optionalOriginal) = 0;
+    std::shared_ptr<DataType>         optionalOriginal) = 0;
 };
 
 /**
@@ -85,6 +85,7 @@ public:
   {
     // Note: We make it a string for the actual factories that are generic
     std::shared_ptr<DataType> dt = readDataType(params, factory);
+
     if (dt != nullptr) {
       std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
       return dr;
@@ -99,6 +100,7 @@ public:
   {
     // Note: We make it a string for the actual factories that are generic
     std::shared_ptr<DataType> dt = readBufferImp(buffer, factory);
+
     if (dt != nullptr) {
       std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
       return dr;
@@ -181,7 +183,7 @@ public:
    * factory=outputfolder, or factory= script, outputfolder.
    * This turns the command line into the param map values */
   virtual void
-  handleCommandParam(const std::string& command,
+  handleCommandParam(const std::string & command,
     std::map<std::string, std::string> &outputParams);
 
   /** Default write out handling for files */

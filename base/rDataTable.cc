@@ -5,7 +5,7 @@ using namespace rapio;
 
 bool
 PTreeDataTable::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>& keys)
+  std::map<std::string, std::string>            & keys)
 {
   // We write as generic PTreeData.  Might change later
   // if extra fields go to DataTable
@@ -15,11 +15,12 @@ PTreeDataTable::write(std::shared_ptr<DataType> dt,
 std::shared_ptr<DataType>
 PTreeDataTable::read(
   std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType> dt)
+  std::shared_ptr<DataType>         dt)
 {
   // We only introduce as PTreeData
   std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
   auto datatable = xml->getTree()->getChildOptional("datatable");
+
   if (datatable != nullptr) {
     auto datatype = datatable->getChildOptional("datatype");
     if (datatype != nullptr) {
@@ -54,6 +55,7 @@ PTreeDataTable::read(
 
   // Create a specialized DataTable and move the stuff in PTreeData to it.
   std::shared_ptr<DataTable> table = std::make_shared<DataTable>();
+
   xml->Move(table);
   return table;
 } // PTreeDataTable::read

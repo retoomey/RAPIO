@@ -144,15 +144,15 @@ public:
    * functions at some point
    */
   virtual bool
-  writeDirectOutput(const URL& path,
-    std::shared_ptr<DataType> outputData,
+  writeDirectOutput(const URL         & path,
+    std::shared_ptr<DataType>         outputData,
     std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
   writeOutputProduct(const std::string& key,
-    std::shared_ptr<DataType> outputData,
+    std::shared_ptr<DataType>         outputData,
     std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
@@ -162,6 +162,7 @@ public:
     std::shared_ptr<DataType>         outputData)
   {
     std::map<std::string, std::string> outputParams;
+
     writeOutputProduct(key, outputData, outputParams);
   }
 

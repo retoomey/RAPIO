@@ -22,6 +22,7 @@ OptionList::replaceMacros(const std::string& original)
   std::string newString = original;
 
   std::string PWD = OS::getCurrentDirectory();
+
   Strings::replace(newString, "{PWD}", PWD);
   return (newString);
 }
@@ -61,6 +62,7 @@ OptionList::makeOption(
     exit(1);
   }
   Option o; // on stack..humm damn Java, lol
+
   o.required = required;
   o.boolean  = boolean;
   o.system   = system;

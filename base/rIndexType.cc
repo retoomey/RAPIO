@@ -27,6 +27,7 @@ IndexType::formKey(const std::vector<std::string>& sel,
   end   = std::min(end, sel.size());
   begin = std::min(begin, end);
   std::string s;
+
   s.reserve(512);
 
   for (size_t i = begin; i < end; ++i) {

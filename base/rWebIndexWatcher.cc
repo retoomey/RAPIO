@@ -29,6 +29,7 @@ WebIndexWatcher::attach(const std::string & dirname,
   IOListener *                            l)
 {
   std::shared_ptr<WebInfo> newWatch = std::make_shared<WebInfo>(l, dirname);
+
   myWatches.push_back(newWatch);
   return true;
 }
@@ -37,5 +38,6 @@ void
 WebIndexWatcher::introduceSelf()
 {
   std::shared_ptr<WebIndexWatcher> io = std::make_shared<WebIndexWatcher>();
+
   IOWatcher::introduce(WEB_WATCH, io);
 }

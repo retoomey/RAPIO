@@ -28,6 +28,7 @@ public:
       dt = rec.createObject(); // cache it
     }
     std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
+
     return (dr);
   }
 

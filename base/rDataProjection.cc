@@ -31,12 +31,12 @@ rapio::operator << (ostream& os, const LLCoverage& p)
 std::shared_ptr<ProjLibProject>
 DataProjection::getBBOX(
   std::map<std::string, std::string>& keys,
-  size_t& rows,
-  size_t& cols,
-  double& left,
-  double& bottom,
-  double& right,
-  double& top)
+  size_t                            & rows,
+  size_t                            & cols,
+  double                            & left,
+  double                            & bottom,
+  double                            & right,
+  double                            & top)
 {
   left = bottom = right = top = 0;
 
@@ -44,12 +44,12 @@ DataProjection::getBBOX(
   std::string bbox   = keys["BBOX"];
   std::string bboxsr = keys["BBOXSR"];
 
-   // Is this used?
-  //std::string mode = keys["mode"];
-  //if (mode.empty()) {
+  // Is this used?
+  // std::string mode = keys["mode"];
+  // if (mode.empty()) {
   //  mode         = "tile";
   //  keys["mode"] = mode;
- // }
+  // }
 
   try{
     rows = std::stoi(keys["rows"]); // could except
@@ -66,11 +66,10 @@ DataProjection::getBBOX(
 
   // Check if center, width, height set, create bbox from extent?
   if (bbox.empty()) { // New auto tile mode
-
     // FIXME: I should rewrite this to use mercator meters from the 'center'
     // to create the bounding box.  Currently I'm focused on web tile generation
     // which typically wants webmerc
-    
+
     // Try zoom, center ability based on web mercator
     size_t zoom;
     double centerLatDegs, centerLonDegs;
@@ -108,20 +107,20 @@ DataProjection::getBBOX(
     double raw_latS = (rad_to_deg) * (2.0 * atan(pow(M_E, (old_pix_to_eq - pixN) / pix_radius))) - 90.0;
 
     bboxsr = "4326"; // Note converted to webmerc below?  Should we?
-    left = raw_lonW;
+    left   = raw_lonW;
     bottom = raw_latS;
-    right = raw_lonE;
-    top = raw_latN;
+    right  = raw_lonE;
+    top    = raw_latN;
   } else {
     // FIXME: more checks?
     std::vector<std::string> pieces;
     Strings::splitWithoutEnds(bbox, ',', &pieces);
     if (pieces.size() == 4) {
-      left = std::stod(pieces[0]);          // lon
+      left   = std::stod(pieces[0]); // lon
       bottom = std::stod(pieces[1]);
-      right = std::stod(pieces[2]);
-      top = std::stod(pieces[3]);
-    }else{
+      right  = std::stod(pieces[2]);
+      top    = std::stod(pieces[3]);
+    } else {
       LogSevere("Malformed BBOX? " << bbox << "\n");
       return nullptr;
     }
@@ -129,25 +128,25 @@ DataProjection::getBBOX(
     // For the tile engine...
     // We need to march in webmerc or distortions will get too big when zooming out,
     // marching in LatLon is equal angle but webmerc is conformal
-    if (theWebMercToLatLon == nullptr){
+    if (theWebMercToLatLon == nullptr) {
       theWebMercToLatLon = std::make_shared<ProjLibProject>(
         "+proj=webmerc +datum=WGS84 +units=m +resolution=1", // Web mercator
         "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"   // Lat Lon
-        );
+      );
       theWebMercToLatLon->initialize();
     }
 
-    if (bboxsr == "4326"){
+    if (bboxsr == "4326") {
       // Box is in Lat Lon, we want web mercator marching
       // Note: lat/lon is swapped order...probably should change it
       // 'Could' just have in/out share..humm
-      theWebMercToLatLon->LatLonToXY(bottom, left, left, bottom); 
+      theWebMercToLatLon->LatLonToXY(bottom, left, left, bottom);
       theWebMercToLatLon->LatLonToXY(top, right, right, top);
       return theWebMercToLatLon;
-    }else if (bboxsr == "3857"){ // Coordinates are already in webmerc
+    } else if (bboxsr == "3857") { // Coordinates are already in webmerc
       return theWebMercToLatLon;
-    }else{
-       LogSevere("Unknown projection requested: " << bboxsr << "\n");
+    } else {
+      LogSevere("Unknown projection requested: " << bboxsr << "\n");
     }
   }
 
@@ -167,6 +166,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
   std::string mode = c.mode;
   size_t cols      = c.cols;
   size_t rows      = c.rows;
+
   try{
     mode   = fields.getAttr("mode", mode);
     c.mode = mode;
@@ -177,6 +177,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
   }
 
   float top, left, deltaLat, deltaLon;
+
   if (mode == "full") {
     optionSuccess = LLCoverageFull(rows, cols, top, left, deltaLat, deltaLon);
     // Calculated back.  Full will generate the rows/cols based on data resolution
@@ -318,10 +319,12 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::st
     return Constants::MissingData;
   }
   const double y = (lonDegs - myLonNWDegs) / myLonSpacing;
+
   if ((y < 0) || (y > myNumLons)) {
     return Constants::MissingData;
   }
   const auto& data = my2DLayer->ref();
+
   return data[int(x)][int(y)];
 }
 
@@ -378,6 +381,7 @@ LatLonGridProjection::LLCoverageTile(
   // All these are meaningless I think...we need to project left and
   // right to X, then use _that_ width I think
   auto width = rightDegs - leftDegs;
+
   deltaLonDegs = width / numCols;
 
   // To keep aspect ratio per cell, use deltaLon to back calculate

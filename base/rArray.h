@@ -64,6 +64,7 @@ public:
     auto& dd = ref();
 
     boost::multi_array_ref<float, 1> a_ref(dd.data(), boost::extents[dd.num_elements()]);
+
     std::fill(a_ref.begin(), a_ref.end(), value);
   }
 
@@ -74,6 +75,7 @@ public:
     std::vector<size_t> theDims;
     auto& dd = ref();
     auto s   = dd.shape();
+
     for (size_t i = 0; i < N; i++) {
       theDims.push_back(s[i]);
     }

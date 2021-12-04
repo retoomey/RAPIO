@@ -14,6 +14,7 @@ std::string
 Secure::sign(const std::string& key, const std::string& message)
 {
   std::string out;
+
   #ifdef EVP_MAX_MD_SIZE
   unsigned int result_len = -1;
   unsigned char result[EVP_MAX_MD_SIZE];
@@ -39,6 +40,7 @@ std::string
 Secure::hexdigest(const std::string& bytes)
 {
   std::stringstream ss;
+
   for (size_t i = 0; i < bytes.length(); i++) {
     // Clip to unsigned char, this is why should be utf-8
     unsigned char x = bytes[i] & 0xFF;
@@ -60,6 +62,7 @@ Secure::decode64(const std::string& input)
   bmem = BIO_new_mem_buf(input.c_str(), input.size());
   bmem = BIO_push(b64, bmem);
   std::vector<uint8_t> outbuf;
+
   while ((inlen = BIO_read(b64, inbuf, 512)) > 0) {
     size_t len = (inlen < 0) ? 0 : (size_t) (inlen);
     for (size_t i = 0; i < len; i++) {

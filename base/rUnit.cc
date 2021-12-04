@@ -61,11 +61,12 @@ void
 ConfigUnit::introduceSelf()
 {
   std::shared_ptr<ConfigType> units = std::make_shared<ConfigUnit>();
+
   Config::introduce("unit", units);
 }
 
 bool
-ConfigUnit::readSettings(std::shared_ptr<PTreeData> )
+ConfigUnit::readSettings(std::shared_ptr<PTreeData>)
 {
   // Look for one of the neccessary udunits2 xml files
   URL url = Config::getConfigFile("misc/udunits2.xml");
@@ -102,7 +103,7 @@ Unit::getConverter(const std::string& from,
   // Key holds char* rather than std::string because
   // lookup is 3x faster if we don't create new strings each time...
   // FIXME: Need to investigate this
-  const Key lookup_key((char *)from.c_str(), (char *)to.c_str());
+  const Key lookup_key((char *) from.c_str(), (char *) to.c_str());
 
   auto it(converter_cache.find(lookup_key));
 
@@ -131,6 +132,7 @@ Unit::getConverter(const std::string& from,
 
   // FIXME: these leaks don't hurt anything but probably make valgrind unhappy
   Key insert_key(strdup(from.c_str()), strdup(to.c_str()));
+
   converter_cache[insert_key] = setme;
   return (true);
 } // Unit::getConverter

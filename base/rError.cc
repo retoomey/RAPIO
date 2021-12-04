@@ -51,6 +51,7 @@ bool
 stringToSeverity(const std::string& level, Log::Severity& severity)
 {
   std::string s = level;
+
   Strings::toLower(s);
   if (s == "") { s = "info"; }
 
@@ -283,6 +284,7 @@ Log::Log()
 
   // We have to provide an empty deleter to avoid destroying the global stream object
   boost::shared_ptr<std::ostream> stream(&std::clog, boost::log::v2_mt_posix::empty_deleter());
+
   mySink->locked_backend()->add_stream(stream);
 
   // We flush on a timer
@@ -303,6 +305,7 @@ Log::Log()
 
   // Set up a timer to auto flush logs, default for now until set by config
   auto flusher = make_shared<LogFlusher>(900);
+
   EventLoop::addEventHandler(flusher);
   myLogFlusher = flusher;
 }
@@ -318,6 +321,7 @@ Log::setLogPattern(const std::string& pattern)
   // Output
   std::vector<int> outputtokens;    // Token numbers in order
   std::vector<std::string> fillers; // Stuff between tokens
+
   Strings::TokenScan(pattern, tokens, outputtokens, fillers);
 
   // Thankfully we're not threaded, otherwise we'll need to start
@@ -355,6 +359,7 @@ LogSettingURLWatcher::action()
   Log::Severity severity = Log::Severity::SEVERE; // fall back
 
   std::vector<char> buf;
+
   if (IOURL::read(myURL, buf) > 0) {
     // LogSevere("Found log setting information at \"" << aURL << "\"\n");
 
@@ -461,6 +466,7 @@ Log::printCurrentLogSettings()
 
   // Show current settings we're using
   std::string realLevel;
+
   if (l.myLogURLWatcher != nullptr) {
     realLevel = "From file:" + l.myLogURLWatcher->getURL().toString();
   } else {

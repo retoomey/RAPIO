@@ -191,6 +191,7 @@ public:
     if (d) { out = *d; return true; }
     // Cast up from float.  Could warn here
     auto f = myAttributes->get<float>(name);
+
     if (f) { out = *f; return true; }
     return false;
   }
@@ -210,6 +211,7 @@ public:
 
     if (f) { out = *f; return true; }
     auto d = myAttributes->get<double>(name);
+
     if (d) { out = *d; return true; }
     return false;
   }
@@ -229,6 +231,7 @@ public:
 
     if (l) { out = *l; return true; }
     auto i = myAttributes->get<int>(name); // allow int to long?
+
     if (i) { out = *i; return true; }
     return false;
   }

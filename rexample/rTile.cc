@@ -51,7 +51,7 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   myOverride["rows"] = o.getString("image-width");
   myOverride["centerLatDegs"] = o.getString("center-latitude");
   myOverride["centerLonDegs"] = o.getString("center-longitude");
-  myOverride["flags"] = o.getString("flags");
+  myOverride["flags"]         = o.getString("flags");
 
   // Steal the normal output location as suggested cache folder
   // This will probably work unless someone deliberately tries to break it by passing
@@ -123,6 +123,7 @@ std::vector<std::string>
 getProductList()
 {
   std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/";
+
   if (rootdisk[rootdisk.size() - 1] != '/') {
     rootdisk += '/';
   }
@@ -130,6 +131,7 @@ getProductList()
   std::vector<std::string> products;
 
   DIR * dirp = opendir(rootdisk.c_str()); // close?
+
   if (dirp == 0) {
     return products;
   }
@@ -151,12 +153,13 @@ getProductList()
   }
   sort(products.begin(), products.end(), std::less<std::string>());
   return products;
-}
+} // getProductList
 
 std::vector<std::string>
 getSubtypeList(const std::string& product)
 {
   std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/" + product;
+
   if (rootdisk[rootdisk.size() - 1] != '/') {
     rootdisk += '/';
   }
@@ -166,6 +169,7 @@ getSubtypeList(const std::string& product)
   // Duplicate the code..I think we'll have to sort the subtypes...
   // We could sort the products too right?
   DIR * dirp = opendir(rootdisk.c_str()); // close?
+
   if (dirp == 0) {
     return subtypes;
   }
@@ -185,12 +189,13 @@ getSubtypeList(const std::string& product)
   }
   sort(subtypes.begin(), subtypes.end(), std::greater<std::string>());
   return subtypes;
-}
+} // getSubtypeList
 
 std::vector<std::string>
 getTimeList(const std::string& product, const std::string& subtype)
 {
   std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/" + product + "/" + subtype;
+
   if (rootdisk[rootdisk.size() - 1] != '/') {
     rootdisk += '/';
   }
@@ -201,6 +206,7 @@ getTimeList(const std::string& product, const std::string& subtype)
   // Duplicate the code..I think we'll have to sort the subtypes...
   // We could sort the products too right?
   DIR * dirp = opendir(rootdisk.c_str()); // close?
+
   if (dirp == 0) {
     return times;
   }
@@ -220,7 +226,7 @@ getTimeList(const std::string& product, const std::string& subtype)
   }
   sort(times.begin(), times.end(), std::greater<std::string>());
   return times;
-}
+} // getTimeList
 
 // These will become part of the 'navigator' class I think...
 // There's duplicate code in these functions, but don't
@@ -232,8 +238,10 @@ getJSONProductList()
   auto l = getProductList();
 
   std::stringstream json;
+
   json << "{\"products\":[";
   std::string add = "";
+
   for (auto& p:l) {
     json << add << "\"" << p << "\"";
     add = ",";
@@ -248,8 +256,10 @@ getJSONSubtypeList(const std::string& product)
   auto l = getSubtypeList(product);
 
   std::stringstream json;
+
   json << "{\"subtypes\":[";
   std::string add = "";
+
   for (auto& p:l) {
     json << add << "\"" << p << "\"";
     add = ",";
@@ -264,8 +274,10 @@ getJSONTimeList(const std::string& product, const std::string& subtype)
   auto l = getTimeList(product, subtype);
 
   std::stringstream json;
+
   json << "{\"times\":[";
   std::string add = "";
+
   for (auto& p:l) {
     json << add << "\"" << p << "\"";
     add = ",";
@@ -286,11 +298,13 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
 
   myOverride["debug"] = debuglog;
   std::string cache = myOverride["tilecachefolder"];
-  if (cache.empty()){
+
+  if (cache.empty()) {
     cache = "CACHE";
   }
 
   std::ofstream myfile;
+
   if (debuglog) {
     myfile.open("logtile.txt", ios::app);
     myfile << w->getPath() << " --- ";
@@ -305,18 +319,18 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
     // Leaflet WMS fields to ours...
     if (a.first == "bbox") {
       myOverride["BBOX"] = a.second;
-    }else if (a.first == "height") {
+    } else if (a.first == "height") {
       myOverride["rows"] = a.second;
-    }else if (a.first == "width") {
+    } else if (a.first == "width") {
       myOverride["cols"] = a.second;
-    }else if (a.first == "srs"){ // wms source
-     if (a.second == "EPSG:4326"){ // lat lon
+    } else if (a.first == "srs") {   // wms source
+      if (a.second == "EPSG:4326") { // lat lon
         myOverride["BBOXSR"] = "4326";
-     }else if (a.second == "EPSG:3857"){
+      } else if (a.second == "EPSG:3857") {
         myOverride["BBOXSR"] = "3857";
-     }
+      }
     } // wms "format=image/jpeg" should probably handle it
-    // LogSevere("Field " << a.first << " == " << a.second << "\n");
+      // LogSevere("Field " << a.first << " == " << a.second << "\n");
   }
   if (debuglog) {
     myfile << "\n";
@@ -369,8 +383,8 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         // Verify the z/y/x and that it's integers
         if (pieces.size() < 4) {
           LogSevere("Expected http://tms/z/x/y for start of tms path\n");
-          for(auto k:pieces){
-             std::cout << "PIECE " << k << "\n";
+          for (auto k:pieces) {
+            std::cout << "PIECE " << k << "\n";
           }
           return;
         }
@@ -380,7 +394,7 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
           x = std::stoi(pieces[2]);
           // Google vs TMS can flip this.  Usually fixable with -y or y passed into URL
           // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
-          y = std::stoi(pieces[3]); 
+          y = std::stoi(pieces[3]);
         }catch (const std::exception& e) {
           LogSevere("Non number passed for z, x or y? " << pieces[1] << ", " << pieces[2] << ", " << pieces[3] << "\n");
           return;
@@ -397,10 +411,10 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
         const double lat2 = tiley2lat(y + 1, z);
         myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
           + std::to_string(lat1);
-        myOverride["BBOXSR"] = "4326"; // Lat/Lon
-        myOverride["TILETEXT"] = "X:"+std::to_string(x)+",Y:" + std::to_string(y)+",Z:"+std::to_string(z);
+        myOverride["BBOXSR"]   = "4326"; // Lat/Lon
+        myOverride["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
 
-	LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
+        LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
       } else if (type == "UI") {
         LogSevere("Woooh...something calling our json stuff\n");
 

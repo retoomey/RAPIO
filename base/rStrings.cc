@@ -19,6 +19,7 @@ bool
 Strings::removePrefix(std::string& str, const std::string& prefix)
 {
   std::string original = str;
+
   str = boost::algorithm::replace_first_copy(str, prefix, "");
   return (original != str);
 }
@@ -33,6 +34,7 @@ bool
 Strings::removeSuffix(std::string& str, const std::string& suffix)
 {
   std::string original = str;
+
   str = boost::algorithm::replace_last_copy(str, suffix, "");
   return (original != str);
 }
@@ -66,6 +68,7 @@ Strings::split(const std::string& in, std::vector<std::string> * setme)
 {
   // Split greedy on space here
   std::string s3 = boost::algorithm::trim_copy(in);
+
   boost::split(*setme, s3, boost::is_any_of(" "), boost::token_compress_on);
   return setme->size();
 }
@@ -80,6 +83,7 @@ Strings::splitWithoutEnds(const std::string & in,
     };
 
   std::string s3 = boost::algorithm::trim_copy_if(in, test);
+
   boost::split(*setme, s3, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
   return setme->size();
 }
@@ -396,10 +400,13 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
 {
   // Get full .sxml file
   std::ifstream xmlfile;
+
   xmlfile.open(signedxml.c_str());
   std::ostringstream str;
+
   str << xmlfile.rdbuf();
   std::string msg = str.str();
+
   xmlfile.close();
 
   // The last three lines should be of form:
@@ -409,6 +416,7 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
   // where key may not be xml compliant.  We remove it before
   // passing to xml parsing.
   std::size_t found = msg.rfind("<signed>");
+
   if (found == std::string::npos) {
     LogSevere("Missing signed tag end of file\n");
     return false;
@@ -455,10 +463,12 @@ Strings::TokenScan(
 
   // DFA count array for each token
   std::vector<size_t> ats;
+
   ats.resize(tokens.size());
 
   // For each character in pattern...
   std::string fill;
+
   for (auto s:pattern) {
     // For each token in list...
     fill += s;
