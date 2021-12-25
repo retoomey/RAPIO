@@ -1,5 +1,5 @@
 #Docker/Podman for building a base for building RAPIO and/or RAPIO development box
-FROM fedora:34
+FROM fedora:35
 
 ##############################################################################
 # Non root user to run as.  We try to use the user you are running

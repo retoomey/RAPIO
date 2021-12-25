@@ -41,10 +41,6 @@ run "yum install unzip xz-devel bzip2-devel -y"
 # expat-devel (udunits requirement)
 run "yum install expat-devel libpng-devel openssl-devel -y"
 
-# (image) The image plugin for RAPIO uses imagick
-# FIXME: Decided to leave here though we 'could' push it to RAPIO container
-run "yum install GraphicsMagick-c++-devel -y"
-
 # The big ones... Third Party. 
 run "yum install boost-devel -y"
 run "yum install netcdf-devel -y"
@@ -66,19 +62,22 @@ echo "   Substep Install motd..."
 run "mv /tmp/PACKAGES/MRMSBASE/motd.sh /etc/profile.d/motd.sh"
 
 # -------------------------------------------------------------
-echo "   Substep Install/Build g2clib 1.6.3 (not available as RPM)..."
-run "mkdir -p /BUILD/Third"
-#mkdir -p /BUILD/include
-#mkdir -p /BUILD/lib
-run "mv /tmp/PACKAGES/MRMSBASE/g2clib-1.6.3.tar /BUILD/Third/."
-run "cd /BUILD/Third"
-run "tar xvf g2clib-1.6.3.tar"
-run "cd /BUILD/Third/g2clib-1.6.3"
-run "mv makefile makefileBASE"
-run "mv /tmp/PACKAGES/MRMSBASE/g2makefile makefile"
-run "make"
-run "cp *.h /usr/include/."
-run "cp libg2c_v1.6.3.a /usr/lib64/libgrib2c.a"
+# Setup non versioned g2clib for MRMS/etc...
+run "cp /usr/lib64/libg2c_v1.6.3.a /usr/lib64/libgrib2c.a"
+
+# I'm gonna leave this as an example of building custom,
+# even though we have the rpm now in Fedora 35
+#echo "   Substep Install/Build g2clib 1.6.3 (not available as RPM)..."
+#run "mkdir -p /BUILD/Third"
+#run "mv /tmp/PACKAGES/MRMSBASE/g2clib-1.6.3.tar /BUILD/Third/."
+#run "cd /BUILD/Third"
+#run "tar xvf g2clib-1.6.3.tar"
+#run "cd /BUILD/Third/g2clib-1.6.3"
+#run "mv makefile makefileBASE"
+#run "mv /tmp/PACKAGES/MRMSBASE/g2makefile makefile"
+#run "make"
+#run "cp *.h /usr/include/."
+#run "cp libg2c_v1.6.3.a /usr/lib64/libgrib2c.a"
 
 # Allow developer passwordless sudo here (probably not wanted in production)
 run "cp /tmp/PACKAGES/MRMSBASE/95-developer-user /etc/sudoers.d/."

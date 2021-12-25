@@ -15,9 +15,8 @@
 INCLUDE(FindThirdParty)
 find_third_party(
   Netcdf
-  REQUIRED
   HEADER netcdf.h
   LIBRARY netcdf
   HEADER_PATHS ${Netcdf_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include
-  LIBRARY_PATHS ${Netcdf_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
+  LIBRARY_PATHS ${Netcdf_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
 )

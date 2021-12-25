@@ -14,9 +14,8 @@
 INCLUDE(FindThirdParty)
 find_third_party(
   Jasper
-  REQUIRED
   HEADER jas_init.h
   LIBRARY jasper
   HEADER_PATHS ${Jasper_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include/jasper /usr/include/jasper
-  LIBRARY_PATHS ${Jasper_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
+  LIBRARY_PATHS ${Jasper_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
 )

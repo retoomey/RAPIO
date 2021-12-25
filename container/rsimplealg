@@ -1,25 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 # Toomey Jul 2021
-# Test to run the RAPIO build on container rsimplealg example.
-# When the container is built correctly this will work when you
-# run it.  You can make a copy of this with your algorithm to
-# execute it from the HOST directly instead of inside the container.
 
-# You can remove the -t for 'slightly' more speed maybe,
-# but lose terminal colors, etc.
+# Predefined settings and functions
+. ./config.sh
 
-# Go set your settings here oR you could put everything in here 
-# to make a more portable script
-source config.sh
-
-# Run this algorithm.  To run yours do
+# If you make your own algorithm, give full container path like so:
 # /BUILD/MYALGS/Algname/binary
-RUNTHISALG=rsimplealg
-
-mkdir -p $MYALGPATH
-docker run -t \
-    -v "$INPUT":/INPUT \
-    -v "$OUTPUT":/OUTPUT \
-    -v "$MYALGPATH":/BUILD/MYALGS \
-    --user $(id -u):$(id -g) \
-    rapio:f34 $RUNTHISALG $*
+dockerrun "--rm rapio:f34 rsimplealg" "$@"

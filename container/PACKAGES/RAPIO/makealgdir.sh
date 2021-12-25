@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Toomey July 2021
 # Just a simple copy/rename of TEMPLATE to a given directory
 # You can of course also do it by hand, etc.

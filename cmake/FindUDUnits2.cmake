@@ -14,9 +14,8 @@
 INCLUDE(FindThirdParty)
 find_third_party(
   UDUnits2
-  REQUIRED
   HEADER udunits2.h
   LIBRARY udunits2
   HEADER_PATHS ${UDUnits2_INCLUDEDIR} ${UDUnits2_INCLUDEDIR}/udunits2 ${CUSTOM_THIRDDIR}/include/ /usr/include/udunits2
-  LIBRARY_PATHS ${UDUnits2_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
+  LIBRARY_PATHS ${UDUnits2_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
 )

@@ -16,9 +16,8 @@
 INCLUDE(FindThirdParty)
 find_third_party(
   CURL
-  REQUIRED
   HEADER curl.h
   LIBRARY curl
   HEADER_PATHS ${CURL_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include/curl /usr/include/curl
-  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64
+  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
 )

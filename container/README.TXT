@@ -1,13 +1,16 @@
 Toomey July 2021
 
 Build a docker container for cross-compiling a RAPIO algorithm.
-Requirements: Docker
-Differences: This uses RPMS for ALL third party, except for g2clib which has been upgraded from source.
+Requirements: Docker or Podman
+
+Differences: This uses RPMS for ALL third party, with the cooresponding pros and cons.
+
 TODO: It's quite possible to svn checkout build MRMS/HMET on top of this container,
       probably I can see trying that in future.  It will probably take some tweaking.
 NOTE: FAM actually works inside a container due to FUSEFS
 NOTE: The building user id/group is used internally to the container when running.  So if you build as fred
       and move to another computer it tries to run as that user.
+NOTE: Podman does it's thing so user ids are shifted, thus some stuff is better accessed from inside the container.
 
 Watch the YouTube tutorial for details on this stuff if it's confusing.
 It can be challenging at first if you aren't familar with containers.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Toomey July 2021
 # Run DOXYGEN in your MYALGS folder
 # on the container to generate documentation

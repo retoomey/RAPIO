@@ -16,6 +16,10 @@ function run(){
   fi
 }
 
+# (image) The image plugin for RAPIO uses imagick
+echo "   Substep Install GraphicsMagick-c++ for ioimage plugin..."
+run "yum install GraphicsMagick-c++-devel -y"
+
 # -------------------------------------------------------------
 echo "   Substep Install RAPIO motd..."
 run "mv /tmp/PACKAGES/RAPIO/motd.sh /etc/profile.d/motd.sh"

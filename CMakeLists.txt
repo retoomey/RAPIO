@@ -61,15 +61,21 @@ find_package(Proj REQUIRED)
 find_package(Netcdf REQUIRED)
 # There's a cmake one but it doesn't seem to allow me to force a library path
 find_package(CURL REQUIRED)   # FIXME:  I 'might' go pure boost ASIO at some point here
+
+# With MRMS I always look for Jasper/PNG because GDAL fails to decompress certain data
+# files without it when we _build_ GDAL.  However, I'm not using the headers so 
+# 'technically' this is nice but not critical to RAPIO
 # The FindJasper module is giving me paths and semicolons not the actual
 # jasper.  Either it's bugged or I'm still learning cmake.
 # Seems to also fail falling back to OS in Fedora 35.  Using my own searcher for now
-find_package(Jasper REQUIRED)
+#find_package(Jasper)
+#find_package(PNG)
 
 # Optional for submodules.  FIXME: Move checks to modules and have flags for
 # conditional building
 find_package(Magick)
 find_package(Grib2C)
+find_package(GDAL REQUIRED)
 ###########################################################################
 
 
@@ -80,20 +86,13 @@ find_package(Grib2C)
 find_package(Boost 1.71 REQUIRED COMPONENTS
   system log log_setup thread filesystem serialization iostreams timer
 )
-# The FindJasper module is giving me paths and semicolons not the actual
-# jasper.  Either it's bugged or I'm still learning cmake
-#find_package(Jasper REQUIRED)
-#if (JASPER_FOUND)
-#  message(STATUS "Jasper was found... ${JASPER_LIBRARY}")
-#  if (NOT "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
-#    set(JASPER_LIBRARIES "${JASPER_LIBRARY}/libjasper.so")
-#  endif()
-#endif()
+# Added these because if they aren't installed pretty sure BOOST will
+# dynamically fail on compression reading/writing these.  Don't think I actually
+# use the headers anywhere. The question is if the installed apk/rpm/etc versions
+# of boost support the XZ, ZLIB, BZIP2 compressions (did they build with them?)
 find_package(ZLIB REQUIRED)
-find_package(PNG REQUIRED)
 find_package(BZip2 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(GDAL REQUIRED)
 ###########################################################################
 
 # Directories

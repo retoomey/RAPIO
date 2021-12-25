@@ -7,6 +7,9 @@
 #include <string>
 #include <chrono>
 
+// POSIX header for timeval (on some OS like alpine)
+#include <sys/time.h>
+
 namespace rapio {
 /**
  * Simple representation of a point on the universal time-line.
