@@ -6,4 +6,4 @@
 
 # If you make your own algorithm, give full container path like so:
 # /BUILD/MYALGS/Algname/binary
-dockerrun "--rm rapio:f34 rsimplealg" "$@"
+dockerrun "--rm rapio:f35 rsimplealg" "$@"

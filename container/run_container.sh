@@ -5,4 +5,4 @@
 . ./config.sh
 
 # Wrapper to the stock folders, podman/docker binary, etc. Edit this in config.sh
-dockerrun "rapio:f34 /bin/bash"
+dockerrun "rapio:f35 /bin/bash"
