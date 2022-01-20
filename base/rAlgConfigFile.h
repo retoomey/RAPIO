@@ -49,6 +49,9 @@ public:
     const std::string       & program,
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) = 0;
+
+  /** Abstract class needs a virtual destructor */
+  virtual ~AlgConfigFile(){ }
 };
 
 /** Can read write a xml style file.  This matches the oldstyle

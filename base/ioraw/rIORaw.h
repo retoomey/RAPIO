@@ -17,7 +17,7 @@ public:
 
   /** Help for ioimage module */
   virtual std::string
-  getHelpString(const std::string& key);
+  getHelpString(const std::string& key) override;
 
   // Registering of classes ---------------------------------------------
   virtual void

@@ -16,7 +16,7 @@ class IOPython : public IODataType {
 public:
 
   /** Help for python module */
-  virtual std::string getHelpString(const std::string& key);
+  virtual std::string getHelpString(const std::string& key) override;
 
   // Registering of classes ---------------------------------------------
   virtual void

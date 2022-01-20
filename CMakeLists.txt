@@ -2,6 +2,11 @@
 # Top cmake for RAPIO building
 cmake_minimum_required (VERSION 3.10)
 
+# My force of clang compiler for me, not doing it for everyone though
+#set(CMAKE_C_COMPILER "/usr/bin/clang")
+#set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+#set(CMAKE_VERBOSE_MAKEFILE)
+
 ##################################################################################################
 # Set the project info
 project (RAPIO 

@@ -16,11 +16,15 @@ public:
     std::shared_ptr<DataType>  dt,
     std::shared_ptr<PTreeNode> dfs) = 0;
 
+  /** Read DataTYpe from given ncid */
   virtual std::shared_ptr<DataType>
   read(
     const int ncid,
     const URL & loc
   ) = 0;
+
+  /** Abstract class should have a virtual destructor */
+  virtual ~GDALType(){ }
 };
 
 /**
@@ -33,7 +37,7 @@ public:
 
   /** Help for netcdf module */
   virtual std::string
-  getHelpString(const std::string& key);
+  getHelpString(const std::string& key) override;
 
   // Registering of classes ---------------------------------------------
   virtual void

@@ -38,7 +38,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lo
 
   if (dirp == 0) {
     LogSevere("Unable to read location " << dir << "\n");
-    // Do a unmount event? return (false);
+    return;
   }
   struct dirent * dp;
 
