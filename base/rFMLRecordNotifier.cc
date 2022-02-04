@@ -115,7 +115,7 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   const std::string sourceName = rec.getSourceName();
 
   if (!sourceName.empty()) {
-    filename << sourceName << '_';
+    filename << '_' << sourceName;
   }
 
   // First part of multi-write.  I'm gonna to append the factory

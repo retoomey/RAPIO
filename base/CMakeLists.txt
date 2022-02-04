@@ -6,6 +6,7 @@
 set(HEADER_FILES
   RAPIO.h
   rArray.h
+  rBinaryIO.h
   rColor.h
   rColorMap.h
   rDataFilter.h
@@ -101,6 +102,7 @@ set(HEADER_FILES
 # Set variable of all sources we use
 set(SOURCE_FILES
   rArray.cc
+  rBinaryIO.cc
   rColor.cc
   rColorMap.cc
   rDataFilter.cc
@@ -239,3 +241,4 @@ add_subdirectory(iogdal)
 add_subdirectory(iogrib)
 add_subdirectory(iopython)
 add_subdirectory(ioraw)
+add_subdirectory(iohmrg)

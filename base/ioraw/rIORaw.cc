@@ -22,6 +22,7 @@ std::string
 IORaw::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that reads Merger Stage 1 RAW files.";
   return help;
 }
@@ -43,16 +44,18 @@ IORaw::readRawDataType(const URL& url)
   // Double reading here for now, I want the size for debugging
   // or when I'm less lazy I'll at least file seek
   std::vector<char> buf;
+
   IOURL::read(url, buf);
   if (!buf.empty()) {
     LogSevere("RAW READER: " << url << " SIZE: " << buf.size() << "\n");
-  }else{
+  } else {
     LogSevere("Couldn't read raw datatype at " << url << "\n");
     return nullptr;
   }
 
-  FILE* fp = fopen( url.toString().c_str(), "r" );
-  if (fp == nullptr){
+  FILE * fp = fopen(url.toString().c_str(), "r");
+
+  if (fp == nullptr) {
     LogSevere("Couldn't open file at " << url << "\n");
     return nullptr;
   }
@@ -62,7 +65,8 @@ IORaw::readRawDataType(const URL& url)
   // Need a registered 'tree' factory that knows the headers and creates the object...
   std::shared_ptr<RObsBinaryTable> r = std::make_shared<RObsBinaryTable>();
   bool success = r->readBlock(fp);
-  if (!success){
+
+  if (!success) {
     LogSevere("Couldn't read binary table from raw datatype at " << url << "\n");
     return nullptr;
   }
@@ -79,7 +83,7 @@ IORaw::createDataType(const std::string& params)
 
 bool
 IORaw::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
+  std::map<std::string, std::string>            & keys
 )
 {
   return false;

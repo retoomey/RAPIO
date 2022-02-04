@@ -500,6 +500,11 @@ Strings::TokenScan(
       }
     }
   }
+  // Write unmatched to the end
+  if (!fill.empty()) {
+    outputfillers.push_back(fill);
+    outputtokens.push_back(-1);
+  }
 
   // Verification/debugging if the code ever fails
   #if 0
@@ -527,3 +532,59 @@ Strings::peel(std::string& s, const char * delimiter)
   if (p == std::string::npos) { s.clear(); } else { s.erase(0, p + strlen(delimiter)); }
   return (token);
 }
+
+std::string
+Strings::replaceGroup(
+  const std::string             & pattern,
+  const std::vector<std::string>& froms,
+  std::vector<std::string>      & tos
+)
+{
+  // Toomey: Simple multi-DFA string replacer.  I made this to
+  // replace X substrs in a string with a single N pass/copy.
+  // For 'dynamic' replacement, use the TokenScan instead which
+  // gives you a token/filler list to iterate over.
+
+  std::string output; // stream 'might' be faster
+
+  // DFA count array for each from
+  std::vector<size_t> ats;
+
+  ats.resize(froms.size());
+
+  // For each character in pattern...
+  std::string fill;
+
+  for (auto s:pattern) {
+    // For each token in list...
+    fill += s;
+    for (size_t i = 0; i < froms.size(); i++) {
+      auto& from = froms[i];
+      auto& at   = ats[i];
+      // If character matches...progress token DFA forward...
+      if (from[at] == s) {
+        // Matched a token, remove from gathered string, this
+        // will be the unmatched part filler before the token
+        if (++at >= from.size()) {
+          // Add one filler string to log
+          Strings::removeSuffix(fill, from);
+          if (!fill.empty()) {
+            output += fill;
+            fill    = "";
+          }
+          // Add one matched token to log and reset all DFAS
+          output += tos[i];
+          for (auto& a:ats) {
+            a = 0;
+          }
+          break; // important
+        }
+        // Otherwise that single token resets
+      } else {
+        at = 0; // token failed match, reset
+      }
+    }
+  }
+  output += fill;
+  return output;
+} // Strings::replaceGroup

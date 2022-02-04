@@ -920,7 +920,7 @@ readGribDatabase()
 
   const URL url = Config::getConfigFile("gribtab.dat");
 
-  if (url == "") {
+  if (url.empty()) {
     LogSevere("Grib2 reader requires a gribtab.dat file in your configuration\n");
     exit(1);
   }

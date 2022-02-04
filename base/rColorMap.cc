@@ -19,7 +19,7 @@ ColorMap::getColorMap(const std::string& key)
 
   if (lookup == myColorMaps.end()) {
     URL find = Config::getConfigFile("colormaps/" + key + ".xml");
-    if (find != "") {
+    if (!find.empty()) {
       colormap = ColorMap::readColorMap(find.toString());
     }
     if (colormap == nullptr) { // ALWAYS return a color map

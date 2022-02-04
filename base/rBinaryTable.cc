@@ -127,7 +127,7 @@ BinaryTable::readBlock(FILE * fp)
   // 1. Read the magic marker name...
   std::string disk_magic;
 
-  read_string8(disk_magic, fp);
+  BinaryIO::read_string8(disk_magic, fp);
   magicToBlockLevels(disk_magic, myLastFileBlockLevels);
 
   // Check block level...this is the base class, so
@@ -142,7 +142,7 @@ BinaryTable::readBlock(FILE * fp)
   // 2. Read the file version number...
   size_t file_version;
 
-  read_type<size_t>(file_version, fp);
+  BinaryIO::read_type<size_t>(file_version, fp);
   myLastFileVersion = file_version;
 
   // Check the file version number....
@@ -156,7 +156,7 @@ BinaryTable::readBlock(FILE * fp)
 
   std::string test2;
 
-  read_string8(test2, fp);
+  BinaryIO::read_string8(test2, fp);
 
   return (true);
 } // BinaryTable::readBlock
@@ -170,16 +170,16 @@ BinaryTable::writeBlock(FILE * fp)
 
   getBlockLevels(classLevels); // Virtual so full subclass name
   blockLevelsToMagic(classLevels, magic);
-  write_string8(magic, fp);
+  BinaryIO::write_string8(magic, fp);
 
   // 2. Write the file version number...
   const size_t version = getVersion();
 
-  write_type<size_t>(version, fp);
+  BinaryIO::write_type<size_t>(version, fp);
 
   std::string test2 = "Toomey was here";
 
-  write_string8(test2, fp);
+  BinaryIO::write_string8(test2, fp);
 
   return (true);
 }
@@ -205,29 +205,29 @@ WObsBinaryTable::readBlock(FILE * fp)
   {
     // ----------------------------------------------------------
     // Read our data block if available (match with write below)
-    read_string8(typeName, fp);
+    BinaryIO::read_string8(typeName, fp);
     myTypeName = typeName;
 
     // Handle units
     std::string unit;
-    read_string8(unit, fp);
+    BinaryIO::read_string8(unit, fp);
     setDataAttributeValue("Unit", "dimensionless", unit);
-    read_type<float>(lat, fp);
-    read_type<float>(lon, fp);
-    read_type<float>(ht, fp);
+    BinaryIO::read_type<float>(lat, fp);
+    BinaryIO::read_type<float>(lon, fp);
+    BinaryIO::read_type<float>(ht, fp);
     myLocation = LLH(lat, lon, ht / 1000.0);
-    read_type<time_t>(data_time, fp);
-    read_type<time_t>(valid_time, fp);
+    BinaryIO::read_type<time_t>(data_time, fp);
+    BinaryIO::read_type<time_t>(valid_time, fp);
 
     LogInfo(
       "RAW INFO: " << typeName << "/" << unit << "," << lat << "," << lon << "," << ht << "," << data_time << "," << valid_time
                    << "\n");
 
     // Handle the marked lines reading in...
-    read_string8(markedLinesCacheFile, fp);
+    BinaryIO::read_string8(markedLinesCacheFile, fp);
     std::vector<Line> markedLines;
     if (markedLinesCacheFile == "") {
-      read_vector(markedLines, fp);
+      BinaryIO::read_vector(markedLines, fp);
       size_t aSize = markedLines.size();
       LogInfo("SIZE OF LINES IS " << aSize << "\n");
       if (aSize > 5) { aSize = 5; }
@@ -240,12 +240,12 @@ WObsBinaryTable::readBlock(FILE * fp)
     }
 
     // Read the six default arrays that always read
-    read_vector(x, fp);
-    read_vector(y, fp);
-    read_vector(z, fp);
-    read_vector(newvalue, fp);
-    read_vector(scaled_dist, fp);
-    read_vector(elevWeightScaled, fp);
+    BinaryIO::read_vector(x, fp);
+    BinaryIO::read_vector(y, fp);
+    BinaryIO::read_vector(z, fp);
+    BinaryIO::read_vector(newvalue, fp);
+    BinaryIO::read_vector(scaled_dist, fp);
+    BinaryIO::read_vector(elevWeightScaled, fp);
 
     // ----------------------------------------------------------
     return true;
@@ -276,13 +276,13 @@ RObsBinaryTable::readBlock(FILE * fp)
     // Read our data block if available (match with write below)
 
     // More header for us....
-    read_string8(radarName, fp);
-    read_type<int>(vcp, fp);    // fread( &vcp, sizeof(int), 1, fp );
-    read_type<float>(elev, fp); // fread( &elev, sizeof(float), 1, fp );
+    BinaryIO::read_string8(radarName, fp);
+    BinaryIO::read_type<int>(vcp, fp);    // fread( &vcp, sizeof(int), 1, fp );
+    BinaryIO::read_type<float>(elev, fp); // fread( &elev, sizeof(float), 1, fp );
 
     // And our arrays
-    read_vector(azimuth, fp);
-    read_vector<mrmstime>(aztime, fp);
+    BinaryIO::read_vector(azimuth, fp);
+    BinaryIO::read_vector<mrmstime>(aztime, fp);
 
     // ----------------------------------------------------------
     return true;

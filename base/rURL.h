@@ -39,10 +39,10 @@ public:
 
   ~URL(){ }
 
-  URL(const char * s)
-  {
-    *this = s;
-  }
+  // URL(const char * s)
+  // {
+  //   *this = s;
+  // }
 
   URL(const std::string& s)
   {

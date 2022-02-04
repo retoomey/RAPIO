@@ -7,6 +7,7 @@
 #
 # autogen.sh --prefix=/myinstall/path --usecmake # cmake
 # autogen.sh --prefix=/myinstall/path            # autotools
+# autogen.sh --prefix=/myinstall/path --usescanbuild  # Build using clang-analyzer
 #
 # You can ignore this script if you're comfortable with cmake and do the basic commands.
 # The recommendation in cmake is to keep a build seperate from source, but that is personal
@@ -21,6 +22,10 @@ PROJECT="RAPIO"  # Just for printing project info (WDSS2, W2ALGS, RAPIO, etc.)
 # Iterate over arguments get the sent options, vs. defaults listed here
 BUILDPREFIX="/usr"   # Where we install stuff (--prefix)
 USEAUTOTOOLS="true"  # Do we use autotools or cmake (--usecmake)
+USESCANBUILD="false" # Do we try the scan-build static analyzer? I think this auto uses clang compiler
+                     # We wrap this around cmake only
+
+# Search for our special options.
 for var in "$@"
 do
   # Get the "--prefix"
@@ -32,6 +37,11 @@ do
   usecmake=${var#"--usecmake"}
   if [ ! "$usecmake" = "$var" ]; then
     USEAUTOTOOLS="false"
+  fi
+  # Get the "--usescanbuild"
+  usescanbuild=${var#"--usescanbuild"}
+  if [ ! "$usescanbuild" = "$var" ]; then
+    USESCANBUILD="true"
   fi
 done
 
@@ -67,9 +77,28 @@ else
     if ! type "$CMAKEBINARY" &> /dev/null
     then
       echo "Couldn't find cmake or cmake3 in path for building, ask IT to install."
+      exit
     fi
-    exit
   fi
+
+  # On scan-build, wrap cmake with scan-build command, this will setup for
+  # static analyzer
+  extratext=""
+  if [ "$USESCANBUILD" = "true" ]; then
+
+    # Check for scan-build and scan-view
+    if ! type "scan-build" &> /dev/null
+    then
+      if ! type "scan-view" &> /dev/null
+      then
+        echo "Can't find scan-build and/or scan-view in your path from clang-analyzer tools."
+        echo "You need this for the --usescanbuild option."
+        exit
+      fi
+    fi
+    CMAKEBINARY="scan-build $CMAKEBINARY"
+    extratext="scan-build "
+  fi 
 
   echo "CMAKE defaulting install prefix to $BUILDPREFIX."
   # This is just to do a fully 'fresh' build without the cache iff you call autogen.sh
@@ -78,6 +107,6 @@ else
     rm ./BUILD/CMakeCache.txt
   fi
   $CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX -S. -B./BUILD
-  echo "Now type 'cd BUILD; make ' to compile $PROJECT."
+  echo "Now type 'cd BUILD; ${extratext} make ' to compile $PROJECT."
 fi
 

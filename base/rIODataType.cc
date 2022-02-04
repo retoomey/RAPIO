@@ -93,6 +93,27 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
   return Factory<IODataType>::get(factory, "IODataType:" + factory);
 }
 
+namespace {
+// Check the read factory was set by a submodule, if not use that module by default
+// So basically reading xml means we also write it using xml if no other factory provided.
+// Reading netcdf typically writes as netcdf as well, etc.
+// A module would set this to another module for example if it reads something
+// and wants another writer like netcdf by default
+void
+checkReadFactorySet(std::shared_ptr<DataType> dt, const std::string& builtBy)
+{
+  if (dt != nullptr) {
+    std::string f = dt->getReadFactory();
+    if (f == "default") { // Only if module didn't explicitly set it...
+      f = builtBy;
+      // Migrating Old W2ALGS to general XML:
+      if (f == "w2algs") { f = "xml"; }
+      dt->setReadFactory(f);
+    }
+  }
+}
+}
+
 std::shared_ptr<DataType>
 IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
 {
@@ -102,11 +123,7 @@ IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
   if (builder != nullptr) {
     // Create DataType and remember factory
     std::shared_ptr<DataType> dt = builder->createDataTypeFromBuffer(buffer);
-    if (dt != nullptr) {
-      // Old W2ALGS is XML:
-      if (f == "w2algs") { f = "xml"; }
-      dt->setReadFactory(f);
-    }
+    checkReadFactorySet(dt, f);
     return dt;
   } else {
     LogSevere("No builder IO module loaded for type '" << f << "'\n");
@@ -123,11 +140,7 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
   if (builder != nullptr) {
     // Create DataType and remember factory
     std::shared_ptr<DataType> dt = builder->createDataType(factoryparams);
-    if (dt != nullptr) {
-      // Old W2ALGS is XML:
-      if (f == "w2algs") { f = "xml"; }
-      dt->setReadFactory(f);
-    }
+    checkReadFactorySet(dt, f);
     return dt;
   } else {
     LogSevere("No builder IO module loaded for type '" << f << "'\n");
@@ -167,20 +180,57 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
   // First replace meta datatype terms with datatype values,
   // then pass on to the pickier time filter
   // std::string p = "{base}/{datatype}{/subtype}/{time}";
-  std::string p = basepattern;
+  // std::string p = basepattern;
 
   // Example: dirName/TIMESTRING_Reflectivity_00.50.netcdf (the subdirs from WDSS2)
   // std::string p = "{base}/{time}_{datatype}{_subtype}";
 
-  Strings::replace(p, "{base}", dirbase);
-  Strings::replace(p, "{datatype}", dataType);
+  // std::string p2;
+  // Strings::replace(p, "{base}", dirbase);
+  // Strings::replace(p, "{datatype}", dataType);
+
+  // Should be able to keep constant
+  const std::vector<std::string> tokens =
+  { "{base}", "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}" };
+  const std::string sub1 = subType.empty() ? ("") : ('/' + subType);
+  const std::string sub2 = subType.empty() ? ("") : ('_' + subType);
+  const std::string time = rsTime.getString(Record::RECORD_TIMESTAMP);
+
+  std::vector<std::string> tos =
+  { dirbase, dataType, sub1, sub2, subType, time };
+  std::string p = Strings::replaceGroup(basepattern, tokens, tos);
+
   // Specials for subtype where we don't want blank delimiter.  Maybe there's a
   // cleaner way, can explore in the future.  We support / and _ for optional subtype
-  Strings::replace(p, "{/subtype}", subType.empty() ? ("") : ('/' + subType));
-  Strings::replace(p, "{_subtype}", subType.empty() ? ("") : ('_' + subType));
-  Strings::replace(p, "{subtype}", subType);
-  Strings::replace(p, "{time}", Record::RECORD_TIMESTAMP); // Note you could use the time fields independently
-  URL path = URL(rsTime.getString(p));
+  //  Strings::replace(p, "{/subtype}", subType.empty() ? ("") : ('/' + subType));
+  //  Strings::replace(p, "{_subtype}", subType.empty() ? ("") : ('_' + subType));
+  //  Strings::replace(p, "{subtype}", subType);
+  //  Strings::replace(p, "{time}", Record::RECORD_TIMESTAMP); // Note you could use the time fields independently
+
+  //  LogSevere("P '"<< p << "'\n");
+  //  LogSevere("P2 '"<< p2 << "'\n");
+  //  exit(1);
+  // URL path = URL(rsTime.getString(p));
+  LogSevere("FINAL PATH " << p << " length " << p.length() << "\n");
+  for (size_t i = 0; i < p.length(); i++) {
+    if (p[i] == 0) {
+      std::cout << "X";
+    } else {
+      std::cout << p[i];
+    }
+  }
+  std::cout << "\n";
+  LogSevere("BASEPATTERN: '" << dataType << "'\n");
+  for (size_t i = 0; i < dataType.length(); i++) {
+    if (dataType[i] == 0) {
+      std::cout << "X";
+    } else {
+      std::cout << dataType[i];
+    }
+  }
+  std::cout << "\n";
+
+  URL path = URL(p);
 
   // Ensure directory tree exists for this path.  Should be done by caller I think...because this might
   // be a bucket prefix instead..muahhahhaa

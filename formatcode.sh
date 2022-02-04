@@ -1,6 +1,6 @@
 #!/bin/bash
 # Toomey: Pretty print code using uncrustify
-folders="base base/ionetcdf base/iogrib base/iogdal base/ioimage rexample PYTHON tests"
+folders="base base/ionetcdf base/iogrib base/iogdal base/ioimage base/ioraw base/iohmrg rexample PYTHON tests"
 crust="uncrustify"
 if (! hash $crust 2>/dev/null); then
   echo "$crust does not appear to be in your path"

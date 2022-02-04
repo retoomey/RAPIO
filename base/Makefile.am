@@ -9,6 +9,7 @@ librapio_la_LIBADD =\
 
 librapio_la_SOURCES =\
   rArray.cc\
+  rBinaryIO.cc\
   rColor.cc\
   rColorMap.cc\
   rDataFilter.cc\

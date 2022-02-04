@@ -147,6 +147,13 @@ Information needed:
     <output />
   </io>
 
+<!-- HMRG module settings
+     This reads/writes HMET MRMS binary
+-->
+  <io names="hmrg" module="librapiohmrg.so">
+    <output />
+  </io>
+
 </datatype>
 
 </settings>

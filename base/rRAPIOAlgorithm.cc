@@ -177,10 +177,13 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   myReadMode = o.getString("r");
   std::string web = o.getString("web");
 
-  if (!web.empty()) {
+  // I can now see a case where we run a webserver for a large archive, however maybe we notify
+  // since the algorithm and webserver will 'stop' after we process the archive.
+  // This means we need -r to be a daemon mode to keep webserver running
+  if (web != "off") {
     if (!isDaemon()) {
-      LogInfo("Changing -r option to new since archive makes no sense for webserver mode\n");
-      myReadMode = "new";
+      LogInfo("NOTE: Not in realtime mode, so webserver will stop after processing.\n");
+      LogInfo("      If you want webserver to run as a daemon, set your -r to a realtime mode\n");
     }
   }
   myCronList = o.getString("sync");

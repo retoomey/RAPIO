@@ -172,6 +172,16 @@ public:
   /** Remove up to a prefix off a source string */
   static std::string
   peel(std::string& s, const char * delimiter);
+
+  /** Scan a single string for a give list of replacement strings
+   * @param pattern The string we are scanning.
+   * @param froms The list of from strings to match.
+   * @param tos The list of strings to replace with.
+   */
+  static std::string
+  replaceGroup(const std::string   & pattern,
+    const std::vector<std::string> & froms,
+    std::vector<std::string>       & tos);
 };
 
 /** A class for DFA parsing a word/token by character */
