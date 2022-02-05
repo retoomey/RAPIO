@@ -41,14 +41,14 @@ std::string
 FileIndex::getHelpString(const std::string& fkey)
 {
   if (fkey == FileINDEX_FAM) {
-    return " Use inotify to watch a directory for general data files (such as for an ingestor).\n  Example: "
+    return "Use inotify to watch a directory for general data files (such as for an ingestor).\n  Example: "
            + FileINDEX_FAM + "=/mydata";
   } else if (fkey == FileINDEX_POLL) {
-    return " Use polling to watch a directory for general data files (such as for an ingestor).\n  Example: "
+    return "Use polling to watch a directory for general data files (such as for an ingestor).\n  Example: "
            + FileINDEX_POLL + "=/mydata";
   } else {
-    return " Process a single file, typically guessing the builder from the file suffix. Example: " + FileINDEX_ONE
-           + "=/mydata/netcdffile.netcdf";
+    return "Process a single file, providing builder or guessing from the file suffix.\n  Example: " + FileINDEX_ONE
+           + "=/mydata/netcdffile.netcdf\n  Example: " + FileINDEX_ONE + "=hmrg:REFL.20220202.222000.gz";
   }
 }
 
@@ -124,15 +124,54 @@ FileIndex::handleFile(const std::string& filename)
     std::vector<std::string> params;
     std::vector<std::string> selects;
 
-    std::string f = filename;
-    // .xml.gz -> "xml", .xml --> "xml"
-    std::string ending = OS::getRootFileExtension(f);
-    if (ending.empty()) {
-      LogSevere("No suffix on watched files, will try netcdf.");
-      ending = "netcdf";
+    // Ok we're gonna allow explicit builder specification so
+    // 1. file=netcdf:/pathtonetcdf or
+    // 2. file=stuff.netcdf(.gz) and we pull the suffix off
+    std::string aBuilder;
+    std::string aFileName;
+
+    // ----------------------------------------------
+    // 1. Try the builder:/pathtofile form
+    // Incoming will look like /folder/path/hmrg:test.gz
+    size_t found              = filename.find_last_of("/\\");
+    std::string prefix        = filename.substr(0, found);
+    std::string localFilename = filename.substr(found + 1);
+    // LogSevere("INCOMING FILE:"<<filename<<"\n");
+    // LogSevere("PREFIX:"<<prefix<<"\n");
+    // LogSevere("FINAL:"<<localFilename << "\n");
+
+    std::vector<std::string> twoStrings;
+    bool splitWorked = true;
+    Strings::splitOnFirst(localFilename, ':', &twoStrings);
+    if (twoStrings.size() > 1) { // Ok have a :
+      // I'm gonna allow URL here..so don't make these builders...
+      // You'd have to file=netcdf:http://pathtofile and NOT
+      // file=http://pathtofile which will just try file extension
+      if ((twoStrings[0] == "http") || (twoStrings[0] == "https")) {
+        splitWorked = false;
+      } else {
+        aBuilder  = twoStrings[0];
+        aFileName = prefix + '/' + twoStrings[1];
+      }
+    } else {
+      splitWorked = false;
     }
-    params.push_back(ending);
-    params.push_back(filename);
+
+    // ----------------------------------------------
+    // Try file extension...
+    if (!splitWorked) {
+      std::string f = filename;
+      // .xml.gz -> "xml", .xml --> "xml"
+      aBuilder = OS::getRootFileExtension(f);
+      if (aBuilder.empty()) {
+        LogInfo("No suffix or given builder for '" << filename << "', will try netcdf.");
+        aBuilder = "netcdf";
+      }
+    }
+
+    // Create params for the record
+    params.push_back(aBuilder);
+    params.push_back(aFileName);
 
     // Selections matter for display mostly...not sure how to
     // create generically.
@@ -144,7 +183,7 @@ FileIndex::handleFile(const std::string& filename)
     Record rec(params, selects, time);
     Record::theRecordQueue->addRecord(rec);
   }
-}
+} // FileIndex::handleFile
 
 void
 FileIndex::handleNewDirectory(const std::string& dirname)

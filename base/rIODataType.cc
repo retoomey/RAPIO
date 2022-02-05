@@ -174,63 +174,18 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
   if (!radar.empty()) {
     dirbase = dirbase + '/' + radar;
   }
-
   // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
-  // How about a PATTERN instead, let's try it out
-  // First replace meta datatype terms with datatype values,
-  // then pass on to the pickier time filter
-  // std::string p = "{base}/{datatype}{/subtype}/{time}";
-  // std::string p = basepattern;
-
-  // Example: dirName/TIMESTRING_Reflectivity_00.50.netcdf (the subdirs from WDSS2)
-  // std::string p = "{base}/{time}_{datatype}{_subtype}";
-
-  // std::string p2;
-  // Strings::replace(p, "{base}", dirbase);
-  // Strings::replace(p, "{datatype}", dataType);
 
   // Should be able to keep constant
   const std::vector<std::string> tokens =
   { "{base}", "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}" };
-  const std::string sub1 = subType.empty() ? ("") : ('/' + subType);
-  const std::string sub2 = subType.empty() ? ("") : ('_' + subType);
-  const std::string time = rsTime.getString(Record::RECORD_TIMESTAMP);
-
+  const std::string sub1       = subType.empty() ? ("") : ('/' + subType);
+  const std::string sub2       = subType.empty() ? ("") : ('_' + subType);
+  const std::string time       = rsTime.getString(Record::RECORD_TIMESTAMP);
   std::vector<std::string> tos =
   { dirbase, dataType, sub1, sub2, subType, time };
   std::string p = Strings::replaceGroup(basepattern, tokens, tos);
-
-  // Specials for subtype where we don't want blank delimiter.  Maybe there's a
-  // cleaner way, can explore in the future.  We support / and _ for optional subtype
-  //  Strings::replace(p, "{/subtype}", subType.empty() ? ("") : ('/' + subType));
-  //  Strings::replace(p, "{_subtype}", subType.empty() ? ("") : ('_' + subType));
-  //  Strings::replace(p, "{subtype}", subType);
-  //  Strings::replace(p, "{time}", Record::RECORD_TIMESTAMP); // Note you could use the time fields independently
-
-  //  LogSevere("P '"<< p << "'\n");
-  //  LogSevere("P2 '"<< p2 << "'\n");
-  //  exit(1);
-  // URL path = URL(rsTime.getString(p));
-  LogSevere("FINAL PATH " << p << " length " << p.length() << "\n");
-  for (size_t i = 0; i < p.length(); i++) {
-    if (p[i] == 0) {
-      std::cout << "X";
-    } else {
-      std::cout << p[i];
-    }
-  }
-  std::cout << "\n";
-  LogSevere("BASEPATTERN: '" << dataType << "'\n");
-  for (size_t i = 0; i < dataType.length(); i++) {
-    if (dataType[i] == 0) {
-      std::cout << "X";
-    } else {
-      std::cout << dataType[i];
-    }
-  }
-  std::cout << "\n";
-
-  URL path = URL(p);
+  URL path      = URL(p);
 
   // Ensure directory tree exists for this path.  Should be done by caller I think...because this might
   // be a bucket prefix instead..muahhahhaa

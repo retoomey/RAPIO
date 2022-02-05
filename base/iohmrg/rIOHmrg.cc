@@ -211,10 +211,10 @@ std::shared_ptr<DataType>
 IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
 {
   // name passed in was used to check type
-  const int headerScale    = readInt(fp);   // 5-8
-  const int radarMSLmeters = readInt(fp);   // 9-12
-  const float radarLatDegs = readFloat(fp); // 13-16
-  const float radarLonDegs = readFloat(fp); // 17-20
+  const int headerScale      = readInt(fp);                    // 5-8
+  const float radarMSLmeters = readScaledInt(fp, headerScale); // 9-12
+  const float radarLatDegs   = readFloat(fp);                  // 13-16
+  const float radarLonDegs   = readFloat(fp);                  // 17-20
 
   // Time
   const int year  = readInt(fp); // 21-24
@@ -224,7 +224,7 @@ IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
   const int min   = readInt(fp); // 37-40
   const int sec   = readInt(fp); // 41-44
 
-  const float nyquest = readScaledInt(fp, headerScale); // 45-48
+  const float nyquest = readScaledInt(fp, headerScale); // 45-48  // FIXME: Volume number?
   const int vcp       = readInt(fp);                    // 49-52
 
   const int tiltNumber      = readInt(fp);                    // 53-56
@@ -246,7 +246,12 @@ IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
   }
   const std::string units = readChar(fp, 6); // 105-110
 
-  const int dataScale        = readInt(fp);
+  int dataScale = readInt(fp);
+
+  if (dataScale == 0) {
+    LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
+    dataScale = 1;
+  }
   const int dataMissingValue = readInt(fp);
 
   // The placeholder.. 8 ints
@@ -271,14 +276,63 @@ IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
     LogInfo("   Data scale and missing value: " << dataScale << " and " << dataMissingValue << "\n");
   }
 
-  auto d = RadialSet::Create(name, units, center, dataTime, elevAngleDegs, distanceToFirstGateMeters,
+  // Read the data right?  Buffer the short ints we'll have to unscale them into the netcdf
+  // We'll handle endian swapping in the convert loop.  So these shorts 'could' be flipped if
+  // we're on a big endian machine
+  // Order is radial major, all gates for a single radial/ray first.  That's great since
+  // that's our RAPIO/W2 order.
+  int count = num_radials * num_gates;
+  std::vector<short int> rawBuffer;
+
+  rawBuffer.resize(count);
+  ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+
+  auto radialSetSP = RadialSet::Create(name, units, center, dataTime, elevAngleDegs, distanceToFirstGateMeters,
       num_radials, num_gates);
+  RadialSet& radialSet = *radialSetSP;
 
-  d->setReadFactory("netcdf"); // Default would call us to write
+  radialSet.setReadFactory("netcdf"); // Default would call us to write
 
-  // FIXME: fill in the data I think...lol
+  auto azimuthsA   = radialSet.getFloat1D("Azimuth");
+  auto& azimuths   = azimuthsA->ref();
+  auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
+  auto& beamwidths = beamwidthsA->ref();
+  auto gatewidthsA = radialSet.getFloat1D("GateWidth");
+  auto& gatewidths = gatewidthsA->ref();
 
-  return d;
+  auto array = radialSet.getFloat2D("primary");
+  auto& data = array->ref();
+
+  const bool needSwap = is_big_endian(); // data is little
+  // size_t countm = 0;
+  size_t rawBufferIndex = 0;
+  // Think using the missing scaled up will help prevent float drift here
+  // and avoid some divisions in loop
+  int dataMissing = dataMissingValue * dataScale;
+
+  for (size_t i = 0; i < num_radials; ++i) {
+    float start_az = i; // Each degree
+
+    // We could add each time but that might accumulate drift error
+    // Adding would be faster.  Does it matter?
+    azimuths[i]   = std::fmod(firstAzimuthDegs + (i * azimuthResDegs), 360);
+    beamwidths[i] = 1; // Correct?
+    gatewidths[i] = gateSpacingMeters;
+    for (size_t j = 0; j < num_gates; ++j) {
+      short int v = rawBuffer[rawBufferIndex++];
+      if (needSwap) { byteswap(v); }
+      if (v == dataMissing) { // The missing value maps to our missing value
+        data[i][j] = Constants::MissingData;
+        //	countm++;
+      } else {
+        float scaled = (float) v / (float) dataScale; // FIXME: zero check previous
+        data[i][j] = scaled;
+      }
+    }
+  }
+  // LogInfo("    Found " << countm << " missing values\n");
+
+  return radialSetSP;
 } // IOHmrg::readRadialSet
 
 std::shared_ptr<DataType>
