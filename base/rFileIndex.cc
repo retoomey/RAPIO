@@ -161,6 +161,7 @@ FileIndex::handleFile(const std::string& filename)
     // Try file extension...
     if (!splitWorked) {
       std::string f = filename;
+      aFileName = filename;
       // .xml.gz -> "xml", .xml --> "xml"
       aBuilder = OS::getRootFileExtension(f);
       if (aBuilder.empty()) {
