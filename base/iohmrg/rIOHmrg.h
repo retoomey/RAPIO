@@ -58,12 +58,12 @@ public:
   std::string projection; // 37-40 map projection (="LL  " always)
   int map_scale;          // 41-44
   // scaled ints must be floats after division
-  float lat1;   // 45-48
-  float lat2;   // 49-52
-  float lon;    // 53-56
-  float lonnw;  // 57-60
-  float center; // 61-64
-  int depScale; // 65-68
+  float lat1;      // 45-48
+  float lat2;      // 49-52
+  float lon;       // 53-56
+  float lonNWDegs; // 57-60
+  float latNWDegs; // 61-64
+  int depScale;    // 65-68
   // scaled to dxy_scale
   float gridCellLonDegs; // 69-72
   float gridCellLatDegs; // 73-76
