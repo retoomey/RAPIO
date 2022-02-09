@@ -1,4 +1,7 @@
 #!/bin/sh
+# ^^^^^ Ok if using sh we need to be POSIX compliant for things like dash on ubuntu
+#        See www.shellcheck.net with #!/bin/dash as prefix to verify script changes,
+#        That project is pretty cool.
 # Toomey Aug 2021
 # Generic help script in linux to wrap CMAKE installing for root and local folder installation
 # Basically MRMS/HMET and RAPIO we used to do autogen.sh --prefix=/path called from other scripts,
@@ -47,7 +50,7 @@ done
 
 # Check install directory location
 # I'm enforcing it preexisting at moment
-if [ ! -d $BUILDPREFIX ]; then
+if [ ! -d "$BUILDPREFIX" ]; then
   echo "Prefix directory $BUILDPREFIX doesn't exist."
   exit
 fi
@@ -71,10 +74,10 @@ else
   # a higher version that you want to use.
   # Of course if you're smart enough for this you probably already just typed it yourself
   CMAKEBINARY="cmake3"  
-  if ! type "$CMAKEBINARY" &> /dev/null
+  if ! type "$CMAKEBINARY" > /dev/null 2>&1
   then
     CMAKEBINARY="cmake"
-    if ! type "$CMAKEBINARY" &> /dev/null
+    if ! type "$CMAKEBINARY" > /dev/null 2>&1
     then
       echo "Couldn't find cmake or cmake3 in path for building, ask IT to install."
       exit
@@ -87,9 +90,9 @@ else
   if [ "$USESCANBUILD" = "true" ]; then
 
     # Check for scan-build and scan-view
-    if ! type "scan-build" &> /dev/null
+    if ! type "scan-build" > /dev/null 2>&1
     then
-      if ! type "scan-view" &> /dev/null
+      if ! type "scan-view" > /dev/null 2>&1
       then
         echo "Can't find scan-build and/or scan-view in your path from clang-analyzer tools."
         echo "You need this for the --usescanbuild option."
@@ -100,13 +103,13 @@ else
     extratext="scan-build "
   fi 
 
-  echo "CMAKE defaulting install prefix to $BUILDPREFIX."
+  echo "$CMAKEBINARY defaulting install prefix to $BUILDPREFIX."
   # This is just to do a fully 'fresh' build without the cache iff you call autogen.sh
   if test -f "./BUILD/CMakeCache.txt"; then
     echo "-- Removing CMakeCache.txt for a fresh build (autogen.sh)"
     rm ./BUILD/CMakeCache.txt
   fi
-  $CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX -S. -B./BUILD
+  $CMAKEBINARY -DCMAKE_INSTALL_PREFIX="$BUILDPREFIX" -S. -B./BUILD
   echo "Now type 'cd BUILD; ${extratext} make ' to compile $PROJECT."
 fi
 
