@@ -18,6 +18,8 @@ find_third_party(
   CURL
   HEADER curl.h
   LIBRARY curl
-  HEADER_PATHS ${CURL_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include/curl /usr/include/curl
-  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
+  # Ubuntu: libcurl4-gnutls-dev /usr/include/x86_64-linux-gnu/curl /usr/lib/x86_64-linux-gnu
+  # Fedora: libcurl-devel /usr/include/curl /usr/lib64
+  HEADER_PATHS ${CURL_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include/curl /usr/include/curl /usr/include/x86_64-linux-gnu/curl
+  LIBRARY_PATHS ${CURL_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
 )

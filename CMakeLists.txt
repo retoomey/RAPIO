@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Our package modules
-set(CMAKE_MODULE_PATH cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # My hack for a container system build.  I specify /usr in order
 # to install using system libraries and path.
@@ -97,6 +97,8 @@ find_package(Boost 1.71 REQUIRED COMPONENTS
 # of boost support the XZ, ZLIB, BZIP2 compressions (did they build with them?)
 find_package(ZLIB REQUIRED)
 find_package(BZip2 REQUIRED)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 ###########################################################################
 

@@ -206,7 +206,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 
 # Link libraries
 target_link_libraries(rapio
-  -lpthread
+  Threads::Threads
   ${CURL_LIBRARIES}
   ${UDUnits2_LIBRARIES}
   ${JASPER_LIBRARIES}
@@ -215,14 +215,6 @@ target_link_libraries(rapio
   ${BZip2_LIBRARIES}
   ${PNG_LIBRARIES}
   ${Boost_LIBRARIES}
-#  boost_system
-#  boost_log
-#  boost_log_setup
-#  boost_thread
-#  boost_filesystem
-#  boost_serialization
-#  boost_iostreams
-#  boost_timer
 )
 
 # Install the RAPIO headers

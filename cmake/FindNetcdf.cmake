@@ -17,6 +17,8 @@ find_third_party(
   Netcdf
   HEADER netcdf.h
   LIBRARY netcdf
+  # Ubuntu: /usr/include /usr/lib/x86_64-linux-gnu
+  # Fedora: /usr/include/ /usr/lib64
   HEADER_PATHS ${Netcdf_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include
-  LIBRARY_PATHS ${Netcdf_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
+  LIBRARY_PATHS ${Netcdf_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
 )

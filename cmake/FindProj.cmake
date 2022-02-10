@@ -23,6 +23,8 @@ find_third_party(
   Proj
   HEADER proj.h
   LIBRARY proj
+  # Ubuntu: libproj-dev /usr/include /usr/lib/x86_64-linux-gnu
+  # Fedora: proj-devel /usr/include/ /usr/lib64
   HEADER_PATHS ${Proj_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include
-  LIBRARY_PATHS ${Proj_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
+  LIBRARY_PATHS ${Proj_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
 )
