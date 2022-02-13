@@ -21,7 +21,10 @@ public:
   RadialSet();
 
   /** Public API for users to create a single band RadialSet quickly,
-   * note gates are padded with missing data as a grid. */
+   * using polar grid style.  RadialSets are typically small enough that
+   * we don't gain anything from variable radial length.
+   * Note that data is uninitialized/random memory since most algorithms
+   * you'll fill it in and it wastes time to double fill it. */
   static std::shared_ptr<RadialSet>
   Create(
     const std::string& TypeName,
@@ -31,12 +34,7 @@ public:
     const float      elevationDegrees,
     const float      firstGateDistanceMeters,
     const size_t     num_radials,
-    const size_t     num_gates,
-    const float      value = Constants::MissingData);
-
-  // ------------------------------------------------------
-  // Getting the 'data' of the 2d array...
-  // @see DataGrid for accessing the various raster layers
+    const size_t     num_gates);
 
   /** Return the location of the radar. */
   const LLH&
@@ -102,12 +100,16 @@ public:
 
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
-  getProjection(const std::string& layer = "primary") override;
+  getProjection(const std::string& layer = Constants::PrimaryDataName) override;
 
-  // ------------------------------------------------------------
-  // Methods for factories, etc. to fill in data post creation
-  // Normally you don't call these directly unless you are making
-  // a factory
+  /** Update global attribute list for RadialSet */
+  virtual void
+  updateGlobalAttributes(const std::string& encoded_type) override;
+
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
 
 private:
 
@@ -122,19 +124,7 @@ private:
     const float      elevationDegrees,
     const float      firstGateDistanceMeters,
     const size_t     num_radials,
-    const size_t     num_gates,
-    const float      fill = Constants::MissingData);
-
-public:
-
-  /** Update global attribute list for RadialSet */
-  virtual void
-  updateGlobalAttributes(const std::string& encoded_type) override;
-
-  /** Sync any internal stuff to data from current attribute list,
-   * return false on fail. */
-  virtual bool
-  initFromGlobalAttributes() override;
+    const size_t     num_gates);
 
 protected:
   /** The elevation angle of radial set in degrees */

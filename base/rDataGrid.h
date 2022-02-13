@@ -21,6 +21,15 @@ enum DataArrayType {
 };
 
 /* Wraps a named array of data with metadata
+ * So we have a collection of attributes as well
+ * as one of the Array<T> classes
+ *
+ * This big thing here is that I'm trying to hide the
+ * array template type stuff, since DataGrid can hold
+ * a generic list of different templated arrays.
+ * Treating it generic helps with reader/writer code.
+ *
+ * Is there a better design?
  *
  * @author Robert Toomey
  */
@@ -32,9 +41,27 @@ public:
   DataArray(const std::string& name, const std::string& units,
     const DataArrayType& type, const std::vector<size_t>& dimindexes)
     : NamedAny(name), myAttributes(std::make_shared<DataAttributeList>()), myUnits(units), myStorageType(type),
-    myDimIndexes(dimindexes)
+    myDimIndexes(dimindexes), myRawArrayPointer(nullptr)
   {
     myAttributes->put<std::string>("Units", units);
+  }
+
+  // The boost any is nice for general attributes, but since we store only ONE multi array
+  // we'll just keep a simple shared_ptr to the non-templated interface.
+  template <typename T>
+  void
+  setArray(std::shared_ptr<ArrayBase> keep, std::shared_ptr<T> derived)
+  {
+    myArray = keep;
+    myRawArrayPointer = derived->getRawDataPointer();
+  }
+
+  /** Get a raw void pointer to array data. Used by reader/writers.
+   * You probably don't want this, see the example algorithm.*/
+  void *
+  getRawDataPointer()
+  {
+    return myRawArrayPointer;
   }
 
   /** Get the DataArrayType of this data array */
@@ -52,12 +79,6 @@ public:
   /** Set the dimension reference */
   void
   setDimIndexes(const std::vector<size_t>& vin){ myDimIndexes = vin; }
-
-  /** Get a raw void pointer to array data. Used by reader/writers.
-   * You probably don't want this, see the example algorithm.
-   * FIXME: Maybe better as an optional */
-  void *
-  getRawDataPointer();
 
   /** Get attributes list.  Used by reader/writers. */
   std::shared_ptr<DataAttributeList>
@@ -79,6 +100,10 @@ public:
     myAttributes->put<T>(name, value);
   }
 
+  /** Get the array as typeless for generic usage */
+  std::shared_ptr<ArrayBase>
+  getNewArray(){ return myArray; }
+
 protected:
 
   /** The data attribute list for this data */
@@ -92,37 +117,53 @@ protected:
 
   /** The index number of dimensions of the data */
   std::vector<size_t> myDimIndexes;
+
+  // General internal access methods where we remove type
+
+  /** The Array we store (type hidden here) */
+  std::shared_ptr<ArrayBase> myArray;
+
+  /** A raw pointer to our last set array. Valid only
+   * when we are. Safest would be a weak-ref might do that
+   * later on.  You should be using getNArray functions with auto */
+  void * myRawArrayPointer;
 };
 
 /** Stores a dimension of the grid space,
- * curiously like a netcdf dimension.
- * Use this or just two vectors.  Still debating...*/
+ * curiously like a netcdf dimension. */
 class DataGridDimension : public Data {
 public:
   DataGridDimension(const std::string& name, size_t aSize) : myName(name), mySize(aSize){ }
 
+  /** Return the number of dimensions */
   size_t
   size(){ return mySize; }
 
+  /** Get the name of this dimension */
   std::string
   name(){ return myName; }
 
 protected:
+
+  /** The name of the dimension size */
   std::string myName;
+
+  /** The number of dimensions */
   size_t mySize;
 };
 
 /** DataGrid acts as a name to storage database.
  * This has common access/memory storage for multiband RadialSets
  * and LatLonGrids, etc.
- *
- * ALPHA: first pass adding multiband ability
+ * It can generically store general netcdf files
+ * FIXME: Handle netcdf groups (I currently don't use any
+ * grouped data)
  *
  * @author Robert Toomey */
 class DataGrid : public DataType {
 public:
 
-  /** Resize the dimensions of array objects */
+  /** Declare the dimensions of array objects */
   void
   declareDims(const std::vector<size_t>& dimsizes,
     const std::vector<std::string>     & dimnames);
@@ -135,14 +176,14 @@ public:
 
   /** Get back object so can call methods on it */
   inline std::shared_ptr<Array<float, 1> >
-  getFloat1D(const std::string& name)
+  getFloat1D(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<float, 1> >(name);
   }
 
   /** Get back primary (first) grid reference */
   inline boost::multi_array<float, 1>&
-  getFloat1DRef(const std::string& name)
+  getFloat1DRef(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<float, 1> >(name)->ref();
   }
@@ -153,14 +194,14 @@ public:
 
   /** Get a pointer data for quick transversing */
   inline std::shared_ptr<Array<int, 1> >
-  getInt1D(const std::string& name)
+  getInt1D(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<int, 1> >(name);
   }
 
   /** Get back primary (first) grid reference */
   inline boost::multi_array<int, 1>&
-  getInt1DRef(const std::string& name)
+  getInt1DRef(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<int, 1> >(name)->ref();
   }
@@ -173,41 +214,42 @@ public:
 
   /** Get back object so can call methods on it */
   inline std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& name)
+  getFloat2D(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<float, 2> >(name);
   }
 
   /** Get ref to a named 2d array */
   inline boost::multi_array<float, 2>&
-  getFloat2DRef(const std::string& name)
+  getFloat2DRef(const std::string& name = Constants::PrimaryDataName)
   {
     return get<Array<float, 2> >(name)->ref();
-  }
-
-  /** Get back primary (first) grid */
-  inline std::shared_ptr<Array<float, 2> >
-  getFloat2D()
-  {
-    return myNodes[0]->getSP<Array<float, 2> >();
-  }
-
-  /** Get back primary (first) grid reference */
-  inline boost::multi_array<float, 2>&
-  getFloat2DRef()
-  {
-    return myNodes[0]->getSP<Array<float, 2> >()->ref();
   }
 
   /** Add named float data with initial size and value */
   std::shared_ptr<Array<float, 2> >
   addFloat2D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
 
-  /** Replace missing/range in the primary 2D data grid */
-  static void
-  replaceMissing(std::shared_ptr<Array<float, 2> > f, const float missing, const float range);
-  // ----------------------------------------------------------------------
-  //
+  // 3D stuff ----------------------------------------------------------
+
+  /** Get back object so can call methods on it */
+  inline std::shared_ptr<Array<float, 3> >
+  getFloat3D(const std::string& name = Constants::PrimaryDataName)
+  {
+    return get<Array<float, 3> >(name);
+  }
+
+  /** Get ref to a named 2d array */
+  inline boost::multi_array<float, 3>&
+  getFloat3DRef(const std::string& name = Constants::PrimaryDataName)
+  {
+    return get<Array<float, 3> >(name)->ref();
+  }
+
+  /** Add named float data with initial size and value */
+  std::shared_ptr<Array<float, 3> >
+  addFloat3D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
+
 public:
 
   /** Return dimensions */
@@ -231,7 +273,8 @@ public:
     std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<T>(aT));
     auto newNode = std::make_shared<DataArray>(name, units, type, dims);
 
-    newNode->set(ptr);
+    // Set with type security
+    newNode->setArray(ptr, ptr);
 
     // Add or replace the named node
     int at = getNodeIndex(name);
@@ -254,7 +297,11 @@ public:
 
     for (auto i:myNodes) {
       if (i->getName() == name) {
-        return i->getSP<T>();
+        // Ok we have to cast the general interface to the specific template class
+        //
+        std::shared_ptr<T> derived = std::dynamic_pointer_cast<T>(i->getNewArray());
+        return derived;
+        // return i->getSP<T>();
       }
       count++;
     }

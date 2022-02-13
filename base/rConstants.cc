@@ -37,6 +37,7 @@ const std::string Constants::FilenameDateTime = "FilenameDateTime";
 
 
 // Datatype reading/writing
+const std::string Constants::PrimaryDataName("primary");
 const std::string Constants::TypeName("TypeName");
 const std::string Constants::sDataType("DataType");
 const std::string Constants::Units("Units");

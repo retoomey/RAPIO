@@ -77,6 +77,7 @@ set(HEADER_FILES
   rDataTypeHistory.h
   rElevationVolume.h
   rLatLonGrid.h
+  rLatLonHeightGrid.h
   rFileIndex.h
   rFMLIndex.h
   rFMLRecordNotifier.h
@@ -159,6 +160,7 @@ set(SOURCE_FILES
   rBinaryTable.cc
   rDataGrid.cc
   rLatLonGrid.cc
+  rLatLonHeightGrid.cc
   rRadialSet.cc
   rRadialSetLookup.cc
   rDataTypeHistory.cc

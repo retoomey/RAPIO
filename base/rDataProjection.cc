@@ -3,6 +3,7 @@
 #include "rRadialSet.h"
 #include "rRadialSetLookup.h"
 #include "rLatLonGrid.h"
+#include "rLatLonHeightGrid.h"
 #include "rStrings.h"
 #include "rProject.h"
 
@@ -11,6 +12,9 @@
 using namespace rapio;
 using namespace std;
 
+// FIXME: Bunch of classes here...I'm still finalized how this part works
+// and I want to refactor before dividing up into final files/classes.
+//
 std::shared_ptr<ProjLibProject> DataProjection::theWebMercToLatLon = nullptr;
 
 ostream&
@@ -309,6 +313,21 @@ LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid 
   myNumLons    = l.getNumLons();
 }
 
+LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer, LatLonHeightGrid * owner)
+{
+  // Grab everything we need from the LatLonGrid
+  // Note changing LatLonGrid, etc. will invalidate the projection
+  auto& l = *owner;
+
+  my3DLayer    = l.getFloat3D(layer.c_str());
+  myLatNWDegs  = l.myLocation.getLatitudeDeg();
+  myLonNWDegs  = l.myLocation.getLongitudeDeg();
+  myLatSpacing = l.myLatSpacing;
+  myLonSpacing = l.myLonSpacing;
+  myNumLats    = l.getNumLats();
+  myNumLons    = l.getNumLons();
+}
+
 double
 LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
 {
@@ -328,8 +347,42 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::st
   return data[int(x)][int(y)];
 }
 
+double
+LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
+{
+  // Try to do this quick and efficient, called a LOT
+  const double x = (myLatNWDegs - latDegs) / myLatSpacing;
+
+  if ((x < 0) || (x > myNumLats)) {
+    return Constants::MissingData;
+  }
+  const double y = (lonDegs - myLonNWDegs) / myLonSpacing;
+
+  if ((y < 0) || (y > myNumLons)) {
+    return Constants::MissingData;
+  }
+
+  // FIXME: see this actually returns data and I think we could just do coordinates instead..
+  // this would allow HeightGrid and Grid to be merged easily
+  const auto& data = my3DLayer->ref();
+
+  return data[int(x)][int(y)][0]; // hardcoded Z layer at moment for POC
+}
+
 bool
 LatLonGridProjection::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // location is the top left, find the absolute center (for x, y > 0)
+  const auto lonc = myLonNWDegs + (myLonSpacing * myNumLons / 2.0);
+  const auto latc = myLatNWDegs - (myLatSpacing * myNumLats / 2.0);
+
+  Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
+  return true;
+}
+
+bool
+LatLonHeightGridProjection::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
   float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
 {
   // location is the top left, find the absolute center (for x, y > 0)
@@ -354,7 +407,60 @@ LatLonGridProjection::LLCoverageFull(size_t& numRows, size_t& numCols,
 }
 
 bool
+LatLonHeightGridProjection::LLCoverageFull(size_t& numRows, size_t& numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  numRows      = myNumLats;
+  numCols      = myNumLons;
+  topDegs      = myLatNWDegs;
+  leftDegs     = myLonNWDegs;
+  deltaLatDegs = -myLatSpacing;
+  deltaLonDegs = myLonSpacing;
+  return true;
+}
+
+bool
 LatLonGridProjection::LLCoverageTile(
+  const size_t zoomLevel, const size_t& numRows, const size_t& numCols,
+  const float centerLatDegs, const float centerLonDegs,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // Zoom level is based on the earth size
+  // https://wiki.openstreetmap.org/wiki/Zoom_levels
+  // Open street map uses earth radius of 6372.7982 km
+
+  // Use half degree calculation as the 'degreeout'
+  // Ok this should be correct even for spherical mercator..since the east-west
+  // matches geodetic.  North-south is where the stretching is.
+  const double degWidth  = 360.0 / pow(2, zoomLevel); // lol I wrote 2 ^ zoomlevel which is not c++
+  const double halfDeg   = degWidth / 2.0;
+  const double degreeOut = halfDeg;
+
+  //  Project::createLatLonGrid(centerLatDegs, centerLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs,
+  //    deltaLonDegs);
+  auto lon = centerLonDegs;
+
+  // These 'should' project back to x1/x2
+  leftDegs = lon - degreeOut;
+  auto rightDegs = lon + degreeOut;
+
+  // All these are meaningless I think...we need to project left and
+  // right to X, then use _that_ width I think
+  auto width = rightDegs - leftDegs;
+
+  deltaLonDegs = width / numCols;
+
+  // To keep aspect ratio per cell, use deltaLon to back calculate
+  deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
+  auto lat = centerLatDegs;
+
+  topDegs = lat - (deltaLatDegs * numRows / 2.0);
+
+  return true;
+} // LatLonGridProjection::LLCoverageTile
+
+bool
+LatLonHeightGridProjection::LLCoverageTile(
   const size_t zoomLevel, const size_t& numRows, const size_t& numCols,
   const float centerLatDegs, const float centerLonDegs,
   float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)

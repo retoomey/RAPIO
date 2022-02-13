@@ -29,8 +29,7 @@ RadialSet::Create(
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
   const size_t     num_radials,
-  const size_t     num_gates,
-  const float      value)
+  const size_t     num_gates)
 {
   auto r = std::make_shared<RadialSet>();
 
@@ -38,30 +37,7 @@ RadialSet::Create(
     LogSevere("Couldn't create RadialSet.\n");
   } else {
     // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
-    r->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters, num_radials, num_gates,
-      value);
-
-    // FIXME: Do filling of default value here...
-
-    /*
-     * auto array = radialSet.getFloat2D("primary");
-     * auto& data = array->ref();
-     * for (size_t i = 0; i < num_radials; ++i) {
-     *  for (size_t j = 0; j < num_gates; ++j) {
-     *    azimuths[i]   = start_az;
-     *    beamwidths[i] = beam_width;
-     *    gatewidths[i] = gate_width;
-     *    data[i][j] = value;
-     *  }
-     * }
-     * auto azimuthsA   = radialSet.getFloat1D("Azimuth");
-     * auto& azimuths   = azimuthsA->ref();
-     * auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
-     * auto& beamwidths = beamwidthsA->ref();
-     * auto gatewidthsA = radialSet.getFloat1D("GateWidth");
-     * auto& gatewidths = gatewidthsA->ref();
-     *
-     */
+    r->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters, num_radials, num_gates);
   }
 
   return r;
@@ -76,8 +52,7 @@ RadialSet::init(
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
   const size_t     num_radials,
-  const size_t     num_gates,
-  const float      fill)
+  const size_t     num_gates)
 {
   /** Declare/update the dimensions */
   setTypeName(TypeName);
@@ -88,7 +63,7 @@ RadialSet::init(
   myFirstGateDistanceM = firstGateDistanceMeters;
 
   declareDims({ num_radials, num_gates }, { "Azimuth", "Gate" });
-  addFloat2D("primary", Units, { 0, 1 });
+  addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
   // These are the only ones we force...
 

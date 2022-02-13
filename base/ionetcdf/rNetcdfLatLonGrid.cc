@@ -66,8 +66,7 @@ NetcdfLatLonGrid::getTestObject(
     lat_spacing,
     lon_spacing,
     num_lats,
-    num_lons,
-    7.0);
+    num_lons);
 
   return (llgridsp);
 }

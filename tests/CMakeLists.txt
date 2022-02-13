@@ -25,6 +25,15 @@ target_link_libraries(testrapio
   rapio
 )
 
+add_executable(rTestNetcdf
+  rTestNetcdf.cc
+)
+
+# Link to other libraries
+target_link_libraries(rTestNetcdf
+  rapio
+)
+
 # Files we need in the build folder
 configure_file(runtests.sh runtests.sh)
 configure_file(testxml.xml testxml.xml)

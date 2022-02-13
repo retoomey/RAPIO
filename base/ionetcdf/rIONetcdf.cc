@@ -1041,7 +1041,7 @@ IONetcdf::declareGridVars(
     }
 
     // Primary data is the data type of the file
-    if (theName == "primary") {
+    if (theName == Constants::PrimaryDataName) {
       theName = typeName;
     }
 

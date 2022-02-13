@@ -147,5 +147,43 @@ public:
    */
   static bool
   deleteFile(const std::string& file);
+
+  /** Swap bytes for a given type for endian change */
+  template <class T>
+  static void
+  byteswap(T &data)
+  {
+    size_t N = sizeof( T );
+
+    if (N == 1) { return; }
+    size_t mid = floor(N / 2); // Even 4 --> 2 Odd 5 --> 2 (middle is already good)
+
+    char * char_data = reinterpret_cast<char *>( &data );
+
+    for (size_t i = 0; i < mid; i++) { // swap in place
+      const char temp = char_data[i];
+      char_data[i]         = char_data[N - i - 1];
+      char_data[N - i - 1] = temp;
+    }
+  }
+
+  /** Check endianness  */
+  static bool
+  isBigEndian()
+  {
+    // Humm even better, set a global variable on start up I think...
+    static bool firstTime = true;
+    static bool big       = false;
+
+    if (!firstTime) {
+      union {
+        uint32_t i;
+        char     c[4];
+      } bint = { 0x01020304 };
+      big       = (bint.c[0] == 1);
+      firstTime = false;
+    }
+    return big;
+  }
 };
 }

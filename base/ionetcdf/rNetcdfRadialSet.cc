@@ -81,7 +81,7 @@ NetcdfRadialSet::getTestObject(
   auto gatewidthsA = radialSet.getFloat1D("GateWidth");
   auto& gatewidths = gatewidthsA->ref();
 
-  auto array = radialSet.getFloat2D("primary");
+  auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
 
   for (size_t i = 0; i < num_radials; ++i) {

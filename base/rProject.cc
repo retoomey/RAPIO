@@ -271,7 +271,7 @@ void
 ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   std::shared_ptr<LatLonGrid>                                  out)
 {
-  auto data2DFA = out->getFloat2D("primary"); // size could be nice right?
+  auto data2DFA = out->getFloat2D(Constants::PrimaryDataName); // size could be nice right?
   auto& data2DF = data2DFA->ref();
 
   // ----------------------------------------------------------

@@ -80,6 +80,9 @@ public:
 
   // Constants for reading/writing attributes
 
+  /** Used to read first/primary layer of DataTypes */
+  static const std::string PrimaryDataName;
+
   /** What is the TypeName is present in this file? */
   static const std::string TypeName;
 

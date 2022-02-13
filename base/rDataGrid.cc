@@ -8,36 +8,6 @@
 using namespace rapio;
 using namespace std;
 
-void *
-DataArray::getRawDataPointer()
-{
-  // Bypass all type safety for reader/writer convenience
-  // Returning pointer to any of possible stored array types
-  // Sadly boost etc doesn't seem to have a common superclass,
-  // maybe we could rework this.
-  // FIXME: maybe keep a weak ref copy of the pointer on creation
-  const size_t size = myDimIndexes.size();
-
-  if (myStorageType == FLOAT) {
-    if (size == 2) {
-      // return (getSP<RAPIO_2DF>()->data());
-      return (getSP<Array<float, 2> >()->getRawDataPointer());
-    }
-    if (size == 1) {
-      // return (getSP<RAPIO_1DF>()->data());
-      return (getSP<Array<float, 1> >()->getRawDataPointer());
-    }
-  }
-  if (myStorageType == INT) {
-    if (size == 1) {
-      // return (getSP<RAPIO_1DI>()->data());
-      return (getSP<Array<int, 1> >()->getRawDataPointer());
-    }
-  }
-
-  return nullptr;
-}
-
 std::shared_ptr<DataAttributeList>
 DataArray::getAttributes()
 {
@@ -72,7 +42,11 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
     myDims.push_back(DataGridDimension(dimnames[zz], dimsizes[zz]));
   }
 
-  // Resize all arrays to given dimensions....
+  // Resize all arrays to given dimensions...this only gets
+  // calls if someone is trying to 'expand' or reduce the size of
+  // our stuff.  I've tested some but not 100% hammered it yet
+  // I probably need to design a DataGrid test in tests for this
+  // purpose.
   for (auto l:myNodes) {
     auto i    = l->getDimIndexes();
     auto name = l->getName();
@@ -86,28 +60,8 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
     for (size_t d = 0; d < size; ++d) {
       sizes[d] = dimsizes[i[d]];
     }
-
-    // Since we want convenience classes and well boost
-    // arrays don't have a common superclass, some
-    // type checking here.  FIXME: better way?
-    if (size == 1) {
-      if (type == FLOAT) {
-        auto f = l->getSP<Array<float, 1> >();
-        if (f != nullptr) {
-          f->resize({ sizes[0] });
-        }
-      } else if (type == INT) {
-        auto f = l->getSP<Array<int, 1> >();
-        if (f != nullptr) {
-          f->resize({ sizes[0] });
-        }
-      }
-    } else if (size == 2) {
-      auto f = l->getSP<Array<float, 2> >();
-      if (f != nullptr) {
-        f->resize({ sizes[0], sizes[1] });
-      }
-    }
+    auto array = l->getNewArray();
+    array->resize(sizes);
   }
 } // DataGrid::declareDims
 
@@ -154,35 +108,23 @@ DataGrid::addFloat2D(const std::string& name,
   return a;
 }
 
-void
-DataGrid::replaceMissing(std::shared_ptr<Array<float, 2> > f, const float missing, const float range)
+// 3D stuff ----------------------------------------------------------
+//
+
+std::shared_ptr<Array<float, 3> >
+DataGrid::addFloat3D(const std::string& name,
+  const std::string& units, const std::vector<size_t>& dimindexes)
 {
-  if (f == nullptr) {
-    LogSevere("Replace missing called on null pointer\n");
-    return;
-  }
-  // #ifdef BOOST_ARRAY
-  // Just view as 1D to fill it...
-  LogSevere(">>>REPLACE MISSING NOT IMPLEMENTED\n");
+  // Map index to dimension sizes
+  const auto x = myDims[dimindexes[0]].size();
+  const auto y = myDims[dimindexes[1]].size();
+  const auto z = myDims[dimindexes[2]].size();
 
-  /*
-   * boost::multi_array_ref<float, 1> a_ref(f->data(), boost::extents[f->num_elements()]);
-   * for (size_t i = 0; i < a_ref.num_elements(); ++i) {
-   *  float * v = &a_ref[i];
-   * }
-   */
+  // We always add/replace since index order could change or it could be different
+  // type, etc.  Maybe possibly faster by updating over replacing
+  auto a = add<Array<float, 3> >(name, units, Array<float, 3>({ x, y, z }), FLOAT, dimindexes);
 
-  /*
-   #else
-   * for (auto& i:*f) {
-   *  float * v = &i;
-   #endif
-   *  if (*v == missing) {
-   * v = Constants::MissingData;
-   *  } else if (*v == range) {
-   * v = Constants::RangeFolded;
-   *  }
-   */
+  return a;
 }
 
 namespace {

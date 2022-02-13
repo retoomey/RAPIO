@@ -85,6 +85,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
     // Declare dimensions in data structure
     dataGridSP->declareDims(dimsizes, dimnames);
+
     auto dims = dataGridSP->getDims();
 
     // ------------------------------------------------------------
@@ -151,7 +152,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       if (aTypeName == name) {
         // Map to primary in internal structure in case TypeName
         // changes.
-        arrayName = "primary";
+        arrayName = Constants::PrimaryDataName;
       }
 
       // If there's a units attribute it will replace later in general pull

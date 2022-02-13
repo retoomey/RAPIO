@@ -1,8 +1,11 @@
 #include "rIOHmrg.h"
 
 #include "rIOURL.h"
+#include "rOS.h"
 #include "rRadialSet.h"
 #include "rLatLonGrid.h"
+#include "rLatLonHeightGrid.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 
@@ -43,44 +46,6 @@ isMRMSValidYear(int year)
   return (!((year < 1900) || (year > 2500)));
 }
 
-// Check endianness (OS) function probably
-bool
-is_big_endian()
-{
-  // Humm even better, set a global variable on start up I think...
-  static bool firstTime = true;
-  static bool big       = false;
-
-  if (!firstTime) {
-    union {
-      uint32_t i;
-      char     c[4];
-    } bint = { 0x01020304 };
-    big       = (bint.c[0] == 1);
-    firstTime = false;
-  }
-  return big;
-}
-
-// Swap bytes for a given type for endian change
-template <class T>
-inline void
-byteswap(T &data)
-{
-  size_t N = sizeof( T );
-
-  if (N == 1) { return; }
-  size_t mid = floor(N / 2); // Even 4 --> 2 Odd 5 --> 2 (middle is already good)
-
-  char * char_data = reinterpret_cast<char *>( &data );
-
-  for (size_t i = 0; i < mid; i++) { // swap in place
-    const char temp = char_data[i];
-    char_data[i]         = char_data[N - i - 1];
-    char_data[N - i - 1] = temp;
-  }
-}
-
 /** Read a scaled integer with correct endian and return as a float */
 float
 readScaledInt(gzFile fp, float scale)
@@ -88,8 +53,8 @@ readScaledInt(gzFile fp, float scale)
   int temp;
 
   ERRNO(gzread(fp, &temp, sizeof(int)));
-  if (is_big_endian()) {
-    byteswap(temp); // Data always written little endian
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
   }
   return float(temp) / scale;
 }
@@ -101,8 +66,8 @@ readInt(gzFile fp)
   int temp;
 
   ERRNO(gzread(fp, &temp, sizeof(int)));
-  if (is_big_endian()) {
-    byteswap(temp); // Data always written little endian
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
   }
   return temp;
 }
@@ -114,8 +79,8 @@ readFloat(gzFile fp)
   float temp;
 
   ERRNO(gzread(fp, &temp, sizeof(float)));
-  if (is_big_endian()) {
-    byteswap(temp); // Data always written little endian
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
   }
   return temp;
 }
@@ -179,7 +144,7 @@ IOHmrg::readRawDataType(const URL& url)
       break;
     }
     unsigned int firstYear = (v[0] | (v[1] << 8) | (v[2] << 16) | (v[3] << 24)); // little endian
-    if (is_big_endian()) { byteswap(firstYear); }
+    if (OS::isBigEndian()) { OS::byteswap(firstYear); }
     const bool validYear = isMRMSValidYear(firstYear);
 
     // --------------------------------------------------------------------------
@@ -298,10 +263,10 @@ IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
   auto gatewidthsA = radialSet.getFloat1D("GateWidth");
   auto& gatewidths = gatewidthsA->ref();
 
-  auto array = radialSet.getFloat2D("primary");
+  auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
 
-  const bool needSwap = is_big_endian(); // data is little
+  const bool needSwap = OS::isBigEndian(); // data is little
   // size_t countm = 0;
   size_t rawBufferIndex = 0;
 
@@ -320,7 +285,7 @@ IOHmrg::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
     gatewidths[i] = gateSpacingMeters;
     for (size_t j = 0; j < num_gates; ++j) {
       short int v = rawBuffer[rawBufferIndex++];
-      if (needSwap) { byteswap(v); }
+      if (needSwap) { OS::byteswap(v); }
       if (v == dataUnavailable) {
         data[i][j] = Constants::DataUnavailable;
       } else if (v == dataMissing) {
@@ -362,22 +327,6 @@ IOHmrg::readGriddedType(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
     LogInfo("   Dimensions: " << h.num_x << " " << h.num_y << " " << h.num_z << "\n");
   }
 
-  // LatLonGrid or LatLonHeightGrid?
-  // I could see 'some' situations where we'd want to force a LatLonHeightGrid of '1',
-  // we can add settings in the xml later for this...
-  if (h.num_z == 1) {
-    LogInfo("   Z dimension of 1, creating LatLonGrid by default.\n");
-    return readLatLonGrid(fp, h, debug);
-  } else {
-    LogInfo("   Z dimension of " << h.num_z << " creating LatLonHeightGrid..\n");
-    return readLatLonHeightGrid(fp, h, debug);
-  }
-  return nullptr;
-} // IOHmrg::readGriddedType
-
-std::shared_ptr<DataType>
-IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
-{
   h.projection = readChar(fp, 4); // 37-40
   // Perhaps LL is the only one actually used, we can warn on others though
   // "    " proj1=0;
@@ -393,6 +342,26 @@ IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
   h.lonNWDegs = readScaledInt(fp, h.map_scale); // 57-60
   h.latNWDegs = readScaledInt(fp, h.map_scale); // 61-64
 
+  // LatLonGrid or LatLonHeightGrid?
+  // I could see 'some' situations where we'd want to force a LatLonHeightGrid of '1',
+  // we can add settings in the xml later for this...
+  return readLatLonGrid(fp, h, debug);
+
+  /*
+   * if (h.num_z == 1) {
+   * LogInfo("   Z dimension of 1, creating LatLonGrid by default.\n");
+   * return readLatLonGrid(fp, h, debug);
+   * } else {
+   * LogInfo("   Z dimension of " << h.num_z << " creating LatLonHeightGrid..\n");
+   * return readLatLonHeightGrid(fp, h, debug);
+   * }
+   */
+  return nullptr;
+} // IOHmrg::readGriddedType
+
+std::shared_ptr<DataType>
+IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
+{
   // Manually scale since scale after the values
   const int xy_scale         = readInt(fp); // 65-68 Deprecated, used anywhere?
   const int temp1            = readInt(fp); // 69-72
@@ -426,9 +395,11 @@ IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
   std::string varName = readChar(fp, 20);
   std::string varUnit = readChar(fp, 6);
 
+  // FIXME: MAKE THE #(@*#%@#(% TABLE lol...soon..SOOON
   if (varName == "CREF") { // example use Reflectivy colormap, etc. FIXME: make table
     varName = "MergedReflectivityComposite";
   }
+  varName = "MergedReflectivityComposite";
 
   // Common code here with Radial
   // Scale for scaling data values
@@ -451,11 +422,7 @@ IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
   }
 
   // Common code here with Radial
-  int count = h.num_x * h.num_y;
   std::vector<short int> rawBuffer;
-
-  rawBuffer.resize(count);
-  ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
 
   if (debug) {
     LogInfo("   Projection: '" << h.projection << "'\n"); // always "LL  "?
@@ -478,24 +445,8 @@ IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
   h.latNWDegs - .5 * (latSpacingDegs);
   LLH location(h.latNWDegs, h.lonNWDegs, heightMeters[0] / 1000.0); // takes kilometers...
 
-  // Create a LatLonGrid using the data
-  auto latLonGridSP = LatLonGrid::Create(
-    varName,
-    varUnit,
-    location,
-    time,
-    latSpacingDegs,
-    lonSpacingDegs,
-    h.num_y, // num_lats
-    h.num_x  // num_lons
-  );
-
-  LatLonGrid& grid = *latLonGridSP;
-
-  grid.setReadFactory("netcdf"); // Default would call us to write
-
   // Fill in the data here
-  const bool needSwap = is_big_endian(); // data is little
+  const bool needSwap = OS::isBigEndian(); // data is little
   // size_t countm = 0;
   size_t rawBufferIndex = 0;
 
@@ -504,35 +455,130 @@ IOHmrg::readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
   const int dataMissing     = dataMissingValue * dataScale;
   const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
 
-  // Grid 2d primary
-  auto array = grid.getFloat2D("primary");
-  auto& data = array->ref();
+  // Lol I'm making a mess right now, all this needs to clean up at some point
+  if (h.num_z == 1) {
+    LogInfo("HMRG reader: --Single layer LatLonGrid--\n");
 
-  // NOTE: flipped order from RadialSet array if you try to merge the code
-  for (size_t j = 0; j < h.num_y; ++j) {
-    const size_t jflip = h.num_y - j - 1;
-    for (size_t i = 0; i < h.num_x; ++i) {       // row order for the data, so read in order
-      short int v = rawBuffer[rawBufferIndex++]; // we could improve speed here and the swap
-      if (needSwap) { byteswap(v); }
-      if (v == dataUnavailable) {
-        data[jflip][i] = Constants::DataUnavailable;
-      } else if (v == dataMissing) {
-        data[jflip][i] = Constants::MissingData;
-        // countm++;
-      } else {
-        data[jflip][i] = (float) v / (float) dataScale;
+    // Read in the data from file
+    int count = h.num_x * h.num_y;
+    rawBuffer.resize(count);
+    ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+    // Create a LatLonGrid using the data
+    auto latLonGridSP = LatLonGrid::Create(
+      varName,
+      varUnit,
+      location,
+      time,
+      latSpacingDegs,
+      lonSpacingDegs,
+      h.num_y, // num_lats
+      h.num_x  // num_lons
+    );
+
+    LatLonGrid& grid = *latLonGridSP;
+
+    grid.setReadFactory("netcdf"); // Default would call us to write
+
+
+    // Grid 2d primary
+    auto array = grid.getFloat2D(Constants::PrimaryDataName);
+    auto& data = array->ref();
+
+    // NOTE: flipped order from RadialSet array if you try to merge the code
+    for (size_t j = 0; j < h.num_y; ++j) {
+      const size_t jflip = h.num_y - j - 1;
+      for (size_t i = 0; i < h.num_x; ++i) {       // row order for the data, so read in order
+        short int v = rawBuffer[rawBufferIndex++]; // we could improve speed here and the swap
+        if (needSwap) { OS::byteswap(v); }
+        if (v == dataUnavailable) {
+          data[jflip][i] = Constants::DataUnavailable;
+        } else if (v == dataMissing) {
+          data[jflip][i] = Constants::MissingData;
+          // countm++;
+        } else {
+          data[jflip][i] = (float) v / (float) dataScale;
+        }
       }
     }
-  }
-  // LogInfo("    Found " << countm << " missing values\n");
+    // LogInfo("    Found " << countm << " missing values\n");
+    return latLonGridSP;
+  } else {
+    LogInfo("HMRG reader: --Multi layer LatLonGrid--\n");
+    // for(size_t i=0; i<heightMeters.size(); i++){
+    //	  LogSevere("HEIGHT "<<i<<": " << heightMeters[i] << "\n");
+    // }
 
-  return latLonGridSP;
+    // Read in the data from file
+    int count = h.num_x * h.num_y * h.num_z;
+    rawBuffer.resize(count);
+    ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+
+    // Create a LatLonGrid using the data
+    auto latLonHeightGridSP = LatLonHeightGrid::Create(
+      varName,
+      varUnit,
+      location,
+      time,
+      latSpacingDegs,
+      lonSpacingDegs,
+      h.num_y, // num_lats
+      h.num_x, // num_lons
+      h.num_z  // num layers
+    );
+
+    LatLonHeightGrid& grid = *latLonHeightGridSP;
+    grid.setReadFactory("netcdf"); // Default would call us to write
+
+    /*
+     * ProcessTimer timeIt("How long to do it as 2D?");
+     * for(size_t i=0; i < h.num_z; i++){
+     *  // Bleh gonna be slower this way can already tell.
+     *  // the 3D array will be faster.   Maybe we create a LatLonGridView class with
+     *  // access to a LatLonGrid and/or a data3d...
+     * auto test = latLonHeightGridSP->getLatLonGrid(i);
+     * LogSevere(i << " getting LatLonGrid...\n");
+     * }
+     * //grid.setReadFactory("netcdf"); // Default would call us to write
+     * LogSevere("Timer at this point: " << timeIt << "\n");
+     *  return latLonHeightGridSP;
+     */
+
+    // First 'guess' using 3D array directly???
+    auto array = grid.getFloat3D(Constants::PrimaryDataName);
+    auto& data = array->ref();
+
+    // NOTE: flipped order from RadialSet array if you try to merge the code
+    size_t Z = 0;
+
+    // This is same as the LatLonGrid code I'm hoping...
+    // well except the data array reference.  This gonna be slower than W2
+    // because the data ordering is different so we can't just directly
+    // push into memory.
+    for (size_t j = 0; j < h.num_y; ++j) {
+      const size_t jflip = h.num_y - j - 1;
+      for (size_t i = 0; i < h.num_x; ++i) {       // row order for the data, so read in order
+        short int v = rawBuffer[rawBufferIndex++]; // we could improve speed here and the swap
+        if (needSwap) { OS::byteswap(v); }
+        if (v == dataUnavailable) {
+          data[jflip][i][Z] = Constants::DataUnavailable;
+        } else if (v == dataMissing) {
+          data[jflip][i][Z] = Constants::MissingData;
+          // countm++;
+        } else {
+          data[jflip][i][Z] = (float) v / (float) dataScale;
+        }
+      }
+    }
+
+    return latLonHeightGridSP;
+  }
+
+  return nullptr;
 } // IOHmrg::readLatLonGrid
 
 std::shared_ptr<DataType>
 IOHmrg::readLatLonHeightGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug)
 {
-  LogSevere(" TODO: Implement LatLonHeightGrid class.\n");
   return nullptr;
 }
 

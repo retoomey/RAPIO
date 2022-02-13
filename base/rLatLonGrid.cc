@@ -26,10 +26,9 @@ LatLonGrid::Create(
   const float lat_spacing,
   const float lon_spacing,
 
-  // Basically the 2D array and initial value
+  // Basically the 2D array
   size_t num_lats,
-  size_t num_lons,
-  float  value
+  size_t num_lons
 )
 {
   auto llgridsp = std::make_shared<LatLonGrid>();
@@ -38,10 +37,8 @@ LatLonGrid::Create(
     LogSevere("Couldn't create LatLonGrid\n");
   } else {
     // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
-    llgridsp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons, value);
+    llgridsp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons);
   }
-
-  // FIXME: Do filling of default value here...
 
   return llgridsp;
 }
@@ -55,8 +52,7 @@ LatLonGrid::init(
   const float      lat_spacing,
   const float      lon_spacing,
   size_t           num_lats,
-  size_t           num_lons,
-  float            value
+  size_t           num_lons
 )
 {
   setTypeName(TypeName);
@@ -77,7 +73,7 @@ LatLonGrid::init(
 
   // Update primary grid to the given size
   declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
-  addFloat2D("primary", Units, { 0, 1 });
+  addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 }
 
 bool

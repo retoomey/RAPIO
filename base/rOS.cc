@@ -276,7 +276,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // FIXME: We write the primary data array for now, if any.
     // FIXME: generalize by looping and handle the data TYPE such as float, int
     auto theDims = datagrid->getDims();
-    auto dataptr = datagrid->getFloat2D("primary");
+    auto dataptr = datagrid->getFloat2D(Constants::PrimaryDataName);
     if (dataptr == nullptr) {
       LogSevere("Python call only allowed on 2D LatLonGrid and RadialSet at moment :(\n");
       return std::vector<std::string>();
