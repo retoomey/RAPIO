@@ -4,29 +4,31 @@ include_directories(.)
 # Get headers from core above us, or where ever RAPIO headers are
 include_directories(../)
 
-# We're building a standalone shared library
-add_library(rapioimage SHARED
-  rImageDataTypeImp.cc
-  rIOImage.cc
-)
+find_package(Magick)
 
 # Add conditional flag
-if (Magick_LIBRARIES AND Magick_INCLUDE_DIR)
+if (Magick_FOUND)
+
+  # We're building a standalone shared library
+  add_library(rapioimage SHARED
+    rImageDataTypeImp.cc
+    rIOImage.cc
+  )
+
+  # Eh conditional compile of some stuff...probably not needed
   add_definitions(-DHAVE_MAGICK)
+
   # Include headers and libraries
   include_directories(${Magick_INCLUDE_DIR})
   target_link_libraries(rapioimage
     ${Magick_LIBRARIES}
   )
-else(
-  message(WARNING "Couldn't find GraphicsMagick or ImageMagick, You should install if you want the rapioimage module to work.")
-  # Include headers and libraries
-  target_link_libraries(rapioimage
-  )
-)
-endif(Magick_LIBRARIES AND Magick_INCLUDE_DIR)
 
-# Install the module
-install(TARGETS rapioimage
+  # Install the module
+  install(TARGETS rapioimage
    DESTINATION ${RAPIO_INSTALL_LIB}
-)
+  )
+else()
+  message(WARNING "Couldn't find GraphicsMagick or ImageMagick, You won't be able to use rtile or make pngs, etc. without this.")
+endif(Magick_FOUND)
+

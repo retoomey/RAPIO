@@ -2,6 +2,13 @@
 # Top cmake for RAPIO building
 cmake_minimum_required (VERSION 3.10)
 
+# Set type of build.  This has effect on different os it seems based on some settings here:
+# CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel") google these
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "No build type selected, defaulting to 'Release'")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)")
+endif()
+
 # My force of clang compiler for me, not doing it for everyone though
 #set(CMAKE_C_COMPILER "/usr/bin/clang")
 #set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
@@ -14,6 +21,7 @@ project (RAPIO
     HOMEPAGE_URL "https://github.com/retoomey/RAPIO"
     LANGUAGES CXX C
     VERSION 1.0)
+
 
 # Specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
@@ -58,31 +66,10 @@ else()
   set(BOOST_LIBRARYDIR "${CMAKE_INSTALL_PREFIX}/boost/lib")
 endif()
 
-
 ###########################################################################
 # Note my custom cmake finders which work for my setup
-find_package(UDUnits2 REQUIRED)
 find_package(Proj REQUIRED)
-find_package(Netcdf REQUIRED)
-# There's a cmake one but it doesn't seem to allow me to force a library path
-find_package(CURL REQUIRED)   # FIXME:  I 'might' go pure boost ASIO at some point here
-
-# With MRMS I always look for Jasper/PNG because GDAL fails to decompress certain data
-# files without it when we _build_ GDAL.  However, I'm not using the headers so 
-# 'technically' this is nice but not critical to RAPIO
-# The FindJasper module is giving me paths and semicolons not the actual
-# jasper.  Either it's bugged or I'm still learning cmake.
-# Seems to also fail falling back to OS in Fedora 35.  Using my own searcher for now
-#find_package(Jasper)
-#find_package(PNG)
-
-# Optional for submodules.  FIXME: Move checks to modules and have flags for
-# conditional building
-find_package(Magick)
-find_package(Grib2C)
-find_package(GDAL REQUIRED)
-###########################################################################
-
+find_package(CURL REQUIRED)
 
 ###########################################################################
 # Cmake provided modules.  Either I've copied to cmake folder or system
@@ -100,11 +87,53 @@ find_package(BZip2 REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-###########################################################################
 
+# Allow building without it, but warn
+find_package(UDUnits2)
+if (UDUnits2_FOUND)
+  add_definitions(-DHAVE_UDUNITS2)
+else()
+  message(WARNING "Couldn't find udunits2 library, unit conversion ability disabled.  This is not critical right now. ")
+endif(UDUnits2_FOUND)
+
+###########################################################################
 # Directories
 add_subdirectory(base)
 add_subdirectory(rexample)
 
-# Tests are conditional
+###########################################################################
+# Independent module building
+#
+option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
+if (BUILD_NETCDF_MODULE)
+  add_subdirectory(base/ionetcdf)
+endif (BUILD_NETCDF_MODULE)
+
+option(BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
+if (BUILD_IMAGE_MODULE)
+  add_subdirectory(base/ioimage)
+endif (BUILD_IMAGE_MODULE)
+
+option(BUILD_GDAL_MODULE "Build GDAL module" YES)
+if (BUILD_GDAL_MODULE)
+  add_subdirectory(base/iogdal)
+endif (BUILD_GDAL_MODULE)
+
+option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
+if (BUILD_GRIB2_MODULE)
+  add_subdirectory(base/iogrib)
+endif (BUILD_GRIB2_MODULE)
+
+# These two currently don't require any extra libraries, so we'll just
+# build them.  Though python might at some point
+add_subdirectory(base/iopython)
+add_subdirectory(base/ioraw)
+
+option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
+if (BUILD_HMRG_MODULE)
+  add_subdirectory(base/iohmrg)
+endif (BUILD_HMRG_MODULE)
+
+# Tests are conditional.  We 'could' make a flag...here we just have to manual
+# go into directory and make.  Not sure what the cmake community does yet
 add_subdirectory(tests EXCLUDE_FROM_ALL)

@@ -227,12 +227,3 @@ install(TARGETS rapio
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/rapiobase
   LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
 )
-
-# Create the modules.  They could be built on the top layer actually?
-add_subdirectory(ionetcdf)
-add_subdirectory(ioimage)
-add_subdirectory(iogdal)
-add_subdirectory(iogrib)
-add_subdirectory(iopython)
-add_subdirectory(ioraw)
-add_subdirectory(iohmrg)
