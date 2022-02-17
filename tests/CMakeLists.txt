@@ -17,6 +17,7 @@ add_executable(testrapio
   rTestTime.cc
   rTestURL.cc
   rTestIODataType.cc
+  rTestArray.cc
 )
 
 # Link to other libraries

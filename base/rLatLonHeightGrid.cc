@@ -1,6 +1,5 @@
 #include "rLatLonHeightGrid.h"
 #include "rProject.h"
-#include "rProcessTimer.h"
 
 using namespace rapio;
 using namespace std;
@@ -76,71 +75,12 @@ LatLonHeightGrid::init(
       << "(" << lat_spacing << "," << lon_spacing << ")\n");
   }
 
-  // Ok 'how' we implement...for the moment we're doing N 2D LatLonGrids,
-  // but if 3D we would declareDims with 3 dimensions
-  // With our N 2D implementation we can lazy implement it I think.
-  // Update primary grid to the given size
-  // Which funny enough means there's actual no data directly within us.
-  LogSevere("----pre 3D creation..\n");
-
-  {
-    ProcessTimer timeit("Creating as a 3D all at once\n");
-    declareDims({ num_lats, num_lons, num_layers }, { "Lat", "Lon", "H" });
-    addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
-
-    LogSevere("----post 3D creation..\n");
-    LogSevere("Time post 3D is now " << timeit << "\n");
-  }
+  declareDims({ num_lats, num_lons, num_layers }, { "Lat", "Lon", "Ht" });
+  addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
 
   // Note layers random...you need to fill them all during data reading
   myLayerNumbers.resize(num_layers);
-  myLatLonGrids.resize(num_layers); // These will be nullptr
 } // LatLonHeightGrid::init
-
-std::shared_ptr<LatLonGrid>
-LatLonHeightGrid::getLatLonGrid(size_t layerNumber)
-{
-  if (layerNumber >= myLayerNumbers.size()) {
-    LogSevere(
-      "Requestion layer number " << layerNumber << " which is out of range in LatLonHeightGrid 0 to " <<
-        myLayerNumbers.size());
-    return nullptr;
-  }
-  auto out = myLatLonGrids[layerNumber];
-
-  if (out == nullptr) {
-    std::string units;
-    getString("Unit", units);
-    // Create a new LatLonGrid matching our stats
-    out = LatLonGrid::Create(
-      getTypeName(),
-      units,
-      //     varName,
-      //     varUnit,
-      myLocation, // Humm the height is initially the first passed in LatLonHeightGrid height
-                  // Up to callar to update the height?  We don't know 100% that the layer number
-      // is a height right?  I kinda want to be able to do things that aren't height as
-      // well like s-layers
-      // If our technique works reasonably at some point we'll generalize for
-      // CartesianGrids maybe...they only differ by not marching in lat/lon which is
-      // pretty minor
-      myTime,
-      myLatSpacing,
-      myLonSpacing,
-      myNumLats, // num_lats
-      myNumLons  // num_lons
-    );
-    //
-  }
-  myLatLonGrids[layerNumber] = out;
-  LogSevere("    " << myNumLats << ", " << myNumLons << "\n");
-
-  return nullptr;
-} // LatLonHeightGrid::getLatLonGrid
-
-// void setLayerValue(size_t layerNumber, int layerValue)
-// {
-// }
 
 bool
 LatLonHeightGrid::initFromGlobalAttributes()

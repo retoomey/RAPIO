@@ -3,7 +3,6 @@
 #include <rDataGrid.h>
 #include <rLLH.h>
 #include <rTime.h>
-#include <rLatLonGrid.h>
 #include <vector>
 
 namespace rapio {
@@ -11,15 +10,11 @@ namespace rapio {
  *  longitude at a constant height above the surface of the earth,
  *  where there are N levels of height.
  *
- *  First implementation we will do this as a stack of LatLonGrids,
- *  though in certain cases having a direct 3D array might be better.
- *  Each LatLonGrid will have additional meta properties stores by
- *  the height grid.
+ *  First implementation using 3D array.
  *
- *  Second implementation could use a Data3D and only allow 3D iteration.
- *  Interestingly RadialSet could for example also be a N collection of
- *  Radials which is how W2 did it.  So multiple internal representations
- *  might be something to do.
+ *  FIXME: Most of this could go into a class between DataGrid
+ *  and this in order to implement CartesianGrid3D.  Since that in W2
+ *  only changes the projection.
  *
  *  FIXME: I might enhance get DataType to allow parameters or tweaking as
  *  to the method of storage, this would allow faster iteration in
@@ -89,11 +84,26 @@ public:
     return myLayerNumbers.size();
   }
 
-  /** Return a LatLonGrid of the given layer index, which can then be filled in normally.
-   * With the N 2D implementation this will lazy create/cache a LatLonGrid 2D.
-   * If I do the 3D array I'll need a 'view' object */
-  std::shared_ptr<LatLonGrid>
-  getLatLonGrid(size_t layerNumber);
+  /** Return reference to layer numbers, which then can be used for searching or changing */
+  std::vector<int>&
+  getLayerValues()
+  {
+    return myLayerNumbers;
+  }
+
+  /** Set the layer value for given level.  This is the height currently */
+  void
+  setLayerValue(size_t l, int v)
+  {
+    myLayerNumbers[l] = v;
+  }
+
+  /** Get the layer value for given level.  This is the height currently */
+  int
+  getLayerValue(size_t l)
+  {
+    return myLayerNumbers[l];
+  }
 
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH
@@ -155,8 +165,5 @@ protected:
 
   /** Vector of layer numbers.  Most likely heights */
   std::vector<int> myLayerNumbers;
-
-  /** LatLonGrids are independent objects */
-  std::vector<std::shared_ptr<LatLonGrid> > myLatLonGrids;
 };
 }

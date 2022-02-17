@@ -5,6 +5,7 @@
 #include "rIODataType.h"
 #include "rIOURL.h"
 #include "rConfig.h"
+#include "rStrings.h"
 
 using namespace rapio;
 
@@ -18,7 +19,19 @@ ColorMap::getColorMap(const std::string& key)
   auto lookup = myColorMaps.find(key);
 
   if (lookup == myColorMaps.end()) {
-    URL find = Config::getConfigFile("colormaps/" + key + ".xml");
+    URL find;
+    find = Config::getConfigFile("colormaps/" + key + ".xml");
+    if (find.empty()) {
+      // FIXME: We have lots of stuff like MergedReflectivityQC, etc..feel like
+      // there needs to be some smart searching ability or something.
+      // Gonna hack some for Reflectivity at moment.
+      // We could have a special color names to files table or something,
+      // I'm gonna refactor this at some point and improve color map ability
+      if (Strings::beginsWith(key, "MergedReflectivity")) {
+        find = Config::getConfigFile("colormaps/Reflectivity.xml");
+      }
+    }
+
     if (!find.empty()) {
       colormap = ColorMap::readColorMap(find.toString());
     }

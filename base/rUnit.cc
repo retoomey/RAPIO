@@ -10,7 +10,7 @@
 #include <iostream>
 
 #if HAVE_UDUNITS2
-#include <udunits.h>
+# include <udunits.h>
 #endif
 
 using namespace rapio;
@@ -60,7 +60,7 @@ getUtUnit(const std::string& u, utUnit& setme)
   return (true);
 }
 }
-#endif
+#endif // if HAVE_UDUNITS
 
 void
 ConfigUnit::introduceSelf()
@@ -73,7 +73,7 @@ ConfigUnit::introduceSelf()
 bool
 ConfigUnit::readSettings(std::shared_ptr<PTreeData>)
 {
-#if HAVE_UDUNITS
+  #if HAVE_UDUNITS
   // Look for one of the neccessary udunits2 xml files
   URL url = Config::getConfigFile("misc/udunits2.xml");
 
@@ -83,29 +83,31 @@ ConfigUnit::readSettings(std::shared_ptr<PTreeData>)
   }
   // Initialize environment to xml files and udunits
   Config::setEnvVar("UDUNITS2_XML_PATH", url.getPath());
-#endif
+  #endif
   return true;
 }
 
 void
 Unit::initialize()
 {
-#if HAVE_UDUNITS
+  #if HAVE_UDUNITS
   // Initialize udunits2
   utInit("");
-#endif
+  #endif
 }
 
 bool
 Unit::isValidUnit(const std::string& unit)
 {
-#if HAVE_UDUNITS
+  #if HAVE_UDUNITS
   utUnit u;
 
   return (getUtUnit(unit, u) != 0);
-#else
+
+  #else
   return false;
-#endif
+
+  #endif
 }
 
 bool
@@ -113,7 +115,7 @@ Unit::getConverter(const std::string& from,
   const std::string                 & to,
   UnitConverter                     & setme)
 {
-#if HAVE_UDUNITS
+  #if HAVE_UDUNITS
   // Key holds char* rather than std::string because
   // lookup is 3x faster if we don't create new strings each time...
   // FIXME: Need to investigate this
@@ -148,7 +150,7 @@ Unit::getConverter(const std::string& from,
   Key insert_key(strdup(from.c_str()), strdup(to.c_str()));
 
   converter_cache[insert_key] = setme;
-#endif
+  #endif // if HAVE_UDUNITS
   return (true);
 } // Unit::getConverter
 
@@ -167,7 +169,7 @@ Unit::convert(const std::string& fromUnit,
   double                       fromVal,
   double                       & toVal)
 {
-#if HAVE_UDUNITS
+  #if HAVE_UDUNITS
   if (fromUnit == toUnit) {
     toVal = fromVal;
     return (true);
@@ -179,10 +181,12 @@ Unit::convert(const std::string& fromUnit,
 
   toVal = uc.value(fromVal);
   return (true);
-#else
+
+  #else // if HAVE_UDUNITS
   LogSevere("Not compiled with Udunits2 support, can't convert units!");
   return false;
-#endif
+
+  #endif // if HAVE_UDUNITS
 }
 
 double

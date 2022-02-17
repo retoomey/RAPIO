@@ -1,0 +1,162 @@
+VarName	VarUnit	VarPrefix	ProductDir	VarMissing	VarNoCoverage	VarScale	w2Name	w2Unit	w2Missing	w2NoCoverage
+
+#3D Reflectivity
+mosaicked_refl	dbz	MREF3D33L	mrefl	-99	-999	10	MergedReflectivityQC	dBZ	-99900	-99903
+mosaicked_refl	dbz	MREF3D33L	mrefl	-99	-999	10	MergedReflectivityDPQC	dBZ	-99900	-99903
+mosaicked_refl	dbz	MREF3D33L	mrawrefl	-99	-999	10	MergedRawReflectivity	dBZ	-99900	-99903
+mosaicked_refl	dbz	MREF3D33L	mrefqcl	-99	-999	10	MergedRefQCL	dBZ	-99900	-99903
+mosaicked_rhohv	none	MRHOHV3D33L	mrhohv	-99	-100	100	MergedRhoHV		none	-99900	-99903
+mosaicked_rhohv	none	MRHOHV3D33L	mrawrhohv	-99	-100	100	MergedRawRhoHV		none	-99900	-99903
+mosaicked_rhohv	none	MRHOHV3D33L	mrhohv	-99	-100	100	MergedRhoHVDPQC		none	-99900	-99903
+mosaicked_zdr	db	MZDR3D33L	mzdr	-99	-999	10	MergedZdr		dB	-99900	-99903
+mosaicked_zdr	db	MZDR3D33L	mrawzdr	-99	-999	10	MergedRawZdr		dB	-99900	-99903
+mosaicked_zdr	db	MZDR3D33L	mzdr	-99	-999	10	MergedZdrDPQC		dB	-99900	-99903
+mosaicked_spw	m/sec	MSPW3D33L	mspw	-99	-999	10	MergedSPW		MetersPerSecond	-99900	-99903
+mosaicked_spw	m/sec	MSPW3D33L	mrawspw	-99	-999	10	MergedRawSPW		MetersPerSecond	-99900	-99903
+mosaicked_spw	m/sec	MSPW3D33L	mspw	-99	-999	10	MergedSPWDPQC		MetersPerSecond	-99900	-99903
+mosaicked_kdp	degrees	MKDP3D33L	mkdp	-20	-30	1000	MergedKdp		degrees	-99900	-99903
+mosaicked_kdp	degrees	MKDP3D33L	mrawkdp	-20	-30	1000	MergedRawKdp		degrees	-99900	-99903
+mosaicked_kdp	degrees	MKDP3D33L	mkdp	-20	-30	1000	MergedKdpDPQC		degrees	-99900	-99903
+REFL_AGE	s	MREFAGE3D33L	mrefl_age	-1	-3	1	MergedReflectivityQCAge	s	-99900	-99903
+
+#Hydro inputs
+CREF	dBZ		CREF	cref	-99	-999	10	MergedReflectivityQCComposite	dBZ	-99900	-99903
+CREFTDWR	dBZ		CREF	creftdwr	-99	-999	10	MergedReflectivityQCompositeTDWR	dBZ	-99900	-99903
+MEHS	mm	MEHS	mehs	-99	-999	10	MESH	mm	-99900	-99903
+POSH	none	POSH	posh	-99	-999	10	POSH	%	-99900	-99903
+SHI	none	SHI	shi	-99	-999	10	SHI	none	-99900	-99903
+VII	kg/m2	VII	vii	-99	-999	10	VII	kg/m^2	-99900	-99903
+VIL	kg/m2	VIL	vil	-99	-999	10	VIL	kg/m^2	-99900	-99903
+VIL120M	kg/m2	VIL120M	vilswath/120m_max	-99	-999	10	VIL_Max_120min	kg/m^2	-99900	-99903
+VIL1440M	kg/m2	VIL1440M	vilswath/1440m_max	-99	-999	10	VIL_Max_1440min	kg/m^2	-99900	-99903
+VILD	g/m3	VILD	vilD	-99	-999    10	VIL_Density     g/m^3   -99900  -99903
+TREFL_0C	dBZ	TREFL_0C	tref_0C	-99	-999	10	Reflectivity_0C	dBZ	-99900	-99903
+TREFL_-5C	dBZ	TREFL_-5C	tref_m5C	-99	-999	10	Reflectivity_-5C	dBZ	-99900	-99903
+TREFL_-10C	dBZ	TREFL_-10C	tref_m10C	-99	-999	10	Reflectivity_-10C	dBZ	-99900	-99903
+TREFL_-15C	dBZ	TREFL_-15C	tref_m15C	-99	-999	10	Reflectivity_-15C	dBZ	-99900	-99903
+TREFL_-20C	dBZ	TREFL_-20C	tref_m20C	-99	-999	10	Reflectivity_-20C	dBZ	-99900	-99903
+TREFL_-40C	dBZ	TREFL_-40C	tref_m40C	-99	-999	10	Reflectivity_-40C	dBZ	-99900	-99903
+
+#More CREF variants and assoc. heights
+CREFH	m	CREFH	crefh	-1	-999	1	HeightCompositeReflectivity	m	-99900	-99903
+LCREF	dBZ	LCREF	lcref	-99	-999	10	LowLevelCompositeReflectivity	dBZ	-99900	-99903
+LCREFH	m	LCREFH	lcrefh	-1	-999	1	HeightLowLevelCompositeReflectivity	m	-99900	-99903
+LCR_LOW	dBZ	LCR_LOW	lcr_low	-99	-999	10	LayerCompositeReflectivity_Low	dBZ	-99900	-99903
+LCR_HIGH	dBZ	LCR_HIGH	lcr_high	-99	-999	10	LayerCompositeReflectivity_High	dBZ	-99900	-99903
+LCR_SUPER	dBZ	LCR_SUPER	lcr_super	-99	-999	10	LayerCompositeReflectivity_Super	dBZ	-99900	-99903
+LCR_ANC	dBZ	LCR_ANC	lcr_anc	-99	-999	10	LayerCompositeReflectivity_ANC	dBZ	-99900	-99903
+LCR_18to25KFT	dBZ	LCR_18to25KFT	lcr_18to25kft	-99	-999	10	LayerCompositeReflectivity_18to25kft	dBZ	-99900	-99903
+LCR_25to30KFT	dBZ	LCR_25to30KFT	lcr_25to30kft	-99	-999	10	LayerCompositeReflectivity_25to30kft	dBZ	-99900	-99903
+LCR_30to35KFT	dBZ	LCR_30to35KFT	lcr_30to35kft	-99	-999	10	LayerCompositeReflectivity_30to35kft	dBZ	-99900	-99903
+LCR_35to40KFT	dBZ	LCR_35to40KFT	lcr_35to40kft	-99	-999	10	LayerCompositeReflectivity_35to40kft	dBZ	-99900	-99903
+LCR_40+KFT	dBZ	LCR_40+KFT	lcr_40+kft	-99	-999	10	LayerCompositeReflectivity_40+kft	dBZ	-99900	-99903
+
+#NOTE: Use "none" instead of "SI" for w2Units
+#Special 2D Mosaics
+REFL	dBZ	REFL	base_refl	-99	-999	10	MergedReflectivityQC	none	-99900	-99903
+BASE_REFL	dBZ	BASE_REFL	base_refl	-99	-999	10	MergedBaseReflectivityQC	none	-99900	-99903
+BASE_REFL	dBZ	BASE_REFL	base_refl	-99	-999	10	MergedBaseReflectivityQC	dBZ	-99900	-99903
+UNQC_BREF	dBZ	UNQC_BREF	unqc_bref	-99	-999	10	MergedBaseReflectivity	none	-99900	-99903
+UNQC_BREF	dBZ	UNQC_BREF	unqc_bref	-99	-999	10	MergedBaseReflectivity	dBZ	-99900	-99903
+UNQC_CREF	dBZ	UNQC_CREF	unqc_cref	-99	-999	10	MergedReflectivityComposite	none	-99900	-99903
+UNQC_CREF	dBZ	UNQC_CREF	unqc_cref	-99	-999	10	MergedReflectivityComposite	dBZ	-99900	-99903
+CREF_MAX	dBZ	CREF_MAX	cref_max	-99	-999	10	MergedReflectivityQComposite	none	-99900	-99903
+CREF_MAX	dBZ	CREF_MAX	cref_max	-99	-999	10	MergedReflectivityQComposite	dBZ	-99900	-99903
+BASE_DHC	flag	BASE_DHC	base_dhc	-1	-999	1	Merged_LVL3_DHC	none	-99900	-99903
+
+RALA	dBZ	RALA	rala	-99	-999	10	ReflectivityAtLowestAltitude	dBZ	-99900 -99903
+UNQC_RALA	dBZ	UNQC_RALA	unqc_rala	-99	-999	10	MergedReflectivityAtLowestAltitude	none	-99900 -99903
+UNQC_RALA	dBZ	UNQC_RALA	unqc_rala	-99	-999	10	MergedReflectivityAtLowestAltitude	dBZ	-99900 -99903
+
+VELOCITY	m/sec	VELOCITY	velocity	-99	-999	10	MergedVelocityAtLowestAltitude	MetersPerSecond	-99900 -99903
+
+#ETP-35	km	ETP-35	etp-35	-1	-999	1000	EchoTop_-35	km	-99900	-99903
+ETP-35	km	ETP-35	etp-35	-1	-999	1000	SimpleCloudTop	km	-99900	-99903
+ETP00	km	ETP00	etp00	-1	-999	1000	EchoTop_00	km	-99900	-99903
+ETP18	km	ETP18	etp18	-1	-999	1000	EchoTop_18	km	-99900	-99903
+ETP30	km	ETP30	etp30	-1	-999	1000	EchoTop_30	km	-99900	-99903
+ETP50	km	ETP50	etp50	-1	-999	1000	EchoTop_50	km	-99900	-99903
+ETP60	km	ETP60	etp60	-1	-999	1000	EchoTop_60	km	-99900	-99903
+
+H50_0C	km	H50_0C	etp50_above_0C	-1	-999	1000	H50_Above_0C	km	-99900	-99903
+H60_0C	km	H60_0C	etp60_above_0C	-1	-999	1000	H60_Above_0C	km	-99900	-99903
+H50_-20C	km	H50_-20C	etp50_above_m20C	-1	-999	1000	H50_Above_-20C	km	-99900	-99903
+H60_-20C	km	H60_-20C	etp60_above_m20C	-1	-999	1000	H60_Above_-20C	km	-99900	-99903
+
+#NOTE: Use "none" instead of "SI" for w2Units
+#Rotation (AzShear and Tracks) for low and mid-levels
+AZ_SHEAR_2KM	1/sec	AZ_SHEAR_2KM	az_shear	-1	-3	1000	MergedAzShear_0-2kmAGL	none    	-99900	-99903
+AZ_SHEAR_2KM	1/sec	AZ_SHEAR_2KM	az_shear	-1	-3	1000	MergedAzShear_0-2kmAGL	1/second	-99900	-99903
+AZ_SHEAR_6KM	1/sec	AZ_SHEAR_6KM	az_shear_ml	-1	-3	1000	MergedAzShear_3-6kmAGL	none    	-99900	-99903
+AZ_SHEAR_6KM	1/sec	AZ_SHEAR_6KM	az_shear_ml	-1	-3	1000	MergedAzShear_3-6kmAGL	1/second	-99900	-99903
+RT30M		1/sec	RT30M	rotate_track/30m_acc	-1	-3	1000	RotationTrack30min	none    	-99900	-99903
+RT30M		1/sec	RT30M	rotate_track/30m_acc	-1	-3	1000	RotationTrack30min	1/second	-99900	-99903
+RT60M		1/sec	RT60M	rotate_track/60m_acc	-1	-3	1000	RotationTrack60min	none    	-99900	-99903
+RT60M		1/sec	RT60M	rotate_track/60m_acc	-1	-3	1000	RotationTrack60min	1/second	-99900	-99903
+RT120M		1/sec	RT120M	rotate_track/120m_acc	-1	-3	1000	RotationTrack120min	none    	-99900	-99903
+RT120M		1/sec	RT120M	rotate_track/120m_acc	-1	-3	1000	RotationTrack120min	1/second	-99900	-99903
+RT240M		1/sec	RT240M	rotate_track/240m_acc	-1	-3	1000	RotationTrack240min	none    	-99900	-99903
+RT240M		1/sec	RT240M	rotate_track/240m_acc	-1	-3	1000	RotationTrack240min	1/second	-99900	-99903
+RT360M		1/sec	RT360M	rotate_track/360m_acc	-1	-3	1000	RotationTrack360min	none    	-99900	-99903
+RT360M		1/sec	RT360M	rotate_track/360m_acc	-1	-3	1000	RotationTrack360min	1/second	-99900	-99903
+RT1440M		1/sec	RT1440M	rotate_track/1440m_acc	-1	-3	1000	RotationTrack1440min	none    	-99900	-99903
+RT1440M		1/sec	RT1440M	rotate_track/1440m_acc	-1	-3	1000	RotationTrack1440min	1/second	-99900	-99903
+RTML30M		1/sec	RTML30M	rotate_track_ml/30m_acc	-1	-3	1000	RotationTrackML30min	none    	-99900	-99903
+RTML30M		1/sec	RTML30M	rotate_track_ml/30m_acc	-1	-3	1000	RotationTrackML30min	1/second	-99900	-99903
+RTML60M		1/sec	RTML60M	rotate_track_ml/60m_acc	-1	-3	1000	RotationTrackML60min	none    	-99900	-99903
+RTML60M		1/sec	RTML60M	rotate_track_ml/60m_acc	-1	-3	1000	RotationTrackML60min	1/second	-99900	-99903
+RTML120M	1/sec	RTML120M	rotate_track_ml/120m_acc	-1	-3	1000	RotationTrackML120min	none    	-99900	-99903
+RTML120M	1/sec	RTML120M	rotate_track_ml/120m_acc	-1	-3	1000	RotationTrackML120min	1/second	-99900	-99903
+RTML240M	1/sec	RTML240M	rotate_track_ml/240m_acc	-1	-3	1000	RotationTrackML240min	none    	-99900	-99903
+RTML240M	1/sec	RTML240M	rotate_track_ml/240m_acc	-1	-3	1000	RotationTrackML240min	1/second	-99900	-99903
+RTML360M	1/sec	RTML360M	rotate_track_ml/360m_acc	-1	-3	1000	RotationTrackML360min	none    	-99900	-99903
+RTML360M	1/sec	RTML360M	rotate_track_ml/360m_acc	-1	-3	1000	RotationTrackML360min	1/second	-99900	-99903
+RTML1440M	1/sec	RTML1440M	rotate_track_ml/1440m_acc	-1	-3	1000	RotationTrackML1440min	none    	-99900	-99903
+RTML1440M	1/sec	RTML1440M	rotate_track_ml/1440m_acc	-1	-3	1000	RotationTrackML1440min	1/second	-99900	-99903
+
+#Hailswaths
+MESHMAX30M	mm	MESHMAX30M	hailswath/30m_max	-1	-3	10	MESH_Max_30min	mm	-99900	-99903
+MESHMAX60M	mm	MESHMAX60M	hailswath/60m_max	-1	-3	10	MESH_Max_60min	mm	-99900	-99903
+MESHMAX120M	mm	MESHMAX120M	hailswath/120m_max	-1	-3	10	MESH_Max_120min	mm	-99900	-99903
+MESHMAX240M	mm	MESHMAX240M	hailswath/240m_max	-1	-3	10	MESH_Max_240min	mm	-99900	-99903
+MESHMAX360M	mm	MESHMAX360M	hailswath/360m_max	-1	-3	10	MESH_Max_360min	mm	-99900	-99903
+MESHMAX1440M	mm	MESHMAX1440M	hailswath/1440m_max	-1	-3	10	MESH_Max_1440min	mm	-99900	-99903
+
+#Karen's weak attempt to add nldn to the webpages. 
+#NOTE: Use "none" instead of "SI" for w2Units
+#NLDN
+LTG_DENSITY_1MIN	none	LTG_DENSITY_1MIN	ltg/1m_density	-1	-3	1	NLDN_CG_001min	flashes	-99900	-99901
+LTG_DENSITY_2MIN	none	LTG_DENSITY_2MIN	ltg/2m_density	-1	-3	1	NLDN_CG_002min	flashes	-99900	-99901
+LTG_DENSITY_5MIN	none	LTG_DENSITY_5MIN	ltg/5m_density	-1	-3	1	NLDN_CG_005min	flashes	-99900	-99901
+LTG_DENSITY_15MIN	none	LTG_DENSITY_15MIN	ltg/15m_density	-1	-3	1	NLDN_CG_015min	flashes	-99900	-99901
+LTG_DENSITY_30MIN	none	LTG_DENSITY_30MIN	ltg/30m_density	-1	-3	1	NLDN_CG_030min	flashes	-99900	-99901
+LTG_DENSITY_60MIN	none	LTG_DENSITY_60MIN	ltg/60m_density	-1	-3	1	NLDN_CG_060min	flashes	-99900	-99901
+LTG_DENSITY_1MIN	none	LTG_DENSITY_1MIN	ltg/1m_density	-1	-3	1	NLDN_CG_001min_AvgDensity	flashes	-99900	-99901
+LTG_DENSITY_2MIN	none	LTG_DENSITY_2MIN	ltg/2m_density	-1	-3	1	NLDN_CG_002min_AvgDensity	flashes	-99900	-99901
+LTG_DENSITY_5MIN	none	LTG_DENSITY_5MIN	ltg/5m_density	-1	-3	1	NLDN_CG_005min_AvgDensity	flashes	-99900	-99901
+LTG_DENSITY_15MIN	none	LTG_DENSITY_15MIN	ltg/15m_density	-1	-3	1	NLDN_CG_015min_AvgDensity	flashes	-99900	-99901
+LTG_DENSITY_30MIN	none	LTG_DENSITY_30MIN	ltg/30m_density	-1	-3	1	NLDN_CG_030min_AvgDensity	flashes	-99900	-99901
+LTG_DENSITY_60MIN	none	LTG_DENSITY_60MIN	ltg/60m_density	-1	-3	1	NLDN_CG_060min_AvgDensity	flashes	-99900	-99901
+#NLDN_1min	none	NLDN_1min	nldn/1min	-1	-3	1	NLDN_CG_001min	flashes	-99900	-99901
+#NLDN_5min	none	NLDN_5min	nldn/5min	-1	-3	1	NLDN_CG_005min	flashes	-99900	-99901
+#NLDN_15min	none	NLDN_15min	nldn/15min	-1	-3	1	NLDN_CG_015min	flashes	-99900	-99901
+#NLDN_30min	none	NLDN_30min	nldn/30min	-1	-3	1	NLDN_CG_030min	flashes	-99900	-99901
+#LTG_30MIN_PROB	percent	LTG_30MIN_PROB	ltg/30m_prob	-1	-3	100	LightningProbabilityNext30min	none	-99900	-99901	
+#LTG_60MIN_PROB	percent	LTG_60MIN_PROB	ltg/60m_prob	-1	-3	100	LightningProbabilityNext60min	none	-99900	-99901	
+#LTG_30MIN_PROB	percent	LTG_30MIN_PROB	ltg/30m_prob	-1	-3	1	probgrid0to30Scale0Grid	%	-99900	-99901	
+#LTG_60MIN_PROB	percent	LTG_60MIN_PROB	ltg/60m_prob	-1	-3	1	probgrid0to60Scale0Grid	%	-99900	-99901	
+LTG_30MIN_PROB	percent	LTG_30MIN_PROB	ltg/30m_prob	-1	-3	1	LightningProbabilityNext30minGrid	%	-99900	-99901	
+LTG_60MIN_PROB	percent	LTG_60MIN_PROB	ltg/60m_prob	-1	-3	1	LightningProbabilityNext60minGrid	%	-99900	-99901	
+#SegMotion and LP fields -- custom for CWB
+CREF_030min	dBZ	CompositeReflectivity_030min	CompositeReflectivity_030min	-99	-999	10	MergedReflectivityQCComposite_030min	dBZ	-99900	-99903
+CREF_060min	dBZ	CompositeReflectivity_060min	CompositeReflectivity_060min	-99	-999	10	MergedReflectivityQCComposite_060min	dBZ	-99900	-99903
+CREF_120min	dBZ	CompositeReflectivity_120min	CompositeReflectivity_120min	-99	-999	10	MergedReflectivityQCComposite_120min	dBZ	-99900	-99903
+CREF_180min	dBZ	CompositeReflectivity_180min	CompositeReflectivity_180min	-99	-999	10	MergedReflectivityQCComposite_180min	dBZ	-99900	-99903
+
+SHSRVPRC_Rate_030min	mm/hr	SHSR_VPRC_PrecipRate_030min	SHSR_VPRC_PrecipRate_030min	0	-999	10	SHSR_VPRC_PrecipRate_030min	none	-99900	-99903
+SHSRVPRC_Rate_060min	mm/hr	SHSR_VPRC_PrecipRate_060min	SHSR_VPRC_PrecipRate_060min	-99	-999	10	SHSR_VPRC_PrecipRate_060min	none	-99900	-99903
+SHSRVPRC_Rate_120min	mm/hr	SHSR_VPRC_PrecipRate_120min	SHSR_VPRC_PrecipRate_120min	-99	-999	10	SHSR_VPRC_PrecipRate_120min	none	-99900	-99903
+SHSRVPRC_Rate_180min	mm/hr	SHSR_VPRC_PrecipRate_180min	SHSR_VPRC_PrecipRate_180min	-99	-999	10	SHSR_VPRC_PrecipRate_180min	none	-99900	-99903
+
+lp_cref	dBZ	LPCREF	lp_cref	-99	-999	10	MergedReflectivityQCCompositeLP	dBZ	-99900	-99903
+

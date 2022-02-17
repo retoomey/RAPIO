@@ -1,7 +1,10 @@
 #pragma once
 
 #include "rIODataType.h"
+
+#include "rHmrgProductInfo.h"
 #include "rIO.h"
+#include "rOS.h"
 
 #include <zlib.h>
 #include <string.h> // errno strs
@@ -43,37 +46,6 @@ private:
   std::string command;
 };
 
-/** Simple gridded header for HMRG for parameter passing */
-class IOHmrgGriddedHeader {
-public:
-  int year;               // !< 1-4 4-digit year of valid time in UTC
-  int month;              // !< 5-8 month of valid time in UTC
-  int day;                // !< 9-12 day of valid time in UTC
-  int hour;               // !< 13-16 hour of valid time in UTC
-  int min;                // !< 17-20 minute of valid time in UTC
-  int sec;                // !< 21-24 second of valid time in UTC
-  int num_x;              // !< 25-28 number of data columns (NX)
-  int num_y;              // !< 29-32 number of data columns (NY)
-  int num_z;              // !< 33-36 number of data vertical levels (NZ); = 1 for 2D data
-  std::string projection; // 37-40 map projection (="LL  " always)
-  int map_scale;          // 41-44
-  // scaled ints must be floats after division
-  float lat1;      // 45-48
-  float lat2;      // 49-52
-  float lon;       // 53-56
-  float lonNWDegs; // 57-60
-  float latNWDegs; // 61-64
-  int depScale;    // 65-68
-  // scaled to dxy_scale
-  float gridCellLonDegs; // 69-72
-  float gridCellLatDegs; // 73-76
-  float scaleCellSize;   // 77-80
-
-  std::string varName; // variable name such as CREF1
-  std::string varUnit; // variable unit such as dBZ
-  int var_scale;
-};
-
 /**
  * Read HMRG binary files, an internal format we use in NSSL
  * Based on reader work done by others
@@ -104,6 +76,51 @@ public:
   static std::shared_ptr<DataType>
   readRawDataType(const URL& path);
 
+  /** Convert scaled compressed int to float.  Grouping the uncompression logic here inline,
+   * this 'should' optimize in compiler to inline. */
+  static inline float
+  convertDataValue(short int v, const bool needSwap, const int dataUnavailable, const int dataMissing,
+    const float dataScale)
+  {
+    float out;
+
+    if (needSwap) { OS::byteswap(v); }
+    if (v == dataUnavailable) {
+      out = Constants::DataUnavailable;
+    } else if (v == dataMissing) {
+      out = Constants::MissingData;
+    } else {
+      out = (float) v / (float) dataScale;
+    }
+    return out;
+  }
+
+  /** What we consider a valid year in the MRMS binary file,
+   * used for validation of datatype */
+  static bool
+  isMRMSValidYear(int year);
+
+  /** Read a scaled integer with correct endian and return as a float */
+  static float
+  readScaledInt(gzFile fp, float scale);
+
+  /** Read an integer with correct endian and return as an int */
+  static int
+  readInt(gzFile fp);
+
+  /** Read a float with correct endian and return as a float */
+  static int
+  readFloat(gzFile fp);
+
+  /** Read up to length characters into a std::string */
+  static std::string
+  readChar(gzFile fp, size_t length);
+
+  /** Give back W2 info based on passed in HMRG */
+  static bool
+  HmrgToW2(const std::string& varName,
+    std::string             & outW2Name);
+
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
@@ -112,27 +129,11 @@ public:
     std::map<std::string, std::string>     & keys
   ) override;
 
-  // Could move these to other files which might make it cleaner
-
-  /** Do the heavy work of creating a RadialSet */
-  static std::shared_ptr<DataType>
-  readRadialSet(gzFile fp, const std::string& radarName, bool debug = false);
-
-  /** Do the heavy work of creating a Gridded type */
-  static std::shared_ptr<DataType>
-  readGriddedType(gzFile fp, IOHmrgGriddedHeader& h, bool debug = false);
-
-  /** Do the heavy work of creating a LatLonGrid */
-  static std::shared_ptr<DataType>
-  readLatLonGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug = false);
-
-  /** Do the heavy work of creating a LatLonHeightGrid
-   * No excuses now I need to add the 3D class soon */
-  static std::shared_ptr<DataType>
-  readLatLonHeightGrid(gzFile fp, IOHmrgGriddedHeader& h, bool debug = false);
-
   virtual
   ~IOHmrg();
+
+  /** The database of product info for conversion stuff */
+  static ProductInfoSet theProductInfos;
 };
 }
 

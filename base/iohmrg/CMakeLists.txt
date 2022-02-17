@@ -6,6 +6,9 @@ include_directories(../)
 
 add_library(rapiohmrg SHARED
   rIOHmrg.cc
+  rHmrgProductInfo.cc
+  rHmrgRadialSet.cc
+  rHmrgLatLonGrids.cc
 )
 
 target_link_libraries(rapiohmrg
