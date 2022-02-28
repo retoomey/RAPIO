@@ -1,0 +1,51 @@
+<!-- Color database for color maps
+   Toomey Feb 2022
+   A meta file for how to do colormaps.  This is better design than the current WDSS2/MRMS setup
+   so I might push this into that code at some point.
+   Two types:
+     1. Our NSSL W2/MRMS colormaps (type="w2" name="Reflectivity.xml")
+     2. Paraview/idl/matplotlib maps
+        http://paraview.org/Wiki/Colormaps
+        I like playing with these since they have a more traditional 'GIS' colormap style.
+        I'm using Paraview format because as of now they still have that going in current versions of linux.
+        Currently there are 41 colorsmaps from IDL and 50 colormaps from Matplotlib in idl_colormaps.xml
+        In theory you could use Paraview to design new colormaps for data.
+-->
+
+<colorconfig>
+
+<!-- Settings for colormap generation.
+     It is good practice to list the product here, but the default for WDSS2 DataType products is to hunt 
+     for a WDSS2 color map file using the DataType + ".xml" as an extension.  This closely matches the
+     current MRMS way of doing it.  However, since we have this table we can use other types of color maps
+     such as generated Matlab style.  We can also override missing and unavailable the 'special' types.
+
+     key:  The lookup name of the colormap.  With WDSS2 products this is the DataType name
+           such as "Reflectivity".
+     type: Type of colormap (default is w2):
+            w2: filename refers to the MRMS color map file. 
+            para: filename refers to a Paraview color map file, a collection of names maps.
+
+     filename: The file referenced.
+     name: Paraview key
+     lowdata: Low value of data for Paraview maps.  This maps to the X -1 range  0% of color key.
+     highdata: High value of data for Paraview maps.  This maps to the X +1 range 100%  of color key
+     missing: The color override for Constants::MissingData.  Since we use say -99000 or special values
+              you will most likely need this with non-WDSS2 file based color maps.  Of course, you
+              can also override the file missing here if needed.  The default will be from the WDSS2
+              filename if it is using that style.
+              The format is '#rrggbb' or '#rrggbbaa' using hex values for colors in html style.
+     unavailable:  The color override for Constants::DataUnavailable.  Same as missing above.
+-->
+<colormaps>
+<!-- FIXME: Might add pattern matching at some point, right now it's a simple key match  -->
+<!-- Reflectivity here would work anyway since we would also try adding .xml to it -->
+  <colormap key="Reflectivity" type="w2" filename="Reflectivity.xml"/>
+  <colormap key="MergedReflectivityQC" type="w2" filename="Reflectivity.xml"/>
+  <colormap key="MergedReflectivityComposite" type="w2" filename="Reflectivity.xml"/>
+
+<!-- Matlab style color maps or more GIS generated.  These typically work by taking data ranges -->
+  <colormap key="disable-MergedReflectivityComposite" type="para" filename="idl_colormaps.xml" name="BLUE-WHITE"  lowdata="-50" highdata="50" missing="#00000000" unavailable="#C800C822"/>
+</colormaps>
+
+</colorconfig>

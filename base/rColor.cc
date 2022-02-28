@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <string>
 #include <iostream>
+#include "rError.h"
 
 namespace rapio
 {
@@ -21,6 +22,43 @@ Color::getRGBColorString() const
   snprintf(buf, sizeof(buf), "#%02x%02x%02x", r, g, b);
   return buf;
 }
+
+bool
+Color::RGBStringToColor(const std::string& s,
+  unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a)
+{
+  bool failed = false;
+
+  if (!s.empty()) {
+    const size_t l = s.length();
+    // "#FF00FF" and "#FF00FF00" styles
+    if (l > 0) {
+      // Marked color format
+      if (s[0] == '#') {
+        errno = 0;
+        if (l >= 7) { // "#FF00FF"
+          std::string t = "0x" + s.substr(1, 2);
+          r       = strtol(t.c_str(), NULL, 0);
+          failed &= errno;
+          t       = "0x" + s.substr(3, 2);
+          g       = strtol(t.c_str(), NULL, 0);
+          failed &= errno;
+          t       = "0x" + s.substr(5, 2);
+          b       = strtol(t.c_str(), NULL, 0);
+          failed &= errno;
+          if (l >= 9) {
+            t       = "0x" + s.substr(7, 2);
+            a       = strtol(t.c_str(), NULL, 0);
+            failed &= errno;
+          } else {
+            a = 255;
+          }
+        }
+      }
+    }
+  }
+  return !failed;
+} // Color::RGBStringToColor
 
 double
 Color::brightness() const

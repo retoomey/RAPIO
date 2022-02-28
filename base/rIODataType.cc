@@ -86,7 +86,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
   // 3. If STILL empty, try the suffix as a factory...might get lucky
   if (factory.empty()) {
     factory = OS::getRootFileExtension(path);
-    LogSevere("Using file suffix as builder guess, might put this in configuration file\n");
+    LogSevere("Using file suffix '" << factory << "' as builder guess, might put this in configuration file\n");
   }
 
   Strings::toLower(factory);

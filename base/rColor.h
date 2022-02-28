@@ -22,6 +22,21 @@ public:
   std::string
   getRGBColorString() const;
 
+  /** Convert hexadecimal string into RGB color values */
+  static bool
+  RGBStringToColor(const std::string& s,
+    unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a);
+
+  /** Get color into values */
+  inline void
+  get(unsigned char& red, unsigned char& green, unsigned char& blue, unsigned char& alpha) const
+  {
+    red   = r;
+    green = g;
+    blue  = b;
+    alpha = a;
+  }
+
   /** Get color brightness between 0 and 255 (0 = black, 255 = white). */
   double
   brightness() const;
