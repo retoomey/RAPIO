@@ -17,6 +17,7 @@ find_third_party(
   Magick
   HEADER Magick++.h
   LIBRARY GraphicsMagick++ Magick++-6.Q16
-  HEADER_PATHS ${Magick_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include/GraphicsMagick /usr/include/ImageMagick
+  # AWS linux 2: /usr/include/ImageMagick-6 /usr/lib64
+  HEADER_PATHS ${Magick_INCLUDEDIR} ${CUSTOM_THIRDDIR}/include /usr/include/GraphicsMagick /usr/include/ImageMagick /usr/include/ImageMagick-6
   LIBRARY_PATHS ${Magick_LIBRARYDIR} ${CUSTOM_THIRDDIR}/lib /usr/lib64 /usr/lib
 )

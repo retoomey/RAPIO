@@ -1,13 +1,19 @@
 # We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
-# Get headers from core above us, or where ever RAPIO headers are
-include_directories(../)
+# Include all headers RAPIO uses and RAPIO headers
+include_directories(${RAPIO_INCLUDE_DIRS})
+
+# Add any definitions RAPIO might need
+add_definitions(${RAPIO_DEFINITIONS})
 
 find_package(Magick)
 
 # Add conditional flag
 if (Magick_FOUND)
+
+  # Do some default definitions for ImagicMagick
+  add_definitions(-DMAGICKCORE_HDRI_ENABLE=0 -DMAGICKCORE_QUANTUM_DEPTH=16)
 
   # We're building a standalone shared library
   add_library(rapioimage SHARED
@@ -21,6 +27,9 @@ if (Magick_FOUND)
   # Include headers and libraries
   include_directories(${Magick_INCLUDE_DIR})
   target_link_libraries(rapioimage
+    # We are a module so we don't link to RAPIO itself
+    ${RAPIO_THIRD_LIBRARIES}
+    # And of course imagic magick or graphic
     ${Magick_LIBRARIES}
   )
 

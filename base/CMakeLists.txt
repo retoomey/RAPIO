@@ -193,13 +193,7 @@ add_library(rapio SHARED
 link_directories(${RAPIO_INSTALL_LIB})
 
 include_directories(. 
-  ${CMAKE_INSTALL_PREFIX}/include 
-  ${Boost_INCLUDE_DIR}
-  ${UDUnits2_INCLUDE_DIR} 
-  ${JASPER_INCLUDE_DIR} 
-  ${Proj_INCLUDE_DIR} 
-  ${PNG_INCLUDE_DIRS}
-  ${BZip2_INCLUDE_DIRS}
+  ${RAPIO_INCLUDE_DIRS}
 )
 
 # Need this to add the BOOST setting or the rError.cc will complain about v2
@@ -208,15 +202,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 
 # Link libraries
 target_link_libraries(rapio
-  Threads::Threads
-  ${CURL_LIBRARIES}
-  ${UDUnits2_LIBRARIES}
-  ${JASPER_LIBRARIES}
-  ${JPEG_LIBRARIES}
-  ${Proj_LIBRARIES}
-  ${BZip2_LIBRARIES}
-  ${PNG_LIBRARIES}
-  ${Boost_LIBRARIES}
+  ${RAPIO_THIRD_LIBRARIES}
 )
 
 # Install the RAPIO headers

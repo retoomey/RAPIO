@@ -97,6 +97,33 @@ else()
 endif(UDUnits2_FOUND)
 
 ###########################################################################
+# Definitions for subfolders
+
+set(RAPIO_DEFINITIONS
+  -DBOOST_LOG_DYN_LINK
+)
+
+set(RAPIO_INCLUDE_DIRS
+  ${CMAKE_CURRENT_SOURCE_DIR}/base
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${Boost_INCLUDE_DIRS}
+  ${CURL_INCLUDE_DIR}
+  ${UDUnits2_INCLUDE_DIR}
+  ${Proj_INCLUDE_DIR}
+  ${BZip2_INCLUDE_DIRS}
+)
+
+# Libraries
+set(RAPIO_THIRD_LIBRARIES
+  Threads::Threads
+  ${Boost_LIBRARIES}
+  ${CURL_LIBRARIES}
+  ${UDUnits2_LIBRARIES}
+  ${Proj_LIBRARIES}
+  ${BZip2_LIBRARIES}
+)
+
+###########################################################################
 # Directories
 add_subdirectory(base)
 add_subdirectory(rexample)

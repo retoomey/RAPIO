@@ -1,8 +1,11 @@
 # We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
-# Get headers from core above us, or where ever RAPIO headers are
-include_directories(../)
+# Include all headers RAPIO uses and RAPIO headers
+include_directories(${RAPIO_INCLUDE_DIRS})
+
+# Add any definitions RAPIO might need
+add_definitions(${RAPIO_DEFINITIONS})
 
 add_library(rapiohmrg SHARED
   rIOHmrg.cc
@@ -12,6 +15,7 @@ add_library(rapiohmrg SHARED
 )
 
 target_link_libraries(rapiohmrg
+  ${RAPIO_INCLUDE_LIBRARIES}
 )
 
 # Install the module

@@ -1,16 +1,16 @@
 # We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
-# Get headers from core above us, or where ever RAPIO headers are
-include_directories(../)
+# Include all headers RAPIO uses and RAPIO headers
+include_directories(${RAPIO_INCLUDE_DIRS})
+
+# Add any definitions RAPIO might need
+add_definitions(${RAPIO_DEFINITIONS})
 
 find_package(Netcdf)
 
 # Add conditional flag
 if (Netcdf_FOUND)
-
-  # Need this to add the BOOST setting or the rError.cc will complain about v2
-  add_definitions(-DBOOST_LOG_DYN_LINK)
 
   add_library(rapionetcdf SHARED
     rIONetcdf.cc
@@ -24,8 +24,9 @@ if (Netcdf_FOUND)
   # Include headers and libraries
   include_directories(${Netcdf_INCLUDE_DIR})
   target_link_libraries(rapionetcdf
-    #boost_system
-    ${Boost_LIBRARIES}
+    # We are a module so we don't link to RAPIO itself
+    ${RAPIO_THIRD_LIBRARIES}
+    # And of course we also use netcdf
     ${Netcdf_LIBRARIES}
   )
 

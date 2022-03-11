@@ -1,8 +1,11 @@
 # We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
-# Get headers from core above us, or where ever RAPIO headers are
-include_directories(../)
+# Include all headers RAPIO uses and RAPIO headers
+include_directories(${RAPIO_INCLUDE_DIRS})
+
+# Add any definitions RAPIO might need
+add_definitions(${RAPIO_DEFINITIONS})
 
 find_package(Grib2C)
 
@@ -20,7 +23,10 @@ if (Grib2C_FOUND)
   # Include headers and libraries
   include_directories(${Grib2C_INCLUDE_DIR})
   target_link_libraries(rapiogrib
-  ${Grib2C_LIBRARIES}
+    # We are a module so we don't link to RAPIO itself
+    ${RAPIO_THIRD_LIBRARIES}
+    # And of course the g2clib for grib2 reading
+    ${Grib2C_LIBRARIES}
   )
   # Install the module
   install(TARGETS rapiogrib

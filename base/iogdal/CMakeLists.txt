@@ -1,8 +1,11 @@
 # We wants headers in the current directory, even if bracketed.
 include_directories(.)
 
-# Get headers from core above us, or where ever RAPIO headers are
-include_directories(../)
+# Include all headers RAPIO uses and RAPIO headers
+include_directories(${RAPIO_INCLUDE_DIRS})
+
+# Add any definitions RAPIO might need
+add_definitions(${RAPIO_DEFINITIONS})
 
 find_package(GDAL)
 
@@ -18,7 +21,10 @@ if (GDAL_FOUND)
   # Include headers and libraries
   include_directories(${GDAL_INCLUDE_DIR})
   target_link_libraries(rapiogdal
-  ${GDAL_LIBRARIES}
+   # We are a module so we don't link to RAPIO itself
+   ${RAPIO_THIRD_LIBRARIES}
+   # And of course the GDAL libraries
+   ${GDAL_LIBRARIES}
   )
 
   # Install the module
