@@ -1,5 +1,6 @@
 #include "rSignals.h"
 #include "rError.h"
+#include "rEventLoop.h"
 
 #include <sys/resource.h> // rlimit, etc
 #include <iostream>
@@ -124,7 +125,10 @@ Signals::handleSignal(int signum)
   // possibly I'm building container entry point incorrect..but the signal is lost
   // and algorithm refuses to die.  Exit appears to work correctly so we'll use it for now.
   // kill(getpid(), signum);
-  exit(exitcode);
+  //
+  // I think the issue was that signals are caught by random threads, not always
+  // the main thread.  So instead we tell the main loop to die
+  EventLoop::exit(exitcode);
 } // Signals::handleSignal
 
 void

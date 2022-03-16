@@ -466,28 +466,17 @@ RAPIOAlgorithm::execute()
   const bool wantWeb = (myWebServerMode != "off");
 
   myWebServerOn = wantWeb;
-
-  /*
-   * if (wantWeb) {
-   *  std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
-   *  WebMessageQueue::theWebMessageQueue = wmq;
-   *  EventLoop::addEventHandler(wmq);
-   * }
-   *
-   * EventLoop::doEventLoop();
-   */
-
   if (wantWeb) {
     // Create web message queue
-    std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
-    WebMessageQueue::theWebMessageQueue = wmq;
+    // std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
+    // WebMessageQueue::theWebMessageQueue = wmq;
 
-    EventLoop::addEventHandler(wmq);
-    WebServer::startWebServer(myWebServerMode);
-  } else {
-    // Do event loop solo
-    EventLoop::doEventLoop();
+    // EventLoop::addEventHandler(wmq);
+    WebServer::startWebServer(myWebServerMode, this);
   }
+
+  // Do event loop solo
+  EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute
 
 void
@@ -546,7 +535,7 @@ RAPIOAlgorithm::handleEndDatasetEvent()
       "End of archive data set, " << RecordQueue::poppedRecords << " of " << RecordQueue::pushedRecords
                                   << " processed.\n");
     Log::flush();
-    exit(0);
+    EventLoop::exit(0);
   } else {
     // Realtime queue is empty, hey we're caught up...
   }

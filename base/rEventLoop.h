@@ -6,6 +6,7 @@
 #include <memory>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 
 namespace rapio {
 class EventHandler;
@@ -18,6 +19,9 @@ class EventHandler;
 class EventLoop : public Event {
 public:
 
+  /** Create an event loop */
+  EventLoop(){ }
+
   /** Add timer to list.  No mechanism for searching/replacing
   * deleting here, but we can add that easy later if wanted */
   static void
@@ -26,20 +30,9 @@ public:
     myEventHandlers.push_back(t);
   }
 
-  /** Called by threads to notify action is required */
-  static void
-  notifyReady(){ }
-
-  /** Main thread watcher thread */
-  static void
-  threadWatcher();
-
-  /** Start the application main loop */
+  /** Run main event loop */
   static void
   doEventLoop();
-
-  /** Create an event loop */
-  EventLoop(){ }
 
   /** Destroy an event loop */
   virtual ~EventLoop(){ }
@@ -56,7 +49,20 @@ public:
   /** Ready flag  */
   static bool theReady;
 
+  /** Exit/shutdown with a exit code */
+  static void
+  exit(int theExitCode);
+
+  /** Thread pool of all running threads */
+  static std::vector<std::thread> theThreads;
+
 private:
+
+  /** Exit code to use  */
+  static int exitCode;
+
+  /** Boolean are we still running?  */
+  static std::atomic<bool> isRunning;
 
   /** Timer/heartbeats in main loop */
   static std::vector<std::shared_ptr<EventHandler> > myEventHandlers;

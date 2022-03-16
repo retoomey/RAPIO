@@ -23,33 +23,21 @@ std::mutex EventLoop::theEventLock;
 std::condition_variable EventLoop::theEventCheckVariable;
 bool EventLoop::theReady;
 
+// Flag to tell if we are running.  If this goes false we exit
+// I'm not bothering with atomic.  We should set exitCode and
+// the change isRunning if in another thread.
+int EventLoop::exitCode = 0;
+std::atomic<bool> EventLoop::isRunning(true);
+
+// Global pool of threads
+std::vector<std::thread> EventLoop::theThreads;
+
 void
-EventLoop::threadWatcher()
+EventLoop::exit(int theExitCode)
 {
-  while (true) {
-    std::unique_lock<std::mutex> lck(theEventLock);
-    theEventCheckVariable.wait(lck, [] {
-      return theReady;
-    });
-
-    // We're now locked, so turn off flag so another timer can trigger it again.
-    // However, we can't 'do' anything while locked or any thread trying to retrigger will
-    // deadlock. Copy the list of currently 'ready' timers.
-    theReady = false;
-    std::vector<std::shared_ptr<EventHandler> > isReady;
-    for (auto& a:myEventHandlers) {
-      if (a->isReady()) {
-        isReady.push_back(a);
-      }
-    }
-    lck.unlock(); // actions might turn on dataReady again from either the called threads,
-                  // or others that go off while we're working
-
-    // Now we can tell them all to do work.  Also, firing now will clear flags safely
-    for (auto&a:isReady) {
-      a->actionMainThread();
-    }
-  }
+  // Coming from a random thread here...tell the main thread
+  exitCode  = theExitCode;
+  isRunning = false;
 }
 
 void
@@ -61,18 +49,47 @@ EventLoop::doEventLoop()
   }
 
   // Create any timer threads wanted, these will fire on timers
-  std::vector<std::thread> theThreads;
-
   for (auto& i:myEventHandlers) {
     i->createTimerThread(theThreads);
   }
 
-  // Main watcher thread
-  std::thread mainloop(&EventLoop::threadWatcher);
-
-  // Have to join threads at the very end
+  // Detach the worker threads
   for (auto& t:theThreads) {
-    t.join();
+    t.detach();
   }
-  mainloop.join();
+
+  // While not exited, run main loop
+  try {
+    while (isRunning) {
+      std::unique_lock<std::mutex> lck(theEventLock);
+      theEventCheckVariable.wait(lck, [] {
+        return theReady;
+      });
+
+      // We're now locked, so turn off flag so another timer can trigger it again.
+      // However, we can't 'do' anything while locked or any thread trying to retrigger will
+      // deadlock. Copy the list of currently 'ready' timers.
+      theReady = false;
+      std::vector<std::shared_ptr<EventHandler> > isReady;
+      for (auto& a:myEventHandlers) {
+        if (a->isReady()) {
+          isReady.push_back(a);
+        }
+      }
+      lck.unlock(); // actions might turn on dataReady again from either the called threads,
+                    // or others that go off while we're working
+
+      // Now we can tell them all to do work.  Also, firing now will clear flags safely
+      for (auto&a:isReady) {
+        a->actionMainThread();
+      }
+    }
+  }catch (const std::exception& e) {
+    LogSevere("Main loop uncaught exception " << e.what() << ", exiting\n");
+  }
+
+  // Delete all child threads
+  for (auto& t:theThreads) {
+    t.~thread();
+  }
 } // EventLoop::doEventLoop

@@ -6,7 +6,13 @@
 #include <future>
 #include <mutex>
 
+// We can do a local include here since this is a header only library
+// if installed, algorithms won't have this header, that's ok
+// right now we'll provide our own interface
+#include "../webserver/server_http.hpp"
+
 using namespace std;
+using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace rapio {
 class WebMessage : public Utility
@@ -145,11 +151,23 @@ protected:
 class WebServer : public Utility {
 public:
 
+  /** Thread function for running web server */
+  static void
+  runningWebServer();
+
   /** Simple start web server */
   static void
-  startWebServer(const std::string& params);
+  startWebServer(const std::string& params, RAPIOAlgorithm * alg);
+
+  /** Handle GET */
+  static void
+  handleGET(std::shared_ptr<HttpServer::Response> response,
+    std::shared_ptr<HttpServer::Request>          request);
 
   /** Destroy web server */
   virtual ~WebServer(){ }
+
+  /** The port used by webserver */
+  static int port;
 };
 }

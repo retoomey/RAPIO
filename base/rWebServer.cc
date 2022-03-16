@@ -8,10 +8,12 @@
 // We can do a local include here since this is a header only library
 // if installed, algorithms won't have this header, that's ok
 // right now we'll provide our own interface
-#include "../webserver/server_http.hpp"
+// #include "../webserver/server_http.hpp"
 
 using namespace rapio;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
+
+int WebServer::port;
 
 std::shared_ptr<WebMessageQueue> rapio::WebMessageQueue::theWebMessageQueue;
 
@@ -81,7 +83,115 @@ WebMessageQueue::action()
 }
 
 void
-WebServer::startWebServer(const std::string& params)
+WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
+  std::shared_ptr<HttpServer::Request>                     request)
+{
+  // Create web message record for the worker queue, this
+  // contains a promise that the worker thread will forfill.
+  // Copy fields of interest to avoid algorithms needing the library headers.
+  // request->remote_endpoint().address().to_string()
+  // request->remote_endpoint().port();
+  // request->method (for now we're just gonna do GET)
+  // request->path
+  // request->http_version;
+  // request->header (map of pairs)
+  auto query_fields = request->parse_query_string();
+
+  // Copy just in case they change their type later
+  std::map<std::string, std::string> theFields;
+
+  for (auto f:query_fields) {
+    theFields[f.first] = f.second;
+  }
+  auto web = std::make_shared<WebMessage>(request->path, theFields);
+
+  WebMessageQueue::theWebMessageQueue->addRecord(web);
+  auto fut = web->result.get_future();
+
+  // FIXME: We could do a proper timeout here and handle accordingly I think..
+  try{
+    bool result = fut.get(); // wait on the algorithm thread to process this
+
+    // We've been waiting on this WebMessage, dump its message for now.
+    // FIXME: I'm gonna want file/MIME support here, etc.
+    // First pass just doing text..lots of glue work left to do.
+    if (result) {
+      // How to send an error properly...
+      // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
+
+      if (web->isFile()) {
+        // Simple attempt to send a file
+        // static vector<char> buffer(131072); // Safe when server is running on one thread
+        auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
+        ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
+        if (*ifs) {
+          // Ok get the length of the file we're gonna send, let the client know
+          auto length = ifs->tellg();
+          ifs->seekg(0, ios::beg);
+          SimpleWeb::CaseInsensitiveMultimap header;
+          header.emplace("Content-Length", to_string(length));
+          response->write(header);
+
+          FileServer::read_and_send(response, ifs);
+        } else {
+          LogSevere("Failed to open filename " << web->getFile() << "\n");
+          web->setMessage("Failed to open filename " + web->getFile());
+          std::stringstream stream;
+          stream << web->getMessage();
+          response->write(stream);
+        }
+      } else {
+        LogSevere("Sending text:\n");
+        //    response->write(SimpleWeb::StatusCode::client_error_bad_request, "Testing error");
+        //         // FIXME: need to check message was ever set
+
+        auto aSize = web->getMessage().size();
+
+        // Fill in header from web message
+        SimpleWeb::CaseInsensitiveMultimap header;
+        for (auto& a:web->getHeaderMap()) {
+          header.emplace(a.first, a.second);
+        }
+        header.emplace("Content-Length", to_string(aSize));
+        header.emplace("Access-Control-Allow-Origin", "*");
+
+        std::stringstream stream;
+        stream << web->getMessage();
+        LogSevere(web->getMessage());
+        response->write(stream, header);
+      }
+    } else {
+      // Algorithm basically reported an error maybe?
+    }
+  }catch (const std::exception& e) {
+    LogSevere("Error handling web request: " << e.what() << "\n");
+    // FIXME: do http error codes with library properly
+  }
+} // WebServer::handleGET
+
+namespace {
+// I 'think' this is a call back telling us actual port used for multiconnections
+void
+serverStarted(unsigned short port)
+{
+  // WebServer::port=port;
+};
+};
+
+void
+WebServer::runningWebServer()
+{
+  HttpServer server;
+
+  server.config.port = WebServer::port;
+
+  server.default_resource["GET"] = &WebServer::handleGET;
+
+  server.start(&serverStarted);
+}
+
+void
+WebServer::startWebServer(const std::string& params, RAPIOAlgorithm * alg)
 {
   // HTTP-server at give port using 1 thread
   // Unless you do more heavy non-threaded processing in the resources,
@@ -97,114 +207,17 @@ WebServer::startWebServer(const std::string& params)
     LogSevere("Couldn't get port from '" << params << "', exiting.\n");
     exit(1);
   }
-  HttpServer server;
 
-  server.config.port = port;
+  WebServer::port = port;
 
-  // Can for instance be used to retrieve an HTML 5 client that uses REST-resources on this server
-  // Lambas are cool..but not the greatest when it comes to readability and code
-  // organization.  Sigh I'm probably gonna start using them
-  server.default_resource["GET"] = [](
-    std::shared_ptr<HttpServer::Response> response,
-    std::shared_ptr<HttpServer::Request> request)
-    {
-      // Create web message record for the worker queue, this
-      // contains a promise that the worker thread will forfill.
-      // Copy fields of interest to avoid algorithms needing the library headers.
-      // request->remote_endpoint().address().to_string()
-      // request->remote_endpoint().port();
-      // request->method (for now we're just gonna do GET)
-      // request->path
-      // request->http_version;
-      // request->header (map of pairs)
-      auto query_fields = request->parse_query_string();
+  // Create web message queue first
+  std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(alg);
 
-      // Copy just in case they change their type later
-      std::map<std::string, std::string> theFields;
+  WebMessageQueue::theWebMessageQueue = wmq;
 
-      for (auto f:query_fields) {
-        theFields[f.first] = f.second;
-      }
-      auto web = std::make_shared<WebMessage>(request->path, theFields);
+  EventLoop::addEventHandler(wmq);
 
-      WebMessageQueue::theWebMessageQueue->addRecord(web);
-      auto fut = web->result.get_future();
-
-      // FIXME: We could do a proper timeout here and handle accordingly I think..
-      try{
-        bool result = fut.get(); // wait on the algorithm thread to process this
-
-        // We've been waiting on this WebMessage, dump its message for now.
-        // FIXME: I'm gonna want file/MIME support here, etc.
-        // First pass just doing text..lots of glue work left to do.
-        if (result) {
-          // How to send an error properly...
-          // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
-
-          if (web->isFile()) {
-            // Simple attempt to send a file
-            // static vector<char> buffer(131072); // Safe when server is running on one thread
-            auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
-            ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
-            if (*ifs) {
-              // Ok get the length of the file we're gonna send, let the client know
-              auto length = ifs->tellg();
-              ifs->seekg(0, ios::beg);
-              SimpleWeb::CaseInsensitiveMultimap header;
-              header.emplace("Content-Length", to_string(length));
-              response->write(header);
-
-              FileServer::read_and_send(response, ifs);
-            } else {
-              LogSevere("Failed to open filename " << web->getFile() << "\n");
-              web->setMessage("Failed to open filename " + web->getFile());
-              std::stringstream stream;
-              stream << web->getMessage();
-              response->write(stream);
-            }
-          } else {
-            LogSevere("Sending text:\n");
-            //    response->write(SimpleWeb::StatusCode::client_error_bad_request, "Testing error");
-            //         // FIXME: need to check message was ever set
-
-            auto aSize = web->getMessage().size();
-
-            // Fill in header from web message
-            SimpleWeb::CaseInsensitiveMultimap header;
-            for (auto& a:web->getHeaderMap()) {
-              header.emplace(a.first, a.second);
-            }
-            header.emplace("Content-Length", to_string(aSize));
-            header.emplace("Access-Control-Allow-Origin", "*");
-
-            std::stringstream stream;
-            stream << web->getMessage();
-            LogSevere(web->getMessage());
-            response->write(stream, header);
-          }
-        } else {
-          // Algorithm basically reported an error maybe?
-        }
-      }catch (const std::exception& e) {
-        LogSevere("Error handling web request: " << e.what() << "\n");
-        // FIXME: do http error codes with library properly
-      }
-    };
-
-  // Start server and receive assigned port when server is listening for requests
-  promise<unsigned short> server_port;
-  thread server_thread([&server, &server_port](){
-    // Start server
-    server.start([&server_port](unsigned short port){
-    server_port.set_value(port);
-      });
-    });
-
-  LogInfo("Algorithm Web Server Initialized on port: " << server_port.get_future().get() << "\n");
-
-  // Wait until server shutsdown
-  // Do it here for the moment else the other thread context dies.
-  EventLoop::doEventLoop();
-
-  // server_thread.join(); // if we keep this context alive don't need this since exit will kill us
+  // Now add the webserver thread to the event loop
+  EventLoop::theThreads.push_back(std::thread(&WebServer::runningWebServer));
+  LogInfo("Algorithm Web Server Initialized on port: " << WebServer::port << "\n");
 } // WebServer::startWebServer
