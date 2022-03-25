@@ -8,6 +8,21 @@
 
 #include <rSentinelDouble.h>
 
+#ifndef M_PI
+// Source: http://www.geom.uiuc.edu/~huberty/math5337/groupe/digits.html
+# define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406
+#endif
+
+// Convenient shortcuts
+#define DEG_TO_RAD (Constants::RadiansPerDegree)
+#define RAD_TO_DEG (Constants::DegreesPerRadian)
+
+// Still debating unit classes (the slowness of unit safety vs the speed of labeling units in variables)
+// The issue with classes comes when we have millions/billions of angles, lengths, etc.
+// FIXME: Actually...I think we should have both ways and link them together.
+#define AngleDegs float
+#define LengthKMs float
+
 namespace rapio {
 /** Hold all constants for RAPIO
  *

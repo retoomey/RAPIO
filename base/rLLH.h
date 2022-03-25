@@ -2,6 +2,7 @@
 
 #include <rLL.h>
 #include <rLength.h>
+#include <rConstants.h>
 
 #include <iosfwd>
 
@@ -14,8 +15,8 @@ class LLH : public LL {
 protected:
 
   /** Height above mean sea level. */
-  // Length myHeight;
-  double myHeight;
+  // Length myHeightKMs;
+  LengthKMs myHeightKMs;
 
 public:
 
@@ -28,42 +29,41 @@ public:
    *  @param longitude   longitude degrees
    *  @param height  height in kilometers
    */
-  LLH(const double& latitude,
-    const double  & longitude,
-    const double  & height);
+  LLH(const AngleDegs& latitude,
+    const AngleDegs  & longitude,
+    const LengthKMs  & height);
 
   /** Build Location from LatLon and height.
    *
    *  @param a  angular location about earth center
    *  @param height  height above earth surface
    */
-  LLH(const LL& a, const double& height);
+  LLH(const LL& a, const LengthKMs& height);
 
   /** Do-nothing destructor. */
   ~LLH(){ }
 
   /** Set the height of this Location. */
-  // void setHeight(const Length& d)
   void
-  setHeight(double d)
+  setHeightKM(LengthKMs d)
   {
-    myHeight = d;
+    myHeightKMs = d;
   }
 
   /** Replace values without making new object */
   void
-  set(const double& lat, const double& lon, const double& l)
+  set(const AngleDegs& lat, const AngleDegs& lon, const LengthKMs& l)
   {
     myLatitudeDegs  = lat;
     myLongitudeDegs = lon;
-    myHeight        = l;
+    myHeightKMs     = l;
   }
 
   /** @return the height (const Length& as return type) */
-  const double&
+  const LengthKMs
   getHeightKM() const
   {
-    return (myHeight);
+    return (myHeightKMs);
   }
 
   /** Add a Displacement to get a new Location. */
@@ -92,7 +92,7 @@ public:
   {
     return ((myLatitudeDegs == l.myLatitudeDegs) &&
            (myLongitudeDegs == l.myLongitudeDegs) &&
-           (myHeight == l.myHeight));
+           (myHeightKMs == l.myHeightKMs));
   }
 };
 

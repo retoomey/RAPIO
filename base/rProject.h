@@ -23,16 +23,53 @@ public:
   virtual bool
   initialize();
 
+  // ----------------------------------------------------------------------------
+  // General projection methods polar/lat lon
+  // @author John Krause, Lak and others for the logic.
+  //
+
   /** Project from a lat lon to azimuth range based on earth surface */
   static void
-  LatLonToAzRange(const float &cLat, const float &cLon,
-    const float &tLat, const float &tLon, float &azDegs, float &rangeMeters);
+  LatLonToAzRange(const AngleDegs &cLat, const AngleDegs &cLon,
+    const AngleDegs &tLat, const AngleDegs &tLon, AngleDegs &azDegs, float &rangeMeters);
+
+  /** Project from a amimuth/range to a latitude longitude */
+  static void
+  BeamPath_AzRangeToLatLon(
+    const AngleDegs &stationLatDegs, // !< Station Latitude in degrees
+    const AngleDegs &stationLonDegs, // !< Station Long in degrees
+
+    const AngleDegs &azimuthDeg, // !< Target Azimuth in degrees
+    const LengthKMs &rangeKMs,   // !< Target Range in kilometers
+    const AngleDegs &elevDegs,   // !< Elevation angle in degrees
+
+    LengthKMs       &heightKMs, // !< Height in kilometers
+    AngleDegs       &latDegs,   // !< Target Latitude in degrees
+    AngleDegs       &lonDegs);  // !< Target Longitude in degree
+
+  /** Calculate observed range, azimuth and elevation */
+  static void
+  BeamPath_LLHtoAzRangeElev(
+    const AngleDegs & targetLatDegs, // !< Target Latitude in degrees
+    const AngleDegs & targetLonDegs, // !< Target Longitude in degrees
+    const LengthKMs & targetHeightM, // !< Target ht above MSL in meters
+
+    const AngleDegs & stationLatDegs, // !< Station Latitude in degrees
+    const AngleDegs & stationLonDegs, // !< Station Long in degrees
+    const LengthKMs &stationHeightM,  // Station ht above MSL in meters
+
+    AngleDegs       & elevAngleDegs, // !< Elevation angle in degrees
+    AngleDegs       & azimuthDegs,   // !< Target *Azimuth in degrees
+    float           & rangeM,        // !< Target *Range in meters
+    double          & gcd);
 
   /** Create Lat Lon Grid marching information from a center and delta degree */
   static void
   createLatLonGrid(const float centerLatDegs, const float centerLonDegrees,
     const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
+  // ----------------------------------------------------------------------------
 
   /** Get the X/Y kilometer coordinate origin for the raster grid center */
   virtual bool

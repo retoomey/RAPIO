@@ -10,25 +10,25 @@
 using namespace rapio;
 using namespace std;
 
-LLH::LLH() : LL(0, 0), myHeight(0)
+LLH::LLH() : LL(0, 0), myHeightKMs(0)
 { }
 
 LLH::LLH(
-  const double& latitude, const double& longitude, const double& height
-) : LL(latitude, longitude), myHeight(height)
+  const AngleDegs& latitude, const AngleDegs& longitude, const LengthKMs& height
+) : LL(latitude, longitude), myHeightKMs(height)
 { }
 
-LLH::LLH(const LL& a, const double& height)
-  : LL(a.getLatitudeDeg(), a.getLongitudeDeg()), myHeight(height)
+LLH::LLH(const LL& a, const LengthKMs& height)
+  : LL(a.getLatitudeDeg(), a.getLongitudeDeg()), myHeightKMs(height)
 { }
 
 ostream&
 rapio::operator << (ostream& output, const LLH& exp)
 {
   output
-    << "(lat=" << std::setprecision(8) << exp.getLatitudeDeg() << ","
-    << "lon=" << std::setprecision(8) << exp.getLongitudeDeg() << ","
-    << "h=" << std::setprecision(8) << exp.getHeightKM() << ")";
+    << "(latDeg=" << std::setprecision(8) << exp.getLatitudeDeg() << ","
+    << "lonDeg=" << std::setprecision(8) << exp.getLongitudeDeg() << ","
+    << "hKM=" << std::setprecision(8) << exp.getHeightKM() << ")";
 
   return (output);
 }

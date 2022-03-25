@@ -64,10 +64,53 @@ public:
   virtual LLH
   getCenterLocation() override
   {
-    const double lat = myLocation.getLatitudeDeg() - myLatSpacing * (getNumLats() / 2.0);
-    const double lon = myLocation.getLongitudeDeg() + myLonSpacing * (getNumLons() / 2.0);
+    // This simple one liner doesn't work, because the middle can be on a cell wall and
+    // not in the center of the cell.  Imagine 2 cells..the true middle is the line
+    // between them.  For three cells it is the middle of cell 1.
+    // return(getCenterLocationAt(getNumLats()/2, getNumLons()/2);
+    //
+    // However, this does:
+    const double latHalfWidth = (myLatSpacing * getNumLats()) / 2.0;
+    const double lonHalfWidth = (myLonSpacing * getNumLons()) / 2.0;
+    const double latDegs      = myLocation.getLatitudeDeg() - latHalfWidth;
+    const double lonDegs      = myLocation.getLongitudeDeg() + lonHalfWidth;
 
-    return LLH(lat, lon, myLocation.getHeightKM());
+    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
+  }
+
+  /** Get the top left location of a cell in the LatLonGrid
+   *  This is the point on the left top of grid (see X).
+   *  X------
+   *  |     |
+   *  |     |
+   *  |     |
+   *  -------
+   */
+  LLH
+  getTopLeftLocationAt(size_t i, size_t j)
+  {
+    if (i == j == 0) { return myLocation; }
+    const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
+    const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * j);
+
+    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
+  }
+
+  /** Get the center location of a cell in the LatLonGrid
+   *  This is the center point of the grid (see O).
+   *  -------
+   *  |     |
+   *  |  O  |
+   *  |     |
+   *  -------
+   */
+  LLH
+  getCenterLocationAt(size_t i, size_t j)
+  {
+    const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * (i + 0.5));
+    const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * (j + 0.5));
+
+    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
   }
 
   /** Generated default string for subtype from the data */

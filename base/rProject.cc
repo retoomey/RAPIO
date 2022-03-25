@@ -2,6 +2,9 @@
 
 #include "rError.h"
 #include "rLatLonGrid.h"
+#include "rXYZ.h"
+
+#include <cmath>
 
 using namespace rapio;
 
@@ -13,27 +16,181 @@ Project::initialize()
 
 void
 Project::LatLonToAzRange(
-  const float &cLat,
-  const float &cLon,
-  const float &tLat,
-  const float &tLon,
-  float       &azDegs,
-  float       &rangeMeters)
+  const AngleDegs &cLat,
+  const AngleDegs &cLon,
+  const AngleDegs &tLat,
+  const AngleDegs &tLon,
+  AngleDegs       &azDegs,
+  float           &rangeMeters) // FIXME: do more work to make units consistent
 
 {
-  const float meterDeg = Constants::EarthRadiusM * Constants::RadiansPerDegree; // 2nr/360 amazingly
+  const auto meterDeg = Constants::EarthRadiusM * DEG_TO_RAD; // 2nr/360 amazingly
 
   // Below equator we flip lat I think
-  float Y = (tLat > 0) ? (tLat - cLat) * meterDeg : (cLat - tLat) * meterDeg;
-  float X = ((tLon - cLon) * meterDeg) * cos((cLat + tLat) / 2.0 * Constants::RadiansPerDegree);
+  auto Y = (tLat > 0) ? (tLat - cLat) * meterDeg : (cLat - tLat) * meterDeg;
+  auto X = ((tLon - cLon) * meterDeg) * cos((cLat + tLat) / 2.0 * DEG_TO_RAD);
 
   // Final range/azimuth guess
   rangeMeters = sqrt(X * X + Y * Y);
-  azDegs      = atan2(X, Y) / Constants::RadiansPerDegree;
+  azDegs      = atan2(X, Y) * RAD_TO_DEG;
   if (azDegs < 0) {
     azDegs = 360.0 + azDegs;
   }
 }
+
+namespace {
+double
+asin_bugworkaround(double arg)
+{
+  double result = asin(arg);
+
+  if (std::isnan(result) ) {
+    // for some reason asin(1) returns
+    if (arg < -0.99999999) {
+      result = (-0.5 * M_PI);
+    }
+    if (arg > 0.999999999) {
+      result = (0.5 * M_PI);
+    }
+  }
+  return result;
+}
+}
+
+void
+Project::BeamPath_AzRangeToLatLon(
+  const AngleDegs &stationLatDegs,
+  const AngleDegs &stationLonDegs,
+
+  const AngleDegs &azimuthDegs,
+  const LengthKMs &rangeKMs,
+  const AngleDegs &elevAngleDegs,
+
+  LengthKMs       &heightKMs,
+  AngleDegs       &latDegs,
+  AngleDegs       &lonDegs)
+{
+  const auto elevAngleRad      = elevAngleDegs * DEG_TO_RAD;
+  const auto stationLatRad     = (90. - stationLatDegs) * DEG_TO_RAD;
+  const auto azimuthRad        = azimuthDegs * DEG_TO_RAD;
+  const auto rangeM            = rangeKMs * 1000;
+  const double EarthRadius     = Constants::EarthRadiusM;
+  const double earthRefraction = (4. / 3.) * EarthRadius;
+
+  const auto heightM = pow(pow(rangeM, 2.) + pow(earthRefraction, 2.)
+      + 2. * rangeM * earthRefraction
+      * sin(elevAngleRad), 0.5) - earthRefraction;
+
+  const double great_circle_distance = earthRefraction
+    * asin_bugworkaround( ( rangeM * cos(elevAngleRad) )
+      / ( (earthRefraction) + heightM) );
+  const auto gcdEarth = great_circle_distance / EarthRadius;
+  const auto SIN      = sin(gcdEarth); // Make sure this sin only called once
+
+  // Output
+  latDegs = 90. - (acos( (cos(gcdEarth))
+    * (cos(stationLatRad)) + ( SIN
+    * (sin(stationLatRad)) * (cos(azimuthRad) )))) / DEG_TO_RAD;
+
+  const double deltaLonDegs = ( asin_bugworkaround(SIN
+    * (sin(azimuthRad)) / (sin(DEG_TO_RAD * (90. - latDegs)) ) ) ) / DEG_TO_RAD;
+
+  heightKMs = heightM / 1000.0;
+  lonDegs   = stationLonDegs + deltaLonDegs;
+}
+
+void
+Project::BeamPath_LLHtoAzRangeElev(
+  const AngleDegs & targetLatDegs,
+  const AngleDegs & targetLonDegs,
+  const LengthKMs & targetHeightKMs,
+
+  const AngleDegs & stationLatDegs,
+  const AngleDegs & stationLonDegs,
+  const LengthKMs & stationHeightKMs,
+
+  AngleDegs       & elevAngleDegs,
+  AngleDegs       & azimuthDegs,
+  LengthKMs       & rangeKMs,
+
+  double          & gcd)
+{
+  // Called SO much during Terrain algorithm, I think we could cache
+  // the math and optimize.  The amount of sin/cos etc is crazy here.
+  // FIXME: These functions would work better if passing in RADIANS
+  const auto stationLatRad = (90. - stationLatDegs) * DEG_TO_RAD;
+  const auto targetLatRad  = (90. - targetLatDegs) * DEG_TO_RAD;
+
+  const AngleDegs deltaLonDegs = targetLonDegs - stationLonDegs;
+
+  /*
+   * LogSevere("INPUT: " << targetLatDegs
+   * << " " << targetLonDegs
+   * << " " <<  targetHeightKMs
+   * << " " <<  stationLatDegs
+   * << " " <<  stationLonDegs
+   * << " " << stationHeightM << "\n");
+   * LogSevere("----LON " << deltaLonDegs << "\n");
+   */
+
+  // const auto deltaLonRadOrg = targetLatRad - stationLatRad; Can't because the Rad above is 90- dee dee
+  const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
+
+  const double EarthRadius = Constants::EarthRadiusM;
+  // const double EarthRadius=6371000.0;
+  const double IR = (4. / 3.) * EarthRadius;
+
+  double great_circle_distance =
+    EarthRadius * acos(cos(stationLatRad)
+      * cos(targetLatRad)
+      + sin(stationLatRad)
+      * sin(targetLatRad) * cos(deltaLonRad));
+
+  gcd = great_circle_distance;
+
+  // LogSevere("------GCD " << great_circle_distance << "\n");
+  // exit(1);
+
+  // FIXME: The math/objects here are called a billion times, optimize
+  LLH target(targetLatDegs, targetLonDegs, targetHeightKMs);
+  LLH station(stationLatDegs, stationLonDegs, stationHeightKMs);
+
+  XYZ O   = XYZ(0, 0, 0); // O -- origin ( earth center )
+  XYZ R   = XYZ(station); // R -- radar point
+  XYZ C   = XYZ(target);
+  IJK RC  = C - R;
+  IJK OR  = R - O;
+  IJK ORu = OR.unit();
+  IJK Z(0.0, 0.0, 1.0);
+  IJK oz        = ORu;
+  IJK ox        = (Z % oz).unit();
+  IJK oy        = (oz % ox ).unit();
+  double azycos = RC.unit() * oy;
+  double azxcos = RC.unit() * ox;
+  double az     = atan( ( RC.norm() * azxcos ) / ( RC.norm() * azycos ) );
+
+  if (azycos >= 0) {
+    if (azxcos <= 0) { az = M_PI * 2 + az; }
+  } else {
+    az = M_PI + az;
+  }
+
+  // Convert the azimuth from radians to degrees
+  azimuthDegs = az * RAD_TO_DEG; // humm combine with the M_PI math above?
+
+
+  // reverse calculate elev_angle from height difference
+  // FIXME: Can we do this in kilometers get correct values
+  const double heightM = (targetHeightKMs - stationHeightKMs) * 1000.0;
+
+  const double elevAngleRad = atan(
+    (cos(great_circle_distance / IR) - (IR / (IR + heightM)))
+    / sin(great_circle_distance / IR)
+  );
+
+  rangeKMs      = (( sin(great_circle_distance / IR) ) * (IR + heightM) / cos(elevAngleRad)) / 1000.0;
+  elevAngleDegs = elevAngleRad * RAD_TO_DEG;
+} // Project::BeamPath_LLHtoAzRangeElev
 
 void
 Project::createLatLonGrid(
