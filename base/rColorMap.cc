@@ -95,16 +95,16 @@ ColorMap::getColorMap(const std::string& key)
       } else if (type == "para") {
         colormap = readParaColorMap(key, attributes);
       }
-
-      // If anything failed use my debugging high contrast all data map
-      if (colormap == nullptr) { // ALWAYS return a color map
-        LogSevere("Using testing high contrast ColorMap for key " << key << "\n");
-        colormap = std::make_shared<NullColorMap>();
-      }
-
-      // Cache this color map so we don't hunt for it again
-      myColorMaps[key] = colormap;
     }
+
+    // If anything failed use my debugging high contrast all data map
+    if (colormap == nullptr) { // ALWAYS return a color map
+      LogSevere("Using testing high contrast ColorMap for key " << key << "\n");
+      colormap = std::make_shared<NullColorMap>();
+    }
+
+    // Cache this color map so we don't hunt for it again
+    myColorMaps[key] = colormap;
   } else {
     colormap = lookup->second;
   }

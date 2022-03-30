@@ -39,23 +39,25 @@ Color::RGBStringToColor(const std::string& s,
         if (l >= 7) { // "#FF00FF"
           std::string t = "0x" + s.substr(1, 2);
           r       = strtol(t.c_str(), NULL, 0);
-          failed &= errno;
+          failed |= errno;
           t       = "0x" + s.substr(3, 2);
           g       = strtol(t.c_str(), NULL, 0);
-          failed &= errno;
+          failed |= errno;
           t       = "0x" + s.substr(5, 2);
           b       = strtol(t.c_str(), NULL, 0);
-          failed &= errno;
+          failed |= errno;
           if (l >= 9) {
             t       = "0x" + s.substr(7, 2);
             a       = strtol(t.c_str(), NULL, 0);
-            failed &= errno;
+            failed |= errno;
           } else {
             a = 255;
           }
         }
       }
     }
+  } else {
+    failed = true;
   }
   return !failed;
 } // Color::RGBStringToColor

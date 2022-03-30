@@ -158,64 +158,38 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       // If there's a units attribute it will replace later in general pull
       const std::string units = "dimensionless";
 
-      // If we had pixel dimension, check the sparse
-      if (sparse) {
-        if (name == aTypeName) {
-          if ((ndimsp2 == 1) and (xtypep == NC_FLOAT)) {
+      void * data = nullptr;
+
+      // Read all the arrays we support at the moment
+      if (ndimsp2 == 1) { // 1D float
+        if (xtypep == NC_FLOAT) {
+          if ((sparse) and (name == aTypeName)) {
             // SPARSE DATA READ
             // Expand it to 2D float array from sparse...
             // We're assuming it's using first two dimensions on 2D sparse...
             auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
             IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
               Constants::MissingData, Constants::RangeFolded, *data2DF);
-          }
-        }
-      } else {
-        // --------------------------------------------------
-
-        void * data = nullptr;
-
-
-        // Slowly evolving to more generalized code
-        if (ndimsp2 == 1) { // 1D float
-          if (xtypep == NC_FLOAT) {
+          } else {
+            // Non-sparse regular data
             auto data1DF = dataGrid.addFloat1D(arrayName, units, dimindexes);
-            // data = data1DF->data();
             data = data1DF->getRawDataPointer();
-
-            //       NETCDF(nc_get_var_float(ncid, varid, data1DF->data()));
-            //          NETCDF(nc_get_var(ncid, varid, data));
-          } else if (xtypep == NC_INT) {
-            auto data1DI = dataGrid.addInt1D(arrayName, units, dimindexes);
-            // data = data1DI->data();
-            data = data1DI->getRawDataPointer();
-
-            //       NETCDF(nc_get_var_int(ncid, varid, data1DI->data()));
-            //          NETCDF(nc_get_var(ncid, varid, data));
           }
-        } else if (ndimsp2 == 2) { // 2D stuff
-          if (xtypep == NC_FLOAT) {
-            auto data2DF = dataGrid.addFloat2D(arrayName, units, dimindexes);
-            // data = data2DF->data();
-            data = data2DF->getRawDataPointer();
-
-            //          const size_t start2[] = { 0, 0 };
-            //          const size_t count2[] = { dims[dimindexes[0]].size(), dims[dimindexes[1]].size() };
-            //          NETCDF(nc_get_vara(ncid, varid, start2, count2, data));
-
-            //       Could we just do this? Seems the same output...
-            //             NETCDF(nc_get_var_float(ncid, varid, data2DF->data()));
-            //        NETCDF(nc_get_var(ncid, varid, data2DF->data())); yeah we can I think
-            // Do we need this?  FIXME: should take any grid right?
-            //          dataGrid.replaceMissing(data2DF, FILE_MISSING_DATA, FILE_RANGE_FOLDED);
-            //          Only for NSSL data sets
-          }
+        } else if (xtypep == NC_INT) {
+          auto data1DI = dataGrid.addInt1D(arrayName, units, dimindexes);
+          data = data1DI->getRawDataPointer();
         }
-        // Read generally into array
-        if (data != nullptr) {
-          NETCDF(nc_get_var(ncid, varid, data));
+      } else if (ndimsp2 == 2) { // 2D stuff
+        if (xtypep == NC_FLOAT) {
+          auto data2DF = dataGrid.addFloat2D(arrayName, units, dimindexes);
+          data = data2DF->getRawDataPointer();
         }
       }
+      // Read generally into array
+      if (data != nullptr) {
+        NETCDF(nc_get_var(ncid, varid, data));
+      }
+
 
       // This should fill in attributes per array, such as the stored Units in wdssii
       auto theList = dataGridSP->getAttributes(arrayName);
