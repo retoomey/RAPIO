@@ -14,6 +14,26 @@ Project::initialize()
   return false;
 }
 
+LengthKMs
+Project::attenuationHeightKMs(
+  LengthKMs stationHeightKMs,
+  LengthKMs rangeKMs,
+  AngleDegs elevDegs)
+{
+  // Radar formula approimation. p 232, Radar Equations for Modern Radar
+  // this is good to 0.4% error at 1000 km.
+
+  const double EarthRadius = Constants::EarthRadiusM / 1000.0;
+  // const double EarthRadius=6371000.0;
+  const double IR2 = (4. / 3.) * EarthRadius * 2;
+  double elevRad   = elevDegs * DEG_TO_RAD;
+
+  const double top    = rangeKMs * cos(elevRad);
+  LengthKMs heightKMs = rangeKMs * sin(elevRad) + (top * top / IR2) + stationHeightKMs;
+
+  return heightKMs;
+}
+
 void
 Project::LatLonToAzRange(
   const AngleDegs &cLat,
@@ -111,9 +131,7 @@ Project::BeamPath_LLHtoAzRangeElev(
 
   AngleDegs       & elevAngleDegs,
   AngleDegs       & azimuthDegs,
-  LengthKMs       & rangeKMs,
-
-  double          & gcd)
+  LengthKMs       & rangeKMs)
 {
   // Called SO much during Terrain algorithm, I think we could cache
   // the math and optimize.  The amount of sin/cos etc is crazy here.
@@ -123,35 +141,32 @@ Project::BeamPath_LLHtoAzRangeElev(
 
   const AngleDegs deltaLonDegs = targetLonDegs - stationLonDegs;
 
-  /*
-   * LogSevere("INPUT: " << targetLatDegs
-   * << " " << targetLonDegs
-   * << " " <<  targetHeightKMs
-   * << " " <<  stationLatDegs
-   * << " " <<  stationLonDegs
-   * << " " << stationHeightM << "\n");
-   * LogSevere("----LON " << deltaLonDegs << "\n");
-   */
-
-  // const auto deltaLonRadOrg = targetLatRad - stationLatRad; Can't because the Rad above is 90- dee dee
   const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
 
   const double EarthRadius = Constants::EarthRadiusM;
   // const double EarthRadius=6371000.0;
   const double IR = (4. / 3.) * EarthRadius;
 
-  double great_circle_distance =
+  const double great_circle_distance =
     EarthRadius * acos(cos(stationLatRad)
       * cos(targetLatRad)
       + sin(stationLatRad)
       * sin(targetLatRad) * cos(deltaLonRad));
 
-  gcd = great_circle_distance;
+  #if 0
+  // Doing azimuth in 3D isn't really necessary..azimuth aligns to lat/lon axis
+  // and this saves a LOT of time vs 3D vector math
+  const auto meterDeg = Constants::EarthRadiusM * DEG_TO_RAD; // 2nr/360 amazingly
+  // Below equator we flip lat I think
+  auto Y =
+    (targetLatDegs > 0) ? (targetLatDegs - stationLatDegs) * meterDeg : (stationLatDegs - targetLatDegs) * meterDeg;
+  auto X = (deltaLonDegs * meterDeg) * cos((stationLatDegs + targetLatDegs) / 2.0 * DEG_TO_RAD);
+  azimuthDegs = atan2(X, Y) * RAD_TO_DEG;
+  if (azimuthDegs < 0) {
+    azimuthDegs = 360.0 + azimuthDegs;
+  }
+  #endif // if 0
 
-  // LogSevere("------GCD " << great_circle_distance << "\n");
-  // exit(1);
-
-  // FIXME: The math/objects here are called a billion times, optimize
   LLH target(targetLatDegs, targetLonDegs, targetHeightKMs);
   LLH station(stationLatDegs, stationLonDegs, stationHeightKMs);
 
@@ -178,17 +193,18 @@ Project::BeamPath_LLHtoAzRangeElev(
   // Convert the azimuth from radians to degrees
   azimuthDegs = az * RAD_TO_DEG; // humm combine with the M_PI math above?
 
-
   // reverse calculate elev_angle from height difference
   // FIXME: Can we do this in kilometers get correct values
   const double heightM = (targetHeightKMs - stationHeightKMs) * 1000.0;
 
+  const double sinGcdIR = sin(great_circle_distance / IR);
+
   const double elevAngleRad = atan(
     (cos(great_circle_distance / IR) - (IR / (IR + heightM)))
-    / sin(great_circle_distance / IR)
+    / sinGcdIR
   );
 
-  rangeKMs      = (( sin(great_circle_distance / IR) ) * (IR + heightM) / cos(elevAngleRad)) / 1000.0;
+  rangeKMs      = (( sinGcdIR ) * (IR + heightM) / cos(elevAngleRad)) / 1000.0;
   elevAngleDegs = elevAngleRad * RAD_TO_DEG;
 } // Project::BeamPath_LLHtoAzRangeElev
 

@@ -73,8 +73,143 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
   }
 
   // For moment print out volume
-  printVolume();
+  // printVolume();
 } // Volume::addDataType
+
+std::vector<double>
+Volume::getNumberVector()
+{
+  // Convert each subtype to an int for doing a fast lookup
+  // using an int because later search will be quicker
+  std::vector<double> numbers;
+
+  for (auto v:myVolume) {
+    const auto os = v->getSubType();
+    double d      = std::stod(os); // FIXME catch?
+    numbers.push_back(d);
+  }
+  return numbers;
+}
+
+void
+Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper)
+{
+  /* std::cout << "Incoming ranges looking for " << at << "\n";
+   * for (auto v:numbers){
+   *  std::cout << v << ", ";
+   * }
+   * std::cout << "\n";
+   */
+
+  // Binary search
+  lower = upper = nullptr;
+  int left  = 0;
+  int right = numbers.size() - 1;
+  int found = -100;
+
+  while (left <= right) {
+    const int midv = left + (right - left) / 2;
+    const auto v   = numbers[midv];
+    if (v == at) {
+      found = midv;
+      break;
+    } else if (v < at) {
+      left = midv + 1;
+    } else {
+      right = midv - 1;
+    }
+  }
+
+  // Direct hit, use mid index
+  if (found > -100) {
+    lower = myVolume[found].get();
+    if (found + 1 < numbers.size() - 1) {
+      upper = myVolume[found + 1].get();
+    }
+  } else {
+    // So left is now <= right. Pin to the bins
+    if (left > numbers.size() - 1) { left = numbers.size() - 1; }
+    if (right < 0) { right = 0; }
+
+    const float l = numbers[right]; // switch em back
+    const float r = numbers[left];
+
+    // Same left/right special cases
+    if (left == right) { // left size or right size
+      if (at >= r) {     // past range, use top
+        lower = myVolume[left].get();
+        upper = nullptr;
+      } else if (at <= l) { // before range, use bottom
+        upper = myVolume[right].get();
+        lower = nullptr;
+      }
+    } else {                           // left and right are different
+      if ((l <= at) && ( at <= r)) {   // between ranges
+        lower = myVolume[right].get(); // left/right swapped
+        upper = myVolume[left].get();
+      }
+    }
+  }
+  // std::cout << "Hit, left and right... " << found << " " << left << " and " << right << "\n";
+
+  #if 0
+  // binary search.
+  size_t max = numbers.size() - 1;
+  std::cout << "Incoming length is " << max << "\n";
+  int high = max;
+  int low  = 0;
+  std::cout << "Low and high " << low << ", " << high << " searching for " << at << "\n";
+  while (true) {
+    int mid = (low + high) / 2;
+    if (at == numbers[mid]) { // direct hit
+      std::cout << "Found " << at << " at " << mid << "\n";
+      lower = myVolume[mid].get(); // If direct hit use lower
+      if (mid < max) {             // upper only if exists
+        upper = myVolume[mid + 1].get();
+      } else {
+        upper = nullptr;
+      }
+      return;
+    } else if (at > numbers[mid]) {
+      low = mid + 1;
+      std::cout << "Low becomes [" << low << ", " << high << "]\n";
+    } else {
+      high = mid - 1;
+      std::cout << "High becomes [" << low << ", " << high << "]\n";
+    }
+    if (low >= high) {
+      int use = (low > high) ? high : low;
+
+      std::cout << "End hits at " << low << " , " << high << "\n";
+
+      lower = myVolume[use].get(); //  We could be lower than lowest as well
+      if (at >= numbers[use]) {    // if less than outside the 'bin' just use the lower and down interpolate
+        if (low + 1 <= max) {      // If not at the 'end' than we have one above
+          upper = myVolume[use + 1].get();
+        } else {
+          upper = nullptr;
+        }
+      } else {
+        upper = nullptr;
+        // Below the hit field (say index 0) we use that lower
+      }
+      std::cout << "FINAL " << (void *) (lower) << " to " << (void *) (upper) << "\n";
+
+      /*
+       * if (low
+       * if (at <= numbers[low]){ // if value less or equal, use only one
+       * lower= myVolume[mid].get();  // If direct hit use lower
+       * upper = nullptr;
+       * }else{
+       * }
+       */
+
+      return;
+    }
+  }
+
+  #endif // if 0
+} // Volume::getSpread
 
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)

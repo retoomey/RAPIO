@@ -95,6 +95,94 @@ RAPIOOptions::setHeader(const std::string& a)
   }
 }
 
+void
+RAPIOOptions::declareLegacyGrid()
+{
+  // Legacy grid for calling from declareOptions
+  optional("t", "37 -100 20", "The top corner of grid");
+  optional("b", "30.5 -93 1", "The bottom corner of grid");
+  optional("s", "0.05 0.05 1", "The grid spacing");
+  addGroup("t", "SPACE");
+  addGroup("b", "SPACE");
+  addGroup("s", "SPACE");
+}
+
+bool
+RAPIOOptions::getLegacyGrid(
+  AngleDegs& nwLatDegs, AngleDegs& nwLonDegs,
+  AngleDegs& seLatDegs, AngleDegs& seLonDegs,
+  AngleDegs& latSpacing, AngleDegs& lonSpacing,
+  size_t& numX,
+  size_t& numY
+)
+{
+  // TOP
+  std::string topcorner = getString("t");
+
+  AngleDegs nwlatsp, nwlonsp;
+
+  std::vector<std::string> nwpieces;
+
+  Strings::split(topcorner, &nwpieces);
+  if (nwpieces.size() != 3) {
+    LogSevere("Failed top left grid specification \n");
+    return false;
+  } else {
+    nwlatsp = atof(nwpieces[0].c_str()); // FIXME: catch...and use c++ silly
+    nwlonsp = atof(nwpieces[1].c_str());
+  }
+  nwLatDegs = nwlatsp;
+  nwLonDegs = nwlonsp;
+
+  // BOTTOM
+  std::string botcorner = getString("b");
+
+  AngleDegs selatsp, selonsp;
+
+  std::vector<std::string> sepieces;
+
+  Strings::split(botcorner, &sepieces);
+  if (sepieces.size() != 3) {
+    LogSevere("Failed bottom right grid specification \n");
+    return false;
+  } else {
+    selatsp = atof(sepieces[0].c_str());
+    selonsp = atof(sepieces[1].c_str());
+  }
+  seLatDegs = selatsp;
+  seLonDegs = selonsp;
+
+  // SPACING
+  std::string spacing = getString("s");
+  AngleDegs slatsp, slonsp;
+  std::vector<std::string> spieces;
+
+  Strings::split(spacing, &spieces);
+  if (spieces.size() != 3) {
+    LogSevere("Failed spacing specification \n");
+    return false;
+  } else {
+    slatsp = atof(spieces[0].c_str());
+    slonsp = atof(spieces[1].c_str());
+  }
+  latSpacing = slatsp;
+  lonSpacing = slonsp;
+
+  // Ok calculate the GRID dimensions.  Feels backwards, normally with say map tiles
+  // we do the x y first and get any spacing from that
+  int x = (seLonDegs - nwLonDegs) / lonSpacing;
+
+  if (x < 0) { x = -x; }
+  int y = (nwLatDegs - seLatDegs) / latSpacing;
+
+  if (y < 0) { y = -y; }
+
+  numX = x;
+  numY = y;
+
+  return true;
+} // RAPIOOptions::getLegacyGrid
+
 Option *
 RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue,
   const std::string& usage)

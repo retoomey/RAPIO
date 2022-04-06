@@ -28,6 +28,15 @@ public:
   // @author John Krause, Lak and others for the logic.
   //
 
+  /** Toomey: Implement radar attenuation approximation from
+   * Radar Equations for Modern Radar, p. 232.  This is accurate up to
+   * 0.4% at about 1000KM */
+  static LengthKMs
+  attenuationHeightKMs(
+    LengthKMs stationHeightKMs,
+    LengthKMs rangeKMs,
+    AngleDegs elevDegs);
+
   /** Project from a lat lon to azimuth range based on earth surface */
   static void
   LatLonToAzRange(const AngleDegs &cLat, const AngleDegs &cLon,
@@ -60,8 +69,8 @@ public:
 
     AngleDegs       & elevAngleDegs, // !< Elevation angle in degrees
     AngleDegs       & azimuthDegs,   // !< Target *Azimuth in degrees
-    float           & rangeM,        // !< Target *Range in meters
-    double          & gcd);
+    float           & rangeM         // !< Target *Range in meters
+  );
 
   /** Create Lat Lon Grid marching information from a center and delta degree */
   static void

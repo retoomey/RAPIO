@@ -268,12 +268,11 @@ computeTerrainPoints(
       // Crap Lak does want the block.elev, stores in object..
       // BeamPath_LLHtoAzRangeElev(loc123, radarLocation123,  e, az, rn (meters))
       PointBlockage block;
-      double gcd;
       Project::BeamPath_LLHtoAzRangeElev(
         // Ok wasted to create the location object right?
         loc.getLatitudeDeg(), loc.getLongitudeDeg(), loc.getHeightKM(),
         myRadarLocation.getLatitudeDeg(), myRadarLocation.getLongitudeDeg(),
-        myRadarLocation.getHeightKM(), block.elevDegs, block.azDegs, block.startKMs, gcd);
+        myRadarLocation.getHeightKM(), block.elevDegs, block.azDegs, block.startKMs);
 
       // the numbers so far look decent.
       aref[i][j] = block.azDegs;

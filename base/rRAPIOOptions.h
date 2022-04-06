@@ -63,6 +63,22 @@ public:
   // FIXME: Grid stuff experimental.  Need to work on this/clean up
   // These three functions might have better locations
 
+  /** Legacy grid using the t, b, and s options.  This is for backward
+   * compatibility with older WDSS2 algorithms */
+  void
+  declareLegacyGrid();
+
+  /** Read the legacy grid t, b, and s, options from options.  Note,
+   * declareLegacyGrid should be called in declareOptions */
+  bool
+  getLegacyGrid(
+    AngleDegs& nwLatDegs, AngleDegs& nwLonDegs,
+    AngleDegs& seLatDegs, AngleDegs& seLonDegs,
+    AngleDegs& latSpacing, AngleDegs& lonSpacing,
+    size_t& numX,
+    size_t& numY
+  );
+
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for
    * clipping or determining bounds. */
   Option *

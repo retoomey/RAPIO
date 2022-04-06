@@ -35,6 +35,14 @@ public:
   virtual void
   addDataType(std::shared_ptr<DataType> d);
 
+  /** Spread above and below from number vector.  Pointers for speed */
+  void
+  getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper);
+
+  /** Return a sorted number vector for quick lookup */
+  std::vector<double>
+  getNumberVector();
+
   /** Get DataType matching a given subtype */
   std::shared_ptr<DataType>
   getSubType(const std::string& subtype);
