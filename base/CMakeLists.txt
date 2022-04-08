@@ -54,6 +54,7 @@ set(HEADER_FILES
   rIOXML.h
   rIOJSON.h
   rIndexType.h
+  rLLCoverageArea.h
   rLLH.h
   rXYZ.h
   rIJK.h
@@ -157,6 +158,7 @@ set(SOURCE_FILES
   rTime.cc
   rUnit.cc
   rLL.cc
+  rLLCoverageArea.cc
   rLLH.cc
   rStrings.cc
   rBinaryTable.cc
