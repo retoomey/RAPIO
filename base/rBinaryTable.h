@@ -174,6 +174,10 @@ class WObsBinaryTable : public BinaryTable
 {
 public:
 
+  /** Write our block to file at current location */
+  virtual bool
+  writeBlock(FILE * fp) override;
+
   /** Our block level...which is level 1 and the first always.  Every subclass
    * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */
   static size_t BLOCK_LEVEL;
@@ -221,6 +225,10 @@ public:
 class RObsBinaryTable : public WObsBinaryTable
 {
 public:
+
+  /** Write our block to file at current location */
+  virtual bool
+  writeBlock(FILE * fp) override;
 
   /** Our block level...which is level 1 and the first always.  Every subclass
    * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */

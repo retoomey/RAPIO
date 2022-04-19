@@ -44,7 +44,7 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
 }
 
 // Entrance point from merger
-int
+unsigned char
 TerrainBlockage::
 computePercentBlocked(
   const AngleDegs& beamWidthDegs,
@@ -254,7 +254,10 @@ computeTerrainPoints(
       // missing value per datatype.  I'm not sure even W2 actually does this properly
       // Also someplace like Hawaii has a ton of these so it is faster
       const double& v = href[i][j];
-      if (v == -9999) { continue; }
+
+      // Yow we need the azimuth always.  Height of less than zero we should
+      // be able to do this faster in that special case
+      // if (v == -9999) { continue; }
 
       // Get location of center of cell at location.  Then override this
       // this the DEM height to pass to Azmuth/Range conversion

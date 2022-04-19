@@ -88,7 +88,7 @@ public:
    *  between 0 and 100 (both numbers inclusive) with 100
    *  indicating a fully blocked beam (no radar return)
    */
-  int
+  unsigned char
   computePercentBlocked(
     const AngleDegs& beamWidthDegs,
     const AngleDegs& beamElevationDegs,

@@ -35,9 +35,13 @@ public:
   virtual void
   addDataType(std::shared_ptr<DataType> d);
 
-  /** Spread above and below from number vector.  Pointers for speed */
+  /** Binary search (large N) Spread above and below from number vector.  Pointers for speed */
   void
-  getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper);
+  getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper, bool print = false);
+
+  /** Linear search (faster for smaller N) Spread above and below from number vector.  Pointers for speed */
+  void
+  getSpreadL(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper, bool print = false);
 
   /** Return a sorted number vector for quick lookup */
   std::vector<double>
@@ -51,7 +55,23 @@ public:
   bool
   deleteSubType(const std::string& subtype);
 
-private:
+protected:
+
+  /** Remove at given index */
+  virtual void
+  removeAt(size_t at);
+
+  /** Replace at given index */
+  virtual void
+  replaceAt(size_t at, std::shared_ptr<DataType> dt);
+
+  /** Insert at given index */
+  virtual void
+  insertAt(size_t at, std::shared_ptr<DataType> dt);
+
+  /** Add at given index */
+  virtual void
+  add(std::shared_ptr<DataType> dt);
 
   /** Unique key for volume used by history */
   std::string myKey;

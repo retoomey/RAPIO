@@ -211,7 +211,8 @@ WObsBinaryTable::readBlock(FILE * fp)
     // Handle units
     std::string unit;
     BinaryIO::read_string8(unit, fp);
-    setDataAttributeValue("Unit", "dimensionless", unit);
+    // setDataAttributeValue("Unit", "dimensionless", unit);
+    setUnits("dimensionless");
     BinaryIO::read_type<float>(lat, fp);
     BinaryIO::read_type<float>(lon, fp);
     BinaryIO::read_type<float>(ht, fp);
@@ -255,6 +256,54 @@ WObsBinaryTable::readBlock(FILE * fp)
   return false;
 } // WObsBinaryTable::readBlock
 
+bool
+WObsBinaryTable::writeBlock(FILE * fp)
+{
+  if (BinaryTable::writeBlock(fp)) {
+    // ----------------------------------------------------------
+    // Write our data block if available (match with read above)
+
+    // Header
+    BinaryIO::write_string8(typeName, fp);
+
+    // Handle units
+    std::string unit = "dimensionless";
+
+    unit = getUnits();
+
+    //    SmartPtr<DataCell> unitdc = getAttributeValue( this->Unit );
+    //    if (unitdc.is_ptr_valid()){
+    //      unit = unitdc->str();
+    //    }
+    BinaryIO::write_string8(unit, fp);
+
+    BinaryIO::write_type<float>(lat, fp);
+    BinaryIO::write_type<float>(lon, fp);
+    BinaryIO::write_type<float>(ht, fp);
+    BinaryIO::write_type<time_t>(data_time, fp);
+    BinaryIO::write_type<time_t>(valid_time, fp);
+
+    // Handle the marked lines writing out...
+    BinaryIO::write_string8(markedLinesCacheFile, fp);
+    if (markedLinesCacheFile == "") {
+      BinaryIO::write_vector("Marked", markedLines, fp);
+    }
+
+    // Write the six default arrays that always write
+    BinaryIO::write_vector("X", x, fp);
+    BinaryIO::write_vector("Y", y, fp);
+    BinaryIO::write_vector("Z", z, fp);
+    BinaryIO::write_vector("V", newvalue, fp);
+    BinaryIO::write_vector("Scaled", scaled_dist, fp);
+    BinaryIO::write_vector("ElevScaled", elevWeightScaled, fp);
+    // ----------------------------------------------------------
+    return true;
+  } else {
+    // No need to error, weighted already did...
+  }
+  return false;
+} // WObsBinaryTable::writeBlock
+
 void
 RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 {
@@ -288,6 +337,31 @@ RObsBinaryTable::readBlock(FILE * fp)
     return true;
   } else {
     LogSevere("RObsBinaryTable: Missing our data in .raw file\n");
+  }
+  return false;
+}
+
+bool
+RObsBinaryTable::writeBlock(FILE * fp)
+{
+  // Blocks have to be ordered by magic string
+  if (WObsBinaryTable::writeBlock(fp)) {
+    // ----------------------------------------------------------
+    // Write our data block if available (match with read above)
+
+    // Header...
+    BinaryIO::write_string8(radarName, fp);
+    BinaryIO::write_type<int>(vcp, fp);    // fwrite( &vcp, sizeof(int), 1, fp );
+    BinaryIO::write_type<float>(elev, fp); // fwrite( &elev, sizeof(float), 1, fp );
+
+    // Data...
+    BinaryIO::write_vector("Azimuth", azimuth, fp);
+    BinaryIO::write_vector("Aztime", aztime, fp);
+
+    // ----------------------------------------------------------
+    return true;
+  } else {
+    // No need to error, weighted already did...
   }
   return false;
 }

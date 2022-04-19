@@ -66,6 +66,8 @@ IORaw::readRawDataType(const URL& url)
   std::shared_ptr<RObsBinaryTable> r = std::make_shared<RObsBinaryTable>();
   bool success = r->readBlock(fp);
 
+  fclose(fp);
+
   if (!success) {
     LogSevere("Couldn't read binary table from raw datatype at " << url << "\n");
     return nullptr;
@@ -86,5 +88,35 @@ IORaw::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>            & keys
 )
 {
-  return false;
+  bool success = false;
+
+  auto output = std::dynamic_pointer_cast<BinaryTable>(dt);
+
+  if (output != nullptr) {
+    std::string filename = keys["filename"];
+
+    if (filename.empty()) {
+      LogSevere("Need a filename to output\n");
+      return false;
+    }
+    // FIXME: still need to cleanup suffix stuff
+    if (keys["directfile"] == "false") {
+      // We let writers control final suffix
+      filename         = filename + ".raw";
+      keys["filename"] = filename;
+    }
+    LogInfo("Raw (merger/fusion stage 2) writer: " << filename << "\n");
+
+    // FIXME: skipping writing temp file here, think we're ok.
+    // Though I think we should merge some of this code into common functions at
+    // some point with the other modules.
+    FILE * fp = fopen(filename.c_str(), "w");
+    success = output->writeBlock(fp); // write block is virtual
+    fclose(fp);
+
+    if (!success) {
+      LogSevere("Failed to write raw output file " << filename << "\n");
+    }
+  }
+  return success;
 } // IORaw::encodeDataType

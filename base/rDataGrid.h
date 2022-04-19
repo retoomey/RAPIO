@@ -170,7 +170,41 @@ public:
 
   /** Get back node so can call methods on it */
   std::shared_ptr<DataArray>
-  getDataArray(const std::string& name);
+  getDataArray(const std::string& name = Constants::PrimaryDataName);
+
+  /** Convenience to get the units of a given array name */
+  virtual std::string
+  getUnits(const std::string& name = Constants::PrimaryDataName) override
+  {
+    std::string units;
+
+    if (name == Constants::PrimaryDataName) {
+      units = myUnits;
+    }
+    auto n = getNode(name);
+
+    if (n != nullptr) {
+      auto someunit = n->getAttribute<std::string>("Units");
+      if (someunit) {
+        units = *someunit;
+      }
+    }
+    return units;
+  }
+
+  /** Convenience to set the units of a given array name */
+  virtual std::string
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
+  {
+    if (name == Constants::PrimaryDataName) {
+      myUnits = units;
+    }
+    auto n = getNode(name);
+
+    if (n != nullptr) {
+      n->putAttribute<std::string>("Units", units);
+    }
+  }
 
   // 1D stuff ----------------------------------------------------------
 

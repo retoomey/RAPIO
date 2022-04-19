@@ -72,11 +72,74 @@ public:
     float           & rangeM         // !< Target *Range in meters
   );
 
+  /** Cached version.  Calculate observed range, azimuth and elevation */
+  static void
+  Cached_BeamPath_LLHtoAzRangeElev(
+    const AngleDegs & targetLatDegs, // !< Target Latitude in degrees
+    const AngleDegs & targetLonDegs, // !< Target Longitude in degrees
+    const LengthKMs & targetHeightM, // !< Target ht above MSL in meters
+
+    const AngleDegs & stationLatDegs, // !< Station Latitude in degrees
+    const AngleDegs & stationLonDegs, // !< Station Long in degrees
+    const LengthKMs & stationHeightM, // Station ht above MSL in meters
+    //
+    const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
+    const double    cosGcdIR,
+
+    AngleDegs       & elevAngleDegs, // !< Elevation angle in degrees
+    AngleDegs       & azimuthDegs,   // !< Target *Azimuth in degrees
+    float           & rangeM         // !< Target *Range in meters
+  );
+
+  /** For a station lat lon to target, calculate the sin/cos values for attentuation */
+  static void
+  stationLatLonToTarget(
+    const AngleDegs & targetLatDegs,
+    const AngleDegs & targetLonDegs,
+
+    const AngleDegs & stationLatDegs,
+    const AngleDegs & stationLonDegs,
+
+    double          & sinGcdIR,
+    double          & cosGcdIR);
+
+  /** Using exact same math as the BeamPath_toAzRangeElev, we can calculate the
+   * range and height for a different elevation angle */
+  static void
+  BeamPath_LLHtoAttenuationRange(
+    const AngleDegs & targetLatDegs,
+    const AngleDegs & targetLonDegs,
+    // const LengthKMs & targetHeightKMs, output now
+
+    const AngleDegs & stationLatDegs,
+    const AngleDegs & stationLonDegs,
+    const LengthKMs & stationHeightKMs,
+
+    const AngleDegs & elevAngleDegs, // need angle now
+    //  AngleDegs       & azimuthDegs,  Doesn't matter which direction
+
+    LengthKMs & targetHeightKMs,
+    LengthKMs & rangeKMs);
+
   /** Create Lat Lon Grid marching information from a center and delta degree */
   static void
   createLatLonGrid(const float centerLatDegs, const float centerLonDegrees,
     const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
+
+  static void
+  Cached_BeamPath_LLHtoAttenuationRange(
+
+    const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
+
+    const double    sinGcdIR, // Cache the sin/cos from regular version
+    const double    cosGcdIR,
+
+    const AngleDegs & elevAngleDegs, // need angle now
+    //  AngleDegs       & azimuthDegs,  Uniform all directions
+
+    LengthKMs & targetHeightKMs,
+    LengthKMs & rangeKMs);
 
   // ----------------------------------------------------------------------------
 

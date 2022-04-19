@@ -162,6 +162,16 @@ public:
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer = "primary"){ return nullptr; }
 
+  /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual std::string getUnits(const std::string& name = Constants::PrimaryDataName)
+  { return myUnits; }
+
+  /** Set the primary units.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual std::string setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
+  { myUnits = units; }
+
   /** Get a string from global attributes */
   inline bool
   getString(const std::string& name, std::string& out) const
@@ -279,6 +289,7 @@ public:
     to->myReadFactory = myReadFactory;
     to->myDataType    = myDataType;
     to->myTypeName    = myTypeName;
+    to->myUnits       = myUnits;
   }
 
 protected:
@@ -301,5 +312,8 @@ protected:
 
   /** The TypeName of the data contained.  */
   std::string myTypeName;
+
+  /** The primary units of the data contained.  */
+  std::string myUnits;
 };
 }

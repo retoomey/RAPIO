@@ -209,6 +209,190 @@ Project::BeamPath_LLHtoAzRangeElev(
 } // Project::BeamPath_LLHtoAzRangeElev
 
 void
+Project::Cached_BeamPath_LLHtoAzRangeElev(
+  const AngleDegs & targetLatDegs,
+  const AngleDegs & targetLonDegs,
+  const LengthKMs & targetHeightKMs,
+
+  const AngleDegs & stationLatDegs,
+  const AngleDegs & stationLonDegs,
+  const LengthKMs & stationHeightKMs,
+
+  const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
+  const double    cosGcdIR,
+
+  AngleDegs       & elevAngleDegs,
+  AngleDegs       & azimuthDegs,
+  LengthKMs       & rangeKMs)
+{
+  const double EarthRadius = Constants::EarthRadiusM;
+  // const double EarthRadius=6371000.0;
+  const double IR = (4. / 3.) * EarthRadius;
+
+  LLH target(targetLatDegs, targetLonDegs, targetHeightKMs);
+  LLH station(stationLatDegs, stationLonDegs, stationHeightKMs);
+
+  XYZ O   = XYZ(0, 0, 0); // O -- origin ( earth center )
+  XYZ R   = XYZ(station); // R -- radar point
+  XYZ C   = XYZ(target);
+  IJK RC  = C - R;
+  IJK OR  = R - O;
+  IJK ORu = OR.unit();
+  IJK Z(0.0, 0.0, 1.0);
+  IJK oz        = ORu;
+  IJK ox        = (Z % oz).unit();
+  IJK oy        = (oz % ox ).unit();
+  double azycos = RC.unit() * oy;
+  double azxcos = RC.unit() * ox;
+  double az     = atan( ( RC.norm() * azxcos ) / ( RC.norm() * azycos ) );
+
+  if (azycos >= 0) {
+    if (azxcos <= 0) { az = M_PI * 2 + az; }
+  } else {
+    az = M_PI + az;
+  }
+
+  // Convert the azimuth from radians to degrees
+  azimuthDegs = az * RAD_TO_DEG; // humm combine with the M_PI math above?
+
+  // reverse calculate elev_angle from height difference
+  const double heightM = (targetHeightKMs - stationHeightKMs) * 1000.0;
+
+  const double elevAngleRad = atan(
+    (cosGcdIR - (IR / (IR + heightM)))
+    / sinGcdIR
+  );
+
+  rangeKMs      = (( sinGcdIR ) * (IR + heightM) / cos(elevAngleRad)) / 1000.0;
+  elevAngleDegs = elevAngleRad * RAD_TO_DEG;
+} // Project::Cached_BeamPath_LLHtoAzRangeElev
+
+void
+Project::BeamPath_LLHtoAttenuationRange(
+  const AngleDegs & targetLatDegs,
+  const AngleDegs & targetLonDegs,
+  // const LengthKMs & targetHeightKMs, output now
+
+  const AngleDegs & stationLatDegs,
+  const AngleDegs & stationLonDegs,
+  const LengthKMs & stationHeightKMs,
+
+  const AngleDegs & elevAngleDegs, // need angle now
+  //  AngleDegs       & azimuthDegs,  Doesn't matter which direction
+
+  LengthKMs & targetHeightKMs,
+  LengthKMs & rangeKMs)
+{
+  const auto stationLatRad = (90. - stationLatDegs) * DEG_TO_RAD;
+  const auto targetLatRad  = (90. - targetLatDegs) * DEG_TO_RAD;
+
+  const AngleDegs deltaLonDegs = targetLonDegs - stationLonDegs;
+
+  const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
+
+  const double EarthRadius = Constants::EarthRadiusM;
+  // const double EarthRadius=6371000.0;
+  const double IR = (4. / 3.) * EarthRadius;
+
+  const double great_circle_distance =
+    EarthRadius * acos(cos(stationLatRad)
+      * cos(targetLatRad)
+      + sin(stationLatRad)
+      * sin(targetLatRad) * cos(deltaLonRad));
+
+  const double sinGcdIR = sin(great_circle_distance / IR);
+  const double cosGcdIR = cos(great_circle_distance / IR);
+
+  // Assuming Lak's formula correct and solving for a new elevation should give me the height
+  // above and below.  I'll compare to radar book attentuation functions.  I prefer this
+  // version of formula because it will 'match' the math of Lak/Krause.
+  // Algebra:
+  // const double elevAngleRad = atan( (cos(great_circle_distance / IR) - (IR / (IR + heightM))) / sinGcdIR);
+  // double newElevRad = 20 * RAD_TO_DEG;  Say I have another elevation...
+  // tan(newElevRad) =  (cos(great_circle_distance / IR) - (IR / (IR + heightM))) / sinGcdIR;
+  // sinGcdIR*tan(newElevRad) = cos(great_circle_distance / IR) - (IR / (IR + heightM));
+  // sinGcdIR*tan(newElevRad) - cos(great_circle_distance / IR) = - (IR / (IR + heightM));
+  // Z  = - (C / (C + H));
+  // H = C/-Z - C
+  // -----------------------------------------------------------------------------------
+  // Verified reverse formula from new elev to height here
+  // heightM = (IR/(-sinGcdIR*tan(newElevRad) + cos(great_circle_distance/IR))) - IR;
+  // targetHeightKMs = (heightM/1000.0) + stationHeightKMs;
+  // -----------------------------------------------------------------------------------
+  const double newElevRad = elevAngleDegs * DEG_TO_RAD;
+  const double newHeightM = (IR / (-sinGcdIR * tan(newElevRad) + cosGcdIR)) - IR;
+
+  targetHeightKMs = (newHeightM / 1000.0) + stationHeightKMs;
+
+  rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cos(newElevRad)) / 1000.0;
+} // Project::BeamPath_LLHtoAttenuationRange
+
+void
+Project::stationLatLonToTarget(
+  const AngleDegs & targetLatDegs,
+  const AngleDegs & targetLonDegs,
+
+  const AngleDegs & stationLatDegs,
+  const AngleDegs & stationLonDegs,
+
+  double          & sinGcdIR,
+  double          & cosGcdIR)
+{
+  // Common math for lat lon of a station to a target lat lon
+  const auto stationLatRad = (90. - stationLatDegs) * DEG_TO_RAD;
+  const auto targetLatRad  = (90. - targetLatDegs) * DEG_TO_RAD;
+
+  const AngleDegs deltaLonDegs = targetLonDegs - stationLonDegs;
+
+  const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
+
+  // FIXME: Move to a single constant
+  const double EarthRadius = Constants::EarthRadiusM;
+  // const double EarthRadius=6371000.0;
+  const double IR = (4. / 3.) * EarthRadius;
+
+  const double great_circle_distance =
+    EarthRadius * acos(cos(stationLatRad)
+      * cos(targetLatRad)
+      + sin(stationLatRad)
+      * sin(targetLatRad) * cos(deltaLonRad));
+
+  sinGcdIR = sin(great_circle_distance / IR);
+  cosGcdIR = cos(great_circle_distance / IR);
+}
+
+void
+Project::Cached_BeamPath_LLHtoAttenuationRange(
+
+  const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
+
+  const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
+  const double    cosGcdIR,
+
+  const AngleDegs & elevAngleDegs, // need angle now
+  //  AngleDegs       & azimuthDegs,  Uniform all directions
+
+  LengthKMs & targetHeightKMs,
+  LengthKMs & rangeKMs)
+{
+  const double EarthRadius = Constants::EarthRadiusM;
+  // const double EarthRadius=6371000.0;
+  const double IR = (4. / 3.) * EarthRadius;
+
+  // -----------------------------------------------------------------------------------
+  // Verified reverse formula from new elev to height here
+  // heightM = (IR/(-sinGcdIR*tan(newElevRad) + cos(great_circle_distance/IR))) - IR;
+  // targetHeightKMs = (heightM/1000.0) + stationHeightKMs;
+  // -----------------------------------------------------------------------------------
+  const double newElevRad = elevAngleDegs * DEG_TO_RAD;
+  const double newHeightM = (IR / (-sinGcdIR * tan(newElevRad) + cosGcdIR)) - IR;
+
+  targetHeightKMs = (newHeightM / 1000.0) + stationHeightKMs;
+
+  rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cos(newElevRad)) / 1000.0;
+}
+
+void
 Project::createLatLonGrid(
   const float  centerLatDegs,
   const float  centerLonDegs,

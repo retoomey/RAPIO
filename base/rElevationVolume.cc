@@ -10,6 +10,30 @@ using namespace rapio;
 using namespace std;
 
 void
+Volume::removeAt(size_t at)
+{
+  myVolume.erase(myVolume.begin() + at);
+}
+
+void
+Volume::replaceAt(size_t at, std::shared_ptr<DataType> dt)
+{
+  myVolume[at] = dt;
+}
+
+void
+Volume::insertAt(size_t at, std::shared_ptr<DataType> dt)
+{
+  myVolume.insert(myVolume.begin() + at, dt);
+}
+
+void
+Volume::add(std::shared_ptr<DataType> dt)
+{
+  myVolume.push_back(dt);
+}
+
+void
 Volume::purgeTimeWindow(const Time& time)
 {
   // ----------------------------------------------------------------------------
@@ -18,7 +42,7 @@ Volume::purgeTimeWindow(const Time& time)
     // if (!RAPIOAlgorithm::inTimeWindow(dt->getTime()+TimeDuration(-10000))) // Make it older than 15 mins (900 seconds)
     if (!RAPIOAlgorithm::inTimeWindow(time)) {
       // LogInfo(myVolume[i]->getSubType() << " --PURGE-- " << myVolume[i]->getTime() << "\n");
-      myVolume.erase(myVolume.begin() + i);
+      removeAt(i); //  myVolume.erase(myVolume.begin() + i);
       i--;
     }
   }
@@ -56,20 +80,20 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
 
     // If equal subtype, replace and we're done...
     if (os == s) {
-      myVolume[i] = dt;
-      found       = true;
+      replaceAt(i, dt); // myVolume[i] = dt;
+      found = true;
       break;
     }
 
     // if the current index is greater than our subtype insert before
-    if (os > s) { // FIXME: Doing this by string.  Does this always work?  Seems to for our stuff
-      myVolume.insert(myVolume.begin() + i, dt);
+    if (os > s) {      // FIXME: Doing this by string.  Does this always work?  Seems to for our stuff
+      insertAt(i, dt); // myVolume.insert(myVolume.begin() + i, dt);
       found = true;
       break;
     }
   }
   if (!found) {
-    myVolume.push_back(dt);
+    add(dt); // myVolume.push_back(dt);
   }
 
   // For moment print out volume
@@ -92,7 +116,7 @@ Volume::getNumberVector()
 }
 
 void
-Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper)
+Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper, bool print)
 {
   /* std::cout << "Incoming ranges looking for " << at << "\n";
    * for (auto v:numbers){
@@ -139,77 +163,64 @@ Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lowe
       if (at >= r) {     // past range, use top
         lower = myVolume[left].get();
         upper = nullptr;
+        if (print) { std::cout << " lower upper to " << left << " and NULL\n"; }
       } else if (at <= l) { // before range, use bottom
         upper = myVolume[right].get();
         lower = nullptr;
+        if (print) { std::cout << " lower upper to " << right << " and NULL\n"; }
       }
     } else {                           // left and right are different
       if ((l <= at) && ( at <= r)) {   // between ranges
         lower = myVolume[right].get(); // left/right swapped
         upper = myVolume[left].get();
+        if (print) {
+          std::cout << " lower upper to " << right << " and " << left << " pointers " << (void *) (lower) << " and " <<
+            (void *) (upper) << "\n";
+        }
       }
     }
   }
   // std::cout << "Hit, left and right... " << found << " " << left << " and " << right << "\n";
+} // Volume::getSpread
 
-  #if 0
-  // binary search.
-  size_t max = numbers.size() - 1;
-  std::cout << "Incoming length is " << max << "\n";
-  int high = max;
-  int low  = 0;
-  std::cout << "Low and high " << low << ", " << high << " searching for " << at << "\n";
-  while (true) {
-    int mid = (low + high) / 2;
-    if (at == numbers[mid]) { // direct hit
-      std::cout << "Found " << at << " at " << mid << "\n";
-      lower = myVolume[mid].get(); // If direct hit use lower
-      if (mid < max) {             // upper only if exists
-        upper = myVolume[mid + 1].get();
-      } else {
-        upper = nullptr;
-      }
-      return;
-    } else if (at > numbers[mid]) {
-      low = mid + 1;
-      std::cout << "Low becomes [" << low << ", " << high << "]\n";
-    } else {
-      high = mid - 1;
-      std::cout << "High becomes [" << low << ", " << high << "]\n";
-    }
-    if (low >= high) {
-      int use = (low > high) ? high : low;
+void
+Volume::getSpreadL(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper, bool print)
+{
+  // 10 20 30 40 50 60
+  // 5 --> nullptr, 10
+  // 10 --> 10 20
+  // 15 --> 10 20
+  // 65 --> 60 nullptr
+  lower = upper = nullptr;
+  const size_t s = numbers.size();
 
-      std::cout << "End hits at " << low << " , " << high << "\n";
+  if (s == 0) { return; }
 
-      lower = myVolume[use].get(); //  We could be lower than lowest as well
-      if (at >= numbers[use]) {    // if less than outside the 'bin' just use the lower and down interpolate
-        if (low + 1 <= max) {      // If not at the 'end' than we have one above
-          upper = myVolume[use + 1].get();
-        } else {
-          upper = nullptr;
+  // Low end
+  if (at < numbers[0]) {
+    upper = myVolume[0].get();
+    return;
+  }
+
+  // Go top back to first, linearly find bin O(N) but list is tiny typically
+  for (size_t i = s - 1; i >= 0; i--) {
+    if (at >= numbers[i]) {
+      lower = myVolume[i].get();
+      if (print) { std::cout << " >= match at " << i << " lower " << (void *) (lower) << "\n"; }
+      if (i < (s - 1)) {
+        upper = myVolume[i + 1].get();
+        if (print) {
+          std::cout << " upper to " << i + 1 << " " << (void *) (upper) << "\n";
+          for (size_t z = 0; z < myVolume.size(); z++) {
+            std::cout << (void *) (myVolume[z].get()) << ", ";
+          }
+          std::cout << "\n";
         }
-      } else {
-        upper = nullptr;
-        // Below the hit field (say index 0) we use that lower
       }
-      std::cout << "FINAL " << (void *) (lower) << " to " << (void *) (upper) << "\n";
-
-      /*
-       * if (low
-       * if (at <= numbers[low]){ // if value less or equal, use only one
-       * lower= myVolume[mid].get();  // If direct hit use lower
-       * upper = nullptr;
-       * }else{
-       * }
-       */
-
       return;
     }
   }
-
-  #endif // if 0
-} // Volume::getSpread
+} // Volume::getSpreadL
 
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)
@@ -225,7 +236,7 @@ Volume::deleteSubType(const std::string& subtype)
 {
   for (size_t i = 0; i < myVolume.size(); ++i) {
     if (myVolume[i]->getSubType() == subtype) {
-      myVolume.erase(myVolume.begin() + i);
+      removeAt(i); // myVolume.erase(myVolume.begin() + i);
       return true;
     }
   }
