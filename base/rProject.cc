@@ -369,11 +369,11 @@ Project::Cached_BeamPath_LLHtoAttenuationRange(
   const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
   const double    cosGcdIR,
 
-  const AngleDegs & elevAngleDegs, // need angle now
-  //  AngleDegs       & azimuthDegs,  Uniform all directions
+  const double    tanElev, // Cached tangent of the elevation angle
+  const double    cosElev, // Cached cosine of the elevation angle
 
-  LengthKMs & targetHeightKMs,
-  LengthKMs & rangeKMs)
+  LengthKMs       & targetHeightKMs,
+  LengthKMs       & rangeKMs)
 {
   const double EarthRadius = Constants::EarthRadiusM;
   // const double EarthRadius=6371000.0;
@@ -384,12 +384,11 @@ Project::Cached_BeamPath_LLHtoAttenuationRange(
   // heightM = (IR/(-sinGcdIR*tan(newElevRad) + cos(great_circle_distance/IR))) - IR;
   // targetHeightKMs = (heightM/1000.0) + stationHeightKMs;
   // -----------------------------------------------------------------------------------
-  const double newElevRad = elevAngleDegs * DEG_TO_RAD;
-  const double newHeightM = (IR / (-sinGcdIR * tan(newElevRad) + cosGcdIR)) - IR;
+  const double newHeightM = (IR / (-sinGcdIR * tanElev + cosGcdIR)) - IR;
 
   targetHeightKMs = (newHeightM / 1000.0) + stationHeightKMs;
 
-  rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cos(newElevRad)) / 1000.0;
+  rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cosElev) / 1000.0;
 }
 
 void

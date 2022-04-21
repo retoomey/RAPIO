@@ -91,35 +91,37 @@ public:
     float           & rangeM         // !< Target *Range in meters
   );
 
-  /** For a station lat lon to target, calculate the sin/cos values for attentuation */
+  /** For a station lat lon to target, calculate the sin/cos values for attentuation.
+   * These can be cached and passed to other projection functions. */
   static void
   stationLatLonToTarget(
-    const AngleDegs & targetLatDegs,
-    const AngleDegs & targetLonDegs,
+    const AngleDegs & targetLatDegs, // !< Target latitude degrees
+    const AngleDegs & targetLonDegs, // !< Target longitude degrees
 
-    const AngleDegs & stationLatDegs,
-    const AngleDegs & stationLonDegs,
+    const AngleDegs & stationLatDegs, // !< The radar center latitude
+    const AngleDegs & stationLonDegs, // !< The radar center longitude
 
-    double          & sinGcdIR,
-    double          & cosGcdIR);
+    double          & sinGcdIR,  // !< sin(gcd/IR) output
+    double          & cosGcdIR); // !< cos(gcd/IR) output
 
   /** Using exact same math as the BeamPath_toAzRangeElev, we can calculate the
-   * range and height for a different elevation angle */
+   * range and height for a different elevation angle.
+   * The caching version is much faster for cube marching, but requires caching
+   * trigonometric functions using stationLatLonToTarget and RadialSet caching
+   * of elevation angle. This uses 4/3 attenuation of atmosphere */
   static void
   BeamPath_LLHtoAttenuationRange(
-    const AngleDegs & targetLatDegs,
-    const AngleDegs & targetLonDegs,
-    // const LengthKMs & targetHeightKMs, output now
+    const AngleDegs & targetLatDegs, // !< Target latitude degrees
+    const AngleDegs & targetLonDegs, // !< Target longitude degrees
 
-    const AngleDegs & stationLatDegs,
-    const AngleDegs & stationLonDegs,
-    const LengthKMs & stationHeightKMs,
+    const AngleDegs & stationLatDegs,   // !< The radar center latitude
+    const AngleDegs & stationLonDegs,   // !< The radar center longitude
+    const LengthKMs & stationHeightKMs, // !< The radar center height in kilometers
 
-    const AngleDegs & elevAngleDegs, // need angle now
-    //  AngleDegs       & azimuthDegs,  Doesn't matter which direction
+    const AngleDegs & elevAngleDegs, // !< The elevation angle in degrees of radar tilt
 
-    LengthKMs & targetHeightKMs,
-    LengthKMs & rangeKMs);
+    LengthKMs       & targetHeightKMs, // !< Output height perpendicular to earth of beam
+    LengthKMs       & rangeKMs);       // !< Output range along the curved elevation beam
 
   /** Create Lat Lon Grid marching information from a center and delta degree */
   static void
@@ -127,19 +129,21 @@ public:
     const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
 
+  /** A caching version of LLHtoAttenuationRange which uses cached values of
+   * trigonometric functions for speed.  This uses 4/3 attenuation of atmosphere */
   static void
   Cached_BeamPath_LLHtoAttenuationRange(
 
     const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
 
-    const double    sinGcdIR, // Cache the sin/cos from regular version
-    const double    cosGcdIR,
+    const double    sinGcdIR, // !< sin(gcd/IR) Cache the sin/cos from regular version
+    const double    cosGcdIR, // !< cos(gcd/IR) which is from radar center to LL location
 
-    const AngleDegs & elevAngleDegs, // need angle now
-    //  AngleDegs       & azimuthDegs,  Uniform all directions
+    const double    tanElev, // !< Cached tangent of the elevation angle
+    const double    cosElev, // !< Cached cosine of the elevation angle
 
-    LengthKMs & targetHeightKMs,
-    LengthKMs & rangeKMs);
+    LengthKMs       & targetHeightKMs, // !< Output height perpendicular to earth of beam
+    LengthKMs       & rangeKMs);       // !< Output range along the curved elevation beam
 
   // ----------------------------------------------------------------------------
 

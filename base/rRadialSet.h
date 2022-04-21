@@ -45,17 +45,33 @@ public:
   };
 
   /** Elevation of radial set */
-  double
-  getElevation() const
+  AngleDegs
+  getElevationDegs() const
   {
     return (myElevAngleDegs);
   };
 
+  /** Cached sin of elevation angle, used in speed calculations in volumes */
+  double
+  getElevationCos() const
+  {
+    return (myElevCos);
+  }
+
+  /** Cached tan of elevation angle, used in speed calculation in volumes */
+  double
+  getElevationTan() const
+  {
+    return (myElevTan);
+  }
+
   /** Set the target elevation of this sweep. */
   void
-  setElevation(const double& targetElev)
+  setElevationDegs(AngleDegs targetElev)
   {
     myElevAngleDegs = targetElev;
+    myElevCos       = cos(targetElev * DEG_TO_RAD);
+    myElevTan       = tan(targetElev * DEG_TO_RAD);
   };
 
   // -----------------------
@@ -64,6 +80,18 @@ public:
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
   getAzimuthVector(){ return getFloat1D("Azimuth"); }
+
+  /** Allow reader/writer access to full vector */
+  std::shared_ptr<Array<float, 1> >
+  getAzimuthSpacingVector()
+  {
+    auto array = getFloat1D("AzimuthSpacing");
+
+    if (array == nullptr) {
+      array = getFloat1D("BeamWidth");
+    }
+    return array;
+  }
 
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
@@ -111,6 +139,14 @@ public:
   virtual bool
   initFromGlobalAttributes() override;
 
+  /** Return pointer to the lookup for immediate access, only valid
+   * while RadialSet is */
+  RadialSetLookup *
+  getRadialSetLookupPtr() const
+  {
+    return myLookup.get();
+  }
+
 private:
 
   /** Post creation initialization of fields
@@ -130,9 +166,15 @@ protected:
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
 
+  /** The cached cos of current elevation angle */
+  double myElevCos;
+
+  /** The cached tan of current elevation angle */
+  double myElevTan;
+
   /** Distance to the first gate */
   double myFirstGateDistanceM;
-private:
+
   /** Cache lookup (FIXME: unique_ptr c++14 among other locations in code) */
   std::shared_ptr<RadialSetLookup> myLookup;
 };

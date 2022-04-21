@@ -12,10 +12,10 @@ using namespace std;
 std::string
 RadialSet::getGeneratedSubtype() const
 {
-  return (formatString(getElevation(), 5, 2)); // RadialSet
+  return (formatString(getElevationDegs(), 5, 2)); // RadialSet
 }
 
-RadialSet::RadialSet() : myElevAngleDegs(0), myFirstGateDistanceM(0), myLookup(nullptr)
+RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirstGateDistanceM(0), myLookup(nullptr)
 {
   myDataType = "RadialSet";
 }
@@ -57,9 +57,12 @@ RadialSet::init(
   /** Declare/update the dimensions */
   setTypeName(TypeName);
   setDataAttributeValue("Unit", "dimensionless", Units);
-  myLocation           = center;
-  myTime               = time;
-  myElevAngleDegs      = elevationDegrees;
+  myLocation      = center;
+  myTime          = time;
+  myElevAngleDegs = elevationDegrees;
+  myElevCos       = cos(myElevAngleDegs * DEG_TO_RAD);
+  myElevTan       = tan(myElevAngleDegs * DEG_TO_RAD);
+
   myFirstGateDistanceM = firstGateDistanceMeters;
 
   declareDims({ num_radials, num_gates }, { "Azimuth", "Gate" });
@@ -152,7 +155,7 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
   DataType::updateGlobalAttributes(encoded_type);
 
   // Radial set only global attributes
-  const double elevDegrees = getElevation();
+  const double elevDegrees = getElevationDegs();
 
   setDouble("Elevation", elevDegrees);
   setString("ElevationUnits", "Degrees");
