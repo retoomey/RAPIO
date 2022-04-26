@@ -6,6 +6,7 @@
 #include "rColorTerm.h"
 #include "rOS.h"
 #include "rAlgConfigFile.h"
+#include "rLLCoverageArea.h"
 #include "rIOURL.h"
 
 #include <sys/ioctl.h>
@@ -109,13 +110,15 @@ RAPIOOptions::declareLegacyGrid()
 
 bool
 RAPIOOptions::getLegacyGrid(
-  AngleDegs& nwLatDegs, AngleDegs& nwLonDegs,
-  AngleDegs& seLatDegs, AngleDegs& seLonDegs,
-  AngleDegs& latSpacing, AngleDegs& lonSpacing,
-  size_t& numX,
-  size_t& numY
+  LLCoverageArea& grid
 )
 {
+  AngleDegs nwLatDegs, nwLonDegs;
+  AngleDegs seLatDegs, seLonDegs;
+  AngleDegs latSpacing, lonSpacing;
+  size_t numX;
+  size_t numY;
+
   // TOP
   std::string topcorner = getString("t");
 
@@ -179,6 +182,12 @@ RAPIOOptions::getLegacyGrid(
 
   numX = x;
   numY = y;
+
+  grid.set(nwLatDegs, nwLonDegs,
+    seLatDegs, seLonDegs,
+    latSpacing, lonSpacing,
+    numX,
+    numY);
 
   return true;
 } // RAPIOOptions::getLegacyGrid

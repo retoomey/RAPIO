@@ -145,6 +145,18 @@ public:
     LengthKMs       & targetHeightKMs, // !< Output height perpendicular to earth of beam
     LengthKMs       & rangeKMs);       // !< Output range along the curved elevation beam
 
+  /** Destination point given distance and bearing from start point */
+  static void
+  LLBearingDistance(
+    const AngleDegs startLatDegs,
+    const AngleDegs startLonDegs,
+    const AngleDegs bearing,
+    const LengthKMs distance,
+    AngleDegs       & outLat,
+    AngleDegs       & outLon
+  );
+
+
   // ----------------------------------------------------------------------------
 
   /** Get the X/Y kilometer coordinate origin for the raster grid center */

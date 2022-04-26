@@ -26,6 +26,23 @@ public:
     size_t aNumX, size_t aNumY) : nwLat(north), nwLon(west), seLat(south), seLon(east),
     latSpacing(southDelta), lonSpacing(eastSpacing), startX(0), startY(0), numX(aNumX), numY(aNumY){ }
 
+  /** Set values, called by readers */
+  void
+  set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
+    AngleDegs eastSpacing, size_t aNumX, size_t aNumY)
+  {
+    nwLat      = north;
+    nwLon      = west;
+    seLat      = south;
+    seLon      = east;
+    latSpacing = southDelta;
+    lonSpacing = eastSpacing;
+    startX     = 0;
+    startY     = 0;
+    numX       = aNumX;
+    numY       = aNumY;
+  }
+
   /** Inset our grid to a given radar center and range */
   LLCoverageArea
   insetRadarRange(

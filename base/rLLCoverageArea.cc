@@ -27,10 +27,13 @@ LLCoverageArea::insetRadarRange(
   LengthKMs outHeightKMs;
   AngleDegs outDegs, north, south, east, west;
 
-  Project::BeamPath_AzRangeToLatLon(cLat, cLon, 0, rangeKMs, 0, outHeightKMs, north, outDegs);
-  Project::BeamPath_AzRangeToLatLon(cLat, cLon, 90, rangeKMs, 0, outHeightKMs, outDegs, east);
-  Project::BeamPath_AzRangeToLatLon(cLat, cLon, 180, rangeKMs, 0, outHeightKMs, south, outDegs);
-  Project::BeamPath_AzRangeToLatLon(cLat, cLon, 270, rangeKMs, 0, outHeightKMs, outDegs, west);
+  // Seems slightly more accurate to use ground hugging vs the 0 angle..though it's
+  // so close might not matter
+  //  Project::BeamPath_AzRangeToLatLon(cLat, cLon, 0, rangeKMs, 0, outHeightKMs, north, outDegs);
+  Project::LLBearingDistance(cLat, cLon, 0, rangeKMs, north, outDegs);
+  Project::LLBearingDistance(cLat, cLon, 90, rangeKMs, outDegs, east);
+  Project::LLBearingDistance(cLat, cLon, 180, rangeKMs, south, outDegs);
+  Project::LLBearingDistance(cLat, cLon, 270, rangeKMs, outDegs, west);
 
   #if 0
   LogInfo("For lat to lat " << nwLat << " to " << seLat << "\n");
@@ -39,7 +42,6 @@ LLCoverageArea::insetRadarRange(
   LogInfo(" yields 180 degrees " << south << "\n");
   LogInfo(" yields 270 degrees " << west << "\n");
   #endif
-
   // Inset each side independently
   if (nwLat > north) { // Inset the top
     size_t deltaY = floor((out.nwLat - north) / latSpacing);

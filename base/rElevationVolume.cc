@@ -49,16 +49,6 @@ Volume::purgeTimeWindow(const Time& time)
 }
 
 void
-Volume::printVolume()
-{
-  LogInfo("------CURRENT VOLUME LIST " << myKey << "(" << (void *) (this) << ") --------\n");
-  for (auto x:myVolume) {
-    LogInfo(x->getSubType() << " Time: " << x->getTime() << " " << myKey << "\n");
-  }
-  LogInfo("------END CURRENT VOLUME LIST ----------------------------------------\n");
-}
-
-void
 Volume::addDataType(std::shared_ptr<DataType> dt)
 {
   // Map lookup key for volume name is DataType+TypeName such as "RadialSet-Reflectivity"
@@ -100,19 +90,18 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
   // printVolume();
 } // Volume::addDataType
 
-std::vector<double>
-Volume::getNumberVector()
+void
+Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers)
 {
-  // Convert each subtype to an int for doing a fast lookup
-  // using an int because later search will be quicker
-  std::vector<double> numbers;
-
+  pointers.push_back(nullptr);
   for (auto v:myVolume) {
+    pointers.push_back(v.get());
     const auto os = v->getSubType();
     double d      = std::stod(os); // FIXME catch?
-    numbers.push_back(d);
+    levels.push_back(d);
   }
-  return numbers;
+  levels.push_back(std::numeric_limits<double>::max());
+  pointers.push_back(nullptr);
 }
 
 void
@@ -183,45 +172,6 @@ Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lowe
   // std::cout << "Hit, left and right... " << found << " " << left << " and " << right << "\n";
 } // Volume::getSpread
 
-void
-Volume::getSpreadL(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper, bool print)
-{
-  // 10 20 30 40 50 60
-  // 5 --> nullptr, 10
-  // 10 --> 10 20
-  // 15 --> 10 20
-  // 65 --> 60 nullptr
-  lower = upper = nullptr;
-  const size_t s = numbers.size();
-
-  if (s == 0) { return; }
-
-  // Low end
-  if (at < numbers[0]) {
-    upper = myVolume[0].get();
-    return;
-  }
-
-  // Go top back to first, linearly find bin O(N) but list is tiny typically
-  for (size_t i = s - 1; i >= 0; i--) {
-    if (at >= numbers[i]) {
-      lower = myVolume[i].get();
-      if (print) { std::cout << " >= match at " << i << " lower " << (void *) (lower) << "\n"; }
-      if (i < (s - 1)) {
-        upper = myVolume[i + 1].get();
-        if (print) {
-          std::cout << " upper to " << i + 1 << " " << (void *) (upper) << "\n";
-          for (size_t z = 0; z < myVolume.size(); z++) {
-            std::cout << (void *) (myVolume[z].get()) << ", ";
-          }
-          std::cout << "\n";
-        }
-      }
-      return;
-    }
-  }
-} // Volume::getSpreadL
-
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)
 {
@@ -252,4 +202,35 @@ ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
   if (rs != nullptr) {
     Volume::addDataType(dt);
   }
+}
+
+std::ostream&
+rapio::operator << (std::ostream& os, const ElevationVolume& v)
+{
+  std::stringstream z;
+
+  Time latest(0);
+  std::vector<double> out1;
+  std::vector<Time> times;
+
+  z << "Current Virtual Volume: ";
+  for (auto x:v.getVolume()) {
+    const auto os = x->getSubType();
+    double d      = std::stod(os);
+    Time newer    = x->getTime();
+    if (newer > latest) {
+      latest = newer;
+    }
+    out1.push_back(d);
+    times.push_back(newer);
+  }
+
+  for (size_t c = 0; c < out1.size(); c++) {
+    z << out1[c];
+    if (times[c] == latest) {
+      z << " (latest)";
+    }
+    z << ", ";
+  }
+  return (os << z.str());
 }

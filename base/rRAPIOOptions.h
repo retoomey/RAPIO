@@ -10,6 +10,8 @@
 #include <map>
 
 namespace rapio {
+class LLCoverageArea;
+
 /* RAPIOOptions handles parsing the information from a command line
  * for parameters in/out of the stock algorithm, and printing them
  * to command line.
@@ -72,11 +74,7 @@ public:
    * declareLegacyGrid should be called in declareOptions */
   bool
   getLegacyGrid(
-    AngleDegs& nwLatDegs, AngleDegs& nwLonDegs,
-    AngleDegs& seLatDegs, AngleDegs& seLonDegs,
-    AngleDegs& latSpacing, AngleDegs& lonSpacing,
-    size_t& numX,
-    size_t& numY
+    LLCoverageArea& grid
   );
 
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for

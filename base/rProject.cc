@@ -392,6 +392,31 @@ Project::Cached_BeamPath_LLHtoAttenuationRange(
 }
 
 void
+Project::LLBearingDistance(
+  const AngleDegs startLatDegs,
+  const AngleDegs startLonDegs,
+  const AngleDegs bearingDegs,
+  const LengthKMs distance,
+  AngleDegs       & outLat,
+  AngleDegs       & outLon
+)
+{
+  const double sinLat = sin(startLatDegs * DEG_TO_RAD);
+  const double cosLat = cos(startLatDegs * DEG_TO_RAD);
+
+  const double angDR      = distance / (Constants::EarthRadiusM / 1000.0);
+  const double cosDR      = cos(angDR);
+  const double sinDR      = sin(angDR);
+  const double bearingRad = bearingDegs * DEG_TO_RAD;
+
+  const double outLatRad = asin(sinLat * cosDR + cosLat * sinDR * cos(bearingRad));
+
+  outLat = outLatRad * RAD_TO_DEG;
+  outLon = startLonDegs + (atan2(sin(bearingRad) * sinDR * cosLat,
+    cosDR - sinLat * sin(outLatRad))) * RAD_TO_DEG;
+}
+
+void
 Project::createLatLonGrid(
   const float  centerLatDegs,
   const float  centerLonDegs,
