@@ -1,9 +1,13 @@
 #!/bin/bash
 # Toomey: Pretty print code using uncrustify
+
+#is_user_root () { [ "${EUID:-$(id -u)}" -eq 0 ]; }
+
 folders="base base/ionetcdf base/iogrib base/iogdal base/ioimage base/ioraw base/iohmrg rexample PYTHON tests"
 crust="uncrustify"
 if (! hash $crust 2>/dev/null); then
   echo "$crust does not appear to be in your path"
+  echo "If you have docker or podman installed, you could build the uncrustify container (see ./container)"
   exit
 fi
 
@@ -19,6 +23,13 @@ then
     $crust -c uncrustify.cfg --no-backup $f/*.cc
     $crust -c uncrustify.cfg --no-backup $f/*.h
     $crust -c uncrustify.cfg --no-backup $f/*.h
+    #if is_user_root; then
+    # Match read/write and user to the CMakeLists.txt.  This is especially important
+    # on docker which may be running as another user
+    chown --reference=CMakeLists.txt $f/*.cc
+    chmod --reference=CMakeLists.txt $f/*.cc
+    chown --reference=CMakeLists.txt $f/*.h
+    chmod --reference=CMakeLists.txt $f/*.h
   done
 fi
 

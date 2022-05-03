@@ -4,6 +4,7 @@ folders="base base/ionetcdf base/iogrib base/iogdal base/ioimage base/ioraw base
 crust="uncrustify"
 if (! hash $crust 2>/dev/null); then
   echo "$crust does not appear to be in your path"
+  echo "If you have docker or podman installed, you could build the uncrustify container (see ./container)"
   exit
 fi
 

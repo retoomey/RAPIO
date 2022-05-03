@@ -2,7 +2,8 @@
 # Toomey Jul 2021
 
 # Predefined settings and functions
-. ./config.sh
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. $SCRIPT_DIR/config.sh
 
 # If you make your own algorithm, give full container path like so:
 # /BUILD/MYALGS/Algname/binary

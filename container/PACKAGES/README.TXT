@@ -11,3 +11,10 @@ Containers:
 
 MRMSBASE           -- Base with all third party installed used by MRMS, HMET, RAPIO
 --> RAPIO          -- RAPIO development container on top of MRMSBASE
+
+UNCRUSTIFY         -- Container running version of uncrustify currently using to
+                      pretty format code with on check-ins.  Different versions, etc.
+                      can do slightly different output so this standardizes it on
+                      different OS and versions.
+                   -- Building this container allows you to use the check and format
+                      scripts in the container folder to pretty print on any OS
