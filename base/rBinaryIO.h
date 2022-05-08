@@ -105,7 +105,6 @@ public:
   template <typename T> static void
   write_type(const T& s, FILE * fp)
   {
-    // LogInfo("Write type size is " << sizeof(T) << "\n");
     fwrite(&s, sizeof(T), 1, fp);
   }
 
@@ -129,7 +128,7 @@ public:
 
     if (mode == 1) { // ZLIB
       std::vector<unsigned char> compressed;
-      rapio::ProcessTimer timer("ZLIB compression " + label + " took:");
+      ProcessTimer timer("ZLIB compression " + label + " took:", Log::Severity::DEBUG);
       bool success = compressZLIB<T>(vec, compressed);
 
       if (success) {
@@ -158,11 +157,11 @@ public:
           // Print out the saving percentage for now...
           const float percent =
             ((float) (vBYTESize - cBYTESize) / (float) (vBYTESize)) * 100.0;
-          LogInfo("ZLIB SAVED: " << label << " size percent " << percent << "% "
-                                 << vBYTESize << " --> " << cBYTESize << "\n");
+          LogDebug("ZLIB SAVED: " << label << " size percent " << percent << "% "
+                                  << vBYTESize << " --> " << cBYTESize << "\n");
         } else {
-          LogInfo("ZLIB didn't save any space " << cBYTESize << " < " << vBYTESize
-                                                << " skipping compression of vector\n");
+          LogDebug("ZLIB didn't save any space " << cBYTESize << " < " << vBYTESize
+                                                 << " skipping compression of vector\n");
           mode = 0;
         }
 

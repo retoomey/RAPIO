@@ -124,10 +124,18 @@ dump(T& strm)
           strm << Log::buffer.str();
           break;
         case LogToken::file: {
-          //   logging::value_ref<std::string> fullpath = logging::extract<std::string>("File", rec);
-          //   strm << boost::format("%10s") % boost::filesystem::path(fullpath.get()).filename().string();
-          //   strm << boost::filesystem::path(fullpath.get()).filename().string();
-          strm << Log::file;
+          const size_t s = Log::file.size();
+          bool noskip    = true;
+          if (s > 0) {
+            for (size_t at = s - 1; at >= 0; at--) {
+              if (Log::file[at] == '/') {
+                strm << Log::file.substr(at + 1); // no string_view until c++17
+                noskip = false;
+                break;
+              }
+            }
+            if (noskip) { strm << Log::file; }
+          }
         }
         break;
         case LogToken::line:

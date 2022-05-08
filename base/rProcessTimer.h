@@ -59,15 +59,12 @@ class ProcessTimer : public Utility {
 public:
   friend ProcessTimerSum;
 
-  /** Process time with no message */
-  ProcessTimer() : ProcessTimer(""){ };
+  /** Process time with a final message on destruction */
+  ProcessTimer(const std::string& message = "", Log::Severity at = Log::Severity::DEBUG);
 
   /** Operator << write out a ProcessTimer */
   friend std::ostream&
   operator << (std::ostream& os, const ProcessTimer&);
-
-  /** Process time with a final message on destruction */
-  ProcessTimer(const std::string& message);
 
   /** Restart the timer.  ProcessTimer starts on actual construction,
    * this can be used to reset later if needed */
@@ -106,6 +103,9 @@ protected:
 
   /** The message to print on destruction */
   std::string myMsg;
+
+  /** The Log Severity to display messages */
+  Log::Severity mySeverity;
 
   /** Boost internal timer */
   boost::timer::cpu_timer myTimer;

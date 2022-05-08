@@ -3,8 +3,8 @@
 
 using namespace rapio;
 
-ProcessTimer::ProcessTimer(const std::string& message) : myMsg(message),
-  myTimer()
+ProcessTimer::ProcessTimer(const std::string& message, Log::Severity at) : myMsg(message),
+  mySeverity(at), myTimer()
 { }
 
 void
@@ -48,7 +48,17 @@ ProcessTimer::getCPUTime()
 ProcessTimer::~ProcessTimer()
 {
   if (myMsg != "") {
-    LogInfo(*this << "\n");
+    switch (mySeverity) {
+        case Log::Severity::DEBUG: LogDebug(*this << "\n");
+          break;
+        case Log::Severity::INFO: LogInfo(*this << "\n");
+          break;
+        case Log::Severity::SEVERE: LogSevere(*this << "\n");
+          break;
+        default:
+          LogInfo(*this << "\n");
+          break;
+    }
   }
 }
 

@@ -193,7 +193,7 @@ public:
   }
 
   /** Convenience to set the units of a given array name */
-  virtual std::string
+  virtual void
   setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
   {
     if (name == Constants::PrimaryDataName) {

@@ -169,7 +169,7 @@ public:
 
   /** Set the primary units.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
-  virtual std::string setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
+  virtual void setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
   { myUnits = units; }
 
   /** Get a string from global attributes */

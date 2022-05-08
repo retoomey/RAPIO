@@ -70,7 +70,7 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
   // if more precision is needed.
-  o.optional("h", "15", "History in minutes kept for inputs source(s).");
+  o.optional("h", "900", "History in seconds kept for inputs source(s).");
   o.addGroup("h", "TIME");
 
   // Feature to add all 'GRID' options for cutting lat lon grid data...
@@ -158,11 +158,11 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   // We create the history flag for others, but we're not
   // currently using it ourselves
   if (history < 0.001) {
-    history = 15;
+    history = 900;
     LogSevere(
-      "History -h value set too small, changing to " << history << "minutes.\n");
+      "History -h value set too small, changing to " << history << "seconds.\n");
   }
-  myMaximumHistory = TimeDuration::Minutes(history);
+  myMaximumHistory = TimeDuration::Seconds(history);
 
   // Standard -i, -I -r handling of the input parameters,
   // most algorithms do it this way.
