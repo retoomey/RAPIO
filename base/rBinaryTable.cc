@@ -211,8 +211,8 @@ WObsBinaryTable::readBlock(FILE * fp)
     // Handle units
     std::string unit;
     BinaryIO::read_string8(unit, fp);
-    // setDataAttributeValue("Unit", "dimensionless", unit);
-    setUnits("dimensionless");
+    setUnits(unit);
+
     BinaryIO::read_type<float>(lat, fp);
     BinaryIO::read_type<float>(lon, fp);
     BinaryIO::read_type<float>(ht, fp);
@@ -267,14 +267,7 @@ WObsBinaryTable::writeBlock(FILE * fp)
     BinaryIO::write_string8(typeName, fp);
 
     // Handle units
-    std::string unit = "dimensionless";
-
-    unit = getUnits();
-
-    //    SmartPtr<DataCell> unitdc = getAttributeValue( this->Unit );
-    //    if (unitdc.is_ptr_valid()){
-    //      unit = unitdc->str();
-    //    }
+    std::string unit = getUnits();
     BinaryIO::write_string8(unit, fp);
 
     BinaryIO::write_type<float>(lat, fp);

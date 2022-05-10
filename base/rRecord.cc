@@ -343,7 +343,12 @@ Record::constructXMLString(std::ostream& ss, const std::string& indexPath) const
 
   // Params tag -------------------------------------------------------
   ss << " <params>";
-  for (auto& p:getBuilderParams(0)) {
+  for (auto& p2:getBuilderParams(0)) {
+    std::string p = p2;
+    // W2 uses w2merger, not raw...HACK for moment
+    //    if (p =="raw"){
+    //	    p = "w2merger";
+    //    }
     // Replace actual index path with a marker
     if (p == indexPath) {
       ss << Constants::IndexPathReplace << Constants::RecordXMLSeparator;
@@ -359,4 +364,4 @@ Record::constructXMLString(std::ostream& ss, const std::string& indexPath) const
     ss << iter << Constants::RecordXMLSeparator;
   }
   ss << "</selections>\n";
-}
+} // Record::constructXMLString

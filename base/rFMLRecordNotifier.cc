@@ -147,9 +147,10 @@ FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
   // We're responsible for the meta and the item part, this
   // allows single meta for example for a large file containing
   // multiple items.  FAM just writes one
-  ofp << "<meta>\n";
-  rec.constructXMLMeta(ofp);
-  ofp << "</meta>\n";
+  // WDSSII breaking bad on this...plus guess XML doesn't want multiple head nodes?  Interesting
+  //  ofp << "<meta>\n";
+  //  rec.constructXMLMeta(ofp);
+  //  ofp << "</meta>\n";
 
   ofp << "<item>\n";
   rec.constructXMLString(ofp, indexLocation);

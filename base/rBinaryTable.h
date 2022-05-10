@@ -167,9 +167,6 @@ protected:
   static const size_t BLOCK_LEVEL;
 };
 
-// for now here, refactoring... these are two classes in MRMS for the raw, I think we
-// don't need them
-
 class WObsBinaryTable : public BinaryTable
 {
 public:
@@ -184,9 +181,6 @@ public:
 
   /** Typename of the data such as Reflectivity */
   std::string typeName;
-
-  /** Units of the data (use attribute of datatype to store) */
-  std::string unit;
 
   /** Optional marked lines cache filename, blank if not used.
    * I'm wondering if this is ever used currently in MRMS. */
@@ -211,6 +205,20 @@ public:
   std::vector<unsigned short> scaled_dist;
   std::vector<char> elevWeightScaled;
 
+  /** Add an observation.  Subclasses should create new methods for extra fields and call this. */
+  inline void
+  addWeightedObservation(int i, int j, int k, float val,
+    unsigned short scaled_range, int scaled_elev_wt)
+  {
+    // Add to each list of stored data...subclasses can add more...
+    newvalue.push_back(val);
+    scaled_dist.push_back(scaled_range);
+    x.push_back(i);
+    y.push_back(j);
+    z.push_back(k);
+    elevWeightScaled.push_back((char) (scaled_elev_wt));
+  }
+
   /** Get the block level magic vector for this class.  Subclasses MUST override
    * to call their
    * superclass and then push back their level identifier. */
@@ -233,7 +241,6 @@ public:
   /** Our block level...which is level 1 and the first always.  Every subclass
    * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */
   static size_t BLOCK_LEVEL;
-
 
   /** Radar name these observations belong to */
   std::string radarName;
@@ -264,6 +271,17 @@ public:
    * superclass and then push back their level identifier. */
   virtual void
   getBlockLevels(std::vector<std::string>& levels) override;
+
+  /** Add a raw observation. */
+  inline void
+  addRawObservation(int i, int j, int k, float val,
+    unsigned short scaled_range, int scaled_elev_wt,
+    unsigned short aAzimuth, mrmstime& aTime)
+  {
+    addWeightedObservation(i, j, k, val, scaled_range, scaled_elev_wt);
+    azimuth.push_back(aAzimuth);
+    aztime.push_back(aTime);
+  }
 
   /** Read our block from file if it exists at current location */
   virtual bool
