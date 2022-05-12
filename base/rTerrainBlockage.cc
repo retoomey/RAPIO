@@ -5,11 +5,11 @@
 
 using namespace rapio;
 
-// Unlike MRMS we do't read from XML.  Could always add this later
+// Unlike MRMS we don't read from XML.  Could always add this later
 // if we want to be able to dynamically change it.
 #define MIN_HT_ABOVE_TERRAIN_M 0
 
-// What's interesting so far, is that TerrainBlockage does the hold
+// What's interesting so far, is that TerrainBlockage does the whole
 // virtual RadialSet overlay thing that RadialSetLookup does to cache values.
 // The question is, could we combine these somehow or share a common class or
 // something to make cleaner/more efficient?
@@ -29,6 +29,9 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   myRadarLocation(radarLocation_in),
   myRays(NUM_RAYS)
 {
+  // Make a lookup for our primary data layer, which is the height array
+  myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
+
   // FIXME: I think this work code should be outside the constructor, even if it adds another
   // function call
   std::vector<PointBlockage> terrainPoints;
@@ -208,8 +211,16 @@ getHeightAboveTerrainKM(const AngleDegs elevDegs,
   if (outLatDegs > 180) {
     outLatDegs -= 360;
   }
-  return (outHeightKMs + myRadarLocation.getHeightKM());
-}
+
+  // Add radar height location to raise beam to correct height
+  outHeightKMs += myRadarLocation.getHeightKM();
+  double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
+
+  if (aHeightMeters != -9999) {
+    outHeightKMs -= (aHeightMeters / 1000.0);
+  }
+  return (outHeightKMs);
+} // TerrainBlockage::getHeightAboveTerrainKM
 
 // --------------------------------------------------------------------
 // Below here are the creation functions, pre reading making cache
@@ -249,14 +260,9 @@ computeTerrainPoints(
 
   for (size_t i = 0; i < numLats; ++i) {
     for (size_t j = 0; j < numLons; ++j) {
-      // The missing value in DEM.  Why does the DEM use a non-standard missing value?
-      // FIXME: Guess we need to convert missings on read/write and/or use a dynamic
-      // missing value per datatype.  I'm not sure even W2 actually does this properly
-      // Also someplace like Hawaii has a ton of these so it is faster
       const double& v = href[i][j];
 
-      // Yow we need the azimuth always.  Height of less than zero we should
-      // be able to do this faster in that special case
+      // We need to fill the azimuth array, so no special skipping here
       // if (v == -9999) { continue; }
 
       // Get location of center of cell at location.  Then override this
@@ -277,7 +283,7 @@ computeTerrainPoints(
         myRadarLocation.getLatitudeDeg(), myRadarLocation.getLongitudeDeg(),
         myRadarLocation.getHeightKM(), block.elevDegs, block.azDegs, block.startKMs);
 
-      // the numbers so far look decent.
+      // Store the azimuth for later use.
       aref[i][j] = block.azDegs;
 
       if ( (block.elevDegs > GROUND) && (block.startKMs < (radarRangeKMs)) ) {
@@ -285,17 +291,6 @@ computeTerrainPoints(
         block_i.push_back(i);
         block_j.push_back(j);
       }
-
-      /*
-       * static int count = 0;
-       * if (count < 100){
-       *    if (v > 1000){ // v is meters
-       *  std::cout << loc << " " << block.az << " " << block.elev << " " << block.startKMs << " " << gcd << "\n";
-       *  std::cout << "   Location " << myRadarLocation.getHeightKM() << " and " << loc.getHeightKM() << "\n";
-       *      count++;
-       * }
-       * }
-       */
     }
   }
 

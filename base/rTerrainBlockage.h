@@ -75,8 +75,6 @@ public:
 
   /** This should be a LatLonGrid such that the data are
    *  altitude above mean-sea-level in meters.
-   *  FIXME: I feel like you could pass a RadialSet and get all these
-   *  parameters.  I guess maybe you don't have it?
    */
   TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
     const LLH                                 & radarLocation,
@@ -129,6 +127,9 @@ protected:
 
   /** Store terrain Lat Lon Grid for radar.  The data is heights */
   std::shared_ptr<LatLonGrid> myDEM;
+
+  /** Store LatLonGrid projection for our DEM's height layer */
+  std::shared_ptr<LatLonGridProjection> myDEMLookup;
 
   /** Stores center location of the radar used */
   LLH myRadarLocation;
