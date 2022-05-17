@@ -613,13 +613,18 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::string newProductName = "";
 
   if (productMatch(key, newProductName)) {
+    // Original typeName, which may match key or not
+    const std::string typeName = outputData->getTypeName();
+
+    // Write DataType as given key, or as filtered to new product name by -O
     const bool changeProductName = (key != newProductName);
     if (changeProductName) {
       LogInfo("Writing '" << key << "' as product name '" << newProductName
                           << "'\n");
+      outputData->setTypeName(newProductName);
+    } else {
+      outputData->setTypeName(key);
     }
-    std::string typeName = outputData->getTypeName(); // Old one...
-    outputData->setTypeName(newProductName);
 
     // Can call write multiple times for each output wanted.
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
@@ -635,11 +640,8 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       }
     }
 
-    if (changeProductName) {
-      outputData->setTypeName(typeName); // Restore old type name
-                                         // not overridden.  Probably
-                                         // doesn't matter.
-    }
+    // Restore original typename, does matter since DataType might be reused.
+    outputData->setTypeName(typeName);
   } else {
     LogInfo("DID NOT FIND a match for product key " << key << "\n");
   }
