@@ -83,9 +83,11 @@ computeFractionBlocked(
   // The bottom of the beam has to clear the terrain by at least 150m
   float htM = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs) * 1000; // to meters
 
-  if (htM < MIN_HT_ABOVE_TERRAIN_M) {
-    return 1.0;
-  }
+  // The problem is this fails to get correct blockage values past this point outward in the ray
+  // and seems to also hit too early
+  //  if (htM < MIN_HT_ABOVE_TERRAIN_M) {
+  //    return 1.0;
+  //  }
 
   AngleDegs minazDegs = binAzimuthDegs - 0.5 * beamWidthDegs;
   AngleDegs maxazDegs = binAzimuthDegs + 0.5 * beamWidthDegs;
@@ -103,7 +105,6 @@ computeFractionBlocked(
   for (size_t ray = startRay; ray <= endRay; ++ray) {
     size_t rayno = ray % NUM_RAYS; // re-wrap
     // consider all the blockers along this ray
-    // const RayBlockage& blockers = rays[rayno];
     const std::vector<PointBlockage>& blockers = myRays[rayno];
     const size_t num_blockers = blockers.size();
     for (size_t i = 0; i < num_blockers; ++i) { // auto loop better right?
@@ -135,20 +136,102 @@ computeFractionBlocked(
   return blocked;
 } // TerrainBlockage::computeFractionBlocked
 
-namespace
+// -----------------------------------
+// Experimental and/or super calculations
+// for debugging/comparison
+unsigned char
+TerrainBlockage::
+computeCumulativePercentBlocked(
+  const AngleDegs& beamWidthDegs,
+  const AngleDegs& beamElevationDegs,
+  const AngleDegs& binAzimuthDegs,
+  const LengthKMs& binRangeKMs) const
 {
+  // Toomey: a vertical total cumulative blockage test.  Keeping for moment I was using this
+  // to get some comparisons to the more optimized algorithm.
+  // We march outward from the center until we get to the final
+  // range.  Cumulative blockage is the minimum point partial blockage up to the sample location.
+  // Of course this increased with range out from radar and duplicates possibly cached calculations,
+  // though it is silly simple to understand.
+  if (binRangeKMs <= 0) {
+    return 0;
+  }
+  if (binRangeKMs > 80) { // blocking past 80 or this will crawl
+    return 1.0;
+  }
+  LengthKMs deltaKMS = 1; // 0.10;  // 10 samples per kilometer....
+  size_t count       = binRangeKMs / deltaKMS;
+
+  unsigned char percent = 0; // the lowest blockage possible
+  LengthKMs start       = 0;
+
+  for (size_t i = 0; i < count; ++i) { // SLOOOOW, not sure how to cache with virtual rays, etc.
+    // We want largest cumulative blockage along the ray...
+    unsigned char newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
+        start);
+    if (newone > percent) { percent = newone; };
+    start += deltaKMS;
+  }
+  // Make sure and check the exact range value last just to get around roundoff/etc.
+  unsigned char newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
+      binRangeKMs);
+
+  if (newone > percent) { percent = newone; };
+
+  return percent;
+} // TerrainBlockage::computeCumulativePercentBlocked
+
+unsigned char
+TerrainBlockage::
+computePointPartialAt(
+  const AngleDegs& beamWidthDegs,
+  const AngleDegs& beamElevationDegs,
+  const AngleDegs& binAzimuthDegs,
+  const LengthKMs& binRangeKMs) const
+{
+  // Toomey: silly simple yet slow vertical partial beam blockage 'at the point',
+  // which is unique per location along the ray.  Did this for some testing/comparison.
+  // This doesn't do any horizontal beam blockage (say mountain on right or left, etc.)
+  AngleDegs topDegs    = beamElevationDegs + 0.5 * beamWidthDegs;
+  AngleDegs bottomDegs = beamElevationDegs - 0.5 * beamWidthDegs;
+
+  // This could all be optimized.
+  AngleDegs outLatDegs, outLonDegs, A, B;
+  double htMBOTTOM     = getHeightKM(bottomDegs, binAzimuthDegs, binRangeKMs, A, B) * 1000;                // meters
+  double htMTOP        = getHeightKM(topDegs, binAzimuthDegs, binRangeKMs, outLatDegs, outLonDegs) * 1000; // meters
+  double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
+
+  // partial beam blockage by terrain is simple right...just the vertical amount of coverage in the beam
+  if (aHeightMeters < htMBOTTOM) {
+    return 0; // terrain below the beam
+  }
+  if (aHeightMeters > htMTOP) {
+    return 100; // terrain above the beam
+  }
+
+  // Otherwise the percent of coverage of the distance between top and bottom
+  // This is stupid simple.  However, cummulative will require all the points along the ray
+  // BEFORE this one...so it will need to march outwards.
+  double rangeM       = htMTOP - htMBOTTOM;
+  double partTerrainM = aHeightMeters - htMBOTTOM;
+  double blocked      = partTerrainM / rangeM;
+
+  // Ok we need the height of the 'top' for 'my' way of doing partial.
+  int result = int(0.5 + blocked * 100);
+
+  if (result < 0) {
+    result = 0;
+  } else if (result > 100) {
+    result = 100;
+  }
+
+  return result;
+} // TerrainBlockage::computePointPartialAt
+
 float
-power_density(float dist)
+TerrainBlockage::
+getPowerDensity(float dist)
 {
-  // eq. 3.2a of Doviak-Zrnic gives the power density function
-  //   theta -- angular distance from the beam axis = dist * beamwidth
-  //   sin(theta) is approx theta = dist*beamwidth
-  //   lambda (eq.3.2b) = beamwidth*D / 1.27
-  //   thus, Dsin(theta)/lambda = D * dist * beamwidth / (D*beamwidth/1.27)
-  //                            = 1.27 * dist
-  //   and the weight is ( J_2(pi*1.27*dist)/(pi*1.27*dist)^2 )^2
-  //      dist is between -1/2 and 1/2, so abs(pi*1.27*dist) < 2
-  //   in this range, J_2(x) is approximately 1 - exp(-x^2/8.5)
   float x = M_PI * 1.27 * dist;
 
   if (x < 0.01) {
@@ -159,10 +242,9 @@ power_density(float dist)
   wt = wt * wt;
   return (wt);
 }
-}
 
 float
-TerrainBlockage :: findAveragePassed(const std::vector<float>& passed) const
+TerrainBlockage :: findAveragePassed(const std::vector<float>& passed)
 {
   // this beam consists of several "rays" i.e. pencil beams
   // numerically integrate the amounts passed by each of these beams
@@ -172,13 +254,52 @@ TerrainBlockage :: findAveragePassed(const std::vector<float>& passed) const
   float halfN = 0.5 * N;
 
   for (int i = 0; i < N; ++i) {
-    // this is the
     float dist = (i + 0.5 - halfN) / N; // -1/2 to 1/2
-    float wt   = power_density(dist);
+    float wt   = getPowerDensity(dist);
     sum_passed += passed[i] * wt;
     sum_wt     += wt;
   }
   return (sum_passed / sum_wt);
+}
+
+LengthKMs
+TerrainBlockage ::
+getHeightKM(const AngleDegs elevDegs,
+  const AngleDegs           azDegs,
+  const LengthKMs           rnKMs,
+  AngleDegs                 & outLatDegs, // hack moment
+  AngleDegs                 & outLonDegs) const
+{
+  // This is what WDSS2 does, but we don't even need the lat lon, km here...
+  // FIXME: use the direct approximation Radar formula for this and just put in Project
+  //  AngleDegs outLatDegs, outLonDegs;
+  LengthKMs outHeightKMs;
+
+  Project::BeamPath_AzRangeToLatLon(
+    myRadarLocation.getLatitudeDeg(),
+    myRadarLocation.getLongitudeDeg(),
+    azDegs,
+    rnKMs,
+    elevDegs,
+
+    outHeightKMs,
+    outLatDegs,
+    outLonDegs
+  );
+
+  // FIXME: if this is necessary should be part of the project I think
+  if (outLonDegs <= -180) {
+    outLonDegs += 360;
+  }
+
+  if (outLatDegs > 180) {
+    outLatDegs -= 360;
+  }
+
+  // Add radar height location to raise beam to correct height
+  outHeightKMs += myRadarLocation.getHeightKM();
+
+  return (outHeightKMs);
 }
 
 LengthKMs
@@ -216,7 +337,7 @@ getHeightAboveTerrainKM(const AngleDegs elevDegs,
   outHeightKMs += myRadarLocation.getHeightKM();
   double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
 
-  if (aHeightMeters != -9999) {
+  if (aHeightMeters != Constants::MissingData) { // getValueAt out of range
     outHeightKMs -= (aHeightMeters / 1000.0);
   }
   return (outHeightKMs);
@@ -260,6 +381,8 @@ computeTerrainPoints(
 
   for (size_t i = 0; i < numLats; ++i) {
     for (size_t j = 0; j < numLons; ++j) {
+      // FIXME: rapio core replace missing not implemented
+      if (href[i][j] == -9999) { href[i][j] = -99999; } // Passed functions later.  Bleh the old terrain badly
       const double& v = href[i][j];
 
       // We need to fill the azimuth array, so no special skipping here
@@ -286,8 +409,17 @@ computeTerrainPoints(
       // Store the azimuth for later use.
       aref[i][j] = block.azDegs;
 
-      if ( (block.elevDegs > GROUND) && (block.startKMs < (radarRangeKMs)) ) {
-        terrainPoints.push_back(block); // variable bleh....
+      // We actually need negative angles due to refraction drop..the delta heights also bring things back up
+      // This is a bug in WDSS2 I think...not having this creates 100 percent blockage which means
+      // values farther out get auto clipped.  Most likely this bug hasn't been noticed since with merger the
+      // weights drop as you get farther from the radar.
+      //     if ( (block.elevDegs > GROUND) && (block.startKMs < (radarRangeKMs)) ) {
+      //   if ( block.startKMs < (radarRangeKMs) ) { // don't see difference but do we have any negative angles?
+
+      // We need to check the DEM range actually since setAzimuthSpread looks around the point, we
+      // can't handle points directly on the DEM border line..
+      if ((i > 0) && (i < numLats - 1) && (j > 0) && (j < numLons - 1)) {
+        terrainPoints.push_back(block);
         block_i.push_back(i);
         block_j.push_back(j);
       }
@@ -296,9 +428,13 @@ computeTerrainPoints(
 
   // compute azimuthal spread for each of the blockers
   for (size_t i = 0; i < terrainPoints.size(); ++i) {
-    terrainPoints[i].setAzimuthalSpread(aref, block_i[i], block_j[i]);
+    PointBlockage::setAzimuthalSpread(aref, block_i[i], block_j[i],
+      terrainPoints[i].minRayNumber, terrainPoints[i].maxRayNumber);
   }
   LogInfo("Found " << terrainPoints.size() << " terrain blockers.\n");
+  LogInfo(
+    "Sizes: " << (numLats * numLons) << " - " << 2 * (numLats) + 2 * (numLons - 2) << " == " << terrainPoints.size() <<
+      "\n");
 } // TerrainBlockage::computeTerrainPoints
 
 void
@@ -364,7 +500,7 @@ pruneRayBlockage(std::vector<PointBlockage>& orig)
   std::sort(orig.begin(), orig.end(), sort_by_range);
 
   std::vector<PointBlockage> result;
-  AngleDegs maxSoFarDegs; // zero
+  AngleDegs maxSoFarDegs = 0; // zero
 
   for (size_t i = 0; i < orig.size(); ++i) {
     // elevations lower than what we have already seen don't count ...
@@ -378,7 +514,7 @@ pruneRayBlockage(std::vector<PointBlockage>& orig)
 
 void
 PointBlockage::setAzimuthalSpread(const boost::multi_array<float, 2>& azimuths,
-  int x, int y)
+  int x, int y, size_t& minRay, size_t& maxRay)
 {
   float max_diff = 0;
 
@@ -399,8 +535,8 @@ PointBlockage::setAzimuthalSpread(const boost::multi_array<float, 2>& azimuths,
   }
   float azimuthalSpread = (max_diff / 2.0);
 
-  minRayNumber = getRayNumber(azimuths[x][y] - azimuthalSpread);
-  maxRayNumber = getRayNumber(azimuths[x][y] + azimuthalSpread);
+  minRay = getRayNumber(azimuths[x][y] - azimuthalSpread);
+  maxRay = getRayNumber(azimuths[x][y] + azimuthalSpread);
 }
 
 size_t

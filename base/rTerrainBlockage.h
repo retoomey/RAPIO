@@ -29,8 +29,8 @@ public:
 
   /** Set the azimuthal spread.  Feel like would be quicker to do directly and skip the
    * function calling.  I'm having to direct pass the boost reference which is less clean */
-  void
-  setAzimuthalSpread(const boost::multi_array<float, 2>& azimuths, int x, int y);
+  static void
+  setAzimuthalSpread(const boost::multi_array<float, 2>& azimuths, int x, int y, size_t& min, size_t& max);
 
   /** Calculate ray number from angle */
   static size_t
@@ -116,12 +116,63 @@ public:
     const AngleDegs                     & binAzimuthDegs,
     const LengthKMs                     & binRangeKMs) const;
 
+  /** Toomey: Experimental/Debugging function.  Hard calculate the vertical total cumulative blockage, or the
+   * min point of each partial. This is slow since I'm iterating from radar center each time.  */
+  unsigned char
+  computeCumulativePercentBlocked(
+    const AngleDegs& beamWidthDegs,
+    const AngleDegs& beamElevationDegs,
+    const AngleDegs& binAzimuthDegs,
+    const LengthKMs& binRangeKMs) const;
+
+  /** Toomey: Experimental/Debugging function.   Hard calculate the partial beam vertical blockage at a particular
+   * point. This is simple to understand.  No hoizontal beam width assumed here */
+  unsigned char
+  computePointPartialAt(
+    const AngleDegs& beamWidthDegs,
+    const AngleDegs& beamElevationDegs,
+    const AngleDegs& binAzimuthDegs,
+    const LengthKMs& binRangeKMs) const;
+
+  /** Computes and returns the height above the terrain
+   *  given the elev, az and range from the radar. */
+  LengthKMs
+  getHeightKM(const AngleDegs elevDegs,
+    const AngleDegs           azDegs,
+    const LengthKMs           rnKMs,
+    AngleDegs                 & outLatDegs,
+    AngleDegs                 & outLonDegs) const;
+
   /** Computes and returns the height above the terrain
    *  given the elev, az and range from the radar. */
   LengthKMs
   getHeightAboveTerrainKM(const AngleDegs elevDegs,
     const AngleDegs                       azDegs,
     const LengthKMs                       rnKMs) const;
+
+  /** Calculate  eq. 3.2a of Doviak-Zrnic gives the power density function
+   *   theta -- angular distance from the beam axis = dist * beamwidth
+   *   sin(theta) is approx theta = dist*beamwidth
+   *  lambda (eq.3.2b) = beamwidth*D / 1.27
+   *  thus, Dsin(theta)/lambda = D * dist * beamwidth / (D*beamwidth/1.27)
+   *                           = 1.27 * dist
+   *  and the weight is ( J_2(pi*1.27*dist)/(pi*1.27*dist)^2 )^2
+   *     dist is between -1/2 and 1/2, so abs(pi*1.27*dist) < 2
+   *  in this range, J_2(x) is approximately 1 - exp(-x^2/8.5)
+   */
+  static float
+  getPowerDensity(float dist);
+
+  /** Prune rays. (used by computeBeamBlockage) */
+  static void
+  pruneRayBlockage(std::vector<PointBlockage>& orig);
+
+  /**
+   * Given the amount of each pencil ray that has been passed,
+   * compute the average amount passed by the entire beam.
+   */
+  static float
+  findAveragePassed(const std::vector<float>& pencil_passed);
 
 protected:
 
@@ -150,16 +201,5 @@ private:
   /** Computer beam blockage using the finished computed terrain points */
   void
   computeBeamBlockage(const std::vector<PointBlockage>& terrainPoints);
-
-  /** Prune rays. (used by computeBeamBlockage) */
-  void
-  pruneRayBlockage(std::vector<PointBlockage>& orig);
-
-  /**
-   * Given the amount of each pencil ray that has been passed,
-   * compute the average amount passed by the entire beam.
-   */
-  float
-  findAveragePassed(const std::vector<float>& pencil_passed) const;
 };
 }
