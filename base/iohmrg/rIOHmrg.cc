@@ -8,6 +8,10 @@
 #include "rHmrgRadialSet.h"
 #include "rHmrgLatLonGrids.h"
 
+#include "rRadialSet.h"
+#include "rLatLonGrid.h"
+#include "rLatLonHeightGrid.h"
+
 using namespace rapio;
 
 ProductInfoSet IOHmrg::theProductInfos;
@@ -39,16 +43,27 @@ IOHmrg::initialize()
 {
   theProductInfos.readConfigFile();
   // theProductInfos.dump();
+
+  // Add the default classes we handle...
+  HmrgRadialSet::introduceSelf(this);
+  HmrgLatLonGrids::introduceSelf(this);
 }
 
 IOHmrg::~IOHmrg()
 { }
 
 bool
-IOHmrg::HmrgToW2(const std::string& varName,
-  std::string                     & outW2Name)
+IOHmrg::HmrgToW2Name(const std::string& varName,
+  std::string                         & outW2Name)
 {
-  return theProductInfos.HmrgToW2(varName, outW2Name);
+  return theProductInfos.HmrgToW2Name(varName, outW2Name);
+}
+
+bool
+IOHmrg::W2ToHmrgName(const std::string& varName,
+  std::string                         & outW2Name)
+{
+  return theProductInfos.W2ToHmrgName(varName, outW2Name);
 }
 
 bool
@@ -57,6 +72,8 @@ IOHmrg::isMRMSValidYear(int year)
   return (!((year < 1900) || (year > 2500)));
 }
 
+// FIXME: Ok we should put these in IOBinary which has
+// general binary read/write stuff
 float
 IOHmrg::readScaledInt(gzFile fp, float scale)
 {
@@ -67,6 +84,18 @@ IOHmrg::readScaledInt(gzFile fp, float scale)
     OS::byteswap(temp); // Data always written little endian
   }
   return float(temp) / scale;
+}
+
+void
+IOHmrg::writeScaledInt(gzFile fp, float w, float scale)
+{
+  int temp = w * scale;
+
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
+  }
+
+  ERRNO(gzwrite(fp, &temp, sizeof(int)));
 }
 
 int
@@ -81,6 +110,18 @@ IOHmrg::readInt(gzFile fp)
   return temp;
 }
 
+void
+IOHmrg::writeInt(gzFile fp, int w)
+{
+  int temp = w;
+
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
+  }
+
+  ERRNO(gzwrite(fp, &temp, sizeof(int)));
+}
+
 int
 IOHmrg::readFloat(gzFile fp)
 {
@@ -91,6 +132,18 @@ IOHmrg::readFloat(gzFile fp)
     OS::byteswap(temp); // Data always written little endian
   }
   return temp;
+}
+
+void
+IOHmrg::writeFloat(gzFile fp, float w)
+{
+  float temp = w;
+
+  if (OS::isBigEndian()) {
+    OS::byteswap(temp); // Data always written little endian
+  }
+
+  ERRNO(gzwrite(fp, &temp, sizeof(float)));
 }
 
 std::string
@@ -113,11 +166,72 @@ IOHmrg::readChar(gzFile fp, size_t length)
   return name;
 }
 
-std::shared_ptr<DataType>
-IOHmrg::readRawDataType(const URL& url)
+void
+IOHmrg::writeChar(gzFile fp, std::string c, size_t length)
 {
+  if (length < 1) { return; }
+  std::vector<unsigned char> v;
+
+  v.resize(length);
+
+  const size_t max = c.length();
+
+  // Write up to std::string chars
+  for (size_t i = 0; i < max; i++) {
+    v[i] = c[i];
+  }
+  // Fill with zeros
+  for (size_t i = max; i < length; i++) {
+    v[i] = 0;
+  }
+
+  const size_t bytes = length * sizeof(unsigned char);
+
+  ERRNO(gzwrite(fp, &v[0], bytes));
+}
+
+Time
+IOHmrg::readTime(gzFile fp, int year)
+{
+  // Time
+  // We preread year in some cases during the guessing
+  // of datatype since mrms binary doesn't have a type field
+  // So we sometimes already have read the year
+  if (year == -99) {
+    year = IOHmrg::readInt(fp);
+  }
+  const int month = IOHmrg::readInt(fp);
+  const int day   = IOHmrg::readInt(fp);
+  const int hour  = IOHmrg::readInt(fp);
+  const int min   = IOHmrg::readInt(fp);
+  const int sec   = IOHmrg::readInt(fp);
+
+  Time dataTime(year, month, day, hour, min, sec, 0.0);
+
+  return dataTime;
+}
+
+void
+IOHmrg::writeTime(gzFile fp, const Time& t)
+{
+  // Time
+  IOHmrg::writeInt(fp, t.getYear());
+  IOHmrg::writeInt(fp, t.getMonth());
+  IOHmrg::writeInt(fp, t.getDay());
+  IOHmrg::writeInt(fp, t.getHour());
+  IOHmrg::writeInt(fp, t.getMinute());
+  IOHmrg::writeInt(fp, t.getSecond());
+}
+
+std::shared_ptr<DataType>
+IOHmrg::createDataType(const std::string& params)
+{
+  URL url(params);
+
+  // LogInfo("HMRG reader: " << url << "\n");
+  std::shared_ptr<DataType> datatype = nullptr;
+
   gzFile fp;
-  std::shared_ptr<DataType> dataout = nullptr;
 
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
@@ -155,37 +269,116 @@ IOHmrg::readRawDataType(const URL& url)
 
     // --------------------------------------------------------------------------
     // Factory
+    std::map<std::string, std::string> keys;
+    GZFileToKey(keys, fp);
     if (validASCII) {
       LogInfo("HMRG reader: " << url << " (Guess: MRMS Polar Binary)\n");
+      std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("RadialSet");
+
       std::string radarName(v.begin(), v.end());
-      dataout = IOHmrgRadialSet::readRadialSet(fp, radarName, true);
+      keys["RadarName"] = radarName;
+      datatype = fmt->read(keys, nullptr);
     } else if (validYear) {
       LogInfo("HMRG reader: " << url << " (Guess: MRMS Gridded Binary)\n");
-      dataout = IOHmrgLatLonGrids::readLatLonGrids(fp, firstYear, true);
-      // sleep(2000);
+      std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("LatLonGrid");
+
+      keys["DataYear"] = to_string(firstYear);
+      datatype         = fmt->read(keys, nullptr);
     } else {
       LogSevere("HRMG Reader: Unrecognizable radar name or valid year, can't process " << url << "\n");
     }
   } catch (const ErrnoException& ex) {
     LogSevere("Errno: " << ex.getErrnoVal() << " " << ex.getErrnoStr() << "\n");
-    dataout = nullptr;
+    datatype = nullptr;
   }
   gzclose(fp);
-  return dataout;
-} // IOHmrg::readRawDataType
-
-std::shared_ptr<DataType>
-IOHmrg::createDataType(const std::string& params)
-{
-  // virtual to static
-  return (IOHmrg::readRawDataType(URL(params)));
-}
+  return datatype;
+} // IOHmrg::createDataType
 
 bool
 IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>             & keys
 )
 {
-  LogSevere("HMRG encoder is not implemented\n");
-  return false;
+  /** So myLookup "RadialSet" writer for example from the data type.
+   * This allows algs etc to replace our IOHmrg with a custom if needed. */
+  const std::string type = dt->getDataType();
+
+  std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer(type);
+
+  if (fmt == nullptr) {
+    LogSevere("Can't create a writer for datatype " << type << "\n");
+    return false;
+  }
+
+  std::string filename = keys["filename"];
+
+  if (filename.empty()) {
+    LogSevere("Need a filename to output\n");
+    return false;
+  }
+  // FIXME: still need to cleanup suffix stuff
+  if (keys["directfile"] == "false") {
+    // We let writers control final suffix
+    filename         = filename + ".hmrg"; // forcing a suffix at moment, HMET should do this imo
+    keys["filename"] = filename;
+  }
+  // ----------------------------------
+
+  // Clear any errno from other stuff that might have set it already
+  // we could clear it in the macro..maybe best
+  bool successful = false;
+  gzFile fp;
+
+  errno = 0;
+  try{
+    // FIXME: Do we want to gzopen/write everything?  We have rapio compression methods
+    // so in theory should wrap with those for generic compression.  This file format is
+    // a special use case however
+    fp = gzopen(filename.c_str(), "wb");
+    if (fp == nullptr) {
+      LogSevere("HRMG writer Couldn't open local file at " << filename << ", errno is " << errno << "\n");
+      gzclose(fp);
+      return false;
+    }
+
+    // Write hmrg binary to a disk file here
+    try {
+      GZFileToKey(keys, fp);
+      successful = fmt->write(dt, keys);
+      GZFileToKey(keys, nullptr);
+    } catch (...) {
+      successful = false;
+      LogSevere("Failed to write hmrg file for DataType\n");
+    }
+  } catch (const ErrnoException& ex) {
+    LogSevere("Errno: " << ex.getErrnoVal() << " " << ex.getErrnoStr() << "\n");
+  }
+  gzclose(fp);
+
+  // Post compression pass if wanted, temp move, ldm insert, etc.
+  // FIXME: clean up with netcdf/more functions, etc. Maybe use flags?
+
+  return successful;
 } // IOHmrg::encodeDataType
+
+gzFile
+IOHmrg::keyToGZFile(std::map<std::string, std::string>& keys)
+{
+  gzFile fp;
+
+  // Make sure enough address numbers for 128 bit machines and forever hopefully
+  try{
+    unsigned long long rawPointer = std::stol(keys["GZFILE_ID"]);
+    fp = (gzFile) (rawPointer); // Clip down to os pointer size
+  }catch (...) {                // allow fail to nullptr
+    fp = nullptr;
+  }
+  return fp;
+}
+
+void
+IOHmrg::GZFileToKey(std::map<std::string, std::string>& keys, gzFile fp)
+{
+  keys["GZFILE_ID"] = to_string((unsigned long long) (fp));
+}

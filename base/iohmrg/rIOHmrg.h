@@ -72,14 +72,10 @@ public:
   virtual std::shared_ptr<DataType>
   createDataType(const std::string& params) override;
 
-  /** Do a full read from a param list */
-  static std::shared_ptr<DataType>
-  readRawDataType(const URL& path);
-
   /** Convert scaled compressed int to float.  Grouping the uncompression logic here inline,
    * this 'should' optimize in compiler to inline. */
   static inline float
-  convertDataValue(short int v, const bool needSwap, const int dataUnavailable, const int dataMissing,
+  fromHmrgValue(short int v, const bool needSwap, const int dataUnavailable, const int dataMissing,
     const float dataScale)
   {
     float out;
@@ -95,6 +91,24 @@ public:
     return out;
   }
 
+  /** Convert float to scaled compressed int. */
+  static inline short int
+  toHmrgValue(float v, const bool needSwap, const int dataUnavailable, const int dataMissing,
+    const float dataScale)
+  {
+    short int out;
+
+    if (v == Constants::DataUnavailable) {
+      out = dataUnavailable;
+    } else if (v == Constants::MissingData) {
+      out = dataMissing;
+    } else {
+      out = v * dataScale;
+      if (needSwap) { OS::byteswap(out); }
+    }
+    return out;
+  }
+
   /** What we consider a valid year in the MRMS binary file,
    * used for validation of datatype */
   static bool
@@ -104,22 +118,59 @@ public:
   static float
   readScaledInt(gzFile fp, float scale);
 
+  /** Write a scaled integer with correct endian */
+  static void
+  writeScaledInt(gzFile fp, float w, float scale);
+
   /** Read an integer with correct endian and return as an int */
   static int
   readInt(gzFile fp);
+
+  /** Write an integer with correct endian and return as an int */
+  static void
+  writeInt(gzFile fp, int w);
 
   /** Read a float with correct endian and return as a float */
   static int
   readFloat(gzFile fp);
 
+  /** Write a float with correct endian and return as a float */
+  static void
+  writeFloat(gzFile fp, float w);
+
   /** Read up to length characters into a std::string */
   static std::string
   readChar(gzFile fp, size_t length);
 
+  /** Write up to length characters from a std::string */
+  static void
+  writeChar(gzFile fp, std::string c, size_t length);
+
+  /** Convenience method to read time, with optional predefined year */
+  static Time
+  readTime(gzFile fp, int year = -99);
+
+  /** Convenience method to write time */
+  static void
+  writeTime(gzFile fp, const Time& time);
+
   /** Give back W2 info based on passed in HMRG */
   static bool
-  HmrgToW2(const std::string& varName,
-    std::string             & outW2Name);
+  HmrgToW2Name(const std::string& varName,
+    std::string                 & outW2Name);
+
+  /** Give back HMRGinfo based on passed in WG */
+  static bool
+  W2ToHmrgName(const std::string& varName,
+    std::string                 & outHmrgName);
+
+  /** Convert keys string to gzfile pointer in generic parameter passing */
+  static gzFile
+  keyToGZFile(std::map<std::string, std::string>& keys);
+
+  /** Convert gzFile pointer to keys string in generic parameter passing */
+  static void
+  GZFileToKey(std::map<std::string, std::string>& keys, gzFile fp);
 
   // WRITING ------------------------------------------------------------
 

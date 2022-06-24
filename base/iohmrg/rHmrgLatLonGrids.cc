@@ -6,26 +6,74 @@
 
 using namespace rapio;
 
-std::shared_ptr<DataType>
-IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
+void
+HmrgLatLonGrids::introduceSelf(IOHmrg * owner)
 {
-  // Timestamp
-  // h.year passed in;    // 1-4
-  const int month = readInt(fp); // 5-8
-  const int day   = readInt(fp); // 9-12
-  const int hour  = readInt(fp); // 13-16
-  const int min   = readInt(fp); // 17-20
-  const int sec   = readInt(fp); // 21-24
+  std::shared_ptr<IOSpecializer> io = std::make_shared<HmrgLatLonGrids>();
 
-  // RAPIO time handles this
-  Time time(year, month, day, hour, min, sec, 0.0);
+  // DataTypes we handle
+  owner->introduce("LatLonGrid", io);
+  owner->introduce("SparseLatLonGrid", io);
+
+  // We handle 3D directly as well
+  owner->introduce("LatLonHeightGrid", io);
+  owner->introduce("SparseLatLonHeightGrid", io);
+}
+
+std::shared_ptr<DataType>
+HmrgLatLonGrids::read(
+  std::map<std::string, std::string>& keys,
+  std::shared_ptr<DataType>         dt)
+{
+  gzFile fp = IOHmrg::keyToGZFile(keys);
+
+  if (fp != nullptr) {
+    int dataYear;
+    try{
+      dataYear = std::atoi(keys["DataYear"].c_str());
+    }catch (...) {
+      dataYear = Time().getYear();
+    }
+    return readLatLonGrids(fp, dataYear, true);
+  } else {
+    LogSevere("Invalid gzfile pointer, cannot read\n");
+  }
+  return nullptr;
+}
+
+bool
+HmrgLatLonGrids::write(
+  std::shared_ptr<DataType>         dt,
+  std::map<std::string, std::string>& keys)
+{
+  bool success = false;
+  gzFile fp    = IOHmrg::keyToGZFile(keys);
+
+  if (fp != nullptr) {
+    auto latlongrid = std::dynamic_pointer_cast<LatLonGrid>(dt);
+    if (latlongrid != nullptr) {
+      success = writeLatLonGrids(fp, latlongrid);
+    }
+  } else {
+    LogSevere("Invalid gzfile pointer, cannot write\n");
+  }
+
+  return success;
+}
+
+std::shared_ptr<DataType>
+HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
+{
+  // Time
+  Time time = IOHmrg::readTime(fp, year);
 
   // Dimensions
-  const int num_x = readInt(fp); // 25-28
-  const int num_y = readInt(fp); // 29-32
-  const int num_z = readInt(fp); // 33-36
+  const int num_x = IOHmrg::readInt(fp); // 25-28
+  const int num_y = IOHmrg::readInt(fp); // 29-32
+  const int num_z = IOHmrg::readInt(fp); // 33-36
 
-  const std::string projection = readChar(fp, 4); // 37-40
+  // Projection
+  const std::string projection = IOHmrg::readChar(fp, 4); // 37-40
   // Perhaps LL is the only one actually used, we can warn on others though
   // "    " proj1=0;
   // "PS  " proj1=1;
@@ -33,26 +81,27 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   // "MERC" proj1=3;
   // "LL  " proj1=4;
 
-  const int map_scale    = readInt(fp);                  // 41-44
-  const float lat1       = readScaledInt(fp, map_scale); // 45-48
-  const float lat2       = readScaledInt(fp, map_scale); // 49-52
-  const float lon        = readScaledInt(fp, map_scale); // 53-56
-  const float lonNWDegs1 = readScaledInt(fp, map_scale); // 57-60
-  const float latNWDegs1 = readScaledInt(fp, map_scale); // 61-64
+  const int map_scale    = IOHmrg::readInt(fp);                  // 41-44
+  const float lat1       = IOHmrg::readScaledInt(fp, map_scale); // 45-48
+  const float lat2       = IOHmrg::readScaledInt(fp, map_scale); // 49-52
+  const float lon        = IOHmrg::readScaledInt(fp, map_scale); // 53-56
+  const float lonNWDegs1 = IOHmrg::readScaledInt(fp, map_scale); // 57-60
+  const float latNWDegs1 = IOHmrg::readScaledInt(fp, map_scale); // 61-64
 
   // Manually scale since scale after the values
-  const int xy_scale         = readInt(fp); // 65-68 Deprecated, used anywhere?
-  const int temp1            = readInt(fp); // 69-72
-  const int temp2            = readInt(fp); // 73-76
-  const int dxy_scale        = readInt(fp); // 77-80
+  const int xy_scale         = IOHmrg::readInt(fp); // 65-68 Deprecated, used anywhere?
+  const int temp1            = IOHmrg::readInt(fp); // 69-72
+  const int temp2            = IOHmrg::readInt(fp); // 73-76
+  const int dxy_scale        = IOHmrg::readInt(fp); // 77-80
   const float lonSpacingDegs = (float) temp1 / (float) dxy_scale;
   const float latSpacingDegs = (float) temp2 / (float) dxy_scale;
   // HMRG uses center of cell for northwest corner, while we use the actual northwest corner
   // or actual top left of the grid cell.  We need to adjust using lat/lon spacing...so
   // that 'should' be just shifting NorthWest by half of the deg spacing, which means
   //  W2/RAPIO lon = + (.5*HMRG lon), W2/RAPIO lat = - (.5*HMRG lat)
-  const float lonNWDegs = lonNWDegs1 + .5 * (lonSpacingDegs);
-  const float latNWDegs = latNWDegs1 - .5 * (latSpacingDegs);
+  const float lonNWDegs = lonNWDegs1 + (.5 * lonSpacingDegs);
+  const float latNWDegs = latNWDegs1 - (.5 * latSpacingDegs);
+
 
   // Read the height levels, scaled by Z_scale
   std::vector<int> levels;
@@ -60,7 +109,7 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   levels.resize(num_z);
   gzread(fp, &levels[0], num_z * sizeof(int));
 
-  const int z_scale = readInt(fp);
+  const int z_scale = IOHmrg::readInt(fp);
   std::vector<float> heightMeters;
 
   heightMeters.resize(num_z);
@@ -75,50 +124,57 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   gzread(fp, &placeholder[0], 10 * sizeof(int));
 
   // Get the variable name and units
-  std::string varName = readChar(fp, 20);
-  std::string varUnit = readChar(fp, 6);
+  std::string varName = IOHmrg::readChar(fp, 20);
+  std::string varUnit = IOHmrg::readChar(fp, 6);
 
   // Convert HMRG names etc to w2 expected
-  HmrgToW2(varName, varName);
-  LogSevere("FINAL VARNAME " << varName << "\n");
+  std::string orgName = varName;
+
+  IOHmrg::HmrgToW2Name(varName, varName);
+  LogDebug("Convert: " << orgName << " to " << varName << "\n");
 
   // Common code here with Radial
   // Scale for scaling data values
-  int dataScale = readInt(fp);
+  int dataScale = IOHmrg::readInt(fp);
 
   if (dataScale == 0) {
     LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
     dataScale = 1;
   }
 
-  const int dataMissingValue = readInt(fp);
+  const int dataMissingValue = IOHmrg::readInt(fp);
 
-  int numRadars = readInt(fp);
+  // Read number and names of contributing radars
+  int numRadars = IOHmrg::readInt(fp);
   std::vector<std::string> radars;
 
   for (size_t i = 0; i < numRadars; i++) {
-    std::string r = readChar(fp, 4);
+    std::string r = IOHmrg::readChar(fp, 4);
     radars.push_back(r);
   }
 
   // Common code here with Radial
   std::vector<short int> rawBuffer;
 
+  // FIXME: will probably remove at some point
   if (debug) {
     for (size_t i = 0; i < numRadars; i++) {
-      LogInfo("   Got radar '" << radars[i] << "'\n");
+      LogDebug("   Got radar '" << radars[i] << "'\n");
     }
-    LogInfo(
-      "   Date: " << year << " " << month << " " << day << " " << hour << " " << min << " " << sec << "\n");
-    LogInfo("   Time: " << time << "\n");
-    LogInfo("   Dimensions: " << num_x << " " << num_y << " " << num_z << "\n");
-    LogInfo("   Projection: '" << projection << "'\n"); // always "LL  "?
-    LogInfo("   Lat, lat2, lon: " << lat1 << ", " << lat2 << ", " << lon << "\n");
-    LogInfo("   VarNameUnit: " << varName << ", " << varUnit << "\n");
-    LogInfo("   VarScale/Missing: " << dataScale << " " << dataMissingValue << "\n");
+    LogDebug("   LatLons: " << lonSpacingDegs << ", " << latSpacingDegs << ", " << lonNWDegs1 << ", "
+                            << latNWDegs1 << ", " << lonNWDegs << ", " << latNWDegs << "\n");
+    LogDebug("   Date: " << time.getString("%Y %m %d %H %M %S") << "\n");
+    LogDebug("   Time: " << time << "\n");
+    LogDebug("   Dimensions: " << num_x << " " << num_y << " " << num_z << "\n");
+    LogDebug("   Projection: '" << projection << "'\n"); // always "LL  "?
+    LogDebug(
+      "   Lat, lat2, lon: " << lat1 << ", " << lat2 << ", " << lon << ", nw:" << latNWDegs1 << ", " << lonNWDegs1 <<
+        "\n");
+    LogDebug("   VarNameUnit: " << varName << ", " << varUnit << "\n");
+    LogDebug("   VarScale/Missing: " << dataScale << " " << dataMissingValue << "\n");
     if (heightMeters.size() > 0) {
-      LogInfo("  OK height Z at 0 is " << heightMeters[0] << "\n");
-      LogInfo("  Spacing is " << latSpacingDegs << ", " << lonSpacingDegs << "\n");
+      LogDebug("  OK height Z at 0 is " << heightMeters[0] << "\n");
+      LogDebug("  Spacing is " << latSpacingDegs << ", " << lonSpacingDegs << "\n");
     }
   }
 
@@ -126,8 +182,6 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 
   // Fill in the data here
   const bool needSwap = OS::isBigEndian(); // data is little
-  // size_t countm = 0;
-  size_t rawBufferIndex = 0;
 
   // Think using the missing scaled up will help prevent float drift here
   // and avoid some divisions in loop
@@ -141,6 +195,8 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
 
   // Handle single layer
+  size_t at = 0;
+
   if (num_z == 1) {
     LogInfo("HMRG reader: --Single layer LatLonGrid--\n");
 
@@ -168,7 +224,7 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
       const size_t jflip = num_y - j - 1;
       for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
         data[jflip][i] =
-          convertDataValue(rawBuffer[rawBufferIndex++], needSwap, dataUnavailable, dataMissing, dataScale);
+          IOHmrg::fromHmrgValue(rawBuffer[at++], needSwap, dataUnavailable, dataMissing, dataScale);
       }
     }
     // LogInfo("    Found " << countm << " missing values\n");
@@ -208,7 +264,8 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
       for (size_t j = 0; j < num_y; ++j) {
         const size_t jflip = num_y - j - 1;
         for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-          data[jflip][i][z] = convertDataValue(rawBuffer[rawBufferIndex++], needSwap, dataUnavailable, dataMissing,
+          data[jflip][i][z] = IOHmrg::fromHmrgValue(rawBuffer[at++], needSwap, dataUnavailable,
+              dataMissing,
               dataScale);
         }
       }
@@ -220,3 +277,157 @@ IOHmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 
   return nullptr;
 } // IOHmrg::readLatLonGrid
+
+bool
+HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llg)
+{
+  bool success = false;
+
+  // FIXME: Get from lookup table.  I think lookup table needs refactor at some point
+  // We could also use keys to pass these down
+  const int dataMissingValue = -99;
+  const int dataScale        = 10;
+  const int map_scale        = 1000;
+  const int z_scale = 1;
+  // FIXME: Not 100% sure what these represent, we'll tweak later
+  const float lat1 = 30;      // FIXME: what is this?  Calculate these properly
+  const float lat2 = 60;      // FIXME: what is this?
+  const float lon  = -60.005; // FIXME: what is this?
+
+
+  // Values appear fixed, not sure they matter much, they only compress a couple values
+  const int xy_scale  = 1000; // Not used?
+  const int dxy_scale = 100000;
+
+  // Time
+  IOHmrg::writeTime(fp, llg->getTime());
+
+  // Dimensions
+  const int num_y = llg->getNumLats();
+  const int num_x = llg->getNumLons();
+  const int num_z = llg->getNumLayers(); // LLG is 1, LLHG can be 1 or more
+
+  IOHmrg::writeInt(fp, num_x);
+  IOHmrg::writeInt(fp, num_y);
+  IOHmrg::writeInt(fp, num_z);
+
+  // Projection
+  const std::string projection = "LL  ";
+
+  IOHmrg::writeChar(fp, projection, 4);
+
+  // Calculate scaled lat/lon spacing values
+  const float lonSpacingDegs = llg->getLonSpacing();
+  const float latSpacingDegs = llg->getLatSpacing();
+  const auto aLoc       = llg->getTopLeftLocationAt(0, 0);
+  const float lonNWDegs = aLoc.getLongitudeDeg();
+  const float latNWDegs = aLoc.getLatitudeDeg();
+
+  const int temp1        = lonSpacingDegs * dxy_scale;
+  const int temp2        = latSpacingDegs * dxy_scale;
+  const float lonNWDegs1 = lonNWDegs - (.5 * lonSpacingDegs); // -94.995;
+  const float latNWDegs1 = latNWDegs + (.5 * latSpacingDegs); // 37.495;
+
+  IOHmrg::writeInt(fp, map_scale);
+  IOHmrg::writeScaledInt(fp, lat1, map_scale);
+  IOHmrg::writeScaledInt(fp, lat2, map_scale);
+  IOHmrg::writeScaledInt(fp, lon, map_scale);
+  IOHmrg::writeScaledInt(fp, lonNWDegs1, map_scale);
+  IOHmrg::writeScaledInt(fp, latNWDegs1, map_scale);
+
+  IOHmrg::writeInt(fp, xy_scale);
+  IOHmrg::writeInt(fp, temp1);
+  IOHmrg::writeInt(fp, temp2);
+  IOHmrg::writeInt(fp, dxy_scale);
+
+  // Write the height levels, scaled by Z_scale
+  auto& heights = llg->getLayerValues();
+
+  for (size_t h = 0; h < heights.size(); h++) {
+    float aHeightMeters = heights[h];
+    IOHmrg::writeInt(fp, aHeightMeters * z_scale);
+  }
+  IOHmrg::writeInt(fp, z_scale);
+
+  // Write the placeholder array
+  std::vector<int> placeholder;
+
+  placeholder.resize(10);
+  gzwrite(fp, &placeholder[0], 10 * sizeof(int));
+
+  // Convert W2 names to HMRG names
+  std::string typeName = llg->getTypeName();
+  std::string name     = typeName;
+
+  IOHmrg::W2ToHmrgName(name, name);
+
+  // Write the variable name and units
+  std::string varUnit = llg->getUnits();
+
+  IOHmrg::writeChar(fp, name, 20);
+  IOHmrg::writeChar(fp, varUnit, 6);
+
+  IOHmrg::writeInt(fp, dataScale);
+
+  IOHmrg::writeInt(fp, dataMissingValue);
+
+  LogDebug("Convert: " << typeName << " to " << name << "\n");
+  LogDebug("Output units is " << varUnit << "\n");
+  LogDebug("   LatLons: " << lonSpacingDegs << ", " << latSpacingDegs << ", " << lonNWDegs1 << ", "
+                          << latNWDegs1 << ", " << lonNWDegs << ", " << latNWDegs << "\n");
+
+  // Scaled versions
+  const int dataMissing = dataMissingValue * dataScale;
+
+  //  const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
+
+  // Write number and names of contributing radars
+  // Leaving this none for now.  We could use attributes in the LatLonGrid
+  // to store this on a read to perserve anything from incoming mrms binary files
+  // Also, W2 netcdf could use this ability to be honest
+  IOHmrg::writeInt(fp, 1);
+  std::string radar = "none";
+
+  IOHmrg::writeChar(fp, radar, 4);
+
+  // Write in the data from LatLonGrid
+  // For now convert which eats some ram for big stuff.  I think we could
+  // add the mrms binary ability to our LatLonGrid data structure to compress ram/disk
+  int count = num_x * num_y * num_z;
+  std::vector<short int> rawBuffer;
+
+  rawBuffer.resize(count);
+  const int dataUnavailable = -9990;             // FIXME: table lookup * dataScale;
+  const bool needSwap       = OS::isBigEndian(); // data is little
+  size_t at = 0;
+
+  if (num_z == 1) {
+    LogInfo("HMRG writer: --Single layer LatLonGrid--\n");
+    auto array = llg->getFloat2D(Constants::PrimaryDataName);
+    auto& data = array->ref();
+    // NOTE: flipped order from RadialSet array if you try to merge the code
+    for (size_t j = 0; j < num_y; ++j) {
+      const size_t jflip = num_y - j - 1;
+      for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+        rawBuffer[at++] = IOHmrg::toHmrgValue(data[jflip][i], needSwap, dataUnavailable, dataMissing, dataScale);
+      }
+    }
+    ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+    return true;
+  } else {
+    LogInfo("HMRG writer: --Multi layer LatLonGrid--\n");
+    auto array = llg->getFloat3D(Constants::PrimaryDataName);
+    auto& data = array->ref();
+    for (size_t z = 0; z < num_z; ++z) {
+      // NOTE: flipped order from RadialSet array if you try to merge the code
+      // Same code as 2D though the data array type is different.  Could use a template method or macro
+      for (size_t j = 0; j < num_y; ++j) {
+        const size_t jflip = num_y - j - 1;
+        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+          rawBuffer[at++] = IOHmrg::toHmrgValue(data[jflip][i][z], needSwap, dataUnavailable, dataMissing, dataScale);
+        }
+      }
+    }
+  }
+  return false;
+} // HmrgLatLonGrids::writeLatLonGrids

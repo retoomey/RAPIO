@@ -71,8 +71,8 @@ ProductInfoSet::readConfigFile()
 } // ProductInfoSet::readConfigFile
 
 bool
-ProductInfoSet::HmrgToW2(const std::string& varName,
-  std::string                             & outW2Name)
+ProductInfoSet::HmrgToW2Name(const std::string& varName,
+  std::string                                 & outW2Name)
 {
   bool success = false;
 
@@ -83,6 +83,22 @@ ProductInfoSet::HmrgToW2(const std::string& varName,
     if (p.varName == varName) {
       outW2Name = p.w2Name;
       success   = true;
+      break;
+    }
+  }
+  return success;
+}
+
+bool
+ProductInfoSet::W2ToHmrgName(const std::string& varName,
+  std::string                                 & outHMRGName)
+{
+  bool success = false;
+
+  for (auto& p:myProductInfos) {
+    if (p.w2Name == varName) {
+      outHMRGName = p.varName;
+      success     = true;
       break;
     }
   }

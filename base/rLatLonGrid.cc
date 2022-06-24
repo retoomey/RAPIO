@@ -74,6 +74,9 @@ LatLonGrid::init(
   // Update primary grid to the given size
   declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
+
+  // Store a single static layer matching height in meters
+  myLayerNumbers.push_back(location.getHeightKM() * 1000.0);
 }
 
 bool

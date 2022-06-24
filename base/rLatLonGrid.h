@@ -60,6 +60,39 @@ public:
     return myDims.size() > 1 ? myDims[1].size() : 0;
   }
 
+  // Layer interface.  A LatLonGrid only has one layer at its height, while
+  // LatLonHeightGrids have multiple
+  // FIXME: Could be virtual layer if other classes are made.  I can see
+  // doing something that stores non-height layers
+
+  /** Get the number of layers */
+  size_t
+  getNumLayers()
+  {
+    return myLayerNumbers.size();
+  }
+
+  /** Return reference to layer numbers, which then can be used for searching or changing */
+  std::vector<int>&
+  getLayerValues()
+  {
+    return myLayerNumbers;
+  }
+
+  /** Set the layer value for given level.  This is the height currently */
+  void
+  setLayerValue(size_t l, int v)
+  {
+    myLayerNumbers[l] = v;
+  }
+
+  /** Get the layer value for given level.  This is the height currently */
+  int
+  getLayerValue(size_t l)
+  {
+    return myLayerNumbers[l];
+  }
+
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH
   getCenterLocation() override
@@ -152,5 +185,8 @@ protected:
 
   /** Longitude spacing of cells in degrees */
   float myLonSpacing;
+
+  /** Vector of layer numbers.  Most likely heights. */
+  std::vector<int> myLayerNumbers;
 };
 }

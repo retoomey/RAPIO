@@ -64,7 +64,11 @@ DataType::getSubType() const
 void
 DataType::setSubType(const std::string& s)
 {
-  setDataAttributeValue("SubType", s);
+  if ((s.empty()) || (s == "file")) { // From file index
+    setDataAttributeValue("SubType", getGeneratedSubtype());
+  } else {
+    setDataAttributeValue("SubType", s);
+  }
 }
 
 void
