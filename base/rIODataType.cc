@@ -5,6 +5,7 @@
 #include "rFactory.h"
 #include "rDataType.h"
 #include "rStrings.h"
+#include "rDataFilter.h"
 #include "rOS.h"
 
 using namespace rapio;
@@ -395,3 +396,86 @@ IODataType::writeBuffer(std::shared_ptr<DataType> dt,
   // 2. Output file and generate records
   return (encoder->encodeDataTypeBuffer(dt, buffer));
 }
+
+bool
+IODataType::resolveFileName(
+  std::map<std::string, std::string>& keys,
+  const std::string                 & suffixDefault,
+  const std::string                 & tempDefault,
+  std::string                       & writeOut)
+{
+  // Get suffix from suggested by writer, or forced from settings
+  std::string suffix = keys["suffix"];
+
+  if (suffix.empty()) {
+    suffix = suffixDefault;
+  }
+
+  // Get filename from settings
+  std::string filename = keys["filename"];
+
+  if (filename.empty()) {
+    LogSevere("Need a filename to output\n");
+    return false;
+  }
+
+  // If not a direct file, it's generated so we need to add suffix
+  if (keys["directfile"] == "false") {
+    keys["filename"] = filename + "." + suffix;
+  }
+
+  // Use temporary file to do first write
+  writeOut = OS::getUniqueTemporaryFile(tempDefault);
+  // Some writers like ioimage, need the file suffix to output the correct
+  // data format such as 'png'
+  writeOut = writeOut + "." + suffix;
+
+  return true;
+}
+
+bool
+IODataType::postWriteProcess(
+  const std::string                 & outfile,
+  std::map<std::string, std::string>& keys)
+{
+  bool successful = true;
+
+  std::string finalfile = outfile;
+
+  // -----------------------------------------------------------------------
+  // Post compression pass if wanted
+  const std::string compress = keys["compression"];
+
+  if (!compress.empty()) {
+    std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(compress, "IO writer");
+    if (f != nullptr) {
+      std::string tmpgz = OS::getUniqueTemporaryFile(compress + "-");
+
+      successful = f->applyURL(finalfile, tmpgz, keys);
+      if (successful) {
+        LogDebug("Compress " << finalfile << " with '" << compress << "' to " << tmpgz << "\n");
+        OS::deleteFile(finalfile);
+        finalfile = tmpgz; // now use the new tmp
+        // Update final filename to the compressed one
+        // FIXME: Maybe directfile we don't add compression suffix?
+        // However, stuff like ioimage requires the suffix to determine what's written
+        keys["filename"] = keys["filename"] + "." + compress;
+      } else {
+        LogDebug("Unable to compress " << finalfile << " with '" << compress << "' to " << tmpgz << "\n");
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Migrate file async to final location
+  LogDebug("Migrate " << finalfile << " to " << keys["filename"] << "\n");
+  successful = OS::moveFile(finalfile, keys["filename"]);
+  if (!successful) {
+    LogSevere("Unable to move " << finalfile << " to " << keys["filename"] << "\n");
+  }
+
+  // -----------------------------------------------------------------------
+  // LDM ingest option
+  // TODO here
+  return successful;
+} // IODataType::postWriteProcess

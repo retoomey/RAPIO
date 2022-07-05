@@ -300,8 +300,8 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>             & keys
 )
 {
-  /** So myLookup "RadialSet" writer for example from the data type.
-   * This allows algs etc to replace our IOHmrg with a custom if needed. */
+  // ----------------------------------------------------------
+  // Get specializer for the data type
   const std::string type = dt->getDataType();
 
   std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer(type);
@@ -311,19 +311,16 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
 
-  std::string filename = keys["filename"];
+  // ----------------------------------------------------------
+  // Get the filename we should write to
+  std::string filename;
 
-  if (filename.empty()) {
-    LogSevere("Need a filename to output\n");
+  if (!resolveFileName(keys, "hmrg", "hmrg-", filename)) {
     return false;
   }
-  // FIXME: still need to cleanup suffix stuff
-  if (keys["directfile"] == "false") {
-    // We let writers control final suffix
-    filename         = filename + ".hmrg"; // forcing a suffix at moment, HMET should do this imo
-    keys["filename"] = filename;
-  }
-  // ----------------------------------
+
+  // ----------------------------------------------------------
+  // Write Hmrg
 
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
@@ -356,8 +353,13 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   }
   gzclose(fp);
 
-  // Post compression pass if wanted, temp move, ldm insert, etc.
-  // FIXME: clean up with netcdf/more functions, etc. Maybe use flags?
+  // ----------------------------------------------------------
+  // Post processing such as extra compression, ldm, etc.
+  if (successful) {
+    successful = postWriteProcess(filename, keys);
+  }
+
+  LogInfo("HMRG writer: " << keys["filename"] << "\n");
 
   return successful;
 } // IOHmrg::encodeDataType

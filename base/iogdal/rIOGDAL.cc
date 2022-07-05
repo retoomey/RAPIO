@@ -83,6 +83,8 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>             & keys
 )
 {
+  bool successful = true;
+
   DataType& r = *dt;
 
   // DataType LLH to data cell projection
@@ -106,17 +108,16 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   // ----------------------------------------------------------------------
   // Read settings
   //
-  std::string filename = keys["filename"];
 
-  if (filename.empty()) {
-    LogSevere("Need a filename to output\n");
+  // ----------------------------------------------------------
+  // Get the filename we should write to
+  std::string filename;
+
+  if (!resolveFileName(keys, "tif", "gdal-", filename)) {
     return false;
   }
-  std::string suffix = keys["suffix"];
 
-  if (suffix.empty()) {
-    suffix = ".tif";
-  }
+  // Get GDAL driver
   std::string driver = keys["GTiff"];
 
   if (driver.empty()) {
@@ -131,13 +132,6 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   double bottom = 0;
   double right  = 0;
   auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
-
-  // FIXME: still need to cleanup suffix stuff
-  if (keys["directfile"] == "false") {
-    // We let writers control final suffix
-    filename         = filename + "." + suffix;
-    keys["filename"] = filename;
-  }
 
   // ----------------------------------------------------------------------
   // Calculate bounding box for generating image
@@ -163,9 +157,6 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
   #endif // if 0
-
-  // ----------------------------------------------------
-  LogInfo("GDAL writer settings: (suffix: " << suffix << ", driver: " << driver << "\n");
 
   /*
    * static bool setup = false;
@@ -290,13 +281,21 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     GDALClose(geotiffDataset);
     //   CPLFree(rowBuff);
 
+    // ----------------------------------------------------------
+    // Post processing such as extra compression, ldm, etc.
+    if (successful) {
+      successful = postWriteProcess(filename, keys);
+    }
     // IODataType::generateRecord(dt, aURL, "gdal", records);
     // GDALDestroyDriverManager(); leaking?
-    return true;
   }catch (const std::exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");
+    successful = false;
   }
 
-  return false;
+  LogInfo("GDAL writer: " << keys["filename"] << "\n");
+
+
+  return successful;
 } // IOGDAL::encodeDataType

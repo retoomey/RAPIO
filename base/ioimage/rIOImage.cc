@@ -114,18 +114,17 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   }
   auto& p = *project;
 
+  // ----------------------------------------------------------
+  // Get the filename we should write to
+  std::string filename;
+  if (!resolveFileName(keys, "png", "image-", filename)) {
+    return false;
+  }
+
   // ----------------------------------------------------------------------
   // Read settings
   //
-  std::string filename = keys["filename"];
-  if (filename.empty()) {
-    LogSevere("Need a filename to output\n");
-    return false;
-  }
-  std::string suffix = keys["suffix"];
-  if (suffix.empty()) {
-    suffix = ".png";
-  }
+  bool successful = false;
 
   // ----------------------------------------------------------------------
   // Bounding Box settings from given BBOX string
@@ -136,13 +135,6 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   double bottom = 0;
   double right  = 0;
   auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
-
-  // FIXME: still need to cleanup suffix stuff
-  if (keys["directfile"] == "false") {
-    // We let writers control final suffix
-    filename         = filename + "." + suffix;
-    keys["filename"] = filename;
-  }
 
   bool transform = (proj != nullptr);
 
@@ -213,11 +205,18 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     }
 
     i.write(filename);
+    successful = true;
+
+    // ----------------------------------------------------------
+    // Post processing such as extra compression, ldm, etc.
+    if (successful) {
+      successful = postWriteProcess(filename, keys);
+    }
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");
   }
 
   #endif // if HAVE_MAGICK
-  return false;
+  return successful;
 } // IOImage::encodeDataType

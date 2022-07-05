@@ -193,6 +193,18 @@ public:
     const std::string& factory,
     std::map<std::string, std::string>& outputParams);
 
+  /** Helper pre writer which resolves filenames/direct, etc. */
+  bool
+  resolveFileName(std::map<std::string, std::string>& keys,
+    const std::string                               & suffixDefault,
+    const std::string                               & tempDefault,
+    std::string                                     & writeOut);
+
+  /** Helper post writer which does any extra compression, ldm, etc. */
+  bool
+  postWriteProcess(const std::string  & outfile,
+    std::map<std::string, std::string>& keys);
+
 protected:
 
   /** Encode this data type to path given format settings */

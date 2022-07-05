@@ -26,8 +26,6 @@ HmrgRadialSet::read(
 
   if (fp != nullptr) {
     std::string radarName = keys["RadarName"];
-    LogSevere(">>>>HMRG RADIALSET READ CALLED " << (void *) (fp) << " and " << radarName << "\n");
-
     return readRadialSet(fp, radarName, true);
   } else {
     LogSevere("Invalid gzfile pointer, cannot read\n");
@@ -45,9 +43,7 @@ HmrgRadialSet::write(
 
   if (fp != nullptr) {
     auto radialSet = std::dynamic_pointer_cast<RadialSet>(dt);
-    LogSevere(">>>>HMRG RADIALSET WRITE CALLED\n");
     if (radialSet != nullptr) {
-      LogSevere(">>>>HMRG THIS IS A RADIALSET\n");
       success = writeRadialSet(fp, radialSet);
     }
   } else {
@@ -209,9 +205,9 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
   const auto num_gates   = radialset->getNumGates();
   auto azimuth = radialset->getFloat1DRef("Azimuth");
 
-  for (size_t i = 0; i < num_radials; ++i) {
-    std::cout << azimuth[i] << ",";
-  }
+  // for (size_t i = 0; i < num_radials; ++i) {
+  //   std::cout << azimuth[i] << ",";
+  // }
 
   // ----------------------------------------------------------------------------
   // Check all angles between radials are the same (FIXME: function)
@@ -238,7 +234,6 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
       return false;
     }
   }
-  LogSevere(">>>>>>>>>>>>>>>>>>>>>>FIRSTAZIMUTH:" << firstAzimuthDegs << " " << oldDeltaDeg << "\n");
   const float azimuthResDegs = oldDeltaDeg;
 
   // ----------------------------------------------------------------------------
@@ -254,7 +249,6 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
       return false;
     }
   }
-  LogSevere(">>>>>>>>>>>>>>>>>>>GATEWIDTH " << gateW << "\n");
   // ----------------------------------------------------------------------------
   const float gateSpacingMeters = gateW;
 
