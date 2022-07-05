@@ -174,7 +174,7 @@ IOHmrg::writeChar(gzFile fp, std::string c, size_t length)
 
   v.resize(length);
 
-  const size_t max = c.length();
+  const size_t max = std::min(c.length(), length);
 
   // Write up to std::string chars
   for (size_t i = 0; i < max; i++) {

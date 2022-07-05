@@ -413,7 +413,7 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llg)
       }
     }
     ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
-    return true;
+    success = true;
   } else {
     LogInfo("HMRG writer: --Multi layer LatLonGrid--\n");
     auto array = llg->getFloat3D(Constants::PrimaryDataName);
@@ -428,6 +428,7 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llg)
         }
       }
     }
+    success = true;
   }
-  return false;
+  return success;
 } // HmrgLatLonGrids::writeLatLonGrids
