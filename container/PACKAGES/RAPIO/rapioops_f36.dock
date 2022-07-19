@@ -1,0 +1,41 @@
+# To build, we need the dev mrmsbase and the ops mrmsbase,
+# the dev is used to build the code, then we copy to the ops for size
+FROM mrmsbasedev:f36 as build
+
+##############################################################################
+# Add current RAPIO git build
+# Keeping this build separate from the rapiodev one, since we might change
+# flags, etc. later
+COPY PACKAGES/RAPIO /tmp/PACKAGES/RAPIO
+WORKDIR /tmp/PACKAGES/RAPIO
+# Make install should put into HOLDME, so we can copy into the smaller image /usr/bin, etc.
+ENV DESTDIR="/home/developer/HOLDME"
+RUN ./buildrapio.sh
+
+# Reduce final size.
+FROM mrmsbaseops:f36 as deploy
+
+##############################################################################
+# Get static scripts, etc.
+COPY PACKAGES/RAPIO /tmp/PACKAGES/RAPIO
+WORKDIR /tmp/PACKAGES/RAPIO
+
+##############################################################################
+# Setup non root user for developer.  We try to use the user 
+# **** That you are currenting building with ****
+# So when running, we can use the --user option to ensure reading/writing
+# as a particular user.  If you move the image to another system then
+# you'd probably want to replace the developer user id with the user you
+# want to be (or rebuild if you can)
+ARG RUNID
+ARG RUNGROUP
+RUN ./setupdeveloper.sh $RUNID $RUNGROUP
+##############################################################################
+
+# We have bin, include and lib64.  "Could" skip include maybe
+# We could also 'strip' the binaries but current rapio binaries are 5 MB total so not worried
+# about it
+COPY --from=build /home/developer/HOLDME/usr /usr
+COPY PACKAGES/RAPIO/motd-ops.sh /etc/profile.d/motd.sh
+COPY --from=build /BUILD/RAPIO/RAPIOConfig /CONFIG
+ENV RAPIO_CONFIG_LOCATION="/CONFIG"

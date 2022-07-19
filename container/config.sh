@@ -37,6 +37,14 @@ then
   fi
 fi
 
+# Extra drive permissions for podman
+if [ "$PODMAN" = true ]; 
+then
+  PODP=":U,Z"
+else
+  PODP=""
+fi
+
 # Function for 'stock' calling docker/podman with the general directories
 # you can modify to add extra settings
 function dockerrun(){  # extra line

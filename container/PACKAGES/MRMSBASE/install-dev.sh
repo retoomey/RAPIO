@@ -1,6 +1,8 @@
-# Toomey July 2021
-# Doing in a script saves docker layer memory, with the downside
-# of taking longer to regenerate if we add a bug
+# Toomey July 2022
+#
+# Add -devel rpms, compilers, etc.  This makes the image a bit bigger
+# than the operations one
+#
 
 # Break on any error, but messages can be confusing
 #set -e
@@ -17,53 +19,62 @@ function run(){
   fi
 }
 
+# Install a dnf/yum package with options we want
+function install(){
+  aCommand="dnf --nodocs -y install --setopt=install_weak_deps=False $1"
+  $aCommand
+}
+
 # -------------------------------------------------------------
 echo "   Substep Install extra stock packages..."
-# Utility stuff/useful for admin 
-# color ls on container/install please
-run "yum install vim coreutils-common -y"
+#run "dnf --nodocs -y upgrade-minimal"
 
 # Any Repo access
-run "yum install svn git -y"
+install "svn git"
 
 # -------------------------------------------------------------
 # Basic compiler stuff, RAPIO core (subset of WDSSII/MRMS)
 # Compiler stuff
 # gcc-toolset-9-gcc-c++ is on here too, we'll go with stock
 # libtool 'should' snag autoconf, automake, m4
-run "yum install gcc-c++ gdb make libtool -y"
-run "yum install cmake -y"
+install "gcc-c++ gdb make libtool"
+install "cmake"
 
-# Compression/Decompression libraries
-run "yum install unzip xz-devel bzip2-devel -y"
+install "xz-devel bzip2-devel"
 
 # Development libraries
 # expat-devel (udunits requirement)
-run "yum install expat-devel libpng-devel openssl-devel -y"
+install "expat-devel libpng-devel openssl-devel"
 
 # The big ones... Third Party. 
-run "yum install boost-devel -y"
-run "yum install netcdf-devel -y"
-run "yum install udunits2-devel -y"
-run "yum install g2clib-devel -y"
+install "boost-devel"
+install "netcdf-devel"
+install "udunits2-devel"
+install "g2clib-devel"
 # This one is like 500mb..projection.  Maybe we could use gdal projection instead?
-run "yum install proj-devel -y"
-run "yum install gdal-devel -y"
+install "proj-devel"
+install "gdal-devel"
+# (image) The image plugin for RAPIO uses imagick
+# I'm gonna go ahead and do this on these containers since all dnf
+# is slow and we'll rebuild subcontainers a lot more then these base
+# ones.  However you could 'squeeze' a bit more space by removing these
+echo "   Substep Install supplemental packages..."
+install "GraphicsMagick-c++-devel"
 
 # Doxygen stuff for documentation creation
-run "yum install doxygen -y"
-run "yum install graphviz -y"
+install "doxygen"
+install "graphviz"
 
 # Save some final image size
-run "yum clean all"
+run "dnf clean all"
 
 # -------------------------------------------------------------
 echo "   Substep Install motd..."
-run "mv /tmp/PACKAGES/MRMSBASE/motd.sh /etc/profile.d/motd.sh"
+run "mv /tmp/PACKAGES/MRMSBASE/motd-dev.sh /etc/profile.d/motd.sh"
 
 # -------------------------------------------------------------
 # Setup non versioned g2clib for MRMS/etc...
-run "cp /usr/lib64/libg2c_v1.6.3.a /usr/lib64/libgrib2c.a"
+#run "cp /usr/lib64/libg2c_v1.6.3.a /usr/lib64/libgrib2c.a"
 
 # I'm gonna leave this as an example of building custom,
 # even though we have the rpm now in Fedora 35

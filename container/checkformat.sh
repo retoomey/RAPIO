@@ -13,5 +13,5 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 RAPIOSOURCE="$SCRIPT_DIR/.."
 
 $DOCKERBIN run --rm --workdir="/INPUT" \
-	-v "$RAPIOSOURCE":/INPUT \
+	-v "$RAPIOSOURCE":/INPUT$PODP \
 	uncrustify /INPUT/checkformat.sh

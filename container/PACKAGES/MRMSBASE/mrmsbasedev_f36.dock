@@ -1,0 +1,5 @@
+#Docker/Podman for building a base for building RAPIO and/or RAPIO development box
+FROM mrmsbaseops:f36
+
+WORKDIR /tmp/PACKAGES/MRMSBASE
+RUN ./install-dev.sh

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Toomey Jul 2022
+
+# Predefined settings and functions
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. $SCRIPT_DIR/config.sh
+
+dockerrun "--rm rapioops:f36 rtile" "$@"

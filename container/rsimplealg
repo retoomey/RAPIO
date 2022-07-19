@@ -7,4 +7,4 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # If you make your own algorithm, give full container path like so:
 # /BUILD/MYALGS/Algname/binary
-dockerrun "--rm rapio:f35 rsimplealg" "$@"
+dockerrun "--rm rapiodev:f36 rsimplealg" "$@"

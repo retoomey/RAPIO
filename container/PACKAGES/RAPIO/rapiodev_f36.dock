@@ -1,0 +1,27 @@
+#Docker/Podman for building a RAPIO development box
+FROM mrmsbasedev:f36
+
+##############################################################################
+# Get static scripts, etc.
+COPY PACKAGES/RAPIO /tmp/PACKAGES/RAPIO
+WORKDIR /tmp/PACKAGES/RAPIO
+
+##############################################################################
+# Setup non root user for developer.  We try to use the user 
+# **** That you are currenting building with ****
+# So when running, we can use the --user option to ensure reading/writing
+# as a particular user.  If you move the image to another system then
+# you'd probably want to replace the developer user id with the user you
+# want to be (or rebuild if you can)
+ARG RUNID
+ARG RUNGROUP
+RUN ./setupdeveloper.sh $RUNID $RUNGROUP
+##############################################################################
+
+# Building/installing to /usr/bin as root.
+RUN ./buildrapio.sh
+
+# Use the RAPIOConfig for RAPIO algorithms by default
+# This can map from host to allow on-the-fly changes
+ENV RAPIO_CONFIG_LOCATION="/BUILD/MYALGS/RAPIOConfig"
+WORKDIR /BUILD
