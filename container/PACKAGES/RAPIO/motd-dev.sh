@@ -13,6 +13,10 @@ cat << EOF
 EOF
 
 HOSTSTUFF="/BUILD/MYALGS"
+# The built location of the config file
+DEFAULTCONFIG="/BUILD/RAPIO/RAPIOConfig"
+
+export RAPIO_CONFIG_LOCATION=$DEFAULTCONFIG
 
 if [ -d "$HOSTSTUFF" ]; then
 
@@ -24,12 +28,13 @@ if [ ! -d "$HOSTSTUFF/TEMPLATE" ]; then
   cp -f /tmp/PACKAGES/RAPIO/makedocs.sh $HOSTSTUFF/.
 fi
 
-# Set up rapioconfig folder on host if not already there
-if [ ! -d "/BUILD/MYALGS/RAPIOConfig" ]; then
-  if [ ! -d "$HOSTSTUFF/RAPIOConfig" ]; then
-    echo "...Installing RAPIOConfig settings, etc. into $HOSTSTUFF/RAPIOConfig"
-    cp -r /BUILD/RAPIO/RAPIOConfig $HOSTSTUFF/RAPIOConfig
-  fi
+# Try to copy to rapioconfig folder on host if not already there
+if [ ! -d "$HOSTSTUFF/RAPIOConfig" ]; then
+  echo "...Installing RAPIOConfig settings, etc. into $HOSTSTUFF/RAPIOConfig"
+  cp -r $DEFAULTCONFIG $HOSTSTUFF/RAPIOConfig
+fi
+# and or if the directory valid, use it
+if [ -d "$HOSTSTUFF/RAPIOConfig" ]; then
   export RAPIO_CONFIG_LOCATION=$HOSTSTUFF/RAPIOConfig
 fi
 
@@ -37,7 +42,6 @@ else
   echo "We expected to find a /BUILD/MYALGS directory."
   echo "Map a host folder to /BUILD/MYALGS if you want host based configuration files,"
   echo "such as colormaps, etc. Otherwise we're using the static ones on the container."
-  export RAPIO_CONFIG_LOCATION=/BUILD/RAPIO/RAPIOConfig
 fi
 
 echo "Your configuration location is $RAPIO_CONFIG_LOCATION"

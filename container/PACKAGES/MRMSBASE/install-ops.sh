@@ -24,7 +24,7 @@ function run(){
 # Install a dnf/yum package with options we want
 function install(){
   aCommand="dnf --nodocs -y install --setopt=install_weak_deps=False $1"
-  $aCommand
+  run "$aCommand"
 }
 
 # -------------------------------------------------------------
