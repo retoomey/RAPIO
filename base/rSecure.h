@@ -7,10 +7,6 @@
 #include <cstdio>
 #include <iostream>
 #include <unistd.h>
-#include <openssl/conf.h>
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
 #include <iostream>
 #include <fstream>
 

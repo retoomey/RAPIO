@@ -88,6 +88,18 @@ find_package(BZip2 REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+###########################################################################
+# Optional libraries not on every system that aren't currently critical
+# but nice to have
+
+# Allow building without openssl, but warn
+find_package(OpenSSL)
+if (OPENSSL_FOUND)
+  add_definitions(-DHAVE_OPENSSL)
+else()
+  message(WARNING "Couldn't find OpenSSL. Not critical, only needed for the AWS web experiment.")
+endif(OPENSSL_FOUND)
+
 # Allow building without it, but warn
 find_package(UDUnits2)
 if (UDUnits2_FOUND)
@@ -111,6 +123,7 @@ set(RAPIO_INCLUDE_DIRS
   ${UDUnits2_INCLUDE_DIR}
   ${Proj_INCLUDE_DIR}
   ${BZip2_INCLUDE_DIRS}
+  ${OPENSSL_INCLUDE_DIR} 
 )
 
 # Libraries
@@ -121,6 +134,7 @@ set(RAPIO_THIRD_LIBRARIES
   ${UDUnits2_LIBRARIES}
   ${Proj_LIBRARIES}
   ${BZip2_LIBRARIES}
+  ${OPENSSL_LIBRARIES}
 )
 
 ###########################################################################

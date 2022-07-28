@@ -8,9 +8,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
-
 using namespace rapio;
 
 std::string

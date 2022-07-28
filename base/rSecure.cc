@@ -5,8 +5,15 @@
 #include <iostream>
 #include <iomanip>
 
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
+
+#if HAVE_OPENSSL
+# include <openssl/err.h>
+# include <openssl/ssl.h>
+# include <openssl/hmac.h>
+# include <openssl/sha.h>
+# include <openssl/conf.h>
+# include <openssl/evp.h>
+#endif
 
 using namespace rapio;
 
@@ -15,7 +22,9 @@ Secure::sign(const std::string& key, const std::string& message)
 {
   std::string out;
 
-  #ifdef EVP_MAX_MD_SIZE
+  #if HAVE_OPENSSL
+
+  # ifdef EVP_MAX_MD_SIZE
   unsigned int result_len = -1;
   unsigned char result[EVP_MAX_MD_SIZE];
   // FIXME: Seems to be handling utf8 conversion...python did this
@@ -30,9 +39,13 @@ Secure::sign(const std::string& key, const std::string& message)
   for (size_t i = 0; i < result_len; i++) {
     out += result[i];
   }
-  #else // ifdef EVP_MAX_MD_SIZE
+  # else // ifdef EVP_MAX_MD_SIZE
   // FIXME: Complain?
-  #endif // ifdef EVP_MAX_MD_SIZE
+  # endif // ifdef EVP_MAX_MD_SIZE
+  #else // if HAVE_OPENSSL
+  LogSevere("Compiled without openssl support.\n");
+  asdfasfas
+  #endif // if HAVE_OPENSSL
   return out;
 }
 
@@ -53,6 +66,9 @@ Secure::hexdigest(const std::string& bytes)
 std::vector<uint8_t>
 Secure::decode64(const std::string& input)
 {
+  std::vector<uint8_t> outbuf;
+
+  #if HAVE_OPENSSL
   BIO * b64, * bmem;
   char inbuf[512];
   int inlen;
@@ -61,7 +77,6 @@ Secure::decode64(const std::string& input)
 
   bmem = BIO_new_mem_buf(input.c_str(), input.size());
   bmem = BIO_push(b64, bmem);
-  std::vector<uint8_t> outbuf;
 
   while ((inlen = BIO_read(b64, inbuf, 512)) > 0) {
     size_t len = (inlen < 0) ? 0 : (size_t) (inlen);
@@ -70,24 +85,32 @@ Secure::decode64(const std::string& input)
     }
   }
   BIO_free_all(b64); // this frees bmem too
+  #else // if HAVE_OPENSSL
+  LogSevere("Compiled without openssl support.\n");
+  #endif // if HAVE_OPENSSL
   return outbuf;
 }
 
 std::string
 Secure::sha256(const std::string& str)
 {
+  std::stringstream ss;
+
+  #if HAVE_OPENSSL
   unsigned char hash[SHA256_DIGEST_LENGTH];
   SHA256_CTX sha256;
 
   SHA256_Init(&sha256);
   SHA256_Update(&sha256, str.c_str(), str.size());
   SHA256_Final(hash, &sha256);
-  std::stringstream ss;
 
   for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++) {
     // ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
     ss << hash[i];
   }
+  #else // if HAVE_OPENSSL
+  LogSevere("Compiled without openssl support.\n");
+  #endif // if HAVE_OPENSSL
   return ss.str();
 }
 
@@ -109,6 +132,7 @@ Secure::validateSigned(
   const std::string& signature,
   bool             base64) // convert from base64 or not (binary already)
 {
+  #if HAVE_OPENSSL
   const char * hold = publickey.c_str();
 
   // Memory stuff
@@ -188,4 +212,10 @@ Secure::validateSigned(
   BIO_free(bufio);
 
   return pass;
+
+  #else // if HAVE_OPENSSL
+  LogSevere("Compiled without openssl support.\n");
+  return false;
+
+  #endif // if HAVE_OPENSSL
 } // Secure::validateSigned
