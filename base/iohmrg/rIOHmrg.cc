@@ -315,7 +315,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   // Get the filename we should write to
   std::string filename;
 
-  if (!resolveFileName(keys, "hmrg", "hmrg-", filename)) {
+  if (!resolveFileName(keys, "hmrg.gz", "hmrg-", filename)) {
     return false;
   }
 
@@ -355,6 +355,13 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
 
   // ----------------------------------------------------------
   // Post processing such as extra compression, ldm, etc.
+  const std::string compress = keys["compression"];
+
+  if (!compress.empty()) {
+    LogSevere("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
+    keys["compression"] = ""; // global for this run unless alg setting it
+  }
+
   if (successful) {
     successful = postWriteProcess(filename, keys);
   }

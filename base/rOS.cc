@@ -209,38 +209,50 @@ OS::validateExe(const std::string& path)
 }
 
 std::vector<std::string>
-OS::runProcess(const std::string& command)
+OS::runProcess(const std::string& commandin)
 {
   std::vector<std::string> data;
+  std::string error = "None";
 
   try{
     namespace p = boost::process;
+
+    // Properly break up command and args vector for boost child
+    std::string command;
+    std::vector<std::string> args;
+    Strings::splitWithoutEnds(commandin, ' ', &args);
+    // for(size_t i=0; i< args.size(); i++){
+    //  LogDebug(i << " --> " << args[i] << "\n");
+    // }
+    if (args.size() < 1) { return std::vector<std::string>(); }
+
+    if (args.size() > 0) {
+      command = args[0];
+      args.erase(args.begin());
+    }
+
+    // Call the child synchronously, capturing std_out and std_err
     p::ipstream is;
-    // p::child c("gcc --version", p::std_out > pipe_stream);
-    p::child c(command, p::std_out > is);
+    p::child c(p::search_path(command), p::args(args), (p::std_out & p::std_err) > is);
 
     std::string line;
 
-    // while (pipe_stream && std::getline(pipe_stream, line) && !line.empty()){
     while (c.running() && std::getline(is, line) && !line.empty()) {
-      //  std::cerr << line << std::endl;
-      // line += "\n";
-      // LogSevere(line);
       data.push_back(line);
     }
 
     c.wait();
 
-    LogInfo("Success running command '" << command << "'\n");
+    LogInfo("Success running command '" << commandin << "'\n");
     return data;
   }catch (const std::exception& e)
   // Catch ALL exceptions deliberately and recover
   // since we want our algorithms to continue running
   {
-    // std::cerr << "Error caught " << e.what() << "\n";
+    error = e.what();
   }
   // Failure
-  LogSevere("Failure running command '" << command << "'\n");
+  LogSevere("Failure running command '" << commandin << "' Error: '" << error << "'\n");
   return std::vector<std::string>();
 } // OS::runProcess
 
