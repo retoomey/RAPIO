@@ -19,8 +19,13 @@
 using namespace rapio;
 using namespace std;
 
-RAPIOOptions::RAPIOOptions()
+RAPIOOptions::RAPIOOptions(const std::string& base)
 {
+  setHeader(Constants::RAPIOHeader + base);
+  setDescription(
+    base + ".  See examples.  Call o.setHeader, o.setAuthors, o.setDescription in declareOptions to change.");
+  setAuthors("Robert Toomey");
+
   optional("verbose",
     "info",
     "Error log verbosity levels.  Increasing level prints more stuff: A given file path will read this value from a file periodically and update.");
@@ -32,30 +37,29 @@ RAPIOOptions::RAPIOOptions()
 
   // grid2D("GridTest", "nw(34.5, 91.5) se(20.2, 109.5)", "Testing grid 2d");
 
-  // Decided to make this global since it's probably rarely used
-  // optional("flush",
-  //  "900",
-  //  "Error log flush (force write) timer set in seconds.");
-  // addGroup("flush", "LOGGING");
-
   optional("iconfig",
     "",
     "Input URL to read a configuration file. Command line overrides.");
   addGroup("iconfig", "CONFIG");
-  addAdvancedHelp("iconfig",
-    "Can end with .xml for WDSS2 file, .config for HMET file, .json for JSON file. This will parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
 
   optional("oconfig",
     "",
     "Output URL to write a configuration file, using parameters from all sources.");
   addGroup("oconfig", "CONFIG");
-  addAdvancedHelp("oconfig",
-    "Can end with .xml for WDSS2 file, .config for HMET file, .json for a JSON file. This will use all parameters if any from iconfig, override with command line arguments, then generate a new output file.  You can convert from one style to another as well.");
 
   // The help group
   boolean("help",
     "Print out parameter help information. Can also just type the program without arguments.");
   addGroup("help", "HELP");
+}
+
+void
+RAPIOOptions::addPostLoadedHelp()
+{
+  addAdvancedHelp("iconfig",
+    "Can end with .xml for WDSS2 file, .config for HMET file, .json for JSON file. This will parse the given file and add found parameters. Anything passed to command line will override the contents of the passed in file.");
+  addAdvancedHelp("oconfig",
+    "Can end with .xml for WDSS2 file, .config for HMET file, .json for a JSON file. This will use all parameters if any from iconfig, override with command line arguments, then generate a new output file.  You can convert from one style to another as well.");
 }
 
 void
@@ -806,6 +810,54 @@ RAPIOOptions::writeConfigFile(const std::string& string)
   ;
 }
 
+bool
+RAPIOOptions::setHelpFields()
+{
+  std::vector<std::string> myHelpFields;
+
+  // Left over fields get the set of asked for help fields
+  // so basically "myalg help field1 field2 field3" which will be
+  // used to load advanced help settings.
+
+  // FIXME: Humm this is from left over options (non -), issue or not?
+  if (myRawArgs.size() > 1) { // help is one of them...
+    std::vector<Option> allOptions;
+    OptionFilter all;
+
+    // Make it dynamic based on what else is left on line
+    for (auto what: myRawArgs) {
+      // Skip help for help itself...hummm
+      if (what == "help") { continue; }
+
+      // Try to find a group matching argument...
+      // So if user types 'alg help time' they get detailed time options.
+      std::string group = Strings::makeUpper(what);
+      if (group == "OPTIONS") { group = ""; }
+      FilterGroup g(group);
+      sortOptions(allOptions, g);
+
+      // If not found, try to find a variable matching argument...
+      if (allOptions.size() == 0) {
+        FilterName aName(what); // Capital?
+        sortOptions(allOptions, aName);
+      }
+
+      // Dump advanced help for this if found
+      if (allOptions.size() > 0) {
+        ///  std::cout << ColorTerm::bold(group + ":\n");
+        //  dumpArgs(allOptions, all, false, true);
+        for (auto o:allOptions) {
+          myHelpOptions.push_back(o);
+        }
+        allOptions.clear();
+      } else {
+        std::cout << "-->Unknown option/variable: " << what << "\n";
+      }
+    }
+  }
+  return (myHelpFields.size() > 0);
+} // RAPIOOptions::setHelpFields
+
 void
 RAPIOOptions::dumpHelp()
 {
@@ -906,6 +958,9 @@ RAPIOOptions::processArgs(const int& argc, char **& argv)
     readConfigFile(fileName);
   }
 
+  if (haveHelp) {
+    setHelpFields(); // Update help field
+  }
   return haveHelp;
 } // RAPIOOptions::processArgs
 

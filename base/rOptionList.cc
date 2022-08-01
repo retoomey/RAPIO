@@ -329,6 +329,23 @@ OptionList::addGroup(const std::string& sourceopt, const std::string& group)
   }
 }
 
+bool
+OptionList::wantAdvancedHelp(const std::string& sourceopt)
+{
+  bool want     = false;
+  Option * have = getOption(sourceopt);
+
+  if (have) {
+    for (auto o:myHelpOptions) {
+      if (o.opt == have->opt) {
+        want = true;
+        break;
+      }
+    }
+  }
+  return want;
+}
+
 void
 OptionList::addAdvancedHelp(const std::string& sourceopt,
   const std::string                          & help)
@@ -340,8 +357,14 @@ OptionList::addAdvancedHelp(const std::string& sourceopt,
   Option * have = getOption(sourceopt);
 
   if (have) {
-    have->advancedHelp = help;
-    have->usage        = have->usage + " (See help " + have->opt + ")";
+    // Only add advanced help if in the myHelpOptions list
+    for (auto o:myHelpOptions) {
+      if (o.opt == have->opt) {
+        have->advancedHelp = help;
+        have->usage        = have->usage + " (See help " + have->opt + ")";
+        break;
+      }
+    }
   } else {
     std::cout
       << "WARNING: Code error: Trying to add detailed help to missing option '"

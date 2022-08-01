@@ -5,6 +5,7 @@
 # Set variable of all headers we use
 set(HEADER_FILES
   RAPIO.h
+  rRAPIOProgram.h
   rTerrainBlockage.h
   rArray.h
   rBinaryIO.h
@@ -104,6 +105,7 @@ set(HEADER_FILES
 
 # Set variable of all sources we use
 set(SOURCE_FILES
+  rRAPIOProgram.cc
   rTerrainBlockage.cc
   rArray.cc
   rBinaryIO.cc

@@ -20,8 +20,13 @@ class LLCoverageArea;
 class RAPIOOptions : public OptionList {
 public:
 
-  RAPIOOptions();
+  /** Construct default options */
+  RAPIOOptions(const std::string& base = "Program");
   ~RAPIOOptions(){ }
+
+  /** Add advanced help for default options */
+  void
+  addPostLoadedHelp();
 
   // We support iconfig and oconfig options for loading/saving parameters
   // FIXME: Should this in the OptionList generically?
@@ -129,6 +134,11 @@ public:
     unsigned int                     i,
     std::string                      & arg,
     std::string                      & value);
+
+  /** Set help fields for advanced help, used to dynamically
+   * add only required advanced help **/
+  bool
+  setHelpFields();
 
   /** Dump help for options based on what is passed in */
   void

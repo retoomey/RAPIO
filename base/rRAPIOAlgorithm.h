@@ -1,11 +1,13 @@
 #pragma once
 
+#include <rRAPIOProgram.h>
 #include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
 #include <rIndexType.h>
 #include <rRecordNotifier.h>
 #include <rConfigParamGroup.h>
+#include <rHeartbeat.h>
 
 #include <string>
 #include <vector>
@@ -19,20 +21,12 @@ class WebMessage;
  *  @author Robert Toomey
  *
  */
-class RAPIOAlgorithm : public Algorithm {
+class RAPIOAlgorithm : public RAPIOProgram {
 public:
   /** Construct a stock algorithm */
   RAPIOAlgorithm();
 
   // Public intended open API -----------------------
-
-  /** Declare all algorithm options algorithm needs */
-  virtual void
-  declareOptions(RAPIOOptions& o){ };
-
-  /** Process/setup from the given algorithm options */
-  virtual void
-  processOptions(RAPIOOptions& o){ };
 
   /** Process a matched new record (occurs as the records come in)  Index number
    * is index into declared order */
@@ -71,21 +65,9 @@ public:
   virtual void
   processInputParams(RAPIOOptions& o);
 
-  /** Initialize system wide base parsers */
-  virtual void
-  initializeBaseParsers();
-
   /** Initialize system wide setup */
   virtual void
   initializeBaseline();
-
-  /** Initialize algorithm from c arguments and execute.  Used if algorithm is
-   * standalone
-   * and not chained with other modules.  This simplifies one shot algorithm
-   * binaries. */
-  void
-  executeFromArgs(int argc,
-    char *            argv[]);
 
   /** Should write product? Subclasses can use this bypass generation of
    * storage/cpu
@@ -118,6 +100,22 @@ public:
    * of the input flow.  This represents the -I filter ability for records.  */
   virtual void
   setUpRecordFilter();
+
+  /** Set up the heartbeat callback */
+  virtual void
+  setUpHeartbeat();
+
+  /** Set up initial indexes and initial loading */
+  virtual void
+  setUpInitialIndexes();
+
+  /** Set up webserver if wanted */
+  virtual void
+  setUpWebserver();
+
+  /** Set up the record queue */
+  virtual void
+  setUpRecordQueue();
 
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
@@ -214,6 +212,18 @@ protected:
 
   /** The web server mode */
   bool myWebServerOn;
+
+protected:
+
+  /** Declare all default options for this layer,
+   * typically you don't need to change at this level */
+  virtual RAPIOOptions
+  initializeOptions() override;
+
+  /** Finalize options by processing, etc.,
+   * typically you don't need to change at this level */
+  virtual void
+  finalizeOptions(RAPIOOptions& o) override;
 };
 
 //  end class RAPIOAlgorithm

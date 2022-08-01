@@ -99,6 +99,10 @@ public:
   addGroup(const std::string& sourceopt,
     const std::string       & group);
 
+  /** Do we want advanced help for this option? */
+  bool
+  wantAdvancedHelp(const std::string& sourceopt);
+
   /** Add advanced help to an option.  */
   void
   addAdvancedHelp(const std::string& sourceopt,
@@ -143,6 +147,11 @@ public:
   /** Get if processed, this allows get value methods to work */
   bool
   getIsProcessed(){ return isProcessed; }
+
+protected:
+
+  /** Advanced Help filter list of options */
+  std::vector<Option> myHelpOptions;
 
 private:
 

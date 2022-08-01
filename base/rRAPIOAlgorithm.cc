@@ -4,32 +4,24 @@
 #include "rError.h"
 #include "rEventLoop.h"
 #include "rEventTimer.h"
-#include "rIOIndex.h"
-#include "rIOWatcher.h"
 #include "rTime.h"
 #include "rStrings.h"
-#include "rConfig.h"
-#include "rUnit.h"
 #include "rDataType.h"
 #include "rIODataType.h"
 #include "rIndexType.h"
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
-#include "rAlgConfigFile.h"
 #include "rFactory.h"
-#include "rSignals.h"
 #include "rHeartbeat.h"
 #include "rDataTypeHistory.h"
-#include "rStreamIndex.h"
 #include "rRecordFilter.h"
-
-// Default always loaded datatype creation factories
 #include "rWebServer.h"
-#include "rIOXML.h"
-#include "rIOJSON.h"
-#include "rIOFile.h"
 
+// Baseline initialize
 #include "rDataFilter.h"
+#include "rIOWatcher.h"
+#include "rIOIndex.h"
+#include "rUnit.h"
 
 #include <iostream>
 #include <string>
@@ -110,7 +102,12 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   // Dispatch advanced help to the mega static classes
   o.addAdvancedHelp("i", IOIndex::introduceHelp());
   o.addAdvancedHelp("n", RecordNotifier::introduceHelp());
-  o.addAdvancedHelp("o", IODataType::introduceHelp());
+
+  // Datatype will try to load all dynamic modules, so we want to avoid that
+  // unless help is requested
+  if (o.wantAdvancedHelp("o")) {
+    o.addAdvancedHelp("o", IODataType::introduceHelp());
+  }
 
   // Static advanced on demand (lazy add)
   o.addAdvancedHelp("I",
@@ -229,36 +226,13 @@ RAPIOAlgorithm::isWebServer()
 }
 
 void
-RAPIOAlgorithm::initializeBaseParsers()
-{
-  // We have to introduce the 'raw' builder types
-  // early since eveyrthing else will use them.
-  // More advanced stuff like netcdf, etc will be
-  // introduced later as system ramps up.
-  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xml);
-  Factory<IODataType>::introduce("w2algs", xml);
-
-  xml->initialize();
-
-  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
-  Factory<IODataType>::introduce("json", json);
-
-  json->initialize();
-
-  std::shared_ptr<IOFile> file = std::make_shared<IOFile>();
-  Factory<IODataType>::introduce("file", file);
-
-  file->initialize();
-}
-
-void
 RAPIOAlgorithm::initializeBaseline()
 {
-  Config::introduceSelf();
+  // Many of these modules/abilities register with config to load
+  // settings
 
   // -------------------------------------------------------------------
-  // Data filter support
+  // Data filter support (compression endings)
   DataFilter::introduceSelf();
 
   // -------------------------------------------------------------------
@@ -273,92 +247,32 @@ RAPIOAlgorithm::initializeBaseline()
   // Notification support (Send xml records somewhere on processing)
   RecordNotifier::introduceSelf();
 
-  // Everything should be registered, try initial start up
-  if (!Config::initialize()) {
-    LogSevere("Failed to initialize\n");
-    exit(1);
-  }
+  // -------------------------------------------------------------------
+  // Unit conversion support
   Unit::initialize();
-
-  /*
-   * // Force immediate loading, maybe good for testing
-   * // dynamic modules
-   * auto x = Factory<IODataType>::get("netcdf");
-   */
 } // RAPIOAlgorithm::initializeBaseline
 
-void
-RAPIOAlgorithm::executeFromArgs(int argc, char * argv[])
+RAPIOOptions
+RAPIOAlgorithm::initializeOptions()
 {
-  // Make sure initial logging setup
-  Log::instance();
+  RAPIOOptions o("Algorithm");
 
-  // Since this is called by a main function
-  // wrap to catch any uncaught exception.
-  try  {
-    // Default header for an algorithm, subclasses should override
-    RAPIOOptions o;
-    o.setHeader(Constants::RAPIOHeader + "Algorithm");
-    o.setDescription(
-      "An Algorithm.  See example algorithm.  Call o.setHeader, o.setAuthors, o.setDescription in declareOptions to change.");
-    o.setAuthors("Robert Toomey");
+  declareInputParams(o);  // Declare the input parameters used, default of
+                          // i, I, l...
+  declareOutputParams(o); // Declare the output parameters, default of o,
+                          // O...
+  declareOptions(o);      // Allow algorithm to declare wanted general
+                          // arguments...
+  return o;
+}
 
-    // --------------------------------------------------------------------------------
-    // We separate the stages here because I want to create modules later where
-    // this order
-    // of events may be critical:
-    //
-    // 1. Declare step
-    declareInputParams(o);  // Declare the input parameters used, default of
-                            // i, I, l...
-    declareOutputParams(o); // Declare the output parameters, default of o,
-                            // O...
-    declareOptions(o);      // Allow algorithm to declare wanted general
-                            // arguments...
-
-    // 2. Parse step
-    // Algorithm special read/write of options support, processing args
-    initializeBaseParsers(); // raw xml, json reading, etc.
-    AlgConfigFile::introduceSelf();
-
-    // Read/process arguments, don't react yet
-    bool wantHelp = o.processArgs(argc, argv);
-
-    // Initial loading of logging, settings/modules
-    initializeBaseline();
-    o.initToSettings();
-
-    // Dump help and stop
-    if (wantHelp) {
-      // Dump advanced
-      addPostLoadedHelp(o);
-      o.finalizeArgs(wantHelp);
-      exit(1);
-    }
-
-    // Allow options final validatation of ALL arguments passed in.
-    bool success = o.finalizeArgs(wantHelp);
-    if (!success) { exit(1); }
-
-    // Change final logging now to arguments passed in.
-    LogInfo("Algorithm initialized, executing " << OS::getProcessName() << "...\n");
-    const std::string verbose = o.getString("verbose");
-    Log::setSeverityString(verbose);
-    Log::printCurrentLogSettings();
-
-    // 3. Process options, inputs, outputs that were successfully parsed
-    processOptions(o);      // Process generic options declared above
-    processInputParams(o);  // Process stock input params declared above
-    processOutputParams(o); // Process stock output params declared above
-
-    // 4. Execute the algorithm (this will connect listeners, etc. )
-    execute();
-  } catch (const std::string& e) {
-    std::cerr << "Error: " << e << "\n";
-  } catch (...) {
-    std::cerr << "Uncaught exception (unknown type) \n";
-  }
-} // RAPIOAlgorithm::executeFromArgs
+void
+RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
+{
+  processOptions(o);
+  processInputParams(o);  // Process stock input params declared above
+  processOutputParams(o); // Process stock output params declared above
+}
 
 void
 RAPIOAlgorithm::setUpRecordNotifier()
@@ -376,7 +290,7 @@ RAPIOAlgorithm::setUpRecordFilter()
 }
 
 void
-RAPIOAlgorithm::execute()
+RAPIOAlgorithm::setUpHeartbeat()
 {
   // Add Heartbeat (if wanted)
   std::shared_ptr<Heartbeat> heart = nullptr;
@@ -388,17 +302,13 @@ RAPIOAlgorithm::execute()
       LogSevere("Bad format for -sync string, aborting\n");
       exit(1);
     }
+    EventLoop::addEventHandler(heart);
   }
+}
 
-  // Create record queue and record filter/notifier
-  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
-
-  Record::theRecordQueue = q;
-
-  setUpRecordNotifier();
-
-  setUpRecordFilter();
-
+void
+RAPIOAlgorithm::setUpInitialIndexes()
+{
   // Try to create an index for each source we want data from
   // and add sorted records to queue
   // FIXME: Archive should probably skip queue in case of giant archive cases,
@@ -439,7 +349,7 @@ RAPIOAlgorithm::execute()
                                    << " data sources, ending.\n");
     exit(1);
   }
-  const size_t rSize = q->size();
+  const size_t rSize = Record::theRecordQueue->size();
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
   LogDebug("Outputs:\n");
@@ -448,34 +358,51 @@ RAPIOAlgorithm::execute()
   for (auto& w:writers) {
     LogDebug("   " << w.factory << "--> " << w.outputinfo << "\n");
   }
+} // RAPIOAlgorithm::setUpInitialIndexes
+
+void
+RAPIOAlgorithm::setUpWebserver()
+{
+  // Launch event loop, either along with web server, or solo
+  const bool wantWeb = (myWebServerMode != "off");
+
+  myWebServerOn = wantWeb;
+  if (wantWeb) {
+    WebServer::startWebServer(myWebServerMode, this);
+  }
+}
+
+void
+RAPIOAlgorithm::setUpRecordQueue()
+{
+  // Create record queue and record filter/notifier
+  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
+
+  Record::theRecordQueue = q;
+  EventLoop::addEventHandler(q);
+}
+
+void
+RAPIOAlgorithm::execute()
+{
+  // FIXME: Probably move some of these things 'up' to program as
+  // requestable abilities
+
+  setUpHeartbeat();
+
+  setUpRecordQueue();
+
+  setUpRecordNotifier();
+
+  setUpRecordFilter();
+
+  setUpInitialIndexes();
 
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
   static std::shared_ptr<ProcessTimer> fulltime(
     new ProcessTimer("Algorithm total runtime"));
 
-  // Add RecordQueue
-  EventLoop::addEventHandler(q);
-
-  // Add heartbeat
-  if (heart != nullptr) {
-    EventLoop::addEventHandler(heart);
-  }
-
-  // Launch event loop, either along with web server, or solo
-  const bool wantWeb = (myWebServerMode != "off");
-
-  myWebServerOn = wantWeb;
-  if (wantWeb) {
-    // Create web message queue
-    // std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(this);
-    // WebMessageQueue::theWebMessageQueue = wmq;
-
-    // EventLoop::addEventHandler(wmq);
-    WebServer::startWebServer(myWebServerMode, this);
-  }
-
-  // Do event loop solo
   EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute
 

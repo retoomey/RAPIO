@@ -17,13 +17,21 @@ AlgConfigFile::introduce(const string & protocol,
 void
 AlgConfigFile::introduceSelf()
 {
-  AlgXMLConfigFile::introduceSelf();
-  AlgFLATConfigFile::introduceSelf();
+  static bool initialized = false;
+
+  if (!initialized) {
+    AlgXMLConfigFile::introduceSelf();
+    AlgFLATConfigFile::introduceSelf();
+    initialized = true;
+  }
 }
 
 std::shared_ptr<AlgConfigFile>
 AlgConfigFile::getConfigFileForURL(const URL& path)
 {
+  // This is the only entry point for RAPIOOptions
+  introduceSelf();
+
   // How to tell what type of config file it is?
   // We'll start by using the file suffix.  We could enhance
   // AlgConfigFile class to 'scan' for a file it recognizes...
