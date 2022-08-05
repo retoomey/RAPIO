@@ -4,6 +4,8 @@
 #include "rStrings.h"
 #include "rIODataType.h"
 
+#include <fstream>
+
 using namespace rapio;
 using namespace std;
 

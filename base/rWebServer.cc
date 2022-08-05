@@ -4,6 +4,7 @@
 #include "rEventLoop.h"
 
 #include <memory>
+#include <fstream>
 
 // We can do a local include here since this is a header only library
 // if installed, algorithms won't have this header, that's ok

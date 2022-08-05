@@ -178,7 +178,7 @@ public:
    * You probably don't want this, see the example algorithm.
    */
   virtual void *
-  getRawDataPointer()
+  getRawDataPointer() override
   {
     return myStorage.data();
   }

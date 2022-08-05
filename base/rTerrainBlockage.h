@@ -7,6 +7,7 @@
 #include "rConstants.h"
 
 #include <boost/multi_array.hpp>
+#include <limits>
 
 namespace rapio
 {
@@ -18,7 +19,7 @@ class PointBlockage : public Data
 public:
 
   /** Create a point blockage, a 'bin' along a radial line for terrain blockage values */
-  PointBlockage() : endKMs(INT_MAX){ } // not sure max needed here really
+  PointBlockage() : endKMs(std::numeric_limits<float>::max()){ } // not sure max needed here really
 
   /**  Does a ray fall into our bin?.  Used during terrain lookup creation */
   bool

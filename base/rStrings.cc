@@ -6,6 +6,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <fstream>
+
 using namespace rapio;
 using namespace std;
 

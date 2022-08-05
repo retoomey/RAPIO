@@ -47,7 +47,7 @@ public:
 
   /** Post load, advanced help request.  This help requires the system to be initialized */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o);
+  addPostLoadedHelp(RAPIOOptions& o) override;
 
   /** Declare input parameter options (Called before option parse) */
   virtual void
@@ -67,7 +67,7 @@ public:
 
   /** Initialize system wide setup */
   virtual void
-  initializeBaseline();
+  initializeBaseline() override;
 
   /** Should write product? Subclasses can use this bypass generation of
    * storage/cpu
@@ -119,7 +119,7 @@ public:
 
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
-  execute();
+  execute() override;
 
   /** Handle new record, usually from event queue */
   virtual void

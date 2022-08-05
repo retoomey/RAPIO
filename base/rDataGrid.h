@@ -194,7 +194,7 @@ public:
 
   /** Convenience to set the units of a given array name */
   virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override
   {
     if (name == Constants::PrimaryDataName) {
       myUnits = units;

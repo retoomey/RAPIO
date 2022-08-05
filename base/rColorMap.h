@@ -19,6 +19,9 @@ public:
   /** All color bins return colors for a given value */
   virtual void
   getColor(double value, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const = 0;
+
+  /** Destructor */
+  virtual ~ColorBin(){ }
 };
 
 /** A Color bin that stores a single color for the bin range */
