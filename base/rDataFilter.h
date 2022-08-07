@@ -129,6 +129,8 @@ public:
     std::map<std::string, std::string> &params) override;
 };
 
+#if HAVE_LZMA
+
 /** LZMA, XZ style
  */
 class LZMADataFilter : public DataFilter {
@@ -150,6 +152,7 @@ public:
   applyURL(const URL& infile, const URL& outfile,
     std::map<std::string, std::string> &params) override;
 };
+#endif // if HAVE_LZMA
 
 #if RAPIO_USE_SNAPPY == 1
 

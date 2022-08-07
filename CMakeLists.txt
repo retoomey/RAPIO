@@ -75,15 +75,33 @@ find_package(CURL REQUIRED)
 # Cmake provided modules.  Either I've copied to cmake folder or system
 # cmake default.  I think some of these are only installed in the latest
 # OS systems.
-find_package(Boost 1.71 REQUIRED COMPONENTS
+find_package(Boost 1.66 REQUIRED COMPONENTS
   system log log_setup thread filesystem serialization iostreams timer
 )
+
+###########################################################################
+# Compression libraries
+#
 # Added these because if they aren't installed pretty sure BOOST will
 # dynamically fail on compression reading/writing these.  Don't think I actually
 # use the headers anywhere. The question is if the installed apk/rpm/etc versions
 # of boost support the XZ, ZLIB, BZIP2 compressions (did they build with them?)
 find_package(ZLIB REQUIRED)
 find_package(BZip2 REQUIRED)
+
+# Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
+# variant of Redhat, and is therefore ancient using Boost 1.66
+# It appears at first glance that LZMA wasn't built properly in the RPM.
+# Is Boost version greater/equal to 1.71, then I'll build the LZMA
+# We 'could' do a find_package(LibLZMA OPTIONAL) as well
+if (${Boost_VERSION} VERSION_GREATER_EQUAL "107600")
+  message(STATUS "Building LZMA compression support, BOOST >= 1.71")
+  add_definitions(-DHAVE_LZMA)
+else()
+  message(WARNING "BOOST < 1.71, no LZMA support.  Only matters if you want to read .xz or .lzma compressed files.")
+endif()
+
+###########################################################################
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)

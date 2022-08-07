@@ -11,7 +11,10 @@
 #include <boost/iostreams/filter/gzip.hpp>  // .gz files
 #include <boost/iostreams/filter/bzip2.hpp> // .bz2 files
 #include <boost/iostreams/filter/zlib.hpp>  // .z files
-#include <boost/iostreams/filter/lzma.hpp>  // .lzma files
+
+#if HAVE_LZMA
+# include <boost/iostreams/filter/lzma.hpp> // .lzma files
+#endif
 
 #if RAPIO_USE_SNAPPY == 1
 # include "snappy.h" // google .sz files
@@ -79,7 +82,9 @@ DataFilter::introduceSelf()
   GZIPDataFilter::introduceSelf();
   BZIP2DataFilter::introduceSelf();
   ZLIBDataFilter::introduceSelf();
+  #if HAVE_LZMA
   LZMADataFilter::introduceSelf();
+  #endif
 
   #if RAPIO_USE_SNAPPY == 1
   // Playing with snappy some.  The downside it that for whatever
@@ -196,6 +201,7 @@ ZLIBDataFilter::applyURL(const URL& infile, const URL& outfile,
   return (applyBOOSTURL(infile, outfile, outbuf));
 }
 
+#if HAVE_LZMA
 void
 LZMADataFilter::introduceSelf()
 {
@@ -223,6 +229,8 @@ LZMADataFilter::applyURL(const URL& infile, const URL& outfile,
   outbuf.push(bi::lzma_compressor());
   return (applyBOOSTURL(infile, outfile, outbuf));
 }
+
+#endif // if HAVE_LZMA
 
 #if RAPIO_USE_SNAPPY == 1
 void
