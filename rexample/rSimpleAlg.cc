@@ -231,7 +231,9 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");
-    writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
+    std::map<std::string, std::string> myOverrides;
+    // myOverrides["postSuccessCommand"] = "ldm";            // Do a standard pqinsert of final data file
+    writeOutputProduct(r->getTypeName(), r, myOverrides); // Typename will be replaced by -O filters
     LogInfo("--->Finished " << r->getTypeName() << " product to output\n");
   }
 } // W2SimpleAlg::processNewData

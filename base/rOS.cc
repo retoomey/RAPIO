@@ -208,10 +208,10 @@ OS::validateExe(const std::string& path)
   return "";
 }
 
-std::vector<std::string>
-OS::runProcess(const std::string& commandin)
+int
+OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
 {
-  std::vector<std::string> data;
+  data.clear();
   std::string error = "None";
 
   try{
@@ -224,27 +224,39 @@ OS::runProcess(const std::string& commandin)
     // for(size_t i=0; i< args.size(); i++){
     //  LogDebug(i << " --> " << args[i] << "\n");
     // }
-    if (args.size() < 1) { return std::vector<std::string>(); }
+    if (args.size() < 1) { return -1; }
 
     if (args.size() > 0) {
       command = args[0];
       args.erase(args.begin());
     }
 
-    // Call the child synchronously, capturing std_out and std_err
-    p::ipstream is;
-    p::child c(p::search_path(command), p::args(args), (p::std_out & p::std_err) > is);
+    // Check can find executable, because otherwise BOOST outright segfaults if
+    // missing, which we really don't want in a realtime/recovering algorithm.
+    const auto spath = p::search_path(command);
+    if (spath.empty()) {
+      error = "Command not found in path";
+    } else {
+      // Have child send std_out and std_err to a stream for us. We're assuming
+      // output is wanted.  FIXME: we could add a flag for this maybe?
+      p::ipstream is;
+      p::child c(spath, p::args(args), (p::std_out & p::std_err) > is);
 
-    std::string line;
+      // Call the child synchronously, capturing std_out and std_err
+      std::string line;
 
-    while (c.running() && std::getline(is, line) && !line.empty()) {
-      data.push_back(line);
+      while (c.running() && std::getline(is, line) && !line.empty()) {
+        data.push_back(line);
+      }
+
+      c.wait();
+
+      // int childError = c.native_exit_code();
+      int childError = c.exit_code();
+
+      LogInfo("(" << childError << ") Running command '" << commandin << "'\n");
+      return childError;
     }
-
-    c.wait();
-
-    LogInfo("Success running command '" << commandin << "'\n");
-    return data;
   }catch (const std::exception& e)
   // Catch ALL exceptions deliberately and recover
   // since we want our algorithms to continue running
@@ -253,7 +265,7 @@ OS::runProcess(const std::string& commandin)
   }
   // Failure
   LogSevere("Failure running command '" << commandin << "' Error: '" << error << "'\n");
-  return std::vector<std::string>();
+  return -1;
 } // OS::runProcess
 
 std::vector<std::string>
@@ -313,7 +325,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
 
     // ----------------------------------------------------
     // Call the python helper.
-    output = runProcess(command);
+    runProcess(command, output);
 
     // Do we need to copy back?  Aren't we mapped to this?
     memcpy(ref2.data(), at, size * sizeof(float));

@@ -475,7 +475,45 @@ IODataType::postWriteProcess(
   }
 
   // -----------------------------------------------------------------------
-  // LDM ingest option
-  // TODO here
+  // PostSuccessCommand option.  Implementing a simple post command ability which
+  // would handle the majority of uses.
+  // Note: There's the EXERecordNotifier for sending records to external binaries,
+  // though I could do it with keys. Maybe that ability/design should merge with
+  // this or be refactored.  The question is if to have it on the command line or
+  // have the program do it...eh.  Design here could go multiple ways.
+  // FIXME: Could store macros in configuration
+  // FIXME: Could generalize key substitution like 'filename', etc.
+  if (successful) {
+    // Check for a simple post success command
+    std::string postCommand = keys["postSuccessCommand"];
+    if (!postCommand.empty()) {
+      // ----------------------------------------------------------------
+      // Macros.  Could be in configuration file?  This is our silly standard ldm insert
+      //
+      if (postCommand == "ldm") {
+        postCommand = "pqinsert -v -f EXP %filename%"; // stock ldm and in path
+      }
+
+      // ----------------------------------------------------------------
+      // Key substitution. Usually, things like final filename would be important
+      // for post success
+      const std::string finalFile = keys["filename"];
+      Strings::replace(postCommand, "%filename%", keys["filename"]);
+
+      // ----------------------------------------------------------------
+      // Run command and log the output
+      //
+      std::vector<std::string> output;
+      successful = (OS::runProcess(postCommand, output) != -1);
+      // FIXME: add option to not print?
+      // FIXME: General write success matter vs command success?
+      if (successful) {
+        for (auto& i: output) {
+          LogInfo("   " << i << "\n");
+        }
+      }
+    }
+  }
+
   return successful;
 } // IODataType::postWriteProcess

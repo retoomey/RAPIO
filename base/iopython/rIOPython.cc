@@ -128,7 +128,7 @@ IOPython::runDataProcess(const std::string& command,
 
     // ----------------------------------------------------
     // Call the python helper.
-    output = OS::runProcess(command);
+    OS::runProcess(command, output);
 
     // Do we need to copy back?  Aren't we mapped to this?
     memcpy(ref2.data(), at, size * sizeof(float));
@@ -187,7 +187,8 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
     // which needs to be installed
     std::vector<std::string> pythonnames = {"python", "python2", "python3"};
     for (auto p:pythonnames){
-      auto pythonWhich = OS::runProcess("which "+p);
+      std::vector<std::string> pythonWhich;
+      OS::runProcess("which "+p, pythonWhich);
       for(auto o:pythonWhich){
        if (o[0] == '/'){
          python = o;

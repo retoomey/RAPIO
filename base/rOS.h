@@ -90,10 +90,11 @@ public:
   validateExe(const std::string& path);
 
   /**
-   * Run a OS process
+   * Run a OS process, return true is successful and lines of output
+   * Returns exit code of process or -1 on general failure
    */
-  static std::vector<std::string>
-  runProcess(const std::string& command);
+  static int
+  runProcess(const std::string& command, std::vector<std::string>& output);
 
   /**
    * Run a python data process (or others if they know the API), passing JSON and data
