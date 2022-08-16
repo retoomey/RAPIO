@@ -10,6 +10,7 @@
 // ConfigTypes
 #include "rUnit.h"
 #include "rConfigDirectoryMapping.h"
+#include "rConfigRadarInfo.h"
 #include "rConfigIODataType.h"
 #include "rConfigLogging.h"
 
@@ -117,6 +118,7 @@ Config::introduceSelf()
   ConfigIODataType::introduceSelf(); // all iodatatype reader/writer settings
   // FIXME: could become general index settings
   ConfigDirectoryMapping::introduceSelf(); // directory (used by index)
+  ConfigRadarInfo::introduceSelf();        // radar info database
   ConfigLogging::introduceSelf();          // logging, colors, etc.
 }
 

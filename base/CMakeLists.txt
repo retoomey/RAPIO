@@ -45,6 +45,7 @@ set(HEADER_FILES
   rConfigLogging.h
   rConfigDirectoryMapping.h
   rConfigParamGroup.h
+  rConfigRadarInfo.h
   rOS.h
   rIODataType.h
   rNetcdfDataType.h
@@ -133,6 +134,7 @@ set(SOURCE_FILES
   rConfigIODataType.cc
   rConfigLogging.cc
   rConfigParamGroup.cc
+  rConfigRadarInfo.cc
   rIODataType.cc
   rNetcdfDataType.cc
   rGribDataType.cc

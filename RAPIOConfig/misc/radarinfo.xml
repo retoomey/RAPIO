@@ -1,0 +1,1109 @@
+<radars>
+<!-- radarinfo.xml requires that: 
+     a) WSR-88Ds have unique 4-letter identifiers and RPG id.
+     b) TDWRs have a 3-letter identifier and magnetic offset.  
+     c) Taiwan and Australian radar have no rpgid (default -1).
+     d) Original Canada radars use a 3-letter ID starting with W or X
+     e) New Canada S-Band radars use a 4-letter ID starting with CA
+     f) lat/lon values should not exceed 4 decimal places.
+     g) ht is in meters.
+     polarization: d, s, u (dualpol, single, unknown default)
+     freqband: C, S, X, U (unknown default)
+     beamwidth: float (1.0 default)
+-->
+<radar name="KABR" site="Aberdeen" rpgid="309" frequency="2885" polarization="d" freqband="S" beamwidth="1.0">
+    <location lat="45.4558" lon="-98.4131" ht="422.0"/>
+</radar>
+<radar name="KABX" site="Albuquer" rpgid="311" frequency="2890" polarization="d" freqband="S">
+    <location lat="35.1497" lon="-106.8239" ht="1814.0"/>
+</radar>
+<radar name="KAKQ" site="Norfolk" rpgid="516" frequency="2865" polarization="d" freqband="S">
+    <location lat="36.9839" lon="-77.0075" ht="78.0"/>
+</radar>
+<radar name="KAMA" site="Amarillo" rpgid="313" frequency="2895" polarization="d" freqband="S">
+    <location lat="35.2333" lon="-101.7093" ht="1129.0"/>
+</radar>
+<radar name="KAMX" site="Miami" rpgid="728" frequency="2895" polarization="d" freqband="S">
+    <location lat="25.6106" lon="-80.4131" ht="34.0"/>
+</radar>
+<radar name="KAPX" site="NclMichigan" rpgid="312" frequency="2880" polarization="d" freqband="S">
+    <location lat="44.9064" lon="-84.7195" ht="476.0"/>
+</radar>
+<radar name="KARX" site="LaCrosse" rpgid="389" frequency="2770" polarization="d" freqband="S">
+    <location lat="43.8228" lon="-91.1911" ht="414.0"/>
+</radar>
+<radar name="KATX" site="Seattle" rpgid="542" frequency="2740" polarization="d" freqband="S">
+    <location lat="48.1946" lon="-122.4957" ht="196.0"/>
+</radar>
+<radar name="KBBX" site="BealeAfb" rpgid="380" frequency="2725" polarization="d" freqband="S">
+    <location lat="39.4961" lon="-121.6317" ht="68.0"/>
+</radar>
+<radar name="KBGM" site="Binghmtn" rpgid="319" frequency="2885" polarization="d" freqband="S">
+    <location lat="42.1997" lon="-75.9847" ht="520.0"/>
+</radar>
+<radar name="KBHX" site="Eureka (Bunker Hill)" rpgid="359" frequency="2890" polarization="d" freqband="S">
+    <location lat="40.4983" lon="-124.2922" ht="767.0"/>
+</radar>
+<radar name="KBIS" site="Bismarck" rpgid="321" frequency="2705" polarization="d" freqband="S">
+    <location lat="46.7708" lon="-100.7603" ht="535.0"/>
+</radar>
+<radar name="KBIX" site="Keesler" >
+   <location lat="30.524" lon="-88.985" ht="62.0"/>
+</radar>
+<radar name="KBLX" site="Billings" rpgid="318" frequency="2995" polarization="d" freqband="S">
+    <location lat="45.8538" lon="-108.6068" ht="1129.0"/>
+</radar>
+<radar name="KBMX" site="Birmnghm" rpgid="320" frequency="2740" polarization="d" freqband="S">
+    <location lat="33.1719" lon="-86.7697" ht="232.0"/>
+</radar>
+<radar name="KBOX" site="Boston" rpgid="323" frequency="2890" polarization="d" freqband="S">
+    <location lat="41.9558" lon="-71.1369" ht="71.0"/>
+</radar>
+<!--
+<radar name="KTAW" site="Boston" >
+   <location lat="41.956" lon="-71.137" ht="66.0"/>
+</radar>
+-->
+<radar name="KBRO" site="Brwnsvil" rpgid="324" frequency="2802" polarization="d" freqband="S">
+    <location lat="25.9156" lon="-97.4186" ht="27.0"/>
+</radar>
+<radar name="KBUF" site="Buffalo" rpgid="325" frequency="2993" polarization="d" freqband="S">
+    <location lat="42.9486" lon="-78.7369" ht="241.0"/>
+</radar>
+<radar name="KBYX" site="KeyWest" rpgid="386" frequency="2705" polarization="d" freqband="S">
+    <location lat="24.5969" lon="-81.7033" ht="27.0"/>
+</radar>
+<!--
+<radar name="KEYW" site="KeyWest" >
+   <location lat="24.598" lon="-81.703" ht="23.0"/>
+</radar>
+-->
+<radar name="KCAE" site="Columbia" rpgid="341" frequency="2890" polarization="d" freqband="S">
+    <location lat="33.9486" lon="-81.1186" ht="105.0"/>
+</radar>
+<radar name="KCBW" site="Caribou" rpgid="329" frequency="2720" polarization="d" freqband="S">
+    <location lat="46.0392" lon="-67.8064" ht="262.0"/>
+</radar>
+<radar name="KCBX" site="Boise" rpgid="322" frequency="2740" polarization="d" freqband="S">
+    <location lat="43.4902" lon="-116.236" ht="967.0"/>
+</radar>
+<radar name="KCCX" site="StateCol" rpgid="374" frequency="2875" polarization="d" freqband="S">
+    <location lat="40.9231" lon="-78.0039" ht="758.0"/>
+</radar>
+<radar name="KCLE" site="Clevelnd" rpgid="340" frequency="2875" polarization="d" freqband="S">
+    <location lat="41.4131" lon="-81.86" ht="263.0"/>
+</radar>
+<radar name="KCLX" site="CharlSC" rpgid="333" frequency="2810" polarization="d" freqband="S">
+    <location lat="32.6556" lon="-81.0422" ht="70.0"/>
+</radar>
+<radar name="KCRI" site="NormOSF" frequency="2950">
+   <location lat="35.238" lon="-97.460" ht="394.0"/>
+</radar>
+<radar name="NOP3" site="NormOSF" >
+   <location lat="35.238" lon="-97.460" ht="394.0"/>
+</radar>
+<radar name="KOU3" site="NormOSF" >
+   <location lat="35.238" lon="-97.460" ht="394.0"/>
+</radar>
+<radar name="KCRP" site="CorpusCr" rpgid="343" frequency="2810" polarization="d" freqband="S">
+    <location lat="27.7839" lon="-97.5108" ht="44.0"/>
+</radar>
+<radar name="KCXX" site="Burlngtn" rpgid="326" frequency="2890" polarization="d" freqband="S">
+    <location lat="44.5111" lon="-73.1664" ht="132.0"/>
+</radar>
+<radar name="KCYS" site="Cheyenne" rpgid="335" frequency="2880" polarization="d" freqband="S">
+    <location lat="41.1519" lon="-104.8061" ht="1888.0"/>
+</radar>
+<radar name="KDAX" site="Sacramen" rpgid="536" frequency="2880" polarization="d" freqband="S">
+    <location lat="38.5011" lon="-121.6778" ht="44.0"/>
+</radar>
+<radar name="KDDC" site="DodgeCty" rpgid="350" frequency="2940" polarization="d" freqband="S">
+    <location lat="37.7608" lon="-99.9689" ht="814.0"/>
+</radar>
+<radar name="KDFX" site="Laughlin" rpgid="394" frequency="2725" polarization="d" freqband="S">
+    <location lat="29.2726" lon="-100.2803" ht="365.0"/>
+</radar>
+<radar name="KDGX" site="Brandon" rpgid="855" frequency="2870" polarization="d" freqband="S">
+    <location lat="32.28" lon="-89.9844" ht="186.0"/>
+</radar>
+<radar name="KDIX" site="Philadel" rpgid="523" frequency="2870" polarization="d" freqband="S">
+    <location lat="39.9469" lon="-74.4107" ht="70.0"/>
+</radar>
+<radar name="KDLH" site="Duluth" rpgid="352" frequency="2870" polarization="d" freqband="S">
+    <location lat="46.8369" lon="-92.2097" ht="470.0"/>
+</radar>
+<radar name="KDMX" site="DesMoine" rpgid="348" frequency="2875" polarization="d" freqband="S">
+    <location lat="41.7311" lon="-93.7229" ht="334.0"/>
+</radar>
+<radar name="KDOX" site="DoverAfb" rpgid="351" frequency="2725" polarization="d" freqband="S">
+    <location lat="38.8256" lon="-75.44" ht="50.0"/>
+</radar>
+<radar name="KDTX" site="Detroit" rpgid="349" frequency="2895" polarization="d" freqband="S">
+    <location lat="42.7" lon="-83.4717" ht="371.0"/>
+</radar>
+<radar name="KDVN" site="QuadCtys" rpgid="530" frequency="2860" polarization="d" freqband="S">
+    <location lat="41.6117" lon="-90.5808" ht="260.0"/>
+</radar>
+<radar name="KDYX" site="DyessAfb" rpgid="353" frequency="2705" polarization="d" freqband="S">
+    <location lat="32.5383" lon="-99.2542" ht="482.0"/>
+</radar>
+<radar name="KEAX" site="KansCity" rpgid="385" frequency="2875" polarization="d" freqband="S">
+    <location lat="38.8103" lon="-94.2644" ht="333.0"/>
+</radar>
+<radar name="KEMX" site="Tucson" rpgid="556" frequency="2890" polarization="d" freqband="S">
+    <location lat="31.8936" lon="-110.6303" ht="1621.0"/>
+</radar>
+<radar name="KENX" site="AlbanyNY" rpgid="310" frequency="2865" polarization="d" freqband="S">
+    <location lat="42.5866" lon="-74.0641" ht="590.0"/>
+</radar>
+<radar name="KEOX" site="FtRucker" rpgid="362" frequency="2865" polarization="d" freqband="S">
+    <location lat="31.4606" lon="-85.4594" ht="164.0"/>
+</radar>
+<radar name="KEPZ" site="ElPaso" rpgid="357" frequency="2885" polarization="d" freqband="S">
+    <location lat="31.8731" lon="-106.698" ht="1286.0"/>
+</radar>
+<radar name="KESX" site="LasVegas" rpgid="566" frequency="2860" polarization="d" freqband="S">
+    <location lat="35.7011" lon="-114.8914" ht="1508.0"/>
+</radar>
+<radar name="KEVX" site="EglinAfb" rpgid="307" frequency="2705" polarization="d" freqband="S">
+    <location lat="30.565" lon="-85.9217" ht="68.0"/>
+</radar>
+<radar name="KEWX" site="Austin" rpgid="539" frequency="2880" polarization="d" freqband="S">
+    <location lat="29.7041" lon="-98.0286" ht="234.0"/>
+</radar>
+<radar name="KEYX" site="Edwards" rpgid="511" frequency="2922" polarization="d" freqband="S">
+    <location lat="35.0978" lon="-117.5608" ht="876.0"/>
+</radar>
+<radar name="KFCX" site="Roanoke" rpgid="534" frequency="2830" polarization="d" freqband="S">
+    <location lat="37.0242" lon="-80.2742" ht="904.0"/>
+</radar>
+<radar name="KFDR" site="AltusAfb" rpgid="305" frequency="2710" polarization="d" freqband="S">
+    <location lat="34.3622" lon="-98.9767" ht="401.0"/>
+</radar>
+<radar name="KFDX" site="CanonAfb" rpgid="328" frequency="2885" polarization="d" freqband="S">
+    <location lat="34.6342" lon="-103.6189" ht="1432.0"/>
+</radar>
+<radar name="KFFC" site="Atlanta" rpgid="316" frequency="2705" polarization="d" freqband="S">
+    <location lat="33.3633" lon="-84.5658" ht="297.0"/>
+</radar>
+<radar name="KFSD" site="SiouxFal" rpgid="544" frequency="2995" polarization="d" freqband="S">
+    <location lat="43.5878" lon="-96.7289" ht="456.0"/>
+</radar>
+<radar name="KFSX" site="Flagstaff" rpgid="361" frequency="2890" polarization="d" freqband="S">
+    <location lat="34.5743" lon="-111.1984" ht="2291.0"/>
+</radar>
+<radar name="KFTG" site="Denver" rpgid="347" frequency="2890" polarization="d" freqband="S">
+    <location lat="39.7866" lon="-104.5458" ht="1710.0"/>
+</radar>
+<radar name="KFWS" site="FtWorth" rpgid="345" frequency="2830" polarization="d" freqband="S">
+    <location lat="32.5728" lon="-97.3031" ht="237.0"/>
+</radar>
+<radar name="KGGW" site="Glasgow" rpgid="365" frequency="2860" polarization="d" freqband="S">
+    <location lat="48.2064" lon="-106.6247" ht="727.0"/>
+</radar>
+<radar name="KGJX" site="GrndJnxn" rpgid="368" frequency="2885" polarization="d" freqband="S">
+    <location lat="39.0622" lon="-108.2138" ht="3079.0"/>
+</radar>
+<radar name="KGLD" site="Goodland" rpgid="366" frequency="2880" polarization="d" freqband="S">
+    <location lat="39.3669" lon="-101.7003" ht="1133.0"/>
+</radar>
+<radar name="KGRB" site="GreenBay" rpgid="371" frequency="2705" polarization="d" freqband="S">
+    <location lat="44.4986" lon="-88.1111" ht="246.0"/>
+</radar>
+<radar name="KGRK" site="FtHood" rpgid="332" frequency="2890" polarization="d" freqband="S">
+    <location lat="30.7217" lon="-97.3828" ht="184.0"/>
+</radar>
+<radar name="KGRR" site="GrndRapd" rpgid="369" frequency="2710" polarization="d" freqband="S">
+    <location lat="42.8939" lon="-85.5449" ht="267.0"/>
+</radar>
+<radar name="KGSP" site="Greer" rpgid="555" frequency="2780" polarization="d" freqband="S">
+    <location lat="34.8833" lon="-82.2198" ht="326.0"/>
+</radar>
+<radar name="KGWX" site="Columbus" rpgid="342" frequency="2875" polarization="d" freqband="S">
+    <location lat="33.8969" lon="-88.3292" ht="180.0"/>
+</radar>
+<radar name="KGYX" site="PrtlndME" rpgid="528" frequency="2840" polarization="d" freqband="S">
+    <location lat="43.8913" lon="-70.2564" ht="145.0"/>
+</radar>
+<radar name="KHDX" site="Holloman" rpgid="376" frequency="2860" polarization="d" freqband="S">
+    <location lat="33.077" lon="-106.12" ht="1302.0"/>
+</radar>
+<!--
+<radar name="KWSD" site="Holloman" >
+   <location lat="33.076" lon="-106.123" ht="1297.0"/>
+</radar>
+-->
+<radar name="KHGX" site="Houston" rpgid="378" frequency="2705" polarization="d" freqband="S">
+    <location lat="29.4719" lon="-95.0789" ht="35.0"/>
+</radar>
+<radar name="KHNX" site="Hanford" rpgid="363" frequency="2870" polarization="d" freqband="S">
+    <location lat="36.3142" lon="-119.6321" ht="104.0"/>
+</radar>
+<radar name="KHPX" site="FtCampbel" rpgid="364" frequency="2855" polarization="d" freqband="S">
+    <location lat="36.7367" lon="-87.285" ht="191.0"/>
+</radar>
+<radar name="KHTX" site="Huntsvil" rpgid="826" frequency="2755" polarization="d" freqband="S">
+    <location lat="34.9306" lon="-86.0836" ht="567.0"/>
+</radar>
+<radar name="KICT" site="Wichita" rpgid="562" frequency="2870" polarization="d" freqband="S">
+    <location lat="37.6544" lon="-97.4431" ht="427.0"/>
+</radar>
+<radar name="KICX" site="CedarCty" rpgid="330" frequency="2880" polarization="d" freqband="S">
+    <location lat="37.5911" lon="-112.8622" ht="3279.0"/>
+</radar>
+<radar name="KILN" site="Cincnati" rpgid="338" frequency="2725" polarization="d" freqband="S">
+    <location lat="39.4203" lon="-83.8217" ht="357.0"/>
+</radar>
+<radar name="KILX" site="LinclnIL" rpgid="549" frequency="2805" polarization="d" freqband="S">
+    <location lat="40.1505" lon="-89.3368" ht="223.0"/>
+</radar>
+<radar name="KIND" site="Indianap" rpgid="381" frequency="2890" polarization="d" freqband="S">
+    <location lat="39.7075" lon="-86.2803" ht="271.0"/>
+</radar>
+<radar name="KINX" site="Tulsa" rpgid="557" frequency="2890" polarization="d" freqband="S">
+    <location lat="36.175" lon="-95.5641" ht="229.0"/>
+</radar>
+<radar name="KIWA" site="Phoenix" rpgid="524" frequency="2770" polarization="d" freqband="S">
+    <location lat="33.2892" lon="-111.67" ht="435.0"/>
+</radar>
+<radar name="KIWX" site="FtWayne" rpgid="827" frequency="2705" polarization="d" freqband="S">
+    <location lat="41.3586" lon="-85.7" ht="322.0"/>
+</radar>
+<radar name="KJAN" site="JacksnMS" rpgid="382" polarization="d" freqband="S">
+   <location lat="32.318" lon="-90.080" ht="116.0"/>
+</radar>
+<radar name="KJAX" site="Jaxnvill" rpgid="383" frequency="2705" polarization="d" freqband="S">
+    <location lat="30.4846" lon="-81.7019" ht="49.0"/>
+</radar>
+<radar name="KJGX" site="RobinsAf" rpgid="535" frequency="2875" polarization="d" freqband="S">
+    <location lat="32.675" lon="-83.3511" ht="189.0"/>
+</radar>
+<!--
+<radar name="KWRB" site="RobinsAF" >
+   <location lat="32.675" lon="-83.351" ht="184.0"/>
+</radar>
+-->
+<radar name="KJKL" site="JacksnKY" rpgid="373" frequency="2855" polarization="d" freqband="S">
+    <location lat="37.5908" lon="-83.3131" ht="446.0"/>
+</radar>
+<radar name="KLBB" site="Lubbock" rpgid="398" frequency="2850" polarization="d" freqband="S">
+    <location lat="33.6541" lon="-101.8142" ht="1030.0"/>
+</radar>
+<radar name="KLCH" site="LkCharls" rpgid="391" frequency="2895" polarization="d" freqband="S">
+    <location lat="30.1253" lon="-93.2159" ht="42.0"/>
+</radar>
+<!--
+I don't have the rpgid for LangleyHill yet.
+-->
+<radar name="KLGX" site="LngleyHl" rpgid="870" polarization="d" freqband="S">
+    <location lat="47.1169" lon="-124.1066" ht="108.0"/>
+</radar>
+<radar name="KLIX" site="Slidell" rpgid="545" frequency="2993" polarization="d" freqband="S">
+    <location lat="30.3367" lon="-89.8254" ht="55.0"/>
+</radar>
+<radar name="KLNX" site="N.Platte" rpgid="517" frequency="2770" polarization="d" freqband="S">
+    <location lat="41.9579" lon="-100.5762" ht="949.0"/>
+</radar>
+<radar name="KLOT" site="Chicago" rpgid="337" frequency="2895" polarization="d" freqband="S">
+    <location lat="41.6044" lon="-88.0844" ht="232.0"/>
+</radar>
+<radar name="KLRX" site="Elko" rpgid="564" frequency="2770" polarization="d" freqband="S">
+    <location lat="40.7397" lon="-116.8028" ht="2102.0"/>
+</radar>
+<radar name="KLSX" site="St.Louis" rpgid="308" frequency="2707" polarization="d" freqband="S">
+    <location lat="38.6989" lon="-90.6828" ht="220.0"/>
+</radar>
+<radar name="KLTX" site="WilmngNC" rpgid="563" frequency="2755" polarization="d" freqband="S">
+    <location lat="33.9892" lon="-78.4292" ht="45.0"/>
+</radar>
+<radar name="KLVX" site="Louisvil" rpgid="397" frequency="2895" polarization="d" freqband="S">
+    <location lat="37.9753" lon="-85.9439" ht="254.0"/>
+</radar>
+<!-- FIXME
+<radar name="KLWX_old" site="Sterling" rpgid="303">
+    <location lat="38.9753" lon="-77.4781" ht="113.0"/>
+</radar>
+-->
+<radar name="KLWX" site="Sterling" rpgid="303" frequency="2950" polarization="d" freqband="S">
+    <location lat="38.9761" lon="-77.4874" ht="123.0"/>
+</radar>
+<radar name="KLZK" site="LitlRock" rpgid="395" frequency="2890" polarization="d" freqband="S">
+    <location lat="34.8364" lon="-92.2619" ht="198.0"/>
+</radar>
+<radar name="KMAF" site="Midland" rpgid="518" frequency="2720" polarization="d" freqband="S">
+    <location lat="31.9435" lon="-102.1893" ht="903.0"/>
+</radar>
+<radar name="KMAX" site="Medford" rpgid="500" frequency="2840" polarization="d" freqband="S">
+    <location lat="42.0811" lon="-122.7174" ht="2305.0"/>
+</radar>
+<radar name="KMBX" site="MinotAfb" rpgid="507" frequency="2895" polarization="d" freqband="S">
+    <location lat="48.3924" lon="-100.8644" ht="485.0"/>
+</radar>
+<radar name="KMHX" site="Morehead City" rpgid="375" frequency="2770" polarization="d" freqband="S">
+    <location lat="34.7758" lon="-76.8764" ht="44.0"/>
+</radar>
+<radar name="KMKX" site="Milwaukee" rpgid="504" frequency="2805" polarization="d" freqband="S">
+    <location lat="42.9678" lon="-88.5506" ht="312.0"/>
+</radar>
+<radar name="KMLB" site="Melbourn" rpgid="302" frequency="2865" polarization="d" freqband="S">
+    <location lat="28.1131" lon="-80.6544" ht="36.0"/>
+</radar>
+<radar name="KMOB" site="Mobile" rpgid="509" frequency="2720" polarization="d" freqband="S">
+    <location lat="30.6794" lon="-88.2397" ht="88.0"/>
+</radar>
+<radar name="KMPX" site="Minneapl" rpgid="506" frequency="2880" polarization="d" freqband="S">
+    <location lat="44.8489" lon="-93.5656" ht="336.0"/>
+</radar>
+<radar name="KMQT" site="Marquett" rpgid="399" frequency="2725" polarization="d" freqband="S">
+    <location lat="46.5311" lon="-87.5483" ht="465.0"/>
+</radar>
+<radar name="KMRX" site="Knoxvill" rpgid="387" frequency="2875" polarization="d" freqband="S">
+    <location lat="36.1683" lon="-83.4019" ht="438.0"/>
+</radar>
+<radar name="KMSX" site="Missoula" rpgid="508" frequency="2895" polarization="d" freqband="S">
+    <location lat="47.0411" lon="-113.9861" ht="2432.0"/>
+</radar>
+<radar name="KMTX" site="SaltLake" rpgid="537" frequency="2760" polarization="d" freqband="S">
+    <location lat="41.2628" lon="-112.4478" ht="2010.0"/>
+</radar>
+<radar name="KMUX" site="SanFran" rpgid="541" frequency="2745" polarization="d" freqband="S">
+    <location lat="37.1552" lon="-121.8984" ht="1082.0"/>
+</radar>
+<radar name="KMVX" site="GrndFork" rpgid="360" frequency="2860" polarization="d" freqband="S">
+    <location lat="47.5281" lon="-97.325" ht="331.0"/>
+</radar>
+<!--
+<radar name="KMXF" site="Maxwell" >
+   <location lat="32.537" lon="-85.790" ht="152.0"/>
+</radar>
+-->
+<radar name="KMXX" site="Maxwell" rpgid="354" frequency="2890" polarization="d" freqband="S">
+    <location lat="32.5367" lon="-85.7898" ht="171.0"/>
+</radar>
+<radar name="KNKX" site="SanDiego" rpgid="540" frequency="2745" polarization="d" freqband="S">
+    <location lat="32.9189" lon="-117.0419" ht="321.0"/>
+</radar>
+<radar name="KNQA" site="Memphis" rpgid="501" frequency="2820" polarization="d" freqband="S">
+    <location lat="35.3447" lon="-89.8733" ht="133.0"/>
+</radar>
+<radar name="KOAX" site="Omaha" rpgid="519" frequency="2705" polarization="d" freqband="S">
+    <location lat="41.3203" lon="-96.3668" ht="385.0"/>
+</radar>
+<radar name="KOHX" site="Nashvill" rpgid="512" frequency="2891" polarization="d" freqband="S">
+    <location lat="36.2472" lon="-86.5625" ht="206.0"/>
+</radar>
+<radar name="KOKX" site="Brookhven" rpgid="515" frequency="2875" polarization="d" freqband="S">
+    <location lat="40.8654" lon="-72.8639" ht="61.0"/>
+</radar>
+<radar name="KOTX" site="Spokane" rpgid="547" frequency="2886" polarization="d" freqband="S">
+    <location lat="47.6806" lon="-117.6258" ht="747.0"/>
+</radar>
+<radar name="KOUN" site="Norman" >
+   <location lat="35.236" lon="-97.463" ht="377.0"/>
+</radar>
+<radar name="KPAH" site="Paducah" rpgid="521" frequency="2730" polarization="d" freqband="S">
+    <location lat="37.0683" lon="-88.7719" ht="154.0"/>
+</radar>
+<radar name="KPBZ" site="Pittsbrg" rpgid="526" frequency="2890" polarization="d" freqband="S">
+    <location lat="40.5317" lon="-80.2179" ht="386.0"/>
+</radar>
+<radar name="KPDT" site="Pndlton" rpgid="522" frequency="2735" polarization="d" freqband="S">
+    <location lat="45.6906" lon="-118.8529" ht="482.0"/>
+</radar>
+<radar name="KPOE" site="FtPolk" rpgid="339" frequency="2850" polarization="d" freqband="S">
+    <location lat="31.1553" lon="-92.9758" ht="144.0"/>
+</radar>
+<radar name="KPUX" site="Pueblo" rpgid="529" frequency="2865" polarization="d" freqband="S">
+    <location lat="38.4594" lon="-104.1814" ht="1635.0"/>
+</radar>
+<radar name="KRAX" site="Raleigh" rpgid="531" frequency="2880" polarization="d" freqband="S">
+    <location lat="35.6653" lon="-78.49" ht="141.0"/>
+</radar>
+<radar name="KRGX" site="Reno" rpgid="533" frequency="2895" polarization="d" freqband="S">
+    <location lat="39.7541" lon="-119.462" ht="2560.0"/>
+</radar>
+<radar name="KRIW" site="Riverton" rpgid="392" frequency="2870" polarization="d" freqband="S">
+    <location lat="43.0661" lon="-108.4773" ht="1717.0"/>
+</radar>
+<radar name="KRIX" site="MarchAFB" >
+   <location lat="33.598" lon="-117.120" ht="431.0"/>
+</radar>
+<radar name="KRLX" site="CharlWV" rpgid="334" frequency="2895" polarization="d" freqband="S">
+    <location lat="38.3111" lon="-81.7228" ht="370.0"/>
+</radar>
+<radar name="KRMX" site="Griffiss" >
+   <location lat="43.468" lon="-75.458" ht="492.0"/>
+</radar>
+<radar name="KRTX" site="PrtlndOR" rpgid="527" frequency="2870" polarization="d" freqband="S">
+    <location lat="45.715" lon="-122.965" ht="527.0"/>
+</radar>
+<radar name="KSFX" site="Pocatelo" rpgid="546" frequency="2830" polarization="d" freqband="S">
+    <location lat="43.1056" lon="-112.6861" ht="1384.0"/>
+</radar>
+<radar name="KSGF" site="Sprgfild" rpgid="548" frequency="2865" polarization="d" freqband="S">
+    <location lat="37.2353" lon="-93.4003" ht="420.0"/>
+</radar>
+<radar name="KSHV" site="Shrvport" rpgid="543" frequency="2855" polarization="d" freqband="S">
+    <location lat="32.4508" lon="-93.8413" ht="118.0"/>
+</radar>
+<radar name="KSJT" site="SanAnglo" rpgid="538" frequency="2891" polarization="d" freqband="S">
+    <location lat="31.3711" lon="-100.4922" ht="611.0"/>
+</radar>
+<radar name="KSOX" site="Santa/Ana" rpgid="574" frequency="2934" polarization="d" freqband="S">
+    <location lat="33.8177" lon="-117.636" ht="947.0"/>
+</radar>
+<radar name="KSRX" site="FtSmith" rpgid="825" frequency="2895" polarization="d" freqband="S">
+    <location lat="35.2904" lon="-94.3619" ht="225.0"/>
+</radar>
+<radar name="KTBW" site="Tampa" rpgid="552" frequency="2880" polarization="d" freqband="S">
+    <location lat="27.7053" lon="-82.4019" ht="38.0"/>
+</radar>
+<radar name="KTFX" site="GreatFal" rpgid="370" frequency="2895" polarization="d" freqband="S">
+    <location lat="47.4597" lon="-111.3853" ht="1160.0"/>
+</radar>
+<radar name="KTLH" site="Talhasee" rpgid="551" frequency="2895" polarization="d" freqband="S">
+    <location lat="30.3976" lon="-84.3289" ht="54.0"/>
+</radar>
+<radar name="KTLX" site="Norman" rpgid="1" frequency="2910" polarization="d" freqband="S">
+    <location lat="35.3331" lon="-97.2778" ht="390.0"/>
+</radar>
+<radar name="KTWX" site="Topeka" rpgid="554" frequency="2705" polarization="d" freqband="S">
+    <location lat="38.9969" lon="-96.2326" ht="432.0"/>
+</radar>
+<radar name="KTYX" site="FtDrum" rpgid="850" frequency="2705" polarization="d" freqband="S">
+    <location lat="43.7558" lon="-75.68" ht="598.0"/>
+</radar>
+<radar name="KUDX" site="RapidCty" rpgid="532" frequency="2830" polarization="d" freqband="S">
+    <location lat="44.1247" lon="-102.83" ht="974.0"/>
+</radar>
+<radar name="KUEX" site="GrandIsl" rpgid="367" frequency="2890" polarization="d" freqband="S">
+    <location lat="40.3208" lon="-98.4419" ht="627.0"/>
+</radar>
+<radar name="KVAX" site="MoodyAfb" rpgid="510" frequency="2715" polarization="d" freqband="S">
+    <location lat="30.8903" lon="-83.0018" ht="101.0"/>
+</radar>
+<!--
+<radar name="KVBG" site="Vandenbg" >
+   <location lat="34.838" lon="-120.396" ht="398.0"/>
+</radar>
+-->
+<radar name="KVBX" site="Vandenbg" rpgid="559" frequency="2890" polarization="d" freqband="S">
+    <location lat="34.8386" lon="-120.3979" ht="413.0"/>
+</radar>
+<radar name="KVNX" site="VanceAfb" rpgid="558" frequency="2895" polarization="d" freqband="S">
+    <location lat="36.7408" lon="-98.1274" ht="384.0"/>
+</radar>
+<radar name="KVTX" site="LosAngls" rpgid="396" frequency="2905" polarization="d" freqband="S">
+    <location lat="34.4117" lon="-119.1786" ht="856.0"/>
+</radar>
+<radar name="KVWX" site="Evansvle" rpgid="851" frequency="2885" polarization="d" freqband="S">
+    <location lat="38.2603" lon="-87.7245" ht="191.0"/>
+</radar>
+<radar name="KYUX" site="Yuma" rpgid="393" frequency="2835" polarization="d" freqband="S">
+    <location lat="32.4953" lon="-114.6567" ht="73.0"/>
+</radar>
+ <radar name="MGDT" site="GrndTurk" >
+   <location lat="21.461" lon="-71.131" ht="40.0"/>
+ </radar>
+ <radar name="PABC" site="Bethel" rpgid="304" frequency="2880" polarization="d" freqband="S">
+   <location lat="60.7919" lon="-161.8764" ht="54.0"/>
+ </radar>
+ <radar name="PGGR" site="Bethel" >
+   <location lat="60.792" lon="-161.876" ht="54.0"/>
+ </radar>
+ <radar name="PACG" site="Sitka" rpgid="553" frequency="2800" polarization="d" freqband="S">
+   <location lat="56.8528" lon="-135.5292" ht="79.0"/>
+ </radar>
+ <radar name="PWRC" site="Sitka" >
+   <location lat="56.853" lon="-135.529" ht="79.0"/>
+ </radar>
+ <radar name="PAEC" site="Nome" rpgid="346" polarization="d" freqband="S">
+   <location lat="64.5114" lon="-165.2950" ht="40.0"/>
+ </radar>
+ <radar name="PJMG" site="Nome" >
+   <location lat="64.511" lon="-165.295" ht="40.0"/>
+ </radar>
+ <radar name="PAHG" site="Anchorag" polarization="d" freqband="S">
+   <location lat="60.7258" lon="-151.3514" ht="109.0"/>
+ </radar>
+ <radar name="PBCS" site="Anchorag" >
+   <location lat="60.726" lon="-151.351" ht="109.0"/>
+ </radar>
+ <radar name="KBCS" site="Anchorag" >
+   <location lat="60.726" lon="-151.351" ht="109.0"/>
+ </radar>
+ <radar name="PAIH" site="MdltnIsl" rpgid="505" frequency="2885" polarization="d" freqband="S">
+   <location lat="59.4614" lon="-146.3031" ht="30.0"/>
+ </radar>
+ <radar name="PRCW" site="MdltnIsl" >
+   <location lat="59.461" lon="-146.303" ht="30.0"/>
+ </radar>
+ <radar name="PAKC" site="KngSalmn" rpgid="568" frequency="2800" polarization="d" freqband="S">
+   <location lat="58.6794" lon="-156.6294" ht="39.0"/>
+ </radar>
+ <radar name="PDVS" site="KngSalmn" >
+   <location lat="58.679" lon="-156.629" ht="39.0"/>
+ </radar>
+ <radar name="PAPD" site="Fairbnks" rpgid="525" polarization="d" freqband="S">
+   <location lat="65.0350" lon="-147.5017" ht="820.0"/>
+ </radar>
+ <radar name="PSGL" site="Fairbnks" >
+   <location lat="65.035" lon="-147.502" ht="820.0"/>
+ </radar>
+<!--
+ <radar name="PDON" site="Kamuela" >
+   <location lat="20.126" lon="-155.778" ht="1191.0"/>
+ </radar>
+-->
+ <radar name="PHKI" site="S.Kauai" rpgid="550" frequency="2860" polarization="d" freqband="S">
+   <location lat="21.8942" lon="-159.5522" ht="85.0"/>
+ </radar>
+<radar name="PHWA" site="S. Shore" polarization="d" freqband="S">
+   <location lat="19.0950" lon="-155.5689" ht="422"/>
+ </radar>
+<!--
+ <radar name="PJAE" site="S.Kauai" >
+   <location lat="21.894" lon="-159.552" ht="85.0"/>
+ </radar>
+-->
+ <radar name="PHKM" site="Kohala" rpgid="377" frequency="2760" polarization="d" freqband="S">
+   <location lat="20.1256" lon="-155.7778" ht="1191.0"/>
+ </radar>
+ <radar name="PHMO" site="Molokai" rpgid="336" frequency="2750" polarization="d" freqband="S">
+   <location lat="21.1328" lon="-157.1800" ht="435.0"/>
+ </radar>
+<!--
+ <radar name="PTEJ" site="Molokai" >
+   <location lat="21.133" lon="-157.180" ht="435.0"/>
+ </radar>
+-->
+ <radar name="PUGA" site="Guam" >
+   <location lat="13.454" lon="144.808" ht="110.0"/>
+ </radar>
+ <radar name="PGUA" site="Guam" polarization="d" freqband="S">
+   <location lat="13.4560" lon="144.8111" ht="110.0"/>
+ </radar>
+
+<!-- Korean Radars -->
+ <radar name="RKSG" site="Camp Humphreys, Korea" polarization="d" freqband="S">
+   <location lat="37.2077" lon="127.2856" ht="463.0"/>
+ </radar>
+ <radar name="RKJK" site="Kunsan AFB, Korea" polarization="d" freqband="S">
+   <location lat="35.9242" lon="126.6222" ht="58.0"/>
+ </radar>
+ <radar name="RODN" site="Kadena AFB, Japan" polarization="d" freqband="S">
+   <location lat="26.3078" lon="127.9034" ht="125.0"/>
+ </radar>
+
+ <!-- KMA Radars -->
+ <radar name="RKWK" site="Gwanaksan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="37.4439" lon="126.9639" ht="641.0"/>
+ </radar>
+ <radar name="RBRI" site="Baengnyeongdo, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="37.9676" lon="124.6303" ht="185.0"/>
+ </radar>
+ <radar name="RGDK" site="Gwangdeoksan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="38.1172" lon="127.4336" ht="1066.0"/>
+ </radar>
+ <radar name="RGNG" site="Gangneung, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="37.8176" lon="128.8656" ht="99.0"/>
+ </radar>
+ <radar name="RKSN" site="Oseongsan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="36.0126" lon="126.7839" ht="234.0"/>
+ </radar>
+ <radar name="RJNI" site="Jindo, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="34.4726" lon="126.3239" ht="497.0"/>
+ </radar>
+ <radar name="RMYN" site="Myeonbongsan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="36.1792" lon="128.9972" ht="1136.0"/>
+ </radar>
+ <radar name="RPSN" site="Gudeoksan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="35.1186" lon="128.9997" ht="549.0"/>
+ </radar>
+ <radar name="RSSP" site="Seongsan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="33.3869" lon="126.8797" ht="68.0"/>
+ </radar>
+ <radar name="RGSN" site="Gosan, KR" network="KMA" polarization="d" freqband="S">
+   <location lat="33.2942" lon="126.1631" ht="103.0"/>
+ </radar>
+
+<!--
+ <radar name="TCBR" site="SanJuan" >
+   <location lat="18.116" lon="-66.078" ht="882.0"/>
+ </radar>
+ <radar name="MCBR" site="SanJuan" >
+   <location lat="18.116" lon="-66.078" ht="882.0"/>
+ </radar>
+-->
+<!-- Note: This is a NEXRAD radar not TDWR -->
+ <radar name="TJUA" site="SanJuan" rpgid="502" polarization="d" freqband="S">
+   <location lat="18.1156" lon="-66.0781" ht="882.0"/>
+ </radar>
+
+<!-- TDWR FOR SPG -->
+<!-- lat/lons round at 4th decimal, mitigates w2merger round off issue -->
+<!-- mon: VCP90/MONITOR SWEEPS (i.e. no precip) ; haz: VCP80/HAZARDOUS SWEEPS (i.e. precip present)  -->
+ <radar name="TADW" site="Andrews AFB" magnetic_offset="10W" frequency="5635" polarization="s" freqband="C">
+   <location lat="38.6953" lon="-76.8449" ht="105.5" mon1="2000" haz1="2050" mon2="2100" haz2="2150"/>
+ </radar>
+ <radar name="TATL" site="Atlanta, GA" magnetic_offset="3W" frequency="5615" polarization="s" freqband="C">
+   <location lat="33.6466" lon="-84.2622" ht="327.7" mon1="2001" haz1="2051" mon2="2101" haz2="2151"/>
+ </radar>
+ <radar name="TBNA" site="Nashville, TN" magnetic_offset="1W" frequency="5605" polarization="s" freqband="C">
+   <location lat="35.98" lon="-86.6619" ht="249.0" mon1="2002" haz1="2052" mon2="2102" haz2="2152"/>
+ </radar>
+ <radar name="TBOS" site="Boston, MA" magnetic_offset="16W" frequency="5610" polarization="s" freqband="C">
+   <location lat="42.1583" lon="-70.9334" ht="80.5" mon1="2003" haz1="2053" mon2="2103" haz2="2153"/>
+ </radar>
+ <radar name="TBWI" site="Baltimore Intl Airport" magnetic_offset="11W" frequency="5645" polarization="s" freqband="C">
+   <location lat="39.0899" lon="-76.6296" ht="90.6" mon1="2004" haz1="2054" mon2="2104" haz2="2154"/>
+ </radar>
+<!-- CLE is old designation - was replaced by LVE -->
+ <radar name="TCLE" site="Cleveland, OH" magnetic_offset="7W" frequency="5645" polarization="s" freqband="C">
+   <location lat="41.2898" lon="-82.0078" ht="283.8" mon1="2023" haz1="2073" mon2="2123" haz2="2173"/>
+ </radar>
+ <radar name="TCLT" site="Charlotte, NC" magnetic_offset="6W" frequency="5608" polarization="s" freqband="C">
+   <location lat="35.3376" lon="-80.8850" ht="265.5" mon1="2005" haz1="2055" mon2="2105" haz2="2155"/>
+ </radar>
+ <radar name="TCMH" site="Columbus, OH" magnetic_offset="5W" frequency="5605" polarization="s" freqband="C">
+   <location lat="40.0057" lon="-82.7151" ht="350.0" mon1="2006" haz1="2056" mon2="2106" haz2="2156"/>
+ </radar>
+ <radar name="TCVG" site="Covington, OH" magnetic_offset="4W" frequency="5610" polarization="s" freqband="C">
+   <location lat="38.8981" lon="-84.5799" ht="321" mon1="2007" haz1="2057" mon2="2107" haz2="2157"/>
+ </radar>
+ <radar name="TDAL" site="Dallas Love Field" magnetic_offset="7E" frequency="5608" polarization="s" freqband="C">
+   <location lat="32.9258" lon="-96.9683" ht="189.7" mon1="2008" haz1="2058" mon2="2108" haz2="2158"/>
+ </radar>
+ <radar name="TDAY" site="Dayton, OH" magnetic_offset="5W" frequency="5640" polarization="s" freqband="C">
+   <location lat="40.0222" lon="-84.1232" ht="310.5" mon1="2009" haz1="2059" mon2="2109" haz2="2159"/>
+ </radar>
+ <radar name="TDCA" site="Washington Natl Airport" magnetic_offset="10W" frequency="5615" polarization="s" freqband="C">
+   <location lat="38.7590" lon="-76.9616" ht="105.1" mon1="2010" haz1="2060" mon2="2110" haz2="2160"/>
+ </radar>
+ <radar name="TDEN" site="Denver, CO" magnetic_offset="11E" frequency="5615" polarization="s" freqband="C">
+   <location lat="39.7276" lon="-104.5264" ht="1737.5" mon1="2011" haz1="2061" mon2="2111" haz2="2161"/>
+ </radar>
+ <radar name="TDFW" site="Dallas Fort Worth" magnetic_offset="7E" frequency="5640" polarization="s" freqband="C">
+   <location lat="33.0648" lon="-96.9180" ht="178.4" mon1="2012" haz1="2062" mon2="2112" haz2="2162"/>
+ </radar>
+ <radar name="TDTW" site="Detroit, MI" magnetic_offset="6W" frequency="5615" polarization="s" freqband="C">
+   <location lat="42.1113" lon="-83.5150" ht="235.4" mon1="2013" haz1="2063" mon2="2113" haz2="2163"/>
+ </radar>
+ <radar name="TEWR" site="Newark, NJ" magnetic_offset="13W" frequency="5620" polarization="s" freqband="C">
+   <location lat="40.5936" lon="-74.2702" ht="41.5" mon1="2014" haz1="2064" mon2="2114" haz2="2164"/>
+ </radar>
+ <radar name="TFLL" site="Fort Lauderdale, FL" magnetic_offset="4W" frequency="5645" polarization="s" freqband="C">
+   <location lat="26.1433" lon="-80.3440" ht="36.5" mon1="2015" haz1="2065" mon2="2115" haz2="2165"/>
+ </radar>
+ <radar name="THOU" site="Houston, TX" magnetic_offset="6E" frequency="5645" polarization="s" freqband="C">
+   <location lat="29.5164" lon="-95.2416" ht="35.5" mon1="2016" haz1="2066" mon2="2116" haz2="2166"/>
+ </radar>
+ <radar name="TIAD" site="Washington Dulles" magnetic_offset="10W" frequency="5605" polarization="s" freqband="C">
+   <location lat="39.0837" lon="-77.5296" ht="144.2" mon1="2017" haz1="2067" mon2="2117" haz2="2167"/>
+ </radar>
+ <radar name="TIAH" site="Houston Intercontinental" magnetic_offset="6E" frequency="5605" polarization="s" freqband="C">
+   <location lat="30.0649" lon="-95.5670" ht="77.1" mon1="2018" haz1="2068" mon2="2118" haz2="2168"/>
+ </radar>
+ <radar name="TICH" site="Wichita, KS" magnetic_offset="7E" frequency="5603" polarization="s" freqband="C">
+   <location lat="37.5071" lon="-97.4370" ht="411.6" mon1="2019" haz1="2069" mon2="2119" haz2="2169"/>
+ </radar>
+<!-- ICT is old designation - was replaced by ICH -->
+ <radar name="TICT" site="Wichita, KS" magnetic_offset="7E" frequency="5603" polarization="s" freqband="C">
+   <location lat="37.5071" lon="-97.4370" ht="411.7" mon1="2019" haz1="2069" mon2="2119" haz2="2169"/>
+ </radar>
+ <radar name="TIDS" site="Indianapolis, IN" magnetic_offset="2W" frequency="5605" polarization="s" freqband="C">
+   <location lat="39.6370" lon="-86.4360" ht="258.2" mon1="2020" haz1="2070" mon2="2120" haz2="2170"/>
+ </radar>
+<!-- IND is old designation - was replaced by IDS -->
+ <radar name="TIND" site="Indianapolis, IN" magnetic_offset="2W" frequency="5605" polarization="s" freqband="C">
+   <location lat="39.6370" lon="-86.4360" ht="258.2" mon1="2020" haz1="2070" mon2="2120" haz2="2170"/>
+ </radar>
+ <radar name="TJFK" site="New York John F Kennedy" magnetic_offset="13W" frequency="5647" polarization="s" freqband="C">
+   <location lat="40.5889" lon="-73.8804" ht="34.1" mon1="2021" haz1="2071" mon2="2121" haz2="2171"/>
+ </radar>
+ <radar name="KPSF" site="TDWR-OKC" >
+   <location lat="35.393" lon="-97.629" ht="384.0"/>
+ </radar>
+ <radar name="TLAS" site="Las Vegas, NV" magnetic_offset="14E" frequency="5645" polarization="s" freqband="C">
+   <location lat="36.1436" lon="-115.0073" ht="627.2" mon1="2022" haz1="2072" mon2="2122" haz2="2172"/>
+ </radar>
+ <radar name="TLVE" site="Cleveland, OH" magnetic_offset="7W" frequency="5645" polarization="s" freqband="C">
+   <location lat="41.2898" lon="-82.0078" ht="283.8" mon1="2023" haz1="2073" mon2="2123" haz2="2173"/>
+ </radar>
+ <radar name="TMCI" site="Kansas City, MO" magnetic_offset="5E" frequency="5605" polarization="s" freqband="C">
+   <location lat="39.4981" lon="-94.7419" ht="332.2" mon1="2024" haz1="2074" mon2="2124" haz2="2174"/>
+ </radar>
+ <radar name="TMCO" site="Orlando International" magnetic_offset="3W" frequency="5640" polarization="s" freqband="C">
+   <location lat="28.3437" lon="-81.3258" ht="51.4" mon1="2025" haz1="2075" mon2="2125" haz2="2175"/>
+ </radar>
+ <radar name="TMDW" site="Chicago Midway" magnetic_offset="2W" frequency="5645" polarization="s" freqband="C">
+   <location lat="41.6513" lon="-87.7296" ht="232.6" mon1="2026" haz1="2076" mon2="2126" haz2="2176"/>
+ </radar>
+ <radar name="TMEM" site="Memphis" magnetic_offset="3E" frequency="5610" polarization="s" freqband="C">
+   <location lat="34.8958" lon="-89.9927" ht="147.3" mon1="2027" haz1="2077" mon2="2127" haz2="2177"/>
+ </radar>
+ <radar name="TMIA" site="Miami, FL" magnetic_offset="4W" frequency="5605" polarization="s" freqband="C">
+   <location lat="25.7576" lon="-80.4912" ht="38.0" mon1="2028" haz1="2078" mon2="2128" haz2="2178"/>
+ </radar>
+ <radar name="TMKE" site="General Mitchell Airport" magnetic_offset="2W" frequency="5603" polarization="s" freqband="C">
+   <location lat="42.8196" lon="-88.0464" ht="284.4" mon1="2029" haz1="2079" mon2="2129" haz2="2179"/>
+ </radar>
+ <radar name="TMSP" site="Minneapolis, MN" magnetic_offset="3E" frequency="5610" polarization="s" freqband="C">
+   <location lat="44.8714" lon="-92.9328" ht="341.5" mon1="2030" haz1="2080" mon2="2130" haz2="2180"/>
+ </radar>
+ <radar name="TMSY" site="New Orleans, LA" magnetic_offset="2E" frequency="5645" polarization="s" freqband="C">
+   <location lat="30.0216" lon="-90.4032" ht="30.1" mon1="2031" haz1="2081" mon2="2131" haz2="2181"/>
+ </radar>
+<!-- OEX??? -->
+ <radar name="TOKC" site="Oklahoma City" magnetic_offset="7E" frequency="5603" polarization="s" freqband="C">
+   <location lat="35.2761" lon="-97.5099" ht="383.70" mon1="2032" haz1="2082" mon2="2132" haz2="2182"/>
+ </radar>
+ <radar name="TORD" site="Chicago O'Hare" magnetic_offset="2W" frequency="5615" polarization="s" freqband="C">
+   <location lat="41.7972" lon="-87.8583" ht="226.7" mon1="2033" haz1="2083" mon2="2133" haz2="2183"/>
+ </radar>
+ <radar name="TPBI" site="West Palm Beach, FL" magnetic_offset="5W" frequency="5630" polarization="s" freqband="C">
+   <location lat="26.6879" lon="-80.2732" ht="40.6" mon1="2034" haz1="2084" mon2="2134" haz2="2184"/>
+ </radar>
+ <radar name="TPHL" site="Philadelphia Intl Airport" magnetic_offset="11W" frequency="5610" polarization="s" freqband="C">
+   <location lat="39.9493" lon="-75.0702" ht="46.7" mon1="2035" haz1="2085" mon2="2135" haz2="2185"/>
+ </radar>
+ <radar name="TPHX" site="Phoenix, AZ" magnetic_offset="12E" frequency="5610" polarization="s" freqband="C">
+   <location lat="33.4204" lon="-112.1628" ht="331.9" mon1="2036" haz1="2086" mon2="2136" haz2="2186"/>
+ </radar>
+ <radar name="TPIT" site="Pittsburgh, PA" magnetic_offset="8W" frequency="5615" polarization="s" freqband="C">
+   <location lat="40.5011" lon="-80.4861" ht="422.5" mon1="2037" haz1="2087" mon2="2137" haz2="2187"/>
+ </radar>
+ <radar name="TRDU" site="Raleigh/Durham, NC" magnetic_offset="6W" frequency="5647" polarization="s" freqband="C">
+   <location lat="36.0019" lon="-78.6969" ht="157.0" mon1="2038" haz1="2088" mon2="2138" haz2="2188"/>
+ </radar>
+ <radar name="TSDF" site="Louisville, KY" magnetic_offset="3W" frequency="5646" polarization="s" freqband="C">
+   <location lat="38.0460" lon="-85.6106" ht="222.9" mon1="2039" haz1="2089" mon2="2139" haz2="2189"/>
+ </radar>
+ <radar name="TSJU" site="San Juan, PR" magnetic_offset="11W" frequency="5610" polarization="s" freqband="C">
+   <location lat="18.4739" lon="-66.1794" ht="47.8" mon1="2040" haz1="2090" mon2="2140" haz2="2190"/>
+ </radar>
+ <radar name="TSLC" site="Salt Lake City, UT" magnetic_offset="14.5E" frequency="5610" polarization="s" freqband="C">
+   <location lat="40.9674" lon="-111.9298" ht="1308.9" mon1="2041" haz1="2091" mon2="2141" haz2="2191"/>
+ </radar>
+ <radar name="TSTL" site="Lambert Intl Airport" magnetic_offset="1E" frequency="5610" polarization="s" freqband="C">
+   <location lat="38.8054" lon="-90.4891" ht="197.1" mon1="2042" haz1="2092" mon2="2142" haz2="2192"/>
+ </radar>
+ <radar name="TTPA" site="Tampa Bay, FL" magnetic_offset="3W" frequency="5620" polarization="s" freqband="C">
+   <location lat="27.8596" lon="-82.5178" ht="28.2" mon1="2043" haz1="2093" mon2="2143" haz2="2193"/>
+ </radar>
+ <radar name="TTUL" site="Tulsa, OK" magnetic_offset="6E" frequency="5605" polarization="s" freqband="C">
+   <location lat="36.0706" lon="-95.8263" ht="250.9" mon1="2044" haz1="2094" mon2="2144" haz2="2194"/>
+ </radar>
+
+ <radar name="UNKN" site="Unknown" >
+   <location lat="0.000" lon="0.000" ht="0.0"/>
+ </radar>
+
+<!-- TV Station Radars -->
+ <radar name="KPIX" site="MtVaca">
+   <location lat="38.39833" lon="-122.10222" ht="875.0"/>
+ </radar>
+ <radar name="KURN" site="Kurnell" >
+   <location lat="-34.017" lon="151.230" ht="60.0"/>
+ </radar>
+
+ <!-- Taiwan Radars -->
+ <radar name="RCWF" site="Wu-Fen-Shan" polarization="d" freqband="S">
+   <location lat="25.073" lon="121.772" ht="766.0"/>
+ </radar>
+ <radar name="RCHL" site="Hualien" polarization="s" freqband="S">
+   <location lat="23.990" lon="121.620" ht="63.0"/>
+ </radar>
+ <radar name="RCKT" site="Kenting" polarization="s" freqband="S">
+   <location lat="21.901" lon="120.855" ht="42.0"/>
+ </radar>
+ <radar name="RCCG" site="Chi-Ku" polarization="s" freqband="S">
+   <location lat="23.148" lon="120.069" ht="38.0"/>
+ </radar>
+ <radar name="RWCA" site="Li-Tan-Shan" >
+   <location lat="24.694" lon="121.295" ht="1931.0"/>
+ </radar>
+
+ <!-- Canada Radars -->
+ <radar name="WBI" site="Britt" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="45.7932" lon="-80.5338" ht="218.0"/>
+ </radar>
+ <radar name="WGJ" site="Montreal-River-Harbour" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="47.2477" lon="-84.5966" ht="549.0"/>
+ </radar>
+ <radar name="WHK" site="Carvel" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="53.5606" lon="-114.1448" ht="798.0"/>
+ </radar>
+ <radar name="WHN" site="Jimmy-Lake" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="54.9132" lon="-109.9600" ht="655.0"/>
+ </radar>
+ <radar name="WKR" site="King-City" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="43.9640" lon="-79.5739" ht="393.0"/>
+ </radar>
+ <radar name="WMB" site="Lac-Castor" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="48.5754" lon="-70.6673" ht="824.0"/>
+ </radar>
+ <radar name="WSO" site="Exeter" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="43.3720" lon="-81.3806" ht="328.0"/>
+ </radar>
+ <radar name="WTP" site="Holyrood" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="47.3264" lon="-53.1266" ht="323.0"/>
+ </radar>
+ <radar name="WUJ" site="Aldergrove" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="49.0166" lon="-122.4871" ht="121.0"/>
+ </radar>
+ <radar name="WVY" site="Villeroy" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="46.4496" lon="-71.9137" ht="128.0"/>
+ </radar>
+ <radar name="WWW" site="Spirit-River" polarization="s" freqband="C" beamwidth="1.5">
+   <location lat="55.6949" lon="-119.2307" ht="1045.0"/>
+ </radar>
+ <radar name="XAM" site="Val-dirne" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="48.4806" lon="-67.6009" ht="732.0"/>
+ </radar>
+ <radar name="XBE" site="Bethune" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="50.5712" lon="-105.1827" ht="615.0"/>
+ </radar>
+ <radar name="XBU" site="Schuler" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="50.3126" lon="-110.1956" ht="881.0"/>
+ </radar> 
+ <radar name="XDR" site="Dryden" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="49.8581" lon="-92.7973" ht="441.0"/>
+ </radar>
+ <radar name="XFT" site="Franktown" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="45.0410" lon="-76.1162" ht="167.0"/>
+ </radar>
+ <radar name="XFW" site="Foxwarren" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="50.5489" lon="-101.0856" ht="564.0"/>
+ </radar>
+ <radar name="XGO" site="Gore" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="45.0986" lon="-63.7043" ht="241.0"/>
+ </radar>
+ <radar name="XLA" site="Landrienne" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="48.5514" lon="-77.8080" ht="420.0"/>
+ </radar>
+ <radar name="XMB" site="Marion-Bridge" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="45.9494" lon="-60.2054" ht="125.0"/>
+ </radar> 
+ <radar name="XME" site="Marble-Mountain" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="48.9303" lon="-57.8346" ht="558.0"/>
+ </radar>
+ <radar name="XNC" site="Chipman" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="46.2222" lon="-65.6992" ht="126.0"/>
+ </radar>
+ <radar name="XNI" site="Lasseter-Lake" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="48.8534" lon="-89.1216" ht="539.0"/>
+ </radar>
+ <radar name="XPG" site="Prince-George" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="53.6154" lon="-122.9547" ht="1135.0"/>
+ </radar>
+ <radar name="XRA" site="Radisson" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="52.5206" lon="-107.4436" ht="544.0"/>
+ </radar>
+ <radar name="XSI" site="Mt.Sicker" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="48.8609" lon="-123.7567" ht="756.0"/>
+ </radar>
+ <radar name="XSM" site="Strathmore" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="51.2062" lon="-113.3991" ht="986.0"/>
+ </radar>
+ <radar name="XSS" site="Mt.SilverStar" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="50.3694" lon="-119.0642" ht="1914.0"/>
+ </radar>
+ <radar name="XTI" site="Timmins" polarization="s" freqband="C" beamwidth="1.0">
+   <location lat="49.2814" lon="-81.7938" ht="266.0"/>
+ </radar>
+ <radar name="XWL" site="Woodlands" polarization="s" freqband="C" beamwidth="0.65">
+   <location lat="50.1530" lon="-97.7800" ht="289.0"/>
+ </radar>
+
+ <!-- New Canada S-Band Radars -->
+ <radar name="CASAG" site="Aldergrove BC" polarization="d" freqband="S">
+   <location lat="49.0164" lon="-122.4874" ht="127.0"/>
+ </radar>
+ <radar name="CASBE" site="Bethune SK" polarization="d" freqband="S">
+   <location lat="50.5712" lon="-105.1829" ht="609.0"/>
+ </radar>
+ <radar name="CASBI" site="Britt ON" polarization="d" freqband="S">
+   <location lat="45.7931" lon="-80.5341" ht="224.0"/>
+ </radar>
+ <radar name="CASBV" site="Blainville QC" polarization="d" freqband="S">
+   <location lat="45.7063" lon="-73.8589" ht="105.0"/>
+ </radar>
+ <radar name="CASCL" site="Cold Lake AB" polarization="d" freqband="S">
+   <location lat="54.3789" lon="-110.0614" ht="668.0"/>
+ </radar>
+ <radar name="CASCM" site="Chipman NB" polarization="d" freqband="S">
+   <location lat="46.2223" lon="-65.6992" ht="133.0"/>
+ </radar>
+ <radar name="CASCV" site="Carvel AB" polarization="d" freqband="S">
+   <location lat="53.5606" lon="-114.1446" ht="810.0"/>
+ </radar>
+ <radar name="CASDR" site="Dryden ON" polarization="d" freqband="S">
+   <location lat="49.8580" lon="-92.7974" ht="445.0"/>
+ </radar>
+ <radar name="CASET" site="Exeter ON" polarization="d" freqband="S">
+   <location lat="43.3724" lon="-81.3807" ht="335.0"/>
+ </radar>
+ <radar name="CASFT" site="Franktown ON" polarization="d" freqband="S">
+   <location lat="45.0411" lon="-76.1164" ht="173.0"/>
+ </radar>
+ <radar name="CASFW" site="Foxwarren MB" polarization="d" freqband="S">
+   <location lat="50.5488" lon="-101.0856" ht="574.0"/>
+ </radar>
+ <radar name="CASGO" site="Gore NS" polarization="d" freqband="S">
+   <location lat="45.0982" lon="-63.7049" ht="245.0"/>
+ </radar>
+ <radar name="CASHR" site="Holyrood NL" polarization="d" freqband="S">
+   <location lat="47.3266" lon="-53.1267" ht="318.0"/>
+ </radar>
+ <radar name="CASKR" site="King ON" polarization="d" freqband="S">
+   <location lat="43.9637" lon="-79.5728" ht="393.0"/>
+ </radar>
+ <radar name="CASLA" site="Landrienne QC" polarization="d" freqband="S">
+   <location lat="48.5514" lon="-77.8081" ht="425.0"/>
+ </radar>
+ <radar name="CASMB" site="Marion Bridge NS" polarization="d" freqband="S">
+   <location lat="45.9497" lon="-60.2052" ht="127.0"/>
+ </radar>
+ <radar name="CASMR" site="Montreal River ON" polarization="d" freqband="S">
+   <location lat="47.2477" lon="-84.5967" ht="555.0"/>
+ </radar>
+ <radar name="CASRA" site="Radisson SK" polarization="d" freqband="S">
+   <location lat="52.5204" lon="-107.4427" ht="553.0"/>
+ </radar>
+ <radar name="CASRF" site="Smooth Rock Falls ON" polarization="d" freqband="S">
+   <location lat="49.2812" lon="-81.7939" ht="275.0"/>
+ </radar>
+ <radar name="CASSF" site="St-Francoise QC" polarization="d" freqband="S">
+   <location lat="46.4494" lon="-71.9138" ht="137.0"/>
+ </radar>
+ <radar name="CASSM" site="Strathmore AB" polarization="d" freqband="S">
+   <location lat="51.2061" lon="-113.3994" ht="991.0"/>
+ </radar>
+ <radar name="CASSR" site="Spirit River AB" polarization="d" freqband="S">
+   <location lat="55.6950" lon="-119.2304" ht="1050.0"/>
+ </radar>
+ <radar name="CASSU" site="Schuler AB" polarization="d" freqband="S">
+   <location lat="50.3126" lon="-110.1954" ht="886.0"/>
+ </radar>
+ <radar name="CASVD" site="Val-dIrene QC" polarization="d" freqband="S">
+   <location lat="48.4804" lon="-67.6010" ht="739.0"/>
+ </radar>
+ <radar name="CASWL" site="Woodlands MB" polarization="d" freqband="S">
+   <location lat="50.1530" lon="-97.7804" ht="296.0"/>
+ </radar>
+
+<!-- Cuban Radars -->
+ <radar name="KCMW" site="Camaguey">
+   <location lat="21.4233" lon="-77.8486" ht="139.5"/>
+ </radar>
+
+
+ <radar name="MPAR" site="NWRT MPAR - Norman, OK">
+   <location lat="35.235833" lon="-97.461944" ht="369.7224"/> <!-- Per Benner & Priegnitz -->
+ </radar>
+ <radar name="MDS" site="Chennai" >
+   <location lat="13.073" lon="80.288" ht="40.0"/>
+ </radar>
+ <radar name="UNKN" site="Unknown" >
+   <location lat="0.000" lon="0.000" ht="0.0"/>
+ </radar>
+
+<!-- CASA Radars -->
+ <radar name="KCYR" site="Cyril, OK" polarization="d" freqband="X">
+   <location lat="34.874" lon="-98.251" ht="423.9"/>
+ </radar>
+ <radar name="KLWE" site="Lawton, OK" polarization="d" freqband="X">
+   <location lat="34.624" lon="-98.272" ht="377.4"/>
+ </radar>
+ <radar name="KSAO" site="Chickasha, OK" polarization="d" freqband="X">
+   <location lat="35.031" lon="-97.957" ht="354.0"/>
+ </radar>
+ <radar name="KRSP" site="Rush Springs, OK" polarization="d" freqband="X">
+   <location lat="34.813" lon="-97.931" ht="404.2"/>
+ </radar>
+
+<!-- MWR Radars -->
+<!-- radarinfo.xml requires that: 
+  a) WSR-88Ds have unique 4-letter identifiers and RPG id.
+  b) TDWRs have a 3-letter identifier and magnetic offset.  
+  c) Taiwan and Australian radar have no rpgid.
+  d) Canada radar use a 3-letter ID starting with W or X
+-->
+ <radar name="9516" site="Xuzhou" >
+   <location lat="34.29" lon="117.15" ht="190.0"/>
+ </radar>
+ <radar name="9539" site="Linyi" >
+   <location lat="35.05" lon="118.35" ht="184.0"/>
+ </radar>
+ <radar name="9558" site="Fuyang" >
+   <location lat="32.88" lon="115.74" ht="66.0"/>
+ </radar>
+ <radar name="9396" site="Zhumadian" >
+   <location lat="32.98" lon="114.02" ht="123.0"/>
+ </radar>
+ <radar name="9371" site="Zhengzhou" >
+   <location lat="34.78" lon="113.69" ht="175.0"/>
+ </radar>
+ <radar name="9398" site="Sanmenxia" >
+   <location lat="34.68" lon="111.13" ht="755.0"/>
+ </radar>
+
+
+<!-- PX1000 Radar temporary location summer 2019. -->
+ <radar name="PX1000" site="Durango, CO" >
+   <location lat="37.340" lon="-107.824" ht="2740.0"/>
+ </radar>
+ <radar name="PX-1000" site="Durango, CO" >
+   <location lat="37.340" lon="-107.824" ht="2740.0"/>
+ </radar>
+
+<!-- Belize, Mexico radar.. -->
+ <radar name="TBZE" site="Belize, Mexico" polarization="s">
+   <location lat="17.5356" lon="-88.3058" ht="31.0"/>
+ </radar>
+
+<!-- Cayman Island Rainbow 5 radar.. -->
+ <radar name="TGCI" site="Grand Cayman, Cayman Islands" polarization="d" >
+   <location lat="19.3289" lon="-81.1429" ht="36.0"/>
+ </radar>
+
+<!-- Sabancuy, Mexico radar.. -->
+ <radar name="TSBM" site="Sabancuy, Mexico" polarization="d" >
+   <location lat="18.9724" lon="-91.1726" ht="36.0"/>
+ </radar>
+
+<!-- Bowman, ND Doppler radar.  State Water Commission .. -->
+ <radar name="KBPP" site="Bowman, ND" >
+   <location lat="46.189" lon="-103.418" ht="900.0"/>
+ </radar>
+
+<!-- SoCal (AQPI) X-band radars.  -->
+ <radar name="SCVW" site="San Jose" >
+   <location lat="37.399" lon="-121.833" ht="138.0"/>
+ </radar>
+ <radar name="SCWA" site="Santa Clara" >
+   <location lat="38.522" lon="-122.802" ht="40.0"/>
+ </radar>
+
+<!-- Alamosa gap filler radar. -->
+ <radar name="KALA" site="Alamosa, CO" >
+   <location lat="37.444" lon="-105.866" ht="2311.0"/>
+ </radar>
+
+<!-- MZZU gap filler X-band radar. -->
+ <radar name="MZZU" site="Columbia, MO" >
+   <location lat="38.907" lon="-92.268" ht="269.0"/>
+ </radar>
+
+<!-- Arizona DOT (ADOT) network gap filler X-band radar. -->
+ <radar name="AZPI" site="Picacho, AZ" >
+   <location lat="32.7244" lon="-111.5172" ht="499.0"/>
+ </radar>
+
+<!-- OU SR2 mobile radar truck C-band radar -->
+ <radar name="SR2" site="Lake Charles, LA" freqband="C">
+   <location lat="30.1776" lon="-92.9963" ht="9.0"/>
+ </radar>
+
+</radars>

@@ -403,6 +403,9 @@ RAPIOAlgorithm::execute()
   static std::shared_ptr<ProcessTimer> fulltime(
     new ProcessTimer("Algorithm total runtime"));
 
+  // Always set up web server for algorithms for now
+  setUpWebserver();
+
   EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute
 
