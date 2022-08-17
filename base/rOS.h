@@ -23,10 +23,11 @@ public:
   getHostName();
 
   /**
-   * Returns the process name.
+   * Returns the process name. Default is full path,
+   * but passing flag will remove folders
    */
   static std::string
-  getProcessName();
+  getProcessName(const bool shortname = false);
 
   /**
    * Gets root path of process.

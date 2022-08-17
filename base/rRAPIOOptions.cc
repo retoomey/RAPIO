@@ -19,6 +19,17 @@
 using namespace rapio;
 using namespace std;
 
+namespace {
+void
+printHelpHelp()
+{
+  const std::string name = OS::getProcessName(true);
+
+  std::cout << "Type:\n  '" << name << " help' to see help, or\n  '" << name <<
+    " help arg1 argN' for detailed help on various arguments or groups.\n";
+}
+}
+
 RAPIOOptions::RAPIOOptions(const std::string& base)
 {
   setHeader(Constants::RAPIOHeader + base);
@@ -49,7 +60,7 @@ RAPIOOptions::RAPIOOptions(const std::string& base)
 
   // The help group
   boolean("help",
-    "Print out parameter help information. Can also just type the program without arguments.");
+    "Print out parameter help information.");
   addGroup("help", "HELP");
 }
 
@@ -509,6 +520,7 @@ RAPIOOptions::verifyRequired()
     OptionFilter all;
     dumpArgs(allOptions, all); // already filtered..but should work
     good = false;
+    printHelpHelp();
   }
   return (good);
 }
@@ -570,6 +582,7 @@ RAPIOOptions::verifyAllRecognized()
     OptionFilter ff;
     dumpArgs(unused, ff, true);
     good = false;
+    printHelpHelp();
   }
   return (good);
 } // RAPIOOptions::verifyAllRecognized
@@ -947,7 +960,9 @@ RAPIOOptions::processArgs(const int& argc, char **& argv)
   // Help first incase of help iconfig
   bool haveHelp = false;
 
-  if (isParsed("help") || (argc < 2)) { // 'alg help' or 'alg' dumps help
+  // Ok just binary name should be allowed actually...
+  // if (isParsed("help") || (argc < 2)) { // 'alg help' or 'alg' dumps help
+  if (isParsed("help")) { // 'alg help' dumps help
     haveHelp = true;
   }
 

@@ -9,42 +9,68 @@ Some presentations and tutorials when time permits. The first video sound is pre
 At the [National Severe Storms Laboratory](https://www.nssl.noaa.gov) big data is collected from hundreds of radars and processed with proprietary meteorology and hydrology algorithms.  Algorithm collection comes from various systems, such as the [Warning Decision Support System --Integrated Information](http://www.wdssii.org), as well as other groups within the lab.  These systems run important algorithms such as tornado prediction, clustering, and weighted merging of data. Operational output of weather algorithms go into the [MRMS System](https://www.nssl.noaa.gov/projects/mrms/).  RAPIO in this use case allows students and other contributers to MRMS to create new algorithms more easily that can then be integrated/licensed into MRMS operations if desired.
 ## RAPIO algorithms differences
 * No SmartPtr classes.  You have to use at least C++11 shared_ptr, unique_ptr and STL
-* Differences/enhancements in also all standard parameters.
+* Differences/enhancements in all standard algorithm parameters.
 * Many more abilities in how to run/execute.  Most of these features are built into the help output of the algorithm but will also get more officially documented as the software matures.
 
 ## Features
+* Realtime
+  * Watchers for data ingest monitoring (Linux FAM, IO polling, Web polling, etc.).
+  * Notifiers for data output notification (.fml MRMS/WDSSII files, external EXE, AWS, etc.).
+* Algorithm template class/infrastructure API
 * Parameter handling for algorithms, command line and external files.
 * Input of various data streams with filtering abilities (WDSSII indexes, netcdf, grib2, etc.).
 * Output of data with filtering abilities.
-* Watchers for data ingest monitoring (Linux FAM, IO polling, Web polling, etc.).
-* Notifiers for data output notification (.fml MRMS/WDSSII files, external EXE, AWS, etc.).
+
+## Subprojects
+* core -- Continually refactor/reduce the core to improve API and speed/usefullness.
+* test -- Continually add tests for unit testing development.
+* iomodules -- Add modules over time for reading/writing other data types.
+* containers -- Develop containers for cross-compiling or operations.
+* python -- Enhance/develop processing or filtering data with Python.
+
+## Subprograms/experiments
+* rTile -- REST API tile server for interacting with formats supported by RAPIO/MRMS.
 
 ## Some third party requirements.
-#### Core dependencies
 * [BOOST C++](https://www.boost.org) Lots of stuff here, we tend to wrap these libraries to simplify algorithm development and to allow for possibility of swap out.
-
-#### Helper dependencies
 * [UCAR udunits](https://www.unidata.ucar.edu/software/udunits) Unit translation ability.
 * [Cron Expression](https://github.com/staticlibs/ccronexpr) A simple c library for parsing CRON expressions (for algorithm cron firing).
 * [Simple-Web-Server](https://gitlab.com/eidheim/Simple-Web-Server) A HTTP and HTTPS server and client library implementation using BOOST headers (for algorithm REST interface support).
 * [cURL](https://curl.haxx.se) (as web ingest (though maybe BOOST asio later)).
+* [PROJ](https://proj.org/) Projection abilities for data.
 
-#### IO libraries (modules for ingesting/outputting data)
-* [G2CLib](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/g2clib.html) Grib2.
-* [Netcdf](https://www.unidata.ucar.edu/software/netcdf/) Netcdf.
-* [HDF5](https://support.hdfgroup.org/HDF5/) HDF5.
-* [GDAL](https://gdal.org/) Geospatial Data Abstraction Library supported formats.
-* [GraphicsMagick](http://www.graphicsmagick.org/) GraphicsMagick when available
-* [ImageMagick](https://imagemagick.org/) or ImageMagick.
-
-#### Projection libraries
-* [PROJ](https://proj.org/) Projection abilities for data
+## Current dynamic loading IO modules (modules for ingesting/outputting data)
+* IOGDAL -- Write formats out such a geoTIFF
+  * [GDAL](https://gdal.org/) Geospatial Data Abstraction Library supported formats.
+* IOGRIB -- Read GRIB2 format files.
+  * [G2CLib](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/g2clib.html) Grib2.
+* IOHMRG -- Read/write NSSL HMET binary files.
+* IOImage -- Write png or other formats recognized by GraphicsMagick/ImageMagick.
+  * [GraphicsMagick](http://www.graphicsmagick.org/) GraphicsMagick when available
+  * [ImageMagick](https://imagemagick.org/) or ImageMagick.
+* IONetcdf -- Read/write general non-grouped netcdf files and NSSL netcdf files.
+  * [Netcdf](https://www.unidata.ucar.edu/software/netcdf/) Netcdf.
+  * [HDF5](https://support.hdfgroup.org/HDF5/) HDF5.
+* IOPython -- Send RAPIO data to Python for processing.
+* IORaw -- Read/write MRMS W2merger stage one files.
+* IOXML -- Read/Write XML.  Used to read configurations, MRMS BinaryTable XML data.
+* IOJSON -- Read/Write JSON.
 
 ## API Documentation
 * Generate locally by running "doxygen rapio.dox" in the project directory.
 * The rexample folder is meant as a general API example and will be updated as RAPIO is.
 
-## Images
-* Image of default example RAPIO algorithm with parameter formatting
+## Example Images
+* HMRG Reflectivity polar data example in REST tile server
+![HMRG polar image](images/rapio002.png?raw=true "HMRG polar data example in REST tile server")
+* WDSSII Reflectivity May 3, 1999 in REST tile server
+![WDSSII polar image](images/rapio003.png?raw=true "WDSSII Reflectivity May 3, 1999 in tile server")
+* Closer WDSSII Reflectivity May 3, 1999 in REST tile server
+![Closer WDSSII polar image](images/rapio004.png?raw=true "Closer WDSSII Reflectivity May 3, 1999 in tile server")
+* WDSSII CONUS Merged Reflectivity in REST tile server
+![WDSSII CONUS image](images/rapio005.png?raw=true "WDSSII CONUS Merged Reflectivity")
+* Closer WDSSII CONUS Merged Reflectivity in REST tile server
+![Closer WDSSII CONUS image](images/rapio006.png?raw=true "Closer WDSSII CONUS Merged Reflectivity")
+* Example of RAPIO algorithm help parameter formatting
 ![RAPIO example image](images/rapio001.png?raw=true "RAPIO example")
 

@@ -39,16 +39,19 @@ OS::getHostName()
 }
 
 std::string
-OS::getProcessName()
+OS::getProcessName(const bool shortname)
 {
   static bool first = true;
   static std::string process;
+  static std::string processShort;
 
   if (first) {
     process = boost::dll::program_location().string();
-    first   = false;
+    boost::filesystem::path p(process);
+    processShort = p.filename().string();
+    first        = false;
   }
-  return process;
+  return shortname ? processShort : process;
 }
 
 std::string

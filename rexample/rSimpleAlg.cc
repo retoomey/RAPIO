@@ -246,3 +246,13 @@ W2SimpleAlg::processHeartbeat(const Time& n, const Time& p)
   // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
   // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
 }
+
+int
+main(int argc, char * argv[])
+{
+  // Create your algorithm instance and run it.  Isn't this API better?
+  W2SimpleAlg alg = W2SimpleAlg();
+
+  // Run this thing standalone.
+  alg.executeFromArgs(argc, argv);
+}
