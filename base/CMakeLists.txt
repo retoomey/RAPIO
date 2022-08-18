@@ -102,6 +102,7 @@ set(HEADER_FILES
   rAWS.h
   rProject.h
   rNamedAny.h
+  rVolumeValueResolver.h
 )
 
 # Set variable of all sources we use
@@ -189,6 +190,7 @@ set(SOURCE_FILES
   rAlgConfigFile.cc
   rAWS.cc
   rProject.cc
+  rVolumeValueResolver.cc
   ccronexpr.c
 )
 

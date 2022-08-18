@@ -7,7 +7,7 @@
 
 namespace rapio {
 /** So many caches clean up needs to happen.  We need a single one of these per radar center and 2D coverage */
-class SinCosLatLonCache
+class SinCosLatLonCache : public Utility
 {
 public:
   SinCosLatLonCache(size_t numX, size_t numY) :
@@ -80,7 +80,7 @@ public:
  * Tried using a 3D array of cache objects with pointer math and still slower than this,
  * interesting. It might be that a set of 2D caches better in RAM vs 3D due to L3, etc.
  */
-class AzRanElevTerrainCache
+class AzRanElevTerrainCache : public Utility
 {
 public:
 
@@ -220,7 +220,7 @@ public:
  * toggle which is used.  So requesting a LatLonGrid from it would either copy, create a 'view'
  * or just return the 2D LatLonGrid, etc.
  */
-class LatLonGridSet // could also template/generalize to shared_ptr set
+class LatLonGridSet : public Data // could also template/generalize to shared_ptr set
 {
 public:
   /** Get the size */

@@ -1,5 +1,6 @@
 #include "rTerrainBlockage.h"
 #include "rProcessTimer.h"
+#include "rRadialSet.h"
 
 #include <algorithm>
 
@@ -83,11 +84,9 @@ computeFractionBlocked(
   // The bottom of the beam has to clear the terrain by at least 150m
   float htM = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs) * 1000; // to meters
 
-  // The problem is this fails to get correct blockage values past this point outward in the ray
-  // and seems to also hit too early
-  //  if (htM < MIN_HT_ABOVE_TERRAIN_M) {
-  //    return 1.0;
-  //  }
+  if (htM < MIN_HT_ABOVE_TERRAIN_M) {
+    return 1.0;
+  }
 
   AngleDegs minazDegs = binAzimuthDegs - 0.5 * beamWidthDegs;
   AngleDegs maxazDegs = binAzimuthDegs + 0.5 * beamWidthDegs;
@@ -227,6 +226,51 @@ computePointPartialAt(
 
   return result;
 } // TerrainBlockage::computePointPartialAt
+
+void
+TerrainBlockage::
+calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
+{
+  ProcessTimer("Simulating calculating terrain for incoming radial set took:\n", Log::Severity::INFO);
+  RadialSet& r       = *rp; // Ok maybe just pass the references, lol
+  size_t gates       = r.getNumGates();
+  size_t radials     = r.getNumRadials();
+  AngleDegs elevDegs = r.getElevationDegs();
+  // API a bit messy here but all this is for speed in loop
+  // Get the Azimuth data array azr[radial]
+  auto& azr = r.getAzimuthVector()->ref();
+  auto& gw  = r.getGateWidthVector()->ref();
+  // Create a terrain percentage tr[radial][gate]
+  auto ta        = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
+  auto& tr       = ta->ref();
+  double startKM = r.getDistanceToFirstGateM();
+
+  // Humm the good thing of this is now we might be able to use the RadialSet beamwidth
+  // FIXME: Could use the beamwidth array, but I think the terrain algorithm also
+  // requires it in order to be correct.
+  const size_t beamWidth = 1;
+
+  for (size_t radial = 0; radial < radials; radial++) {
+    const AngleDegs azDegs = azr[radial];
+    double gateWidthM      = gw[radial];
+
+    // Range we can just use the starting range + half gateWidth
+    LengthKMs rangeKMs = startKM;
+
+    for (size_t gate = 0; gate < gates; gate++) {
+      tr[radial][gate] = computePercentBlocked(
+        beamWidth, // Technically not static, but start with 1 deg
+        elevDegs,
+        azDegs,
+        // Use the center of the gate for range
+        // rangeKMs+(gw[gate]/2000.0));  // gatewidth meters, /2 for half gate /1000 to km
+        rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
+
+      // rangeKMs += gw[gate];
+      rangeKMs += gateWidthM;
+    }
+  }
+} // TerrainBlockage::calculateTerrainPerGate
 
 float
 TerrainBlockage::
@@ -409,6 +453,13 @@ computeTerrainPoints(
       // Store the azimuth for later use.
       aref[i][j] = block.azDegs;
 
+      if ( (block.elevDegs <= GROUND) ) {
+        continue;
+      }
+
+      if ( (block.startKMs >= (radarRangeKMs)) ) {
+        continue;
+      }
       // We actually need negative angles due to refraction drop..the delta heights also bring things back up
       // This is a bug in WDSS2 I think...not having this creates 100 percent blockage which means
       // values farther out get auto clipped.  Most likely this bug hasn't been noticed since with merger the

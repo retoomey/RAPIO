@@ -135,6 +135,11 @@ public:
     const AngleDegs& binAzimuthDegs,
     const LengthKMs& binRangeKMs) const;
 
+  /** Calculate terrain blockage percentage for a given RadialSet for each gate, and
+   * add a 2D array to the RadialSet called TerrainPercentage to store this value */
+  void
+  calculateTerrainPerGate(std::shared_ptr<RadialSet> r);
+
   /** Computes and returns the height above the terrain
    *  given the elev, az and range from the radar. */
   LengthKMs

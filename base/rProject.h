@@ -45,64 +45,64 @@ public:
   /** Project from a amimuth/range to a latitude longitude */
   static void
   BeamPath_AzRangeToLatLon(
-    const AngleDegs &stationLatDegs, // !< Station Latitude in degrees
-    const AngleDegs &stationLonDegs, // !< Station Long in degrees
+    const AngleDegs &stationLatDegs, ///< Station Latitude in degrees
+    const AngleDegs &stationLonDegs, ///< Station Long in degrees
 
-    const AngleDegs &azimuthDeg, // !< Target Azimuth in degrees
-    const LengthKMs &rangeKMs,   // !< Target Range in kilometers
-    const AngleDegs &elevDegs,   // !< Elevation angle in degrees
+    const AngleDegs &azimuthDeg, ///< Target Azimuth in degrees
+    const LengthKMs &rangeKMs,   ///< Target Range in kilometers
+    const AngleDegs &elevDegs,   ///< Elevation angle in degrees
 
-    LengthKMs       &heightKMs, // !< Height in kilometers
-    AngleDegs       &latDegs,   // !< Target Latitude in degrees
-    AngleDegs       &lonDegs);  // !< Target Longitude in degree
+    LengthKMs       &heightKMs, ///< Height in kilometers
+    AngleDegs       &latDegs,   ///< Target Latitude in degrees
+    AngleDegs       &lonDegs);  ///< Target Longitude in degree
 
   /** Calculate observed range, azimuth and elevation */
   static void
   BeamPath_LLHtoAzRangeElev(
-    const AngleDegs & targetLatDegs, // !< Target Latitude in degrees
-    const AngleDegs & targetLonDegs, // !< Target Longitude in degrees
-    const LengthKMs & targetHeightM, // !< Target ht above MSL in meters
+    const AngleDegs & targetLatDegs, ///< Target Latitude in degrees
+    const AngleDegs & targetLonDegs, ///< Target Longitude in degrees
+    const LengthKMs & targetHeightM, ///< Target ht above MSL in meters
 
-    const AngleDegs & stationLatDegs, // !< Station Latitude in degrees
-    const AngleDegs & stationLonDegs, // !< Station Long in degrees
-    const LengthKMs &stationHeightM,  // Station ht above MSL in meters
+    const AngleDegs & stationLatDegs, ///< Station Latitude in degrees
+    const AngleDegs & stationLonDegs, ///< Station Long in degrees
+    const LengthKMs &stationHeightM,  ///< Station ht above MSL in meters
 
-    AngleDegs       & elevAngleDegs, // !< Elevation angle in degrees
-    AngleDegs       & azimuthDegs,   // !< Target *Azimuth in degrees
-    float           & rangeM         // !< Target *Range in meters
+    AngleDegs       & elevAngleDegs, ///< Elevation angle in degrees
+    AngleDegs       & azimuthDegs,   ///< Target *Azimuth in degrees
+    float           & rangeM         ///< Target *Range in meters
   );
 
   /** Cached version.  Calculate observed range, azimuth and elevation */
   static void
   Cached_BeamPath_LLHtoAzRangeElev(
-    const AngleDegs & targetLatDegs, // !< Target Latitude in degrees
-    const AngleDegs & targetLonDegs, // !< Target Longitude in degrees
-    const LengthKMs & targetHeightM, // !< Target ht above MSL in meters
+    const AngleDegs & targetLatDegs, ///< Target Latitude in degrees
+    const AngleDegs & targetLonDegs, ///< Target Longitude in degrees
+    const LengthKMs & targetHeightM, ///< Target ht above MSL in meters
 
-    const AngleDegs & stationLatDegs, // !< Station Latitude in degrees
-    const AngleDegs & stationLonDegs, // !< Station Long in degrees
-    const LengthKMs & stationHeightM, // Station ht above MSL in meters
+    const AngleDegs & stationLatDegs, ///< Station Latitude in degrees
+    const AngleDegs & stationLonDegs, ///< Station Long in degrees
+    const LengthKMs & stationHeightM, ///< Station ht above MSL in meters
     //
     const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
     const double    cosGcdIR,
 
-    AngleDegs       & elevAngleDegs, // !< Elevation angle in degrees
-    AngleDegs       & azimuthDegs,   // !< Target *Azimuth in degrees
-    float           & rangeM         // !< Target *Range in meters
+    AngleDegs       & elevAngleDegs, ///< Elevation angle in degrees
+    AngleDegs       & azimuthDegs,   ///< Target *Azimuth in degrees
+    float           & rangeM         ///< Target *Range in meters
   );
 
   /** For a station lat lon to target, calculate the sin/cos values for attentuation.
    * These can be cached and passed to other projection functions. */
   static void
   stationLatLonToTarget(
-    const AngleDegs & targetLatDegs, // !< Target latitude degrees
-    const AngleDegs & targetLonDegs, // !< Target longitude degrees
+    const AngleDegs & targetLatDegs, ///< Target latitude degrees
+    const AngleDegs & targetLonDegs, ///< Target longitude degrees
 
-    const AngleDegs & stationLatDegs, // !< The radar center latitude
-    const AngleDegs & stationLonDegs, // !< The radar center longitude
+    const AngleDegs & stationLatDegs, ///< The radar center latitude
+    const AngleDegs & stationLonDegs, ///< The radar center longitude
 
-    double          & sinGcdIR,  // !< sin(gcd/IR) output
-    double          & cosGcdIR); // !< cos(gcd/IR) output
+    double          & sinGcdIR,  ///< sin(gcd/IR) output
+    double          & cosGcdIR); ///< cos(gcd/IR) output
 
   /** Using exact same math as the BeamPath_toAzRangeElev, we can calculate the
    * range and height for a different elevation angle.
@@ -111,17 +111,17 @@ public:
    * of elevation angle. This uses 4/3 attenuation of atmosphere */
   static void
   BeamPath_LLHtoAttenuationRange(
-    const AngleDegs & targetLatDegs, // !< Target latitude degrees
-    const AngleDegs & targetLonDegs, // !< Target longitude degrees
+    const AngleDegs & targetLatDegs, ///< Target latitude degrees
+    const AngleDegs & targetLonDegs, ///< Target longitude degrees
 
-    const AngleDegs & stationLatDegs,   // !< The radar center latitude
-    const AngleDegs & stationLonDegs,   // !< The radar center longitude
-    const LengthKMs & stationHeightKMs, // !< The radar center height in kilometers
+    const AngleDegs & stationLatDegs,   ///< The radar center latitude
+    const AngleDegs & stationLonDegs,   ///< The radar center longitude
+    const LengthKMs & stationHeightKMs, ///< The radar center height in kilometers
 
-    const AngleDegs & elevAngleDegs, // !< The elevation angle in degrees of radar tilt
+    const AngleDegs & elevAngleDegs, ///< The elevation angle in degrees of radar tilt
 
-    LengthKMs       & targetHeightKMs, // !< Output height perpendicular to earth of beam
-    LengthKMs       & rangeKMs);       // !< Output range along the curved elevation beam
+    LengthKMs       & targetHeightKMs, ///< Output height perpendicular to earth of beam
+    LengthKMs       & rangeKMs);       ///< Output range along the curved elevation beam
 
   /** Create Lat Lon Grid marching information from a center and delta degree */
   static void
@@ -136,14 +136,14 @@ public:
 
     const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
 
-    const double    sinGcdIR, // !< sin(gcd/IR) Cache the sin/cos from regular version
-    const double    cosGcdIR, // !< cos(gcd/IR) which is from radar center to LL location
+    const double    sinGcdIR, ///< sin(gcd/IR) Cache the sin/cos from regular version
+    const double    cosGcdIR, ///< cos(gcd/IR) which is from radar center to LL location
 
-    const double    tanElev, // !< Cached tangent of the elevation angle
-    const double    cosElev, // !< Cached cosine of the elevation angle
+    const double    tanElev, ///< Cached tangent of the elevation angle
+    const double    cosElev, ///< Cached cosine of the elevation angle
 
-    LengthKMs       & targetHeightKMs, // !< Output height perpendicular to earth of beam
-    LengthKMs       & rangeKMs);       // !< Output range along the curved elevation beam
+    LengthKMs       & targetHeightKMs, ///< Output height perpendicular to earth of beam
+    LengthKMs       & rangeKMs);       ///< Output range along the curved elevation beam
 
   /** Destination point given distance and bearing from start point */
   static void

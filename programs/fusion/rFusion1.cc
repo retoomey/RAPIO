@@ -1,41 +1,9 @@
 #include "rFusion1.h"
 #include "rBinaryTable.h"
+#include "rVolumeValueResolver.h"
 #include "rConfigRadarInfo.h"
 
 using namespace rapio;
-
-// ------------------------------------------------------------------
-// FIXME: these will go to class files at some point
-// Probably base if we allow others to create value resolvers
-// Attempt to do plugins/visitors for calculating data values
-//
-/** Organizer for in/out of a VolumeValueResolver */
-class VolumeValue : public Utility
-{
-public:
-  // INPUTS ---------------------
-  DataType * upper;  // Elevation above, if any.  FIXME: Radial set or general?
-  DataType * lower;  // Elevation below, if any
-  LengthKMs cHeight; // Radar location height in Kilometers (constant)
-
-  // INPUTS for this value location
-  LengthKMs layerHeightKMs;  // Height of the virtual layer we're calculating, the merger layer
-  AngleDegs azDegs;          // Virtual Azimuth degrees at this location
-  AngleDegs virtualElevDegs; // Virtual elevation degrees at this location
-  double sinGcdIR;           // Cached sin GCD IR ratio
-  double cosGcdIR;           // Cached cos GCD IR ratio
-
-  // OUTPUTS ---------------------
-  double dataValue;
-  // FIXME: weight probably here too
-};
-
-class VolumeValueResolver : public Utility
-{
-public:
-  /** Calculate/interpret values between layers */
-  virtual void calc(VolumeValue& vv){ vv.dataValue = Constants::DataUnavailable; }
-};
 
 /** Showing elevation angle of the contributing tilt below us */
 class TestResolver1 : public VolumeValueResolver
@@ -53,77 +21,6 @@ public:
     }
   }
 };
-
-namespace {
-// My brain says make this simplier, but I think I just need to accept that it's complicated
-// Part of the complication is that we pass a lot of cached values down for speed.
-
-// Calculate vertical height due to a degree shift (for beamwidth check)
-inline void
-heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs)
-{
-  if (set == nullptr) { return; }
-
-  LengthKMs outRangeKMs; // not needed, we want the height
-  RadialSet& r         = *((RadialSet *) set);
-  const double radElev = (r.getElevationDegs() + delta) * DEG_TO_RAD; // half beamwidth of 1 degree
-  const double elevTan = tan(radElev);                                // maybe we can cache these per point?
-  const double elevCos = cos(radElev);
-
-  Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
-    vv.sinGcdIR, vv.cosGcdIR, elevTan, elevCos, heightKMs, outRangeKMs);
-}
-
-// Get value and height in RadialSet at a given range
-inline bool
-valueAndHeight(VolumeValue& vv, DataType * set, LengthKMs& atHeightKMs, float& out)
-{
-  if (set == nullptr) { return false; }
-
-  bool have    = false;
-  RadialSet& r = *((RadialSet *) set);
-
-  // Projection of height range using attentuation
-  LengthKMs outRangeKMs;
-
-  Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
-    vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), atHeightKMs, outRangeKMs);
-
-  // Projection of azimuth, range to data gate/radial value
-  int radial, gate;
-
-  if (r.getRadialSetLookupPtr()->getRadialGate(vv.azDegs, outRangeKMs * 1000.0, &radial, &gate)) {
-    const auto& data = r.getFloat2DRef();
-    out  = data[radial][gate];
-    have = true;
-
-    auto tptr = r.getFloat2D("TerrainPercent");
-    if (tptr != nullptr) { // FIXME: vv.haveTerrain or something
-      // Ok so check terrain.  50% or more blockage we become unavailable and we don't have it...
-
-      // Shouldn't I store percent here not inter..eh don't know.  Maybe int
-      const auto& t = r.getFloat2D("TerrainPercent")->ref();
-      if (t[radial][gate] > 50) {
-        out  = Constants::DataUnavailable; // meaningless I think. Bleh mask calculation
-        have = false;
-      } else {
-        // How to apply the silly thing?
-        if (Constants::isGood(out)) {
-          out  = out * (1.0f - (float) (t[radial][gate] / 100.0f)); // assume 0 is the default
-          have = true;
-        }
-      }
-      // Starting to think the 50 thing not quite right.  Or bleh
-      // if (t[radial][gate] > 50){
-      //   out = Constants::DataUnavailable; // meaningless I think. Bleh mask calculation
-      //   have = false;
-      // }
-    }
-  }
-
-  return have;
-} // valueAndHeight
-}
 
 class RobertLinear1Resolver : public VolumeValueResolver
 {
@@ -452,59 +349,6 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
 
-namespace {
-// This is a Polar Terrain Blockage algorithm.
-//
-// Ok first attempt of calculating terrain percentage blockage on a per gate level for an incoming RadialSet.
-// We could possibly cache a 'close-enough' value based on tilt or something, but we'll
-// do ahead and make it dynamic this first part
-// This is basically a polar terrain blockage algorithm and could be applied outside merger even
-void
-calculateTerrainPerGate(std::shared_ptr<RadialSet> rp, std::shared_ptr<TerrainBlockage> tp)
-{
-  ProcessTimer("Simulating calculating terrain for incoming radial set took:\n", Log::Severity::INFO);
-  RadialSet& r = *rp; // Ok maybe just pass the references, lol
-  TerrainBlockage& t = *tp;
-  size_t gates = r.getNumGates();
-  size_t radials = r.getNumRadials();
-  AngleDegs elevDegs = r.getElevationDegs();
-  // API a bit messy here but all this is for speed in loop
-  // Get the Azimuth data array azr[radial]
-  auto& azr = r.getAzimuthVector()->ref();
-  auto& gw = r.getGateWidthVector()->ref();
-  // Create a terrain percentage tr[radial][gate]
-  auto ta = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
-  auto& tr = ta->ref();
-  double startKM = r.getDistanceToFirstGateM();
-
-  // Humm the good thing of this is now we might be able to use the RadialSet beamwidth
-  // FIXME: Could use the beamwidth array, but I think the terrain algorithm also
-  // requires it in order to be correct.
-  const size_t beamWidth = 1;
-
-  for (size_t radial = 0; radial < radials; radial++) {
-    const AngleDegs azDegs = azr[radial];
-    double gateWidthM = gw[radial];
-
-    // Range we can just use the starting range + half gateWidth
-    LengthKMs rangeKMs = startKM;
-
-    for (size_t gate = 0; gate < gates; gate++) {
-      tr[radial][gate] = t.computePercentBlocked(
-        beamWidth, // Technically not static, but start with 1 deg
-        elevDegs,
-        azDegs,
-        // Use the center of the gate for range
-        // rangeKMs+(gw[gate]/2000.0));  // gatewidth meters, /2 for half gate /1000 to km
-        rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
-
-      // rangeKMs += gw[gate];
-      rangeKMs += gateWidthM;
-    }
-  }
-} // calculateTerrainPerGate
-}
-
 void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 {
@@ -620,7 +464,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Every RadialSet will require terrain per gate for filters
     if (myTerrainBlockage != nullptr) {
-      calculateTerrainPerGate(r, myTerrainBlockage);
+      myTerrainBlockage->calculateTerrainPerGate(r);
     }
 
     // Radar center coordinates
