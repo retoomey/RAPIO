@@ -193,6 +193,9 @@ if (BUILD_HMRG_MODULE)
   add_subdirectory(base/iohmrg)
 endif (BUILD_HMRG_MODULE)
 
+# Build subprograms.
+add_subdirectory(programs)
+
 # Tests are conditional.  We 'could' make a flag...here we just have to manual
 # go into directory and make.  Not sure what the cmake community does yet
 add_subdirectory(tests EXCLUDE_FROM_ALL)

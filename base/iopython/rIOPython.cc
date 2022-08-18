@@ -9,9 +9,9 @@
 // FIXME: I might play with direct python mapping
 // later vs our hybrid method
 // pkg-config -cflags python
-//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-//#include "Python.h"
-//#include "numpy/arrayobject.h"
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+// #include "Python.h"
+// #include "numpy/arrayobject.h"
 #include "rOS.h"
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -40,6 +40,7 @@ std::string
 IOPython::getHelpString(const std::string& key)
 {
   std::string help;
+
   help += "builder that allows sending data to a python script for filtering or output.";
   return help;
 }
@@ -59,8 +60,8 @@ IOPython::createDataType(const std::string& params)
 }
 
 std::vector<std::string>
-IOPython::runDataProcess(const std::string& command, 
- const std::string& filename, std::shared_ptr<DataGrid> datagrid)
+IOPython::runDataProcess(const std::string& command,
+  const std::string& filename, std::shared_ptr<DataGrid> datagrid)
 {
   // FIXME: can we create boost arrays as shared to begin with?
   // and thus avoid copies? Maybe
@@ -144,27 +145,28 @@ IOPython::runDataProcess(const std::string& command,
     shared_memory_object::remove(key.c_str());
   }
   return output;
-}
+} // IOPython::runDataProcess
 
 void
 IOPython::handleCommandParam(const std::string& command,
-   std::map<std::string, std::string> &outputParams)
+  std::map<std::string, std::string>          &outputParams)
 {
   // The default is factory=outputfolder.  Python for example splits
   // the command param into script,outputfolder
   std::vector<std::string> pieces;
+
   Strings::splitWithoutEnds(command, ',', &pieces);
-  if (pieces.size() < 2){
+  if (pieces.size() < 2) {
     LogSevere("PYTHON= format should be scriptpath,outputfolder\n");
-    LogSevere("        Tried to parse from '"<<command<<"'\n");
+    LogSevere("        Tried to parse from '" << command << "'\n");
   }
-  outputParams["scriptname"] = pieces[0];
+  outputParams["scriptname"]   = pieces[0];
   outputParams["outputfolder"] = pieces[1];
 }
 
 bool
 IOPython::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
+  std::map<std::string, std::string>               & keys
 )
 {
   // -------------------------------------------------------------------
@@ -172,71 +174,74 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
   bool outputPython = (keys["print"] == "true");
   const std::string pythonScript = keys["scriptname"];
   const std::string outputFolder = keys["outputfolder"];
-  std::string  filename = keys["filename"];
-  if (filename.empty()){
+  std::string filename = keys["filename"];
+
+  if (filename.empty()) {
     LogSevere("Need a filename to output\n");
     return false;
   }
 
   // Try a first time hunt for python...assuming which installed
   // FIXME: Could be OS routine..
-  static bool havePython = false;
+  static bool havePython    = false;
   static std::string python = "/usr/bin/python";
-  if (!havePython){
+
+  if (!havePython) {
     // Try to find python...because of python2, 3, etc. This isn't clear-cut
     // which needs to be installed
-    std::vector<std::string> pythonnames = {"python", "python2", "python3"};
-    for (auto p:pythonnames){
+    std::vector<std::string> pythonnames = { "python", "python2", "python3" };
+    for (auto p:pythonnames) {
       std::vector<std::string> pythonWhich;
-      OS::runProcess("which "+p, pythonWhich);
-      for(auto o:pythonWhich){
-       if (o[0] == '/'){
-         python = o;
-         havePython = true;
-         break;
-       }
+      OS::runProcess("which " + p, pythonWhich);
+      for (auto o:pythonWhich) {
+        if (o[0] == '/') {
+          python     = o;
+          havePython = true;
+          break;
+        }
       }
-      if (havePython){ break; }
+      if (havePython) { break; }
     }
     havePython = true;
   }
   auto p = keys["bin"]; // force override the python with setting.  Check for it?
-  if (!p.empty()){ python = p; }
+
+  if (!p.empty()) { python = p; }
   // -------------------------------------------------------------------
 
   // FIXME: Ok at the moment only DataGrid supported, though I can see
   // expanding this to be general DataType
-  bool success = false;
+  bool success  = false;
   auto dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
-  if (dataGrid != nullptr){
-    std::string pythonCommand = python+" "+pythonScript;
+
+  if (dataGrid != nullptr) {
+    std::string pythonCommand = python + " " + pythonScript;
     LogInfo("RUN PYTHON:" << pythonCommand << " BASEURL: " << filename << "\n");
     auto output = runDataProcess(pythonCommand, filename, dataGrid);
 
     // Hunt python output for RAPIO tags
-    bool haveFileBack = false;
+    bool haveFileBack    = false;
     bool haveFactoryBack = false;
     for (auto v:output) {
       // We'll always use RAPIO to mark returns.  I want it to fail as soon as possible for speed
-      if ((v.size() > 4) && (v[0] == 'R') && (v[1] == 'A') && (v[2] == 'P') && (v[3] == 'I') && (v[4] == 'O')){
-          if (Strings::removePrefix(v, "RAPIO_FILE_OUT:")){
-             keys["filename"] = v;
-             haveFileBack = true;
-             continue;
-          }else if (Strings::removePrefix(v, "RAPIO_FACTORY_OUT:")){
-             keys["factory"] = v;
-             haveFactoryBack = true;
-             continue;
-          }
+      if ((v.size() > 4) && (v[0] == 'R') && (v[1] == 'A') && (v[2] == 'P') && (v[3] == 'I') && (v[4] == 'O')) {
+        if (Strings::removePrefix(v, "RAPIO_FILE_OUT:")) {
+          keys["filename"] = v;
+          haveFileBack     = true;
+          continue;
+        } else if (Strings::removePrefix(v, "RAPIO_FACTORY_OUT:")) {
+          keys["factory"] = v;
+          haveFactoryBack = true;
+          continue;
+        }
       }
       // Output lines from python if turned on
-      if (outputPython){
-        LogInfo("PYTHON:"<<v<<"\n");
+      if (outputPython) {
+        LogInfo("PYTHON:" << v << "\n");
       }
     }
     success = haveFileBack && haveFactoryBack;
-
-  }else{
+  } else {
     LogSevere("This is not a DataGrid or subclass, can't call Python yet with this\n");
   }
 

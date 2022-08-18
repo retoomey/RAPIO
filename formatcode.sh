@@ -3,7 +3,7 @@
 
 #is_user_root () { [ "${EUID:-$(id -u)}" -eq 0 ]; }
 
-folders="base base/ionetcdf base/iogrib base/iogdal base/ioimage base/ioraw base/iohmrg rexample PYTHON tests"
+folders="base rexample PYTHON tests programs"
 crust="uncrustify"
 if (! hash $crust 2>/dev/null); then
   echo "$crust does not appear to be in your path"
@@ -19,17 +19,24 @@ then
   for f in $folders; do
     echo "Checking pretty print of *.cc and *.h in $f..."
     # Run it twice on each file, some quirk of uncrustify the files aren't always correct after first format
-    $crust -c uncrustify.cfg --no-backup $f/*.cc
-    $crust -c uncrustify.cfg --no-backup $f/*.cc
-    $crust -c uncrustify.cfg --no-backup $f/*.h
-    $crust -c uncrustify.cfg --no-backup $f/*.h
-    #if is_user_root; then
-    # Match read/write and user to the CMakeLists.txt.  This is especially important
-    # on docker which may be running as another user
-    chown --reference=CMakeLists.txt $f/*.cc
-    chmod --reference=CMakeLists.txt $f/*.cc
-    chown --reference=CMakeLists.txt $f/*.h
-    chmod --reference=CMakeLists.txt $f/*.h
+    LIST=`find "$f" -type f -name "*.cc"`
+    for l in $LIST; do
+      $crust -c uncrustify.cfg --no-backup $l | grep FAIL
+      $crust -c uncrustify.cfg --no-backup $l | grep FAIL
+      # Match read/write and user to the CMakeLists.txt.  This is especially important
+      # on docker which may be running as another user
+      chown --reference=CMakeLists.txt $l
+      chmod --reference=CMakeLists.txt $l
+    done
+    LIST=`find "$f" -type f -name "*.h"`
+    for l in $LIST; do
+      $crust -c uncrustify.cfg --no-backup $l | grep FAIL
+      $crust -c uncrustify.cfg --no-backup $l | grep FAIL
+      # Match read/write and user to the CMakeLists.txt.  This is especially important
+      # on docker which may be running as another user
+      chown --reference=CMakeLists.txt $l
+      chmod --reference=CMakeLists.txt $l
+    done
   done
 fi
 

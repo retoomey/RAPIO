@@ -27,14 +27,3 @@ target_link_libraries(rsimpleprogram rapio)
 install(TARGETS rsimpleprogram
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
-
-##################################################################
-# The tile experiment. This will probably move somewhere else
-# since if we develop this it will grow to decent size
-add_executable(rtile
-  rTile.cc
-)
-target_link_libraries(rtile rapio)
-install(TARGETS rtile
-   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)

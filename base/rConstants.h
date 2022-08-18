@@ -22,6 +22,7 @@
 // FIXME: Actually...I think we should have both ways and link them together.
 #define AngleDegs float
 #define LengthKMs float
+#define LengthMs  float
 
 namespace rapio {
 /** Hold all constants for RAPIO

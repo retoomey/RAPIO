@@ -16,7 +16,8 @@ class IOPython : public IODataType {
 public:
 
   /** Help for python module */
-  virtual std::string getHelpString(const std::string& key) override;
+  virtual std::string
+  getHelpString(const std::string& key) override;
 
   // Registering of classes ---------------------------------------------
   virtual void
@@ -32,14 +33,16 @@ public:
   // WRITING ------------------------------------------------------------
 
   /** Run python */
-  std::vector<std::string> runDataProcess(const std::string& command, 
+  std::vector<std::string>
+  runDataProcess(const std::string& command,
     const std::string& filename, std::shared_ptr<DataGrid> datagrid);
 
   /** Handle parsing the command line param.  For example
-  * factory=outputfolder, or factory= script, outputfolder.
-  * This turns the command line into the param map values */
-  virtual void handleCommandParam(const std::string& command,
-   std::map<std::string, std::string> &outputParams) override;
+   * factory=outputfolder, or factory= script, outputfolder.
+   * This turns the command line into the param map values */
+  virtual void
+  handleCommandParam(const std::string & command,
+    std::map<std::string, std::string> &outputParams) override;
 
   /** Encode this data type to path given format settings */
   virtual bool

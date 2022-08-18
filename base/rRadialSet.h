@@ -51,6 +51,30 @@ public:
     return (myElevAngleDegs);
   };
 
+  /** Radar name for radial set, if any */
+  std::string
+  getRadarName() const
+  {
+    std::string aName;
+
+    getString("radarName-value", aName);
+    return aName;
+  }
+
+  /** Radar VCP number for radial set, if any */
+  int
+  getVCP() const
+  {
+    int vcp = -99;
+    std::string vcpstr;
+
+    getString("vcp-value", vcpstr);
+    try {
+      vcp = std::stoi(vcpstr);
+    }catch (const std::exception&) { }
+    return vcp;
+  }
+
   /** Cached sin of elevation angle, used in speed calculations in volumes */
   double
   getElevationCos() const
@@ -73,6 +97,20 @@ public:
     myElevCos       = cos(targetElev * DEG_TO_RAD);
     myElevTan       = tan(targetElev * DEG_TO_RAD);
   };
+
+  /** Set the radar name for this radial set */
+  void
+  setRadarName(const std::string& aName)
+  {
+    setDataAttributeValue("radarName", aName, "dimensionless");
+  }
+
+  /** Set the radar vcp number */
+  void
+  setVCP(int vcp)
+  {
+    setDataAttributeValue("vcp", std::to_string(vcp), "dimensionless");
+  }
 
   // -----------------------
   // Vector access
