@@ -34,8 +34,8 @@ LL::isValid() const
   return (-90 <= lat && lat <= 90 && -180 < lon && lon < 180);
 }
 
-Length
-LL::getSurfaceDistanceTo(const LL& b) const
+LengthKMs
+LL::getSurfaceDistanceToKMs(const LL& b) const
 {
   // Assuming a perfect sphere earth, give great circle
   // distance between two locations.  Extremely accurate, if
@@ -44,11 +44,10 @@ LL::getSurfaceDistanceTo(const LL& b) const
   double alat = myLatitudeDegs * M_PI / 180.0;
   double blat = b.getLatitudeDeg() * M_PI / 180.0;
 
-  double longdiff = (myLongitudeDegs - b.getLongitudeDeg()) * M_PI / 180.0;
-  double d        = sin(alat) * sin(blat) + cos(alat) * cos(blat) * cos(longdiff);
-  double distance = acos(d)
-    // * (Constants::EarthRadius().kilometers());
+  double longdiff    = (myLongitudeDegs - b.getLongitudeDeg()) * M_PI / 180.0;
+  double d           = sin(alat) * sin(blat) + cos(alat) * cos(blat) * cos(longdiff);
+  LengthKMs distance = acos(d)
     * (Constants::EarthRadiusKM);
 
-  return (Length::Kilometers(distance));
+  return (distance);
 }

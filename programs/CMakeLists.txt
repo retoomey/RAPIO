@@ -18,6 +18,14 @@ install(TARGETS rFusion1
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+add_executable(rFusion2
+  fusion/rFusion2.cc
+)
+target_link_libraries(rFusion2 rapio)
+install(TARGETS rFusion2
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
 ##################################################################
 # MakeFakeRadarData 
 add_executable(rMakeFakeRadarData

@@ -28,7 +28,7 @@ XYZ::getLocation() const
 
 XYZ::XYZ(const LLH& loc)
 {
-  const double r = Constants::EarthRadiusKM
+  const LengthKMs r = Constants::EarthRadiusKM
     + loc.getHeightKM();
 
   const double phi      = loc.getLongitudeDeg() * M_PI / 180.0;

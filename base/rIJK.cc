@@ -30,17 +30,17 @@ IJK::IJK(
 }
 
 IJK::IJK(
-  const LLH    & ref,
-  const double & del_lat,
-  const double & del_lon,
-  const Length & del_ht
+  const LLH       & ref,
+  const double    & del_lat,
+  const double    & del_lon,
+  const LengthKMs & del_htKMs
 )
 {
   LLH target_loc
   (
     ref.getLatitudeDeg() + del_lat,
     ref.getLongitudeDeg() + del_lon,
-    ref.getHeightKM() + del_ht.kilometers()
+    ref.getHeightKM() + del_htKMs
   );
 
   IJK b = XYZ(target_loc) - XYZ(ref);
@@ -51,18 +51,18 @@ IJK::IJK(
 }
 
 IJK::IJK(
-  const LLH    & ref,
-  const Length & dist_east,
-  const Length & dist_north,
-  const Length & del_ht
+  const LLH       & ref,
+  const LengthKMs & dist_east,
+  const LengthKMs & dist_north,
+  const LengthKMs & del_ht
 )
 {
   const double Earth_Circumference = 2.0 * M_PI * 6371000.;
   const double deg_per_meter       = 360.0 / Earth_Circumference;
   const double DEGtoRAD = M_PI / 180.;
 
-  auto X         = dist_east.meters();
-  auto Y         = dist_north.meters();
+  auto X         = dist_east * 1000;
+  auto Y         = dist_north * 1000;
   auto start_lat = ref.getLatitudeDeg();
   auto start_lon = ref.getLongitudeDeg();
 
@@ -77,7 +77,7 @@ IJK::IJK(
     (Range * sin(Az * DEGtoRAD) * deg_per_meter)
     / cos((start_lat + target_lat) / 2.0 * DEGtoRAD));
 
-  const double target_htKM = ref.getHeightKM() + del_ht.kilometers();
+  const double target_htKM = ref.getHeightKM() + del_ht;
 
   LLH target_loc(target_lat, target_lon, target_htKM);
   IJK a = XYZ(target_loc) - XYZ(ref);

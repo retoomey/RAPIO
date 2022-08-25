@@ -28,6 +28,17 @@ USEAUTOTOOLS="true"  # Do we use autotools or cmake (--usecmake)
 USESCANBUILD="false" # Do we try the scan-build static analyzer? I think this auto uses clang compiler
                      # We wrap this around cmake only
 
+# Hack for PATHS.  The set PATH gets searched for libraries but the cmake version isn't
+# handling the NO_SYSTEM_ENVIRONMENT_PATH properly.  The PATH can be set in MRMS to
+# binaries, etc. with libraries and cmake will find those which is wrong.
+# FIXME: to be fair, probably need a rework of CMakeLists.txt
+# This seems to be something they changed in cmake back and forst, the searching of the default
+# ENV path libraries.
+if test -f "/etc/redhat-release"; then
+  echo "Enforcing default PATH for redhat release to avoid PATH bug"
+  PATH="/bin:/usr/sbin:/usr/bin:/usr/lib64/ccache:/usr/local/bin"
+fi
+
 # Search for our special options.
 for var in "$@"
 do

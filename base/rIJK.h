@@ -31,10 +31,10 @@ public:
    *  @param del_ht  difference in height
    */
   IJK(
-    const LLH    & ref,
-    const double & del_lat,
-    const double & del_lon,
-    const Length & del_ht
+    const LLH       & ref,
+    const double    & del_lat,
+    const double    & del_lon,
+    const LengthKMs & del_htKMs
   );
 
   /** Build from a reference point and a list of Lengths.
@@ -61,10 +61,10 @@ public:
    *  @param del_ht  difference in height
    */
   IJK(
-    const LLH   & ref,
-    const Length& dist_east,
-    const Length& dist_north,
-    const Length& del_ht
+    const LLH      & ref,
+    const LengthKMs& dist_east,
+    const LengthKMs& dist_north,
+    const LengthKMs& del_ht
   );
 
   /**  Negation operator.

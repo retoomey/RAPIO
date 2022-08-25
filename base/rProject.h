@@ -61,15 +61,15 @@ public:
   BeamPath_LLHtoAzRangeElev(
     const AngleDegs & targetLatDegs, ///< Target Latitude in degrees
     const AngleDegs & targetLonDegs, ///< Target Longitude in degrees
-    const LengthKMs & targetHeightM, ///< Target ht above MSL in meters
+    const LengthKMs & targetHeightM, ///< Target ht above MSL in kilometers
 
     const AngleDegs & stationLatDegs, ///< Station Latitude in degrees
     const AngleDegs & stationLonDegs, ///< Station Long in degrees
-    const LengthKMs &stationHeightM,  ///< Station ht above MSL in meters
+    const LengthKMs &stationHeightM,  ///< Station ht above MSL in kilometers
 
     AngleDegs       & elevAngleDegs, ///< Elevation angle in degrees
     AngleDegs       & azimuthDegs,   ///< Target *Azimuth in degrees
-    float           & rangeM         ///< Target *Range in meters
+    LengthKMs       & rangeKMs       ///< Target *Range in kilometers
   );
 
   /** Cached version.  Calculate observed range, azimuth and elevation */
@@ -77,18 +77,18 @@ public:
   Cached_BeamPath_LLHtoAzRangeElev(
     const AngleDegs & targetLatDegs, ///< Target Latitude in degrees
     const AngleDegs & targetLonDegs, ///< Target Longitude in degrees
-    const LengthKMs & targetHeightM, ///< Target ht above MSL in meters
+    const LengthKMs & targetHeightM, ///< Target ht above MSL in kilometers
 
     const AngleDegs & stationLatDegs, ///< Station Latitude in degrees
     const AngleDegs & stationLonDegs, ///< Station Long in degrees
-    const LengthKMs & stationHeightM, ///< Station ht above MSL in meters
+    const LengthKMs & stationHeightM, ///< Station ht above MSL in kilometers
     //
     const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
     const double    cosGcdIR,
 
     AngleDegs       & elevAngleDegs, ///< Elevation angle in degrees
     AngleDegs       & azimuthDegs,   ///< Target *Azimuth in degrees
-    float           & rangeM         ///< Target *Range in meters
+    LengthKMs       & rangeKMs       ///< Target *Range in kilometers
   );
 
   /** For a station lat lon to target, calculate the sin/cos values for attentuation.

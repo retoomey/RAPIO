@@ -1,7 +1,7 @@
 #pragma once
 
 #include <rData.h>
-#include <rLength.h>
+#include <rConstants.h>
 
 namespace rapio {
 /** Store a latitude/longitude location */
@@ -73,7 +73,7 @@ public:
 
   /** @return the Great Circle Distance to another location, on the
    * surface of the earth. */
-  Length
-  getSurfaceDistanceTo(const LL& b) const;
+  LengthKMs
+  getSurfaceDistanceToKMs(const LL& b) const;
 };
 }

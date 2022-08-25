@@ -1,7 +1,6 @@
 #pragma once
 
 #include <rLL.h>
-#include <rLength.h>
 #include <rConstants.h>
 
 #include <iosfwd>
@@ -15,7 +14,6 @@ class LLH : public LL {
 protected:
 
   /** Height above mean sea level. */
-  // Length myHeightKMs;
   LengthKMs myHeightKMs;
 
 public:

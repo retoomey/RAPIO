@@ -5,6 +5,7 @@
 #include "rOS.h"
 #include "rStrings.h"
 #include "rDataFilter.h"
+#include "rArith.h"
 
 // Default built in DataType support
 #include "rNetcdfDataGrid.h"

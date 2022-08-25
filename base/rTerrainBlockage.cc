@@ -82,7 +82,7 @@ computeFractionBlocked(
   AngleDegs topDegs    = beamElevationDegs + 0.5 * beamWidthDegs;
 
   // The bottom of the beam has to clear the terrain by at least 150m
-  float htM = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs) * 1000; // to meters
+  LengthMs htM = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs) * 1000; // to meters
 
   if (htM < MIN_HT_ABOVE_TERRAIN_M) {
     return 1.0;
@@ -241,9 +241,9 @@ calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
   auto& azr = r.getAzimuthVector()->ref();
   auto& gw  = r.getGateWidthVector()->ref();
   // Create a terrain percentage tr[radial][gate]
-  auto ta        = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
-  auto& tr       = ta->ref();
-  double startKM = r.getDistanceToFirstGateM();
+  auto ta  = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
+  auto& tr = ta->ref();
+  LengthKMs startKM = r.getDistanceToFirstGateM();
 
   // Humm the good thing of this is now we might be able to use the RadialSet beamwidth
   // FIXME: Could use the beamwidth array, but I think the terrain algorithm also
@@ -252,7 +252,7 @@ calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
 
   for (size_t radial = 0; radial < radials; radial++) {
     const AngleDegs azDegs = azr[radial];
-    double gateWidthM      = gw[radial];
+    LengthMs gateWidthM    = gw[radial];
 
     // Range we can just use the starting range + half gateWidth
     LengthKMs rangeKMs = startKM;
@@ -266,8 +266,7 @@ calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
         // rangeKMs+(gw[gate]/2000.0));  // gatewidth meters, /2 for half gate /1000 to km
         rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
 
-      // rangeKMs += gw[gate];
-      rangeKMs += gateWidthM;
+      rangeKMs += (gateWidthM / 1000.0);
     }
   }
 } // TerrainBlockage::calculateTerrainPerGate
