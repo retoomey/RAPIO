@@ -37,33 +37,34 @@ VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, Angle
     vv.sinGcdIR, vv.cosGcdIR, elevTan, elevCos, heightKMs, outRangeKMs);
 }
 
-// Get value and height in RadialSet at a given range
 bool
-VolumeValueResolver::valueAndHeight(VolumeValue& vv, DataType * set, LengthKMs& atHeightKMs, float& out)
+VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
 {
-  if (set == nullptr) { return false; }
+  l.gate           = -1;
+  l.radial         = -1;
+  l.terrainPercent = 0;
+  l.value          = Constants::DataUnavailable;
 
+  if (set == nullptr) { return false; }
   bool have    = false;
   RadialSet& r = *((RadialSet *) set);
 
   // Projection of height range using attentuation
-  LengthKMs outRangeKMs;
-
   Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
-    vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), atHeightKMs, outRangeKMs);
+    vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
 
   // Projection of azimuth, range to data gate/radial value
-  int radial, gate;
-
-  if (r.getRadialSetLookupPtr()->getRadialGate(vv.azDegs, outRangeKMs * 1000.0, &radial, &gate)) {
+  if (r.getRadialSetLookupPtr()->getRadialGate(vv.azDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
     const auto& data = r.getFloat2DRef();
-    out  = data[radial][gate];
-    have = true;
+    l.value = data[l.radial][l.gate];
+    have    = true;
 
     auto tptr = r.getFloat2D("TerrainPercent");
     if (tptr != nullptr) { // FIXME: vv.haveTerrain or something
       // Ok so check terrain.  50% or more blockage we become unavailable and we don't have it...
-
+      const auto& t = r.getFloat2D("TerrainPercent")->ref();
+      l.terrainPercent = t[l.radial][l.gate];
+      #if 0
       // Shouldn't I store percent here not inter..eh don't know.  Maybe int
       const auto& t = r.getFloat2D("TerrainPercent")->ref();
       if (t[radial][gate] > 50) {
@@ -81,6 +82,7 @@ VolumeValueResolver::valueAndHeight(VolumeValue& vv, DataType * set, LengthKMs& 
       //   out = Constants::DataUnavailable; // meaningless I think. Bleh mask calculation
       //   have = false;
       // }
+      #endif // if 0
     }
   }
 

@@ -28,27 +28,31 @@ public:
   virtual void
   calc(VolumeValue& vv) override
   {
-    // Get values/hit for above and below the location and the heights of hits
-    float vLower = Constants::DataUnavailable;
-    float vUpper = Constants::DataUnavailable;
-    LengthKMs lowerHeightKMs, upperHeightKMs;
+    // ------------------------------------------------------------------------------
+    // Query information for above and below the location
+    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
+    bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
 
-    bool haveLower = valueAndHeight(vv, vv.lower, lowerHeightKMs, vLower);
-    bool haveUpper = valueAndHeight(vv, vv.upper, upperHeightKMs, vUpper);
-
+    // ------------------------------------------------------------------------------
+    // In beamwidth calculation
+    //
     // FIXME: might be able to optimize by not always calculating in beam width,
     // but it's making my head hurt so just do it always for now
     // The issue is between tilts lots of tan, etc. we might skip
+
     // Get height of a .5 deg higher (half beamwidth of 1)
+    LengthKMs lowerHeightKMs;
     bool inLowerBeamwidth = false;
 
     if (haveLower) {
       heightForDegreeShift(vv, vv.lower, .5, lowerHeightKMs);
       inLowerBeamwidth = (vv.layerHeightKMs <= lowerHeightKMs);
     }
-    bool inUpperBeamwidth = false;
 
     // Get height of a .5 deg lower (half beamwidth of 1)
+    LengthKMs upperHeightKMs;
+    bool inUpperBeamwidth = false;
+
     if (haveUpper) {
       heightForDegreeShift(vv, vv.upper, -.5, upperHeightKMs);
       inUpperBeamwidth = (vv.layerHeightKMs >= upperHeightKMs);
@@ -81,26 +85,53 @@ public:
 
     // ------------------------------------------------------------------------------
     // Value calculation
-    if (Constants::isGood(vLower) && Constants::isGood(vUpper)) {
+    const double& lValue = vv.lLayer.value;
+    const double& uValue = vv.uLayer.value;
+
+    // Test terrain percent.  We're gonna show unavailable for every blocking lower tilt over 50%
+    if (vv.lLayer.terrainPercent > .50) {
+      vv.dataValue = Constants::DataUnavailable;
+      return;
+    }
+
+    // FIXME: Apply terrain to good data values, right?
+    // This depends on if we want to 'see' stage one, or passing terrain and values to stage two
+    // for moment I'll apply it
+    if (Constants::isGood(lValue) && Constants::isGood(uValue)) {
       // Linear interpolate using heights.  With two values we can do interpolation
       // between the values always, either linear or exponential
-      double wt = (vv.layerHeightKMs - lowerHeightKMs) / (upperHeightKMs - lowerHeightKMs);
+      double wt = (vv.layerHeightKMs - vv.lLayer.heightKMs) / (upperHeightKMs - vv.uLayer.heightKMs);
       if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
       const double nwt = (1.0 - wt);
-      v = (0.5 + nwt * vLower + wt * vUpper);
+
+      const double lTerrain = lValue * (1 - vv.lLayer.terrainPercent);
+      const double uTerrain = uValue * (1 - vv.uLayer.terrainPercent);
+
+      // v = (0.5 + nwt * lValue + wt * uValue);
+      v = (0.5 + nwt * lTerrain + wt * uTerrain);
     } else if (inLowerBeamwidth) {
-      v = vLower; // Use the gate value even if missing, RF, unavailable, etc.
+      if (Constants::isGood(lValue)) {
+        const double lTerrain = lValue * (1 - vv.lLayer.terrainPercent);
+        v = lTerrain;
+      } else {
+        v = lValue; // Use the gate value even if missing, RF, unavailable, etc.
+      }
     } else if (inUpperBeamwidth) {
-      v = vUpper;
+      if (Constants::isGood(uValue)) {
+        const double uTerrain = uValue * (1 - vv.uLayer.terrainPercent);
+        v = uTerrain;
+      } else {
+        v = uValue;
+      }
     }
     #if 0
-  } else if (Constants::isGood(vLower)) {
+  } else if (Constants::isGood(vv.lLayer.value)) {
     if (inLowerBeamwidth) {
-      v = vLower;
+      v = lValue;
     }
-  } else if (Constants::isGood(vUpper)) {
+  } else if (Constants::isGood(vv.vUpper)) {
     if (inUpperBeamwidth) {
-      v = vUpper;
+      v = uValue;
     }
   }
     #endif
