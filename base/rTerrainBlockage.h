@@ -82,18 +82,6 @@ public:
     const LengthKMs                           & radarRangeKMs, // max range radar
     const std::string                         & radarName);
 
-  /** Returns the percent of the beam that was blocked
-   *  (to nearest whole integer) The return value is
-   *  between 0 and 100 (both numbers inclusive) with 100
-   *  indicating a fully blocked beam (no radar return)
-   */
-  unsigned char
-  computePercentBlocked(
-    const AngleDegs& beamWidthDegs,
-    const AngleDegs& beamElevationDegs,
-    const AngleDegs& binAzimuthDegs,
-    const LengthKMs& binRangeKMs) const;
-
   /**
    *
    * Returns 0 for non-blocked beams and 1 for fully blocked ones.
@@ -119,7 +107,7 @@ public:
 
   /** Toomey: Experimental/Debugging function.  Hard calculate the vertical total cumulative blockage, or the
    * min point of each partial. This is slow since I'm iterating from radar center each time.  */
-  unsigned char
+  float
   computeCumulativePercentBlocked(
     const AngleDegs& beamWidthDegs,
     const AngleDegs& beamElevationDegs,
@@ -128,7 +116,7 @@ public:
 
   /** Toomey: Experimental/Debugging function.   Hard calculate the partial beam vertical blockage at a particular
    * point. This is simple to understand.  No hoizontal beam width assumed here */
-  unsigned char
+  float
   computePointPartialAt(
     const AngleDegs& beamWidthDegs,
     const AngleDegs& beamElevationDegs,

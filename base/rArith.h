@@ -13,6 +13,25 @@ namespace rapio {
 class Arith : public Utility
 {
 public:
+
+  /** Compress a float percent to a char 0 to 100 with range clipping.
+   * values are rounded down.  This is used for compression in
+   * certain situations where we can use a 8 bit char instead of the
+   * longer float */
+  static inline unsigned char
+  floatPercentToChar(float v)
+  {
+    // Ok pin the fraction to 0-100 percent
+    int result = int(0.5 + v * 100);
+
+    if (v < 0) {
+      v = 0;
+    } else if (v > 100) {
+      v = 100;
+    }
+    return v;
+  }
+
   /** Round the given number to the nearest integer. */
   static inline int
   roundOff(double n)

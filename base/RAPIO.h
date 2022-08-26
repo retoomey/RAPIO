@@ -24,6 +24,7 @@
 // General utility
 #include <rStrings.h>
 #include <rOS.h>
+#include <rConfigRadarInfo.h>
 
 // Experimental AWS calls..
 #include <rAWS.h>

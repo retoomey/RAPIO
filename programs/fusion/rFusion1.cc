@@ -85,14 +85,14 @@ public:
 
     // ------------------------------------------------------------------------------
     // Value calculation
-    const double& lValue = vv.lLayer.value;
-    const double& uValue = vv.uLayer.value;
-
     // Test terrain percent.  We're gonna show unavailable for every blocking lower tilt over 50%
     if (vv.lLayer.terrainPercent > .50) {
       vv.dataValue = Constants::DataUnavailable;
       return;
     }
+
+    const double& lValue = vv.lLayer.value;
+    const double& uValue = vv.uLayer.value;
 
     // FIXME: Apply terrain to good data values, right?
     // This depends on if we want to 'see' stage one, or passing terrain and values to stage two

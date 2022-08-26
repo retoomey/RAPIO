@@ -97,6 +97,8 @@ Project::BeamPath_AzRangeToLatLon(
   const double EarthRadius     = Constants::EarthRadiusM;
   const double earthRefraction = (4. / 3.) * EarthRadius;
 
+  // Note: The height is relative to station height, since it is not
+  // passed in.
   const auto heightM = pow(pow(rangeM, 2.) + pow(earthRefraction, 2.)
       + 2. * rangeM * earthRefraction
       * sin(elevAngleRad), 0.5) - earthRefraction;

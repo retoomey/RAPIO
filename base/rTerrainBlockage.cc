@@ -47,29 +47,6 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   //  addManualOverrides(radarName);
 }
 
-// Entrance point from merger
-unsigned char
-TerrainBlockage::
-computePercentBlocked(
-  const AngleDegs& beamWidthDegs,
-  const AngleDegs& beamElevationDegs,
-  const AngleDegs& binAzimuthDegs,
-  const LengthKMs& binRangeKMs) const
-{
-  // FIXME: Is this ever used elsewhere? If not, we might just do the pinning there.
-  float blocked = computeFractionBlocked(beamWidthDegs, beamElevationDegs,
-      binAzimuthDegs, binRangeKMs);
-  // Ok pin the fraction to 0-100 percent
-  int result = int(0.5 + blocked * 100);
-
-  if (result < 0) {
-    result = 0;
-  } else if (result > 100) {
-    result = 100;
-  }
-  return result;
-}
-
 float
 TerrainBlockage::
 computeFractionBlocked(
@@ -138,7 +115,7 @@ computeFractionBlocked(
 // -----------------------------------
 // Experimental and/or super calculations
 // for debugging/comparison
-unsigned char
+float
 TerrainBlockage::
 computeCumulativePercentBlocked(
   const AngleDegs& beamWidthDegs,
@@ -152,27 +129,27 @@ computeCumulativePercentBlocked(
   // range.  Cumulative blockage is the minimum point partial blockage up to the sample location.
   // Of course this increased with range out from radar and duplicates possibly cached calculations,
   // though it is silly simple to understand.
-  if (binRangeKMs <= 0) {
-    return 0;
-  }
-  if (binRangeKMs > 80) { // blocking past 80 or this will crawl
-    return 1.0;
-  }
+  //  if (binRangeKMs <= 0) {
+  //    return 0;
+  //  }
+  //  if (binRangeKMs > 80) { // blocking past 80 or this will crawl
+  //    return 1.0;
+  //  }
   LengthKMs deltaKMS = 1; // 0.10;  // 10 samples per kilometer....
   size_t count       = binRangeKMs / deltaKMS;
 
-  unsigned char percent = 0; // the lowest blockage possible
-  LengthKMs start       = 0;
+  float percent   = 0; // the lowest blockage possible
+  LengthKMs start = 0;
 
   for (size_t i = 0; i < count; ++i) { // SLOOOOW, not sure how to cache with virtual rays, etc.
     // We want largest cumulative blockage along the ray...
-    unsigned char newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
+    float newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
         start);
     if (newone > percent) { percent = newone; };
     start += deltaKMS;
   }
   // Make sure and check the exact range value last just to get around roundoff/etc.
-  unsigned char newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
+  float newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
       binRangeKMs);
 
   if (newone > percent) { percent = newone; };
@@ -180,7 +157,7 @@ computeCumulativePercentBlocked(
   return percent;
 } // TerrainBlockage::computeCumulativePercentBlocked
 
-unsigned char
+float
 TerrainBlockage::
 computePointPartialAt(
   const AngleDegs& beamWidthDegs,
@@ -202,10 +179,10 @@ computePointPartialAt(
 
   // partial beam blockage by terrain is simple right...just the vertical amount of coverage in the beam
   if (aHeightMeters < htMBOTTOM) {
-    return 0; // terrain below the beam
+    return 0.0; // terrain below the beam
   }
   if (aHeightMeters > htMTOP) {
-    return 100; // terrain above the beam
+    return 1.0; // terrain above the beam
   }
 
   // Otherwise the percent of coverage of the distance between top and bottom
@@ -215,16 +192,7 @@ computePointPartialAt(
   double partTerrainM = aHeightMeters - htMBOTTOM;
   double blocked      = partTerrainM / rangeM;
 
-  // Ok we need the height of the 'top' for 'my' way of doing partial.
-  int result = int(0.5 + blocked * 100);
-
-  if (result < 0) {
-    result = 0;
-  } else if (result > 100) {
-    result = 100;
-  }
-
-  return result;
+  return blocked;
 } // TerrainBlockage::computePointPartialAt
 
 void
@@ -258,15 +226,39 @@ calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
     LengthKMs rangeKMs = startKM;
 
     for (size_t gate = 0; gate < gates; gate++) {
-      tr[radial][gate] = computePercentBlocked(
+      const AngleDegs centerAzDegs = azDegs + (0.5 * beamWidth); // FIXME: use radial set data
+      tr[radial][gate] = computePointPartialAt(beamWidth,
+          elevDegs,
+          centerAzDegs,
+          rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
+      #if 0
+
+FIXME: Ok next pass allow choosing method to use, my simple polar or Lak.
+      They should be at least 'kinda' close if all the math / code is correct.
+
+      tr[radial][gate] = computeFractionBlocked(
         beamWidth, // Technically not static, but start with 1 deg
         elevDegs,
         azDegs,
         // Use the center of the gate for range
         // rangeKMs+(gw[gate]/2000.0));  // gatewidth meters, /2 for half gate /1000 to km
         rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
+      #endif // if 0
 
       rangeKMs += (gateWidthM / 1000.0);
+    }
+  }
+
+  // Cumulative percent march on each radial
+  for (size_t radial = 0; radial < radials; radial++) {
+    float greatest = -1000; // percentage
+    for (size_t gate = 0; gate < gates; gate++) {
+      float& v = tr[radial][gate]; // percentage
+      if (v > greatest) {
+        greatest = v;
+      } else {
+        v = greatest;
+      }
     }
   }
 } // TerrainBlockage::calculateTerrainPerGate
@@ -310,12 +302,9 @@ TerrainBlockage ::
 getHeightKM(const AngleDegs elevDegs,
   const AngleDegs           azDegs,
   const LengthKMs           rnKMs,
-  AngleDegs                 & outLatDegs, // hack moment
+  AngleDegs                 & outLatDegs,
   AngleDegs                 & outLonDegs) const
 {
-  // This is what WDSS2 does, but we don't even need the lat lon, km here...
-  // FIXME: use the direct approximation Radar formula for this and just put in Project
-  //  AngleDegs outLatDegs, outLonDegs;
   LengthKMs outHeightKMs;
 
   Project::BeamPath_AzRangeToLatLon(
@@ -343,7 +332,7 @@ getHeightKM(const AngleDegs elevDegs,
   outHeightKMs += myRadarLocation.getHeightKM();
 
   return (outHeightKMs);
-}
+} // TerrainBlockage::getHeightKM
 
 LengthKMs
 TerrainBlockage ::
@@ -351,36 +340,16 @@ getHeightAboveTerrainKM(const AngleDegs elevDegs,
   const AngleDegs                       azDegs,
   const LengthKMs                       rnKMs) const
 {
-  // This is what WDSS2 does, but we don't even need the lat lon, km here...
-  // FIXME: use the direct approximation Radar formula for this and just put in Project
+  // Get projected height using radar height and angle info
   AngleDegs outLatDegs, outLonDegs;
-  LengthKMs outHeightKMs;
+  LengthKMs outHeightKMs = getHeightKM(elevDegs, azDegs, rnKMs,
+      outLatDegs, outLonDegs);
 
-  Project::BeamPath_AzRangeToLatLon(
-    myRadarLocation.getLatitudeDeg(),
-    myRadarLocation.getLongitudeDeg(),
-    azDegs,
-    rnKMs,
-    elevDegs,
-
-    outHeightKMs,
-    outLatDegs,
-    outLonDegs
-  );
-
-  if (outLonDegs <= -180) {
-    outLonDegs += 360;
-  }
-
-  if (outLatDegs > 180) {
-    outLatDegs -= 360;
-  }
-
-  // Add radar height location to raise beam to correct height
-  outHeightKMs += myRadarLocation.getHeightKM();
+  // If we have terrain, subtract it from the height.  If missing,
+  // we assume no change due to terrain.
   double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
 
-  if (aHeightMeters != Constants::MissingData) { // getValueAt out of range
+  if (aHeightMeters != Constants::MissingData) {
     outHeightKMs -= (aHeightMeters / 1000.0);
   }
   return (outHeightKMs);

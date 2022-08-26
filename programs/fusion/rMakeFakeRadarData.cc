@@ -59,7 +59,17 @@ MakeFakeRadarData::execute()
   // We don't have vcp so what to do.  FIXME: probably new parameters right?
   // FIXME: have vcp lists?  Bleh we got into trouble because of that in first place
   AngleDegs elevAngleDegs = .50;
-  LLH myCenter = myDEM->getCenterLocation(); // cheat for moment.  We need radar info I guess, bleh
+  LLH myCenter;
+
+  if (ConfigRadarInfo::haveRadar(myRadarName)) {
+    myCenter = ConfigRadarInfo::getLocation(myRadarName);
+  } else {
+    LogSevere(
+      "Couldn't find info for radar '" << myRadarName << "', using DEM center which is probably not what you want.\n");
+    myCenter = myDEM->getCenterLocation();
+  }
+  LogInfo("Center location: " << myCenter << "\n");
+
   Time myTime;
   LengthMs firstGateDistanceMeters = 0;
 
@@ -137,15 +147,39 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
     for (int i = 0; i < myNumGates; ++i) {
       float gateValue = 60.0 * i / myNumGates; // without terrain
       if (myTerrainBlockage != nullptr) {
-        float fractionBlocked = myTerrainBlockage->computeFractionBlocked(myBeamWidthDegs,
+        float fractionBlocked = myTerrainBlockage->computePointPartialAt(myBeamWidthDegs,
             elevDegs,
             centerAzDegs,
-            i * myGateWidthM);
-        gateValue = myRadarValue * (1 - fractionBlocked);
+            (i * gwKMs) + (.5 * gwKMs)); // plus half gatewidth for center
+
+        /*
+         *      float fractionBlocked = myTerrainBlockage->computeFractionBlocked(myBeamWidthDegs,
+         *          elevDegs,
+         *          centerAzDegs,
+         *          i * gwKMs);
+         */
+        // gateValue = myRadarValue * (1 - fractionBlocked);
+        gateValue = fractionBlocked;
       }
       data[j][i] = gateValue;
     }
     azDegs += myAzimuthalDegs;
+  }
+
+  // Cumulative in polar is sooo much easier than grid
+  // Silly simple make it the greatest along the radial path
+  for (int j = 0; j < myNumRadials; ++j) {
+    float greatest = -1000; // percentage
+    for (int i = 0; i < myNumGates; ++i) {
+      float& v = data[j][i]; // percentage
+      if (v > greatest) {
+        greatest = v;
+      } else {
+        v = greatest;
+      }
+      // Change final value from percent to data value
+      v = myRadarValue * (1 - greatest);
+    }
   }
 } // MakeFakeRadarData::addRadials
 

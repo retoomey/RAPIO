@@ -64,25 +64,6 @@ VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
       // Ok so check terrain.  50% or more blockage we become unavailable and we don't have it...
       const auto& t = r.getFloat2D("TerrainPercent")->ref();
       l.terrainPercent = t[l.radial][l.gate];
-      #if 0
-      // Shouldn't I store percent here not inter..eh don't know.  Maybe int
-      const auto& t = r.getFloat2D("TerrainPercent")->ref();
-      if (t[radial][gate] > 50) {
-        out  = Constants::DataUnavailable; // meaningless I think. Bleh mask calculation
-        have = false;
-      } else {
-        // How to apply the silly thing?
-        if (Constants::isGood(out)) {
-          out  = out * (1.0f - (float) (t[radial][gate] / 100.0f)); // assume 0 is the default
-          have = true;
-        }
-      }
-      // Starting to think the 50 thing not quite right.  Or bleh
-      // if (t[radial][gate] > 50){
-      //   out = Constants::DataUnavailable; // meaningless I think. Bleh mask calculation
-      //   have = false;
-      // }
-      #endif // if 0
     }
   }
 

@@ -89,6 +89,13 @@ ConfigRadarInfo::loadSettings()
   }
 } // ConfigRadarInfo::loadSettings
 
+bool
+ConfigRadarInfo::haveRadar(const std::string& name)
+{
+  loadSettings();
+  return (myRadarInfos.count(name) > 0);
+}
+
 std::string
 ConfigRadarInfo::getSite(const std::string& name)
 {

@@ -91,6 +91,10 @@ public:
     myReadSettings = false;
   }
 
+  /** Do we have this radar? */
+  static bool
+  haveRadar(const std::string& name);
+
   /** Get RadarInfo given a radar name. Can also use direct but slower methods below if
    * only needing say one field of the info. */
   static RadarInfo
