@@ -163,6 +163,17 @@ protected:
 class DataGrid : public DataType {
 public:
 
+  /** Construct uninitialized DataGrid, usually for
+   * factories.  You probably want the Create method */
+  DataGrid();
+
+  /** Public API for users to create a DataGrid,
+   * usually you create a subclass like RadialSet.  This is
+   * used if you need to create generic array data. */
+  static std::shared_ptr<DataGrid>
+  Create(const std::vector<size_t> & dimsizes,
+    const std::vector<std::string> & dimnames);
+
   /** Declare the dimensions of array objects */
   void
   declareDims(const std::vector<size_t>& dimsizes,
@@ -283,6 +294,15 @@ public:
   /** Add named float data with initial size and value */
   std::shared_ptr<Array<float, 3> >
   addFloat3D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
+
+  /** Update global attribute list for RadialSet */
+  virtual void
+  updateGlobalAttributes(const std::string& encoded_type) override;
+
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
 
 public:
 

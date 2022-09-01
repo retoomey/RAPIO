@@ -211,7 +211,7 @@ calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
   // Create a terrain percentage tr[radial][gate]
   auto ta  = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
   auto& tr = ta->ref();
-  LengthKMs startKM = r.getDistanceToFirstGateM();
+  LengthKMs startKM = r.getDistanceToFirstGateM() / 1000.0;
 
   // Humm the good thing of this is now we might be able to use the RadialSet beamwidth
   // FIXME: Could use the beamwidth array, but I think the terrain algorithm also

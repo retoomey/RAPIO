@@ -192,10 +192,23 @@ std::string
 OS::validateExe(const std::string& path)
 {
   try {
-    const auto boostpath = fs::absolute(path);
-    const auto s         = fs::status(boostpath);
+    // BOOST search won't handle folder paths with /, so
+    // we will only search if no / included.
+    fs::path boostpath;
+
+    if (path.find("/") != std::string::npos) {
+      // Try absolute path match
+      boostpath = fs::absolute(path);
+    } else {
+      // Try relative path search
+      boostpath = boost::process::search_path(path);
+    }
+    if (boostpath.empty()) {
+      return "";
+    }
 
     // Check if regular file and executable
+    const auto s = fs::status(boostpath);
     if (fs::is_regular_file(s)) {
       const auto p   = s.permissions();
       bool isExecute = ((p & fs::perms::owner_exe) != fs::perms::no_perms);
@@ -209,6 +222,21 @@ OS::validateExe(const std::string& path)
   }
 
   return "";
+} // OS::validateExe
+
+std::string
+OS::findValidExe(const std::vector<std::string>& list)
+{
+  std::string binaryPath = "";
+
+  for (auto p:list) {
+    const auto search = OS::validateExe(p);
+    if (!search.empty()) {
+      binaryPath = search;
+      break;
+    }
+  }
+  return binaryPath;
 }
 
 int
@@ -236,12 +264,16 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
 
     // Check can find executable, because otherwise BOOST outright segfaults if
     // missing, which we really don't want in a realtime/recovering algorithm.
-    const auto spath = p::search_path(command);
-    if (spath.empty()) {
-      error = "Command not found in path";
+    // We can handle absolute and relative and we check if it is executable or not
+    const std::string absolutePath = validateExe(command);
+
+    //  const auto spath = p::search_path(command);
+    if (absolutePath.empty()) {
+      error = "Command not found or not executable: '" + command + "'";
     } else {
       // Have child send std_out and std_err to a stream for us. We're assuming
       // output is wanted.  FIXME: we could add a flag for this maybe?
+      const auto spath = fs::absolute(absolutePath);
       p::ipstream is;
       p::child c(spath, p::args(args), (p::std_out & p::std_err) > is);
 

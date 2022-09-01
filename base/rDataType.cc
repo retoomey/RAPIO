@@ -94,8 +94,40 @@ DataType::setDataAttributeValue(
 bool
 DataType::initFromGlobalAttributes()
 {
+  // These are optional at the DataType level
+  // since DataGrid might be general, etc. But we can
+  // use them generically if we see them.
+  getString(Constants::TypeName, myTypeName);
+
+  // -------------------------------------------------------
+  // Location
+  float latDegs  = 0;
+  float lonDegs  = 0;
+  float htMeters = 0;
+
+  bool success = true;
+
+  success &= getFloat(Constants::Latitude, latDegs);
+  success &= getFloat(Constants::Longitude, lonDegs);
+  success &= getFloat(Constants::Height, htMeters);
+  if (success) {
+    myLocation = LLH(latDegs, lonDegs, htMeters / 1000.0);
+  }
+
+  // -------------------------------------------------------
+  // Time
+  long timesecs = 0;
+
+  if (getLong(Constants::Time, timesecs)) {
+    // optional
+    double f = 0.0;
+    getDouble(Constants::FractionalTime, f);
+    // Cast long to time_t..hummm
+    myTime = Time(timesecs, f);
+  }
+
   return true;
-}
+} // DataType::initFromGlobalAttributes
 
 void
 DataType::updateGlobalAttributes(const std::string& encoded_type)

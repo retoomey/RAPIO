@@ -8,6 +8,26 @@
 using namespace rapio;
 using namespace std;
 
+DataGrid::DataGrid()
+{
+  myDataType = "DataGrid";
+}
+
+std::shared_ptr<DataGrid>
+DataGrid::Create(const std::vector<size_t>& dimsizes,
+  const std::vector<std::string>          & dimnames)
+{
+  auto datagridsp = std::make_shared<DataGrid>();
+
+  if (datagridsp == nullptr) {
+    LogSevere("Couldn't create DataGrid.\n");
+  } else {
+    datagridsp->declareDims(dimsizes, dimnames);
+  }
+  datagridsp->setTypeName("NONE");
+  return datagridsp;
+}
+
 std::shared_ptr<DataAttributeList>
 DataArray::getAttributes()
 {
@@ -197,9 +217,20 @@ DataGrid::createMetadata()
     // Individual array
     PTreeNode anArray;
 
-    auto name    = ar->getName();
-    auto indexes = ar->getDimIndexes();
+    auto name = ar->getName();
     anArray.put("name", name);
+
+    auto type = ar->getStorageType();
+    std::string typeStr = "Unknown";
+    switch (type) {
+        case FLOAT:
+          typeStr = "float32";
+          break;
+        case INT:
+          typeStr = "int32";
+          break;
+    }
+    anArray.put("type", typeStr);
 
     // Create a unique array key for shared memory
     // FIXME: Create shared_memory unique name
@@ -208,6 +239,7 @@ DataGrid::createMetadata()
 
     // Dimension Index Arrays
     PTreeNode aDimArrays;
+    auto indexes = ar->getDimIndexes();
     for (auto& index:indexes) {
       PTreeNode aDimArray;
       aDimArray.put("", index);
@@ -222,3 +254,20 @@ DataGrid::createMetadata()
   // -----------------------------------
   return theJson;
 } // DataGrid::createMetadata
+
+bool
+DataGrid::initFromGlobalAttributes()
+{
+  bool success = true;
+
+  DataType::initFromGlobalAttributes();
+  return success;
+}
+
+void
+DataGrid::updateGlobalAttributes(const std::string& encoded_type)
+{
+  // Note: Datatype updates the attributes -unit -value specials,
+  // so don't add any after this
+  DataType::updateGlobalAttributes(encoded_type);
+}

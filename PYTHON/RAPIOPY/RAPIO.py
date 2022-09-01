@@ -7,32 +7,63 @@
 import numpy as np
 import mmap, sys, json, os
 
+# Global base passed in from RAPIO
 rapioBaseFileName="pythonoutput"
+
+class rJsonDimension:
+  """ Store info for dimensions of a datatype """
+  def __init__(me, json):
+    me.name = json["name"]
+    me.size = int(json["size"])
+  def getName(me):
+    """ Get the name of this dimension """
+    return me.name
+  def getSize(me):
+    """ Get the size of this dimension """
+    return me.size
+
+class rJsonArray:
+  """ Store info for one array of a datatype """
+  def __init__(me, json):
+    me.name = json["name"]     # Name of array
+    me.type = json["type"]     # Type of data 
+    me.shm = json["shm"]       # Shared memory location
+    me.dims = []               # Dimension indexes
+    dims = json["Dimensions"] 
+    for d in dims:
+      me.dims.append(int(d))
+
+    # Debugging
+    #print("THE NAME IS "+me.name)
+    #print("THE TYPE IS "+me.type)
+    #print("THE SHARED IS "+me.shm)
+    #for d in me.dims:
+    #  print("   Dimension index: "+str(d))
+  def getName(me):
+    """ Get the name of this array """
+    return me.name
+  def getType(me):
+    """ Get the type of this array """
+    return me.type
+  def getSharedPath(me):
+    """ Get the shared memory path of this array """
+    return me.shm
+  def getDims(me):
+    """ Get the dimension vector """
+    return me.dims
 
 class RAPIO_DataType:
   """ Create RAPIO DataType """
   def __init__(me):
     
     # Read metadata
-    me.dimNames = []
-    me.dimSizes = []
+    me.dims = []
+    me.arrays = []
     me.readMetaJSON()
     #print(me.jsonDict)
      
-    # FIXME: To do, need to loop array list, pull each 
-    # one based on array shared memory location
-    # These will be the arrays contained in the metadata
-    # FIXME: Do we lazy load this?  Probably better
-    ppid = os.getppid()
-    key = "/dev/shm/"+str(ppid)+"-JSON"  # Match C++ code
-    x = me.getX()
-    y = me.getY()
-    me.primary2D = RAPIO_2DF(x, y, "1")
-    me.have2D = True
-   
-    pass
   def readMetaJSON(me):
-    """ Read the metadata json for a passes in datatype """
+    """ Read the metadata json for datatype """
     # For now at least, read globals as part of the DataType
     global rapioBaseFileName
     # ----------------------------------------------
@@ -48,6 +79,11 @@ class RAPIO_DataType:
       aSize = me.metamm.size()
       me.jsonText = me.metamm.read(aSize)
       me.jsonDict = json.loads(me.jsonText)
+
+      # Test print for debug
+      #jsonformat = json.dumps(me.jsonDict, indent=2)
+      #print(jsonformat)
+      #exit
     except:
       print("Cannot access JSON information at "+key)
       return
@@ -58,41 +94,87 @@ class RAPIO_DataType:
       outputinfo = me.jsonDict["RAPIOOutput"] # Match C++
       rapioBaseFileName=outputinfo["filebase"]
     except:
-      print("))))))Wasn't able to parse RAPIO output helper information")
+      print("Wasn't able to parse RAPIO output helper information")
 
     # Gather dimension info
     try:
       dims = me.jsonDict["Dimensions"]
       for d in dims:
-        me.dimNames.append(d["name"])
-        me.dimSizes.append(int(d["size"]))
-        #print("Added "+str(d["name"])+ " == " +str(d["size"]))
+        me.dims.append(rJsonDimension(d))
     except:
       print("Wasn't able to parse JSON dimensions")
 
+    # Gather array info
+    try:
+      arrays = me.jsonDict["Arrays"]
+      for a in arrays:
+        me.arrays.append(rJsonArray(a))
+    except:
+      print("Wasn't able to parse JSON arrays")
+    
     # Datatype of the data.  
     if "DataType" in me.jsonDict:
       me.datatype = me.jsonDict["DataType"]
     else:
       me.datatype = None
+
     pass
-  def getFloat2D(me):
+
+  def huntArray(me, atype, name="Primary"):
+    """ Hunt for array and its information """
+    for d in me.arrays:
+      if d.getName() == name:
+        if d.getType() == atype:
+          dimVector = d.getDims()
+          sizes = []
+          for v in dimVector:
+            sizes.append(me.dims[v])
+            return sizes, d.getSharedPath();
+    return None, None
+
+  def getFloat1D(me, name="Primary"):
+    """ Return 1D array, if any """
+    sizes, path = me.huntArray("float32", name)
+    if path != None:
+      return RAPIO_1DF(sizes, path).array
+    return None
+
+  def getInt1D(me, name="Primary"):
+    """ Return 1D array, if any """
+    sizes, path = me.huntArray("int32", name)
+    if path != None:
+      return RAPIO_1DI(sizes, path).array
+    return None
+
+  def getFloat2D(me, name="Primary"):
     """ Return primary 2D array, if any """
-    if me.have2D:
-      return me.primary2D.array
-    else:
-      return None
+    sizes, path = me.huntArray("float32", name)
+    if path != None:
+      return RAPIO_2DF(sizes, path).array
+    return None
+
+  def getInt2D(me, name="Primary"):
+    """ Return primary 2D array, if any """
+    sizes, path = me.huntArray("int32", name)
+    if path != None:
+      return RAPIO_2DI(sizes, path).array
+    return None
+
   def getDataType(me):
     """ Get the known DataType of the passed data """
     return me.datatype
+  def getDim(me, i):
+    """ Return dimension size at index i """
+    return me.dims[i].getSize()
   def getX(me):
     """ Get X of primary grid """
-    # FIXME: need to map it based on passes in array index
-    return me.dimSizes[0]
+    return me.getDim(0)
   def getY(me):
     """ Get Y of primary grid """
-    # FIXME: need to map it based on passes in array index
-    return me.dimSizes[1]
+    return me.getDim(1)
+  def getZ(me):
+    """ Get Z of primary grid """
+    return me.getDim(2)
   def metadata(me):
     print("Metadata start:")
     print(me.jsonText)
@@ -104,47 +186,37 @@ class RAPIO_DataType:
     if name in me.jsonDict:
       data = me.jsonDict[name]
     return data
-#
+
+# Not sure need these classes, will leave for now
 class RAPIO_2DF:
   """ Store access to a RAPIO 2D Float Grid """
-  def __init__(me, x, y, name):
-    ppid = os.getppid()
-    key = "/dev/shm/"+str(ppid)+"-array"+name  # Match C++ code
-    me.name = key
-    print("RAPIO 2D array with "+key)
-#    me.mmap = open("/dev/shm/Boost", "r+b") # Just like a file, but from RAM disk
-#    me.mm = mmap.mmap(me.mmap.fileno(), 0)  # Entire thing goes into RAM.  Love it
-    # Ok so we create a 'header' payload, describing the datatype
-    # then each array can map to a separate shared memory file for input
-    # python can create one for any outputs, and we read back in within c++...hummm
-
-    # Awesome that we can match C output here, at least on same OS
-    # FIXME: Gonna have to generalize for differenr dtype, etc...
+  def __init__(me, sizes, count):
+    x = sizes[0].getSize();
+    y = sizes[1].getSize();
+    me.name = count;
     me.array = np.memmap(key, dtype='float32', mode='r+', shape=(x,y))
-    # Attempt to 
-#    me.metammap = open("/dev/shm/BoostJSON", "r+b")
-#    me.metamm = mmap.mmap(me.metammap.fileno(), 0) # Entire thing
 
-#    me.meta = np.memmap("/dev/shm/BoostJSON", dtype='char', mode='r+', shape=(650,700))
-    #me.wrapper = np.array([(650, 700)], mmap, copy=False)
-    #me.wrapper = np.array(mmap, copy=False)
-    # Count = number of floats to read or 'all'
-    # offset in bytes into the mmap. Could be useful for advanced data type
-    # My concern is that this will make a copy, we don't want that
-    #me.goop = np.frombuffer(mmap, dtype=float, count=-1, offset=0)
-    #me.wrapper = np.array(me.mmap, copy=False) # wrap without copy
-    #print("Shape "+str(me.wrapper.shape))
-    #me.wrapper.shape = (650,700)
-   # me.wrapper = np.ascontiguousarray(me.mmap)
-    #np.copyto(wrapper, vertices.view(dtype=np.uint8), casting='no')
-# numpy.ndarray.tobytes(order='C')
-# dumps to C bytes...
-  def __del__(me):
-    #print("Destroy called "+me.name)
-    #close(me.mmap)
-#    me.mmap.close()
-    pass
-  pass
+class RAPIO_2DI:
+  """ Store access to a RAPIO 2D Int Grid """
+  def __init__(me, sizes, count):
+    x = sizes[0].getSize();
+    y = sizes[1].getSize();
+    me.name = count;
+    me.array = np.memmap(key, dtype='int32', mode='r+', shape=(x,y))
+
+class RAPIO_1DF:
+  """ Store access to a RAPIO 2D Float Grid """
+  def __init__(me, sizes, count):
+    x = sizes[0].getSize();
+    me.name = count;
+    me.array = np.memmap(count, dtype='float32', mode='r+', shape=(x))
+
+class RAPIO_1DI:
+  """ Store access to a RAPIO 2D Int Grid """
+  def __init__(me, sizes, count):
+    x = sizes[0].getSize();
+    me.name = count;
+    me.array = np.memmap(count, dtype='int32', mode='r+', shape=(x))
 
 def getDataType():
   """ Read the metadata, then create a DataType from it """

@@ -104,35 +104,87 @@ IOPython::runDataProcess(const std::string& command,
     // FIXME: We write the primary data array for now, if any.
     // FIXME: generalize by looping and handle the data TYPE such as float, int
     auto theDims = datagrid->getDims();
-    auto dataptr = datagrid->getFloat2D(Constants::PrimaryDataName);
-    if (dataptr == nullptr) {
-      LogSevere("Python call only allowed on 2D LatLonGrid and RadialSet at moment :(\n");
-      return std::vector<std::string>();
-    }
-    auto x       = theDims[0].size();
-    auto y       = theDims[1].size();
-    auto size    = x * y;                // actual data
-    auto memsize = size * sizeof(float); // a lot bigger.  FIXME: This depends on type of data!
-    auto& ref2   = dataptr->ref();
-    // ref2[0][0] = 999.0;
-    // ref2[1][1] = -99000.0;
 
-    std::string key = std::to_string(pid) + "-array" + std::to_string(1); // FIXME: loop
-    arrayNames.push_back(key);
-    shared_memory_object shdmem { open_or_create, key.c_str(), read_write };
-    shdmem.truncate(memsize);
-    // shdmem.get_name()
-    // shdmem.get_size()
-    mapped_region region2 { shdmem, read_write }; // read only, read_write?
-    float * at = static_cast<float *>(region2.get_address());
-    memcpy(at, ref2.data(), size * sizeof(float));
+
+    // -------------------------------------------------------
+    // START ARRAYS
+    //
+    // OK we gotta make it super generic to make it work
+    // for(size_t i=0; i< theDims.size(); i++){
+    //  LogSevere("DIM " << i << " size is " << theDims[i].size() << "\n");
+    // }
+    auto list = datagrid->getArrays();
+    size_t count = 0;
+    std::vector<void *> in, out;
+    std::vector<size_t> moveSizes;
+
+    // Shared memories to use per array
+    std::vector<shared_memory_object> memory;
+
+    for (auto l:list) {
+      // This gets the total count of the data before multiplying by the storage type
+      // FIXME: function
+      auto ddims       = l->getDimIndexes(); // std::vector<size_t>
+      const size_t s   = ddims.size();
+      size_t totalSize = 0;
+      if (s > 0) {
+        totalSize = theDims[ddims[0]].size();
+        if (s > 1) {
+          for (size_t i = 1; i < s; ++i) {
+            totalSize += theDims[ddims[i]].size();
+          }
+        }
+      }
+      // Total byte size from array.
+      // FIXME: function
+      size_t totalBytes = totalSize;
+      auto theType      = l->getStorageType();
+      if (theType == FLOAT) {
+        totalBytes = totalSize * sizeof(float);
+      } else if (theType == INT) {
+        totalBytes = totalSize * sizeof(int);
+      } else {
+        LogSevere("Declaring unknown type.\n");
+      }
+
+      // Save array file key list
+      std::string key = std::to_string(pid) + "-array" + std::to_string(count + 1);
+      count++;
+      arrayNames.push_back(key);
+
+      // Create shared memory with unique name matching process and array so
+      // we don't step on other RAPIO programs
+      memory.push_back({ open_or_create, key.c_str(), read_write });
+      auto& m = memory[memory.size() - 1];
+      m.truncate(totalBytes);
+      // m.get_name()
+      // m.get_size()
+      mapped_region region { m, read_write };
+
+      auto * at = region.get_address();
+      auto ref  = l->getRawDataPointer();
+      memcpy(at, ref, totalBytes); // At least it's a ram to ram copy
+      in.push_back(ref);           // should be ok to hold the pointer here, synchronous
+      moveSizes.push_back(totalBytes);
+    }
+    // END ARRAYS
+    // -------------------------------------------------------
 
     // ----------------------------------------------------
     // Call the python helper.
     OS::runProcess(command, output);
 
-    // Do we need to copy back?  Aren't we mapped to this?
-    memcpy(ref2.data(), at, size * sizeof(float));
+    // Copy back RAM to RAM, since our array isn't shared
+    // to begin with. Note we could maybe have python flag so
+    // we only do this if things were changed.  RAM copies
+    // are still pretty fast
+    size_t pushCount = 0;
+    for (auto l:list) {
+      mapped_region region { memory[pushCount], read_only };
+      auto * at = region.get_address();
+      memcpy(in[pushCount], at, moveSizes[pushCount]); // At least it's a ram to ram copy
+      pushCount++;
+    }
   }catch (const std::exception& e) {
     LogSevere("Failed to execute command " << command << "\n");
   }
@@ -156,12 +208,14 @@ IOPython::handleCommandParam(const std::string& command,
   std::vector<std::string> pieces;
 
   Strings::splitWithoutEnds(command, ',', &pieces);
-  if (pieces.size() < 2) {
+  auto s = pieces.size();
+
+  outputParams["scriptname"]   = (s > 0) ? pieces[0] : "";
+  outputParams["outputfolder"] = (s > 1) ? pieces[1] : "./";
+  if (s < 2) {
     LogSevere("PYTHON= format should be scriptpath,outputfolder\n");
     LogSevere("        Tried to parse from '" << command << "'\n");
   }
-  outputParams["scriptname"]   = pieces[0];
-  outputParams["outputfolder"] = pieces[1];
 }
 
 bool
@@ -181,29 +235,21 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
 
-  // Try a first time hunt for python...assuming which installed
-  // FIXME: Could be OS routine..
-  static bool havePython    = false;
-  static std::string python = "/usr/bin/python";
+  // Try a first time hunt for python
+  // This code could also be in OS maybe.  Given a list of relative
+  // or absolute paths, find a working exe
+  static bool huntedPython  = false;
+  static std::string python = "/usr/bin/pythonfail";
 
-  if (!havePython) {
-    // Try to find python...because of python2, 3, etc. This isn't clear-cut
-    // which needs to be installed
+  if (!huntedPython) {
+    huntedPython = true;
     std::vector<std::string> pythonnames = { "python", "python2", "python3" };
-    for (auto p:pythonnames) {
-      std::vector<std::string> pythonWhich;
-      OS::runProcess("which " + p, pythonWhich);
-      for (auto o:pythonWhich) {
-        if (o[0] == '/') {
-          python     = o;
-          havePython = true;
-          break;
-        }
-      }
-      if (havePython) { break; }
+    const auto search = OS::findValidExe(pythonnames);
+    if (!search.empty()) {
+      python = search;
     }
-    havePython = true;
   }
+
   auto p = keys["bin"]; // force override the python with setting.  Check for it?
 
   if (!p.empty()) { python = p; }
@@ -241,6 +287,14 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
       }
     }
     success = haveFileBack && haveFactoryBack;
+    #if 0
+    if (!haveFileBack) {
+      LogSevere("Your python needs to print RAPIO_FILE_OUT: filename\n");
+    }
+    if (!haveFactoryBack) {
+      LogSevere("Your python needs to print RAPIO_FACTORY_OUT: factory\n");
+    }
+    #endif
   } else {
     LogSevere("This is not a DataGrid or subclass, can't call Python yet with this\n");
   }

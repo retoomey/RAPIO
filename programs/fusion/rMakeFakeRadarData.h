@@ -32,6 +32,10 @@ public:
   virtual void
   execute() override;
 
+  /** Make the DataGrid for a python chart (first pass alpha) */
+  void
+  terrainAngleChart(RadialSet& rs);
+
 protected:
 
   /** Add fake radials to a RadialSet */
@@ -56,6 +60,9 @@ protected:
 
   /** Default radar value before terrain application */
   float myRadarValue;
+
+  /** Chart parameter */
+  std::string myChart;
 
   /** Azimuthial spacing in degrees */
   AngleDegs myAzimuthalDegs;

@@ -90,6 +90,11 @@ public:
   static std::string
   validateExe(const std::string& path);
 
+  /** Find a valid executable path from a list of relative and absolute paths,
+   * returning the first one.  For example: python, /usr/bin/python2 */
+  static std::string
+  findValidExe(const std::vector<std::string>& list);
+
   /**
    * Run a OS process, return true is successful and lines of output
    * Returns exit code of process or -1 on general failure

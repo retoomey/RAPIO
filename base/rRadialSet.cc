@@ -88,47 +88,13 @@ RadialSet::initFromGlobalAttributes()
 {
   bool success = true;
 
-  // Shared coded with LatLonGrid.  Gotta be careful moving 'up'
-  // since the DataGrid can read general netcdf which could be
-  // missing this information.  Still thinking about it.
+  DataType::initFromGlobalAttributes();
 
   // TypeName check, such as Reflectivity or Velocity
-  if (!getString(Constants::TypeName, myTypeName)) {
+  if (myTypeName == "not set") {
     LogSevere("Missing TypeName attribute such as Reflectivity.\n");
     success = false;
   }
-
-  // -------------------------------------------------------
-  // Location
-  float latDegs  = 0;
-  float lonDegs  = 0;
-  float htMeters = 0;
-
-  success &= getFloat(Constants::Latitude, latDegs);
-  success &= getFloat(Constants::Longitude, lonDegs);
-  success &= getFloat(Constants::Height, htMeters);
-  if (success) {
-    myLocation = LLH(latDegs, lonDegs, htMeters / 1000.0);
-  } else {
-    LogSevere("Missing Location attribute\n");
-  }
-
-  // -------------------------------------------------------
-  // Time
-  long timesecs = 0;
-
-  if (getLong(Constants::Time, timesecs)) {
-    // optional
-    double f = 0.0;
-    getDouble(Constants::FractionalTime, f);
-    // Cast long to time_t..hummm
-    myTime = Time(timesecs, f);
-  } else {
-    LogSevere("Missing Time attribute\n");
-    success = false;
-  }
-
-  // Radial set only
 
   // -------------------------------------------------------
   // Elevation
