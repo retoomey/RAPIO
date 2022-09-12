@@ -6,10 +6,6 @@
 
 using namespace rapio;
 
-// Unlike MRMS we don't read from XML.  Could always add this later
-// if we want to be able to dynamically change it.
-#define MIN_HT_ABOVE_TERRAIN_M 0
-
 // What's interesting so far, is that TerrainBlockage does the whole
 // virtual RadialSet overlay thing that RadialSetLookup does to cache values.
 // The question is, could we combine these somehow or share a common class or
@@ -21,18 +17,243 @@ const float ANGULAR_RESOLUTION = 360.0 / NUM_RAYS;
 const double GROUND = 0.1; // degs
 };
 
+TerrainBlockageBase::TerrainBlockageBase(std::shared_ptr<LatLonGrid> aDEM,
+  const LLH                                                          & radarLocation_in,
+  const LengthKMs                                                    & radarRangeKMs,
+  const std::string                                                  & radarName,
+  LengthKMs                                                          minTerrainKMs)
+  : myDEM(aDEM), myRadarLocation(radarLocation_in), myMinTerrainKMs(minTerrainKMs)
+{
+  // Make a lookup for our primary data layer, which is the height array
+  myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
+}
+
+//
+// Terrain height and height functions.  Feel like they could be cleaner
+//
+LengthKMs
+TerrainBlockageBase::
+getTerrainHeightKMs(const AngleDegs latDegs, const AngleDegs lonDegs)
+{
+  double aHeightMeters = myDEMLookup->getValueAtLL(latDegs, lonDegs);
+
+  // Still not sure on what this is in our DEM files
+  if (aHeightMeters == Constants::MissingData) {
+    return 0;
+  }
+  return aHeightMeters / 1000.0;
+}
+
+LengthKMs
+TerrainBlockageBase ::
+getHeightKM(const AngleDegs elevDegs,
+  const AngleDegs           azDegs,
+  const LengthKMs           rnKMs,
+  AngleDegs                 & outLatDegs,
+  AngleDegs                 & outLonDegs) const
+{
+  LengthKMs outHeightKMs;
+
+  Project::BeamPath_AzRangeToLatLon(
+    myRadarLocation.getLatitudeDeg(),
+    myRadarLocation.getLongitudeDeg(),
+    azDegs,
+    rnKMs,
+    elevDegs,
+
+    outHeightKMs,
+    outLatDegs,
+    outLonDegs
+  );
+
+  // FIXME: if this is necessary should be part of the project I think
+  if (outLonDegs <= -180) {
+    outLonDegs += 360;
+  }
+
+  if (outLatDegs > 180) {
+    outLatDegs -= 360;
+  }
+
+  // Add radar height location to raise beam to correct height
+  outHeightKMs += myRadarLocation.getHeightKM();
+
+  return (outHeightKMs);
+} // TerrainBlockage::getHeightKM
+
+LengthKMs
+TerrainBlockageBase ::
+getHeightAboveTerrainKM(const AngleDegs elevDegs,
+  const AngleDegs                       azDegs,
+  const LengthKMs                       rnKMs) const
+{
+  // Get projected height using radar height and angle info
+  AngleDegs outLatDegs, outLonDegs;
+  LengthKMs outHeightKMs = getHeightKM(elevDegs, azDegs, rnKMs,
+      outLatDegs, outLonDegs);
+
+  // If we have terrain, subtract it from the height.  If missing,
+  // we assume no change due to terrain.
+  double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
+
+  if (aHeightMeters != Constants::MissingData) {
+    outHeightKMs -= (aHeightMeters / 1000.0);
+  }
+  return (outHeightKMs);
+} // TerrainBlockage::getHeightAboveTerrainKM
+
+//
+// End terrain height and height functions.
+//
+
+float
+TerrainBlockageBase::
+getPowerDensity(float dist)
+{
+  float x = M_PI * 1.27 * dist;
+
+  if (x < 0.01) {
+    x = 0.01; // avoid divide-by-zero
+  }
+  float wt = (1 - exp(-x * x / 8.5)) / (x * x);
+
+  wt = wt * wt;
+  return (wt);
+}
+
+TerrainBlockage2::TerrainBlockage2(std::shared_ptr<LatLonGrid> aDEM,
+  const LLH                                                    & radarLocation_in,
+  const LengthKMs                                              & radarRangeKMs,
+  const std::string                                            & radarName)
+  : TerrainBlockageBase(aDEM, radarLocation_in, radarRangeKMs, radarName)
+{ }
+
+void
+TerrainBlockage2::calculateGate(
+  // Constants in 3D space information (could be instance)
+  LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+  // Variables in 3D space information.  Should we do center automatically?
+  AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+  // Greatest PBB so far
+  float& greatestPercentage,
+  // Final output percentage for gate
+  float& v)
+{
+  AngleDegs outLatDegs, outLonDegs;
+  AngleDegs topDegs    = elevDegs + 0.5 * beamWidthDegs;
+  AngleDegs bottomDegs = elevDegs - 0.5 * beamWidthDegs;
+
+  // We get back pretty the exact same height doing this, which makes me think heights are correct
+  // LengthKMs height = myTerrainBlockage->getHeightKM(topDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
+  LengthKMs topHeightKMs = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, topDegs);
+  LengthKMs c = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, elevDegs);
+
+  // Need elev/range to lat lon here (FIXME: cleaner)
+  // These give back same height
+  // LengthKMs d = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, bottomDegs);
+  // Using bottom of beam to get the terrain height..should be close no matter what 'vertical' angle we use.
+  LengthKMs d = getHeightKM(bottomDegs, centerAzDegs, centerRangeKMs, outLatDegs, outLonDegs);
+  double aBotTerrainHeightM = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
+
+  if (aBotTerrainHeightM == Constants::MissingData) {
+    aBotTerrainHeightM = 0;
+  }
+  LengthKMs TerrainKMs = aBotTerrainHeightM / 1000.0;
+
+  // LengthKMs TerrainKMs = getTerrainHeightKMs(outLatDegs, outLonDegs);
+
+  // Half power radius 'a' from Bech et all 2003, and python libraries
+  LengthKMs a = (centerRangeKMs * beamWidthDegs * DEG_TO_RAD) / 2.0;
+
+  ///
+  // FIXME: Can do averaging code here for terrain and beam...
+  //
+  LengthKMs y = TerrainKMs - c;
+
+  // Direct from the Bech Et Al 2003 paper, though it doesn't seem to change the results much,
+  // if anything it 'dampens' the terrain effect slightly
+  double fractionBlocked = 0.0;
+
+  if (y >= a) {
+    fractionBlocked = 1.0;
+  } else if (y <= -a) {
+    fractionBlocked = 0.0;
+  } else { // Partial Beam Blockage PBB calculation
+    double a2  = a * a;
+    double y2  = y * y;
+    double num = (y * sqrt(a2 - y2)) + (a2 * asin(y / a)) + (M_PI * a2 / 2.0); // Part of circle
+    double dem = M_PI * a2;                                                    // Full circle
+    fractionBlocked = num / dem;                                               // % covered
+  }
+
+  // Logic here: We want CBB for each gate, unless the beam touches the bottom..then
+  // it's 100% at that gate.  FIXME: I want to provide all the data at some point let
+  // something else determine the blockage logic.  This will be CBB where anywhere the
+  // beam bottom touches we have a 100% gate.
+  v = fractionBlocked;          // Start with PBB
+  if (v > greatestPercentage) { // and become CBB
+    greatestPercentage = v;
+  } else {
+    v = greatestPercentage;
+  }
+  // Either the final gate percentage will be the CBB, or 100% if touching earth:
+  if (d - TerrainKMs <= myMinTerrainKMs) { v = 1.0; } // less than min height of 0
+  if (v < 0) { v = 0; }
+  if (v > 1.0) { v = 1.0; }
+} // TerrainBlockage2::calculateGate
+
+void
+TerrainBlockageBase::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
+{
+  // FIXME: check radar name?
+  // FIXME: We could make a general RadialSet center gate marcher which could be useful.
+  RadialSet& rs = *rptr;
+  const AngleDegs elevDegs         = rs.getElevationDegs();
+  const AngleDegs myBeamWidthDegs  = 1.0; // FIXME
+  const LengthKMs stationHeightKMs = rs.getLocation().getHeightKM();
+
+  // Create output array for now on the RadialSet.  Permanently store for moment
+  // for debugging or outputting to netcdf, etc.
+  auto ta = rs.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
+  auto& terrainPercent = ta->ref();
+
+  // First gate distance
+  LengthKMs startKMs = rs.getDistanceToFirstGateM() / 1000.0;
+  auto& gwMs         = rs.getGateWidthVector()->ref(); // We 'could' check nulls here
+  auto& azDegs       = rs.getAzimuthVector()->ref();
+  auto& azSpaceDegs  = rs.getAzimuthSpacingVector()->ref();
+
+  // March over RadialSet
+  const size_t numRadials = rs.getNumRadials();
+  const size_t numGates   = rs.getNumGates();
+
+  for (int r = 0; r < numRadials; ++r) {
+    const AngleDegs azDeg        = azDegs[r];
+    const AngleDegs centerAzDegs = azDeg + (.5 * azSpaceDegs[r]);
+    LengthKMs rangeKMs = startKMs;
+
+    float greatestPercentage = -1000; // percentage
+
+    for (int g = 0; g < numGates; ++g) {
+      const LengthKMs gwKMs    = gwMs[g] / 1000.0;
+      LengthKMs centerRangeKMs = rangeKMs + (.5 * gwKMs);
+
+      calculateGate(stationHeightKMs, myBeamWidthDegs,
+        elevDegs, centerAzDegs, centerRangeKMs,
+        greatestPercentage, terrainPercent[r][g]);
+
+      rangeKMs += gwKMs;
+    }
+  }
+} // TerrainBlockageBase::calculateTerrainPerGate
+
 TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   const LLH                                                  & radarLocation_in,
   const LengthKMs                                            & radarRangeKMs,
   const std::string                                          & radarName)
-  :
-  myDEM(aDEM),
-  myRadarLocation(radarLocation_in),
+  : TerrainBlockageBase(aDEM, radarLocation_in, radarRangeKMs, radarName),
   myRays(NUM_RAYS)
 {
-  // Make a lookup for our primary data layer, which is the height array
-  myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
-
   // FIXME: I think this work code should be outside the constructor, even if it adds another
   // function call
   std::vector<PointBlockage> terrainPoints;
@@ -47,6 +268,21 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   //  addManualOverrides(radarName);
 }
 
+void
+TerrainBlockage::calculateGate(
+  // Constants in 3D space information (could be instance)
+  LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+  // Variables in 3D space information.  Should we do center automatically?
+  AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+  // Greatest PBB so far
+  float& greatestPercentage,
+  // Final output percentage for gate
+  float& v)
+{
+  // Hack for moment can merge at some point
+  v = computeFractionBlocked(beamWidthDegs, elevDegs, centerAzDegs, centerRangeKMs);
+}
+
 float
 TerrainBlockage::
 computeFractionBlocked(
@@ -55,16 +291,16 @@ computeFractionBlocked(
   const AngleDegs& binAzimuthDegs,
   const LengthKMs& binRangeKMs) const
 {
+  // Note: So with this cutoff we're not PBB or CBB
+  // The bottom of the beam has to clear the terrain by at least myMinTerrainKMs
   AngleDegs bottomDegs = beamElevationDegs - 0.5 * beamWidthDegs;
-  AngleDegs topDegs    = beamElevationDegs + 0.5 * beamWidthDegs;
+  LengthMs htKMs       = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs);
 
-  // The bottom of the beam has to clear the terrain by at least 150m
-  LengthMs htM = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs) * 1000; // to meters
-
-  if (htM < MIN_HT_ABOVE_TERRAIN_M) {
+  if (htKMs < myMinTerrainKMs) {
     return 1.0;
   }
 
+  AngleDegs topDegs   = beamElevationDegs + 0.5 * beamWidthDegs;
   AngleDegs minazDegs = binAzimuthDegs - 0.5 * beamWidthDegs;
   AngleDegs maxazDegs = binAzimuthDegs + 0.5 * beamWidthDegs;
 
@@ -112,172 +348,6 @@ computeFractionBlocked(
   return blocked;
 } // TerrainBlockage::computeFractionBlocked
 
-// -----------------------------------
-// Experimental and/or super calculations
-// for debugging/comparison
-float
-TerrainBlockage::
-computeCumulativePercentBlocked(
-  const AngleDegs& beamWidthDegs,
-  const AngleDegs& beamElevationDegs,
-  const AngleDegs& binAzimuthDegs,
-  const LengthKMs& binRangeKMs) const
-{
-  // Toomey: a vertical total cumulative blockage test.  Keeping for moment I was using this
-  // to get some comparisons to the more optimized algorithm.
-  // We march outward from the center until we get to the final
-  // range.  Cumulative blockage is the minimum point partial blockage up to the sample location.
-  // Of course this increased with range out from radar and duplicates possibly cached calculations,
-  // though it is silly simple to understand.
-  //  if (binRangeKMs <= 0) {
-  //    return 0;
-  //  }
-  //  if (binRangeKMs > 80) { // blocking past 80 or this will crawl
-  //    return 1.0;
-  //  }
-  LengthKMs deltaKMS = 1; // 0.10;  // 10 samples per kilometer....
-  size_t count       = binRangeKMs / deltaKMS;
-
-  float percent   = 0; // the lowest blockage possible
-  LengthKMs start = 0;
-
-  for (size_t i = 0; i < count; ++i) { // SLOOOOW, not sure how to cache with virtual rays, etc.
-    // We want largest cumulative blockage along the ray...
-    float newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
-        start);
-    if (newone > percent) { percent = newone; };
-    start += deltaKMS;
-  }
-  // Make sure and check the exact range value last just to get around roundoff/etc.
-  float newone = computePointPartialAt(beamWidthDegs, beamElevationDegs, binAzimuthDegs,
-      binRangeKMs);
-
-  if (newone > percent) { percent = newone; };
-
-  return percent;
-} // TerrainBlockage::computeCumulativePercentBlocked
-
-float
-TerrainBlockage::
-computePointPartialAt(
-  const AngleDegs& beamWidthDegs,
-  const AngleDegs& beamElevationDegs,
-  const AngleDegs& binAzimuthDegs,
-  const LengthKMs& binRangeKMs) const
-{
-  // Toomey: silly simple yet slow vertical partial beam blockage 'at the point',
-  // which is unique per location along the ray.  Did this for some testing/comparison.
-  // This doesn't do any horizontal beam blockage (say mountain on right or left, etc.)
-  AngleDegs topDegs    = beamElevationDegs + 0.5 * beamWidthDegs;
-  AngleDegs bottomDegs = beamElevationDegs - 0.5 * beamWidthDegs;
-
-  // This could all be optimized.
-  AngleDegs outLatDegs, outLonDegs, A, B;
-  double htMBOTTOM     = getHeightKM(bottomDegs, binAzimuthDegs, binRangeKMs, A, B) * 1000;                // meters
-  double htMTOP        = getHeightKM(topDegs, binAzimuthDegs, binRangeKMs, outLatDegs, outLonDegs) * 1000; // meters
-  double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
-
-  // partial beam blockage by terrain is simple right...just the vertical amount of coverage in the beam
-  if (aHeightMeters < htMBOTTOM) {
-    return 0.0; // terrain below the beam
-  }
-  if (aHeightMeters > htMTOP) {
-    return 1.0; // terrain above the beam
-  }
-
-  // Otherwise the percent of coverage of the distance between top and bottom
-  // This is stupid simple.  However, cummulative will require all the points along the ray
-  // BEFORE this one...so it will need to march outwards.
-  double rangeM       = htMTOP - htMBOTTOM;
-  double partTerrainM = aHeightMeters - htMBOTTOM;
-  double blocked      = partTerrainM / rangeM;
-
-  return blocked;
-} // TerrainBlockage::computePointPartialAt
-
-void
-TerrainBlockage::
-calculateTerrainPerGate(std::shared_ptr<RadialSet> rp)
-{
-  ProcessTimer("Simulating calculating terrain for incoming radial set took:\n", Log::Severity::INFO);
-  RadialSet& r       = *rp; // Ok maybe just pass the references, lol
-  size_t gates       = r.getNumGates();
-  size_t radials     = r.getNumRadials();
-  AngleDegs elevDegs = r.getElevationDegs();
-  // API a bit messy here but all this is for speed in loop
-  // Get the Azimuth data array azr[radial]
-  auto& azr = r.getAzimuthVector()->ref();
-  auto& gw  = r.getGateWidthVector()->ref();
-  // Create a terrain percentage tr[radial][gate]
-  auto ta  = r.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
-  auto& tr = ta->ref();
-  LengthKMs startKM = r.getDistanceToFirstGateM() / 1000.0;
-
-  // Humm the good thing of this is now we might be able to use the RadialSet beamwidth
-  // FIXME: Could use the beamwidth array, but I think the terrain algorithm also
-  // requires it in order to be correct.
-  const size_t beamWidth = 1;
-
-  for (size_t radial = 0; radial < radials; radial++) {
-    const AngleDegs azDegs = azr[radial];
-    LengthMs gateWidthM    = gw[radial];
-
-    // Range we can just use the starting range + half gateWidth
-    LengthKMs rangeKMs = startKM;
-
-    for (size_t gate = 0; gate < gates; gate++) {
-      const AngleDegs centerAzDegs = azDegs + (0.5 * beamWidth); // FIXME: use radial set data
-      tr[radial][gate] = computePointPartialAt(beamWidth,
-          elevDegs,
-          centerAzDegs,
-          rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
-      #if 0
-
-FIXME: Ok next pass allow choosing method to use, my simple polar or Lak.
-      They should be at least 'kinda' close if all the math / code is correct.
-
-      tr[radial][gate] = computeFractionBlocked(
-        beamWidth, // Technically not static, but start with 1 deg
-        elevDegs,
-        azDegs,
-        // Use the center of the gate for range
-        // rangeKMs+(gw[gate]/2000.0));  // gatewidth meters, /2 for half gate /1000 to km
-        rangeKMs + (gateWidthM / 2000.0)); // gatewidth meters, /2 for half gate /1000 to km
-      #endif // if 0
-
-      rangeKMs += (gateWidthM / 1000.0);
-    }
-  }
-
-  // Cumulative percent march on each radial
-  for (size_t radial = 0; radial < radials; radial++) {
-    float greatest = -1000; // percentage
-    for (size_t gate = 0; gate < gates; gate++) {
-      float& v = tr[radial][gate]; // percentage
-      if (v > greatest) {
-        greatest = v;
-      } else {
-        v = greatest;
-      }
-    }
-  }
-} // TerrainBlockage::calculateTerrainPerGate
-
-float
-TerrainBlockage::
-getPowerDensity(float dist)
-{
-  float x = M_PI * 1.27 * dist;
-
-  if (x < 0.01) {
-    x = 0.01; // avoid divide-by-zero
-  }
-  float wt = (1 - exp(-x * x / 8.5)) / (x * x);
-
-  wt = wt * wt;
-  return (wt);
-}
-
 float
 TerrainBlockage :: findAveragePassed(const std::vector<float>& passed)
 {
@@ -296,64 +366,6 @@ TerrainBlockage :: findAveragePassed(const std::vector<float>& passed)
   }
   return (sum_passed / sum_wt);
 }
-
-LengthKMs
-TerrainBlockage ::
-getHeightKM(const AngleDegs elevDegs,
-  const AngleDegs           azDegs,
-  const LengthKMs           rnKMs,
-  AngleDegs                 & outLatDegs,
-  AngleDegs                 & outLonDegs) const
-{
-  LengthKMs outHeightKMs;
-
-  Project::BeamPath_AzRangeToLatLon(
-    myRadarLocation.getLatitudeDeg(),
-    myRadarLocation.getLongitudeDeg(),
-    azDegs,
-    rnKMs,
-    elevDegs,
-
-    outHeightKMs,
-    outLatDegs,
-    outLonDegs
-  );
-
-  // FIXME: if this is necessary should be part of the project I think
-  if (outLonDegs <= -180) {
-    outLonDegs += 360;
-  }
-
-  if (outLatDegs > 180) {
-    outLatDegs -= 360;
-  }
-
-  // Add radar height location to raise beam to correct height
-  outHeightKMs += myRadarLocation.getHeightKM();
-
-  return (outHeightKMs);
-} // TerrainBlockage::getHeightKM
-
-LengthKMs
-TerrainBlockage ::
-getHeightAboveTerrainKM(const AngleDegs elevDegs,
-  const AngleDegs                       azDegs,
-  const LengthKMs                       rnKMs) const
-{
-  // Get projected height using radar height and angle info
-  AngleDegs outLatDegs, outLonDegs;
-  LengthKMs outHeightKMs = getHeightKM(elevDegs, azDegs, rnKMs,
-      outLatDegs, outLonDegs);
-
-  // If we have terrain, subtract it from the height.  If missing,
-  // we assume no change due to terrain.
-  double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
-
-  if (aHeightMeters != Constants::MissingData) {
-    outHeightKMs -= (aHeightMeters / 1000.0);
-  }
-  return (outHeightKMs);
-} // TerrainBlockage::getHeightAboveTerrainKM
 
 // --------------------------------------------------------------------
 // Below here are the creation functions, pre reading making cache

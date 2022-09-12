@@ -77,18 +77,18 @@ MakeFakeRadarData::execute()
   Time myTime;
   LengthMs firstGateDistanceMeters = 0;
 
-  auto myRadialSet = RadialSet::Create("Reflectivity", "dbZ", myCenter, myTime,
+  auto myRadialSet = RadialSet::Create("Percentage", "dbZ", myCenter, myTime,
       elevAngleDegs, firstGateDistanceMeters, myNumRadials, myNumGates);
 
-  myRadialSet->setRadarName("KTLX");
+  myRadialSet->setRadarName(myRadarName);
   myRadialSet->setTime(Time::CurrentTime());
 
   // Fill me.  FIXME: Make API easier maybe
   auto dataPtr = myRadialSet->getFloat2D();
 
   dataPtr->fill(Constants::DataUnavailable);
-  auto & data = myRadialSet->getFloat2D()->ref();
-  auto & rs   = *myRadialSet;
+  //  auto & data = myRadialSet->getFloat2D()->ref();
+  auto & rs = *myRadialSet;
 
   // Create terrain blockage
   if (myDEM != nullptr) {
@@ -108,17 +108,23 @@ MakeFakeRadarData::execute()
 
   // BeamBlockage test alpha
   rs.setTypeName("BeamBlockage");
-  rs.setDataAttributeValue(Constants::ColorMap, "Fuzzy");
+  // rs.setDataAttributeValue(Constants::ColorMap, "Fuzzy");
+  rs.setDataAttributeValue(Constants::ColorMap, "Percentage");
   rs.setDataAttributeValue(Constants::Unit, "dimensionless");
-  //  auto & data = rs.getFloat2D()->ref();
+
+  // RadialSet is indexed Azimuth, Gates...
+  auto & data = rs.getFloat2D()->ref();
+
   for (size_t i = 0; i < myNumGates; ++i) {
     for (size_t j = 0; j < myNumRadials; ++j) {
-      data[i][j] = 1 - (data[i][j] / myRadarValue); // humm
+      data[j][i] = 1 - (data[j][i] / myRadarValue);
     }
   }
   IODataType::write(myRadialSet, "test-beam.netcdf");
 
   terrainAngleChart(rs);
+
+  // terrainAngleChart2(rs);
 } // MakeFakeRadarData::execute
 
 void
@@ -186,10 +192,14 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
     // DEM projection.
     auto myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
 
+    LLH theCenter = rs.getLocation();
+    LengthKMs stationHeightKMs = theCenter.getHeightKM();
+
     // auto& gw  = rs.getGateWidthVector()->ref();
     LengthKMs startKM  = rs.getDistanceToFirstGateM() / 1000.0;
     LengthKMs rangeKMs = startKM;
-    double gwKMs       = myGateWidthM / 1000.0;
+    LengthKMs aTerrain;
+    double gwKMs = myGateWidthM / 1000.0;
     for (int i = 0; i < myNumGates; ++i) {
       // Get height for gate center
       // Height of bottom of beam...
@@ -197,29 +207,169 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
       AngleDegs topDegs    = elevDegs + 0.5 * myBeamWidthDegs;
       AngleDegs bottomDegs = elevDegs - 0.5 * myBeamWidthDegs;
 
-      float fractionBlocked = myTerrainBlockage->computePointPartialAt(myBeamWidthDegs,
-          elevDegs,
-          centerAzDegs,
-          (i * gwKMs) + (.5 * gwKMs)); // plus half gatewidth for center
-      percent1[i] = fractionBlocked;
+      // Full calculate each time to any possible cumluative addition roundoff
+      // or comment out to do addition
+      rangeKMs = startKM + ((i * gwKMs) + (.5 * gwKMs)); // plus half gatewidth for center of gate
 
-      LengthKMs height = myTerrainBlockage->getHeightKM(topDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
+      // We get back pretty the exact same height doing this, which makes me think heights are correct
+      // LengthKMs height = myTerrainBlockage->getHeightKM(topDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
+      LengthKMs height = Project::attenuationHeightKMs(stationHeightKMs, rangeKMs, topDegs);
       top[i] = height;
 
-      height  = myTerrainBlockage->getHeightKM(elevDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
+      height = Project::attenuationHeightKMs(stationHeightKMs, rangeKMs, elevDegs);
+      // height  = myTerrainBlockage->getHeightKM(elevDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
       base[i] = height;
 
+      // I also want the lat/lon at the location for the stock terrain lookup.  Though I'm wondering now
+      // if we make a polar terrain..which is kinda what Lak did, lol.  The issue is we kinda need terrain
+      // values for a range over the gate width.  We could do terrain for each and then average, or
+      // we can average the results.  The approach they used was average the terrain first, eh.  Less math
+      // doing that, not sure it's accurate.  Interesting the centerAzDegs here jus gives us info to
+      // get the lat/lon.  So we could make a function 'just' for that maybe
+      // FIXME: BeamPath_AzRangeToLatLon should just take a height parameter
       height = myTerrainBlockage->getHeightKM(bottomDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
       bot[i] = height;
 
+      float fractionBlocked = 0;
+      // My silly linear thing which isn't going to work with a 3D beam
+      // float fractionBlocked = myTerrainBlockage->computePointPartialAt(myBeamWidthDegs,
+      //    elevDegs,
+      //    centerAzDegs,
+      //    rangeKMs,
+      //    aTerrain);
+
       double aHeightMeters = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs);
-      // Humm getting missing..we never check for it do we?
+      // Humm getting missing..we never check for it do we in the TerrainBlockage?
       if (aHeightMeters == Constants::MissingData) {
         terrain[i] = 0;
       } else {
         terrain[i] = aHeightMeters / 1000.0;
       }
+      // Ok half power radius is based on beamwidth AND range.  Kill me, this took forever
+      // to figure out.
+      // Please make a difference for the love of all that is holy...
+      // Battan (1973)
 
+
+      // Ok let's try the formula from the 2003 Bech paper...
+
+      // These do height at range independent of azimuth direction...
+      LengthKMs c = Project::attenuationHeightKMs(stationHeightKMs, rangeKMs, elevDegs);
+      LengthKMs d = Project::attenuationHeightKMs(stationHeightKMs, rangeKMs, bottomDegs);
+
+      // But gonna try averaging the terrain across the beamwidth circle diameter.  I think we
+      // could use an artificial radialset and sample in 'rings' around the gates.  We really want
+      // the full ray-traced terrain filling the circle.  This could be done on a GPU with shaders
+      // fairly quickly which could be interesting.
+      // So in theory, if we just averaged y from Bech then this would be the dy they talk about...
+      // so we just need to get terrain in a sample range and do a y average.
+      // Why not we can try anything at this point?
+
+      // LengthKMs a = c-d;   // a    Not 100% sure.  Seems right, eh what the heck.  Should be circle radius
+      //                              NOOOOOOOOOOOOOOOOoooooooooooooooooooo
+
+      // LengthKMs a = (rangeKMs *  myBeamWidthDegs*DEG_TO_RAD)/2.0;  // Kill me..  KILL ME
+      LengthKMs a = (rangeKMs * myBeamWidthDegs * DEG_TO_RAD) / 2.0; // Kill me..  KILL ME
+      //      if (a < 0){ a = -a;} /// "shouldn't" hit anything
+
+      // Ok y is the value from circle center up or down to terrain.  This we want to supersample over
+      // the circle.  So if we go from -.5 beamwidth left to +.5 beamwidth right in azimuth, should work...
+      // Lak is doing something similar with the rays.  I just want to see how much the results are
+      // affected by this
+      size_t numSamples = 500;
+
+      LengthKMs TerrainAverageKMs = 0;
+      AngleDegs left     = centerAzDegs - .5 * myBeamWidthDegs;
+      AngleDegs right    = centerAzDegs + 5 * myBeamWidthDegs;
+      AngleDegs deltaDeg = (right - left) / numSamples;
+
+      // Scan dy over the diameter of Bech's beam circle
+      // This is my complete non-meteorological idea..to terrain sample over the entire gate area
+      // to get the terrain value used.
+      LengthKMs TerrainMax    = -9999;
+      LengthKMs TerrainCenter = -9999;
+      for (size_t k = 0; k < numSamples; k++) {
+        AngleDegs terrainElevDegs = 0; // elevDegs or project to ground...wow no difference still?
+        // start of gate range sample
+        LengthKMs h1 = myTerrainBlockage->getHeightKM(terrainElevDegs, left, rangeKMs - (.5 * gwKMs), outLatDegs,
+            outLonDegs);
+        LengthKMs t1 = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs); // not just yet
+        if (t1 == Constants::MissingData) {                               // FIXME: API this should be internally done
+          t1 = 0;
+        } else {
+          t1 = t1 / 1000.0;
+        }
+
+        // middle of gate range sample
+        LengthKMs h2 = myTerrainBlockage->getHeightKM(terrainElevDegs, left, rangeKMs, outLatDegs, outLonDegs);
+        LengthKMs t2 = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs); // not just yet
+        if (t2 == Constants::MissingData) {
+          t2 = 0;
+        } else {
+          t2 = t2 / 1000.0;
+        }
+        if (k == 0) {
+          TerrainCenter = t2;
+        }
+
+        // end of gate range terrain sample
+        LengthKMs h3 = myTerrainBlockage->getHeightKM(terrainElevDegs, left, rangeKMs + (.5 * gwKMs), outLatDegs,
+            outLonDegs);
+        LengthKMs t3 = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs); // not just yet
+        if (t3 == Constants::MissingData) {                               // FIXME: API this should be internally done
+          t3 = 0;
+        } else {
+          t3 = t3 / 1000.0;
+        }
+
+        if (t1 > TerrainMax) { TerrainMax = t1; }
+        if (t2 > TerrainMax) { TerrainMax = t2; }
+        if (t3 > TerrainMax) { TerrainMax = t3; }
+
+        TerrainAverageKMs = TerrainAverageKMs + t1 + t2 + t3;
+
+        // LogSevere(" totalY, y current, degs , terrain " << totalY << ", " << yi << ", " << left << ", " <<  "\n");
+        left += deltaDeg;
+      }
+      TerrainAverageKMs /= (numSamples * 3);
+
+      LengthKMs y = TerrainCenter - c;
+      // LengthKMs y = TerrainAverageKMs-c;
+      // LengthKMs y = TerrainMax-c;
+      // LengthKMs y = terrain[i]-c;
+
+      // Direct from the Bech Et Al 2003 paper, though it doesn't seem to change the results much,
+      // if anything it 'dampens' the terrain effect slightly
+      if (y >= a) {
+        fractionBlocked = 1.0;
+      } else if (y <= -a) {
+        fractionBlocked = 0.0;
+      } else { // Partial Beam Blockage PBB calculation
+        double a2  = a * a;
+        double y2  = y * y;
+        double num = (y * sqrt(a2 - y2)) + (a2 * asin(y / a)) + (M_PI * a2 / 2.0); // Part of circle
+        double dem = M_PI * a2;                                                    // Full circle
+
+        // Ok metpy does it different ?  really? Is this the same output
+        // This is just an optimization I think canceling a
+        //      double ya = y/a;
+        //      double num = (ya*sqrt(a2 - y2))+(a*asin(ya))+(M_PI * a/2.0); // Part of circle
+        //      double dem = M_PI*a; // Full circle
+        fractionBlocked = num / dem; // % covered
+      }
+
+      percent1[i] = fractionBlocked;
+
+      #if 0
+      test passes
+      float diff = terrain[i] - aTerrain;
+      if (diff < 0) { diff = -diff; }
+
+      if (terrain[i] != aTerrain) { // KM !=  KM
+        // LogSevere("TERRAIN? " << terrain[i] << " != " << aTerrain << "\n");
+        LogSevere("TERRAIN? " << diff << "\n");
+      }
+      #endif
       range[i] = rangeKMs;
 
       // Next x on graph...
@@ -240,7 +390,64 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
     IODataType::write(myDataGrid, "test-grid.netcdf");
   }
+  LogSevere("EXECUTED 4  Max terrain in gate.\n");
 } // MakeFakeRadarData::terrainAngleChart
+
+void
+MakeFakeRadarData::terrainAngleChart2(RadialSet& rs)
+{
+  // Keeping this for moment..but also have copy in TerrainBlockage,
+  // more work needed...
+  const size_t numX = myNumRadials;
+  const size_t numY = myNumGates;
+
+  // We 'could' make a RadialSet here I think, or not
+  auto myDataGrid = DataGrid::Create({ numX, numY }, { "Azimuth", "Gate" });
+
+  // DEM projection. FIXME: make global probably better
+  auto myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
+
+  std::string chartTitle = "Terrain";
+
+  myDataGrid->setString("ChartTitle", chartTitle);
+
+  myDataGrid->addFloat2D("TerrainHeight", "Meters", { 0, 1 }); // Y1  API just addFloat, use the dimensions
+  auto & base = myDataGrid->getFloat2DRef("TerrainHeight");
+
+  // auto & azData    = rs.getFloat1D("Azimuth")->ref();
+
+  // Kinda stock for marching over radial set, should be a visitor probably
+  LengthKMs startKM = rs.getDistanceToFirstGateM() / 1000.0;
+  LengthKMs rangeKMs = startKM;
+  AngleDegs outLatDegs, outLonDegs;
+  LengthKMs gwKMs           = myGateWidthM / 1000.0;
+  AngleDegs terrainElevDegs = 0; // elevDegs or project to ground
+  AngleDegs azDegs          = 0;
+
+  for (int r = 0; r < numX; ++r) {
+    for (int g = 0; g < numY; ++g) {
+      rangeKMs = startKM + ((g * gwKMs) + (.5 * gwKMs)); // plus half gatewidth for center of gate
+      // start of gate range sample
+      LengthKMs h1 =
+        myTerrainBlockage->getHeightKM(terrainElevDegs, azDegs + (.5 * myAzimuthalDegs), rangeKMs - (.5 * gwKMs),
+          outLatDegs, outLonDegs);
+      LengthKMs t1 = myDEMLookup->getValueAtLL(outLatDegs, outLonDegs); // not just yet
+      if (t1 == Constants::MissingData) {                               // FIXME: API this should be internally done
+        t1 = 0;
+      } else {
+        t1 = t1 / 1000.0;
+      }
+      if (t1 < 0) { t1 = 0; } // temp pin kilometers for graphing
+      if (t1 > 2) { t1 = 2; }
+      base[r][g] = t1;
+      // base[r][g] = g; // r max 360, g max 20  azimuth, gate.
+      // base[x][g] ==> going down variable...also goes it in matlib.  So it's really y.
+    }
+    azDegs += myAzimuthalDegs;
+  }
+
+  IODataType::write(myDataGrid, "angle-chart-data.netcdf");
+} // MakeFakeRadarData::terrainAngleChart2
 
 void
 MakeFakeRadarData::addRadials(RadialSet& rs)
@@ -267,6 +474,8 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
 
   auto & data = rs.getFloat2D()->ref();
 
+  LengthKMs aTerrain;
+
   for (int j = 0; j < myNumRadials; ++j) {
     azData[j] = azDegs; // Set azimuth degrees
 
@@ -275,10 +484,10 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
     for (int i = 0; i < myNumGates; ++i) {
       float gateValue = 60.0 * i / myNumGates; // without terrain
       if (myTerrainBlockage != nullptr) {
-        float fractionBlocked = myTerrainBlockage->computePointPartialAt(myBeamWidthDegs,
-            elevDegs,
-            centerAzDegs,
-            (i * gwKMs) + (.5 * gwKMs)); // plus half gatewidth for center
+        //  float fractionBlocked = myTerrainBlockage->computePointPartialAt(myBeamWidthDegs,
+        //      elevDegs,
+        //      centerAzDegs,
+        //      (i * gwKMs) + (.5 * gwKMs), aTerrain); // plus half gatewidth for center
 
         /*
          *      float fractionBlocked = myTerrainBlockage->computeFractionBlocked(myBeamWidthDegs,
@@ -287,13 +496,14 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
          *          i * gwKMs);
          */
         // gateValue = myRadarValue * (1 - fractionBlocked);
-        gateValue = fractionBlocked;
+        //  gateValue = fractionBlocked;
+        gateValue = aTerrain * 1000.0; // terrain in meters
       }
-      data[j][i] = gateValue;
+      // Ok WHAT to store in the netcdf...?
+      data[j][i] = gateValue; // data value
     }
     azDegs += myAzimuthalDegs;
   }
-
 
   // Cumulative in polar is sooo much easier than grid
   // Silly simple make it the greatest along the radial path
@@ -303,8 +513,8 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
       float& v = data[j][i];
 
       // Partial
-      v = myRadarValue * (1 - v);
-      continue;
+      // v = myRadarValue * (1 - v);
+      // continue;
 
       // Cumulative
       if (v > greatest) {
@@ -312,12 +522,16 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
       } else {
         v = greatest;
       }
-      // Change final value from percent to data value
-      if (greatest > .50) {
-        v = Constants::DataUnavailable;
-      } else {
-        v = myRadarValue * (1 - greatest);
-      }
+
+      /*
+       *  Leave as cummulative or set to converted value, right?
+       *    // Change final value from percent to data value
+       *    if (greatest > .50) {
+       *      v = Constants::DataUnavailable;
+       *    } else {
+       *      v = myRadarValue * (1 - greatest);
+       *    }
+       */
     }
   }
 } // MakeFakeRadarData::addRadials

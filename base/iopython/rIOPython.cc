@@ -131,7 +131,7 @@ IOPython::runDataProcess(const std::string& command,
         totalSize = theDims[ddims[0]].size();
         if (s > 1) {
           for (size_t i = 1; i < s; ++i) {
-            totalSize += theDims[ddims[i]].size();
+            totalSize *= theDims[ddims[i]].size(); // Multiply dimensions
           }
         }
       }

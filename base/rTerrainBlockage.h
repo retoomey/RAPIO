@@ -6,13 +6,141 @@
 #include "rLatLonGrid.h"
 #include "rConstants.h"
 
-#include <boost/multi_array.hpp>
 #include <limits>
 
 namespace rapio
 {
+/** Base class for creating a terrain blockage algorithm for a particular radar.
+ * @author Robert Toomey
+ */
+class TerrainBlockageBase : public Utility
+{
+public:
+  /** For STL use only. */
+  TerrainBlockageBase()
+  { }
+
+  /** Create TerrainBlockage given a DEM and radar information */
+  TerrainBlockageBase(std::shared_ptr<LatLonGrid> aDEM,
+    const LLH                                     & radarLocation,
+    const LengthKMs                               & radarRangeKMs, // Range after this is zero blockage
+    const std::string                             & radarName,
+    LengthKMs                                     minTerrain = 0);
+
+  // --------------------------------------------------
+  // Accessing DEM heights
+  // --------------------------------------------------
+
+  /** Get the height from the DEM nearest lat/lon location */
+  LengthKMs
+  getTerrainHeightKMs(const AngleDegs latDegs, const AngleDegs lonDegs);
+
+  /** Computes and returns the height above the terrain
+   *  given the elev, az and range from the radar. */
+  LengthKMs
+  getHeightKM(const AngleDegs elevDegs,
+    const AngleDegs           azDegs,
+    const LengthKMs           rnKMs,
+    AngleDegs                 & outLatDegs,
+    AngleDegs                 & outLonDegs) const;
+
+  /** Computes and returns the height above the terrain
+   *  given the elev, az and range from the radar. */
+  LengthKMs
+  getHeightAboveTerrainKM(const AngleDegs elevDegs,
+    const AngleDegs                       azDegs,
+    const LengthKMs                       rnKMs) const;
+
+  // --------------------------------------------------
+  // Meteorology functions.  Maybe separate to a dedicated class
+  // --------------------------------------------------
+
+  /** Doppler Radar and Weather Observations, 2nd Edition.
+   *
+   * Calculate  eq. 3.2a of Doviak-Zrnic
+   * gives the power density function
+   *   theta -- angular distance from the beam axis = dist * beamwidth
+   *   sin(theta) is approx theta = dist*beamwidth
+   *  lambda (eq.3.2b) = beamwidth*D / 1.27
+   *  thus, Dsin(theta)/lambda = D * dist * beamwidth / (D*beamwidth/1.27)
+   *                           = 1.27 * dist
+   *  and the weight is ( J_2(pi*1.27*dist)/(pi*1.27*dist)^2 )^2
+   *     dist is between -1/2 and 1/2, so abs(pi*1.27*dist) < 2
+   *  in this range, J_2(x) is approximately 1 - exp(-x^2/8.5)
+   *
+   */
+  inline static float
+  getPowerDensity(float dist); // FIXME: what units?
+
+  // --------------------------------------------------
+  // Worker functions to actualy calculate blockages
+  // --------------------------------------------------
+
+  /** Calculate terrain blockage percentage for a given RadialSet for each gate, and
+   * add a 2D array to the RadialSet called TerrainPercent to store this value */
+  void
+  calculateTerrainPerGate(std::shared_ptr<RadialSet> r);
+
+  /** First attempt at general per gate method */
+  virtual void
+  calculateGate(
+    // Constants in 3D space information
+    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+    // Gate information.  For now do center automatically.
+    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+    // Largest PBB
+    float& greatestPercentage,
+    // Final output percentage for gate
+    float& v) = 0;
+
+protected:
+
+  /** Store terrain LatLonGrid for radar.  The data is height in meters */
+  std::shared_ptr<LatLonGrid> myDEM;
+
+  /** Store LatLonGrid projection for our DEM's height layer */
+  std::shared_ptr<LatLonGridProjection> myDEMLookup;
+
+  /** Stores center location of the radar used */
+  LLH myRadarLocation;
+
+  /** The minimum bottem beam terrain height before 100% blockage */
+  LengthKMs myMinTerrainKMs;
+};
+
+/** Attempt to make a faster polar terrain blockage
+ * @author Robert Toomey
+ */
+class TerrainBlockage2 : public TerrainBlockageBase
+{
+public:
+  /** For STL use only. */
+  TerrainBlockage2()
+  { }
+
+  /** This should be a LatLonGrid such that the data are
+   *  altitude above mean-sea-level in meters.
+   */
+  TerrainBlockage2(std::shared_ptr<LatLonGrid> aDEM,
+    const LLH                                  & radarLocation,
+    const LengthKMs                            & radarRangeKMs,
+    const std::string                          & radarName);
+
+  /** First attempt at general per gate method */
+  virtual void
+  calculateGate(
+    // Constants in 3D space information
+    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+    // Gate information.  For now do center automatically.
+    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+    // Largest PBB
+    float& greatestPercentage,
+    // Final output percentage for gate
+    float& v);
+};
+
 /* A class for storage information of blockage ranges for the terrain algorithm,
- * @author Lakshman, Toomey
+ * @author Lakshman
  */
 class PointBlockage : public Data
 {
@@ -57,17 +185,11 @@ public:
 };
 
 /**
- * Computes the amount by which each radar bin is blocked
- * by terrain.  Interestingly, this is really another kind of 'lookup'
- * for a Radar, so merging that idea with RadialSetLookup might be a good
- * idea at some point.
+ * Terrain blockage from MRMS
  *
- * Differences to MRMS version:
- *   --the MIN_HT_ABOUT_TERRAIN is current hardcoded.  It's assumed meters
- *
- * @author Lakshman, Toomey
+ * @author Lakshman
  */
-class TerrainBlockage : public Utility
+class TerrainBlockage : public TerrainBlockageBase
 {
 public:
   /** For STL use only. */
@@ -79,8 +201,20 @@ public:
    */
   TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
     const LLH                                 & radarLocation,
-    const LengthKMs                           & radarRangeKMs, // max range radar
+    const LengthKMs                           & radarRangeKMs,
     const std::string                         & radarName);
+
+  /** First attempt at general per gate method */
+  virtual void
+  calculateGate(
+    // Constants in 3D space information
+    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+    // Gate information.  For now do center automatically.
+    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+    // Largest PBB
+    float& greatestPercentage,
+    // Final output percentage for gate
+    float& v) override;
 
   /**
    *
@@ -105,58 +239,6 @@ public:
     const AngleDegs                     & binAzimuthDegs,
     const LengthKMs                     & binRangeKMs) const;
 
-  /** Toomey: Experimental/Debugging function.  Hard calculate the vertical total cumulative blockage, or the
-   * min point of each partial. This is slow since I'm iterating from radar center each time.  */
-  float
-  computeCumulativePercentBlocked(
-    const AngleDegs& beamWidthDegs,
-    const AngleDegs& beamElevationDegs,
-    const AngleDegs& binAzimuthDegs,
-    const LengthKMs& binRangeKMs) const;
-
-  /** Toomey: Experimental/Debugging function.   Hard calculate the partial beam vertical blockage at a particular
-   * point. This is simple to understand.  No hoizontal beam width assumed here */
-  float
-  computePointPartialAt(
-    const AngleDegs& beamWidthDegs,
-    const AngleDegs& beamElevationDegs,
-    const AngleDegs& binAzimuthDegs,
-    const LengthKMs& binRangeKMs) const;
-
-  /** Calculate terrain blockage percentage for a given RadialSet for each gate, and
-   * add a 2D array to the RadialSet called TerrainPercentage to store this value */
-  void
-  calculateTerrainPerGate(std::shared_ptr<RadialSet> r);
-
-  /** Computes and returns the height above the terrain
-   *  given the elev, az and range from the radar. */
-  LengthKMs
-  getHeightKM(const AngleDegs elevDegs,
-    const AngleDegs           azDegs,
-    const LengthKMs           rnKMs,
-    AngleDegs                 & outLatDegs,
-    AngleDegs                 & outLonDegs) const;
-
-  /** Computes and returns the height above the terrain
-   *  given the elev, az and range from the radar. */
-  LengthKMs
-  getHeightAboveTerrainKM(const AngleDegs elevDegs,
-    const AngleDegs                       azDegs,
-    const LengthKMs                       rnKMs) const;
-
-  /** Calculate  eq. 3.2a of Doviak-Zrnic gives the power density function
-   *   theta -- angular distance from the beam axis = dist * beamwidth
-   *   sin(theta) is approx theta = dist*beamwidth
-   *  lambda (eq.3.2b) = beamwidth*D / 1.27
-   *  thus, Dsin(theta)/lambda = D * dist * beamwidth / (D*beamwidth/1.27)
-   *                           = 1.27 * dist
-   *  and the weight is ( J_2(pi*1.27*dist)/(pi*1.27*dist)^2 )^2
-   *     dist is between -1/2 and 1/2, so abs(pi*1.27*dist) < 2
-   *  in this range, J_2(x) is approximately 1 - exp(-x^2/8.5)
-   */
-  static float
-  getPowerDensity(float dist);
-
   /** Prune rays. (used by computeBeamBlockage) */
   static void
   pruneRayBlockage(std::vector<PointBlockage>& orig);
@@ -169,15 +251,6 @@ public:
   findAveragePassed(const std::vector<float>& pencil_passed);
 
 protected:
-
-  /** Store terrain Lat Lon Grid for radar.  The data is heights */
-  std::shared_ptr<LatLonGrid> myDEM;
-
-  /** Store LatLonGrid projection for our DEM's height layer */
-  std::shared_ptr<LatLonGridProjection> myDEMLookup;
-
-  /** Stores center location of the radar used */
-  LLH myRadarLocation;
 
   /** Calculated beam blockage lookup.  A vector of vectors...so the question is
    * how much lookup speed do we lose here?  If we made a 2D array with max length

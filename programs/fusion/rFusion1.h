@@ -262,7 +262,7 @@ public:
   void
   createLLHtoAzRangeElevProjection(
     AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-    std::shared_ptr<TerrainBlockage> terrain,
+    std::shared_ptr<TerrainBlockageBase> terrain,
     LLCoverageArea& g);
 
   /** Process a new record/datatype */
@@ -283,7 +283,7 @@ protected:
   std::shared_ptr<ElevationVolume> myElevationVolume;
 
   /** Store terrain blockage */
-  std::shared_ptr<TerrainBlockage> myTerrainBlockage;
+  std::shared_ptr<TerrainBlockageBase> myTerrainBlockage;
 
   /** Store first radar name.  Currently we can only handle 1 radar */
   std::string myRadarName;

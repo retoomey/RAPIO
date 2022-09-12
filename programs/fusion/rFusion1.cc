@@ -281,7 +281,7 @@ RAPIOFusionOneAlg::createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverage
 void
 RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-  std::shared_ptr<TerrainBlockage> terrain,
+  std::shared_ptr<TerrainBlockageBase> terrain,
   LLCoverageArea& g)
 {
   /** Start by assuming azimuth spacing of 1 degree. */
@@ -480,8 +480,11 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Terrain blockage algorithm is a lookup with a given range and density
       myTerrainBlockage = nullptr;
       if (myDEM != nullptr) {
+        // FIXME: Flag at some point
+        // myTerrainBlockage =
+        //  std::make_shared<TerrainBlockage>(myDEM, r->getLocation(), TerrainRange, name);
         myTerrainBlockage =
-          std::make_shared<TerrainBlockage>(myDEM, r->getLocation(), TerrainRange, name);
+          std::make_shared<TerrainBlockage2>(myDEM, r->getLocation(), TerrainRange, name);
       }
     }
 

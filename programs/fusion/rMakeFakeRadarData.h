@@ -36,6 +36,10 @@ public:
   void
   terrainAngleChart(RadialSet& rs);
 
+  /** Make the DataGrid for a python chart (first pass alpha) */
+  void
+  terrainAngleChart2(RadialSet& rs);
+
 protected:
 
   /** Add fake radials to a RadialSet */

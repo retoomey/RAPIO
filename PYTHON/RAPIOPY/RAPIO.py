@@ -127,9 +127,9 @@ class RAPIO_DataType:
         if d.getType() == atype:
           dimVector = d.getDims()
           sizes = []
-          for v in dimVector:
-            sizes.append(me.dims[v])
-            return sizes, d.getSharedPath();
+          for v in dimVector: # dim indexes
+            sizes.append(me.dims[v]) # dimension for the index
+          return sizes, d.getSharedPath();
     return None, None
 
   def getFloat1D(me, name="Primary"):
@@ -192,9 +192,12 @@ class RAPIO_2DF:
   """ Store access to a RAPIO 2D Float Grid """
   def __init__(me, sizes, count):
     x = sizes[0].getSize();
+    print("RAPIO 2D x : "+str(x))
     y = sizes[1].getSize();
+    print("RAPIO 2D y : "+str(y))
     me.name = count;
-    me.array = np.memmap(key, dtype='float32', mode='r+', shape=(x,y))
+    # Match up index order with netcdf and boost
+    me.array = np.memmap(count, dtype='float32', mode='r+', shape=(x,y), order='C')
 
 class RAPIO_2DI:
   """ Store access to a RAPIO 2D Int Grid """
@@ -202,21 +205,21 @@ class RAPIO_2DI:
     x = sizes[0].getSize();
     y = sizes[1].getSize();
     me.name = count;
-    me.array = np.memmap(key, dtype='int32', mode='r+', shape=(x,y))
+    me.array = np.memmap(count, dtype='int32', mode='r+', shape=(x,y), order='C')
 
 class RAPIO_1DF:
   """ Store access to a RAPIO 2D Float Grid """
   def __init__(me, sizes, count):
     x = sizes[0].getSize();
     me.name = count;
-    me.array = np.memmap(count, dtype='float32', mode='r+', shape=(x))
+    me.array = np.memmap(count, dtype='float32', mode='r+', shape=(x), order='C')
 
 class RAPIO_1DI:
   """ Store access to a RAPIO 2D Int Grid """
   def __init__(me, sizes, count):
     x = sizes[0].getSize();
     me.name = count;
-    me.array = np.memmap(count, dtype='int32', mode='r+', shape=(x))
+    me.array = np.memmap(count, dtype='int32', mode='r+', shape=(x), order='C')
 
 def getDataType():
   """ Read the metadata, then create a DataType from it """
