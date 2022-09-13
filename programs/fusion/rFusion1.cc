@@ -34,6 +34,19 @@ public:
     bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
 
     // ------------------------------------------------------------------------------
+    // Filter out values where terrain blockage more than 50%
+    // FIXME: Part of me wonders if terrain height should be here to, but we'd need a field
+    // for it.
+    if (vv.lLayer.terrainPercent > .50) {
+      vv.lLayer.value = Constants::DataUnavailable;
+      haveLower       = false;
+    }
+    if (vv.lLayer.terrainPercent > .50) {
+      vv.lLayer.value = Constants::DataUnavailable;
+      haveUpper       = false;
+    }
+
+    // ------------------------------------------------------------------------------
     // In beamwidth calculation
     //
     // FIXME: might be able to optimize by not always calculating in beam width,
@@ -81,14 +94,6 @@ public:
       } else {
         // v = Constants::DataUnavailable; // 00
       }
-    }
-
-    // ------------------------------------------------------------------------------
-    // Value calculation
-    // Test terrain percent.  We're gonna show unavailable for every blocking lower tilt over 50%
-    if (vv.lLayer.terrainPercent > .50) {
-      vv.dataValue = Constants::DataUnavailable;
-      return;
     }
 
     const double& lValue = vv.lLayer.value;

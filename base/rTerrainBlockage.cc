@@ -22,7 +22,7 @@ TerrainBlockageBase::TerrainBlockageBase(std::shared_ptr<LatLonGrid> aDEM,
   const LengthKMs                                                    & radarRangeKMs,
   const std::string                                                  & radarName,
   LengthKMs                                                          minTerrainKMs)
-  : myDEM(aDEM), myRadarLocation(radarLocation_in), myMinTerrainKMs(minTerrainKMs)
+  : myDEM(aDEM), myRadarLocation(radarLocation_in), myMinTerrainKMs(minTerrainKMs), myMaxRangeKMs(radarRangeKMs)
 {
   // Make a lookup for our primary data layer, which is the height array
   myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
@@ -129,7 +129,7 @@ TerrainBlockage2::TerrainBlockage2(std::shared_ptr<LatLonGrid> aDEM,
 { }
 
 void
-TerrainBlockage2::calculateGate(
+TerrainBlockage2::calculatePercentBlocked(
   // Constants in 3D space information (could be instance)
   LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
   // Variables in 3D space information.  Should we do center automatically?
@@ -190,7 +190,10 @@ TerrainBlockage2::calculateGate(
   // it's 100% at that gate.  FIXME: I want to provide all the data at some point let
   // something else determine the blockage logic.  This will be CBB where anywhere the
   // beam bottom touches we have a 100% gate.
-  v = fractionBlocked;          // Start with PBB
+  v = fractionBlocked; // Start with PBB
+  if (v < 0) { v = 0; }
+  if (v > 1.0) { v = 1.0; }
+
   if (v > greatestPercentage) { // and become CBB
     greatestPercentage = v;
   } else {
@@ -198,9 +201,7 @@ TerrainBlockage2::calculateGate(
   }
   // Either the final gate percentage will be the CBB, or 100% if touching earth:
   if (d - TerrainKMs <= myMinTerrainKMs) { v = 1.0; } // less than min height of 0
-  if (v < 0) { v = 0; }
-  if (v > 1.0) { v = 1.0; }
-} // TerrainBlockage2::calculateGate
+}                                                     // TerrainBlockage2::calculateGate
 
 void
 TerrainBlockageBase::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
@@ -230,15 +231,15 @@ TerrainBlockageBase::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
   for (int r = 0; r < numRadials; ++r) {
     const AngleDegs azDeg        = azDegs[r];
     const AngleDegs centerAzDegs = azDeg + (.5 * azSpaceDegs[r]);
+    const LengthKMs gwKMs        = gwMs[r] / 1000.0; // Constant per radial
     LengthKMs rangeKMs = startKMs;
 
     float greatestPercentage = -1000; // percentage
 
     for (int g = 0; g < numGates; ++g) {
-      const LengthKMs gwKMs    = gwMs[g] / 1000.0;
       LengthKMs centerRangeKMs = rangeKMs + (.5 * gwKMs);
 
-      calculateGate(stationHeightKMs, myBeamWidthDegs,
+      calculatePercentBlocked(stationHeightKMs, myBeamWidthDegs,
         elevDegs, centerAzDegs, centerRangeKMs,
         greatestPercentage, terrainPercent[r][g]);
 
@@ -252,24 +253,33 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   const LengthKMs                                            & radarRangeKMs,
   const std::string                                          & radarName)
   : TerrainBlockageBase(aDEM, radarLocation_in, radarRangeKMs, radarName),
-  myRays(NUM_RAYS)
+  myRays(NUM_RAYS),
+  myInitialized(false)
+{ }
+
+void
+TerrainBlockage::initialize()
 {
-  // FIXME: I think this work code should be outside the constructor, even if it adds another
-  // function call
-  std::vector<PointBlockage> terrainPoints;
+  // Lak's method requires creating a virtual radialset overlay for
+  // integrating the blockage within sub 'pencils' of the azimuth coverage area
+  if (!myInitialized) {
+    std::vector<PointBlockage> terrainPoints;
 
-  // This makes a 2D array of azimuth values the same dimensions as the DEM
-  computeTerrainPoints(radarRangeKMs, terrainPoints);
+    // This makes a 2D array of azimuth values the same dimensions as the DEM
+    computeTerrainPoints(myMaxRangeKMs, terrainPoints);
 
-  // More calculation...eh 'maybe' this go all into one function, don't know
-  computeBeamBlockage(terrainPoints);
+    // More calculation...eh 'maybe' this go all into one function, don't know
+    computeBeamBlockage(terrainPoints);
 
-  // Ignoring this for now, doesn't appear to be used, at least for merger
-  //  addManualOverrides(radarName);
+    // Ignoring this for now, doesn't appear to be used, at least for merger
+    //  addManualOverrides(radarName);
+
+    myInitialized = true;
+  }
 }
 
 void
-TerrainBlockage::calculateGate(
+TerrainBlockage::calculatePercentBlocked(
   // Constants in 3D space information (could be instance)
   LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
   // Variables in 3D space information.  Should we do center automatically?
@@ -279,30 +289,23 @@ TerrainBlockage::calculateGate(
   // Final output percentage for gate
   float& v)
 {
-  // Hack for moment can merge at some point
-  v = computeFractionBlocked(beamWidthDegs, elevDegs, centerAzDegs, centerRangeKMs);
-}
-
-float
-TerrainBlockage::
-computeFractionBlocked(
-  const AngleDegs& beamWidthDegs,
-  const AngleDegs& beamElevationDegs,
-  const AngleDegs& binAzimuthDegs,
-  const LengthKMs& binRangeKMs) const
-{
-  // Note: So with this cutoff we're not PBB or CBB
-  // The bottom of the beam has to clear the terrain by at least myMinTerrainKMs
-  AngleDegs bottomDegs = beamElevationDegs - 0.5 * beamWidthDegs;
-  LengthMs htKMs       = getHeightAboveTerrainKM(bottomDegs, binAzimuthDegs, binRangeKMs);
-
-  if (htKMs < myMinTerrainKMs) {
-    return 1.0;
+  if (!myInitialized) {
+    initialize();
   }
 
-  AngleDegs topDegs   = beamElevationDegs + 0.5 * beamWidthDegs;
-  AngleDegs minazDegs = binAzimuthDegs - 0.5 * beamWidthDegs;
-  AngleDegs maxazDegs = binAzimuthDegs + 0.5 * beamWidthDegs;
+  // Note: So with this cutoff we're not PBB or CBB
+  // The bottom of the beam has to clear the terrain by at least myMinTerrainKMs
+  AngleDegs bottomDegs = elevDegs - 0.5 * beamWidthDegs;
+  LengthMs htKMs       = getHeightAboveTerrainKM(bottomDegs, centerAzDegs, centerRangeKMs);
+
+  if (htKMs < myMinTerrainKMs) {
+    v = 1.0;
+    return;
+  }
+
+  AngleDegs topDegs   = elevDegs + 0.5 * beamWidthDegs;
+  AngleDegs minazDegs = centerAzDegs - 0.5 * beamWidthDegs;
+  AngleDegs maxazDegs = centerAzDegs + 0.5 * beamWidthDegs;
 
   size_t startRay = PointBlockage::getRayNumber(minazDegs);
   size_t endRay   = PointBlockage::getRayNumber(maxazDegs);
@@ -323,8 +326,8 @@ computeFractionBlocked(
       const PointBlockage& block = blockers[i];
 
       // then find the minimum passed through them at this range & elev
-      if ( (binRangeKMs > block.startKMs) &&
-        (binRangeKMs < block.endKMs) &&
+      if ( (centerRangeKMs > block.startKMs) &&
+        (centerRangeKMs < block.endKMs) &&
         (block.elevDegs > bottomDegs) )
       {
         // fraction passed ...
@@ -345,7 +348,7 @@ computeFractionBlocked(
 
   float blocked = 1 - avgPassed;
 
-  return blocked;
+  v = blocked;
 } // TerrainBlockage::computeFractionBlocked
 
 float

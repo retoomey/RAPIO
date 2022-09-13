@@ -73,7 +73,7 @@ public:
   getPowerDensity(float dist); // FIXME: what units?
 
   // --------------------------------------------------
-  // Worker functions to actualy calculate blockages
+  // Worker functions to actually calculate blockages
   // --------------------------------------------------
 
   /** Calculate terrain blockage percentage for a given RadialSet for each gate, and
@@ -81,9 +81,9 @@ public:
   void
   calculateTerrainPerGate(std::shared_ptr<RadialSet> r);
 
-  /** First attempt at general per gate method */
+  /** Calculate percentage blocked information for a point */
   virtual void
-  calculateGate(
+  calculatePercentBlocked(
     // Constants in 3D space information
     LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
     // Gate information.  For now do center automatically.
@@ -106,6 +106,9 @@ protected:
 
   /** The minimum bottem beam terrain height before 100% blockage */
   LengthKMs myMinTerrainKMs;
+
+  /** The max range before terrain has zero effect */
+  LengthKMs myMaxRangeKMs;
 };
 
 /** Attempt to make a faster polar terrain blockage
@@ -128,7 +131,7 @@ public:
 
   /** First attempt at general per gate method */
   virtual void
-  calculateGate(
+  calculatePercentBlocked(
     // Constants in 3D space information
     LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
     // Gate information.  For now do center automatically.
@@ -204,17 +207,10 @@ public:
     const LengthKMs                           & radarRangeKMs,
     const std::string                         & radarName);
 
-  /** First attempt at general per gate method */
-  virtual void
-  calculateGate(
-    // Constants in 3D space information
-    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
-    // Gate information.  For now do center automatically.
-    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-    // Largest PBB
-    float& greatestPercentage,
-    // Final output percentage for gate
-    float& v) override;
+  /** Lak's method requires creating a virtual radialset overlay for
+   * integrating the blockage within sub 'pencils' of the azimuth coverage area */
+  void
+  initialize();
 
   /**
    *
@@ -233,11 +229,18 @@ public:
    * Weather Radar Coverage over the Contiguous United States. Weather and Forecasting:
    * Vol. 17, No. 4, pp. 927
    */
-  float
-  computeFractionBlocked(const AngleDegs& beamWidthDegs,
-    const AngleDegs                     & beamElevationDegs,
-    const AngleDegs                     & binAzimuthDegs,
-    const LengthKMs                     & binRangeKMs) const;
+  virtual void
+  calculatePercentBlocked(
+    // Constants in 3D space information
+    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+    // Gate information.  For now do center automatically.
+    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
+    // Largest PBB
+    float& greatestPercentage,
+    // Final output percentage for gate
+    float& v) override;
+
+protected:
 
   /** Prune rays. (used by computeBeamBlockage) */
   static void
@@ -250,14 +253,15 @@ public:
   static float
   findAveragePassed(const std::vector<float>& pencil_passed);
 
-protected:
-
   /** Calculated beam blockage lookup.  A vector of vectors...so the question is
    * how much lookup speed do we lose here?  If we made a 2D array with max length
    * we could lookup values a lot faster.  We'll see */
   std::vector<std::vector<PointBlockage> > myRays;
 
 private:
+
+  /** Have we computed terrain points, etc.? */
+  bool myInitialized;
 
   /** Compute terrain points */
   void
