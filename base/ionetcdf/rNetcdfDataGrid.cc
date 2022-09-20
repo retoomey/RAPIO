@@ -161,6 +161,34 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       void * data = nullptr;
 
       // Read all the arrays we support at the moment
+
+      // Handle the special sparse data MRMS format first...
+      bool handled = false;
+      if ((ndimsp2 == 1) && (xtypep == NC_FLOAT)) {
+        if ((sparse) and (name == aTypeName)) {
+          // SPARSE DATA READ
+          // Expand it to 2D float array from sparse...
+          // We're assuming it's using first two dimensions on 2D sparse...
+          auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
+          IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
+            Constants::MissingData, Constants::RangeFolded, *data2DF);
+          handled = true;
+        }
+      }
+
+      // All others, generically try to create array using DataGrid factory
+      if (!handled) {
+        DataArrayType theDataArrayType;
+        if (IONetcdf::netcdfToDataArrayType(xtypep, theDataArrayType)) {
+          data    = dataGrid.factoryGetRawDataPointer(arrayName, units, theDataArrayType, dimindexes);
+          handled = (data != nullptr);
+        }
+        if (!handled) {
+          LogSevere("Skipping netcdf array '" << arrayName << "' since type not yet handled.\n");
+        }
+      }
+      #if 0
+      // Read all the arrays we support at the moment
       if (ndimsp2 == 1) { // 1D float
         if (xtypep == NC_FLOAT) {
           if ((sparse) and (name == aTypeName)) {
@@ -185,16 +213,19 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
           data = data2DF->getRawDataPointer();
         }
       }
-      // Read generally into array
-      if (data != nullptr) {
-        NETCDF(nc_get_var(ncid, varid, data));
-      }
+      #endif // if 0
+      if (handled) {
+        // Read generally into array
+        if (data != nullptr) {
+          NETCDF(nc_get_var(ncid, varid, data));
+        }
 
 
-      // This should fill in attributes per array, such as the stored Units in wdssii
-      auto theList = dataGridSP->getAttributes(arrayName);
-      if (theList != nullptr) {
-        IONetcdf::getAttributes(ncid, varid, theList);
+        // This should fill in attributes per array, such as the stored Units in wdssii
+        auto theList = dataGridSP->getAttributes(arrayName);
+        if (theList != nullptr) {
+          IONetcdf::getAttributes(ncid, varid, theList);
+        }
       }
     }
     // End generic read 2D?

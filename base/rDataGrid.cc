@@ -85,68 +85,6 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
   }
 } // DataGrid::declareDims
 
-// 1D stuff ----------------------------------------------------------
-//
-
-std::shared_ptr<Array<float, 1> >
-DataGrid::addFloat1D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dimindexes)
-{
-  // Map index to dimension sizes
-  const auto size = myDims[dimindexes[0]].size();
-  auto a = add<Array<float, 1> >(name, units, Array<float, 1>({ size }), FLOAT, dimindexes);
-
-  return a;
-}
-
-std::shared_ptr<Array<int, 1> >
-DataGrid::addInt1D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dimindexes)
-{
-  // Map index to dimension sizes
-  const auto size = myDims[dimindexes[0]].size();
-  auto a = add<Array<int, 1> >(name, units, Array<int, 1>({ size }), INT, dimindexes);
-
-  return a;
-}
-
-// 2D stuff ----------------------------------------------------------
-//
-
-std::shared_ptr<Array<float, 2> >
-DataGrid::addFloat2D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dimindexes)
-{
-  // Map index to dimension sizes
-  const auto x = myDims[dimindexes[0]].size();
-  const auto y = myDims[dimindexes[1]].size();
-
-  // We always add/replace since index order could change or it could be different
-  // type, etc.  Maybe possibly faster by updating over replacing
-  auto a = add<Array<float, 2> >(name, units, Array<float, 2>({ x, y }), FLOAT, dimindexes);
-
-  return a;
-}
-
-// 3D stuff ----------------------------------------------------------
-//
-
-std::shared_ptr<Array<float, 3> >
-DataGrid::addFloat3D(const std::string& name,
-  const std::string& units, const std::vector<size_t>& dimindexes)
-{
-  // Map index to dimension sizes
-  const auto x = myDims[dimindexes[0]].size();
-  const auto y = myDims[dimindexes[1]].size();
-  const auto z = myDims[dimindexes[2]].size();
-
-  // We always add/replace since index order could change or it could be different
-  // type, etc.  Maybe possibly faster by updating over replacing
-  auto a = add<Array<float, 3> >(name, units, Array<float, 3>({ x, y, z }), FLOAT, dimindexes);
-
-  return a;
-}
-
 namespace {
 void
 setAttributes(std::shared_ptr<PTreeData> json, std::shared_ptr<DataAttributeList> attribs)
@@ -270,4 +208,46 @@ DataGrid::updateGlobalAttributes(const std::string& encoded_type)
   // Note: Datatype updates the attributes -unit -value specials,
   // so don't add any after this
   DataType::updateGlobalAttributes(encoded_type);
+}
+
+// Define a case for creating a particular type/dimension.
+#define DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, DIMENSION) \
+  if ((dimCount == DIMENSION) && (type == ARRAYTYPE)) { \
+    LogSevere("Created " << name << " with " << units << "\n"); \
+    auto d = add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes); \
+    return d->getRawDataPointer(); \
+  }
+
+// Define dimensions we support
+// Make sure to sync these calls with the DeclareArrayMethods in the .h
+#define DeclareArrayFactoryMethods(TYPE, ARRAYTYPE) \
+  DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, 1) \
+  DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, 2) \
+  DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, 3)
+
+void *
+DataGrid::factoryGetRawDataPointer(const std::string& name, const std::string& units, const DataArrayType& type,
+  const std::vector<size_t>& dimindexes)
+{
+  // A typeless factory for creating/adding and returning a working pointer to array.
+  // Note: This stay in scope only if the DataGrid does, so this is typically used for generic
+  // array creation by readers
+  // Don't think there's a way to pass dynamic parameters to the templates, so we have this
+  // messy thing..unless BOOST lets you do it at lower level somewhere.
+  //
+  // Make sure these calls match up with the DeclareArrayMethods call in the header...
+
+  const size_t dimCount = dimindexes.size();
+
+  DeclareArrayFactoryMethods(char, BYTE)
+
+  DeclareArrayFactoryMethods(short, SHORT)
+
+  DeclareArrayFactoryMethods(int, INT)
+
+  DeclareArrayFactoryMethods(float, FLOAT)
+
+  DeclareArrayFactoryMethods(double, DOUBLE)
+
+  return nullptr;
 }

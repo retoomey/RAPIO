@@ -70,8 +70,16 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
 {
   // 1. Use the suffix lookup table for empty factory
   if (factory.empty()) {
-    const std::string suffix = OS::getRootFileExtension(path);
-    factory = ConfigIODataType::getIODataTypeFromSuffix(suffix);
+    factory = OS::getRootFileExtension(path); // Try suffix as factory
+  }
+  // 1.b Override factory with lookup table
+  std::string alias = ConfigIODataType::getIODataTypeFromSuffix(factory);
+
+  if (!alias.empty()) {
+    if (factory != alias) {
+      LogInfo("Mapping builder '" << factory << "' to '" << alias << "' from configuration.\n");
+    }
+    factory = alias; // map from filesuffix to found factory
   }
 
   // 2. If still no factory, and the datatype exists, try to use the read factory for output
@@ -92,7 +100,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
 
   Strings::toLower(factory);
   return Factory<IODataType>::get(factory, "IODataType:" + factory);
-}
+} // IODataType::getFactory
 
 namespace {
 // Check the read factory was set by a submodule, if not use that module by default

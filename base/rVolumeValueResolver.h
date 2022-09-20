@@ -10,12 +10,28 @@ namespace rapio {
 class LayerValue : public Utility
 {
 public:
-  double value;         ///< Value of data at layer
-  float terrainPercent; ///< Terrain blockage, if available otherwise 0
-  LengthKMs heightKMs;  ///< Height in kilometers at the point of interest
-  LengthKMs rangeKMs;   ///< Rangein kilometers along the beampath
-  int gate;             ///< Gate number at the point of interest, or -1
-  int radial;           ///< Radial number at the point of interest, or -1
+  double value;            ///< Value of data at layer
+  bool haveTerrainPercent; ///< Do we have terrain blockage percentage
+  float terrainPercent;    ///< Terrain blockage, if available otherwise 0
+  LengthKMs heightKMs;     ///< Height in kilometers at the point of interest
+  LengthKMs rangeKMs;      ///< Range in kilometers along the beampath
+  int gate;                ///< Gate number at the point of interest, or -1
+  int radial;              ///< Radial number at the point of interest, or -1
+  AngleDegs elevation;     ///< 'True' elevation angle used for this layer value
+
+  /** Clear all the values to default unset state */
+  void
+  clear()
+  {
+    value = Constants::DataUnavailable;
+    haveTerrainPercent = false;
+    terrainPercent     = 0;
+    heightKMs = 0;
+    rangeKMs  = 0;
+    gate      = -1;
+    radial    = -1;
+    elevation = Constants::MissingData;
+  }
 };
 
 /** Organizer for in/out of a VolumeValueResolver.

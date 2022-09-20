@@ -12,12 +12,46 @@
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
 
+/* Macro for declaring all the convenience methods to help avoid mistyping
+ * This creates getByte1D, getByte1DRef and addByte1D methods, etc.
+ */
+#define DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, DIMENSION) \
+  inline std::shared_ptr<Array<TYPE, DIMENSION> > \
+  get ## TYPESTRING ## DIMENSION ## D(const std::string& name = Constants::PrimaryDataName) \
+  { \
+    return get<Array<TYPE, DIMENSION> >(name); \
+  } \
+  inline boost::multi_array<TYPE, DIMENSION>& \
+  get ## TYPESTRING ## DIMENSION ## DRef(const std::string& name = Constants::PrimaryDataName) \
+  { \
+    return get<Array<TYPE, DIMENSION> >(name)->ref(); \
+  } \
+  std::shared_ptr<Array<TYPE, DIMENSION> > \
+  add ## TYPESTRING ## DIMENSION ## D(const std::string& name, const std::string& units, \
+    const std::vector<size_t>& dimindexes) \
+  { \
+    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes); \
+  }
+
+/** Declare up to 3D array access, haven't seen a need for anything higher 'yet'.
+ * Make sure to sync these with the DeclareArrayFactoryMethods in the .cc  */
+#define DeclareArrayMethods(TYPESTRING, TYPE, ARRAYTYPE) \
+  DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 1) \
+  DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 2) \
+  DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 3)
+
 namespace rapio {
-/** Type marker of data to help out reader/writers */
+/** Type marker of data to help out reader/writers.  This is modeled mostly on netcdf since we use it
+ * the most of all file formats. */
 enum DataArrayType {
-  UNKNOWN,
-  FLOAT,
-  INT
+  BYTE, ///< 1 byte int.  Use for char, byte, unsigned byte
+  // UBYTE, -- issue here is netcdf3 doesn't handle, so we'll keep the netcdf3 basic types for backward compatibility
+  // CHAR, -- Allowed, but can just use byte
+  SHORT, ///< 2 byte integer
+  INT,   ///< 4 bytes on 32 and 64 bit systems
+  FLOAT, ///< 4 byte floating point
+  DOUBLE ///< 8 byte floating point if needed.  All our default classes use float for now
+  // STRING FIXME: to do, could be useful.  Though will take special logic I think
 };
 
 /* Wraps a named array of data with metadata
@@ -217,84 +251,6 @@ public:
     }
   }
 
-  // 1D stuff ----------------------------------------------------------
-
-  /** Get back object so can call methods on it */
-  inline std::shared_ptr<Array<float, 1> >
-  getFloat1D(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 1> >(name);
-  }
-
-  /** Get back primary (first) grid reference */
-  inline boost::multi_array<float, 1>&
-  getFloat1DRef(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 1> >(name)->ref();
-  }
-
-  /** Add named float data with initial size and value (uninitialized) */
-  std::shared_ptr<Array<float, 1> >
-  addFloat1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
-
-  /** Get a pointer data for quick transversing */
-  inline std::shared_ptr<Array<int, 1> >
-  getInt1D(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<int, 1> >(name);
-  }
-
-  /** Get back primary (first) grid reference */
-  inline boost::multi_array<int, 1>&
-  getInt1DRef(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<int, 1> >(name)->ref();
-  }
-
-  /** Add named int data with initial size and value (uninitialized) */
-  std::shared_ptr<Array<int, 1> >
-  addInt1D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
-
-  // 2D stuff ----------------------------------------------------------
-
-  /** Get back object so can call methods on it */
-  inline std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 2> >(name);
-  }
-
-  /** Get ref to a named 2d array */
-  inline boost::multi_array<float, 2>&
-  getFloat2DRef(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 2> >(name)->ref();
-  }
-
-  /** Add named float data with initial size and value */
-  std::shared_ptr<Array<float, 2> >
-  addFloat2D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
-
-  // 3D stuff ----------------------------------------------------------
-
-  /** Get back object so can call methods on it */
-  inline std::shared_ptr<Array<float, 3> >
-  getFloat3D(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 3> >(name);
-  }
-
-  /** Get ref to a named 2d array */
-  inline boost::multi_array<float, 3>&
-  getFloat3DRef(const std::string& name = Constants::PrimaryDataName)
-  {
-    return get<Array<float, 3> >(name)->ref();
-  }
-
-  /** Add named float data with initial size and value */
-  std::shared_ptr<Array<float, 3> >
-  addFloat3D(const std::string& name, const std::string& units, const std::vector<size_t>& dimindexes);
-
   /** Update global attribute list for RadialSet */
   virtual void
   updateGlobalAttributes(const std::string& encoded_type) override;
@@ -303,6 +259,33 @@ public:
    * return false on fail. */
   virtual bool
   initFromGlobalAttributes() override;
+
+  // Non-template array access -----------------------------------------
+  // NOTE: Adding DeclareArrayMethods here, you need to add to the
+  // DeclareFactoryArrayMethods in the factoryGetRawDataPointer method
+
+  /** Functions for referencing char/Byte arrays of 8 bit */
+  DeclareArrayMethods(Byte, char, BYTE)
+
+  /** Functions for referencing short arrays of 8 bit */
+  DeclareArrayMethods(Short, short, SHORT)
+
+  /** Functions for referencing int arrays of 32 bit */
+  DeclareArrayMethods(Int, int, INT)
+
+  /** Functions for referencing float arrays of 32 bit */
+  DeclareArrayMethods(Float, float, FLOAT)
+
+  // Warning: For now at least, there's no auto 'upscaling' or downscaling,
+  // you need to use direct type stored.  One trick would be to use
+  // say getFloat2D("test") == nullptr then try getDouble2D("test"), etc.
+
+  /** Functions for referencing double arrays of 64 bit */
+  DeclareArrayMethods(Double, double, DOUBLE)
+
+  /** Low level generic array creator for readers, you probably don't want this */
+  void * factoryGetRawDataPointer(const std::string& name, const std::string& units, const DataArrayType& type,
+    const std::vector<size_t>& dimindexes);
 
 public:
 
@@ -317,17 +300,25 @@ public:
     return myNodes;
   }
 
-  /** Add or replace a named node array in our storage */
-  template <typename T>
-  std::shared_ptr<T>
-  add(const std::string& name, const std::string& units,
-    T&& aT, const DataArrayType& type, const std::vector<size_t>& dims = { 0 })
+  /** Add an array of given type/size */
+  template <typename T, unsigned int S>
+  std::shared_ptr<Array<T, S> >
+  add(const std::string& name, const std::string& units, const DataArrayType& type,
+    const std::vector<size_t>& dimindexes)
   {
-    // Move new data
-    std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<T>(aT));
-    auto newNode = std::make_shared<DataArray>(name, units, type, dims);
+    // Map indexes to actual dimension sizes (generically)
+    std::vector<size_t> sizes;
 
-    // Set with type security
+    for (auto x: dimindexes) {
+      sizes.push_back(myDims[x].size()); // FIXME: Could check sizes
+    }
+
+    // Create array using the sizes of each dimenion (which holds raw array of the type)
+    std::shared_ptr<Array<T, S> > ptr = std::make_shared<Array<T, S> >(sizes);
+
+    // Make a node to store/remember this arrays attributes (name, units, dimension indexes, etc.)
+    auto newNode = std::make_shared<DataArray>(name, units, type, dimindexes);
+
     newNode->setArray(ptr, ptr);
 
     // Add or replace the named node

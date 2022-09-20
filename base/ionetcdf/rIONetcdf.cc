@@ -231,6 +231,14 @@ IONetcdf::addVar(
 
   // Define variable dimensions...
   retval = nc_def_var(ncid, name, xtype, ndims, dimids, varid);
+  if (retval != NC_NOERR) {
+    // Try again on netcdf4, etc only types...
+    LogSevere("Current netcdf format not handling " << name << ", trying again\n");
+    if (xtype == NC_UBYTE) { // netcdf4 and cdf5 only
+      xtype  = NC_BYTE;
+      retval = nc_def_var(ncid, name, xtype, ndims, dimids, varid);
+    }
+  }
 
   if (retval == NC_NOERR) {
     // Assign units string
@@ -256,7 +264,7 @@ IONetcdf::addVar(
     }
   }
   return (retval);
-}
+} // IONetcdf::addVar
 
 int
 IONetcdf::addVar1D(
@@ -999,6 +1007,54 @@ IONetcdf::readSparse2D(int ncid,
  * }
  */
 
+bool
+IONetcdf::dataArrayTypeToNetcdf(const DataArrayType& theType, nc_type& xtype)
+{
+  // Determine netcdf data output type from data grid type
+  switch (theType) {
+      case BYTE: xtype = NC_BYTE;
+        break;
+      case SHORT: xtype = NC_SHORT;
+        break;
+      case INT: xtype = NC_INT;
+        break;
+      case FLOAT: xtype = NC_FLOAT;
+        break;
+      case DOUBLE: xtype = NC_DOUBLE;
+        break;
+      default:
+        LogSevere("Trying to convert an unknown DataArrayType, using NC_Float..\n");
+        return false;
+
+        break;
+  }
+  return true;
+}
+
+bool
+IONetcdf::netcdfToDataArrayType(const nc_type& xtype, DataArrayType& theType)
+{
+  // Determine data grid output type from netcdf type
+  switch (xtype) {
+      case NC_BYTE: theType = BYTE;
+        break;
+      case NC_SHORT: theType = SHORT;
+        break;
+      case NC_INT: theType = INT;
+        break;
+      case NC_FLOAT: theType = FLOAT;
+        break;
+      case NC_DOUBLE: theType = DOUBLE;
+        break;
+      default:
+        LogSevere("Trying to convert an unhandled netcdf to DataArrayType\n");
+        return false;
+
+        break;
+  }
+  return true;
+}
+
 // Maybe part of a NetcdfDataGrid class?
 std::vector<int>
 IONetcdf::declareGridVars(
@@ -1026,14 +1082,11 @@ IONetcdf::declareGridVars(
     }
 
     // Determine netcdf data output type from data grid type
-    auto theType  = l->getStorageType();
-    nc_type xtype = NC_FLOAT;
-    if (theType == FLOAT) {
-      xtype = NC_FLOAT;
-    } else if (theType == INT) {
-      xtype = NC_INT;
-    } else {
-      LogSevere("Declaring unknown netcdf variable type for " << theName << "\n");
+    nc_type xtype;
+    if (!dataArrayTypeToNetcdf(l->getStorageType(), xtype)) {
+      LogSevere(
+        "Declaring unknown/unsupported DataGrid variable type for " << theName <<
+          ", using NC_FLOAT, field may corrupt in output.\n");
     }
 
     // Translate the indexes into the matching netcdf dimension

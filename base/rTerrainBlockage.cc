@@ -215,7 +215,7 @@ TerrainBlockageBase::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
 
   // Create output array for now on the RadialSet.  Permanently store for moment
   // for debugging or outputting to netcdf, etc.
-  auto ta = rs.addFloat2D("TerrainPercent", "Dimensionless", { 0, 1 });
+  auto ta = rs.addFloat2D(Constants::TerrainPercent, "Dimensionless", { 0, 1 });
   auto& terrainPercent = ta->ref();
 
   // First gate distance

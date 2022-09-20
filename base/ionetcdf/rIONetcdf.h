@@ -284,6 +284,16 @@ public:
   virtual
   ~IONetcdf();
 
+  /** Convert from a stored DataGrid array type to netcdf data type.
+   * This is the type to use to write the pointer. */
+  static bool
+  dataArrayTypeToNetcdf(const DataArrayType& theType, nc_type& out);
+
+  /** Convert from a stored netcdf type to DataGrid array type.
+   * This is the type to use to read the pointer. */
+  static bool
+  netcdfToDataArrayType(const nc_type& theType, DataArrayType& out);
+
   /** Convenience for declaring DataGrid variables */
   static
   std::vector<int>

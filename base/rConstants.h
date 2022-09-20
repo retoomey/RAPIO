@@ -94,6 +94,9 @@ public:
   static const std::string ExpiryInterval;
   static const std::string FilenameDateTime; // Formatted as filename expected
 
+  // Terrain constants
+  static const std::string TerrainPercent;
+
   // Constants for reading/writing attributes
 
   /** Used to read first/primary layer of DataTypes */
