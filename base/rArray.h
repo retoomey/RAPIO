@@ -78,6 +78,10 @@ public:
   virtual void *
   getRawDataPointer() = 0;
 
+  /** Convenience print of Array.  Has to print internal to get the templated method */
+  virtual void
+  printArray(std::ostream& out, const std::string& indent, const std::string& divider, size_t wrap) = 0;
+
 protected:
   /** Vector of sizes for each dimension */
   std::vector<size_t> myDims;
@@ -121,9 +125,7 @@ public:
   void
   fill(C value)
   {
-    auto& dd = ref();
-
-    boost::multi_array_ref<float, 1> a_ref(dd.data(), boost::extents[dd.num_elements()]);
+    auto a_ref = refAs1D();
 
     std::fill(a_ref.begin(), a_ref.end(), value);
   }
@@ -152,19 +154,26 @@ public:
     return true;
   }
 
-  /** Dump entire array to std::cout.  Used for debugging */
-  void
-  dump()
+  /** Convenience print of Array.  Has to print internal to get the templated method */
+  virtual void
+  printArray(std::ostream& out, const std::string& indent, const std::string& divider, size_t wrap) override
   {
-    auto& dd = ref();
+    auto a_ref = refAs1D();
 
-    boost::multi_array_ref<float, 1> a_ref(dd.data(), boost::extents[dd.num_elements()]);
+    size_t counter = 0; // wrapping by item count which is 'ok'
 
-    LogInfo("Dumping array for  " << (void *) (&(dd)) << "\n");
+    out << indent;
     for (auto i = a_ref.begin(); i != a_ref.end(); ++i) {
-      std::cout << *i << ", ";
+      // Need template specialization here, so 'we' have to do the print
+      out << *i;
+      if (std::next(i) != a_ref.end()) {
+        out << divider;
+      }
+      if (counter++ > wrap) {
+        counter = 0;
+        out << "\n" << indent;
+      }
     }
-    std::cout << "\n";
   };
 
   /** Get a reference to raw array for iteration */
@@ -172,6 +181,16 @@ public:
   ref()
   {
     return myStorage;
+  }
+
+  /** Get a reference to raw array as a forced 1D array.
+   * FIXME: Could use _ref in the general ref() above */
+  boost::multi_array_ref<C, 1>
+  refAs1D()
+  {
+    auto& dd = ref();
+
+    return (boost::multi_array_ref<C, 1>(dd.data(), boost::extents[dd.num_elements()]));
   }
 
   /** Get a raw void pointer to array data. Used by reader/writers.

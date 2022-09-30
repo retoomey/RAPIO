@@ -138,6 +138,15 @@ public:
   std::shared_ptr<ArrayBase>
   getNewArray(){ return myArray; }
 
+  /** Convenience print of DataArray items.
+   * FIXME: Has to be done in array to get correct template type. Might
+   * be able to use a visitor class to have more control over printing. */
+  void
+  printArray(std::ostream& out, const std::string& indent = "    ", const std::string& divider = ", ", size_t wrap = 9)
+  {
+    myArray->printArray(out, indent, divider, wrap);
+  }
+
 protected:
 
   /** The data attribute list for this data */

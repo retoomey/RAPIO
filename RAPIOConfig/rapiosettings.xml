@@ -76,6 +76,8 @@ Information needed:
     <file suffix="xml" io="xml"/>
     <file suffix="json" io="json"/>
     <file suffix="raw" io="raw"/>
+    <file suffix="shp" io="gdal"/>
+    <file suffix="txt" io="text"/>
   </suffixes>
 
 <!-- Settings for the built in XML reader --> 
@@ -151,6 +153,15 @@ Information needed:
      This reads/writes HMET MRMS binary
 -->
   <io names="hmrg" module="librapiohmrg.so">
+    <output />
+  </io>
+
+<!-- Text module settings
+     This writer is for converting DataType to text.  Note, for
+     special types like xml, json, etc. you probably want the
+     unique module for that which will generate more standard output
+-->
+  <io names="text" module="librapiotext.so">
     <output />
   </io>
 

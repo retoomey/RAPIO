@@ -166,7 +166,12 @@ public:
     }
   }
 
-  /** Get data we store as an optional */
+  /** Get data we store as an optional pointer.
+   * If not boost::none, can use * to get to the
+   * field. FIXME: Might change name and make a
+   * different get function..this is a pointer and
+   * not the actual typename which can be confusing
+   */
   template <typename T>
   boost::optional<T>
   get(const std::string& name) const

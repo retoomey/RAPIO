@@ -183,6 +183,11 @@ if (BUILD_GRIB2_MODULE)
   add_subdirectory(base/iogrib)
 endif (BUILD_GRIB2_MODULE)
 
+option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
+if (BUILD_TEXT_MODULE)
+  add_subdirectory(base/iotext)
+endif (BUILD_TEXT_MODULE)
+
 # These two currently don't require any extra libraries, so we'll just
 # build them.  Though python might at some point
 add_subdirectory(base/iopython)
