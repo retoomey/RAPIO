@@ -213,7 +213,6 @@ DataGrid::updateGlobalAttributes(const std::string& encoded_type)
 // Define a case for creating a particular type/dimension.
 #define DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, DIMENSION) \
   if ((dimCount == DIMENSION) && (type == ARRAYTYPE)) { \
-    LogSevere("Created " << name << " with " << units << "\n"); \
     auto d = add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes); \
     return d->getRawDataPointer(); \
   }

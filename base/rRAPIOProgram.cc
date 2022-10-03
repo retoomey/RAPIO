@@ -100,6 +100,8 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     const bool success = o.finalizeArgs(wantHelp);
     if (!success) { exit(1); }
 
+    myMacroApplied = o.isMacroApplied();
+
     // Change final logging now to arguments passed in.
     LogInfo("Executing " << OS::getProcessName() << "...\n");
 

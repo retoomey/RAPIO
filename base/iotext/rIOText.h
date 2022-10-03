@@ -29,8 +29,7 @@ class IOText : public IODataType {
 public:
 
   /** Writing reference for submodules */
-  // static std::ofstream* theFile;
-  static std::ofstream theFile;
+  static std::ostream * theFile;
 
   /** Help for ioimage module */
   virtual std::string

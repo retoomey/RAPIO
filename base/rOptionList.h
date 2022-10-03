@@ -112,7 +112,8 @@ public:
   void
   storeParsedArg(const std::string& name,
     const std::string             & value,
-    const bool                    enforceStrict = true);
+    const bool                    enforceStrict = true,
+    const bool                    fromiconfig   = false);
 
   /** Replace all macros within a string */
   std::string

@@ -119,26 +119,38 @@ public:
   void
   setAuthors(const std::string& authors);
 
+  /** If set, adds another example */
+  void
+  setExample(const std::string& e);
+
   /** If set, shows copyright or algorithm information header,
    *  default is RAPIO header. */
   void
   setHeader(const std::string& header);
 
+  /** Sets a macro replacement for 'just text', using a '%s',
+   * for example for an alg that just takes a string */
+  void
+  setTextOnlyMacro(const std::string& macro);
+
+  /** Expand main arguments to a fully paired arg/value list */
+  std::vector<std::string>
+  expandArgs(const std::vector<std::string>& args, std::string& leftovers);
+
+  /** Replace macro on leftovers of command line and rerun expansion
+   * macro needs to have %s replaced  'file=%s -o=/tmp'
+   */
+  void
+  applyLeftOverMacro(const std::string& macro, std::string& leftovers, std::vector<std::string>& expanded);
+
   /** Draw a dash line */
   void
   dumpHeaderLine();
 
-  /** Process one argument */
-  unsigned int
-  processArg(std::vector<std::string>& args,
-    unsigned int                     i,
-    std::string                      & arg,
-    std::string                      & value);
-
   /** Set help fields for advanced help, used to dynamically
    * add only required advanced help **/
-  bool
-  setHelpFields();
+  void
+  setHelpFields(const std::vector<std::string>& list);
 
   /** Dump help for options based on what is passed in */
   void
@@ -157,6 +169,10 @@ public:
   bool
   finalizeArgs(bool haveHelp);
 
+  /** Was the macro applied on leftovers? */
+  bool
+  isMacroApplied(){ return myMacroApplied; }
+
 protected:
 
   /** Name of module or command line binary */
@@ -165,13 +181,25 @@ protected:
   /** Authors of this module/algorithm */
   std::string myAuthors;
 
+  /** Extra example of this module/algorithm */
+  std::string myExample;
+
   /** Header of this module/algorithm, used for copyright, etc. */
   std::string myHeader;
+
+  /** Macro for left over text, if anything */
+  std::string myMacro;
 
   /** Simple description of algorithm */
   std::string myDescription;
 
   /** Actual command line arguments */
   std::vector<std::string> myRawArgs;
+
+  /** Leftover non-args */
+  std::string myLeftovers;
+
+  /** Was macro applied? */
+  bool myMacroApplied;
 };
 }

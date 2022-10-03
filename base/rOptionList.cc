@@ -167,7 +167,8 @@ OptionList::isParsed(const std::string& key)
 }
 
 void
-OptionList::storeParsedArg(const std::string& arg, const std::string& value, const bool enforceStrict)
+OptionList::storeParsedArg(const std::string& arg, const std::string& value, const bool enforceStrict,
+  const bool fromiconfig)
 {
   // Store the option...
   Option * o = getOption(arg);
@@ -190,7 +191,11 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
         o->parsedValue = value;
       }
     } else {
-      // Humm...keep track here?
+      if (!fromiconfig) {
+        // Because of macros, it's confusing to allow duplicates
+        LogSevere("Duplicated commandline option for '" << arg << "'.\n");
+        exit(1);
+      }
     }
   } else {
     // We were giving an option we don't know about...

@@ -7,8 +7,7 @@
 
 using namespace rapio;
 
-std::ofstream IOText::theFile;
-// = nullptr;
+std::ostream * IOText::theFile = nullptr;
 
 // Library dynamic link to create this factory
 extern "C"
@@ -81,6 +80,14 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
 
+  // Check if console because it's a lot simplier...
+  bool console = (!keys["console"].empty());
+
+  if (console) {
+    theFile = &std::cout; // allowed
+    return (fmt->write(dt, keys));
+  }
+
   // ----------------------------------------------------------
   // Get the filename we should write to
   std::string filename;
@@ -95,13 +102,11 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
   bool successful = false;
 
   try{
-    theFile = std::ofstream(filename, std::ofstream::out);
-    if (theFile.is_open()) {
-      // We 'could' try to convert file ofstream to string and put in keys,
-      // gonna use a static.
-      // Note: This would break if we ever multithread write without locking.
+    std::ofstream currentFile(filename, std::ofstream::out);
+    if (currentFile.is_open()) {
+      theFile    = &currentFile;
       successful = fmt->write(dt, keys);
-      theFile.close();
+      currentFile.close();
     } else {
       LogSevere("Couldn't open " << filename << " for writing.\n");
       successful = false;

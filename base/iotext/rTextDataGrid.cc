@@ -29,7 +29,7 @@ namespace {
 void
 dumpAttributes(std::shared_ptr<DataAttributeList> list, const std::string& i, const std::string& header = "")
 {
-  std::ofstream& file = IOText::theFile; // no copy constructor
+  std::ostream& file = *IOText::theFile; // no copy constructor
 
   for (auto& a:*list) {
     // We do this in netcdf as well, bleh. Is these a cleaner way?
@@ -62,7 +62,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
 
   // First pass we simulate ncdump on DataGrid
   try{
-    std::ofstream& file = IOText::theFile; // no copy constructor
+    std::ostream& file = *IOText::theFile; // no copy constructor
 
     // Mark standard with RAPIO and datatype
     // This might allow parsing/reading later

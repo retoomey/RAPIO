@@ -47,7 +47,7 @@ TextBinaryTable::write(std::shared_ptr<DataType> dt,
   auto dataType = table->getDataType();
 
   try{
-    std::ofstream& file = IOText::theFile; // no copy constructor
+    std::ostream& file = *IOText::theFile; // no copy constructor
 
     // Mark standard with RAPIO and datatype
     // This might allow parsing/reading later

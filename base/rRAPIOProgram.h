@@ -15,7 +15,7 @@ namespace rapio {
 class RAPIOProgram : public Algorithm {
 public:
   /** Construct a stock program */
-  RAPIOProgram(){ };
+  RAPIOProgram() : myMacroApplied(false){ };
 
   // Public intended open API -----------------------
 
@@ -60,5 +60,12 @@ protected:
    * typically you don't need to change at this level */
   virtual void
   finalizeOptions(RAPIOOptions& o);
+
+  /** Was the macro applied on leftovers? */
+  bool
+  isMacroApplied(){ return myMacroApplied; }
+
+protected:
+  bool myMacroApplied;
 };
 }

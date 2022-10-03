@@ -9,6 +9,16 @@ include_directories(. ${CMAKE_INSTALL_PREFIX}/include  ../base/)
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
 ##################################################################
+# Tools
+add_executable(rdump
+  rDump.cc
+)
+target_link_libraries(rdump rapio)
+install(TARGETS rdump
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
 # Fusion1
 add_executable(rFusion1
   fusion/rFusion1.cc
