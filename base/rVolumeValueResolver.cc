@@ -65,6 +65,10 @@ VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
       l.haveTerrainPercent = true;
       l.terrainPercent     = t[l.radial][l.gate];
     }
+  } else {
+    // Outside of coverage area we'll remove virtual values
+    l.gate   = -1;
+    l.radial = -1;
   }
 
   return have;

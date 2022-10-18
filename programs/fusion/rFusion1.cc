@@ -34,19 +34,6 @@ public:
     bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
 
     // ------------------------------------------------------------------------------
-    // Filter out values where terrain blockage more than 50%
-    // FIXME: Part of me wonders if terrain height should be here to, but we'd need a field
-    // for it.
-    if (vv.lLayer.terrainPercent > .50) {
-      vv.lLayer.value = Constants::DataUnavailable;
-      haveLower       = false;
-    }
-    if (vv.lLayer.terrainPercent > .50) {
-      vv.lLayer.value = Constants::DataUnavailable;
-      haveUpper       = false;
-    }
-
-    // ------------------------------------------------------------------------------
     // In beamwidth calculation
     //
     // FIXME: might be able to optimize by not always calculating in beam width,
@@ -76,7 +63,7 @@ public:
     //
     // Keep background mask logic separate for now, though would probably be faster
     // doing it in the value calculation.  I recommend doing it this way because
-    // logically it frys your brain a bit less.  You can 'have' and upper tilt,
+    // logically it frys your brain a bit less.  You can 'have' an upper tilt,
     // but have bad values or missing, etc..so the cases are not one to one
     double v = Constants::DataUnavailable;
 
@@ -95,13 +82,20 @@ public:
         // v = Constants::DataUnavailable; // 00
       }
     }
+    // Make values unavailable if terrain over 50%
+    if (vv.uLayer.terrainPercent > .50) {
+      vv.uLayer.value = Constants::DataUnavailable;
+    }
+    if (vv.lLayer.terrainPercent > .50) {
+      vv.lLayer.value = Constants::DataUnavailable;
+    }
 
+    // ------------------------------------------------------------------------------
+    // Interpolation and application of upper and lower data values
+    //
     const double& lValue = vv.lLayer.value;
     const double& uValue = vv.uLayer.value;
 
-    // FIXME: Apply terrain to good data values, right?
-    // This depends on if we want to 'see' stage one, or passing terrain and values to stage two
-    // for moment I'll apply it
     if (Constants::isGood(lValue) && Constants::isGood(uValue)) {
       // Linear interpolate using heights.  With two values we can do interpolation
       // between the values always, either linear or exponential
@@ -129,17 +123,6 @@ public:
         v = uValue;
       }
     }
-    #if 0
-  } else if (Constants::isGood(vv.lLayer.value)) {
-    if (inLowerBeamwidth) {
-      v = lValue;
-    }
-  } else if (Constants::isGood(vv.vUpper)) {
-    if (inUpperBeamwidth) {
-      v = uValue;
-    }
-  }
-    #endif
 
     vv.dataValue = v;
   } // calc
@@ -243,10 +226,10 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   o.getLegacyGrid(myFullGrid);
 
-  myWriteLLG = o.getBoolean("llg");
+  myWriteLLG    = o.getBoolean("llg");
   myTerrainPath = o.getString("terrain");
-  myTerrainAlg = o.getString("terrainalg");
-  myRangeKMs = o.getFloat("rangekm");
+  myTerrainAlg  = o.getString("terrainalg");
+  myRangeKMs    = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
   } else if (myRangeKMs > 1000) {
@@ -259,28 +242,31 @@ void
 RAPIOFusionOneAlg::createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverageArea& g,
   const std::vector<double>& heightsM)
 {
+  // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
+  // turns out to be faster than 1 3D array.
+  // FIXME: We could have a LatLonHeightGrid implementation/create to generalize this
   if (myLLGCache.size() == 0) {
     ProcessTimer("Creating initial LLG value cache.");
     const std::string aName = r->getTypeName() + "Fused";
-    std::string aUnits = r->getUnits();
+    std::string aUnits      = r->getUnits();
     if (aUnits.empty()) {
       LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
       aUnits = "dBZ";
     }
 
-
+    // For each of our height layers to process
     for (size_t layer = 0; layer < heightsM.size(); layer++) {
       const LengthKMs layerHeightKMs = heightsM[layer] / 1000.0;
 
-      std::shared_ptr<LatLonGrid> output = LatLonGrid::
+      // Create a new working space LatLonGrid for the layer
+      auto output = LatLonGrid::
         Create(aName, aUnits, LLH(g.nwLat, g.nwLon, layerHeightKMs), Time(), g.latSpacing, g.lonSpacing,
           g.numY, g.numX);
       output->setReadFactory("netcdf"); // default to netcdf output if we write it
+
+      // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
       auto array = output->getFloat2D();
       array->fill(Constants::DataUnavailable);
-
-      // Ref to the actual raw array for speed
-      // auto& data = array->ref();
 
       myLLGCache.add(output);
     }
@@ -293,7 +279,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   std::shared_ptr<TerrainBlockage> terrain,
   LLCoverageArea& g)
 {
-  /** Projection cache creation, this is still slow.  However, we 'could' auto cache this maybe to disk */
+  // We cache a bunch of repeated trig functions that save us a lot of CPU time
   if (myLLProjections[0] == nullptr) {
     LogInfo("-------------------------------Projection AzRangeElev cache generation.\n");
     LengthKMs rangeKMs;
@@ -310,17 +296,12 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
       myLLProjections[i] = std::make_shared<AzRanElevCache>(g.numX, g.numY);
       auto& llp = *(myLLProjections[i]);
       auto& ssc = *(mySinCosCache);
+      AngleDegs startLat = g.nwLat - (g.latSpacing / 2.0); // move south (lat decreasing)
+      AngleDegs startLon = g.nwLon + (g.lonSpacing / 2.0); // move east (lon increasing)
+      AngleDegs atLat    = startLat;
 
       llp.reset();
       ssc.reset();
-      // Would we save speed by caching all the lat/lon values?
-      AngleDegs startLat = g.nwLat - (g.latSpacing / 2.0); // move south (lat decreasing)
-      AngleDegs startLon = g.nwLon + (g.lonSpacing / 2.0); // move east (lon increasing)
-      AngleDegs atLat = startLat;
-
-      // We'll skip terrain once we're so high we're not hitting in a layer
-      // This assumes the layers are ascending
-      bool tooHighForTerrain = false;
 
       for (size_t y = 0; y < g.numY; y++, atLat -= g.latSpacing) { // a north to south
         AngleDegs atLon = startLon;
@@ -330,6 +311,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
           // This doesn't need height so it can be just a single layer
           double sinGcdIR, cosGcdIR;
           if (i == 0) {
+            // First layer we'll create the sin/cos cache
             Project::stationLatLonToTarget(
               atLat, atLon, cLat, cLon, sinGcdIR, cosGcdIR);
             ssc.add(sinGcdIR, cosGcdIR); // move forward
@@ -337,58 +319,49 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
             ssc.get(sinGcdIR, cosGcdIR); // move forward
           }
 
-          // This is still relatively slow 2 secs or so.  FIXME: Clip to radar range
-          // There's more here to be improved...caching sin cos of station center for instance
-          // Project::BeamPath_LLHtoAzRangeElev(atLat, atLon, layerHeightKMs,
-          //  cLat, cLon, cHeight, virtualElevDegs, azDegs, rangeKMs);
+          // Calculate and cache a virtual azimuth, elevation and range for each
+          // point of interest in the grid
           Project::Cached_BeamPath_LLHtoAzRangeElev(atLat, atLon, layerHeightKMs,
             cLat, cLon, cHeight, sinGcdIR, cosGcdIR, virtualElevDegs, azDegs, rangeKMs);
-          // FIXME: compare original to the cache value make sure didn't break.
-          //
-          // auto percent2 = terrain->computePercentBlocked(
-          //  1, // Technically not static, but start with 1 deg
-          //  .5,
-          //  240, .3);
-          // LogSevere("OUTPUT NEW: " << (int) percent2 << "\n");
-          // exit(1);
 
           llp.add(azDegs, virtualElevDegs, rangeKMs);
         }
       }
     }
     LogInfo("-------------------------------Projection AzRangeElev cache complete.\n");
-    // LogSevere("FORCED EXITING TEST\n");
-    // exit(1);
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
 
 void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 {
-  const LengthKMs TerrainRange = myRangeKMs;
-
   // Look for any data the system knows how to read...
   // auto r = d.datatype<rapio::DataType>();
   auto r = d.datatype<rapio::RadialSet>();
 
   if (r != nullptr) {
-    // Lak used azimuth spacing of first radial.  Could we use the spacing of each radial?
-    // It probably "doesn't" change would be my guess
-    // We need this for the terrain algorithm
+    // ------------------------------------------------------------------------------
+    // Gather information on the current RadialSet
+    //
+    // FIXME: Actually I think with the shift to polar terrain we don't actually use azimuthSpacing.
+    //        Polar only requires the azimuth center of the gate
     auto azimuthSpacingArray = r->getAzimuthSpacingVector();
-    double azimuthSpacing = 1.0;
+    double azimuthSpacing    = 1.0;
     if (azimuthSpacingArray != nullptr) {
       auto& ref = azimuthSpacingArray->ref();
       azimuthSpacing = ref[0];
     }
-    AngleDegs elevDegs = r->getElevationDegs();
-    const Time rTime = r->getTime();
+    AngleDegs elevDegs    = r->getElevationDegs();
+    const Time rTime      = r->getTime();
     const time_t dataTime = rTime.getSecondsSinceEpoch();
     RObsBinaryTable::mrmstime aMRMSTime;
     aMRMSTime.epoch_sec = rTime.getSecondsSinceEpoch();
-    aMRMSTime.frac_sec = rTime.getFractional();
-
-    // ProcessTimer out("Startup for a single tile took\n");
+    aMRMSTime.frac_sec  = rTime.getFractional();
+    // Radar center coordinates
+    const LLH center        = r->getRadarLocation();
+    const AngleDegs cLat    = center.getLatitudeDeg();
+    const AngleDegs cLon    = center.getLongitudeDeg();
+    const LengthKMs cHeight = center.getHeightKM();
 
     LogInfo(
       " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
@@ -401,14 +374,14 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // Get the radar name and typename from this RadialSet.
     std::string name = "UNKNOWN";
     const std::string aTypeName = r->getTypeName();
-    const std::string aUnits = r->getUnits();
+    const std::string aUnits    = r->getUnits();
     if (r->getString("radarName-value", name)) {
       // LogInfo("      Radar name is found!  It is  '" << name << "'\n");
       if (myRadarName.empty()) {
         LogInfo(
           "Linking this algorithm to radar '" << name << "' and typename '" << aTypeName <<
             "' since first pass we only handle 1\n");
-        myTypeName = aTypeName;
+        myTypeName  = aTypeName;
         myRadarName = name;
       } else {
         if ((myRadarName != name) || (myTypeName != aTypeName)) {
@@ -449,10 +422,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // ----------------------------------------------------------------------------
     // Every RADAR/MOMENT will require a elevation volume for virtual volume
-
-
-    // Create an elevation volume off the radial set, this stores a time clippable
-    // virtual volume
+    // This is a time expiring auto sorted volume based on elevation angle (subtype)
+    //
     if (myElevationVolume == nullptr) {
       LogInfo(
         "Creating virtual volume and terrain blockage for '" << myRadarName << "' and typename '" << myTypeName <<
@@ -472,7 +443,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
         // TerrainBlockage::introduce("yourterrain", myterrainclass);
 
         myTerrainBlockage = TerrainBlockage::createTerrainBlockage(myTerrainAlg,
-            myDEM, r->getLocation(), TerrainRange, name);
+            myDEM, r->getLocation(), myRangeKMs, name);
       }
       // Stubbornly refuse to run if terrain requested by name and not found
       if (myTerrainBlockage == nullptr) {
@@ -487,25 +458,24 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // ----------------------------------------------------------------------------
     // Every Unique RadialSet product will require a RadialSetLookup.
-    r->getProjection(); // Creates RadialSetLookup..the resolution is less than Terrain,
-                        // which is interesting.  FIXME: Make resolutions match?
+    // This is a projection from range, angle to gate/radial index.
+    r->getProjection();
 
-    // Every RadialSet will require terrain per gate for filters
+    // Every RadialSet will require terrain per gate for filters.
+    // Run a polar terrain algorithm where the results are added to the RadialSet as
+    // another array.
     if (myTerrainBlockage != nullptr) {
       myTerrainBlockage->calculateTerrainPerGate(r);
     }
 
-    // Radar center coordinates
-    const LLH center = r->getRadarLocation();
-    const AngleDegs cLat = center.getLatitudeDeg();
-    const AngleDegs cLon = center.getLongitudeDeg();
-    const LengthKMs cHeight = center.getHeightKM();
-
-    // Could cache this stuff too
+    // ----------------------------------------------------------------------------
+    // We inset the full merger grid to the subgrid covered by the radar.
+    // This is needed for massively large grids like the CONUS.
+    //
     static bool firstTime = true;
     if (firstTime) {
       const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
-      myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, TerrainRange + fudgeKMs);
+      myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
       LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
       LogInfo("Full coverage grid: " << myFullGrid << "\n");
       firstTime = false;
@@ -537,14 +507,14 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // FIXME: refactor/methods, etc. This isn't clean by a long shot
     t.radarName = myRadarName;
-    t.vcp = -9999; // Ok will merger be ok with this, need to check
-    t.elev = elevDegs;
-    t.typeName = r->getTypeName();
+    t.vcp       = -9999; // Ok will merger be ok with this, need to check
+    t.elev      = elevDegs;
+    t.typeName  = r->getTypeName();
     t.setUnits(aUnits);
     t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
-    t.lat = cLat;                // lat degrees
-    t.lon = cLon;                // lon degrees
-    t.ht = cHeight;              // kilometers assumed by w2merger
+    t.lat       = cLat;          // lat degrees
+    t.lon       = cLon;          // lon degrees
+    t.ht        = cHeight;       // kilometers assumed by w2merger
     t.data_time = dataTime;
     // Ok Lak guesses valid time based on vcp. What do we do here?
     // I'm gonna use the provided history value
@@ -571,13 +541,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
 
       // FIXME: Do we put these into the output?
-      size_t totalLayer = 0;
+      size_t totalLayer   = 0;
       size_t rangeSkipped = 0; // Skip by range (outside circle)
-      size_t upperGood = 0;    // Have tilt above
-      size_t lowerGood = 0;    // Have tilt below
+      size_t upperGood    = 0; // Have tilt above
+      size_t lowerGood    = 0; // Have tilt below
       size_t sameTiltSkip = 0;
 
-      size_t attemptCount = 0;
+      size_t attemptCount    = 0;
       size_t differenceCount = 0;
 
       auto output = myLLGCache.get(layer);
@@ -611,7 +581,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           // gridtest[y][x] = vv.azDegs; continue;   // Azimuth
 
           // Anything over terrain range Kms hard ignore.
-          if (rangeKMs > TerrainRange) {
+          if (rangeKMs > myRangeKMs) {
             // Since this is outside range it should never be different from the initialization
             // gridtest[y][x] = Constants::DataUnavailable;
             rangeSkipped++;
@@ -625,15 +595,15 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           if (vv.upper != nullptr) { upperGood++; }
 
           // If the upper and lower for this point are the _same_ RadialSets as before, then
-          // the interpolation will end up with the same data value.  This takes advantage that in a volume if say one tilt
-          // expires and one tilt comes in, the space time affected is fairly small compared to the entire
-          // volume.
-          // I'm gonna start with the pointers as markers, which are numbers, but it's 'possible'
-          // a new radialset could get same pointer, so we will add
-          // a RadialSet or general DataType counter or something at some point.
-          //
-          // Maybe: In theory you could save more time by checking if just one changed and calculating one while
-          // pulling the other heights/values from a cache.  I'd have to cache those heights then.
+          // the interpolation will end up with the same data value.
+          // This takes advantage that in a volume if a couple tilts change, then
+          // the space time affected is fairly small compared to the entire volume's 3D coverage.
+
+          // I'm gonna start with the pointers as keys, which are numbers, but it's 'possible'
+          // a new radialset could get same pointer (expire/new).
+          // FIXME: Probably super rare to get same pointer, but maybe we add
+          // a RadialSet or general DataType counter at some point to be sure.
+          // Humm.  The tilt time 'might' work appending it to the pointer value.
           const bool changedEnclosingTilts = llp.set(x, y, vv.lower, vv.upper);
           if (!changedEnclosingTilts) { // The value won't change, so continue
             sameTiltSkip++;
@@ -711,14 +681,24 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
         }
       }
 
-      //    writeOutputProduct("NEWDEM", myDEM); // Write out modified dem if wanted?
-      // WRITE LATLONGRID
+      // --------------------------------------------------------
+      // Write LatLonGrid or Raw merger files (FIXME: Maybe more flag control)
+      //
+
+      // Try pushing to ldm afterwards. FIXME: Probably need a command flag
+      std::map<std::string, std::string> myOverrides;
+      myOverrides["postSuccessCommand"] = "ldm";
       if (myWriteLLG) {
         std::map<std::string, std::string> myOverrides;
-        myOverrides["postSuccessCommand"] = "ldm";
-        writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides); // Typename will be replaced by -O filters
+        // Typename will be replaced by -O filters
+        writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
+      } else {
+        // WRITE RAW
+        writeOutputProduct("Mapped" + r->getTypeName(), entries, myOverrides);
       }
-      // WRITE LATLONGRID
+
+      // --------------------------------------------------------
+      // Log info on the layer calculations
       //
       double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
       LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. " << totalLayer << " left.\n");
@@ -732,16 +712,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("----------------------------------------\n");
     } // END HEIGHT LOOP
 
-    // Changed entries write out
-    // WRITE RAW
-    if (!myWriteLLG) {                                          // only do one type for moment
-      writeOutputProduct("Mapped" + r->getTypeName(), entries); // Typename will be replaced by -O filters
-    }
-    // writeOutputProduct(r->getTypeName(), entries); // Typename will be replaced by -O filters
-    // WRITE RAW
-    //
     LogInfo("Total all layer grid points: " << total << "\n");
-    // writeOutputProduct("Mapped"+r->getTypeName(), entries); // Typename will be replaced by -O filters
 
     // ----------------------------------------------------------------------------
   }
@@ -750,10 +721,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 int
 main(int argc, char * argv[])
 {
-  // FIXME: What if I want to use the system but without an algorithm?  Lol..
-  // no I refuse to do a Baseline call...growl.  More work to do
-
-  // Create and run a tile alg
+  // Create and run fusion stage 1
   RAPIOFusionOneAlg alg = RAPIOFusionOneAlg();
 
   alg.executeFromArgs(argc, argv);
