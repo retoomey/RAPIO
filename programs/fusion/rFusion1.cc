@@ -169,6 +169,9 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // Algorithm will stop if terrain cannot be found here for radar (for non-blank)
   o.optional("terrain", "", "Path to terrain files of form RADAR.nc, otherwise we ignore terrain clipping.");
 
+  // Terrain blockage name
+  o.optional("terrainalg", "2me", "Registered terrain blockage algorithm to use, such as 'lak', '2me', or your own.");
+
   // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
@@ -242,6 +245,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   myWriteLLG = o.getBoolean("llg");
   myTerrainPath = o.getString("terrain");
+  myTerrainAlg = o.getString("terrainalg");
   myRangeKMs = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
@@ -286,15 +290,12 @@ RAPIOFusionOneAlg::createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverage
 void
 RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-  std::shared_ptr<TerrainBlockageBase> terrain,
+  std::shared_ptr<TerrainBlockage> terrain,
   LLCoverageArea& g)
 {
-  /** Start by assuming azimuth spacing of 1 degree. */
-  double terrainSpacing = 1.0;
-
   /** Projection cache creation, this is still slow.  However, we 'could' auto cache this maybe to disk */
   if (myLLProjections[0] == nullptr) {
-    LogInfo("-------------------------------Projection/Terrain cache generation.\n");
+    LogInfo("-------------------------------Projection AzRangeElev cache generation.\n");
     LengthKMs rangeKMs;
     AngleDegs azDegs, virtualElevDegs;
 
@@ -306,7 +307,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
     for (size_t i = 0; i < myLLProjections.size(); i++) {
       const LengthKMs layerHeightKMs = myHeightsM[i] / 1000.0;
       LogInfo("  Layer: " << myHeightsM[i] << " meters.\n");
-      myLLProjections[i] = std::make_shared<AzRanElevTerrainCache>(g.numX, g.numY);
+      myLLProjections[i] = std::make_shared<AzRanElevCache>(g.numX, g.numY);
       auto& llp = *(myLLProjections[i]);
       auto& ssc = *(mySinCosCache);
 
@@ -321,7 +322,6 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
       // This assumes the layers are ascending
       bool tooHighForTerrain = false;
 
-      size_t terrainHitCount = 0;                                  // Count hits
       for (size_t y = 0; y < g.numY; y++, atLat -= g.latSpacing) { // a north to south
         AngleDegs atLon = startLon;
         for (size_t x = 0; x < g.numX; x++, atLon += g.lonSpacing) { // a east to west row, changing lon per cell
@@ -352,34 +352,11 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
           // LogSevere("OUTPUT NEW: " << (int) percent2 << "\n");
           // exit(1);
 
-          #if 0
-          unsigned char percent;
-          if (myDEM != nullptr) {
-            // Terrain percentage cache, value per 3D cell
-            // Ok we have an issue here.  I can do terrain in 3D space, but the 'true' values of the
-            // tilts are what are actually blocked or not. In other words, terrain has to be applied
-            // to each of the upper/lower tilts and used to toss out data, not applied in 3D space on final values.
-            percent = terrain->computePercentBlocked(
-              terrainSpacing, // Technically not static, but start with 1 deg
-              virtualElevDegs,
-              azDegs, rangeKMs);
-          } else {
-            percent = 0; // 0 percent blocked
-          }
-          if (percent > 5) { terrainHitCount++; }
-          #endif // if 0
-          unsigned char percent = 0;
-
-          llp.add(azDegs, virtualElevDegs, rangeKMs, percent);
+          llp.add(azDegs, virtualElevDegs, rangeKMs);
         }
       }
-
-      // Ok so if NO greater than 50 percent hits...we could turn off calculation of terrain
-      // from this point on...
-      if (terrainHitCount == 0) { }
-      LogSevere("LAYER TERRAIN HITS: " << layerHeightKMs << " KMs :" << terrainHitCount << "\n");
     }
-    LogInfo("-------------------------------Projection/Terrain cache complete.\n");
+    LogInfo("-------------------------------Projection AzRangeElev cache complete.\n");
     // LogSevere("FORCED EXITING TEST\n");
     // exit(1);
   }
@@ -485,11 +462,23 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Terrain blockage algorithm is a lookup with a given range and density
       myTerrainBlockage = nullptr;
       if (myDEM != nullptr) {
-        // FIXME: Flag at some point
-        // myTerrainBlockage =
-        //  std::make_shared<TerrainBlockage>(myDEM, r->getLocation(), TerrainRange, name);
-        myTerrainBlockage =
-          std::make_shared<TerrainBlockage2>(myDEM, r->getLocation(), TerrainRange, name);
+        // We want the default terrain blockage algorithms.
+        static bool setupTerrain = false;
+        if (!setupTerrain) {
+          // Register the default TerrainBlockage objects
+          TerrainBlockage::introduceSelf();
+          setupTerrain = true;
+        }
+        // TerrainBlockage::introduce("yourterrain", myterrainclass);
+
+        myTerrainBlockage = TerrainBlockage::createTerrainBlockage(myTerrainAlg,
+            myDEM, r->getLocation(), TerrainRange, name);
+      }
+      // Stubbornly refuse to run if terrain requested by name and not found
+      if (myTerrainBlockage == nullptr) {
+        exit(1);
+      } else {
+        LogInfo("Using TerrainBlockage algorithm '" << myTerrainAlg << "'\n");
       }
     }
 
@@ -583,10 +572,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
       // FIXME: Do we put these into the output?
       size_t totalLayer = 0;
-      size_t rangeSkipped = 0;   // Skip by range (outside circle)
-      size_t terrainBlocked = 0; // Skip by terrain > 50 blocked
-      size_t upperGood = 0;      // Have tilt above
-      size_t lowerGood = 0;      // Have tilt below
+      size_t rangeSkipped = 0; // Skip by range (outside circle)
+      size_t upperGood = 0;    // Have tilt above
+      size_t lowerGood = 0;    // Have tilt below
       size_t sameTiltSkip = 0;
 
       size_t attemptCount = 0;
@@ -615,8 +603,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           total++;
           totalLayer++;
           // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
-          unsigned char terrainPercent;
-          llp.get(azimuthSpacing, vv.azDegs, vv.virtualElevDegs, rangeKMs, terrainPercent);
+          llp.get(azimuthSpacing, vv.azDegs, vv.virtualElevDegs, rangeKMs);
           ssc.get(vv.sinGcdIR, vv.cosGcdIR);
 
           // Create lat lon grid of a particular field...
@@ -630,16 +617,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
             rangeSkipped++;
             continue;
           }
-
-          // Terrain filter, old merger skipped blockage over 50%
-          // Wow, it's possible that all the terrain work is just being done, JUST to
-          // test over 50% so we drop the point.  That seems sooo silly.
-          /// SOB can't skip...need the values to be filtered by terrain percentage per radialset
-          //          if (terrainPercent >= 50) { // Let me know a terrain hit for moment
-          //            terrainBlocked++;
-          // gridtest[y][x] = 20; // Do a range check...
-          //            continue;
-          //          }
 
           // Search the virtual volume for elevations above/below our virtual one
           // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
@@ -747,8 +724,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. " << totalLayer << " left.\n");
       totalLayer -= rangeSkipped;
       LogInfo("    Range skipped: " << rangeSkipped << ". " << totalLayer << " left.\n");
-      totalLayer -= terrainBlocked;
-      LogInfo("    Terrain blocked (50%): " << terrainBlocked << ". " << totalLayer << " left.\n");
       totalLayer -= sameTiltSkip;
       LogInfo("    Same cached upper/lower skip: " << sameTiltSkip << ". " << totalLayer << " left.\n");
       LogInfo("    Attempting: " << attemptCount << " or " << percentAttempt << " %.\n");

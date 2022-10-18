@@ -1,4 +1,5 @@
 #include "rMakeFakeRadarData.h"
+#include "rTerrainBlockageLak.h"
 
 using namespace rapio;
 
@@ -93,7 +94,7 @@ MakeFakeRadarData::execute()
   // Create terrain blockage
   if (myDEM != nullptr) {
     myTerrainBlockage =
-      std::make_shared<TerrainBlockage>(myDEM, rs.getLocation(), myRadarRangeKM, rs.getRadarName());
+      std::make_shared<TerrainBlockageLak>(myDEM, rs.getLocation(), myRadarRangeKM, rs.getRadarName());
   }
 
   addRadials(*myRadialSet);

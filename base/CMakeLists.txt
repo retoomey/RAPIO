@@ -7,6 +7,8 @@ set(HEADER_FILES
   RAPIO.h
   rRAPIOProgram.h
   rTerrainBlockage.h
+  rTerrainBlockageLak.h
+  rTerrainBlockage2me.h
   rArray.h
   rBinaryIO.h
   rColor.h
@@ -109,6 +111,8 @@ set(HEADER_FILES
 set(SOURCE_FILES
   rRAPIOProgram.cc
   rTerrainBlockage.cc
+  rTerrainBlockageLak.cc
+  rTerrainBlockage2me.cc
   rArray.cc
   rBinaryIO.cc
   rColor.cc

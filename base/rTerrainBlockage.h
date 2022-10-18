@@ -2,30 +2,80 @@
 
 #include "rData.h"
 #include "rUtility.h"
-
+#include "rFactory.h"
 #include "rLatLonGrid.h"
-#include "rConstants.h"
-
-#include <limits>
 
 namespace rapio
 {
 /** Base class for creating a terrain blockage algorithm for a particular radar.
+ * Also base factory for creating a terrain blockage by registered name.
+ *
  * @author Robert Toomey
  */
-class TerrainBlockageBase : public Utility
+class TerrainBlockage : public Utility
 {
 public:
   /** For STL use only. */
-  TerrainBlockageBase()
+  TerrainBlockage()
   { }
 
+  // --------------------------------------------------------
+  // Factory methods for doing things by name.  Usually if you
+  // want to support command line choosing of a TerrainBlockage
+  // algorithm.
+
+  /** Use this to introduce default built-in RAPIO TerrainBlockage subclasses.
+   * Note: You don't have to use this ability, it's not called by default algorithm.
+   * To use it, call TerrainBlockage::introduceSelf()
+   * To override or add another, call TerrainBlockage::introduce(myterrainkey, newterrain)
+   */
+  static void
+  introduceSelf();
+
+  /** Introduce a new TerrainBlockage by name */
+  static void
+  introduce(const std::string        & key,
+    std::shared_ptr<TerrainBlockage> factory);
+
+  /** Attempt to create TerrainBlockage by name.  This looks up any registered
+   * classes and attempts to call the virtual create method on it.
+   * FIXME: could key pair parameters for generalization, for now constant */
+  static std::shared_ptr<TerrainBlockage>
+  createTerrainBlockage(const std::string & key,
+    // Could make general args and improve interface here
+    std::shared_ptr<LatLonGrid>           aDEM,
+    const LLH                             & radarLocation,
+    const LengthKMs                       & radarRangeKMs, // Range after this is zero blockage
+    const std::string                     & radarName,
+    LengthKMs                             minTerrainKMs = 0,    // Bottom beam touches this we're blocked
+    AngleDegs                             minAngle      = 0.1); // Below this, no blockage occurs
+
+protected:
+
+  /** Called on subclasses by the TerrainBlockage to create/setup the TerrainBlockage.
+   * To use by name, you would override this method and return a new instance of your
+   * TerrainBlockage class. */
+  virtual std::shared_ptr<TerrainBlockage>
+  create(std::shared_ptr<LatLonGrid> aDEM,
+    const LLH                        & radarLocation,
+    const LengthKMs                  & radarRangeKMs, // Range after this is zero blockage
+    const std::string                & radarName,
+    LengthKMs                        minTerrainKMs,
+    AngleDegs                        minAngleDegs)
+  {
+    return nullptr;
+  }
+
+public:
+  // --------------------------------------------------------
+
   /** Create TerrainBlockage given a DEM and radar information */
-  TerrainBlockageBase(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                                     & radarLocation,
-    const LengthKMs                               & radarRangeKMs, // Range after this is zero blockage
-    const std::string                             & radarName,
-    LengthKMs                                     minTerrain = 0);
+  TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
+    const LLH                                 & radarLocation,
+    const LengthKMs                           & radarRangeKMs, // Range after this is zero blockage
+    const std::string                         & radarName,
+    LengthKMs                                 minTerrainKMs,
+    AngleDegs                                 minAngleDegs);
 
   // --------------------------------------------------
   // Accessing DEM heights
@@ -70,7 +120,19 @@ public:
    *
    */
   inline static float
-  getPowerDensity(float dist); // FIXME: what units?
+  getPowerDensity(float dist)
+  {
+    // FIXME: what units?
+    float x = M_PI * 1.27 * dist;
+
+    if (x < 0.01) {
+      x = 0.01; // avoid divide-by-zero
+    }
+    float wt = (1 - exp(-x * x / 8.5)) / (x * x);
+
+    wt = wt * wt;
+    return (wt);
+  }
 
   // --------------------------------------------------
   // Worker functions to actually calculate blockages
@@ -107,170 +169,10 @@ protected:
   /** The minimum bottem beam terrain height before 100% blockage */
   LengthKMs myMinTerrainKMs;
 
+  /** The minimum angle before applying terrain blocking */
+  LengthKMs myMinAngleDegs;
+
   /** The max range before terrain has zero effect */
   LengthKMs myMaxRangeKMs;
-};
-
-/** Attempt to make a faster polar terrain blockage
- * @author Robert Toomey
- */
-class TerrainBlockage2 : public TerrainBlockageBase
-{
-public:
-  /** For STL use only. */
-  TerrainBlockage2()
-  { }
-
-  /** This should be a LatLonGrid such that the data are
-   *  altitude above mean-sea-level in meters.
-   */
-  TerrainBlockage2(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                                  & radarLocation,
-    const LengthKMs                            & radarRangeKMs,
-    const std::string                          & radarName);
-
-  /** First attempt at general per gate method */
-  virtual void
-  calculatePercentBlocked(
-    // Constants in 3D space information
-    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
-    // Gate information.  For now do center automatically.
-    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-    // Largest PBB
-    float& greatestPercentage,
-    // Final output percentage for gate
-    float& v);
-};
-
-/* A class for storage information of blockage ranges for the terrain algorithm,
- * @author Lakshman
- */
-class PointBlockage : public Data
-{
-public:
-
-  /** Create a point blockage, a 'bin' along a radial line for terrain blockage values */
-  PointBlockage() : endKMs(std::numeric_limits<float>::max()){ } // not sure max needed here really
-
-  /**  Does a ray fall into our bin?.  Used during terrain lookup creation */
-  bool
-  contains(size_t ray_no) const
-  {
-    return ( ray_no >= minRayNumber && ray_no <= maxRayNumber );
-  }
-
-  /** Set the azimuthal spread.  Feel like would be quicker to do directly and skip the
-   * function calling.  I'm having to direct pass the boost reference which is less clean */
-  static void
-  setAzimuthalSpread(const boost::multi_array<float, 2>& azimuths, int x, int y, size_t& min, size_t& max);
-
-  /** Calculate ray number from angle */
-  static size_t
-  getRayNumber(float ang);
-
-  /** The azimuth angle represent */
-  AngleDegs azDegs;
-
-  /** The elevation angle represent */
-  AngleDegs elevDegs;
-
-  /** Starting range along the ray */
-  LengthKMs startKMs;
-
-  /** Ending range along the ray */
-  LengthKMs endKMs;
-
-  /** Minimum ray number */
-  size_t minRayNumber;
-
-  /** Maximum ray number */
-  size_t maxRayNumber;
-};
-
-/**
- * Terrain blockage from MRMS
- *
- * @author Lakshman
- */
-class TerrainBlockage : public TerrainBlockageBase
-{
-public:
-  /** For STL use only. */
-  TerrainBlockage()
-  { }
-
-  /** This should be a LatLonGrid such that the data are
-   *  altitude above mean-sea-level in meters.
-   */
-  TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                                 & radarLocation,
-    const LengthKMs                           & radarRangeKMs,
-    const std::string                         & radarName);
-
-  /** Lak's method requires creating a virtual radialset overlay for
-   * integrating the blockage within sub 'pencils' of the azimuth coverage area */
-  void
-  initialize();
-
-  /**
-   *
-   * Returns 0 for non-blocked beams and 1 for fully blocked ones.
-   * The binAzimuth is the *center* azimuth of the radial.
-   *
-   * See O'Bannon, T., 1997: Using a terrain-based hybrid scan to improve WSR-88D precipitation
-   * estimates. Preprints, 28th Conf. on Radar Meteorology, Austin, TX, Amer. Meteor. Soc., 506
-   *
-   * Tim's hybrid scan technique is also described in some detail in:
-   *
-   * Fulton, R. A., J. P. Breidenbach, D. J. Seo, D. A. Miller, and T. O'Bannon, 1998:
-   * The WSR-88D rainfall algorithm. Wea. Forecasting., 13, 377
-   * and
-   * Maddox, Robert A., Zhang, Jian, Gourley, Jonathan J., Howard, Kenneth W. 2002:
-   * Weather Radar Coverage over the Contiguous United States. Weather and Forecasting:
-   * Vol. 17, No. 4, pp. 927
-   */
-  virtual void
-  calculatePercentBlocked(
-    // Constants in 3D space information
-    LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
-    // Gate information.  For now do center automatically.
-    AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-    // Largest PBB
-    float& greatestPercentage,
-    // Final output percentage for gate
-    float& v) override;
-
-protected:
-
-  /** Prune rays. (used by computeBeamBlockage) */
-  static void
-  pruneRayBlockage(std::vector<PointBlockage>& orig);
-
-  /**
-   * Given the amount of each pencil ray that has been passed,
-   * compute the average amount passed by the entire beam.
-   */
-  static float
-  findAveragePassed(const std::vector<float>& pencil_passed);
-
-  /** Calculated beam blockage lookup.  A vector of vectors...so the question is
-   * how much lookup speed do we lose here?  If we made a 2D array with max length
-   * we could lookup values a lot faster.  We'll see */
-  std::vector<std::vector<PointBlockage> > myRays;
-
-private:
-
-  /** Have we computed terrain points, etc.? */
-  bool myInitialized;
-
-  /** Compute terrain points */
-  void
-  computeTerrainPoints(
-    const LengthKMs           & radarRangeKMs,
-    std::vector<PointBlockage>& terrainPoints);
-
-  /** Computer beam blockage using the finished computed terrain points */
-  void
-  computeBeamBlockage(const std::vector<PointBlockage>& terrainPoints);
 };
 }

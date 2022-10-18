@@ -80,15 +80,15 @@ public:
  * Tried using a 3D array of cache objects with pointer math and still slower than this,
  * interesting. It might be that a set of 2D caches better in RAM vs 3D due to L3, etc.
  */
-class AzRanElevTerrainCache : public Utility
+class AzRanElevCache : public Utility
 {
 public:
 
   /** Create lookup of given size */
-  AzRanElevTerrainCache(size_t numX, size_t numY) :
+  AzRanElevCache(size_t numX, size_t numY) :
     myNumX(numX), myNumY(numY),
     myAzimuths(numX * numY), myVirtualElevations(numX * numY), myRanges(numX * numY),
-    myTerrainAzimuthSpacing(1), myTerrainPercents(numX * numY), myUpperElev(numX * numY), myLowerElev(numX * numY),
+    myTerrainAzimuthSpacing(1), myUpperElev(numX * numY), myLowerElev(numX * numY),
     myAt(0)
   { }
 
@@ -101,15 +101,13 @@ public:
 
   /** Store cache lookup given x and y */
   inline void
-  set(size_t x, size_t y, const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges,
-    char terrainPercent)
+  set(size_t x, size_t y, const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges)
   {
     const size_t index = getIndex(x, y);
 
     myAzimuths[index] = inAzDegs;
     myVirtualElevations[index] = inElevDegs;
     myRanges[index] = inRanges;
-    myTerrainPercents[index] = terrainPercent;
   }
 
   /** Store upper/lower markers. Return true if it changes.  When these change, we recalculate data values */
@@ -143,38 +141,33 @@ public:
 
   /** Add at current position (a bit faster).  FIXME: could make an iterator */
   inline void
-  add(const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges, unsigned char terrainPercent)
+  add(const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges)
   {
     myAzimuths[myAt] = inAzDegs;
     myVirtualElevations[myAt] = inElevDegs;
     myRanges[myAt] = inRanges;
-    myTerrainPercents[myAt] = terrainPercent;
     myAt++;
   }
 
   /** Get at current position (a bit faster) */
   inline void
-  get(AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges,
-    unsigned char& terrainPercent)
+  get(AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
   {
-    outAzDegs      = myAzimuths[myAt];
-    outElevDegs    = myVirtualElevations[myAt];
-    outRanges      = myRanges[myAt];
-    terrainPercent = myTerrainPercents[myAt];
+    outAzDegs   = myAzimuths[myAt];
+    outElevDegs = myVirtualElevations[myAt];
+    outRanges   = myRanges[myAt];
     myAt++;
   }
 
   /** Cache lookup given x and y */
   inline void
-  get(size_t x, size_t y, AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges,
-    unsigned char& terrainPercent)
+  get(size_t x, size_t y, AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
   {
     const size_t index = getIndex(x, y);
 
-    outAzDegs      = myAzimuths[index];
-    outElevDegs    = myVirtualElevations[index];
-    outRanges      = myRanges[index];
-    terrainPercent = myTerrainPercents[index];
+    outAzDegs   = myAzimuths[index];
+    outElevDegs = myVirtualElevations[index];
+    outRanges   = myRanges[index];
   }
 
 public:
@@ -197,10 +190,6 @@ public:
 
   /** Store the terrain azimuth spacing for our cached terrain */
   AngleDegs myTerrainAzimuthSpacing;
-
-  /** Cached terrain blockage percentage, this changes only if azimuthSpacing changes.
-   * This value is from 0 to 100 to represent the percentage */
-  std::vector<unsigned char> myTerrainPercents;
 
   /** Cached last upper elevation for this x, y.  This is only important as a number,
    * and it might be an invalid pointer */
@@ -262,7 +251,7 @@ public:
   void
   createLLHtoAzRangeElevProjection(
     AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-    std::shared_ptr<TerrainBlockageBase> terrain,
+    std::shared_ptr<TerrainBlockage> terrain,
     LLCoverageArea& g);
 
   /** Process a new record/datatype */
@@ -283,7 +272,7 @@ protected:
   std::shared_ptr<ElevationVolume> myElevationVolume;
 
   /** Store terrain blockage */
-  std::shared_ptr<TerrainBlockageBase> myTerrainBlockage;
+  std::shared_ptr<TerrainBlockage> myTerrainBlockage;
 
   /** Store first radar name.  Currently we can only handle 1 radar */
   std::string myRadarName;
@@ -298,7 +287,7 @@ protected:
   std::vector<size_t> myHeightsIndex;
 
   /** Cached lookup for radar to conus grid projection */
-  std::vector<std::shared_ptr<AzRanElevTerrainCache> > myLLProjections;
+  std::vector<std::shared_ptr<AzRanElevCache> > myLLProjections;
 
   /** Cached sin/cos lookup.  Needs to be one 2D over radar coverage area */
   std::shared_ptr<SinCosLatLonCache> mySinCosCache;
@@ -311,6 +300,9 @@ protected:
 
   /** Terrain path, if we use it */
   std::string myTerrainPath;
+
+  /** Terrain alg */
+  std::string myTerrainAlg;
 
   /** Radar range */
   LengthKMs myRangeKMs;
