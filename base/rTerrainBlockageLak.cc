@@ -58,24 +58,22 @@ TerrainBlockageLak::calculatePercentBlocked(
   LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
   // Variables in 3D space information.  Should we do center automatically?
   AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-  // Greatest PBB so far
-  float& greatestPercentage,
-  // Final output percentage for gate
-  float& v)
+  // Cumulative beam blockage
+  float& cbb,
+  // Partial beam blockage
+  float& pbb,
+  // Bottom beam hit
+  bool& hit)
 {
   if (!myInitialized) {
     initialize();
   }
 
-  // Note: So with this cutoff we're not PBB or CBB
-  // The bottom of the beam has to clear the terrain by at least myMinTerrainKMs
+  // Check beamwidth bottom
   AngleDegs bottomDegs = elevDegs - 0.5 * beamWidthDegs;
   LengthMs htKMs       = getHeightAboveTerrainKM(bottomDegs, centerAzDegs, centerRangeKMs);
 
-  if (htKMs < myMinTerrainKMs) {
-    v = 1.0;
-    return;
-  }
+  hit = (htKMs < myMinTerrainKMs);
 
   AngleDegs topDegs   = elevDegs + 0.5 * beamWidthDegs;
   AngleDegs minazDegs = centerAzDegs - 0.5 * beamWidthDegs;
@@ -122,7 +120,11 @@ TerrainBlockageLak::calculatePercentBlocked(
 
   float blocked = 1 - avgPassed;
 
-  v = blocked;
+  // Lak is just calculating the cumulative or final value.
+  // I'm not sure how to get partial for his method, so we'll
+  // set them the same here for now.
+  cbb = blocked;
+  pbb = blocked;
 } // TerrainBlockage::computeFractionBlocked
 
 float
@@ -154,7 +156,7 @@ computeTerrainPoints(
   const LengthKMs              & radarRangeKMs,
   std::vector<PointBlockageLak>& terrainPoints)
 {
-  // ProcessTimer("Computing Terran Points for a Single Radar...\n");
+  // ProcessTimer("Computing Terrain Points for a Single Radar...\n");
 
   // Basically here, Lak takes the DEM grid and creates a 2D array to store
   // the azimuth value for each point. In RAPIO,  we can add a 2DArray to our DEM
@@ -173,11 +175,6 @@ computeTerrainPoints(
   auto& aref         = azimuthsArray->ref(); // auto would copy, use auto&.  A bit annoying c++
   auto& href         = myDEM->getFloat2DRef();
 
-  // FIXME: order might matter here for memory accsss...it's in netcdf order
-  // I forget at moment.
-  // In theory we could speed this stuff up by raw calculating here and not
-  // using functions..
-  // Though funny this part is actually reasonable fast, just a couple seconds...
   std::vector<int> block_i, block_j; // ok we store this?
 
   for (size_t i = 0; i < numLats; ++i) {
@@ -198,8 +195,6 @@ computeTerrainPoints(
       LLH loc = myDEM->getCenterLocationAt(i, j);
       loc.setHeightKM(v / 1000.0); // data is in meters  FIXME: units?
 
-      // Crap Lak does want the block.elev, stores in object..
-      // BeamPath_LLHtoAzRangeElev(loc123, radarLocation123,  e, az, rn (meters))
       PointBlockageLak block;
       Project::BeamPath_LLHtoAzRangeElev(
         // Ok wasted to create the location object right?

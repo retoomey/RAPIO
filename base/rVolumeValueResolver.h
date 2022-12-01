@@ -11,8 +11,10 @@ class LayerValue : public Utility
 {
 public:
   double value;            ///< Value of data at layer
-  bool haveTerrainPercent; ///< Do we have terrain blockage percentage
-  float terrainPercent;    ///< Terrain blockage, if available otherwise 0
+  bool haveTerrain;        ///< Do we have terrain information?
+  float terrainCBBPercent; ///< Terrain cumulative beam blockage, if available otherwise 0
+  float terrainPBBPercent; ///< Terrain partial beam blockage, if available otherwise 0
+  bool beamHitBottom;      ///< Terrain blockage, did beam bottom hit terrain?
   LengthKMs heightKMs;     ///< Height in kilometers at the point of interest
   LengthKMs rangeKMs;      ///< Range in kilometers along the beampath
   int gate;                ///< Gate number at the point of interest, or -1
@@ -23,11 +25,13 @@ public:
   void
   clear()
   {
-    value = Constants::DataUnavailable;
-    haveTerrainPercent = false;
-    terrainPercent     = 0;
-    heightKMs = 0;
-    rangeKMs  = 0;
+    value             = Constants::DataUnavailable;
+    haveTerrain       = false;
+    terrainCBBPercent = 0;
+    terrainPBBPercent = 0;
+    beamHitBottom     = false;
+    heightKMs         = 0;
+    rangeKMs          = 0;
     gate      = -1;
     radial    = -1;
     elevation = Constants::MissingData;
@@ -53,8 +57,9 @@ public:
   // INPUTS for this value location
   // This is the location of interest between layers
   LengthKMs layerHeightKMs;  ///< Height of the virtual layer we're calculating, the merger layer
-  AngleDegs azDegs;          ///< Virtual Azimuth degrees at this location
+  AngleDegs virtualAzDegs;   ///< Virtual Azimuth degrees at this location
   AngleDegs virtualElevDegs; ///< Virtual elevation degrees at this location
+  LengthKMs virtualRangeKMs; ///< Virtual range in kilometers at this location
   double sinGcdIR;           ///< Cached sin GCD IR ratio
   double cosGcdIR;           ///< Cached cos GCD IR ratio
 

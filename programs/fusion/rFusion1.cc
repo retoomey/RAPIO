@@ -5,6 +5,63 @@
 
 using namespace rapio;
 
+// Some test resolvers for sanity checks...
+
+/** Azimuth from 0 to 360 or so of virtual */
+class AzimuthVVResolver : public VolumeValueResolver
+{
+public:
+  virtual void
+  calc(VolumeValue& vv) override
+  {
+    // Output value is the virtual azimuth
+    vv.dataValue = vv.virtualAzDegs;
+  }
+};
+
+/** Virtual range in KMs */
+class RangeVVResolver : public VolumeValueResolver
+{
+public:
+  virtual void
+  calc(VolumeValue& vv) override
+  {
+    // Output value is the virtual range
+    vv.dataValue = vv.virtualRangeKMs;
+  }
+};
+
+/** Projected terrain blockage of lower tilt.
+ * Experiment to display some of the terrain fields for debugging */
+class TerrainVVResolver : public VolumeValueResolver
+{
+public:
+  virtual void
+  calc(VolumeValue& vv) override
+  {
+    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
+
+    // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
+    // vv.dataValue = vv.lLayer.terrainPBBPercent;
+    if (vv.lLayer.beamHitBottom) {
+      // beam bottom on terrain we'll plot as unavailable
+      vv.dataValue = Constants::DataUnavailable;
+    } else {
+      vv.dataValue = vv.lLayer.terrainCBBPercent;
+      // Super small we'll go unavailable...
+      if (vv.dataValue < 0.02) {
+        vv.dataValue = Constants::MissingData;
+      } else {
+        // Otherwise scale a bit to show up with colormap better
+        // 0 to 10000
+        vv.dataValue *= 100;
+        vv.dataValue  = vv.dataValue * vv.dataValue;
+      }
+    }
+  }
+};
+
+
 /** Showing elevation angle of the contributing tilt below us */
 class TestResolver1 : public VolumeValueResolver
 {
@@ -82,13 +139,22 @@ public:
         // v = Constants::DataUnavailable; // 00
       }
     }
-    // Make values unavailable if terrain over 50%
-    if (vv.uLayer.terrainPercent > .50) {
+    // Make values unavailable if cumulative blockage is over 50%
+    // FIXME: Could be configurable
+    if (vv.uLayer.terrainCBBPercent > .50) {
       vv.uLayer.value = Constants::DataUnavailable;
     }
-    if (vv.lLayer.terrainPercent > .50) {
+    if (vv.lLayer.terrainCBBPercent > .50) {
       vv.lLayer.value = Constants::DataUnavailable;
     }
+    // Make values unavailable if elevation layer bottom hits terrain
+    if (vv.lLayer.beamHitBottom) {
+      vv.lLayer.value = Constants::DataUnavailable;
+    }
+    if (vv.uLayer.beamHitBottom) {
+      vv.uLayer.value = Constants::DataUnavailable;
+    }
+
 
     // ------------------------------------------------------------------------------
     // Interpolation and application of upper and lower data values
@@ -103,21 +169,21 @@ public:
       if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
       const double nwt = (1.0 - wt);
 
-      const double lTerrain = lValue * (1 - vv.lLayer.terrainPercent);
-      const double uTerrain = uValue * (1 - vv.uLayer.terrainPercent);
+      const double lTerrain = lValue * (1 - vv.lLayer.terrainCBBPercent);
+      const double uTerrain = uValue * (1 - vv.uLayer.terrainCBBPercent);
 
       // v = (0.5 + nwt * lValue + wt * uValue);
       v = (0.5 + nwt * lTerrain + wt * uTerrain);
     } else if (inLowerBeamwidth) {
       if (Constants::isGood(lValue)) {
-        const double lTerrain = lValue * (1 - vv.lLayer.terrainPercent);
+        const double lTerrain = lValue * (1 - vv.lLayer.terrainCBBPercent);
         v = lTerrain;
       } else {
         v = lValue; // Use the gate value even if missing, RF, unavailable, etc.
       }
     } else if (inUpperBeamwidth) {
       if (Constants::isGood(uValue)) {
-        const double uTerrain = uValue * (1 - vv.uLayer.terrainPercent);
+        const double uTerrain = uValue * (1 - vv.uLayer.terrainCBBPercent);
         v = uTerrain;
       } else {
         v = uValue;
@@ -276,14 +342,13 @@ RAPIOFusionOneAlg::createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverage
 void
 RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-  std::shared_ptr<TerrainBlockage> terrain,
   LLCoverageArea& g)
 {
   // We cache a bunch of repeated trig functions that save us a lot of CPU time
   if (myLLProjections[0] == nullptr) {
     LogInfo("-------------------------------Projection AzRangeElev cache generation.\n");
-    LengthKMs rangeKMs;
-    AngleDegs azDegs, virtualElevDegs;
+    LengthKMs virtualRangeKMs;
+    AngleDegs virtualAzDegs, virtualElevDegs;
 
     // Create the sin/cos cache.  We just need one of these vs the Az cache below
     // that is per conus layer
@@ -322,9 +387,9 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
           // Calculate and cache a virtual azimuth, elevation and range for each
           // point of interest in the grid
           Project::Cached_BeamPath_LLHtoAzRangeElev(atLat, atLon, layerHeightKMs,
-            cLat, cLon, cHeight, sinGcdIR, cosGcdIR, virtualElevDegs, azDegs, rangeKMs);
+            cLat, cLon, cHeight, sinGcdIR, cosGcdIR, virtualElevDegs, virtualAzDegs, virtualRangeKMs);
 
-          llp.add(azDegs, virtualElevDegs, rangeKMs);
+          llp.add(virtualAzDegs, virtualElevDegs, virtualRangeKMs);
         }
       }
     }
@@ -492,7 +557,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
     AngleDegs startLat = outg.nwLat - (outg.latSpacing / 2.0); // move south (lat decreasing)
     AngleDegs startLon = outg.nwLon + (outg.lonSpacing / 2.0); // move east (lon increasing)
-    createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, myTerrainBlockage, outg);
+    createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
 
     // We actually store a Lat Lon Grid per each CAPPI
     createLLGCache(r, outg, myHeightsM);
@@ -530,10 +595,12 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     vv.cHeight = cHeight;
 
     // Resolver
-    RobertLinear1Resolver resolver;
+    // RobertLinear1Resolver resolver;
     // TestResolver1 resolver;
+    // RangeVVResolver resolver;
+    TerrainVVResolver resolver;
 
-    LengthKMs rangeKMs;
+    // LengthKMs rangeKMs;
 
     // Each layer of merger we have to loop through
     size_t total = 0;
@@ -573,15 +640,15 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           total++;
           totalLayer++;
           // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
-          llp.get(azimuthSpacing, vv.azDegs, vv.virtualElevDegs, rangeKMs);
+          llp.get(azimuthSpacing, vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
           ssc.get(vv.sinGcdIR, vv.cosGcdIR);
 
           // Create lat lon grid of a particular field...
-          // gridtest[y][x] = rangeKMs; continue; // Range circles
-          // gridtest[y][x] = vv.azDegs; continue;   // Azimuth
+          // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
+          // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
 
           // Anything over terrain range Kms hard ignore.
-          if (rangeKMs > myRangeKMs) {
+          if (vv.virtualRangeKMs > myRangeKMs) {
             // Since this is outside range it should never be different from the initialization
             // gridtest[y][x] = Constants::DataUnavailable;
             rangeSkipped++;
@@ -645,13 +712,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
             // Me: 2200 2600 33 as X, Y, Z.
             const size_t atZ = myHeightsIndex[layer]; // hack sparse height layer index (or we make object?)
             t.addRawObservation(atZ, outX, outY, vv.dataValue,
-              int(rangeKMs * RANGE_SCALE + 0.5),
+              int(vv.virtualRangeKMs * RANGE_SCALE + 0.5),
               //	  entry.elevWeightScaled(), Can't figure this out.  Why a individual scale...oh weight because the
               //	  cloud is the full cube.  Ok so we take current elev..no wait the virtual elevation and scale to char...
               //	  takes -90 to 90 to 0-18000, can still fit into unsigned char...
               //
               ELEV_SCALE(vv.virtualElevDegs),
-              vv.azDegs, aMRMSTime);
+              vv.virtualAzDegs, aMRMSTime);
 
             // Per point (I'm gonna have to rework it if I do a new stage 2):
             // t.azimuth  vector of azimuth of the point, right?  Ok we have that.

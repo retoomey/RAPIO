@@ -251,7 +251,6 @@ public:
   void
   createLLHtoAzRangeElevProjection(
     AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-    std::shared_ptr<TerrainBlockage> terrain,
     LLCoverageArea& g);
 
   /** Process a new record/datatype */

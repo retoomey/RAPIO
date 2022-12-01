@@ -36,7 +36,9 @@ const std::string Constants::ExpiryInterval   = "ExpiryInterval";
 const std::string Constants::FilenameDateTime = "FilenameDateTime";
 
 // Terrain constants
-const std::string Constants::TerrainPercent = "TerrainPercent";
+const std::string Constants::TerrainBeamBottomHit = "TerrainBeamBottomHit";
+const std::string Constants::TerrainPBBPercent    = "TerrainPBBPercent";
+const std::string Constants::TerrainCBBPercent    = "TerrainCBBPercent";
 
 // Datatype reading/writing
 const std::string Constants::PrimaryDataName("primary");

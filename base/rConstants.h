@@ -95,7 +95,9 @@ public:
   static const std::string FilenameDateTime; // Formatted as filename expected
 
   // Terrain constants
-  static const std::string TerrainPercent;
+  static const std::string TerrainBeamBottomHit;
+  static const std::string TerrainPBBPercent;
+  static const std::string TerrainCBBPercent;
 
   // Constants for reading/writing attributes
 

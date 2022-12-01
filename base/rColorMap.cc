@@ -258,6 +258,7 @@ ColorMap::readParaColorMap(const std::string& key,
     }
   }
 
+  LogInfo("Loaded para colormap with key " << key << "\n");
   return colormap;
 } // ColorMap::readParaColorMap
 
@@ -369,6 +370,7 @@ ColorMap::readW2ColorMap(const URL& url)
     out = nullptr;
     LogSevere("Tried to read color map and failed: " << e.what() << "\n");
   }
+  LogInfo("Loaded w2 colormap at " << url.toString() << "\n");
   return out;
 } // ColorMap::readW2ColorMap
 

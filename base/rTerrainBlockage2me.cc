@@ -24,10 +24,12 @@ TerrainBlockage2me::calculatePercentBlocked(
   LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
   // Variables in 3D space information.  Should we do center automatically?
   AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-  // Greatest PBB so far
-  float& greatestPercentage,
-  // Final output percentage for gate
-  float& v)
+  // Cumulative beam blockage
+  float& cbb,
+  // Partial beam blockage
+  float& pbb,
+  // Bottom beam hit
+  bool& hit)
 {
   AngleDegs outLatDegs, outLonDegs;
   AngleDegs topDegs    = elevDegs + 0.5 * beamWidthDegs;
@@ -76,19 +78,16 @@ TerrainBlockage2me::calculatePercentBlocked(
     fractionBlocked = num / dem;                                               // % covered
   }
 
-  // Logic here: We want CBB for each gate, unless the beam touches the bottom..then
-  // it's 100% at that gate.  FIXME: I want to provide all the data at some point let
-  // something else determine the blockage logic.  This will be CBB where anywhere the
-  // beam bottom touches we have a 100% gate.
-  v = fractionBlocked; // Start with PBB
-  if (v < 0) { v = 0; }
-  if (v > 1.0) { v = 1.0; }
+  // Assign Partial beam blockage final value
+  pbb = fractionBlocked;
+  if (pbb < 0) { pbb = 0; }
+  if (pbb > 1.0) { pbb = 1.0; }
 
-  if (v > greatestPercentage) { // and become CBB
-    greatestPercentage = v;
-  } else {
-    v = greatestPercentage;
+  // Update Cumulative
+  if (pbb > cbb) {
+    cbb = pbb;
   }
-  // Either the final gate percentage will be the CBB, or 100% if touching earth:
-  if (d - TerrainKMs <= myMinTerrainKMs) { v = 1.0; } // less than min height of 0
-}                                                     // TerrainBlockage2me::calculateGate
+
+  // Does bottom of beam hit or not?
+  hit = (d - TerrainKMs <= myMinTerrainKMs);
+} // TerrainBlockage2me::calculatePercentBlocked

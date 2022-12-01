@@ -55,9 +55,11 @@ public:
     LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
     // Gate information.  For now do center automatically.
     AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
-    // Largest PBB
-    float& greatestPercentage,
-    // Final output percentage for gate
-    float& v);
+    // Cumulative beam blockage
+    float& cbb,
+    // Partial beam blockage
+    float& pbb,
+    // Bottom beam hit
+    bool& hit);
 };
 }

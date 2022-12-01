@@ -143,14 +143,21 @@ TerrainBlockage::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
   // FIXME: check radar name?
   // FIXME: We could make a general RadialSet center gate marcher which could be useful.
   RadialSet& rs = *rptr;
+
+  // We should always have beamwidth array
+  auto& beamwidth = rs.getBeamWidthVector()->ref();
+
   const AngleDegs elevDegs         = rs.getElevationDegs();
-  const AngleDegs myBeamWidthDegs  = 1.0; // FIXME
   const LengthKMs stationHeightKMs = rs.getLocation().getHeightKM();
 
-  // Create output array for now on the RadialSet.  Permanently store for moment
-  // for debugging or outputting to netcdf, etc.
-  auto ta = rs.addFloat2D(Constants::TerrainPercent, "Dimensionless", { 0, 1 });
-  auto& terrainPercent = ta->ref();
+  // Create output arrays on the RadialSet.
+  // FIXME: API wrap in the RadialSet?  Currently this is accessed by value resolvers
+  auto tbcc = rs.addFloat2D(Constants::TerrainCBBPercent, "Dimensionless", { 0, 1 });
+  auto& terrainCBBPercent = tbcc->ref();
+  auto tpbb = rs.addFloat2D(Constants::TerrainPBBPercent, "Dimensionless", { 0, 1 });
+  auto& terrainPBBPercent = tpbb->ref();
+  auto tbh = rs.addByte2D(Constants::TerrainBeamBottomHit, "Dimensionless", { 0, 1 });
+  auto& terrainBottomHit = tbh->ref();
 
   // First gate distance
   LengthKMs startKMs = rs.getDistanceToFirstGateM() / 1000.0;
@@ -162,20 +169,27 @@ TerrainBlockage::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
   const size_t numRadials = rs.getNumRadials();
   const size_t numGates   = rs.getNumGates();
 
+  bool hitBottom;
+
   for (int r = 0; r < numRadials; ++r) {
-    const AngleDegs azDeg        = azDegs[r];
-    const AngleDegs centerAzDegs = azDeg + (.5 * azSpaceDegs[r]);
-    const LengthKMs gwKMs        = gwMs[r] / 1000.0; // Constant per radial
+    const AngleDegs azDeg           = azDegs[r];
+    const AngleDegs centerAzDegs    = azDeg + (.5 * azSpaceDegs[r]);
+    const LengthKMs gwKMs           = gwMs[r] / 1000.0; // Constant per radial
+    const AngleDegs myBeamWidthDegs = beamwidth[r];
     LengthKMs rangeKMs = startKMs;
 
-    float greatestPercentage = -1000; // percentage
-
+    float cbb = 0; // Terrain Blockage alg should increase cbb values
     for (int g = 0; g < numGates; ++g) {
       LengthKMs centerRangeKMs = rangeKMs + (.5 * gwKMs);
 
+      terrainPBBPercent[r][g] = 0;
+      hitBottom = false;
       calculatePercentBlocked(stationHeightKMs, myBeamWidthDegs,
         elevDegs, centerAzDegs, centerRangeKMs,
-        greatestPercentage, terrainPercent[r][g]);
+        cbb, terrainPBBPercent[r][g], hitBottom);
+
+      terrainBottomHit[r][g]  = hitBottom ? 1 : 0;
+      terrainCBBPercent[r][g] = cbb;
 
       rangeKMs += gwKMs;
     }

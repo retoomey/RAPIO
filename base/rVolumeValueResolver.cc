@@ -5,23 +5,6 @@
 
 using namespace rapio;
 
-/** Showing elevation angle of the contributing tilt below us */
-class TestResolver1 : public VolumeValueResolver
-{
-public:
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    if (vv.lower != nullptr) {
-      RadialSet& lowerr = *((RadialSet *) vv.lower);
-      auto angle        = lowerr.getElevationDegs();
-      vv.dataValue = angle;
-    } else {
-      vv.dataValue = Constants::MissingData;
-    }
-  }
-};
-
 void
 VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs)
 {
@@ -53,17 +36,23 @@ VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
     vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
 
   // Projection of azimuth, range to data gate/radial value
-  if (r.getRadialSetLookupPtr()->getRadialGate(vv.azDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
+  if (r.getRadialSetLookupPtr()->getRadialGate(vv.virtualAzDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
     const auto& data = r.getFloat2DRef();
     l.value = data[l.radial][l.gate];
     have    = true;
 
-    // Check for Terrain Percent grid
-    auto tptr = r.getFloat2D(Constants::TerrainPercent);
-    if (tptr != nullptr) {
-      const auto& t = r.getFloat2D(Constants::TerrainPercent)->ref();
-      l.haveTerrainPercent = true;
-      l.terrainPercent     = t[l.radial][l.gate];
+    // Check for Terrain information arrays
+    auto hitptr = r.getByte2D(Constants::TerrainBeamBottomHit);
+    auto pbbptr = r.getFloat2D(Constants::TerrainPBBPercent);
+    auto cbbptr = r.getFloat2D(Constants::TerrainCBBPercent);
+    if ((hitptr != nullptr) && (pbbptr != nullptr) && (cbbptr != nullptr)) {
+      l.haveTerrain = true;
+      const auto& cbb = cbbptr->ref();
+      const auto& pbb = pbbptr->ref();
+      const auto& hit = hitptr->ref();
+      l.terrainCBBPercent = cbb[l.radial][l.gate];
+      l.terrainPBBPercent = pbb[l.radial][l.gate];
+      l.beamHitBottom     = (hit[l.radial][l.gate] != 0);
     }
   } else {
     // Outside of coverage area we'll remove virtual values
