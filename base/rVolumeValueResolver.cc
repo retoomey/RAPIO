@@ -41,6 +41,10 @@ VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
     l.value = data[l.radial][l.gate];
     have    = true;
 
+    // Get the beamwidth for the radial
+    const auto& bw = r.getBeamWidthVector()->ref();
+    l.beamWidth = bw[l.radial];
+
     // Check for Terrain information arrays
     auto hitptr = r.getByte2D(Constants::TerrainBeamBottomHit);
     auto pbbptr = r.getFloat2D(Constants::TerrainPBBPercent);

@@ -97,21 +97,21 @@ public:
     // but it's making my head hurt so just do it always for now
     // The issue is between tilts lots of tan, etc. we might skip
 
-    // Get height of a .5 deg higher (half beamwidth of 1)
+    // Get height of half beamwidth higher
     LengthKMs lowerHeightKMs;
     bool inLowerBeamwidth = false;
 
-    if (haveLower) {
-      heightForDegreeShift(vv, vv.lower, .5, lowerHeightKMs);
+    if (haveLower) { // Do we hit the valid gates of the lower tilt?
+      heightForDegreeShift(vv, vv.lower, vv.lLayer.beamWidth / 2.0, lowerHeightKMs);
       inLowerBeamwidth = (vv.layerHeightKMs <= lowerHeightKMs);
     }
 
-    // Get height of a .5 deg lower (half beamwidth of 1)
+    // Get height of half beamwidth lower
     LengthKMs upperHeightKMs;
     bool inUpperBeamwidth = false;
 
-    if (haveUpper) {
-      heightForDegreeShift(vv, vv.upper, -.5, upperHeightKMs);
+    if (haveUpper) { // Do we hit the valid gates of the upper tilt?
+      heightForDegreeShift(vv, vv.upper, -vv.uLayer.beamWidth / 2.0, upperHeightKMs);
       inUpperBeamwidth = (vv.layerHeightKMs >= upperHeightKMs);
     }
 
@@ -188,6 +188,83 @@ public:
       } else {
         v = uValue;
       }
+    }
+
+    vv.dataValue = v;
+  } // calc
+};
+
+/** First attempt to do the wt^3 Lak does in w2merger */
+class RobertGuassian1Resolver : public VolumeValueResolver
+{
+public:
+  virtual void
+  calc(VolumeValue& vv) override
+  {
+    // ------------------------------------------------------------------------------
+    // Query information for above and below the location
+    bool haveLower       = queryLayer(vv, vv.lower, vv.lLayer);
+    bool haveUpper       = queryLayer(vv, vv.upper, vv.uLayer);
+    const double& lValue = vv.lLayer.value;
+    const double& uValue = vv.uLayer.value;
+
+    static const float ELEV_FACTOR = log(0.005);
+
+    // Final value
+    double v = Constants::DataUnavailable;
+
+    // Do Lak's exp curve extrapolation from the upper to our sample location...
+    // Lak would cap this at full beamwidth, I think to get half the exponential curve
+    // Also we'll do angle interpolation here vs the linear though I might try that
+    // later.
+    double upperWt = 0.0;
+    double lowerWt = 0.0;
+
+    if (haveUpper) {
+      if ((vv.uLayer.terrainCBBPercent > .50) || (vv.uLayer.beamHitBottom)) {
+        haveUpper = false;
+      } else {
+        // Get coverage over the beamwidth, half the final S curve
+        const double c = (vv.uLayer.elevation - vv.virtualElevDegs) / vv.uLayer.beamWidth;
+        if (c < 1) { v = Constants::MissingData; } // in beamwidth mask
+
+        // If the value is a good one, do more weight math and update
+        if (Constants::isGood(uValue)) {
+          double wt = exp(c * c * c * ELEV_FACTOR);
+          if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
+          upperWt = wt;
+        } else {
+          haveUpper = false; // ignore bad values as if they don't exist
+        }
+      }
+    }
+
+    if (haveLower) {
+      if ((vv.lLayer.terrainCBBPercent > .50) || (vv.lLayer.beamHitBottom)) {
+        haveLower = false;
+      } else {
+        // Get coverage over the beamwidth, half the final S curve
+        const double c = (vv.virtualElevDegs - vv.lLayer.elevation ) / vv.lLayer.beamWidth;
+        if (c < 1) { v = Constants::MissingData; } // in beamwidth mask
+
+        // If the value is a good one, do more weight math and update
+        if (Constants::isGood(lValue)) {
+          double wt = exp(c * c * c * ELEV_FACTOR);
+          if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
+          lowerWt = wt;
+        } else {
+          haveLower = false; // ignore bad values as if they don't exist
+        }
+      }
+    }
+
+    if (haveLower && haveUpper) {
+      // Combine the two into one
+      v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
+    } else if (haveUpper) {
+      v = upperWt * uValue;
+    } else if (haveLower) {
+      v = lowerWt * lValue;
     }
 
     vv.dataValue = v;
@@ -596,9 +673,10 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Resolver
     // RobertLinear1Resolver resolver;
+    RobertGuassian1Resolver resolver;
     // TestResolver1 resolver;
     // RangeVVResolver resolver;
-    TerrainVVResolver resolver;
+    // TerrainVVResolver resolver;
 
     // LengthKMs rangeKMs;
 

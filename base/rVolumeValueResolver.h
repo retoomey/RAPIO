@@ -20,6 +20,7 @@ public:
   int gate;                ///< Gate number at the point of interest, or -1
   int radial;              ///< Radial number at the point of interest, or -1
   AngleDegs elevation;     ///< 'True' elevation angle used for this layer value
+  AngleDegs beamWidth;     ///< Beamwidth at the point of interest
 
   /** Clear all the values to default unset state */
   void
@@ -35,6 +36,7 @@ public:
     gate      = -1;
     radial    = -1;
     elevation = Constants::MissingData;
+    beamWidth = 1;
   }
 };
 
