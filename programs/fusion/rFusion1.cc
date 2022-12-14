@@ -194,13 +194,28 @@ public:
   } // calc
 };
 
-/** First attempt to do the wt^3 Lak does in w2merger */
-class RobertGuassian1Resolver : public VolumeValueResolver
+/**
+ * A resolver attempting to use the math presented in the paper:
+ * "A Real-Time, Three-Dimensional, Rapidly Updating, Heterogeneous Radar
+ * Merger Technique for Reflectivity, Velocity, and Derived Products"
+ * Weather and Forecasting October 2006
+ * Valliappa Lakshmanan, Travis Smith, Kurt Hondl, Greg Stumpf
+ *
+ * In particular, page 10 describing Virtual Volumes and the elevation
+ * influence.
+ */
+class LakResolver1 : public VolumeValueResolver
 {
 public:
   virtual void
   calc(VolumeValue& vv) override
   {
+    double v = Constants::DataUnavailable; // Final output data value
+
+    static const float ELEV_FACTOR     = log(0.005); // Formula constant from paper
+    static const float TERRAIN_PERCENT = .50;        // Cutoff terrain cumulative blockage
+    static const float MAX_SPREAD_DEGS = 4;          // Max spread of degrees between tilts
+
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
     bool haveLower       = queryLayer(vv, vv.lower, vv.lLayer);
@@ -208,63 +223,47 @@ public:
     const double& lValue = vv.lLayer.value;
     const double& uValue = vv.uLayer.value;
 
-    static const float ELEV_FACTOR = log(0.005);
-
-    // Final value
-    double v = Constants::DataUnavailable;
-
-    // Do Lak's exp curve extrapolation from the upper to our sample location...
-    // Lak would cap this at full beamwidth, I think to get half the exponential curve
-    // Also we'll do angle interpolation here vs the linear though I might try that
-    // later.
     double upperWt = 0.0;
     double lowerWt = 0.0;
 
-    if (haveUpper) {
-      if ((vv.uLayer.terrainCBBPercent > .50) || (vv.uLayer.beamHitBottom)) {
-        haveUpper = false;
-      } else {
-        // Get coverage over the beamwidth, half the final S curve
-        const double c = (vv.uLayer.elevation - vv.virtualElevDegs) / vv.uLayer.beamWidth;
-        if (c < 1) { v = Constants::MissingData; } // in beamwidth mask
-
-        // If the value is a good one, do more weight math and update
-        if (Constants::isGood(uValue)) {
-          double wt = exp(c * c * c * ELEV_FACTOR);
-          if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
-          upperWt = wt;
-        } else {
-          haveUpper = false; // ignore bad values as if they don't exist
-        }
-      }
+    // Discard tilts/values that hit terrain
+    if ((vv.uLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.uLayer.beamHitBottom)) {
+      haveUpper = false;
+    }
+    if ((vv.lLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.lLayer.beamHitBottom)) {
+      haveLower = false;
     }
 
+    // Still trying to get good results before optimizing
+
+    // Experimental function to extrapolate from lower to upper
+    // Still need all the cases
     if (haveLower) {
-      if ((vv.lLayer.terrainCBBPercent > .50) || (vv.lLayer.beamHitBottom)) {
-        haveLower = false;
-      } else {
-        // Get coverage over the beamwidth, half the final S curve
-        const double c = (vv.virtualElevDegs - vv.lLayer.elevation ) / vv.lLayer.beamWidth;
-        if (c < 1) { v = Constants::MissingData; } // in beamwidth mask
+      // Formula (6) on page 10 ----------------------------------------------
+      const double alphaTop = vv.virtualElevDegs = vv.lLayer.elevation;
 
-        // If the value is a good one, do more weight math and update
-        if (Constants::isGood(lValue)) {
-          double wt = exp(c * c * c * ELEV_FACTOR);
-          if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
-          lowerWt = wt;
-        } else {
-          haveLower = false; // ignore bad values as if they don't exist
+      double alphaBottom = vv.lLayer.beamWidth;
+      if (haveUpper) {
+        const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
+        if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+          if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
         }
       }
-    }
 
-    if (haveLower && haveUpper) {
-      // Combine the two into one
-      v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
-    } else if (haveUpper) {
-      v = upperWt * uValue;
-    } else if (haveLower) {
-      v = lowerWt * lValue;
+      const double alpha = alphaTop / alphaBottom;
+      double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
+      // ---------------------------------------------------------------------
+
+      // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
+      // is outside the effective beamwidth of the radial
+      if (delta >= 0.5) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+        if (Constants::isGood(lValue)) {
+          if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; } // needed?
+          v = lValue * delta * (1.0 - vv.lLayer.terrainCBBPercent);
+        } else {
+          v = Constants::MissingData; // mask
+        }
+      }
     }
 
     vv.dataValue = v;
@@ -673,7 +672,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Resolver
     // RobertLinear1Resolver resolver;
-    RobertGuassian1Resolver resolver;
+    LakResolver1 resolver;
     // TestResolver1 resolver;
     // RangeVVResolver resolver;
     // TerrainVVResolver resolver;
