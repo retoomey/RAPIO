@@ -207,6 +207,7 @@ public:
 class LakResolver1 : public VolumeValueResolver
 {
 public:
+
   virtual void
   calc(VolumeValue& vv) override
   {
@@ -240,7 +241,7 @@ public:
     // Still need all the cases
     if (haveLower) {
       // Formula (6) on page 10 ----------------------------------------------
-      const double alphaTop = vv.virtualElevDegs = vv.lLayer.elevation;
+      const double alphaTop = vv.virtualElevDegs - vv.lLayer.elevation;
 
       double alphaBottom = vv.lLayer.beamWidth;
       if (haveUpper) {
@@ -262,6 +263,34 @@ public:
           v = lValue * delta * (1.0 - vv.lLayer.terrainCBBPercent);
         } else {
           v = Constants::MissingData; // mask
+        }
+      }
+    } else {
+      if (haveUpper) {
+        // Formula (6) on page 10 ----------------------------------------------
+        const double alphaTop = vv.uLayer.elevation - vv.virtualElevDegs;
+
+        double alphaBottom = vv.uLayer.beamWidth;
+        if (haveLower) {
+          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
+          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+            if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
+          }
+        }
+
+        const double alpha = alphaTop / alphaBottom;
+        double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
+        // ---------------------------------------------------------------------
+
+        // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
+        // is outside the effective beamwidth of the radial
+        if (delta >= 0.5) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+          if (Constants::isGood(uValue)) {
+            if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; } // needed?
+            v = uValue * delta * (1.0 - vv.uLayer.terrainCBBPercent);
+          } else {
+            v = Constants::MissingData; // mask
+          }
         }
       }
     }
