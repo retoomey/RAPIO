@@ -216,6 +216,7 @@ public:
     static const float ELEV_FACTOR     = log(0.005); // Formula constant from paper
     static const float TERRAIN_PERCENT = .50;        // Cutoff terrain cumulative blockage
     static const float MAX_SPREAD_DEGS = 4;          // Max spread of degrees between tilts
+    static const float ELEV_THRESH     = .53;        // Closest to current w2merger
 
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
@@ -224,6 +225,9 @@ public:
     const double& lValue = vv.lLayer.value;
     const double& uValue = vv.uLayer.value;
 
+    // Weighted average use
+    bool useLower  = false;
+    bool useUpper  = false;
     double upperWt = 0.0;
     double lowerWt = 0.0;
 
@@ -238,7 +242,7 @@ public:
     // Still trying to get good results before optimizing
 
     // Experimental function to extrapolate from lower to upper
-    // Still need all the cases
+    // FIXME: if works, both sections of code could share function/macro
     if (haveLower) {
       // Formula (6) on page 10 ----------------------------------------------
       const double alphaTop = vv.virtualElevDegs - vv.lLayer.elevation;
@@ -257,41 +261,60 @@ public:
 
       // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
       // is outside the effective beamwidth of the radial
-      if (delta >= 0.5) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+      if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
         if (Constants::isGood(lValue)) {
-          if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; } // needed?
-          v = lValue * delta * (1.0 - vv.lLayer.terrainCBBPercent);
+          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1;
+          //  v = lValue; //  * delta * (1.0 - vv.lLayer.terrainCBBPercent);
+          lowerWt  = delta;
+          useLower = true;
         } else {
           v = Constants::MissingData; // mask
         }
       }
+    }
+
+    if (haveUpper) {
+      // Formula (6) on page 10 ----------------------------------------------
+      const double alphaTop = vv.uLayer.elevation - vv.virtualElevDegs;
+
+      double alphaBottom = vv.uLayer.beamWidth;
+      if (haveLower) {
+        const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
+        if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+          if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
+        }
+      }
+
+      const double alpha = alphaTop / alphaBottom;
+      double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
+      // ---------------------------------------------------------------------
+
+      // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
+      // is outside the effective beamwidth of the radial
+      if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+        if (Constants::isGood(uValue)) {
+          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1;
+          // v = uValue * delta * (1.0 - vv.uLayer.terrainCBBPercent);
+          upperWt  = delta;
+          useUpper = true;
+        } else {
+          v = Constants::MissingData; // mask
+        }
+      }
+    }
+
+    // Weighted average.  Do we bother separating?
+    // For moment I want explicit cases for testing/debugging
+    if (useLower) { // 10, 11
+      if (useUpper) {
+        // weighted average both (might be quicker to just do this vs branching)
+        v = ((upperWt * uValue) + (lowerWt * lValue)) / (uValue + lValue);
+      } else {
+        v = lValue; // weighted only with self
+      }
     } else {
-      if (haveUpper) {
-        // Formula (6) on page 10 ----------------------------------------------
-        const double alphaTop = vv.uLayer.elevation - vv.virtualElevDegs;
-
-        double alphaBottom = vv.uLayer.beamWidth;
-        if (haveLower) {
-          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
-          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-            if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
-          }
-        }
-
-        const double alpha = alphaTop / alphaBottom;
-        double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
-        // ---------------------------------------------------------------------
-
-        // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
-        // is outside the effective beamwidth of the radial
-        if (delta >= 0.5) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
-          if (Constants::isGood(uValue)) {
-            if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; } // needed?
-            v = uValue * delta * (1.0 - vv.uLayer.terrainCBBPercent);
-          } else {
-            v = Constants::MissingData; // mask
-          }
-        }
+      if (useUpper) { // 01
+        v = uValue;   // weighted only with self
       }
     }
 
