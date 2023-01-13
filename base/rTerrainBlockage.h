@@ -7,6 +7,21 @@
 
 namespace rapio
 {
+/** A DEM Lookup giving back zero height */
+class GroundLatLonGridProjection : public DataProjection
+{
+public:
+  /** Create a lat lon grid projection */
+  GroundLatLonGridProjection(){ };
+
+  /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
+  virtual double
+  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = Constants::PrimaryDataName) override
+  {
+    return 0;
+  }
+};
+
 /** Base class for creating a terrain blockage algorithm for a particular radar.
  * Also base factory for creating a terrain blockage by registered name.
  *
@@ -41,14 +56,14 @@ public:
    * classes and attempts to call the virtual create method on it.
    * FIXME: could key pair parameters for generalization, for now constant */
   static std::shared_ptr<TerrainBlockage>
-  createTerrainBlockage(const std::string & key,
-    // Could make general args and improve interface here
-    std::shared_ptr<LatLonGrid>           aDEM,
-    const LLH                             & radarLocation,
-    const LengthKMs                       & radarRangeKMs, // Range after this is zero blockage
-    const std::string                     & radarName,
-    LengthKMs                             minTerrainKMs = 0,    // Bottom beam touches this we're blocked
-    AngleDegs                             minAngle      = 0.1); // Below this, no blockage occurs
+  createTerrainBlockage(
+    const std::string & key,
+    const std::string & params,
+    const LLH         & radarLocation,
+    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
+    const std::string & radarName,
+    LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
+    AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
 
 protected:
 
@@ -56,12 +71,13 @@ protected:
    * To use by name, you would override this method and return a new instance of your
    * TerrainBlockage class. */
   virtual std::shared_ptr<TerrainBlockage>
-  create(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                        & radarLocation,
-    const LengthKMs                  & radarRangeKMs, // Range after this is zero blockage
-    const std::string                & radarName,
-    LengthKMs                        minTerrainKMs,
-    AngleDegs                        minAngleDegs)
+  create(
+    const std::string & params,
+    const LLH         & radarLocation,
+    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
+    const std::string & radarName,
+    LengthKMs         minTerrainKMs,
+    AngleDegs         minAngleDegs)
   {
     return nullptr;
   }
@@ -163,7 +179,7 @@ protected:
   std::shared_ptr<LatLonGrid> myDEM;
 
   /** Store LatLonGrid projection for our DEM's height layer */
-  std::shared_ptr<LatLonGridProjection> myDEMLookup;
+  std::shared_ptr<DataProjection> myDEMLookup;
 
   /** Stores center location of the radar used */
   LLH myRadarLocation;

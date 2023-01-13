@@ -342,12 +342,11 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 
   o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
 
-  // Terrain DEM location folder with files of form RADAR.nc
-  // Algorithm will stop if terrain cannot be found here for radar (for non-blank)
-  o.optional("terrain", "", "Path to terrain files of form RADAR.nc, otherwise we ignore terrain clipping.");
-
   // Terrain blockage name
-  o.optional("terrainalg", "2me", "Registered terrain blockage algorithm to use, such as 'lak', '2me', or your own.");
+  o.optional("terrainalg", "2me",
+    "Terrain blockage algorithm, such as 'lak', '2me', or your own. Params follow: lak,/DEMS.");
+  o.addAdvancedHelp("terrainalg",
+    "Terrain blockage algorithms are registered by name, so you can add your own options here with this option.  You have some general param support in the form 'key,params' where the params string is passed onto your terrain blockage instance. For example, the lak and 2me terrain algorithms want a DEM file of the form RADARNAME.nc The path for this can be given as 'lak,/MYDEMS' or '2me,/MYDEMS'.");
 
   // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
   // data for the radar
@@ -420,10 +419,9 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   o.getLegacyGrid(myFullGrid);
 
-  myWriteLLG    = o.getBoolean("llg");
-  myTerrainPath = o.getString("terrain");
-  myTerrainAlg  = o.getString("terrainalg");
-  myRangeKMs    = o.getFloat("rangekm");
+  myWriteLLG   = o.getBoolean("llg");
+  myTerrainAlg = o.getString("terrainalg");
+  myRangeKMs   = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
   } else if (myRangeKMs > 1000) {
@@ -556,94 +554,97 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     const AngleDegs cLon    = center.getLongitudeDeg();
     const LengthKMs cHeight = center.getHeightKM();
 
+    // Get the radar name and typename from this RadialSet.
+    std::string name = "UNKNOWN";
+    const std::string aTypeName = r->getTypeName();
+    const std::string aUnits    = r->getUnits();
+    if (!r->getString("radarName-value", name)) {
+      LogSevere("No radar name found in RadialSet, ignoring data\n");
+      return;
+    }
+    ;
+
     LogInfo(
       " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
         "\n");
 
     // ----------------------------------------------------------------------------
-    // For the moment, we can only be linked to one radar and one typename
-    // such as reflectivity
-
-    // Get the radar name and typename from this RadialSet.
-    std::string name = "UNKNOWN";
-    const std::string aTypeName = r->getTypeName();
-    const std::string aUnits    = r->getUnits();
-    if (r->getString("radarName-value", name)) {
-      // LogInfo("      Radar name is found!  It is  '" << name << "'\n");
-      if (myRadarName.empty()) {
-        LogInfo(
-          "Linking this algorithm to radar '" << name << "' and typename '" << aTypeName <<
-            "' since first pass we only handle 1\n");
-        myTypeName  = aTypeName;
-        myRadarName = name;
-      } else {
-        if ((myRadarName != name) || (myTypeName != aTypeName)) {
-          LogSevere(
-            "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-              "'\n");
-          return;
-        }
-      }
-    } else {
-      LogSevere("No radar name found in RadialSet, ignoring data\n");
-      return;
-    };
-
-    // ----------------------------------------------------------------------------
-    // Every RADAR requires a Terrain object
-
-    // Attempt to read a terrain DEM file...
-    // We could lazy read based on incoming radar, 'maybe'.  Is radar name in the
-    // radial set lol
-    if (!myTerrainPath.empty()) {
-      if (myDEM == nullptr) {
-        LogInfo("-------------------------------DEM creation start\n");
-        std::string file = myTerrainPath + "/" + name + ".nc";
-        auto d = IODataType::read<LatLonGrid>(file);
-        if (d != nullptr) {
-          LogInfo("Terrain DEM read: " << file << "\n");
-          myDEM = d;
-        } else {
-          LogSevere("Failed to read in Terrain DEM LatLonGrid at " << file << "\n");
-          exit(1);
-        }
-        LogInfo("-------------------------------DEM creation start\n");
-      }
-    } else {
-      LogInfo("No terrain path specified, so no terrain blockage will occur.\n");
-    }
-
-    // ----------------------------------------------------------------------------
     // Every RADAR/MOMENT will require a elevation volume for virtual volume
     // This is a time expiring auto sorted volume based on elevation angle (subtype)
-    //
-    if (myElevationVolume == nullptr) {
+    // FIXME: Move this to own method when stable
+    static bool setup = false;
+
+    if (!setup) {
+      setup = true;
+
+      // Link to first incoming radar and moment, we will ignore any others from now on
       LogInfo(
-        "Creating virtual volume and terrain blockage for '" << myRadarName << "' and typename '" << myTypeName <<
+        "Linking this algorithm to radar '" << name << "' and typename '" << aTypeName <<
+          "' since first pass we only handle 1\n");
+      myTypeName  = aTypeName;
+      myRadarName = name;
+
+      // We inset the full merger grid to the subgrid covered by the radar.
+      // This is needed for massively large grids like the CONUS.
+      const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
+      myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
+      LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
+      LogInfo("Full coverage grid: " << myFullGrid << "\n");
+      LLCoverageArea outg = myRadarGrid;
+      LogInfo("Radar subgrid: " << outg << "\n");
+
+      // Look up from cells to az/range/elev for RADAR
+      createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
+
+      // Create working LLG cache CAPPI storage per height level
+      createLLGCache(r, outg, myHeightsM);
+
+      // Elevation volume registration and creation
+      LogInfo(
+        "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
           "'\n");
       myElevationVolume = std::make_shared<ElevationVolume>(myRadarName + "_" + myTypeName);
 
-      // Terrain blockage algorithm is a lookup with a given range and density
-      myTerrainBlockage = nullptr;
-      if (myDEM != nullptr) {
-        // We want the default terrain blockage algorithms.
-        static bool setupTerrain = false;
-        if (!setupTerrain) {
-          // Register the default TerrainBlockage objects
-          TerrainBlockage::introduceSelf();
-          setupTerrain = true;
-        }
-        // TerrainBlockage::introduce("yourterrain", myterrainclass);
+      // Terrain blockage registration and creation
+      TerrainBlockage::introduceSelf();
+      // TerrainBlockage::introduce("yourterrain", myterrainclass); To add your own
 
-        myTerrainBlockage = TerrainBlockage::createTerrainBlockage(myTerrainAlg,
-            myDEM, r->getLocation(), myRangeKMs, name);
+      // Set up generic params for all terrain blockage classes
+      // in form "--terrain=key,somestring"
+      // We want a 'key' always to choose the algorithm, therest is passed to the
+      // particular terrain algorithm to use as it wishes.
+      // The Lak and 2me ones take a DEM folder as somestring
+      // FIXME: Pass the whole string to terrain blockage?  Maybe
+      std::string key;
+      std::string params;
+      std::vector<std::string> twoparams;
+      Strings::splitOnFirst(myTerrainAlg, ',', &twoparams);
+      if (twoparams.size() > 1) {
+        key    = twoparams[0];
+        params = twoparams[1];
+      } else {
+        key    = myTerrainAlg;
+        params = "";
       }
-      // Stubbornly refuse to run if terrain requested by name and not found
+      myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
+          r->getLocation(), myRangeKMs, name);
+
+      // Stubbornly refuse to run if terrain requested by name and not found or failed
       if (myTerrainBlockage == nullptr) {
+        LogSevere("Terrain blockage " << key << " requested, but failed to find and/or initialize.\n");
         exit(1);
       } else {
-        LogInfo("Using TerrainBlockage algorithm '" << myTerrainAlg << "'\n");
+        LogInfo("Using TerrainBlockage algorithm '" << key << "'\n");
       }
+    }
+
+    // Check if incoming radar/moment matches our single setup, otherwise we'd need
+    // all the setup for each radar/moment.  Which we 'could' do later maybe
+    if ((myRadarName != name) || (myTypeName != aTypeName)) {
+      LogSevere(
+        "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
+          "'\n");
+      return;
     }
 
     // Always add to elevation volume
@@ -661,35 +662,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       myTerrainBlockage->calculateTerrainPerGate(r);
     }
 
-    // ----------------------------------------------------------------------------
-    // We inset the full merger grid to the subgrid covered by the radar.
-    // This is needed for massively large grids like the CONUS.
-    //
-    static bool firstTime = true;
-    if (firstTime) {
-      const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
-      myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
-      LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
-      LogInfo("Full coverage grid: " << myFullGrid << "\n");
-      firstTime = false;
-    }
-    LLCoverageArea outg = myRadarGrid;
-    LogInfo("Radar subgrid: " << outg << "\n");
-
-    // Get the elevation volume pointers and levels for speed
-    std::vector<double> levels;
-    std::vector<DataType *> pointers;
-    myElevationVolume->getTempPointerVector(levels, pointers);
-    LogInfo(*myElevationVolume << "\n");
-
-    // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
-    AngleDegs startLat = outg.nwLat - (outg.latSpacing / 2.0); // move south (lat decreasing)
-    AngleDegs startLon = outg.nwLon + (outg.lonSpacing / 2.0); // move east (lon increasing)
-    createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
-
-    // We actually store a Lat Lon Grid per each CAPPI
-    createLLGCache(r, outg, myHeightsM);
-
     // ------------------------------------------------------------------------------
     // RAW file entry storage
     //
@@ -702,7 +674,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     t.radarName = myRadarName;
     t.vcp       = -9999; // Ok will merger be ok with this, need to check
     t.elev      = elevDegs;
-    t.typeName  = r->getTypeName();
+    t.typeName  = aTypeName;
     t.setUnits(aUnits);
     t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
     t.lat       = cLat;          // lat degrees
@@ -729,10 +701,19 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // RangeVVResolver resolver;
     // TerrainVVResolver resolver;
 
-    // LengthKMs rangeKMs;
+
+    // Get the elevation volume pointers and levels for speed
+    std::vector<double> levels;
+    std::vector<DataType *> pointers;
+    myElevationVolume->getTempPointerVector(levels, pointers);
+    LogInfo(*myElevationVolume << "\n");
+    // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
+    AngleDegs startLat = myRadarGrid.nwLat - (myRadarGrid.latSpacing / 2.0); // move south (lat decreasing)
+    AngleDegs startLon = myRadarGrid.nwLon + (myRadarGrid.lonSpacing / 2.0); // move east (lon increasing)
 
     // Each layer of merger we have to loop through
-    size_t total = 0;
+    LLCoverageArea outg = myRadarGrid;
+    size_t total        = 0;
     for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
 

@@ -26,13 +26,14 @@ TerrainBlockage::introduceSelf()
 }
 
 std::shared_ptr<TerrainBlockage>
-TerrainBlockage::createTerrainBlockage(const std::string & key,
-  std::shared_ptr<LatLonGrid>                            aDEM,
-  const LLH                                              & radarLocation,
-  const LengthKMs                                        & radarRangeKMs,
-  const std::string                                      & radarName,
-  LengthKMs                                              minTerrainKMs,
-  AngleDegs                                              minAngleDegs)
+TerrainBlockage::createTerrainBlockage(
+  const std::string & key,
+  const std::string & params,
+  const LLH         & radarLocation,
+  const LengthKMs   & radarRangeKMs,
+  const std::string & radarName,
+  LengthKMs         minTerrainKMs,
+  AngleDegs         minAngleDegs)
 {
   // LogSevere("Factory Terrain Blockage Create Called with key "<<key << "\n");
   auto f = Factory<TerrainBlockage>::get(key);
@@ -45,7 +46,7 @@ TerrainBlockage::createTerrainBlockage(const std::string & key,
     }
   } else {
     // Pass onto the factory method
-    f = f->create(aDEM, radarLocation, radarRangeKMs, radarName, minTerrainKMs, minAngleDegs);
+    f = f->create(params, radarLocation, radarRangeKMs, radarName, minTerrainKMs, minAngleDegs);
   }
   return f;
 }
@@ -60,7 +61,11 @@ TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   myMaxRangeKMs(radarRangeKMs)
 {
   // Make a lookup for our primary data layer, which is the height array
-  myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
+  if (aDEM != nullptr) {
+    myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());
+  } else {
+    myDEMLookup = std::make_shared<GroundLatLonGridProjection>();
+  }
 }
 
 //

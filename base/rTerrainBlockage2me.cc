@@ -1,6 +1,28 @@
 #include "rTerrainBlockage2me.h"
+#include "rIODataType.h"
 
 using namespace rapio;
+
+std::shared_ptr<TerrainBlockage>
+TerrainBlockage2me::create(const std::string& params,
+  const LLH                                 & radarLocation,
+  const LengthKMs                           & radarRangeKMs, // Range after this is zero blockage
+  const std::string                         & radarName,
+  LengthKMs                                 minTerrainKMs,
+  AngleDegs                                 minAngleDegs)
+{
+  // Try to read DEM from provided info
+  std::string myTerrainPath = params;
+
+  if (!myTerrainPath.empty()) {
+    myTerrainPath += "/";
+  }
+  std::string file = myTerrainPath + radarName + ".nc";
+  std::shared_ptr<LatLonGrid> aDEM = IODataType::read<LatLonGrid>(file);
+
+  return std::make_shared<TerrainBlockage2me>(TerrainBlockage2me(aDEM, radarLocation, radarRangeKMs, radarName,
+           minTerrainKMs, minAngleDegs));
+}
 
 TerrainBlockage2me::TerrainBlockage2me(std::shared_ptr<LatLonGrid> aDEM,
   const LLH                                                        & radarLocation_in,

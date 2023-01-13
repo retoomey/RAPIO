@@ -67,16 +67,12 @@ public:
 
   /** Factory method when creating by name. */
   virtual std::shared_ptr<TerrainBlockage>
-  create(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                        & radarLocation,
-    const LengthKMs                  & radarRangeKMs, // Range after this is zero blockage
-    const std::string                & radarName,
-    LengthKMs                        minTerrainKMs,
-    AngleDegs                        minAngleDegs) override
-  {
-    return std::make_shared<TerrainBlockageLak>(TerrainBlockageLak(aDEM, radarLocation, radarRangeKMs, radarName,
-             minTerrainKMs, minAngleDegs));
-  }
+  create(const std::string& params,
+    const LLH             & radarLocation,
+    const LengthKMs       & radarRangeKMs, // Range after this is zero blockage
+    const std::string     & radarName,
+    LengthKMs             minTerrainKMs,
+    AngleDegs             minAngleDegs) override;
 
   /** This should be a LatLonGrid such that the data are
    *  altitude above mean-sea-level in meters.

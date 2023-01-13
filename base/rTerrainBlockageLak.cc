@@ -1,5 +1,6 @@
 #include "rTerrainBlockageLak.h"
 #include "rProcessTimer.h"
+#include "rIODataType.h"
 
 #include <algorithm>
 
@@ -12,6 +13,27 @@ namespace
 const size_t NUM_RAYS = 7200;
 const float ANGULAR_RESOLUTION = 360.0 / NUM_RAYS;
 };
+
+std::shared_ptr<TerrainBlockage>
+TerrainBlockageLak::create(const std::string & params,
+  const LLH                                  & radarLocation,
+  const LengthKMs                            & radarRangeKMs, // Range after this is zero blockage
+  const std::string                          & radarName,
+  LengthKMs                                  minTerrainKMs,
+  AngleDegs                                  minAngleDegs)
+{
+  // Try to read DEM from provided info
+  std::string myTerrainPath = params;
+
+  if (!myTerrainPath.empty()) {
+    myTerrainPath += "/";
+  }
+  std::string file = myTerrainPath + radarName + ".nc";
+  std::shared_ptr<LatLonGrid> aDEM = IODataType::read<LatLonGrid>(file);
+
+  return std::make_shared<TerrainBlockageLak>(TerrainBlockageLak(aDEM, radarLocation, radarRangeKMs, radarName,
+           minTerrainKMs, minAngleDegs));
+}
 
 TerrainBlockageLak::TerrainBlockageLak(std::shared_ptr<LatLonGrid> aDEM,
   const LLH                                                        & radarLocation_in,
@@ -156,6 +178,11 @@ computeTerrainPoints(
   const LengthKMs              & radarRangeKMs,
   std::vector<PointBlockageLak>& terrainPoints)
 {
+  // If no DEM info, no blockers
+  if (myDEM == nullptr) {
+    return;
+  }
+
   // ProcessTimer("Computing Terrain Points for a Single Radar...\n");
 
   // Basically here, Lak takes the DEM grid and creates a 2D array to store

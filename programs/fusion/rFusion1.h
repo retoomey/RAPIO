@@ -264,9 +264,6 @@ protected:
 
   // These could probably be unique ptrs
 
-  /** Store terrain Lat Lon Grid for radar */
-  std::shared_ptr<LatLonGrid> myDEM;
-
   /** Store first radar name.  Currently we can only handle 1 radar */
   std::shared_ptr<ElevationVolume> myElevationVolume;
 
@@ -296,9 +293,6 @@ protected:
 
   /** Write lat lon grids to output */
   bool myWriteLLG;
-
-  /** Terrain path, if we use it */
-  std::string myTerrainPath;
 
   /** Terrain alg */
   std::string myTerrainAlg;

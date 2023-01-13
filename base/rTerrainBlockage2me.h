@@ -24,16 +24,12 @@ public:
 
   /** Factory method when creating by name. */
   virtual std::shared_ptr<TerrainBlockage>
-  create(std::shared_ptr<LatLonGrid> aDEM,
-    const LLH                        & radarLocation,
-    const LengthKMs                  & radarRangeKMs, // Range after this is zero blockage
-    const std::string                & radarName,
-    LengthKMs                        minTerrainKMs,
-    AngleDegs                        minAngleDegs) override
-  {
-    return std::make_shared<TerrainBlockage2me>(TerrainBlockage2me(aDEM, radarLocation, radarRangeKMs, radarName,
-             minTerrainKMs, minAngleDegs));
-  }
+  create(const std::string& params,
+    const LLH             & radarLocation,
+    const LengthKMs       & radarRangeKMs, // Range after this is zero blockage
+    const std::string     & radarName,
+    LengthKMs             minTerrainKMs,
+    AngleDegs             minAngleDegs) override;
 
   /** For STL use only. */
   TerrainBlockage2me()
