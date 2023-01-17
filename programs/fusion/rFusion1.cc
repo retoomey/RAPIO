@@ -342,10 +342,16 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 
   o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
 
+  // Elevation volume
+  o.optional("volume", "simple",
+    "Volume algorithm, such as 'simple', or your own. Params follow: simple,params.");
+  o.addAdvancedHelp("volume",
+    "Volume algorithms are registered by name, so you can add you own options here with this option.  The default 'simple' algorithm uses a virtual volume that replaces incoming elevation angles by time.");
+
   // Terrain blockage name
-  o.optional("terrainalg", "2me",
+  o.optional("terrain", "2me",
     "Terrain blockage algorithm, such as 'lak', '2me', or your own. Params follow: lak,/DEMS.");
-  o.addAdvancedHelp("terrainalg",
+  o.addAdvancedHelp("terrain",
     "Terrain blockage algorithms are registered by name, so you can add your own options here with this option.  You have some general param support in the form 'key,params' where the params string is passed onto your terrain blockage instance. For example, the lak and 2me terrain algorithms want a DEM file of the form RADARNAME.nc The path for this can be given as 'lak,/MYDEMS' or '2me,/MYDEMS'.");
 
   // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
@@ -420,7 +426,8 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   o.getLegacyGrid(myFullGrid);
 
   myWriteLLG   = o.getBoolean("llg");
-  myTerrainAlg = o.getString("terrainalg");
+  myVolumeAlg  = o.getString("volume");
+  myTerrainAlg = o.getString("terrain");
   myRangeKMs   = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
@@ -523,6 +530,24 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
 
+namespace {
+/** Split a param string into key,somestring */
+void
+splitKeyParam(const std::string& commandline, std::string& key, std::string& params)
+{
+  std::vector<std::string> twoparams;
+
+  Strings::splitOnFirst(commandline, ',', &twoparams);
+  if (twoparams.size() > 1) {
+    key    = twoparams[0];
+    params = twoparams[1];
+  } else {
+    key    = commandline;
+    params = "";
+  }
+}
+}
+
 void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 {
@@ -593,49 +618,53 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LLCoverageArea outg = myRadarGrid;
       LogInfo("Radar subgrid: " << outg << "\n");
 
-      // Look up from cells to az/range/elev for RADAR
-      createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
-
-      // Create working LLG cache CAPPI storage per height level
-      createLLGCache(r, outg, myHeightsM);
-
-      // Elevation volume registration and creation
-      LogInfo(
-        "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
-          "'\n");
-      myElevationVolume = std::make_shared<ElevationVolume>(myRadarName + "_" + myTypeName);
-
+      std::string key, params;
+      // -------------------------------------------------------------
       // Terrain blockage registration and creation
       TerrainBlockage::introduceSelf();
-      // TerrainBlockage::introduce("yourterrain", myterrainclass); To add your own
+      // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
 
-      // Set up generic params for all terrain blockage classes
-      // in form "--terrain=key,somestring"
-      // We want a 'key' always to choose the algorithm, therest is passed to the
+      // Set up generic params for volume and terrain blockage classes
+      // in form "--optionname=key,somestring"
+      // We want a 'key' always to choose the algorithm, the rest is passed to the
       // particular terrain algorithm to use as it wishes.
       // The Lak and 2me ones take a DEM folder as somestring
-      // FIXME: Pass the whole string to terrain blockage?  Maybe
-      std::string key;
-      std::string params;
-      std::vector<std::string> twoparams;
-      Strings::splitOnFirst(myTerrainAlg, ',', &twoparams);
-      if (twoparams.size() > 1) {
-        key    = twoparams[0];
-        params = twoparams[1];
-      } else {
-        key    = myTerrainAlg;
-        params = "";
-      }
+      splitKeyParam(myTerrainAlg, key, params);
       myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
           r->getLocation(), myRangeKMs, name);
 
       // Stubbornly refuse to run if terrain requested by name and not found or failed
       if (myTerrainBlockage == nullptr) {
-        LogSevere("Terrain blockage " << key << " requested, but failed to find and/or initialize.\n");
+        LogSevere("Terrain blockage '" << key << "' requested, but failed to find and/or initialize.\n");
         exit(1);
       } else {
         LogInfo("Using TerrainBlockage algorithm '" << key << "'\n");
       }
+
+      // -------------------------------------------------------------
+      // Elevation volume registration and creation
+      LogInfo(
+        "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
+          "'\n");
+      Volume::introduceSelf();
+      // Volume::introduce("yourvolume", myVolumeClass); To add your own
+
+      splitKeyParam(myVolumeAlg, key, params);
+      myElevationVolume = Volume::createVolume(key, params, myRadarName + "_" + myTypeName);
+
+      // Stubbornly refuse to run if terrain requested by name and not found or failed
+      if (myElevationVolume == nullptr) {
+        LogSevere("Volume '" << key << "' requested, but failed to find and/or initialize.\n");
+        exit(1);
+      } else {
+        LogInfo("Using Volume algorithm '" << key << "'\n");
+      }
+
+      // Look up from cells to az/range/elev for RADAR
+      createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
+
+      // Create working LLG cache CAPPI storage per height level
+      createLLGCache(r, outg, myHeightsM);
     }
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need

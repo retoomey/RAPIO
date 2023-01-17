@@ -265,7 +265,8 @@ protected:
   // These could probably be unique ptrs
 
   /** Store first radar name.  Currently we can only handle 1 radar */
-  std::shared_ptr<ElevationVolume> myElevationVolume;
+  // std::shared_ptr<ElevationVolume> myElevationVolume;
+  std::shared_ptr<Volume> myElevationVolume;
 
   /** Store terrain blockage */
   std::shared_ptr<TerrainBlockage> myTerrainBlockage;
@@ -293,6 +294,9 @@ protected:
 
   /** Write lat lon grids to output */
   bool myWriteLLG;
+
+  /** Volume alg */
+  std::string myVolumeAlg;
 
   /** Terrain alg */
   std::string myTerrainAlg;

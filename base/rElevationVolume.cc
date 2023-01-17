@@ -10,6 +10,40 @@ using namespace rapio;
 using namespace std;
 
 void
+Volume::introduce(const std::string & key,
+  std::shared_ptr<Volume>           factory)
+{
+  Factory<Volume>::introduce(key, factory);
+}
+
+void
+Volume::introduceSelf()
+{
+  ElevationVolume::introduceSelf();
+}
+
+std::shared_ptr<Volume>
+Volume::createVolume(
+  const std::string & key,
+  const std::string & params,
+  const std::string & historyKey)
+{
+  auto f = Factory<Volume>::get(key);
+
+  if (f == nullptr) {
+    LogSevere("Couldn't create Volume from key '" << key << "', available: \n");
+    auto e = Factory<Volume>::getAll();
+    for (auto i: e) {
+      LogSevere("  '" + i.first + "'\n"); // FIXME: help string later maybe
+    }
+  } else {
+    // Pass onto the factory method
+    f = f->create(historyKey, params);
+  }
+  return f;
+}
+
+void
 Volume::removeAt(size_t at)
 {
   myVolume.erase(myVolume.begin() + at);
@@ -194,6 +228,13 @@ Volume::deleteSubType(const std::string& subtype)
 }
 
 void
+ElevationVolume::introduceSelf()
+{
+  std::shared_ptr<ElevationVolume> newOne = std::make_shared<ElevationVolume>();
+  Factory<Volume>::introduce("simple", newOne);
+}
+
+void
 ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
 {
   // For elevation check it's a RadialSet, do any 'extra' required
@@ -205,7 +246,7 @@ ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
 }
 
 std::ostream&
-rapio::operator << (std::ostream& os, const ElevationVolume& v)
+rapio::operator << (std::ostream& os, const Volume& v)
 {
   std::stringstream z;
 

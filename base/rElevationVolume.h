@@ -2,6 +2,7 @@
 
 #include <rData.h>
 #include <rDataType.h>
+#include <rFactory.h>
 
 #include <memory>
 #include <vector>
@@ -19,8 +20,48 @@ namespace rapio {
 class Volume : public Data {
 public:
 
+  /** For STL use only. */
+  Volume()
+  { }
+
   /** Create a new volume */
   Volume(const std::string& k) : myKey(k){ };
+
+  // --------------------------------------------------------
+  // Factory methods for doing things by name.  Usually if you
+  // want to support command line choosing of a Volume
+  // algorithm.
+
+  /** Use this to introduce default built-in RAPIO TerrainBlockage subclasses.
+   * Note: You don't have to use this ability, it's not called by default algorithm.
+   * To use it, call Volume::introduceSelf()
+   * To override or add another, call Volume::introduce(myvolumekey, newvolume)
+   */
+  static void
+  introduceSelf();
+
+  /** Introduce a new Volume by name */
+  static void
+  introduce(const std::string & key,
+    std::shared_ptr<Volume>   factory);
+
+  /** Attempt to create Volume by name.  This looks up any registered
+   * classes and attempts to call the virtual create method on it. */
+  static std::shared_ptr<Volume>
+  createVolume(
+    const std::string & key,
+    const std::string & params,
+    const std::string & historyKey);
+
+  /** Called on subclasses by the Volume to create/setup the Volume.
+   * To use by name, you would override this method and return a new instance of your
+   * Volume class. */
+  virtual std::shared_ptr<Volume>
+  create(
+    const std::string& historyKey, const std::string & params)
+  {
+    return nullptr;
+  }
 
   /** Purge data base using given time as current.
    * FIXME: out of time order data will jitter here */
@@ -120,16 +161,34 @@ protected:
 class ElevationVolume : public Volume {
 public:
 
+  /** Introduce elevation volume simple type */
+  static void
+  introduceSelf();
+
+  /** For STL use only. */
+  ElevationVolume()
+  { }
+
   /** Create a new elevation volume */
   ElevationVolume(const std::string& k) : Volume(k){ };
+
+  /** Called on subclasses by the Volume to create/setup the Volume.
+   * To use by name, you would override this method and return a new instance of your
+   * Volume class. */
+  virtual std::shared_ptr<Volume>
+  create(
+    const std::string& historyKey, const std::string & params)
+  {
+    return std::make_shared<ElevationVolume>(ElevationVolume(historyKey));
+  }
 
   /** Add a datatype to our collection */
   virtual void
   addDataType(std::shared_ptr<DataType> d) override;
 };
 
-/** Output an Elevation Volume */
+/** Output a Volume */
 std::ostream&
 operator << (std::ostream&,
-  const rapio::ElevationVolume&);
+  const rapio::Volume&);
 }
