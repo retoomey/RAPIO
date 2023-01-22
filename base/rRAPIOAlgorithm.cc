@@ -420,10 +420,18 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
     // isn't equal to the loaded product (netcdf) fractional,
     // but unless we're doing indexed with nano data items probably
     // don't have to worry here.
-    // FIXME: 'Maybe' adjust this post DataType creation?
-    myLastDataTime = rec.getTime();
-    // FIXME: this back calls to inTimeWindow..couldn't it be cleaner?
-    // FIXME: purge before or after adding newest?
+
+    // I think realtime we purge off the clock, but 'archive' mode we purge
+    // based on the 'latest' record in archive.  This requires archives to be
+    // time sorted to work correctly, We'll try doing a 'max' as latest.
+    if (isDaemon()) {
+      myLastDataTime = Time::CurrentTime();
+    } else {
+      Time newTime = rec.getTime();
+      if (newTime > myLastDataTime) {
+        myLastDataTime = newTime;
+      }
+    }
     DataTypeHistory::purgeTimeWindow(myLastDataTime);
     RAPIOData d(rec);
     processNewData(d);

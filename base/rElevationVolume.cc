@@ -1,5 +1,6 @@
 #include "rElevationVolume.h"
 #include "rRadialSet.h"
+#include "rDataTypeHistory.h"
 
 // For the maximum history
 #include "rRAPIOAlgorithm.h"
@@ -39,6 +40,9 @@ Volume::createVolume(
   } else {
     // Pass onto the factory method
     f = f->create(historyKey, params);
+    if (f != nullptr) {
+      DataTypeHistory::registerVolume(historyKey, f); // We want time message for expiration
+    }
   }
   return f;
 }
@@ -73,9 +77,8 @@ Volume::purgeTimeWindow(const Time& time)
   // ----------------------------------------------------------------------------
   // Time purge from given time backwards
   for (size_t i = 0; i < myVolume.size(); i++) {
-    // if (!RAPIOAlgorithm::inTimeWindow(dt->getTime()+TimeDuration(-10000))) // Make it older than 15 mins (900 seconds)
-    if (!RAPIOAlgorithm::inTimeWindow(time)) {
-      // LogInfo(myVolume[i]->getSubType() << " --PURGE-- " << myVolume[i]->getTime() << "\n");
+    // If datatype time is within the history window from the current time passed in
+    if (!RAPIOAlgorithm::inTimeWindow(myVolume[i]->getTime())) {
       removeAt(i); //  myVolume.erase(myVolume.begin() + i);
       i--;
     }

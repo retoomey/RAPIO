@@ -12,6 +12,12 @@ using namespace std;
 std::map<std::string, std::shared_ptr<Volume> > DataTypeHistory::myVolumes;
 
 void
+DataTypeHistory::registerVolume(const std::string& key, std::shared_ptr<Volume> v)
+{
+  myVolumes[key] = v;
+}
+
+void
 DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
 {
   // Map lookup key for volume name is DataType+TypeName such as "RadialSet-Reflectivity"
@@ -41,7 +47,7 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
     } else {
       v = std::make_shared<Volume>(key); // LatLonGrids for now
     }
-    myVolumes[key] = v;
+    registerVolume(key, v);
   } else {
     v = lookup->second;
   }

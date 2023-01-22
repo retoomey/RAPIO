@@ -24,6 +24,10 @@ namespace rapio {
 class DataTypeHistory : public Data {
 public:
 
+  /** Register a volume for a particular key (overriding the updateVolume creation method) */
+  static void
+  registerVolume(const std::string& key, std::shared_ptr<Volume> v);
+
   /** Update the virtual volume for this DataType if possible,
    * Volumes are named by product and contain N subtypes, for example
    * a Reflectivity volume containing 10 elevations that can be used for
