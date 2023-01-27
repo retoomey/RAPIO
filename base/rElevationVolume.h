@@ -32,7 +32,7 @@ public:
   // want to support command line choosing of a Volume
   // algorithm.
 
-  /** Use this to introduce default built-in RAPIO TerrainBlockage subclasses.
+  /** Use this to introduce default built-in RAPIO Volume subclasses.
    * Note: You don't have to use this ability, it's not called by default algorithm.
    * To use it, call Volume::introduceSelf()
    * To override or add another, call Volume::introduce(myvolumekey, newvolume)

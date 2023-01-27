@@ -5,83 +5,27 @@
 
 using namespace rapio;
 
-// Some test resolvers for sanity checks...
-
-/** Azimuth from 0 to 360 or so of virtual */
-class AzimuthVVResolver : public VolumeValueResolver
-{
-public:
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    // Output value is the virtual azimuth
-    vv.dataValue = vv.virtualAzDegs;
-  }
-};
-
-/** Virtual range in KMs */
-class RangeVVResolver : public VolumeValueResolver
-{
-public:
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    // Output value is the virtual range
-    vv.dataValue = vv.virtualRangeKMs;
-  }
-};
-
-/** Projected terrain blockage of lower tilt.
- * Experiment to display some of the terrain fields for debugging */
-class TerrainVVResolver : public VolumeValueResolver
-{
-public:
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
-
-    // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
-    // vv.dataValue = vv.lLayer.terrainPBBPercent;
-    if (vv.lLayer.beamHitBottom) {
-      // beam bottom on terrain we'll plot as unavailable
-      vv.dataValue = Constants::DataUnavailable;
-    } else {
-      vv.dataValue = vv.lLayer.terrainCBBPercent;
-      // Super small we'll go unavailable...
-      if (vv.dataValue < 0.02) {
-        vv.dataValue = Constants::MissingData;
-      } else {
-        // Otherwise scale a bit to show up with colormap better
-        // 0 to 10000
-        vv.dataValue *= 100;
-        vv.dataValue  = vv.dataValue * vv.dataValue;
-      }
-    }
-  }
-};
-
-
-/** Showing elevation angle of the contributing tilt below us */
-class TestResolver1 : public VolumeValueResolver
-{
-public:
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    if (vv.lower != nullptr) {
-      RadialSet& lowerr = *((RadialSet *) vv.lower);
-      auto angle        = lowerr.getElevationDegs();
-      vv.dataValue = angle;
-    } else {
-      vv.dataValue = Constants::MissingData;
-    }
-  }
-};
+// Volume value resolver (alphas)
 
 class RobertLinear1Resolver : public VolumeValueResolver
 {
 public:
+
+  /** Introduce into VolumeValueResolver factory */
+  static void
+  introduceSelf()
+  {
+    std::shared_ptr<RobertLinear1Resolver> newOne = std::make_shared<RobertLinear1Resolver>();
+    Factory<VolumeValueResolver>::introduce("robert", newOne);
+  }
+
+  /** Create by factory */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return std::make_shared<RobertLinear1Resolver>();
+  }
+
   virtual void
   calc(VolumeValue& vv) override
   {
@@ -208,6 +152,21 @@ class LakResolver1 : public VolumeValueResolver
 {
 public:
 
+  /** Introduce into VolumeValueResolver factory */
+  static void
+  introduceSelf()
+  {
+    std::shared_ptr<LakResolver1> newOne = std::make_shared<LakResolver1>();
+    Factory<VolumeValueResolver>::introduce("lak", newOne);
+  }
+
+  /** Create by factory */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return std::make_shared<LakResolver1>();
+  }
+
   virtual void
   calc(VolumeValue& vv) override
   {
@@ -263,7 +222,7 @@ public:
       // is outside the effective beamwidth of the radial
       if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
         if (Constants::isGood(lValue)) {
-          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1;
+          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; }
           //  v = lValue; //  * delta * (1.0 - vv.lLayer.terrainCBBPercent);
           lowerWt  = delta;
           useLower = true;
@@ -293,7 +252,7 @@ public:
       // is outside the effective beamwidth of the radial
       if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
         if (Constants::isGood(uValue)) {
-          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1;
+          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; }
           // v = uValue * delta * (1.0 - vv.uLayer.terrainCBBPercent);
           upperWt  = delta;
           useUpper = true;
@@ -308,13 +267,16 @@ public:
     if (useLower) { // 10, 11
       if (useUpper) {
         // weighted average both (might be quicker to just do this vs branching)
-        v = ((upperWt * uValue) + (lowerWt * lValue)) / (uValue + lValue);
+        v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
+        // std::cout << "merged: " << upperWt << ", " << uValue << ", " << lowerWt << ", " << lValue << ", " << (uValue+lValue) << " ==== " << v << "\n";
       } else {
         v = lValue; // weighted only with self
+        // std::cout << "lower: " << lValue << " ("<<lowerWt << ")\n";
       }
     } else {
       if (useUpper) { // 01
         v = uValue;   // weighted only with self
+        // std::cout << "upper: " << uValue << " ("<<upperWt << ")\n";
       }
     }
 
@@ -342,6 +304,15 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 
   o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
 
+  // FIXME: Thinking general new plugin class in API here.  All three of these
+  // add similar abilities
+
+  // Volume value resolver
+  o.optional("resolver", "lak",
+    "Value Resolver Algorithm, such as 'lak', or your own. Params follow: lak,params.");
+  o.addAdvancedHelp("resolver",
+    "Value Resolver algorithms are registered by name, so you can add you own options here with this option.");
+
   // Elevation volume
   o.optional("volume", "simple",
     "Volume algorithm, such as 'simple', or your own. Params follow: simple,params.");
@@ -357,7 +328,7 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
-}
+} // RAPIOFusionOneAlg::declareOptions
 
 /** RAPIOAlgorithms process options on start up */
 void
@@ -425,10 +396,11 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   o.getLegacyGrid(myFullGrid);
 
-  myWriteLLG   = o.getBoolean("llg");
-  myVolumeAlg  = o.getString("volume");
-  myTerrainAlg = o.getString("terrain");
-  myRangeKMs   = o.getFloat("rangekm");
+  myWriteLLG    = o.getBoolean("llg");
+  myResolverAlg = o.getString("resolver");
+  myTerrainAlg  = o.getString("terrain");
+  myVolumeAlg   = o.getString("volume");
+  myRangeKMs    = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
   } else if (myRangeKMs > 1000) {
@@ -599,6 +571,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // FIXME: Move this to own method when stable
     static bool setup = false;
 
+    std::shared_ptr<VolumeValueResolver> resolversp;
     if (!setup) {
       setup = true;
 
@@ -619,6 +592,25 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("Radar subgrid: " << outg << "\n");
 
       std::string key, params;
+
+      // -------------------------------------------------------------
+      // VolumeValueResolver registration and creation
+      VolumeValueResolver::introduceSelf();
+      RobertLinear1Resolver::introduceSelf();
+      LakResolver1::introduceSelf();
+
+      splitKeyParam(myResolverAlg, key, params);
+      resolversp = VolumeValueResolver::createVolumeValueResolver(key, params);
+
+      // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
+      if (resolversp == nullptr) {
+        LogSevere("Volume Value Resolver '" << key << "' requested, but failed to find and/or initialize.\n");
+        exit(1);
+      } else {
+        LogInfo("Using Volume Value Resolver algorithm '" << key << "'\n");
+      }
+      // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
+
       // -------------------------------------------------------------
       // Terrain blockage registration and creation
       TerrainBlockage::introduceSelf();
@@ -666,6 +658,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Create working LLG cache CAPPI storage per height level
       createLLGCache(r, outg, myHeightsM);
     }
+    auto& resolver = *resolversp;
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need
     // all the setup for each radar/moment.  Which we 'could' do later maybe
@@ -722,14 +715,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // Set the value object for resolvers
     VolumeValue vv;
     vv.cHeight = cHeight;
-
-    // Resolver
-    // RobertLinear1Resolver resolver;
-    LakResolver1 resolver;
-    // TestResolver1 resolver;
-    // RangeVVResolver resolver;
-    // TerrainVVResolver resolver;
-
 
     // Get the elevation volume pointers and levels for speed
     std::vector<double> levels;

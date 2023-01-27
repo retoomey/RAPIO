@@ -2,6 +2,7 @@
 
 #include <rUtility.h>
 #include <rDataType.h>
+#include <rFactory.h>
 
 namespace rapio {
 /** Organizer of outputs for a layer, typically upper tilt or lower tilt
@@ -77,6 +78,31 @@ public:
 class VolumeValueResolver : public Utility
 {
 public:
+
+  /** Use this to introduce default built-in RAPIO VolumeValueResolver subclasses.
+   * Note: You don't have to use this ability, it's not called by default algorithm.
+   * To use it, call VolumeValueResolver::introduceSelf()
+   * To override or add another, call VolumeValueResolver::introduce(key, valueresolver)
+   */
+  static void
+  introduceSelf();
+
+  /** Attempt to create VolumeValueResolver by name.  This looks up any registered
+   * classes and attempts to call the virtual create method on it. */
+  static std::shared_ptr<VolumeValueResolver>
+  createVolumeValueResolver(
+    const std::string & key,
+    const std::string & params);
+
+  /** Called on subclasses by the VolumeVolumeResolver to create/setup the Resolver.
+   * To use by name, you would override this method and return a new instance of your
+   * Volume class. */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return nullptr;
+  }
+
   /** Calculate/interpret values between layers */
   virtual void calc(VolumeValue& vv){ vv.dataValue = Constants::DataUnavailable; }
 
@@ -89,5 +115,77 @@ public:
    * FIXME: group the outputs I think into another structure */
   bool
   queryLayer(VolumeValue& vv, DataType * set, LayerValue& l);
+};
+
+/** Virtual range in KMs */
+class RangeVVResolver : public VolumeValueResolver
+{
+public:
+
+  /** Introduce into VolumeValueResolver factory */
+  static void
+  introduceSelf()
+  {
+    std::shared_ptr<RangeVVResolver> newOne = std::make_shared<RangeVVResolver>();
+    Factory<VolumeValueResolver>::introduce("range", newOne);
+  }
+
+  /** Create by factory */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return std::make_shared<RangeVVResolver>();
+  }
+
+  virtual void
+  calc(VolumeValue& vv) override;
+};
+
+/** Azimuth from 0 to 360 or so of virtual */
+class AzimuthVVResolver : public VolumeValueResolver
+{
+public:
+
+  /** Introduce into VolumeValueResolver factory */
+  static void
+  introduceSelf()
+  {
+    std::shared_ptr<AzimuthVVResolver> newOne = std::make_shared<AzimuthVVResolver>();
+    Factory<VolumeValueResolver>::introduce("azimuth", newOne);
+  }
+
+  /** Create by factory */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return std::make_shared<AzimuthVVResolver>();
+  }
+
+  virtual void
+  calc(VolumeValue& vv) override;
+};
+
+/** Projected terrain blockage of lower tilt.
+ * Experiment to display some of the terrain fields for debugging */
+class TerrainVVResolver : public VolumeValueResolver
+{
+public:
+  /** Introduce into VolumeValueResolver factory */
+  static void
+  introduceSelf()
+  {
+    std::shared_ptr<TerrainVVResolver> newOne = std::make_shared<TerrainVVResolver>();
+    Factory<VolumeValueResolver>::introduce("terrain", newOne);
+  }
+
+  /** Create by factory */
+  virtual std::shared_ptr<VolumeValueResolver>
+  create(const std::string & params)
+  {
+    return std::make_shared<TerrainVVResolver>();
+  }
+
+  virtual void
+  calc(VolumeValue& vv) override;
 };
 }

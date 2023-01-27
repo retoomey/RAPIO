@@ -11,6 +11,7 @@ fi
 for f in $folders; do
   echo "Checking pretty print of *.cc and *.h in $f..."
   LIST=`find "$f" -type f -name "*.cc"`
+  #echo $LIST
   for l in $LIST; do
     $crust -c uncrustify.cfg --check $l | grep FAIL
   done

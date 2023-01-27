@@ -295,6 +295,9 @@ protected:
   /** Write lat lon grids to output */
   bool myWriteLLG;
 
+  /** Resolver alg */
+  std::string myResolverAlg;
+
   /** Volume alg */
   std::string myVolumeAlg;
 

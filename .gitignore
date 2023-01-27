@@ -52,3 +52,4 @@ install_manifest.txt
 rsimplealg
 rtile
 BUILD
+__pycache__

@@ -2,8 +2,76 @@
 #include "rBinaryTable.h"
 #include "rRadialSet.h"
 #include "rConfigRadarInfo.h"
+#include "rFactory.h"
 
 using namespace rapio;
+
+void
+AzimuthVVResolver::calc(VolumeValue& vv)
+{
+  // Output value is the virtual azimuth
+  vv.dataValue = vv.virtualAzDegs;
+}
+
+void
+RangeVVResolver::calc(VolumeValue& vv)
+{
+  // Output value is the virtual range
+  vv.dataValue = vv.virtualRangeKMs;
+}
+
+void
+TerrainVVResolver::calc(VolumeValue& vv)
+{
+  bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
+
+  // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
+  // vv.dataValue = vv.lLayer.terrainPBBPercent;
+  if (vv.lLayer.beamHitBottom) {
+    // beam bottom on terrain we'll plot as unavailable
+    vv.dataValue = Constants::DataUnavailable;
+  } else {
+    vv.dataValue = vv.lLayer.terrainCBBPercent;
+    // Super small we'll go unavailable...
+    if (vv.dataValue < 0.02) {
+      vv.dataValue = Constants::MissingData;
+    } else {
+      // Otherwise scale a bit to show up with colormap better
+      // 0 to 10000
+      vv.dataValue *= 100;
+      vv.dataValue  = vv.dataValue * vv.dataValue;
+    }
+  }
+}
+
+void
+VolumeValueResolver::introduceSelf()
+{
+  // FIXME: no default yet, these are currently in fusion until debugged
+  RangeVVResolver::introduceSelf();
+  AzimuthVVResolver::introduceSelf();
+  TerrainVVResolver::introduceSelf();
+}
+
+std::shared_ptr<VolumeValueResolver>
+VolumeValueResolver::createVolumeValueResolver(
+  const std::string & key,
+  const std::string & params)
+{
+  auto f = Factory<VolumeValueResolver>::get(key);
+
+  if (f == nullptr) {
+    LogSevere("Couldn't create VolumeValueResolver from key '" << key << "', available: \n");
+    auto e = Factory<VolumeValueResolver>::getAll();
+    for (auto i: e) {
+      LogSevere("  '" + i.first + "'\n"); // FIXME: help string later maybe
+    }
+  } else {
+    // Pass onto the factory method
+    f = f->create(params);
+  }
+  return f;
+}
 
 void
 VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs)
