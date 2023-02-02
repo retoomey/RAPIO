@@ -3,6 +3,8 @@
 #include <rData.h>
 #include <rConstants.h>
 
+#include <vector>
+
 namespace rapio {
 /** Represents a sector of Latitude Longitude that is broken up into a grid,
  * with the ability to mark a subset of that area.
@@ -43,6 +45,24 @@ public:
     numY       = aNumY;
   }
 
+  /** Lookup a string such as "NMQWD" and return the incr/upto lists used
+   * to generate a height list */
+  bool
+  lookupIncrUpto(const std::string& key, std::vector<int>& incr, std::vector<int>& upto);
+
+  /** Parse the heights from parameter information such as "ne" and "55, -130" */
+  bool
+  parseHeights(const std::string& label, const std::string& list, std::vector<double>& heightsMs);
+
+  /** Parse a pair of degrees, used for nw, se, and spacing functions */
+  bool
+  parseDegrees(const std::string& label, const std::string& p, AngleDegs& lat, AngleDegs& lon);
+
+  /** Parse from strings, used to generate from command line options.  This supports
+   * the legacy -t -b -s and the combined cleaner -grid option */
+  bool
+  parse(const std::string& grid, const std::string& t = "", const std::string& b = "", const std::string& s = "");
+
   /** Inset our grid to a given radar center and range */
   LLCoverageArea
   insetRadarRange(
@@ -67,6 +87,9 @@ public:
   size_t startY; ///< Starting grid Y or latitude cell
   size_t numX;   ///< Total number of longitude cells
   size_t numY;   ///< Total number of latitude cells
+
+  /** An optional collection of heights in meters */
+  std::vector<double> heightsM;
 };
 
 std::ostream&

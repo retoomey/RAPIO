@@ -158,13 +158,21 @@ RAPIOOptions::setHeader(const std::string& a)
 void
 RAPIOOptions::declareLegacyGrid()
 {
-  // Legacy grid for calling from declareOptions
-  optional("t", "37 -100 20", "The top corner of grid");
-  optional("b", "30.5 -93 1", "The bottom corner of grid");
-  optional("s", "0.05 0.05 1", "The grid spacing");
+  // Legacy grid options, if not empty they are put into the grid option
+  optional("t", "", "The top corner of grid");
+  optional("b", "", "The bottom corner of grid");
+  optional("s", "", "The grid spacing");
+  setHidden("t");
+  setHidden("b");
+  setHidden("s");
   addGroup("t", "SPACE");
   addGroup("b", "SPACE");
   addGroup("s", "SPACE");
+
+  // Standard grid language default
+  grid2D("grid", "nw(37, -100) se(30.5, -93) h(0.5,20,NMQWD) s(0.01, 0.01)", "Grid language (also -t,-b,-s legacy)");
+  addAdvancedHelp("grid",
+    "Grid language: nw(lat,lon) se(lat,lon) s(deltalat,deltalon) h(lowestKMS,highestKMS, key).  The height key can be a pattern such as NMQWD, WISH, ARPS...or it can be a number.");
 }
 
 bool
@@ -172,83 +180,13 @@ RAPIOOptions::getLegacyGrid(
   LLCoverageArea& grid
 )
 {
-  AngleDegs nwLatDegs, nwLonDegs;
-  AngleDegs seLatDegs, seLonDegs;
-  AngleDegs latSpacing, lonSpacing;
-  size_t numX;
-  size_t numY;
-
-  // TOP
   std::string topcorner = getString("t");
-
-  AngleDegs nwlatsp, nwlonsp;
-
-  std::vector<std::string> nwpieces;
-
-  Strings::split(topcorner, &nwpieces);
-  if (nwpieces.size() != 3) {
-    LogSevere("Failed top left grid specification \n");
-    return false;
-  } else {
-    nwlatsp = atof(nwpieces[0].c_str()); // FIXME: catch...and use c++ silly
-    nwlonsp = atof(nwpieces[1].c_str());
-  }
-  nwLatDegs = nwlatsp;
-  nwLonDegs = nwlonsp;
-
-  // BOTTOM
   std::string botcorner = getString("b");
+  std::string spacing   = getString("s");
+  std::string gridstr   = getString("grid");
 
-  AngleDegs selatsp, selonsp;
+  return (grid.parse(gridstr, topcorner, botcorner, spacing));
 
-  std::vector<std::string> sepieces;
-
-  Strings::split(botcorner, &sepieces);
-  if (sepieces.size() != 3) {
-    LogSevere("Failed bottom right grid specification \n");
-    return false;
-  } else {
-    selatsp = atof(sepieces[0].c_str());
-    selonsp = atof(sepieces[1].c_str());
-  }
-  seLatDegs = selatsp;
-  seLonDegs = selonsp;
-
-  // SPACING
-  std::string spacing = getString("s");
-  AngleDegs slatsp, slonsp;
-  std::vector<std::string> spieces;
-
-  Strings::split(spacing, &spieces);
-  if (spieces.size() != 3) {
-    LogSevere("Failed spacing specification \n");
-    return false;
-  } else {
-    slatsp = atof(spieces[0].c_str());
-    slonsp = atof(spieces[1].c_str());
-  }
-  latSpacing = slatsp;
-  lonSpacing = slonsp;
-
-  // Ok calculate the GRID dimensions.  Feels backwards, normally with say map tiles
-  // we do the x y first and get any spacing from that
-  int x = (seLonDegs - nwLonDegs) / lonSpacing;
-
-  if (x < 0) { x = -x; }
-  int y = (nwLatDegs - seLatDegs) / latSpacing;
-
-  if (y < 0) { y = -y; }
-
-  numX = x;
-  numY = y;
-
-  grid.set(nwLatDegs, nwLonDegs,
-    seLatDegs, seLonDegs,
-    latSpacing, lonSpacing,
-    numX,
-    numY);
-
-  return true;
 } // RAPIOOptions::getLegacyGrid
 
 Option *
@@ -456,6 +394,7 @@ RAPIOOptions::countArgs(const std::vector<Option>& options,
 void
 RAPIOOptions::dumpArgs(std::vector<Option>& options,
   OptionFilter                            & a,
+  bool                                    showHidden,
   bool                                    postParse,
   bool                                    advancedHelp)
 {
@@ -463,7 +402,7 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
 
   for (auto& o: options) {
     // Output the option
-    if (a.show(o)) {
+    if (a.show(o) && (!o.hidden)) {
       size_t c1 = max_arg_width + 2 + 2;
 
       // size_t c2 = max_name_width+1;
@@ -562,7 +501,7 @@ RAPIOOptions::verifyRequired()
     std::cout << "Missing " << ColorTerm::bold("(" + std::to_string(allOptions.size()) + ")")
               << " REQUIRED arguments: \n";
     OptionFilter all;
-    dumpArgs(allOptions, all); // already filtered..but should work
+    dumpArgs(allOptions, all, true); // already filtered..but should work
     good = false;
     printHelpHelp();
   }
@@ -585,7 +524,7 @@ RAPIOOptions::verifySuboptions()
     std::cout << "BAD option choice for " << ColorTerm::bold("(" + std::to_string(allOptions.size()) + ")")
               << " arguments:\n";
     OptionFilter all;
-    dumpArgs(allOptions, all, true); // already filtered..but should work
+    dumpArgs(allOptions, all, true, true); // already filtered..but should work
     good = false;
   }
 
@@ -620,7 +559,7 @@ RAPIOOptions::verifyAllRecognized()
       << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
     std::cout << ColorTerm::bold("UNRECOGNIZED:\n");
     OptionFilter ff;
-    dumpArgs(unused, ff, true);
+    dumpArgs(unused, ff, true, true);
     good = false;
     printHelpHelp();
   }
@@ -704,11 +643,11 @@ RAPIOOptions::dumpArgs()
 
   // Dump options
   for (auto& x:layout) {
-    FilterGroup l(x);
+    FilterGroup l(x, false);
     if (countArgs(allOptions, l) > 0) {
       std::cout << ColorTerm::bold(x.empty() ? "OPTIONS:\n" : x + ":\n");
     }
-    dumpArgs(allOptions, l);
+    dumpArgs(allOptions, l, false);
   }
 } // RAPIOOptions::dumpArgs
 
@@ -885,7 +824,7 @@ RAPIOOptions::dumpHelp()
       // Dump advanced help for this if found
       if (allOptions.size() > 0) {
         std::cout << ColorTerm::bold(group + ":\n");
-        dumpArgs(allOptions, all, false, true);
+        dumpArgs(allOptions, all, true, false, true);
         allOptions.clear();
       } else {
         std::cout << "-->Unknown option/variable: '" << v << "'\n";

@@ -60,6 +60,7 @@ public:
   void
   dumpArgs(std::vector<Option>& options,
     OptionFilter              & a,
+    bool                      showHidden   = false,
     bool                      postParse    = false,
     bool                      advancedHelp = false);
 

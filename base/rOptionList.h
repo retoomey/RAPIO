@@ -99,6 +99,10 @@ public:
   addGroup(const std::string& sourceopt,
     const std::string       & group);
 
+  /** Set hidden on an option */
+  void
+  setHidden(const std::string& sourceopt);
+
   /** Do we want advanced help for this option? */
   bool
   wantAdvancedHelp(const std::string& sourceopt);

@@ -138,7 +138,7 @@ FilterName::show(const Option& opt)
   return (opt.opt == myName);
 }
 
-FilterGroup::FilterGroup(const std::string& group) : myGroup(group)
+FilterGroup::FilterGroup(const std::string& group, const bool showHidden) : myGroup(group), myHidden(showHidden)
 { }
 
 bool
@@ -149,14 +149,14 @@ FilterGroup::show(const Option& opt)
   // For blank, get all options _without_ any group
   if (myGroup == "") {
     if (s == 0) {
-      return (true);
+      return (opt.hidden ? myHidden : true);
     }
   }
 
   // Hunt for group string in list
   for (auto& i: opt.groups) {
     if (i == myGroup) {
-      return (true);
+      return (opt.hidden ? myHidden : true);
     }
   }
   return (false);

@@ -35,6 +35,7 @@ public:
                                      ///<  "-r" for example
   bool system;                       ///< Is this a system argument for all
                                      ///< algorithms such as verbose?
+  bool hidden;                       ///< Is this a hidden option?
   std::string opt;                   ///< The option text
   std::string name;                  ///< The full name of the option
   std::string usage;                 ///< The full help string for the option
@@ -122,11 +123,12 @@ protected:
 /** Get list of options by group.  Used for printing out by categories */
 class FilterGroup :  public OptionFilter {
 public:
-  FilterGroup(const std::string& name);
+  FilterGroup(const std::string& name, const bool showHidden = true);
   virtual bool
   show(const Option& opt) override;
 protected:
 
   std::string myGroup;
+  bool myHidden;
 };
 }

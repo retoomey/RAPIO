@@ -334,37 +334,14 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 void
 RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 {
-  // FIXME: Feel like algorithms need a general init not just the process options
-  // Maybe we just rename this method to be clearer...
-  // LogInfo("Checking grid variables: "<<o.getString("t")<<", " << o.getString("b") << ", " << o.getString("s") << "\n");
+  // Get grid
+  o.getLegacyGrid(myFullGrid);
 
-  // -----------------------------------------------------------------------------------
-  // Lak does the gridspecification and heightspacing which does a ton of stuff.
-  // I think the GridSpecification actually slows the loop massively, since it
-  // abstractly redoes the index math for each cell.  The heights are
-  // a list of output heights.  For the moment, I'm gonna hardcode the NMQWD
-  // heights in a vector for testing since well we might not be able to actually
-  // 'do' merger using this new way anyway
-  // FIXME: Do all the configuration stuff
-  //
-  // And we don't have a 20..what strange logic
-  // -t "55 -130 20" -b "20 -60 0.5" -s "0.01 0.01 NMQWD"
-  //
-  // <heightlevels name="NMQWD">
-  // <level incr="250" upto="3000"/>
-  // <level incr="500" upto="9000"/>
-  // <level incr="1000" upto="infty"/>
-  // </heightlevels>
-  ///core/configs/merger_configs/HAWAII_configs.xml
-  //
-  //
+  // Still keeping the myHeightsIndex 'hack' which allows us
+  // to take a subset of the heights within full conus space,
+  // but at some point we can probably get rid of it
   #if 1
-  myHeightsM = {
-    // up to 3000 starting from 1 km
-    500,     750,  1000,  1250,  1500,  1750,  2000,  2250,  2500, 2750, 3000,       // 0-10
-    3500,   4000,  4500,  5000,  5500,  6000,  6500,  7000,  7500, 8000, 8500, 9000, // 11-22
-    10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000             // 23-32
-  };
+  myHeightsM = myFullGrid.heightsM;
   for (size_t hh = 0; hh < myHeightsM.size(); hh++) {
     myHeightsIndex.push_back(hh);
   }
@@ -382,19 +359,12 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     14
   };
   #endif // if 0
+
   myLLProjections.resize(myHeightsM.size());
   if (myLLProjections.size() < 1) {
     LogSevere("No height layers to process, exiting\n");
     exit(1);
   }
-
-  LogInfo("We're hard locked to the following NMQWD output heights:\n")
-  for (auto x:myHeightsM) {
-    std::cout << x / 1000.0 << " ";
-  }
-  std::cout << "\n";
-
-  o.getLegacyGrid(myFullGrid);
 
   myWriteLLG    = o.getBoolean("llg");
   myResolverAlg = o.getString("resolver");
@@ -571,7 +541,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // FIXME: Move this to own method when stable
     static bool setup = false;
 
-    std::shared_ptr<VolumeValueResolver> resolversp;
+    static std::shared_ptr<VolumeValueResolver> resolversp = nullptr;
+
     if (!setup) {
       setup = true;
 

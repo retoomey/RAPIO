@@ -69,6 +69,7 @@ OptionList::makeOption(
   o.opt      = opt;
   o.name     = name;
   o.enforceSuboptions = true;
+  o.hidden = false;
 
   if (o.name.length() > 0) {
     o.name[0] = toupper(o.name[0]);
@@ -327,6 +328,22 @@ OptionList::addGroup(const std::string& sourceopt, const std::string& group)
     have->addGroup(group);
   } else {
     std::cout << "WARNING: Code error: Trying to add group " << group
+              << " to missing option '" << sourceopt << "'\n";
+    std::cout
+      << "You must add the option first with boolean, required or optional\n";
+    exit(1);
+  }
+}
+
+void
+OptionList::setHidden(const std::string& sourceopt)
+{
+  Option * have = getOption(sourceopt);
+
+  if (have) {
+    have->hidden = true;
+  } else {
+    std::cout << "WARNING: Code error: Trying to set hidden "
               << " to missing option '" << sourceopt << "'\n";
     std::cout
       << "You must add the option first with boolean, required or optional\n";
