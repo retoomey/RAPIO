@@ -5,6 +5,8 @@
 # as a grouped time archive for RAPIO and MRMS
 # Current the MRMS compatible index format requires mapping file endings
 # to builder classes that know how to handle that type of data.
+#
+# Feb 2023 -- modified to handle filenames with the .999 fractional timestamp
 
 import sys,os,re,datetime,tempfile
 import shutil
@@ -34,11 +36,51 @@ paramlines = {
 }
 suffix=list(paramlines.keys())
 
+# -----------------------------------------------------
 # Time pattern match for files (without file extension).
 # and pattern match for start/end.
 datatime = "%Y%m%d-%H%M%S"
 
 ebase = datetime.datetime(1970,1,1)
+    
+def getEpoch(timestr):
+  """
+Get epoch seconds from a given time string and timeformat
+or return -1
+  """
+  timeformat = datatime
+
+  failed = True
+  epoch = 0
+  fractional = 0
+
+  # First check for the "." with 3 digits at end, this
+  # is a microsecond addition to W2 files
+  # and we separate it
+  splittwo = timestr.rsplit('.', 1)
+  if len(splittwo) == 2:
+    if len(splittwo[1]) == 3:
+      if splittwo[1].isnumeric():
+        fractional = int(splittwo[1])
+        timestr = splittwo[0]
+
+  #print("time/fraction: " +str(timestr)+" "+str(fractional))
+  
+  # Now try to time match the main part
+  try:
+    date = datetime.datetime.strptime(timestr,timeformat)
+    #epoch = date.timestamp() Python 3.3+
+    td = date-ebase
+    epoch = (td.seconds + td.days*24*3600) 
+    failed = False
+  except ValueError:
+    failed = True
+
+  if failed:
+    return [-1, 0]
+  else:
+    return [epoch, fractional]
+# -----------------------------------------------------
 
 # Conditional print
 def printIf(printIt, p, nl=True):
@@ -122,26 +164,8 @@ def stringArg(args, what, defTrue, defFalse):
     a = defFalse 
   args.append(a)
   return args
-    
-def getEpoch(timestr, timeformat):
-  """
-Get epoch seconds from a given time string and timeformat
-or return -1
-  """
-  epoch = 0
-  try:
-    # Make sure date created as GM
-    # One thing about python that sucks is its handling of
-    # time and the massive changes per version
-    date = datetime.datetime.strptime(timestr,timeformat)
-    #epoch = date.timestamp() Python 3.3+
-    td = date-ebase
-    return (td.seconds + td.days*24*3600) 
-    
-  except ValueError:
-    return -1 
 
-def create_xml_record(t,name,e,p,s):
+def create_xml_record(t,name,e,p,s,frac):
   """
 Create the XML record for the given record information
 product, subtype, t, ending, start, end
@@ -157,13 +181,14 @@ product, subtype, t, ending, start, end
   # Create the record
   theFile=name+endKey
   record = "<item>\n" 
-  record = record + " <time fractional=\"0.000000\"> {0} </time>\n".format(t)
+  percentFrac = frac/1000.0
+  record = record + " <time fractional=\""+str(percentFrac)+"\"> {0} </time>\n".format(t)
   record = record + param.format(p,s,theFile) +"\n" 
   record = record + " <selections>{0} {1} {2} </selections>\n".format(name,p,s) 
   record = record + "</item>" #  python print adds /n
   return record
 
-def indexFiles(v, fullList, d, r, p, s, f, start, end, prod, sub):
+def indexFiles(v, fullList, d, r, p, s, start, end, prod, sub):
   """ 
 Index files in directory d, smart recursive 
 fullList becomes storage for files
@@ -178,7 +203,6 @@ d is directory
 r is recursion level
 p is product name
 s is subtype name
-f is time format string
 start and end are time filters
   """
   #print("TDirectory: {0} {1}".format(d, r))
@@ -191,11 +215,11 @@ start and end are time filters
     if (os.path.isdir(full)):
       if r == 0:    # Directory in top is product
         #print("Product: {0},{1}".format(full, i))
-        indexFiles(v, fullList, full, 1, i, "", f, start, end, prod, sub)  # Handle subtypes
+        indexFiles(v, fullList, full, 1, i, "", start, end, prod, sub)  # Handle subtypes
       elif r == 1:  # Directory inside product is subtype
         pass
         #print("Subtype: {0},{1}".format(full, i))
-        indexFiles(v, fullList, full, 2, p, i, f, start, end, prod, sub)   # Handle times
+        indexFiles(v, fullList, full, 2, p, i, start, end, prod, sub)   # Handle times
       elif r == 2:  # Ignore time directories
         pass
         #print("Time Directory: {0} {1}".format(i, r))
@@ -228,7 +252,9 @@ start and end are time filters
             printIf(v, "-->Subtype skip: '{0}' != '{1}'".format(s, sub))
 
         # Time test
-        epoch = getEpoch(ret[0], f)
+        eret = getEpoch(ret[0])
+        epoch = eret[0]
+        fractional = eret[1]
         if epoch == -1:  # Bad format or something
           printIf(v, "Failed to convert {0} to time using pattern {1}".format(ret[0], datatime))
         else:
@@ -238,7 +264,7 @@ start and end are time filters
 
         # If all tests pass, add the record
         if addIt:
-          fullList.append([epoch, ret[0], ret[1], p, s])
+          fullList.append([epoch, ret[0], ret[1], p, s, fractional])
 
   # Now sort the list by the timestamp column:
   if r == 0: # in the first recursion only
@@ -268,25 +294,25 @@ def printIndex(target_dir, XMLindex, v, timeformat, startEpoch, endEpoch, maxRec
     
   # First gather the sorted records
   fullList = []
-  indexFiles(v, fullList, target_dir, 0, "", "", timeformat, startEpoch, endEpoch, prod, sub)
+  indexFiles(v, fullList, target_dir, 0, "", "", startEpoch, endEpoch, prod, sub)
 
   # Now output where wanted
   toIndex("<codeindex>", tempXML, ter)
   if toCSV:
-    tempCSV.write("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"\n".format("Epoch","TimeStr","FileType","Product","Subtype"))
+    tempCSV.write("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"\n".format("Epoch","TimeStr","FileType","Product","Subtype", "Fractional"))
   count = 0
 
   # Add records iff directory exists
   if os.path.isdir(target_dir):
     for z in fullList:
-      record = create_xml_record(z[0],z[1],z[2],z[3],z[4])
+      record = create_xml_record(z[0],z[1],z[2],z[3],z[4],z[5])
       if (count >= maxRecords):
         break 
       count = count + 1
       toIndex(record, tempXML, ter)
       # Simple csv output. Could use csv module
       if toCSV:
-        tempCSV.write("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"\n".format(z[0],z[1],z[2],z[3],z[4]))
+        tempCSV.write("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\"\n".format(z[0],z[1],z[2],z[3],z[4],z[5]))
 
   toIndex("</codeindex>", tempXML, ter)
 
@@ -395,7 +421,8 @@ if __name__ == "__main__":
   args = getArg(args,"s")
   startStr = args.pop()
   if not ((startStr == True) or (startStr == False)):
-    startEpoch = getEpoch(startStr,datatime)
+    eret = getEpoch(startStr)
+    startEpoch = eret[0]
     printIf(verbose, "Start time: {0} {1}".format(startStr, startEpoch))
     if (startEpoch == -1):
       printIf(not ter, "Bad time string for start time? {0} doesn't match {1}".format(startStr, datatime))
@@ -406,7 +433,8 @@ if __name__ == "__main__":
   args = getArg(args,"e")
   endStr = args.pop()
   if not ((endStr == True) or (endStr == False)):
-    endEpoch = getEpoch(endStr,datatime)
+    eret = getEpoch(endStr)
+    endEpoch = eret[0]
     printIf(verbose, "End time: {0} {1}".format(endStr, endEpoch))
     if (endEpoch == -1):
       printIf(not ter, "Bad time string for end time? {0} doesn't match {1}".format(endStr, datatime))
