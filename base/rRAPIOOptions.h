@@ -53,16 +53,16 @@ public:
 
   /** Count arguments that match a given filter */
   size_t
-  countArgs(const std::vector<Option>& options,
-    OptionFilter                     & a);
+  countArgs(const std::vector<Option *>& options,
+    OptionFilter                       & a);
 
   /** Output arguments that match a given filter */
   void
-  dumpArgs(std::vector<Option>& options,
-    OptionFilter              & a,
-    bool                      showHidden   = false,
-    bool                      postParse    = false,
-    bool                      advancedHelp = false);
+  dumpArgs(std::vector<Option *>& options,
+    OptionFilter                & a,
+    bool                        showHidden   = false,
+    bool                        postParse    = false,
+    bool                        advancedHelp = false);
 
   /** Do the standard dump of help when nothing passed in */
   void
@@ -93,25 +93,6 @@ public:
   getLegacyGrid(
     LLCoverageArea& grid
   );
-
-  /** Convenience get a 2D or 3D location from a string part */
-  LLH
-  getLocation(const std::string& data,
-    const std::string          & gridname,
-    const std::string          & part,
-    const bool                 is3D);
-
-  /*
-   * void
-   * getGrid(const std::string& name,
-   *  LLH                    & location,
-   *  float                  & lat_spacing,
-   *  float                  & lon_spacing,
-   *  int                    & lat_dim,
-   *  int                    & lon_dim);
-   */
-
-  // ^^^ End experimental grid stuff. I'll revisit it
 
   /** Set the module name or program name */
   void

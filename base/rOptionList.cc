@@ -127,24 +127,6 @@ OptionList::boolean(const std::string& opt,
   return (makeOption(false, true, false, opt, "", usage, "false"));
 }
 
-/*
- * namespace {
- * std::string
- * getMapString(
- * std::map<std::string, std::string>& lookup, const std::string& name)
- * {
- * std::map<std::string, std::string>::iterator iter;
- * std::string s = "";
- * iter = lookup.find(name);
- *
- * if (iter != lookup.end()) {
- *  s = iter->second;
- * }
- * return (s);
- * }
- * }
- */
-
 Option *
 OptionList::getOption(const std::string& opt)
 {
@@ -221,13 +203,13 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
 } // OptionList::storeParsedArg
 
 void
-OptionList::sortOptions(std::vector<Option>& allOptions,
-  OptionFilter                             & a)
+OptionList::sortOptions(std::vector<Option *>& allOptions,
+  OptionFilter                               & a)
 {
   // Filter and Sort options how we want to display.
   for (auto& i:optionMap) {
     if (a.show(i.second)) {
-      allOptions.push_back(i.second);
+      allOptions.push_back(&i.second);
     }
   }
   std::sort(allOptions.begin(), allOptions.end());
@@ -359,7 +341,7 @@ OptionList::wantAdvancedHelp(const std::string& sourceopt)
 
   if (have) {
     for (auto o:myHelpOptions) {
-      if (o.opt == have->opt) {
+      if (o == have->opt) {
         want = true;
         break;
       }
@@ -379,14 +361,8 @@ OptionList::addAdvancedHelp(const std::string& sourceopt,
   Option * have = getOption(sourceopt);
 
   if (have) {
-    // Only add advanced help if in the myHelpOptions list
-    for (auto o:myHelpOptions) {
-      if (o.opt == have->opt) {
-        have->advancedHelp = help;
-        have->usage        = have->usage + " (See help " + have->opt + ")";
-        break;
-      }
-    }
+    have->advancedHelp = help;
+    have->usage        = have->usage + " (See help " + have->opt + ")";
   } else {
     std::cout
       << "WARNING: Code error: Trying to add detailed help to missing option '"

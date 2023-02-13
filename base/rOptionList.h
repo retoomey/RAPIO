@@ -21,7 +21,7 @@ public:
   /** Create an empty option list */
   OptionList();
 
-  /** Destory an option list */
+  /** Destroy an option list */
   ~OptionList(){ }
 
   /** Collection of stored valid options by name */
@@ -58,7 +58,7 @@ public:
 
   /** Return sorted options */
   void
-  sortOptions(std::vector<Option>&,
+  sortOptions(std::vector<Option *>&,
     OptionFilter& a);
 
   // Access option value by key -----------------------------
@@ -155,8 +155,8 @@ public:
 
 protected:
 
-  /** Advanced Help filter list of options */
-  std::vector<Option> myHelpOptions;
+  /** Advanced Help filter list of option keys */
+  std::vector<std::string> myHelpOptions;
 
   /** Advanced Help filter hidden or not */
   bool myHelpOptionsHidden;

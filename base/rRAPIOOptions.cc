@@ -211,41 +211,16 @@ RAPIOOptions::getLegacyGrid(
   return (grid.parse(gridstr, topcorner, botcorner, spacing));
 } // RAPIOOptions::getLegacyGrid
 
-LLH
-RAPIOOptions::getLocation(
-  const std::string& data,
-  const std::string& gridname,
-  const std::string& part,
-  const bool       is3D)
-{
-  std::vector<std::string> pieces;
-
-  Strings::split(data, ',', &pieces);
-  size_t expected = is3D ? 3 : 2;
-
-  if (pieces.size() != expected) {
-    std::cout << "Error in specifying the " + part + " of grid '" + gridname
-      + "', expected " << expected << " pieces.\n";
-    exit(1);
-  }
-  const float heightKMs = is3D ? atof(pieces[2].c_str()) : 10.0f;
-  LLH loc(atof(pieces[0].c_str()),
-    atof(pieces[1].c_str()),
-    heightKMs);
-
-  return (loc);
-}
-
 /** Count a list of arguments with a given filter */
 size_t
-RAPIOOptions::countArgs(const std::vector<Option>& options,
-  OptionFilter                                   & a)
+RAPIOOptions::countArgs(const std::vector<Option *>& options,
+  OptionFilter                                     & a)
 {
   size_t counter = 0;
 
   for (auto& o: options) {
     // Output the option
-    if (a.show(o)) {
+    if (a.show(*o)) {
       counter++;
     }
   }
@@ -254,17 +229,17 @@ RAPIOOptions::countArgs(const std::vector<Option>& options,
 
 /** Print a list of arguments with a given filter */
 void
-RAPIOOptions::dumpArgs(std::vector<Option>& options,
-  OptionFilter                            & a,
-  bool                                    showHidden,
-  bool                                    postParse,
-  bool                                    advancedHelp)
+RAPIOOptions::dumpArgs(std::vector<Option *>& options,
+  OptionFilter                              & a,
+  bool                                      showHidden,
+  bool                                      postParse,
+  bool                                      advancedHelp)
 {
   auto& s = std::cout;
 
   for (auto& o: options) {
     // Output the option
-    if (a.show(o) && (showHidden || !o.hidden)) {
+    if (a.show(*o) && (showHidden || !o->hidden)) {
       size_t c1 = max_arg_width + 2 + 2;
 
       // size_t c2 = max_name_width+1;
@@ -272,10 +247,10 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
       // Calculate the option output
       std::string opt;
 
-      if (o.required) {
-        opt = " " + o.opt;
+      if (o->required) {
+        opt = " " + o->opt;
       } else {
-        opt = " [" + o.opt + "]";
+        opt = " [" + o->opt + "]";
       }
 
       // Always output the first two columns, regardless of terminal width...
@@ -286,13 +261,13 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
       std::string status;
 
       if (postParse) {
-        status = "(valueof=" + o.parsedValue + ")";
+        status = "(valueof=" + o->parsedValue + ")";
       } else {
-        if (o.required) {
+        if (o->required) {
           // status = "(required)";
-          status = "(example=" + o.example + ")";
+          status = "(example=" + o->example + ")";
         } else {
-          status = "(default=" + o.defaultValue + ")";
+          status = "(default=" + o->defaultValue + ")";
         }
       }
       // Import that status include the colors so fill spaces
@@ -301,23 +276,23 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
       ColorTerm::wrapWithIndent(c1, c1, status);
 
       // Usage, using our width wrapping output
-      if (o.usage != "") {
+      if (o->usage != "") {
         // s << fGreen;
         s << setw(c1 + 2) << left << ""; // Indent 1 column
-        ColorTerm::wrapWithIndent(c1 + 2, c1 + 4, o.usage);
+        ColorTerm::wrapWithIndent(c1 + 2, c1 + 4, o->usage);
 
         // s << fNormal;
       }
 
       // Choices for suboptions....
-      if (o.suboptions.size() > 0) {
-        for (auto& i: o.suboptions) {
+      if (o->suboptions.size() > 0) {
+        for (auto& i: o->suboptions) {
           s << setw(c1 + 4) << left << ""; // Indent 1 column
           std::string optpad = i.opt;
           if (optpad.empty()) { // Existance only such as -r
             optpad = "\"\"";
           }
-          size_t max = o.suboptionmax;
+          size_t max = o->suboptionmax;
 
           while (optpad.length() < max) {
             optpad += " ";
@@ -327,16 +302,16 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
           ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
         }
       }
-      if (advancedHelp && (o.advancedHelp != "")) {
+      if (advancedHelp && (o->advancedHelp != "")) {
         std::vector<std::string> lines;
-        Strings::splitWithoutEnds(o.advancedHelp, '\n', &lines);
+        Strings::splitWithoutEnds(o->advancedHelp, '\n', &lines);
         // s << fGreen;
         // s << setw(c1+2) << left << ""; // Indent 1 column
         int d = 5;
         s << ColorTerm::bold("DETAILED HELP:\n");
         s << setw(d) << left << ""; // Indent 1 column
         for (auto& l:lines) {
-          // ColorTerm::wrapWithIndent(d, 0, o.advancedHelp);
+          // ColorTerm::wrapWithIndent(d, 0, o->advancedHelp);
           ColorTerm::wrapWithIndent(d, 0, l);
         }
         s << "\n";
@@ -355,7 +330,7 @@ RAPIOOptions::verifyRequired()
   // Copy missing
   FilterMissingRequired r;
 
-  std::vector<Option> allOptions;
+  std::vector<Option *> allOptions;
 
   sortOptions(allOptions, r);
 
@@ -378,7 +353,7 @@ RAPIOOptions::verifySuboptions()
   // Copy arguments with bad suboptions...
   FilterBadSuboption r;
 
-  std::vector<Option> allOptions;
+  std::vector<Option *> allOptions;
 
   sortOptions(allOptions, r);
 
@@ -411,11 +386,11 @@ RAPIOOptions::verifyAllRecognized()
   // Ok, so on unrecognized options we need to exit
   if (unusedOptionMap.size() > 0) {
     std::map<std::string, Option>::iterator i;
-    std::vector<Option> unused;
+    std::vector<Option *> unused;
 
     for (i = unusedOptionMap.begin(); i != unusedOptionMap.end(); ++i) {
       // Might have to modify some other parts...
-      unused.push_back(i->second);
+      unused.push_back(&(i->second));
     }
     std::cout
       << "Unrecognized options were passed in. Possibly arguments have changed format:\n";
@@ -434,7 +409,7 @@ RAPIOOptions::dumpArgs(bool showHidden)
 {
   OptionFilter all;
 
-  std::vector<Option> allOptions;
+  std::vector<Option *> allOptions;
 
   sortOptions(allOptions, all);
 
@@ -472,9 +447,9 @@ RAPIOOptions::dumpArgs(bool showHidden)
 
   for (unsigned int z = 0; z < allOptions.size(); z++) {
     // Output the option
-    if (r.show(allOptions[z])) {
+    if (r.show(*allOptions[z])) {
       outputRequired +=
-        ("-" + ColorTerm::bold(allOptions[z].opt) + " " + ColorTerm::underline(allOptions[z].example) + " ");
+        ("-" + ColorTerm::bold(allOptions[z]->opt) + " " + ColorTerm::underline(allOptions[z]->example) + " ");
     }
   }
   outputRequired += ColorTerm::bold("--verbose");
@@ -488,7 +463,7 @@ RAPIOOptions::dumpArgs(bool showHidden)
   std::vector<std::string> user;
 
   for (const auto& o:allOptions) {
-    for (const auto& g: o.groups) {
+    for (const auto& g: o->groups) {
       // If not in our predefined group...
       if (std::find(layout.begin(), layout.end(), g) != layout.end()) {
         continue;
@@ -610,7 +585,7 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
 
   // FIXME: Humm this is from left over options (non -), issue or not?
   if (list.size() > 2) { // help is one of them... "help" ""
-    std::vector<Option> allOptions;
+    std::vector<Option *> allOptions;
     OptionFilter all;
 
     // Make it dynamic based on what else is left on line
@@ -643,13 +618,14 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
           // Add only if not already there
           bool found = false;
           for (auto h:myHelpOptions) {
-            if (h.opt == o.opt) {
+            if (h == o->opt) {
               found = true;
               break;
             }
           }
           if (!found) {
-            myHelpOptions.push_back(o);
+            // Do a key list because advanced not added yet
+            myHelpOptions.push_back(o->opt);
           }
         }
         allOptions.clear();
@@ -667,57 +643,14 @@ RAPIOOptions::dumpHelp()
   OptionFilter all;
 
   if (myHelpOptions.size()) {
-    // for (auto o:myHelpOptions) {
-    dumpArgs(myHelpOptions, all, true, false, true);
-    // }
+    std::vector<Option *> theHelp;
+    for (auto k:myHelpOptions) {
+      theHelp.push_back(getOption(k));
+    }
+    dumpArgs(theHelp, all, true, false, true);
     // Dump all help
   } else {
     dumpArgs(myHelpOptionsHidden);
-  }
-  return;
-
-  // Here we handle help something, where we filter groups and then variables
-  // to show just the help for those.  It's useful for algorithms with lots of
-  // options
-  if (myRawArgs.size() > 2) { // help is one of them... "help" ""
-    std::vector<Option> allOptions;
-
-    // Make it dynamic based on what else is left on line
-    for (size_t i = 0; i < myRawArgs.size(); i += 2) {
-      auto& c = myRawArgs[i];     // -argument
-      auto& v = myRawArgs[i + 1]; // value
-
-      // Skip hidden
-      if (v == "hidden") { continue; }
-
-      // Skip any arguments (only help is c, rest are v )
-      if (!c.empty()) { continue; }
-
-      // Try to find a group matching argument...
-      // So if user types 'alg help time' they get detailed time options.
-      std::string group = Strings::makeUpper(v);
-      if (group == "OPTIONS") { group = ""; }
-      FilterGroup g(group);
-      sortOptions(allOptions, g);
-
-      // If not found, try to find a variable matching argument...
-      if (allOptions.size() == 0) {
-        FilterName aName(v); // Capital?
-        sortOptions(allOptions, aName);
-      }
-
-      // Dump advanced help for this if found
-      if (allOptions.size() > 0) {
-        std::cout << ColorTerm::bold(group + ":\n");
-        dumpArgs(allOptions, all, true, false, true);
-        allOptions.clear();
-      } else {
-        std::cout << "-->dump Unknown option/variable: '" << v << "'\n";
-      }
-    }
-  } else {
-    // Single help argument, dump basic non-detailed help
-    dumpArgs();
   }
 } // RAPIOOptions::dumpHelp
 

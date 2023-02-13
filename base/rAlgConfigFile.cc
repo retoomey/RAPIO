@@ -83,7 +83,8 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>               & optionlist,
   std::vector<std::string>               & valuelist)
 {
-  auto conf = IODataType::read<PTreeData>(path.toString());
+  bool success = false;
+  auto conf    = IODataType::read<PTreeData>(path.toString());
 
   try{
     if (conf != nullptr) {
@@ -97,13 +98,12 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
           valuelist.push_back(value);
         }
       }
+      success = true;
     }
-    return true;
   }catch (const std::exception& e) {
     LogSevere("Error parsing XML from " << path << ", " << e.what() << "\n");
-    return false;
   }
-  return false;
+  return success;
 }
 
 bool
@@ -140,6 +140,7 @@ AlgFLATConfigFile::readConfigURL(const URL& path,
   // 1. Anything after a // is a comment
   // 2. Each non empty line has a option:value pair, spaces optional around them
   std::vector<char> buf;
+  bool success = false;
 
   if (IOURL::read(path, buf) > 0) {
     buf.push_back('\0');
@@ -167,10 +168,10 @@ AlgFLATConfigFile::readConfigURL(const URL& path,
         valuelist.push_back(value);
       }
     }
-    return true;
+    success = true;
   }
 
-  return false;
+  return success;
 } // AlgFLATConfigFile::readConfigURL
 
 bool
