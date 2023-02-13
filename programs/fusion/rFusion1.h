@@ -239,9 +239,20 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
+  /** Create an LLG for our output or caching */
+  std::shared_ptr<LatLonGrid>
+  createLLG(
+    const std::string   & outputName,
+    const std::string   & outputUnits,
+    const LLCoverageArea& g,
+    const LengthKMs     layerHeightKMs);
+
   /** Create the cache of interpolated layers */
   void
-  createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverageArea& g, const std::vector<double>& heightsM);
+  createLLGCache(
+    const std::string& outputName,
+    const std::string& outputUnits,
+    const LLCoverageArea& g, const std::vector<double>& heightsM);
 
   // Projection requirements:
   // 1.  Project from the coverage grid (Lat, Lon, Height) specified by CONUS, etc. to a virtual az, range, elev
@@ -309,6 +320,11 @@ protected:
 
   /** Coordinates for the one radar we're watching */
   LLCoverageArea myRadarGrid;
+
+  /** A cached single full grid 2D layer for full conus output.  We typically
+   * run this with a very large 3D grid, and some things like the web page require
+   * files that reference this full grid */
+  std::shared_ptr<LatLonGrid> myFullLLG;
 
   /** Cached set of LatLonGrids */
   LatLonGridSet myLLGCache;

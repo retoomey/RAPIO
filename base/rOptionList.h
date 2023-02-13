@@ -158,6 +158,9 @@ protected:
   /** Advanced Help filter list of options */
   std::vector<Option> myHelpOptions;
 
+  /** Advanced Help filter hidden or not */
+  bool myHelpOptionsHidden;
+
 private:
 
   /** Have arguments been sucessfully processed? */

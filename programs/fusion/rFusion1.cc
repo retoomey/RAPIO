@@ -379,37 +379,46 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   LogInfo("Range range is " << myRangeKMs << " Kilometers\n");
 } // RAPIOFusionOneAlg::processOptions
 
+std::shared_ptr<LatLonGrid>
+RAPIOFusionOneAlg::createLLG(
+  const std::string   & outputName,
+  const std::string   & outputUnits,
+  const LLCoverageArea& g,
+  const LengthKMs     layerHeightKMs)
+{
+  // Create a new working space LatLonGrid for the layer
+  auto output = LatLonGrid::
+    Create(outputName, outputUnits, LLH(g.nwLat, g.nwLon, layerHeightKMs), Time(), g.latSpacing, g.lonSpacing,
+      g.numY, g.numX);
+
+  // Extra setup for any of our LLG objects
+
+  output->setReadFactory("netcdf"); // default to netcdf output if we write it
+
+  // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
+  auto array = output->getFloat2D();
+
+  array->fill(Constants::DataUnavailable);
+
+  return output;
+}
+
 void
-RAPIOFusionOneAlg::createLLGCache(std::shared_ptr<RadialSet> r, const LLCoverageArea& g,
+RAPIOFusionOneAlg::createLLGCache(
+  const std::string        & outputName,
+  const std::string        & outputUnits,
+  const LLCoverageArea     & g,
   const std::vector<double>& heightsM)
 {
   // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
   // turns out to be faster than 1 3D array.
-  // FIXME: We could have a LatLonHeightGrid implementation/create to generalize this
   if (myLLGCache.size() == 0) {
     ProcessTimer("Creating initial LLG value cache.");
-    const std::string aName = r->getTypeName() + "Fused";
-    std::string aUnits      = r->getUnits();
-    if (aUnits.empty()) {
-      LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
-      aUnits = "dBZ";
-    }
 
     // For each of our height layers to process
     for (size_t layer = 0; layer < heightsM.size(); layer++) {
       const LengthKMs layerHeightKMs = heightsM[layer] / 1000.0;
-
-      // Create a new working space LatLonGrid for the layer
-      auto output = LatLonGrid::
-        Create(aName, aUnits, LLH(g.nwLat, g.nwLon, layerHeightKMs), Time(), g.latSpacing, g.lonSpacing,
-          g.numY, g.numX);
-      output->setReadFactory("netcdf"); // default to netcdf output if we write it
-
-      // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
-      auto array = output->getFloat2D();
-      array->fill(Constants::DataUnavailable);
-
-      myLLGCache.add(output);
+      myLLGCache.add(createLLG(outputName, outputUnits, g, layerHeightKMs));
     }
   }
 }
@@ -626,8 +635,23 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Look up from cells to az/range/elev for RADAR
       createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
 
+      // Generate output name and units
+      const std::string outputName = r->getTypeName() + "Fused";
+      std::string outputUnits      = r->getUnits();
+      if (outputUnits.empty()) {
+        LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
+        outputUnits = "dBZ";
+      }
+
+      // Create a single 2D covering full grid (for outputting full vs subgrid files)
+      // The web page, etc. require full conus referenced data.
+      // We don't worry about height, we'll set it for each layer
+      if (myWriteLLG) {
+        myFullLLG = createLLG(outputName, outputUnits, myFullGrid, 0);
+      }
+
       // Create working LLG cache CAPPI storage per height level
-      createLLGCache(r, outg, myHeightsM);
+      createLLGCache(outputName, outputUnits, outg, myHeightsM);
     }
     auto& resolver = *resolversp;
 
@@ -849,11 +873,41 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
       // Try pushing to ldm afterwards. FIXME: Probably need a command flag
       std::map<std::string, std::string> myOverrides;
+
+      //  FIXME: hidden flag for ldm writing myOverrides["postSuccessCommand"] = "ldm";
       myOverrides["postSuccessCommand"] = "ldm";
       if (myWriteLLG) {
-        std::map<std::string, std::string> myOverrides;
         // Typename will be replaced by -O filters
-        writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
+
+        // Subgrid file
+        // writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
+
+        // Copy the current output subgrid into the full LLG for writing out...
+        // Note that since the 2D coordinates don't change, any 'outside' part doesn't need
+        // to be written and can stay DataUnavailable
+        // FIXME: Could maybe be a copy method in LatLonGrid with multiple coverage areas
+        auto& fullgrid = myFullLLG->getFloat2DRef();
+        auto& subgrid  = output->getFloat2DRef();
+
+        // Sync height and time with the current output grid
+        // FIXME: a getHeight/setHeight?  Seems silly to pull/push here so much
+        myFullLLG->setTime(r->getTime());
+        auto fullLoc = myFullLLG->getLocation();
+        auto subLoc  = output->getLocation();
+        fullLoc.setHeightKM(subLoc.getHeightKM());
+        myFullLLG->setLocation(fullLoc);
+
+        // Copy subgrid into the full grid
+        size_t startY = outg.startY;
+        size_t startX = outg.startX;
+        for (size_t y = 0; y < outg.numY; y++) {   // a north to south
+          for (size_t x = 0; x < outg.numX; x++) { // a east to west row
+            fullgrid[startY + y][startX + x] = subgrid[y][x];
+          }
+        }
+
+        // Full grid file (CONUS for regular merger)
+        writeOutputProduct("Mapped" + myFullLLG->getTypeName(), myFullLLG, myOverrides);
       } else {
         // WRITE RAW
         writeOutputProduct("Mapped" + r->getTypeName(), entries, myOverrides);

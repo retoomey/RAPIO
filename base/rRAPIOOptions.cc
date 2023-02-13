@@ -25,8 +25,10 @@ printHelpHelp()
 {
   const std::string name = OS::getProcessName(true);
 
-  std::cout << "Type:\n  '" << name << " help' to see help, or\n  '" << name <<
-    " help arg1 argN' for detailed help on various arguments or groups.\n";
+  std::cout << "Type:\n" <<
+    "  '" << name << " help' to see help, or\n" <<
+    "  '" << name << " help hidden' to see hidden rarely used options, or\n" <<
+    "  '" << name << " help arg1 argN' for detailed help on various arguments or groups.\n";
 }
 
 // Common functions for testing if string is argument or value and trimming
@@ -155,6 +157,16 @@ RAPIOOptions::setHeader(const std::string& a)
   }
 }
 
+Option *
+RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue,
+  const std::string& usage)
+{
+  Option * o = optional(opt, defaultValue, usage);
+
+  addGroup(opt, "SPACE");
+  return (o);
+}
+
 void
 RAPIOOptions::declareLegacyGrid()
 {
@@ -176,6 +188,17 @@ RAPIOOptions::declareLegacyGrid()
 }
 
 bool
+RAPIOOptions::getGrid(
+  const std::string& name,
+  LLCoverageArea   & grid
+)
+{
+  std::string gridstr = getString(name);
+
+  return (grid.parse(gridstr, "", "", ""));
+} // RAPIOOptions::getGrid
+
+bool
 RAPIOOptions::getLegacyGrid(
   LLCoverageArea& grid
 )
@@ -186,20 +209,7 @@ RAPIOOptions::getLegacyGrid(
   std::string gridstr   = getString("grid");
 
   return (grid.parse(gridstr, topcorner, botcorner, spacing));
-
 } // RAPIOOptions::getLegacyGrid
-
-Option *
-RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue,
-  const std::string& usage)
-{
-  // For the moment, just make an optional grid...FIXME: check the default value
-  // for valid
-  Option * o = optional(opt, defaultValue, usage);
-
-  addGroup(opt, "SPACE");
-  return (o);
-}
 
 LLH
 RAPIOOptions::getLocation(
@@ -225,154 +235,6 @@ RAPIOOptions::getLocation(
 
   return (loc);
 }
-
-namespace {
-std::string
-getMapString(
-  std::map<std::string, std::string>& lookup, const std::string& name)
-{
-  std::map<std::string, std::string>::iterator iter;
-  std::string s = "";
-
-  iter = lookup.find(name);
-
-  if (iter != lookup.end()) {
-    s = iter->second;
-  }
-  return (s);
-}
-}
-
-void
-RAPIOOptions::getGrid(const std::string& name,
-  LLH                                  & location,
-  float                                & lat_spacing,
-  float                                & lon_spacing,
-  int                                  & lat_dim,
-  int                                  & lon_dim)
-{
-  std::string grid = getString(name);
-
-  // -----------------------------------------------------------
-  // Filter a grid string to our grid 'language'
-  // FIXME: I'll want the value given by user to override
-  // values from the default...
-
-  // Allow spaces in input only after a ')'. Thus something like
-  // "nw ( 5, 3)    se(40,4,  40)" becomes "nw(5,3) se(40,4,40)"
-  std::string cgrid = "";
-  bool space        = false;
-
-  for (size_t i = 0; i < grid.size(); i++) {
-    char c = tolower(grid[i]);
-
-    switch (c) {
-        case ' ': continue;
-
-        case ')':
-          space = true; // Force single space after ')'
-
-        // break; fall though add character
-        default:
-          cgrid += c;
-
-          if (space) {
-            if (i != grid.size() - 1) {
-              cgrid += ' ';
-              space  = false;
-            }
-          }
-          break;
-    }
-  }
-  grid = cgrid;
-
-  // Now break up the f(v) pairs into f --> v
-  std::map<std::string, std::string> lookup;
-  std::vector<std::string> fields;
-
-  Strings::split(grid, ' ', &fields);
-
-  for (size_t i = 0; i < fields.size(); i++) {
-    // std::cout << "Grid setting  " << i << " is '"<<fields[i]<<"'\n";
-
-    // Looking for name(value)....
-    // FIXME: Noticed name duplicated..we're not using grid yet
-    // here..but need to come back and test this
-    std::string name2, value;
-    bool invalue = false;
-
-    for (size_t j = 0; j < fields[i].size(); j++) {
-      char c = fields[i][j];
-
-      switch (c) {
-          case '(': { invalue = true;
-                      continue;
-          }
-
-          case ')': { break;
-          }
-
-          default:
-            invalue ? value += c : name2 += c;
-            break;
-      }
-    }
-
-    // ALIAS
-    if (name2 == "t") { name2 = "nw"; }
-    if (name2 == "b") { name2 = "se"; } lookup[name2] = value;
-  }
-
-  std::string top     = getMapString(lookup, "nw");
-  std::string bot     = getMapString(lookup, "se");
-  std::string spacing = getMapString(lookup, "s");
-
-  std::cout << "GRID IS " << top << "**" << bot << "**" << spacing << "\n";
-
-  // Now convert them...
-  LLH nwc = getLocation(top, "grid", "top corner", false);
-  LLH sec = getLocation(bot, "grid", "bottom corner", false);
-
-  // Ahhh wait this is for a 2D grid right?
-  //   sec.setHeight( nwc.getHeight() ); // set them to same height ...
-
-  std::vector<std::string> pieces2;
-
-  Strings::split(spacing, ',', &pieces2);
-
-  if (pieces2.size() < 2) {
-    std::cout << "Error in specifying grid '" << name << "' spacing.'\n";
-    exit(1);
-  }
-  const float latf = atof(pieces2[0].c_str());
-  const float lonf = atof(pieces2[1].c_str());
-
-  // This would be for 3D grids...
-  // Length htsp = Length::Kilometers( atof(pieces[2].c_str()) );
-
-  // Standard grid stuff.  This can be used to create a LatLonGrid
-  if ((latf > 0.0) && (lonf > 0.0)) {
-    double latsp = latf;
-    double lonsp = lonf;
-    lat_dim = int(0.5 + (nwc.getLatitudeDeg() - sec.getLatitudeDeg()) / latsp);
-    lon_dim = int(0.5 + (sec.getLongitudeDeg() - nwc.getLongitudeDeg()) / lonsp);
-
-    if ((lat_dim < 1) || (lon_dim < 1)) {
-      std::cout << "Error in specifying grid '" << name << "' dimensions ("
-                << lat_dim << " * " << lon_dim << ")\n";
-      exit(1);
-    }
-
-    lat_spacing = latsp;
-    lon_spacing = lonsp;
-    location    = nwc; // copy
-  } else {
-    std::cout << "Error in specifying grid '" << name << "' spacing ("
-              << latf << "," << lonf << ") must both be greater than zero.\n";
-    exit(1);
-  }
-} // RAPIOOptions::getGrid
 
 /** Count a list of arguments with a given filter */
 size_t
@@ -402,7 +264,7 @@ RAPIOOptions::dumpArgs(std::vector<Option>& options,
 
   for (auto& o: options) {
     // Output the option
-    if (a.show(o) && (!o.hidden)) {
+    if (a.show(o) && (showHidden || !o.hidden)) {
       size_t c1 = max_arg_width + 2 + 2;
 
       // size_t c2 = max_name_width+1;
@@ -568,7 +430,7 @@ RAPIOOptions::verifyAllRecognized()
 
 /** The default dump of all arguments available */
 void
-RAPIOOptions::dumpArgs()
+RAPIOOptions::dumpArgs(bool showHidden)
 {
   OptionFilter all;
 
@@ -643,11 +505,11 @@ RAPIOOptions::dumpArgs()
 
   // Dump options
   for (auto& x:layout) {
-    FilterGroup l(x, false);
+    FilterGroup l(x, showHidden);
     if (countArgs(allOptions, l) > 0) {
       std::cout << ColorTerm::bold(x.empty() ? "OPTIONS:\n" : x + ":\n");
     }
-    dumpArgs(allOptions, l, false);
+    dumpArgs(allOptions, l, showHidden);
   }
 } // RAPIOOptions::dumpArgs
 
@@ -744,6 +606,8 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
   // so basically "myalg help field1 field2 field3" which will be
   // used to load advanced help settings.
 
+  myHelpOptionsHidden = false;
+
   // FIXME: Humm this is from left over options (non -), issue or not?
   if (list.size() > 2) { // help is one of them... "help" ""
     std::vector<Option> allOptions;
@@ -754,11 +618,11 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
       auto& c = list[i];     // -argument
       auto& v = list[i + 1]; // value
 
-      // Skip any arguments
+      // Skip hidden
+      if (v == "hidden") { myHelpOptionsHidden = true; continue; }
+
+      // Skip any arguments (only help is c, rest are v )
       if (!c.empty()) { continue; }
-      // Skip help for help itself...hummm
-      // We always make sure that 'help' becomes an arg '--help'
-      if (c == "help") { continue; }
 
       // Try to find a group matching argument...
       // So if user types 'alg help time' they get detailed time options.
@@ -776,11 +640,21 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
       // Dump advanced help for this if found
       if (allOptions.size() > 0) {
         for (auto o:allOptions) {
-          myHelpOptions.push_back(o);
+          // Add only if not already there
+          bool found = false;
+          for (auto h:myHelpOptions) {
+            if (h.opt == o.opt) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            myHelpOptions.push_back(o);
+          }
         }
         allOptions.clear();
       } else {
-        std::cout << "-->Unknown option/variable: '" << v << "'\n";
+        std::cout << "-->set Unknown option/variable: '" << v << "'\n";
       }
     }
   }
@@ -789,24 +663,35 @@ RAPIOOptions::setHelpFields(const std::vector<std::string>& list)
 void
 RAPIOOptions::dumpHelp()
 {
+  // If any help options parsed in setHelpFields
+  OptionFilter all;
+
+  if (myHelpOptions.size()) {
+    // for (auto o:myHelpOptions) {
+    dumpArgs(myHelpOptions, all, true, false, true);
+    // }
+    // Dump all help
+  } else {
+    dumpArgs(myHelpOptionsHidden);
+  }
+  return;
+
   // Here we handle help something, where we filter groups and then variables
   // to show just the help for those.  It's useful for algorithms with lots of
   // options
-  // FIXME: Humm this is from left over options (non -), issue or not?
   if (myRawArgs.size() > 2) { // help is one of them... "help" ""
     std::vector<Option> allOptions;
-    OptionFilter all;
 
     // Make it dynamic based on what else is left on line
     for (size_t i = 0; i < myRawArgs.size(); i += 2) {
       auto& c = myRawArgs[i];     // -argument
       auto& v = myRawArgs[i + 1]; // value
 
-      // Skip any arguments
+      // Skip hidden
+      if (v == "hidden") { continue; }
+
+      // Skip any arguments (only help is c, rest are v )
       if (!c.empty()) { continue; }
-      // Skip help for help itself...hummm
-      // We always make sure that 'help' becomes an arg '--help'
-      if (c == "help") { continue; }
 
       // Try to find a group matching argument...
       // So if user types 'alg help time' they get detailed time options.
@@ -827,7 +712,7 @@ RAPIOOptions::dumpHelp()
         dumpArgs(allOptions, all, true, false, true);
         allOptions.clear();
       } else {
-        std::cout << "-->Unknown option/variable: '" << v << "'\n";
+        std::cout << "-->dump Unknown option/variable: '" << v << "'\n";
       }
     }
   } else {

@@ -66,22 +66,7 @@ public:
 
   /** Do the standard dump of help when nothing passed in */
   void
-  dumpArgs();
-
-  // FIXME: Grid stuff experimental.  Need to work on this/clean up
-  // These three functions might have better locations
-
-  /** Legacy grid using the t, b, and s options.  This is for backward
-   * compatibility with older WDSS2 algorithms */
-  void
-  declareLegacyGrid();
-
-  /** Read the legacy grid t, b, and s, options from options.  Note,
-   * declareLegacyGrid should be called in declareOptions */
-  bool
-  getLegacyGrid(
-    LLCoverageArea& grid
-  );
+  dumpArgs(bool showHidden = false);
 
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for
    * clipping or determining bounds. */
@@ -90,6 +75,25 @@ public:
     const std::string     & name,
     const std::string     & usage);
 
+  /** Legacy grid using the t, b, and s options.  This is for backward
+   * compatibility with older WDSS2 algorithms */
+  void
+  declareLegacyGrid();
+
+  /** Convenience get a 2D or 3D grid information from a grid option */
+  bool
+  getGrid(
+    const std::string& name,
+    LLCoverageArea   & grid
+  );
+
+  /** Read the legacy grid t, b, and s, options from options.  Note,
+   * declareLegacyGrid should be called in declareOptions */
+  bool
+  getLegacyGrid(
+    LLCoverageArea& grid
+  );
+
   /** Convenience get a 2D or 3D location from a string part */
   LLH
   getLocation(const std::string& data,
@@ -97,14 +101,15 @@ public:
     const std::string          & part,
     const bool                 is3D);
 
-  /** Convenience get a 2D or 3D grid information from a grid option */
-  void
-  getGrid(const std::string& name,
-    LLH                    & location,
-    float                  & lat_spacing,
-    float                  & lon_spacing,
-    int                    & lat_dim,
-    int                    & lon_dim);
+  /*
+   * void
+   * getGrid(const std::string& name,
+   *  LLH                    & location,
+   *  float                  & lat_spacing,
+   *  float                  & lon_spacing,
+   *  int                    & lat_dim,
+   *  int                    & lon_dim);
+   */
 
   // ^^^ End experimental grid stuff. I'll revisit it
 
