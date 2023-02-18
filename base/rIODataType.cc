@@ -493,7 +493,7 @@ IODataType::postWriteProcess(
   // FIXME: Could generalize key substitution like 'filename', etc.
   if (successful) {
     // Check for a simple post success command
-    std::string postCommand = keys["postSuccessCommand"];
+    std::string postCommand = keys["postwrite"];
     if (!postCommand.empty()) {
       // ----------------------------------------------------------------
       // Macros.  Could be in configuration file?  This is our silly standard ldm insert

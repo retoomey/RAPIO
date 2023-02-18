@@ -192,6 +192,9 @@ protected:
   /** Hold the "n" list of notifiers */
   std::string myNotifierList;
 
+  /** Hold the postwrite command, if any */
+  std::string myPostWrite;
+
   /** Notifiers we are sending notification of new records to */
   std::vector<std::shared_ptr<RecordNotifierType> > myNotifiers;
 

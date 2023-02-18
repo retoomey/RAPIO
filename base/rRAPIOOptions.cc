@@ -486,6 +486,9 @@ RAPIOOptions::dumpArgs(bool showHidden)
     }
     dumpArgs(allOptions, l, showHidden);
   }
+  if (!showHidden) {
+    std::cout << ColorTerm::bold("There are hidden options not shown (see help hidden)\n");
+  }
 } // RAPIOOptions::dumpArgs
 
 namespace {

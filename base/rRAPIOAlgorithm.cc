@@ -93,7 +93,13 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
   o.optional("web",
     "off",
     "Web server ability for REST pull algorithms. Use a number to assign a port.");
+  o.setHidden("web");
   o.addGroup("web", "I/O");
+  o.optional("postwrite",
+    "",
+    "Simple executable to call post file writing using %filename%.");
+  o.addGroup("postwrite", "I/O");
+  o.setHidden("postwrite");
 }
 
 void
@@ -120,6 +126,8 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
     "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
   o.addAdvancedHelp("web",
     "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
+  o.addAdvancedHelp("postwrite",
+    "Allows you to run a command on a file output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
 }
 
 void
@@ -142,6 +150,9 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   ConfigParamGroupo paramo;
 
   paramo.readString(write);
+
+  // Gather postwrite option
+  myPostWrite = o.getString("postwrite");
 
   myWebServerMode = o.getString("web");
 } // RAPIOAlgorithm::processOutputParams
@@ -538,6 +549,8 @@ RAPIOAlgorithm::writeDirectOutput(const URL& path,
   std::vector<Record> blackHole;
 
   outputParams["filepathmode"] = "direct";
+  outputParams["postwrite"]    = myPostWrite;
+
   return IODataType::write(outputData, path.toString(), blackHole, "", outputParams); // Default write single file
 }
 
@@ -547,6 +560,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::map<std::string, std::string>                & outputParams)
 {
   outputParams["filepathmode"] = "datatype";
+  outputParams["postwrite"]    = myPostWrite;
 
   std::string newProductName = "";
 
