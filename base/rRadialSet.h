@@ -89,6 +89,19 @@ public:
     return (myElevTan);
   }
 
+  /** Get an estimated gatewidth of RadialSet, this will be gatewidth of first radial, if any */
+  LengthKMs
+  getGateWidthKMs()
+  {
+    LengthKMs widthKM = .250;
+    auto& gw = getFloat1D("GateWidth")->ref();
+
+    if (gw.size() > 0) {
+      widthKM = gw[0] / 1000.0;
+    }
+    return widthKM;
+  }
+
   /** Set the target elevation of this sweep. */
   void
   setElevationDegs(AngleDegs targetElev)

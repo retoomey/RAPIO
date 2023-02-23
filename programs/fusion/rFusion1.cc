@@ -5,8 +5,79 @@
 
 using namespace rapio;
 
-// Volume value resolver (alphas)
+namespace {
+/** For first pass, implement Lak's radial set moving average smoother.
+ * FIXME: Make generic plugin class for prefilters.  For now we'll have
+ * a toggle flag to turn on/off
+ *
+ * A moving average replacing algotihm presented in the paper:
+ * "A Real-Time, Three-Dimensional, Rapidly Updating, Heterogeneous Radar
+ * Merger Technique for Reflectivity, Velocity, and Derived Products"
+ * Weather and Forecasting October 2006
+ * Valliappa Lakshmanan, Travis Smith, Kurt Hondl, Greg Stumpf
+ *
+ * In particular, page 10 describing Virtual Volumes and the elevation
+ * influence.
+ *
+ * Notes:  I'm debating the accuracy of this smoothing technique
+ * vs. one using weighted sampling in the CONUS plane.  This technique
+ * is cheaper, which is likely why Lak choose it on older harder systems.
+ * We could probably supersample around the CONUS cell center and possibly
+ * improve the smooothing at the cost of more CPU.  Pictures will probably
+ * be needed.  This alternative method might be more akin to the horizontal
+ * interpolation attempted in w2merger.
+ */
+void
+LakRadialSmoother(std::shared_ptr<RadialSet> rs, int half_size)
+{
+  RadialSet& r           = *rs;
+  const size_t radials   = r.getNumRadials();
+  const int scale_factor = half_size * 2;
+  const size_t gates     = r.getNumGates();
+  auto& data = r.getFloat2D()->ref();
 
+  // For each radial in the radial set....
+  for (size_t i = 0; i < radials; ++i) {
+    int N     = 0;
+    float sum = 0;
+
+    // Work on a copy of the gates
+    std::vector<float> workRadial(gates);
+
+    for (size_t j = 0; j < gates; ++j) {
+      workRadial[j] = data[i][j];
+      // Sum until we get enough (a window size of scale_factor)
+      if (j <= scale_factor) {
+        if (Constants::isGood(workRadial[j])) {
+          sum += workRadial[j];
+          N++;
+        }
+      } else {
+        // take off one if it's a good value - don't forget to keep track of the sum count.
+        if ((N > 0) && Constants::isGood(workRadial[j - scale_factor - 1])) {
+          sum -= workRadial[j - scale_factor - 1];
+          N--;
+        }
+        // add one onto the sum if it is a good one, and keep track of the sum count.
+        if (Constants::isGood(workRadial[j])) {
+          sum += workRadial[j];
+          N++;
+        }
+      }
+
+      // we have enough to compute the average for the window!
+      if ((j >= scale_factor) && (N > half_size)) {
+        data[i][j - half_size] = sum / (float) (N);
+      }
+    }
+  }
+} // LakRadialSmoother
+}
+
+// Volume value resolvers (alphas)
+// If you're interested in calculating values yourself, this acts as another
+// example, but the one matching w2merger the best is the LakResolver1 below
+// so I would skip this at first glance.
 class RobertLinear1Resolver : public VolumeValueResolver
 {
 public:
@@ -172,23 +243,21 @@ public:
   {
     double v = Constants::DataUnavailable; // Final output data value
 
-    static const float ELEV_FACTOR     = log(0.005); // Formula constant from paper
-    static const float TERRAIN_PERCENT = .50;        // Cutoff terrain cumulative blockage
-    static const float MAX_SPREAD_DEGS = 4;          // Max spread of degrees between tilts
-    static const float ELEV_THRESH     = .53;        // Closest to current w2merger
+    static const float ELEV_FACTOR      = log(0.005); // Formula constant from paper
+    static const float TERRAIN_PERCENT  = .50;        // Cutoff terrain cumulative blockage
+    static const float MAX_SPREAD_DEGS  = 4;          // Max spread of degrees between tilts
+    static const float BEAMWIDTH_THRESH = .53;        // Closest to current w2merger
 
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
-    bool haveLower       = queryLayer(vv, vv.lower, vv.lLayer);
-    bool haveUpper       = queryLayer(vv, vv.upper, vv.uLayer);
+    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
+    bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
+
+    // The values above and below us
     const double& lValue = vv.lLayer.value;
     const double& uValue = vv.uLayer.value;
 
     // Weighted average use
-    bool useLower  = false;
-    bool useUpper  = false;
-    double upperWt = 0.0;
-    double lowerWt = 0.0;
 
     // Discard tilts/values that hit terrain
     if ((vv.uLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.uLayer.beamHitBottom)) {
@@ -202,64 +271,96 @@ public:
 
     // Experimental function to extrapolate from lower to upper
     // FIXME: if works, both sections of code could share function/macro
+    bool useLower    = false;
+    bool lowerInBeam = false;
+    double lowerWt   = 0.0;
+
     if (haveLower) {
       // Formula (6) on page 10 ----------------------------------------------
+      // This formula has a alphaTop and alphaBottom to calculate delta (the weight)
+      //
       const double alphaTop = vv.virtualElevDegs - vv.lLayer.elevation;
 
-      double alphaBottom = vv.lLayer.beamWidth;
-      if (haveUpper) {
-        const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
-        if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-          if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
-        }
-      }
+      // Max of beamwidth or the tilt below us.  If too large a spread we
+      // treat as if it's not there
+      // double alphaBottom = vv.lLayer.beamWidth; 'spokes and jitter' on elevation intersections
+      double alphaBottom = 1.0;
 
-      const double alpha = alphaTop / alphaBottom;
-      double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
-      // ---------------------------------------------------------------------
-
+      // -------------------------------------------------------------------
+      // Mask first if no upper and in beamwidth we want missing no matter what
+      // for moment use the calculation (this should reduce I just want mask over with)
+      // Can't we just half the beamwidth here get effective coverage area?
       // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
       // is outside the effective beamwidth of the radial
-      if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
-        if (Constants::isGood(lValue)) {
-          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; }
-          //  v = lValue; //  * delta * (1.0 - vv.lLayer.terrainCBBPercent);
-          lowerWt  = delta;
-          useLower = true;
-        } else {
-          v = Constants::MissingData; // mask
+      //
+      // FIXME: The beamwidth 1 here makes this math seem silly..53% of the spread
+      // works for mask?
+      double alpha = alphaTop / alphaBottom;
+      if (alpha <= BEAMWIDTH_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+        v = Constants::MissingData;    // mask within lower beam
+        lowerInBeam = true;
+      } else {
+        lowerInBeam = false;
+      }
+
+      // -------------------------------------------------------------------
+      // Do we use the lower value?
+      if (Constants::isGood(lValue)) {
+        useLower = true; // Use it if it's a good data value
+
+        // Update the alphaBottom based on if spread is reasonable
+        if (haveUpper) {
+          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
+          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+            if (spreadDegs > alphaBottom) {
+              alphaBottom = spreadDegs;             // Use full spread
+              alpha       = alphaTop / alphaBottom; // recalculate alpha for full spread
+              //  std::cout << ">>> LOWER: " << alphaBottom << " and " << alpha << "\n";
+            }
+          }
         }
       }
+
+      // Weight based on the beamwidth or the spread range
+      lowerWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
+
+      // ---------------------------------------------------------------------
     }
+
+    bool useUpper    = false;
+    bool upperInBeam = false;
+    double upperWt   = 0.0;
 
     if (haveUpper) {
       // Formula (6) on page 10 ----------------------------------------------
       const double alphaTop = vv.uLayer.elevation - vv.virtualElevDegs;
 
-      double alphaBottom = vv.uLayer.beamWidth;
-      if (haveLower) {
-        const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
-        if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-          if (spreadDegs > alphaBottom) { alphaBottom = spreadDegs; }
-        }
+      // Max of beamwidth or the tilt above us.  If too large a spread we
+      // treat as if it's not there
+      // double alphaBottom = vv.uLayer.beamWidth;
+      double alphaBottom = 1.0;
+      double alpha       = alphaTop / alphaBottom;
+      if (alpha <= BEAMWIDTH_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
+        v = Constants::MissingData;    // mask within lower beam
+        upperInBeam = true;
+      } else {
+        upperInBeam = false; /// still needed for single value cases
       }
 
-      const double alpha = alphaTop / alphaBottom;
-      double delta       = exp(alpha * alpha * alpha * ELEV_FACTOR);
-      // ---------------------------------------------------------------------
+      if (Constants::isGood(uValue)) {
+        useUpper = true; // use upper in the spread calculation
 
-      // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
-      // is outside the effective beamwidth of the radial
-      if (alpha <= ELEV_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
-        if (Constants::isGood(uValue)) {
-          // Don't do this: if (delta < 0) { delta = 0; } else if (delta > 1) { delta = 1; }
-          // v = uValue * delta * (1.0 - vv.uLayer.terrainCBBPercent);
-          upperWt  = delta;
-          useUpper = true;
-        } else {
-          v = Constants::MissingData; // mask
+        if (haveLower) {
+          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
+          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+            if (spreadDegs > alphaBottom) {
+              alphaBottom = spreadDegs;
+              alpha       = alphaTop / alphaBottom; // recalculate alpha for full spread
+            }
+          }
         }
       }
+      upperWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
     }
 
     // Weighted average.  Do we bother separating?
@@ -268,15 +369,16 @@ public:
       if (useUpper) {
         // weighted average both (might be quicker to just do this vs branching)
         v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
-        // std::cout << "merged: " << upperWt << ", " << uValue << ", " << lowerWt << ", " << lValue << ", " << (uValue+lValue) << " ==== " << v << "\n";
       } else {
-        v = lValue; // weighted only with self
-        // std::cout << "lower: " << lValue << " ("<<lowerWt << ")\n";
+        if (lowerInBeam) {
+          v = lValue; // weighted only with self
+        }
       }
     } else {
       if (useUpper) { // 01
-        v = uValue;   // weighted only with self
-        // std::cout << "upper: " << uValue << " ("<<upperWt << ")\n";
+        if (upperInBeam) {
+          v = uValue; // weighted only with self
+        }
       }
     }
 
@@ -302,7 +404,18 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // legacy use the t, b and s to define a grid
   o.declareLegacyGrid();
 
+  // -----------------------------------------------
+  // Flags for outputting for testing/temp that I plan to change at some point.
+  // FIXME: Final algorithm this will probably need some rework since we'll
+  // be outputting differently for the stage 2 multiradar merging
   o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
+  o.addGroup("llg", "debug");
+  o.optional("throttle", "1",
+    "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
+  o.addGroup("throttle", "debug");
+  o.boolean("presmooth", "Apply Lak's moving average filter to the incoming radial set.");
+  o.addGroup("presmooth", "debug");
+  // -----------------------------------------------
 
   // FIXME: Thinking general new plugin class in API here.  All three of these
   // add similar abilities
@@ -366,11 +479,18 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     exit(1);
   }
 
-  myWriteLLG    = o.getBoolean("llg");
-  myResolverAlg = o.getString("resolver");
-  myTerrainAlg  = o.getString("terrain");
-  myVolumeAlg   = o.getString("volume");
-  myRangeKMs    = o.getFloat("rangekm");
+  myWriteLLG        = o.getBoolean("llg");
+  myUseLakSmoothing = o.getBoolean("presmooth");
+  myResolverAlg     = o.getString("resolver");
+  myTerrainAlg      = o.getString("terrain");
+  myVolumeAlg       = o.getString("volume");
+  myThrottleCount   = o.getInteger("throttle");
+  if (myThrottleCount > 10) {
+    myThrottleCount = 10;
+  } else if (myThrottleCount < 1) {
+    myThrottleCount = 1;
+  }
+  myRangeKMs = o.getFloat("rangekm");
   if (myRangeKMs < 50) {
     myRangeKMs = 50;
   } else if (myRangeKMs > 1000) {
@@ -664,6 +784,21 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       return;
     }
 
+    // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
+    // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
+    // FIXME: If we plugin the smoother we can pass params and choose the scale factor
+    // manually.
+    const LengthKMs radarDataScale = r->getGateWidthKMs();
+    const LengthKMs gridScale      = std::min(myFullGrid.latKMPerPixel, myFullGrid.lonKMPerPixel);
+    const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
+    if ((scale_factor > 1) && myUseLakSmoothing) {
+      LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
+      LogInfo("    Filter ratio scale is " << scale_factor << "\n");
+      LakRadialSmoother(r, scale_factor / 2);
+    } else {
+      LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
+    }
+
     // Always add to elevation volume
     myElevationVolume->addDataType(r);
 
@@ -871,46 +1006,45 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Write LatLonGrid or Raw merger files (FIXME: Maybe more flag control)
       //
 
-      // Try pushing to ldm afterwards. FIXME: Probably need a command flag
-      std::map<std::string, std::string> myOverrides;
+      static int writeCount = 0;
+      if (++writeCount >= myThrottleCount) {
+        if (myWriteLLG) {
+          // Typename will be replaced by -O filters
 
-      //  FIXME: hidden flag for ldm writing myOverrides["postSuccessCommand"] = "ldm";
-      myOverrides["postSuccessCommand"] = "ldm";
-      if (myWriteLLG) {
-        // Typename will be replaced by -O filters
+          // Subgrid file
+          // writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
 
-        // Subgrid file
-        // writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
+          // Copy the current output subgrid into the full LLG for writing out...
+          // Note that since the 2D coordinates don't change, any 'outside' part doesn't need
+          // to be written and can stay DataUnavailable
+          // FIXME: Could maybe be a copy method in LatLonGrid with multiple coverage areas
+          auto& fullgrid = myFullLLG->getFloat2DRef();
+          auto& subgrid  = output->getFloat2DRef();
 
-        // Copy the current output subgrid into the full LLG for writing out...
-        // Note that since the 2D coordinates don't change, any 'outside' part doesn't need
-        // to be written and can stay DataUnavailable
-        // FIXME: Could maybe be a copy method in LatLonGrid with multiple coverage areas
-        auto& fullgrid = myFullLLG->getFloat2DRef();
-        auto& subgrid  = output->getFloat2DRef();
+          // Sync height and time with the current output grid
+          // FIXME: a getHeight/setHeight?  Seems silly to pull/push here so much
+          myFullLLG->setTime(r->getTime());
+          auto fullLoc = myFullLLG->getLocation();
+          auto subLoc  = output->getLocation();
+          fullLoc.setHeightKM(subLoc.getHeightKM());
+          myFullLLG->setLocation(fullLoc);
 
-        // Sync height and time with the current output grid
-        // FIXME: a getHeight/setHeight?  Seems silly to pull/push here so much
-        myFullLLG->setTime(r->getTime());
-        auto fullLoc = myFullLLG->getLocation();
-        auto subLoc  = output->getLocation();
-        fullLoc.setHeightKM(subLoc.getHeightKM());
-        myFullLLG->setLocation(fullLoc);
-
-        // Copy subgrid into the full grid
-        size_t startY = outg.startY;
-        size_t startX = outg.startX;
-        for (size_t y = 0; y < outg.numY; y++) {   // a north to south
-          for (size_t x = 0; x < outg.numX; x++) { // a east to west row
-            fullgrid[startY + y][startX + x] = subgrid[y][x];
+          // Copy subgrid into the full grid
+          size_t startY = outg.startY;
+          size_t startX = outg.startX;
+          for (size_t y = 0; y < outg.numY; y++) {   // a north to south
+            for (size_t x = 0; x < outg.numX; x++) { // a east to west row
+              fullgrid[startY + y][startX + x] = subgrid[y][x];
+            }
           }
-        }
 
-        // Full grid file (CONUS for regular merger)
-        writeOutputProduct("Mapped" + myFullLLG->getTypeName(), myFullLLG, myOverrides);
-      } else {
-        // WRITE RAW
-        writeOutputProduct("Mapped" + r->getTypeName(), entries, myOverrides);
+          // Full grid file (CONUS for regular merger)
+          writeOutputProduct("Mapped" + myFullLLG->getTypeName(), myFullLLG);
+        } else {
+          // WRITE RAW
+          writeOutputProduct("Mapped" + r->getTypeName(), entries);
+        }
+        writeCount = 0;
       }
 
       // --------------------------------------------------------

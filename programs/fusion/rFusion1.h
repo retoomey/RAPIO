@@ -306,6 +306,9 @@ protected:
   /** Write lat lon grids to output */
   bool myWriteLLG;
 
+  /** Apply Lak's moving average radial set prefilter  */
+  bool myUseLakSmoothing;
+
   /** Resolver alg */
   std::string myResolverAlg;
 
@@ -325,6 +328,10 @@ protected:
    * run this with a very large 3D grid, and some things like the web page require
    * files that reference this full grid */
   std::shared_ptr<LatLonGrid> myFullLLG;
+
+  /** Throttle skip counter to avoid IO spamming during testing.
+  * The good news is we're too fast for the current pipeline. */
+  size_t myThrottleCount;
 
   /** Cached set of LatLonGrids */
   LatLonGridSet myLLGCache;

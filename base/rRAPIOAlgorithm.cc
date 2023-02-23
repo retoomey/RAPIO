@@ -280,9 +280,9 @@ RAPIOAlgorithm::initializeOptions()
 void
 RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
 {
-  processOptions(o);
   processInputParams(o);  // Process stock input params declared above
   processOutputParams(o); // Process stock output params declared above
+  processOptions(o);
 }
 
 void

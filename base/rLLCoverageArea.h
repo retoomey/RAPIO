@@ -28,22 +28,14 @@ public:
     size_t aNumX, size_t aNumY) : nwLat(north), nwLon(west), seLat(south), seLon(east),
     latSpacing(southDelta), lonSpacing(eastSpacing), startX(0), startY(0), numX(aNumX), numY(aNumY){ }
 
+  /** Sync anything relying on the values, such as distances */
+  void
+  sync();
+
   /** Set values, called by readers */
   void
   set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
-    AngleDegs eastSpacing, size_t aNumX, size_t aNumY)
-  {
-    nwLat      = north;
-    nwLon      = west;
-    seLat      = south;
-    seLon      = east;
-    latSpacing = southDelta;
-    lonSpacing = eastSpacing;
-    startX     = 0;
-    startY     = 0;
-    numX       = aNumX;
-    numY       = aNumY;
-  }
+    AngleDegs eastSpacing, size_t aNumX, size_t aNumY);
 
   /** Lookup a string such as "NMQWD" and return the incr/upto lists used
    * to generate a height list */
@@ -87,6 +79,9 @@ public:
   size_t startY; ///< Starting grid Y or latitude cell
   size_t numX;   ///< Total number of longitude cells
   size_t numY;   ///< Total number of latitude cells
+
+  LengthKMs latKMPerPixel; ///< Estimate of KMs per cell in latitude
+  LengthKMs lonKMPerPixel; ///< Estimate of KMS per cell in longitude
 
   /** An optional collection of heights in meters */
   std::vector<double> heightsM;

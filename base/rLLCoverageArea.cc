@@ -1,6 +1,7 @@
 #include "rLLCoverageArea.h"
 #include "rProject.h"
 #include "rStrings.h"
+#include "rLL.h"
 
 #include <iostream>
 
@@ -70,6 +71,8 @@ LLCoverageArea::insetRadarRange(
     out.seLon = out.nwLon + (out.numX * out.lonSpacing);
   }
 
+  out.sync();
+
   #if 0
   LogInfo(
     "OK: " << nwLon << " , " << out.nwLon << " , " << out.seLon << ", " << seLon << " Spacing: " << lonSpacing <<
@@ -91,6 +94,60 @@ LLCoverageArea::insetRadarRange(
 
   return out;
 } // LLCoverageArea::insetRadarRange
+
+void
+LLCoverageArea::sync()
+{
+  // ---------------------------------------------------------------
+  // Calculated distances
+  // Use the cross mid point of the entire area
+  // We're using ground at moment which differs from w2merger which
+  // uses air height straight view distance.  Don't think it matters
+  // but we can check it later.
+  const AngleDegs midLat = (nwLat - seLat) / 2.0;
+  const AngleDegs midLon = (seLon - nwLon) / 2.0;
+  LL midTop(nwLat, midLon);
+  LL midBot(seLat, midLon);
+  LL leftMid(midLat, nwLon);
+  LL rightMid(midLat, seLon);
+
+  LengthKMs d1 = midTop.getSurfaceDistanceToKMs(midBot);
+  LengthKMs d2 = leftMid.getSurfaceDistanceToKMs(rightMid);
+
+  latKMPerPixel = fabs(d1 / numY);
+  lonKMPerPixel = fabs(d2 / numX);
+}
+
+void
+LLCoverageArea::set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
+  AngleDegs eastSpacing, size_t aNumX, size_t aNumY)
+{
+  // ---------------------------------------------------------------
+  // Validate the lat, lon values
+  if (nwLat < seLat) {
+    LogSevere("Nw corner is south of se corner, swapping...\n");
+    std::swap(nwLat, seLat);
+  }
+  if (nwLon < seLon) {
+    LogSevere("Nw corner is east of se corner, swapping...\n");
+    std::swap(nwLon, seLon);
+  }
+
+  // ---------------------------------------------------------------
+  // Simple assigned values
+  nwLat      = north;
+  nwLon      = west;
+  seLat      = south;
+  seLon      = east;
+  latSpacing = southDelta;
+  lonSpacing = eastSpacing;
+  startX     = 0;
+  startY     = 0;
+  numX       = aNumX;
+  numY       = aNumY;
+
+  sync();
+}
 
 namespace {
 /** Add t or b or s parameters to the cooresponding grid language */
