@@ -5,6 +5,7 @@
 #include <rEventTimer.h>
 
 #include <memory>
+#include <mutex>
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
