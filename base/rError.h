@@ -14,10 +14,12 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/filesystem.hpp>
 
+typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
+
 namespace rapio {
 /** Enum class for log pattern tokens */
 enum class LogToken {
-  filler, time, timems, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off
+  filler, time, timems, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off, threadid
 };
 
 /** Flushes the log on a timer in main event loop */
@@ -80,33 +82,6 @@ public:
     SEVERE = 20
   };
 
-  // Fields for line buffering, everything inside a LogInfo(group) for example.
-  // because of logging macros/etc most of this is just public
-
-  /** Current log group severity mode */
-  static Log::Severity mode;
-
-  /** Current log group line number */
-  static int line;
-
-  /** Current log group file name */
-  static std::string file;
-
-  /** Current log group function inside name */
-  static std::string function;
-
-  /** Current log group buffer of output */
-  static std::stringstream buffer;
-
-  /** The standard format string date of form [date UTC] we use for logging. */
-  static std::string LOG_TIMESTAMP;
-
-  /** The standard format string date of form [date UTC] we use for logging with MS. */
-  static std::string LOG_TIMESTAMP_MS;
-
-  /** Log singleton */
-  static std::shared_ptr<Log> mySingleton;
-
   /** Returns the singleton instance. */
   inline static Log *
   instance()
@@ -118,26 +93,20 @@ public:
     return (mySingleton.get());
   }
 
-  /** Used by logger to be a bit faster, assumes log initialized */
-  inline static Log &
-  instanceref()
-  {
-    return *(mySingleton.get());
-  }
+  /** Lock for critical log settings/printing */
+  static std::mutex logLock;
 
-  /** Called by logging macros to set current line settings */
-  inline static void
-  settings(Log::Severity m, int l, const std::string& f, const std::string& f2)
-  {
-    Log::mode     = m;
-    Log::line     = l;
-    Log::file     = f;
-    Log::function = f2;
-  }
+  /** Current log group severity mode */
+  // static Log::Severity mode;
 
-  /** Called at end of logging macro to finalize the output */
-  static void
-  endgroup();
+  /** The standard format string date of form [date UTC] we use for logging. */
+  static std::string LOG_TIMESTAMP;
+
+  /** The standard format string date of form [date UTC] we use for logging with MS. */
+  static std::string LOG_TIMESTAMP_MS;
+
+  /** Log singleton */
+  static std::shared_ptr<Log> mySingleton;
 
   /**
    * Pause logging. This is useful when calling a function that you know
@@ -232,8 +201,10 @@ private:
   static void
   BoostFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm);
 
+  // FIXME: Note, these variables are why we create a log object vs
+  // having everything static.  Maybe routines to do it indirectly?
+
   /** Boost log sink */
-  typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
   boost::shared_ptr<text_sink> mySink;
 
   /** Current Log flush timer, if any */
@@ -246,24 +217,57 @@ private:
   Log();
 };
 
+/** Log state object per LogInfo/etc. call.  This allows proper locking using RAII
+ * even for exception cases */
+class LogCall1 {
+public:
+
+  /** Create a log call with info for one LogInfo, etc. line of output */
+  LogCall1(Log::Severity m, int l, const std::string& f, const std::string& f2)
+    : mode(m), line(l), file(f), function(f2)
+  {
+    // Not locking on this, whatever we get is fine
+    goodlog = ((mode >= Log::myCurrentLevel) && !Log::isPaused());
+  }
+
+  /** Final call to dump current buffer (thread safe) */
+  void
+  dump();
+
+  // Variables we need to maintain by call for thread safety
+
+  /** Good log command test */
+  bool goodlog;
+  /** Buffer of this log call */
+  std::stringstream buffer;
+  /** Set a log severity mode */
+  Log::Severity mode;
+  /** Set a log line number */
+  int line;
+  /** Set a log file name */
+  std::string file;
+  /** Set a log function inside name */
+  std::string function;
+};
+
 /** Templates to allow our custom log wrapper */
-template <class T> rapio::Log&
-operator << (rapio::Log& l, const T& x)
+template <class T> rapio::LogCall1&
+operator << (rapio::LogCall1& l, const T& x)
 {
-  Log::buffer << x;
+  l.buffer << x; // Our per thread buffer per log call
   return l;
 }
 }
 
 #define LogDebug(x) \
-  { rapio::Log::instanceref().settings(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, \
-      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x; \
-    rapio::Log::instanceref().endgroup(); }
+  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, \
+        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
+    _aTempLog.dump(); }
 #define LogInfo(x) \
-  { rapio::Log::instanceref().settings(rapio::Log::Severity::INFO, __LINE__, __FILE__, \
-      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  \
-    rapio::Log::instanceref().endgroup(); }
+  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::INFO, __LINE__, __FILE__, \
+        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
+    _aTempLog.dump(); }
 #define LogSevere(x) \
-  { rapio::Log::instanceref().settings(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, \
-      BOOST_CURRENT_FUNCTION);  rapio::Log::instanceref() << x;  \
-    rapio::Log::instanceref().endgroup(); }
+  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, \
+        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
+    _aTempLog.dump(); }

@@ -24,6 +24,7 @@ namespace expr    = boost::log::expressions;
 namespace sinks   = boost::log::sinks;
 
 std::shared_ptr<Log> Log::mySingleton;
+std::mutex logMutex;
 
 boost::log::sources::severity_logger<boost::log::trivial::severity_level> Log::mySevLog;
 
@@ -37,11 +38,9 @@ std::vector<LogToken> Log::outputtokensENUM;
 std::vector<std::string> Log::fillers;
 
 Log::Severity Log::myCurrentLevel = Log::Severity::INFO;
-Log::Severity Log::mode = Log::Severity::INFO;
-int Log::line             = 0;
-std::string Log::file     = "None";
-std::string Log::function = "None";
-std::stringstream Log::buffer;
+
+std::mutex Log::logLock;
+
 int Log::myPausedLevel = 0;
 int Log::engine        = 0; // cout
 
@@ -103,7 +102,8 @@ BOOST_LOG_CLOSE_NAMESPACE
 namespace {
 // Dump using a given stream
 template <class T> void
-dump(T& strm)
+dump(T& strm, std::stringstream& buffer, const Log::Severity& mode, const std::string& file, int line,
+  const std::string& function, bool colors)
 {
   // Logging is configurable by pattern string
   size_t fat = 0;
@@ -120,49 +120,48 @@ dump(T& strm)
           strm << Time::CurrentTime().getString(Log::LOG_TIMESTAMP_MS);
           break;
         case LogToken::message:
-          // strm << rec[expr::smessage];
-          strm << Log::buffer.str();
+          strm << buffer.str();
           break;
         case LogToken::file: {
-          const size_t s = Log::file.size();
+          const size_t s = file.size();
           bool noskip    = true;
           if (s > 0) {
             for (size_t at = s - 1; at >= 0; at--) {
-              if (Log::file[at] == '/') {
-                strm << Log::file.substr(at + 1); // no string_view until c++17
+              if (file[at] == '/') {
+                strm << file.substr(at + 1); // no string_view until c++17
                 noskip = false;
                 break;
               }
             }
-            if (noskip) { strm << Log::file; }
+            if (noskip) { strm << file; }
           }
         }
         break;
         case LogToken::line:
           // strm << logging::extract<int>("Line", rec);
-          strm << Log::line;
+          strm << line;
           break;
         case LogToken::function:
           // strm << logging::extract<std::string>("Function", rec);
-          strm << Log::function;
+          strm << function;
           break;
         case LogToken::level:
           // strm << boost::format("%6s") % rec[logging::trivial::severity];
           // strm << rec[logging::trivial::severity];
           //      strm << rec[logging::trivial::severity];
-          if (Log::mode == Log::Severity::INFO) { // Use enums I think...
+          if (mode == Log::Severity::INFO) { // Use enums I think...
             strm << "info";
-          } else if (Log::mode == Log::Severity::SEVERE) {
+          } else if (mode == Log::Severity::SEVERE) {
             strm << "error";
           } else {
             strm << "debug";
           }
           break;
         case LogToken::ecolor: // Change depending on verbose level
-          if (Log::useColors) {
-            if (Log::mode == Log::Severity::INFO) {    // Use enums I think...
+          if (colors) {
+            if (mode == Log::Severity::INFO) {         // Use enums I think...
               strm << "\033[38;2;0;255;0;48;2;0;0;0m"; // green
-            } else if (Log::mode == Log::Severity::SEVERE) {
+            } else if (mode == Log::Severity::SEVERE) {
               strm << "\033[38;2;255;0;0;48;2;0;0;0m"; // red
             } else {
               strm << "\033[38;2;0;255;255;48;2;0;0;0m"; // cyan
@@ -170,34 +169,37 @@ dump(T& strm)
           }
           break;
         case LogToken::red:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[38;2;255;0;0;48;2;0;0;0m";
           }
           break;
         case LogToken::blue:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[38;2;0;0;255;48;2;0;0;0m";
           }
           break;
         case LogToken::green:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[38;2;0;255;0;48;2;0;0;0m";
           }
           break;
         case LogToken::yellow:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[38;2;255;255;0;48;2;0;0;0m";
           }
           break;
         case LogToken::cyan:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[38;2;0;255;255;48;2;0;0;0m";
           }
           break;
         case LogToken::off:
-          if (Log::useColors) {
+          if (colors) {
             strm << "\033[0m";
           }
+          break;
+        case LogToken::threadid:
+          strm << "(" << std::hex << std::this_thread::get_id() << std::dec << ")";
           break;
         default:
           break;
@@ -207,43 +209,31 @@ dump(T& strm)
 }
 
 void
-Log::endgroup()
+LogCall1::dump()
 {
-  // Called at end of a LogInfo, etc. to write to log
-  if ((Log::mode >= Log::myCurrentLevel) &&
-    !Log::isPaused())
-  {
-    // Check our message filter here...
-    // std::stringstream temp;
-    // buffer.swap(temp);
+  // Quick exit
+  if (!goodlog) { return; }
 
-    // Using BOOST logging setup
-    // which could do things like log rotation, etc. at some point
-    if (engine == 1) {
-      logging::record rec = Log::mySevLog.open_record();
-      if (rec) {
-        logging::record_ostream booststream(rec);
-        dump<logging::record_ostream>(booststream);
-        Log::mySevLog.push_record(boost::move(rec));
-      }
+  // RAII lock the guard for this log line
+  const std::lock_guard<std::mutex> lock(Log::logLock);
 
-      // Using std::cout/std::err
-      // which works better when using external log capturing
-    } else {
-      if (Log::mode == Log::Severity::SEVERE) {
-        dump<std::ostream>(std::cerr);
-      } else {
-        dump<std::ostream>(std::cout);
-      }
+  // Using BOOST logging setup
+  // which could do things like log rotation, etc. at some point
+  if (Log::engine == 1) {
+    logging::record rec = Log::mySevLog.open_record();
+    if (rec) {
+      logging::record_ostream booststream(rec);
+      ::dump<logging::record_ostream>(booststream, buffer, mode, file, line, function, Log::useColors);
+      Log::mySevLog.push_record(boost::move(rec));
     }
+
+    // Using std::cout/std::err
+    // which works better when using external log capturing
+  } else {
+    ::dump<std::ostream>((mode == Log::Severity::SEVERE) ? std::cerr : std::cout, buffer, mode, file, line, function,
+      Log::useColors);
   }
-  // Always clear the message for next one
-  // Not implemented in some older libc
-  // std::stringstream temp;
-  // buffer.swap(temp);
-  buffer.clear();
-  buffer.str("");
-} // Log::endgroup
+}
 
 void
 Log::BoostFormatter(logging::record_view const& rec, logging::formatting_ostream& strm)
@@ -273,6 +263,9 @@ Log::isPaused()
 void
 Log::flush()
 {
+  // RAII lock the guard for this log event
+  const std::lock_guard<std::mutex> lock(Log::logLock);
+
   // Engine might change..so flush all of them
   instance()->mySink->locked_backend()->flush();
   std::cout << std::flush;
@@ -325,7 +318,7 @@ Log::setLogPattern(const std::string& pattern)
   { "%TIME%",   "%TIMEMS%", "%MESSAGE%", "%FILE%", "%LINE%",   "%FUNCTION%",
     "%LEVEL%",
     "%ECOLOR%", "%RED%",    "%GREEN%",   "%BLUE%", "%YELLOW%", "%CYAN%",
-    "%OFF%" };
+    "%OFF%",    "%THREADID%" };
   // Output
   std::vector<int> outputtokens;    // Token numbers in order
   std::vector<std::string> fillers; // Stuff between tokens

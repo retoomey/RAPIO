@@ -25,6 +25,7 @@
              %TIMEMS% Current UTC time with milliseconds
              %LEVEL% The logging level of the message such as 'severe'
              %MESSAGE% The raw logging message
+             %THREADID% The thread id responsible for printing
         Debugging support:
              %FILE% The file name in code
              %LINE% The line of the file name
