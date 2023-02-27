@@ -98,9 +98,9 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   // HMRG uses center of cell for northwest corner, while we use the actual northwest corner
   // or actual top left of the grid cell.  We need to adjust using lat/lon spacing...so
   // that 'should' be just shifting NorthWest by half of the deg spacing, which means
-  //  W2/RAPIO lon = + (.5*HMRG lon), W2/RAPIO lat = - (.5*HMRG lat)
-  const float lonNWDegs = lonNWDegs1 + (.5 * lonSpacingDegs);
-  const float latNWDegs = latNWDegs1 - (.5 * latSpacingDegs);
+  //  W2/RAPIO lon = - (.5*HMRG lon), W2/RAPIO lat = + (.5*HMRG lat)
+  const float lonNWDegs = lonNWDegs1 - (.5 * lonSpacingDegs);
+  const float latNWDegs = latNWDegs1 + (.5 * latSpacingDegs);
 
 
   // Read the height levels, scaled by Z_scale
@@ -323,10 +323,14 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llg)
   const float lonNWDegs = aLoc.getLongitudeDeg();
   const float latNWDegs = aLoc.getLatitudeDeg();
 
-  const int temp1        = lonSpacingDegs * dxy_scale;
-  const int temp2        = latSpacingDegs * dxy_scale;
-  const float lonNWDegs1 = lonNWDegs - (.5 * lonSpacingDegs); // -94.995;
-  const float latNWDegs1 = latNWDegs + (.5 * latSpacingDegs); // 37.495;
+  const int temp1 = lonSpacingDegs * dxy_scale;
+  const int temp2 = latSpacingDegs * dxy_scale;
+  // Shift NW lat/lon to match hmrg convention
+  // NW grid cell coord in hmrg references the center of the cell
+  // NW grid cell coord in W2 references the upper left-hand corner
+  // So, shift lat and lon to the South and East by half a grid cell
+  const float lonNWDegs1 = lonNWDegs + (.5 * lonSpacingDegs); // -94.995;
+  const float latNWDegs1 = latNWDegs - (.5 * latSpacingDegs); // 37.495;
 
   IOHmrg::writeInt(fp, map_scale);
   IOHmrg::writeScaledInt(fp, lat1, map_scale);
