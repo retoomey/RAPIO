@@ -14,13 +14,19 @@ namespace rapio {
  * @author Robert Toomey */
 class GDALDataTypeImp : public GDALDataType {
 public:
-  GDALDataTypeImp(const std::vector<char>& buf) : myBuf(buf)
+
+  /** Create a GDAL wrapper */
+  GDALDataTypeImp()
   {
     myDataType = "GDALData";
   }
 
+  /** First attempt read a shapefile test.  Since we hide the gdal dependency from
+   * RAPIO core, we'd need to expand an interface in GDALDataType to 'do' anything.
+   * FIXME: Expand interface, thinking at least some shapefile support would be nice. */
+  bool
+  readGDALDataset(const std::string& key);
+
 private:
-  /** Store anything we have here */
-  std::vector<char> myBuf;
 };
 }

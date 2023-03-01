@@ -10,6 +10,11 @@
 // GDAL C++ library
 #include "gdal_priv.h"
 
+// GDAL simple features
+#include "ogr_api.h"
+#include "ogrsf_frmts.h"
+#include "ogr_p.h"
+
 using namespace rapio;
 
 // Library dynamic link to create this factory
@@ -36,7 +41,10 @@ IOGDAL::getHelpString(const std::string& key)
 
 void
 IOGDAL::initialize()
-{ }
+{
+  GDALAllRegister(); // Register/introduce all GDAL drivers
+  CPLPushErrorHandler(CPLQuietErrorHandler);
+}
 
 IOGDAL::~IOGDAL()
 { }
@@ -57,18 +65,117 @@ IOGDAL::getIOGDAL(const std::string& name)
 std::shared_ptr<DataType>
 IOGDAL::readGDALDataType(const URL& url)
 {
+  // Don't think there's a read from memory ability in GDAL, lots
+  // of libraries fail to do this.  Maybe the C arrow stream interface,
+  // but it's too new for now I think
   std::vector<char> buf;
 
-  IOURL::read(url, buf);
+  // IOURL::read(url, buf);
 
-  if (!buf.empty()) {
-    std::shared_ptr<GDALDataTypeImp> g = std::make_shared<GDALDataTypeImp>(buf);
-    return g;
+  //  if (!buf.empty()) {
+  std::shared_ptr<GDALDataTypeImp> g = std::make_shared<GDALDataTypeImp>();
+
+  LogInfo("Sending " << url << " to GDALOpenEx...\n");
+  bool success = g->readGDALDataset(url.toString());
+
+
+  #if 0
+  GDALDataset * poDS;
+
+  // general GDALDataTypeImp right?
+  // FIXME: How do we dispose of this thing?
+  poDS = (GDALDataset *) GDALOpenEx(url.toString().c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
+  if (poDS == NULL) {
+    LogSevere("OK it didn't read... :(\n");
   } else {
-    LogSevere("Couldn't read image datatype at " << url << "\n");
-  }
+    // If it's a raster right?  I'm getting raster size 512 * 512 for a shapefile?
+    // So are all the raster bands in a GDAL file the same size?  We can use that to
+    // map to DataGrid arrays...
+    int xSize = poDS->GetRasterXSize();
+    int ySize = poDS->GetRasterYSize();
+    LogSevere("Sizes of raster is " << xSize << ", " << ySize << "\n");
+    int rcount = poDS->GetRasterCount();
+    LogSevere("Raster count is " << rcount << "\n"); // zero for shapefile...ok works
+    for (auto&& poBand: poDS->GetBands() ) {
+      //  poBand->GetDescription();
+    }
 
-  return nullptr;
+    // Get the layers
+    // I want to read a shapefile here for first pass,
+    // but we could and probably should generally wrap a GDALDataset
+    size_t numLayers = poDS->GetLayerCount();
+    for (auto&& poLayer: poDS->GetLayers() ) { // from docs
+      LogSevere("Layer " << poLayer->GetName() << "\n");
+
+      // Ok features are read and created it seems...
+      OGRFeature * feature = NULL;
+      poLayer->ResetReading();
+      size_t i = 0;
+      // In OK shapefile these are the counties...
+      while ((feature = poLayer->GetNextFeature()) != NULL) {
+        LogSevere(i << " Feature...\n");
+
+        // Ok the fields are stuff stored per feature, like
+        // phone number, etc.
+        for (auto&& oField: *feature) {
+          switch (oField.GetType()) {
+              default:
+                LogSevere("FIELD VALUE: " << oField.GetAsString() << "\n");
+                break;
+          }
+        }
+
+        // The geometry of the object. FIXME: How to project to wsr84?
+        // Each feature can have _several geometry fields..interesting
+        OGRGeometry * poGeometry = feature->GetGeometryRef();
+
+        int geoCount = feature->GetGeomFieldCount();
+        LogSevere("FEATURE HAS " << geoCount << " geometry fields\n");
+        // Ahh kill me there's like 10 billion types here... wkbUnknown, wkbLineString
+        // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
+        if (poGeometry != NULL) {
+          LogSevere("The type is " << wkbFlatten(poGeometry->getGeometryType()) << "\n");
+        }
+        // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
+        if ((poGeometry != NULL) && (wkbFlatten(poGeometry->getGeometryType()) == wkbPolygon) ) {
+          # if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2, 3, 0)
+          // OGRPoint *poPoint = poGeometry->toPoint();
+          OGRPolygon * poPoint = poGeometry->toPolygon();
+          # else
+          // OGRPoint *poPoint = (OGRPoint *)poGeometry;
+          OGRPolygon * poPoint = (OGRPolygon *) poGeometry;
+          # endif
+          //        LogSevere("POINT: " << poPoint->getX() <<  poPoint->getY() <<  "\n");
+
+          // char * test = poGeometry->exportToJson();  Wow it works?
+          ///  char * test = poGeometry->exportToKML();
+          // poGeometry->GetPointCount();
+          exit(1);
+          // exportToJson()  exportToKML()  free with CPLFree()?
+        } else {
+          LogSevere("No point geometry!\n");
+        }
+
+
+        OGRFeature::DestroyFeature(feature);
+        i++;
+      }
+
+      // FIXME: I guess layers don't get deleted?
+    }
+    LogSevere(">>>>GOT BACK " << numLayers << " layers\n");
+
+    // delete poDS; // One delete doesn't crash so guess we do it?
+    // On windows they say call GDALClose()
+
+    GDALClose(poDS);
+  }
+  #endif // if 0
+
+  return success ? g : nullptr;
+  // } else {
+  //   LogSevere("Couldn't read image datatype at " << url << "\n");
+  // }
 } // IOGDAL::readGDALDataType
 
 std::shared_ptr<DataType>
@@ -96,14 +203,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   }
   auto& p = *project;
 
-  // Setup gdal
   static std::shared_ptr<ProjLibProject> project2;
-  static bool setup = false;
-
-  if (!setup) {
-    GDALAllRegister(); // Register/introduce all GDAL drivers
-    CPLPushErrorHandler(CPLQuietErrorHandler);
-  }
 
   // ----------------------------------------------------------------------
   // Read settings
@@ -157,15 +257,6 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     return false;
   }
   #endif // if 0
-
-  /*
-   * static bool setup = false;
-   * if (!setup) {
-   *  GDALAllRegister(); // Register/introduce all GDAL drivers
-   *  CPLPushErrorHandler(CPLQuietErrorHandler);
-   *  setup = true;
-   * }
-   */
 
   // Pull back settings in coverage for marching
 
