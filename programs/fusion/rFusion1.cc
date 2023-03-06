@@ -238,27 +238,28 @@ public:
     return std::make_shared<LakResolver1>();
   }
 
+  /** Calculate the volume value in 3D space for the given VolumeValue object */
   virtual void
   calc(VolumeValue& vv) override
   {
     double v = Constants::DataUnavailable; // Final output data value
 
-    static const float ELEV_FACTOR      = log(0.005); // Formula constant from paper
-    static const float TERRAIN_PERCENT  = .50;        // Cutoff terrain cumulative blockage
-    static const float MAX_SPREAD_DEGS  = 4;          // Max spread of degrees between tilts
-    static const float BEAMWIDTH_THRESH = .53;        // Closest to current w2merger
+    static const float ELEV_FACTOR = log(0.005); // Formula constant from paper
+    // FIXME: These could be parameters fairly easily and probably will be at some point
+    static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
+    static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
+    static const float BEAMWIDTH_THRESH = .53; // Closest to current w2merger
 
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
-    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
-    bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
-
-    // The values above and below us
+    // and reference the values above and below us (note post smoothing filters)
+    // FIXME: future ideas could do cressmen or other methods around sample point
+    bool haveLower       = queryLayer(vv, vv.lower, vv.lLayer);
+    bool haveUpper       = queryLayer(vv, vv.upper, vv.uLayer);
     const double& lValue = vv.lLayer.value;
     const double& uValue = vv.uLayer.value;
 
-    // Weighted average use
-
+    // ------------------------------------------------------------------------------
     // Discard tilts/values that hit terrain
     if ((vv.uLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.uLayer.beamHitBottom)) {
       haveUpper = false;
@@ -267,10 +268,10 @@ public:
       haveLower = false;
     }
 
-    // Still trying to get good results before optimizing
-
-    // Experimental function to extrapolate from lower to upper
-    // FIXME: if works, both sections of code could share function/macro
+    // ------------------------------------------------------------------------------
+    // Lower tilt contribution
+    // FIXME: avoiding combining code with the higher tilt which makes duplication
+    // bugs more likely, but until stage 2 works will leave duplicated with below
     bool useLower    = false;
     bool lowerInBeam = false;
     double lowerWt   = 0.0;
@@ -286,25 +287,6 @@ public:
       // double alphaBottom = vv.lLayer.beamWidth; 'spokes and jitter' on elevation intersections
       double alphaBottom = 1.0;
 
-      // -------------------------------------------------------------------
-      // Mask first if no upper and in beamwidth we want missing no matter what
-      // for moment use the calculation (this should reduce I just want mask over with)
-      // Can't we just half the beamwidth here get effective coverage area?
-      // Paper: It can be seen that where the 'delta' is less than 0.5, the voxel
-      // is outside the effective beamwidth of the radial
-      //
-      // FIXME: The beamwidth 1 here makes this math seem silly..53% of the spread
-      // works for mask?
-      double alpha = alphaTop / alphaBottom;
-      if (alpha <= BEAMWIDTH_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
-        v = Constants::MissingData;    // mask within lower beam
-        lowerInBeam = true;
-      } else {
-        lowerInBeam = false;
-      }
-
-      // -------------------------------------------------------------------
-      // Do we use the lower value?
       if (Constants::isGood(lValue)) {
         useLower = true; // Use it if it's a good data value
 
@@ -313,20 +295,28 @@ public:
           const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
           if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
             if (spreadDegs > alphaBottom) {
-              alphaBottom = spreadDegs;             // Use full spread
-              alpha       = alphaTop / alphaBottom; // recalculate alpha for full spread
-              //  std::cout << ">>> LOWER: " << alphaBottom << " and " << alpha << "\n";
+              alphaBottom = spreadDegs; // Use full spread
             }
           }
         }
       }
 
       // Weight based on the beamwidth or the spread range
+      const double alpha = alphaTop / alphaBottom;
       lowerWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
 
-      // ---------------------------------------------------------------------
+      lowerInBeam = (alpha <= BEAMWIDTH_THRESH);
+      if (lowerInBeam) { // mask
+        // This fills missing even if not a good value (useUpper==false)
+        // So handles mask around beamwidth of a single upper tilt
+        v = Constants::MissingData;
+      }
     }
 
+    // ------------------------------------------------------------------------------
+    // Upper tilt contribution
+    // FIXME: avoiding combining code with the lower tilt which makes duplication
+    // bugs more likely, but until stage 2 works will leave duplicated with above
     bool useUpper    = false;
     bool upperInBeam = false;
     double upperWt   = 0.0;
@@ -339,13 +329,6 @@ public:
       // treat as if it's not there
       // double alphaBottom = vv.uLayer.beamWidth;
       double alphaBottom = 1.0;
-      double alpha       = alphaTop / alphaBottom;
-      if (alpha <= BEAMWIDTH_THRESH) { // Fall off exp(0.125*ln(0.005)) == 0.5156692688
-        v = Constants::MissingData;    // mask within lower beam
-        upperInBeam = true;
-      } else {
-        upperInBeam = false; /// still needed for single value cases
-      }
 
       if (Constants::isGood(uValue)) {
         useUpper = true; // use upper in the spread calculation
@@ -355,19 +338,39 @@ public:
           if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
             if (spreadDegs > alphaBottom) {
               alphaBottom = spreadDegs;
-              alpha       = alphaTop / alphaBottom; // recalculate alpha for full spread
             }
           }
         }
       }
+
+      // Weight based on the beamwidth or the spread range
+      const double alpha = alphaTop / alphaBottom;
       upperWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
+
+      upperInBeam = (alpha <= BEAMWIDTH_THRESH);
+      if (upperInBeam) { // mask
+        // This fills missing even if not a good value (useUpper==false)
+        // So handles mask around beamwidth of a single upper tilt
+        v = Constants::MissingData;
+      }
     }
 
-    // Weighted average.  Do we bother separating?
-    // For moment I want explicit cases for testing/debugging
+    // Mask between two tilts if we have them.
+    if (haveUpper && haveLower) {
+      // Not checking if upper or lower is unavailable which technically would make the mask
+      // unavailable.  Do we get unavailable cells in radial sets?
+      v = Constants::MissingData;
+    }
+
+    // ------------------------------------------------------------------------------
+    // A final weighted average
+    // FIXME: This will be tweaked for stage 2 output later, in particular we'll
+    // need to pass on weight factors not just a final value. For stage 1 we are
+    // just using the valid to generate netcdf or mrms binary for viewing/comparison
     if (useLower) { // 10, 11
       if (useUpper) {
         // weighted average both (might be quicker to just do this vs branching)
+        // Ignore the in beam flags since we're between two valids
         v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
       } else {
         if (lowerInBeam) {
@@ -410,6 +413,9 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // be outputting differently for the stage 2 multiradar merging
   o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
   o.addGroup("llg", "debug");
+  o.boolean("subgrid",
+    "When on, subgrid any llg output such as netcdf/mrms.  Basically make files using the box around radar vs the full grid.");
+  o.addGroup("subgrid", "debug");
   o.optional("throttle", "1",
     "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
   o.addGroup("throttle", "debug");
@@ -479,12 +485,15 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     exit(1);
   }
 
-  myWriteLLG        = o.getBoolean("llg");
-  myUseLakSmoothing = o.getBoolean("presmooth");
-  myResolverAlg     = o.getString("resolver");
-  myTerrainAlg      = o.getString("terrain");
-  myVolumeAlg       = o.getString("volume");
-  myThrottleCount   = o.getInteger("throttle");
+  myWriteOutputName  = "None";          // will get from first radialset typename
+  myWriteOutputUnits = "Dimensionless"; // will get from first radialset units
+  myWriteLLG         = o.getBoolean("llg");
+  myWriteSubgrid     = o.getBoolean("subgrid");
+  myUseLakSmoothing  = o.getBoolean("presmooth");
+  myResolverAlg      = o.getString("resolver");
+  myTerrainAlg       = o.getString("terrain");
+  myVolumeAlg        = o.getString("volume");
+  myThrottleCount    = o.getInteger("throttle");
   if (myThrottleCount > 10) {
     myThrottleCount = 10;
   } else if (myThrottleCount < 1) {
@@ -496,7 +505,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   } else if (myRangeKMs > 1000) {
     myRangeKMs = 1000;
   }
-  LogInfo("Range range is " << myRangeKMs << " Kilometers\n");
+  LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
 } // RAPIOFusionOneAlg::processOptions
 
 std::shared_ptr<LatLonGrid>
@@ -600,6 +609,52 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
     LogInfo("-------------------------------Projection AzRangeElev cache complete.\n");
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
+
+void
+RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
+{
+  if (!myWriteSubgrid) {
+    // FIXME: check grids aren't already same size or this is wasted
+
+    // Lazy create a full CONUS output buffer
+    // Create a single 2D covering full grid (for outputting full vs subgrid files)
+    // The web page, etc. require full conus referenced data.
+    // We don't worry about height, we'll set it for each layer
+    if (myFullLLG == nullptr) {
+      LogInfo("Creating a full CONUS buffer for outputting grids as full files\n");
+      myFullLLG = createLLG(myWriteOutputName, myWriteOutputUnits, myFullGrid, 0);
+    }
+
+    // Copy the current output subgrid into the full LLG for writing out...
+    // Note that since the 2D coordinates don't change, any 'outside' part doesn't need
+    // to be written and can stay DataUnavailable
+    // FIXME: Could maybe be a copy method in LatLonGrid with multiple coverage areas
+    auto& fullgrid = myFullLLG->getFloat2DRef();
+    auto& subgrid  = output->getFloat2DRef();
+
+    // Sync height and time with the current output grid
+    // FIXME: a getHeight/setHeight?  Seems silly to pull/push here so much
+    myFullLLG->setTime(output->getTime());
+    auto fullLoc = myFullLLG->getLocation();
+    auto subLoc  = output->getLocation();
+    fullLoc.setHeightKM(subLoc.getHeightKM());
+    myFullLLG->setLocation(fullLoc);
+
+    // Copy subgrid into the full grid
+    size_t startY = myRadarGrid.startY;
+    size_t startX = myRadarGrid.startX;
+    for (size_t y = 0; y < myRadarGrid.numY; y++) {   // a north to south
+      for (size_t x = 0; x < myRadarGrid.numX; x++) { // a east to west row
+        fullgrid[startY + y][startX + x] = subgrid[y][x];
+      }
+    }
+    // Full grid file (CONUS for regular merger)
+    writeOutputProduct(myWriteOutputName, myFullLLG);
+  } else {
+    // Just write the subgrid directly (typically smaller than the full grid)
+    writeOutputProduct(myWriteOutputName, output);
+  }
+} // RAPIOFusionOneAlg::writeOutputCAPPI
 
 namespace {
 /** Split a param string into key,somestring */
@@ -755,25 +810,17 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       // Look up from cells to az/range/elev for RADAR
       createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
 
-      // Generate output name and units
-      const std::string outputName = r->getTypeName() + "Fused";
-      std::string outputUnits      = r->getUnits();
-      if (outputUnits.empty()) {
+      // Generate output name and units.
+      myWriteOutputName  = "Mapped" + r->getTypeName() + "Fused";
+      myWriteOutputUnits = r->getUnits();
+      if (myWriteOutputUnits.empty()) {
         LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
-        outputUnits = "dBZ";
-      }
-
-      // Create a single 2D covering full grid (for outputting full vs subgrid files)
-      // The web page, etc. require full conus referenced data.
-      // We don't worry about height, we'll set it for each layer
-      if (myWriteLLG) {
-        myFullLLG = createLLG(outputName, outputUnits, myFullGrid, 0);
+        myWriteOutputUnits = "dBZ";
       }
 
       // Create working LLG cache CAPPI storage per height level
-      createLLGCache(outputName, outputUnits, outg, myHeightsM);
+      createLLGCache(myWriteOutputName, myWriteOutputUnits, outg, myHeightsM);
     }
-    auto& resolver = *resolversp;
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need
     // all the setup for each radar/moment.  Which we 'could' do later maybe
@@ -857,6 +904,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Each layer of merger we have to loop through
     LLCoverageArea outg = myRadarGrid;
+    auto& resolver      = *resolversp;
     size_t total        = 0;
     for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
@@ -1009,40 +1057,10 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       static int writeCount = 0;
       if (++writeCount >= myThrottleCount) {
         if (myWriteLLG) {
-          // Typename will be replaced by -O filters
-
-          // Subgrid file
-          // writeOutputProduct("Mapped" + output->getTypeName(), output, myOverrides);
-
-          // Copy the current output subgrid into the full LLG for writing out...
-          // Note that since the 2D coordinates don't change, any 'outside' part doesn't need
-          // to be written and can stay DataUnavailable
-          // FIXME: Could maybe be a copy method in LatLonGrid with multiple coverage areas
-          auto& fullgrid = myFullLLG->getFloat2DRef();
-          auto& subgrid  = output->getFloat2DRef();
-
-          // Sync height and time with the current output grid
-          // FIXME: a getHeight/setHeight?  Seems silly to pull/push here so much
-          myFullLLG->setTime(r->getTime());
-          auto fullLoc = myFullLLG->getLocation();
-          auto subLoc  = output->getLocation();
-          fullLoc.setHeightKM(subLoc.getHeightKM());
-          myFullLLG->setLocation(fullLoc);
-
-          // Copy subgrid into the full grid
-          size_t startY = outg.startY;
-          size_t startX = outg.startX;
-          for (size_t y = 0; y < outg.numY; y++) {   // a north to south
-            for (size_t x = 0; x < outg.numX; x++) { // a east to west row
-              fullgrid[startY + y][startX + x] = subgrid[y][x];
-            }
-          }
-
-          // Full grid file (CONUS for regular merger)
-          writeOutputProduct("Mapped" + myFullLLG->getTypeName(), myFullLLG);
+          writeOutputCAPPI(output);
         } else {
-          // WRITE RAW
-          writeOutputProduct("Mapped" + r->getTypeName(), entries);
+          // WRITE RAW (or whatever we eventually use for stage 2)
+          writeOutputProduct(myWriteOutputName, entries);
         }
         writeCount = 0;
       }

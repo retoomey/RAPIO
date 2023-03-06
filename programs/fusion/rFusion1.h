@@ -264,6 +264,13 @@ public:
     AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
     LLCoverageArea& g);
 
+  /** Write a current layer as a unique full file.  Netcdf or mrms binary files which
+   * represent a single radar stage one w2merger equivalent.  This wouldn't be used in
+   * operations since it won't stage for N radars, but it's handy for testing resolvers
+   * at the stage one level. */
+  void
+  writeOutputCAPPI(std::shared_ptr<LatLonGrid> output);
+
   /** Process a new record/datatype */
   virtual void
   processNewData(rapio::RAPIOData& d) override;
@@ -303,8 +310,17 @@ protected:
   /** Coordinates for the total merger grid */
   LLCoverageArea myFullGrid;
 
+  /** The typename we use for all output products */
+  std::string myWriteOutputName;
+
+  /** The units we use for all output products */
+  std::string myWriteOutputUnits;
+
   /** Write lat lon grids to output */
   bool myWriteLLG;
+
+  /** Write lat lon subgrid vs full grid (typically radar box vs CONUS) */
+  bool myWriteSubgrid;
 
   /** Apply Lak's moving average radial set prefilter  */
   bool myUseLakSmoothing;

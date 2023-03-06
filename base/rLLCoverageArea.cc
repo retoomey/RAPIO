@@ -124,13 +124,13 @@ LLCoverageArea::set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs 
 {
   // ---------------------------------------------------------------
   // Validate the lat, lon values
-  if (nwLat < seLat) {
+  if (north < south) {
     LogSevere("Nw corner is south of se corner, swapping...\n");
-    std::swap(nwLat, seLat);
+    std::swap(north, south);
   }
-  if (nwLon < seLon) {
+  if (east < west) {
     LogSevere("Nw corner is east of se corner, swapping...\n");
-    std::swap(nwLon, seLon);
+    std::swap(east, west);
   }
 
   // ---------------------------------------------------------------
