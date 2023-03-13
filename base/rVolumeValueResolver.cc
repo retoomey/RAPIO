@@ -23,15 +23,15 @@ RangeVVResolver::calc(VolumeValue& vv)
 void
 TerrainVVResolver::calc(VolumeValue& vv)
 {
-  bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
+  bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
 
   // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
   // vv.dataValue = vv.lLayer.terrainPBBPercent;
-  if (vv.lLayer.beamHitBottom) {
+  if (vv.getLowerValue().beamHitBottom) {
     // beam bottom on terrain we'll plot as unavailable
     vv.dataValue = Constants::DataUnavailable;
   } else {
-    vv.dataValue = vv.lLayer.terrainCBBPercent;
+    vv.dataValue = vv.getLowerValue().terrainCBBPercent;
     // Super small we'll go unavailable...
     if (vv.dataValue < 0.02) {
       vv.dataValue = Constants::MissingData;

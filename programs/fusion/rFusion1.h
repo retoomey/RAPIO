@@ -89,6 +89,7 @@ public:
     myNumX(numX), myNumY(numY),
     myAzimuths(numX * numY), myVirtualElevations(numX * numY), myRanges(numX * numY),
     myTerrainAzimuthSpacing(1), myUpperElev(numX * numY), myLowerElev(numX * numY),
+    myNextUpperElev(numX * numY), myNextLowerElev(numX * numY),
     myAt(0)
   { }
 
@@ -112,7 +113,7 @@ public:
 
   /** Store upper/lower markers. Return true if it changes.  When these change, we recalculate data values */
   inline bool
-  set(size_t x, size_t y, void * lower, void * upper)
+  set(size_t x, size_t y, void * lower, void * upper, void * nextLower, void * nextUpper)
   {
     const size_t index = getIndex(x, y);
 
@@ -120,13 +121,18 @@ public:
 
     if (myLowerElev[index] != lower) {
       myLowerElev[index] = lower;
-      //  myUpperElev[index] = upper;
-      //  return true;
       changed = true;
     }
     if (myUpperElev[index] != upper) {
-      // myLowerElev[index] = lower; // already equal
       myUpperElev[index] = upper;
+      changed = true;
+    }
+    if (myNextLowerElev[index] != nextLower) {
+      myNextLowerElev[index] = nextLower;
+      changed = true;
+    }
+    if (myNextUpperElev[index] != nextUpper) {
+      myNextUpperElev[index] = nextUpper;
       changed = true;
     }
     return changed;
@@ -198,6 +204,14 @@ public:
   /** Cached last lower elevation for this x, y.  This is only important as a number,
    * and it might be an invalid pointer */
   std::vector<void *> myLowerElev;
+
+  /** Cached last next upper elevation for this x, y.  This is only important as a number,
+   * and it might be an invalid pointer */
+  std::vector<void *> myNextUpperElev;
+
+  /** Cached last lower elevation for this x, y.  This is only important as a number,
+   * and it might be an invalid pointer */
+  std::vector<void *> myNextLowerElev;
 
   /** Current location for raw iteration */
   size_t myAt;

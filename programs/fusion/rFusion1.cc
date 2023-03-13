@@ -102,8 +102,8 @@ public:
   {
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
-    bool haveLower = queryLayer(vv, vv.lower, vv.lLayer);
-    bool haveUpper = queryLayer(vv, vv.upper, vv.uLayer);
+    bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
+    bool haveUpper = queryLayer(vv, VolumeValueResolver::upper);
 
     // ------------------------------------------------------------------------------
     // In beamwidth calculation
@@ -117,7 +117,7 @@ public:
     bool inLowerBeamwidth = false;
 
     if (haveLower) { // Do we hit the valid gates of the lower tilt?
-      heightForDegreeShift(vv, vv.lower, vv.lLayer.beamWidth / 2.0, lowerHeightKMs);
+      heightForDegreeShift(vv, vv.getLower(), vv.getLowerValue().beamWidth / 2.0, lowerHeightKMs);
       inLowerBeamwidth = (vv.layerHeightKMs <= lowerHeightKMs);
     }
 
@@ -126,7 +126,7 @@ public:
     bool inUpperBeamwidth = false;
 
     if (haveUpper) { // Do we hit the valid gates of the upper tilt?
-      heightForDegreeShift(vv, vv.upper, -vv.uLayer.beamWidth / 2.0, upperHeightKMs);
+      heightForDegreeShift(vv, vv.getUpper(), -(vv.getUpperValue().beamWidth / 2.0), upperHeightKMs);
       inUpperBeamwidth = (vv.layerHeightKMs >= upperHeightKMs);
     }
 
@@ -156,49 +156,49 @@ public:
     }
     // Make values unavailable if cumulative blockage is over 50%
     // FIXME: Could be configurable
-    if (vv.uLayer.terrainCBBPercent > .50) {
-      vv.uLayer.value = Constants::DataUnavailable;
+    if (vv.getUpperValue().terrainCBBPercent > .50) {
+      vv.getUpperValue().value = Constants::DataUnavailable;
     }
-    if (vv.lLayer.terrainCBBPercent > .50) {
-      vv.lLayer.value = Constants::DataUnavailable;
+    if (vv.getLowerValue().terrainCBBPercent > .50) {
+      vv.getLowerValue().value = Constants::DataUnavailable;
     }
     // Make values unavailable if elevation layer bottom hits terrain
-    if (vv.lLayer.beamHitBottom) {
-      vv.lLayer.value = Constants::DataUnavailable;
+    if (vv.getLowerValue().beamHitBottom) {
+      vv.getLowerValue().value = Constants::DataUnavailable;
     }
-    if (vv.uLayer.beamHitBottom) {
-      vv.uLayer.value = Constants::DataUnavailable;
+    if (vv.getUpperValue().beamHitBottom) {
+      vv.getUpperValue().value = Constants::DataUnavailable;
     }
 
 
     // ------------------------------------------------------------------------------
     // Interpolation and application of upper and lower data values
     //
-    const double& lValue = vv.lLayer.value;
-    const double& uValue = vv.uLayer.value;
+    const double& lValue = vv.getLowerValue().value;
+    const double& uValue = vv.getUpperValue().value;
 
     if (Constants::isGood(lValue) && Constants::isGood(uValue)) {
       // Linear interpolate using heights.  With two values we can do interpolation
       // between the values always, either linear or exponential
-      double wt = (vv.layerHeightKMs - vv.lLayer.heightKMs) / (upperHeightKMs - vv.uLayer.heightKMs);
+      double wt = (vv.layerHeightKMs - vv.getLowerValue().heightKMs) / (upperHeightKMs - vv.getUpperValue().heightKMs);
       if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
       const double nwt = (1.0 - wt);
 
-      const double lTerrain = lValue * (1 - vv.lLayer.terrainCBBPercent);
-      const double uTerrain = uValue * (1 - vv.uLayer.terrainCBBPercent);
+      const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
+      const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
 
       // v = (0.5 + nwt * lValue + wt * uValue);
       v = (0.5 + nwt * lTerrain + wt * uTerrain);
     } else if (inLowerBeamwidth) {
       if (Constants::isGood(lValue)) {
-        const double lTerrain = lValue * (1 - vv.lLayer.terrainCBBPercent);
+        const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
         v = lTerrain;
       } else {
         v = lValue; // Use the gate value even if missing, RF, unavailable, etc.
       }
     } else if (inUpperBeamwidth) {
       if (Constants::isGood(uValue)) {
-        const double uTerrain = uValue * (1 - vv.uLayer.terrainCBBPercent);
+        const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
         v = uTerrain;
       } else {
         v = uValue;
@@ -208,6 +208,61 @@ public:
     vv.dataValue = v;
   } // calc
 };
+
+namespace {
+/** Analyze a tilt layer for contribution to final */
+static void inline
+analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
+  // OUTPUTS:
+  bool& isGood, bool& inBeam, bool& terrainBlocked, double& outvalue, double& weight)
+{
+  static const float ELEV_FACTOR = log(0.005); // Formula constant from paper
+  // FIXME: These could be parameters fairly easily and probably will be at some point
+  static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
+  static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
+  static const float BEAMWIDTH_THRESH = .53; // Closest to current w2merger
+
+  // ------------------------------------------------------------------------------
+  // Discard tilts/values that hit terrain
+  if ((layer.terrainCBBPercent > TERRAIN_PERCENT) || (layer.beamHitBottom)) {
+    terrainBlocked = true;
+    return; // don't waste time on other math, or do we need to?
+  }
+
+  // ------------------------------------------------------------------------------
+  // Formula (6) on page 10 ----------------------------------------------
+  // This formula has a alphaTop and alphaBottom to calculate delta (the weight)
+  //
+  const double alphaTop = std::abs(at - layer.elevation);
+
+  inBeam = alphaTop <= BEAMWIDTH_THRESH; // so .53 degree?
+
+  const double& value = layer.value;
+
+  if (Constants::isGood(value)) {
+    isGood = true; // Use it if it's a good data value
+
+    // Max of beamwidth or the tilt below us.  If too large a spread we
+    // treat as if it's not there
+    // double alphaBottom = layer.beamWidth; 'spokes and jitter' on elevation intersections
+    double alphaBottom = 1.0;
+
+    #if 0
+    // Update the alphaBottom based on if spread is reasonable
+    if (spreadDegs > alphaBottom) {
+      if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+        alphaBottom = spreadDegs;          // Use full spread
+      }
+    }
+    #endif
+
+    // Weight based on the beamwidth or the spread range
+    const double alpha = alphaTop / alphaBottom;
+    weight = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
+  }
+  outvalue = value;
+} // analyzeTilt
+}
 
 /**
  * A resolver attempting to use the math presented in the paper:
@@ -238,150 +293,156 @@ public:
     return std::make_shared<LakResolver1>();
   }
 
-  /** Calculate the volume value in 3D space for the given VolumeValue object */
   virtual void
   calc(VolumeValue& vv) override
   {
     double v = Constants::DataUnavailable; // Final output data value
 
-    static const float ELEV_FACTOR = log(0.005); // Formula constant from paper
-    // FIXME: These could be parameters fairly easily and probably will be at some point
-    static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
-    static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
-    static const float BEAMWIDTH_THRESH = .53; // Closest to current w2merger
+    static const float ELEV_THRESH = .45; // Closest to current w2merger
 
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
     // and reference the values above and below us (note post smoothing filters)
+    // This isn't done automatically because not every resolver will need all of it.
     // FIXME: future ideas could do cressmen or other methods around sample point
-    bool haveLower       = queryLayer(vv, vv.lower, vv.lLayer);
-    bool haveUpper       = queryLayer(vv, vv.upper, vv.uLayer);
-    const double& lValue = vv.lLayer.value;
-    const double& uValue = vv.uLayer.value;
+    // FIXME: couldn't we just have a flag inside vv that says have or not?
+    bool haveLower  = queryLayer(vv, VolumeValueResolver::lower);
+    bool haveUpper  = queryLayer(vv, VolumeValueResolver::upper);
+    bool haveLLower = queryLayer(vv, VolumeValueResolver::lower2);
+    bool haveUUpper = queryLayer(vv, VolumeValueResolver::upper2);
 
     // ------------------------------------------------------------------------------
-    // Discard tilts/values that hit terrain
-    if ((vv.uLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.uLayer.beamHitBottom)) {
-      haveUpper = false;
-    }
-    if ((vv.lLayer.terrainCBBPercent > TERRAIN_PERCENT) || (vv.lLayer.beamHitBottom)) {
-      haveLower = false;
+    // Analyze stage
+    // Do our math on the raw information returned by the query database and calculate
+    // values for this location in 3d space
+    //
+
+    AngleDegs spread = 0.0; // want zero to use default beamwidth
+
+    if (haveLower && haveUpper) {
+      // Actually not sure I like this..why should distance between
+      // two tilts determine beam strength, but it's the paper math.
+      // There's not much difference between using 1 degree extrapolation
+      // vs the spread
+      // spread = std::abs(vv.uLayer.elevation - vv.lLayer.elevation);
     }
 
-    // ------------------------------------------------------------------------------
-    // Lower tilt contribution
-    // FIXME: avoiding combining code with the higher tilt which makes duplication
-    // bugs more likely, but until stage 2 works will leave duplicated with below
-    bool useLower    = false;
-    bool lowerInBeam = false;
+    bool isGoodLower = false;
+    bool inBeamLower = false;
     double lowerWt   = 0.0;
+    double lValue;
+    bool terrainBlockedLower = false;
 
     if (haveLower) {
-      // Formula (6) on page 10 ----------------------------------------------
-      // This formula has a alphaTop and alphaBottom to calculate delta (the weight)
-      //
-      const double alphaTop = vv.virtualElevDegs - vv.lLayer.elevation;
+      analyzeTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
+        isGoodLower, inBeamLower, terrainBlockedLower, lValue, lowerWt);
+    }
 
-      // Max of beamwidth or the tilt below us.  If too large a spread we
-      // treat as if it's not there
-      // double alphaBottom = vv.lLayer.beamWidth; 'spokes and jitter' on elevation intersections
-      double alphaBottom = 1.0;
+    bool isGoodUpper = false;
+    bool inBeamUpper = false;
+    double upperWt   = 0.0;
+    double uValue;
+    bool terrainBlockedUpper = false;
 
-      if (Constants::isGood(lValue)) {
-        useLower = true; // Use it if it's a good data value
+    if (haveUpper) {
+      analyzeTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
+        isGoodUpper, inBeamUpper, terrainBlockedUpper, uValue, upperWt);
+    }
 
-        // Update the alphaBottom based on if spread is reasonable
-        if (haveUpper) {
-          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
-          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-            if (spreadDegs > alphaBottom) {
-              alphaBottom = spreadDegs; // Use full spread
-            }
-          }
-        }
-      }
+    spread = 0.0; // want zero to use default beamwidth
+    if (haveLLower && haveUpper) {
+      // spread = std::abs(vv.uLayer.elevation - vv.lPrevLayer.elevation);
+    }
+    bool isGoodLower2 = false;
+    bool inBeamLower2 = false;
+    double lowerWt2   = 0.0;
+    double lValue2;
+    bool terrainBlockedLower2 = false;
 
-      // Weight based on the beamwidth or the spread range
-      const double alpha = alphaTop / alphaBottom;
-      lowerWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
+    if (haveLLower) {
+      analyzeTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread,
+        isGoodLower2, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2);
+    }
 
-      lowerInBeam = (alpha <= BEAMWIDTH_THRESH);
-      if (lowerInBeam) { // mask
-        // This fills missing even if not a good value (useUpper==false)
-        // So handles mask around beamwidth of a single upper tilt
-        v = Constants::MissingData;
-      }
+    spread = 0;
+    if (haveLower && haveUUpper) {
+      // spread = std::abs(vv.uNextLayer.elevation - vv.lLayer.elevation);
+    }
+    bool isGoodUpper2 = false;
+    bool inBeamUpper2 = false;
+    double upperWt2   = 0.0;
+    double uValue2;
+    bool terrainBlockedUpper2 = false;
+
+    if (haveUUpper) {
+      analyzeTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread,
+        isGoodUpper2, inBeamUpper2, terrainBlockedUpper, uValue2, upperWt2);
     }
 
     // ------------------------------------------------------------------------------
-    // Upper tilt contribution
-    // FIXME: avoiding combining code with the lower tilt which makes duplication
-    // bugs more likely, but until stage 2 works will leave duplicated with above
-    bool useUpper    = false;
-    bool upperInBeam = false;
-    double upperWt   = 0.0;
+    // Application stage
+    //
 
-    if (haveUpper) {
-      // Formula (6) on page 10 ----------------------------------------------
-      const double alphaTop = vv.uLayer.elevation - vv.virtualElevDegs;
-
-      // Max of beamwidth or the tilt above us.  If too large a spread we
-      // treat as if it's not there
-      // double alphaBottom = vv.uLayer.beamWidth;
-      double alphaBottom = 1.0;
-
-      if (Constants::isGood(uValue)) {
-        useUpper = true; // use upper in the spread calculation
-
-        if (haveLower) {
-          const double spreadDegs = vv.uLayer.elevation - vv.lLayer.elevation;
-          if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-            if (spreadDegs > alphaBottom) {
-              alphaBottom = spreadDegs;
-            }
-          }
-        }
-      }
-
-      // Weight based on the beamwidth or the spread range
-      const double alpha = alphaTop / alphaBottom;
-      upperWt = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
-
-      upperInBeam = (alpha <= BEAMWIDTH_THRESH);
-      if (upperInBeam) { // mask
-        // This fills missing even if not a good value (useUpper==false)
-        // So handles mask around beamwidth of a single upper tilt
-        v = Constants::MissingData;
-      }
+    // Mask stuff
+    if (inBeamLower || inBeamUpper || inBeamLower2 || inBeamUpper2) {
+      // Mask the beams if good or not (and not terrain blocked)
+      v = Constants::MissingData;
     }
-
-    // Mask between two tilts if we have them.
-    if (haveUpper && haveLower) {
-      // Not checking if upper or lower is unavailable which technically would make the mask
-      // unavailable.  Do we get unavailable cells in radial sets?
+    if (haveUpper && haveLower) { // Mask between.
+      // If you have an upper/upper, you must have an upper.
+      // If you have a lower/lower, you must have a lower.
       v = Constants::MissingData;
     }
 
-    // ------------------------------------------------------------------------------
-    // A final weighted average
-    // FIXME: This will be tweaked for stage 2 output later, in particular we'll
-    // need to pass on weight factors not just a final value. For stage 1 we are
-    // just using the valid to generate netcdf or mrms binary for viewing/comparison
-    if (useLower) { // 10, 11
-      if (useUpper) {
-        // weighted average both (might be quicker to just do this vs branching)
-        // Ignore the in beam flags since we're between two valids
-        v = ((upperWt * uValue) + (lowerWt * lValue)) / (upperWt + lowerWt);
-      } else {
-        if (lowerInBeam) {
-          v = lValue; // weighted only with self
-        }
-      }
-    } else {
-      if (useUpper) { // 01
-        if (upperInBeam) {
-          v = uValue; // weighted only with self
-        }
+    // Value stuff.  Needs cleanup
+    double totalWt  = 0.0;
+    double totalsum = 0.0;
+    size_t count    = 0;
+
+    // if (inBeamLower){ Weight cutoff will be used
+    if (isGoodLower) {
+      // if (lowerWt > ELEV_THRESH){
+      totalWt  += lowerWt;
+      totalsum += (lowerWt * lValue);
+      count++;
+      // }
+    }
+    // }
+
+    if (isGoodLower2) {
+      // if (inBeamLower2){
+      // if (lowerWt2 > ELEV_THRESH){
+      totalWt  += lowerWt2;
+      totalsum += (lowerWt2 * lValue2);
+      count++;
+      // }
+      // }
+    }
+
+    if (isGoodUpper) {
+      // if (inBeamUpper){
+      // if (upperWt > ELEV_THRESH){
+      totalWt  += upperWt;
+      totalsum += (upperWt * uValue);
+      count++;
+      // }
+      // }
+    }
+
+    if (isGoodUpper2) {
+      // if (inBeamUpper2){
+      //  if (upperWt2 > ELEV_THRESH){
+      totalWt  += upperWt2;
+      totalsum += (upperWt2 * uValue2);
+      count++;
+      //  }
+      // }
+    }
+
+    if (count > 0) {
+      //   if (totalWt > .35){
+      if (totalWt > ELEV_THRESH) {
+        v = totalsum / totalWt;
       }
     }
 
@@ -959,9 +1020,11 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
           // Search the virtual volume for elevations above/below our virtual one
           // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
-          myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.lower, vv.upper);
-          if (vv.lower != nullptr) { lowerGood++; }
-          if (vv.upper != nullptr) { upperGood++; }
+          myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
+            vv.getUpper(), vv.get2ndLower(),
+            vv.get2ndUpper());
+          if (vv.getLower() != nullptr) { lowerGood++; }
+          if (vv.getUpper() != nullptr) { upperGood++; }
 
           // If the upper and lower for this point are the _same_ RadialSets as before, then
           // the interpolation will end up with the same data value.
@@ -973,7 +1036,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           // FIXME: Probably super rare to get same pointer, but maybe we add
           // a RadialSet or general DataType counter at some point to be sure.
           // Humm.  The tilt time 'might' work appending it to the pointer value.
-          const bool changedEnclosingTilts = llp.set(x, y, vv.lower, vv.upper);
+          const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
+              vv.get2ndLower(), vv.get2ndUpper());
           if (!changedEnclosingTilts) { // The value won't change, so continue
             sameTiltSkip++;
             continue;

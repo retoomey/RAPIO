@@ -130,6 +130,10 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
 void
 Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers)
 {
+  // Padding for search loop so range end checking not needed, which speeds things up.  See the
+  // getSpreadL loop in ElevationVolume.
+  // FIXME: Need to cleanup/revisit the normal spread functions since not used
+  pointers.push_back(nullptr);
   pointers.push_back(nullptr);
   for (auto v:myVolume) {
     pointers.push_back(v.get());
@@ -138,9 +142,13 @@ Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *
     levels.push_back(d);
   }
   levels.push_back(std::numeric_limits<double>::max());
+  // End padding
+  pointers.push_back(nullptr);
   pointers.push_back(nullptr);
 }
 
+#if 0
+// Deprecated, or at a min needs to be cleaner implemented
 void
 Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper, bool print)
 {
@@ -208,6 +216,8 @@ Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lowe
   }
   // std::cout << "Hit, left and right... " << found << " " << left << " and " << right << "\n";
 } // Volume::getSpread
+
+#endif // if 0
 
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)

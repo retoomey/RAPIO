@@ -49,10 +49,46 @@ public:
  */
 class VolumeValue : public Utility
 {
+protected:
+
+  DataType * layer[4];    ///< Currently four layers, 2 above, 2 below, getSpread fills
+  LayerValue layerout[4]; ///< Output for layers, queryLayer fills
+
 public:
-  // INPUTS ---------------------
-  DataType * upper; ///< DataType above, if any
-  DataType * lower; ///< DataType below, if any
+
+  /** Ensure cleared out on construction..it should be */
+  VolumeValue()
+  {
+    layer[0] = layer[1] = layer[2] = layer[3] = nullptr;
+  }
+
+  // We handle up to two tilts around the sample.  We could
+  // reimplement a N system but it would probably be slow if you
+  // want to resolve using every layer or tilt.  Could be a future
+  // experiment though.  In general, once you get a couple layers/tilts
+  // away your data has very little effect.  We're assuming locality
+  // of data here.
+
+  /** Get the layer/tilt directly below sample, if any */
+  inline DataType *& getLower(){ return layer[0]; } // lower;}
+
+  /** Get the layer/tilt query below sample, if any */
+  inline LayerValue& getLowerValue(){ return layerout[0]; } // lower;}
+
+  /** Get the layer/tilt directly above sample, if any */
+  inline DataType *& getUpper(){ return layer[1]; } // upper; }
+
+  inline LayerValue& getUpperValue(){ return layerout[1]; } // lower;}
+
+  /** Get the layer/tilt directly below the lower, if any */
+  inline DataType *& get2ndLower(){ return layer[2]; } // nextLower; }
+
+  inline LayerValue& get2ndLowerValue(){ return layerout[2]; } // lower;}
+
+  /** Get the layer/tilt directly above the upper, if any */
+  inline DataType *& get2ndUpper(){ return layer[3]; } // nextUpper; }
+
+  inline LayerValue& get2ndUpperValue(){ return layerout[3]; } // lower;}
 
   // Odd value out at moment, probably for calculation speed
   LengthKMs cHeight; ///< Radar location height in Kilometers (constant)
@@ -69,15 +105,18 @@ public:
   // OUTPUTS ---------------------
   double dataValue; ///< Final output calculated data value by resolver
 
-  LayerValue uLayer; ///< Output from above
-  LayerValue lLayer; ///< Output from below
   // FIXME: weight probably here too
 };
+
 
 /** Volume value resolver */
 class VolumeValueResolver : public Utility
 {
 public:
+  /** Enum for layers in queryLayer */
+  enum Layer {
+    lower, upper, lower2, upper2
+  };
 
   /** Use this to introduce default built-in RAPIO VolumeValueResolver subclasses.
    * Note: You don't have to use this ability, it's not called by default algorithm.
@@ -113,8 +152,27 @@ public:
   /** Query info on a RadialSet from cached location information given by a VolumeValue.
    * This basically 'fast' calculates from LLH to RadialSet information.
    * FIXME: group the outputs I think into another structure */
+private:
   bool
   queryLayer(VolumeValue& vv, DataType * set, LayerValue& l);
+public:
+
+  /** Fill in data query layer for a tilt/layer above/below.  This isn't done
+   * automatically since it takes time and some resolvers may not need this information */
+  inline bool
+  queryLayer(VolumeValue& vv, const Layer& l)
+  {
+    switch (l) { // Just use the index into arrays instead of hard values
+        case Layer::lower: return (queryLayer(vv, vv.getLower(), vv.getLowerValue()));
+
+        case Layer::upper: return (queryLayer(vv, vv.getUpper(), vv.getUpperValue()));
+
+        case Layer::lower2: return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue()));
+
+        case Layer::upper2: return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue()));
+    }
+    return false;
+  }
 };
 
 /** Virtual range in KMs */

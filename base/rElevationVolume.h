@@ -89,14 +89,14 @@ public:
   /** Binary search (large N) Spread above and below from number vector.  Pointers for speed,
    * It's slow for small N not sure I'm gonna keep this function.  I'll keep it for now.
    * @deprecated */
-  void
-  getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper, bool print = false);
+  // void
+  // getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper, bool print = false);
 
   /** Linear search (faster for smaller N) Spread above and below from number vector.  Pointers for speed.
    * This is called during fusion/merger grid a billion times so we want to optimize here. */
   inline void
   getSpreadL(float at, const std::vector<double>& numbers, const std::vector<DataType *>& pointers, DataType *& lower,
-    DataType *& upper)
+    DataType *& upper, DataType *& nextLower, DataType *& nextUpper)
   {
     // 10 20 30 40 50 60
     // 5 --> nullptr, 10
@@ -108,14 +108,20 @@ public:
     for (size_t i = 0; i < s; i++) {
       if (at < numbers[i]) { // Down to just one branch
         // We padded to optimize the loop, like so:
-        // nullptr 10 20 30 40 50 60         nullptr
-        // 10      20 30 40 50 60 MAX_DOUBLE
-        lower = pointers[i];
-        upper = pointers[i + 1];
+        // 0  1  2  3  4  5  6  7  8  9
+        // NP NP 10 20 30 40 50 60 NP NP  (padding)
+        // 10 20 30 40 50 60 MAX_DOUBLE
+        // for 29, we have i == 2 since 29 < 30 ---> then:
+        // The lower is i - 1 at 20, next lower i - 2;
+        // The upper is i, the next upper is i + 1;
+        nextLower = pointers[i];
+        lower     = pointers[i + 1];
+        upper     = pointers[i + 2];
+        nextUpper = pointers[i + 3];
         return;
       }
     }
-    lower = upper = nullptr; // needed for s = 0
+    lower = upper = nextLower = nextUpper = nullptr; // needed for s = 0
   };
 
   /** Get DataType matching a given subtype */
