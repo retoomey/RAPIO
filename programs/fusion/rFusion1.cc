@@ -220,7 +220,7 @@ analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   // FIXME: These could be parameters fairly easily and probably will be at some point
   static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
   static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
-  static const float BEAMWIDTH_THRESH = .53; // Closest to current w2merger
+  static const float BEAMWIDTH_THRESH = .50; // Assume half-degree to meet beamwidth test
 
   // ------------------------------------------------------------------------------
   // Discard tilts/values that hit terrain
@@ -235,31 +235,31 @@ analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   //
   const double alphaTop = std::abs(at - layer.elevation);
 
-  inBeam = alphaTop <= BEAMWIDTH_THRESH; // so .53 degree?
+  inBeam = alphaTop <= BEAMWIDTH_THRESH;
 
   const double& value = layer.value;
 
   if (Constants::isGood(value)) {
     isGood = true; // Use it if it's a good data value
-
-    // Max of beamwidth or the tilt below us.  If too large a spread we
-    // treat as if it's not there
-    // double alphaBottom = layer.beamWidth; 'spokes and jitter' on elevation intersections
-    double alphaBottom = 1.0;
-
-    #if 0
-    // Update the alphaBottom based on if spread is reasonable
-    if (spreadDegs > alphaBottom) {
-      if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-        alphaBottom = spreadDegs;          // Use full spread
-      }
-    }
-    #endif
-
-    // Weight based on the beamwidth or the spread range
-    const double alpha = alphaTop / alphaBottom;
-    weight = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
   }
+  // Max of beamwidth or the tilt below us.  If too large a spread we
+  // treat as if it's not there
+  // double alphaBottom = layer.beamWidth; 'spokes and jitter' on elevation intersections
+  // when using inBeam for mask.  Probably doesn't have effect anymore
+  double alphaBottom = 1.0;
+
+  // Update the alphaBottom based on if spread is reasonable
+  if (spreadDegs > alphaBottom) {
+    if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
+      alphaBottom = spreadDegs;          // Use full spread
+    }
+  }
+
+  // Weight based on the beamwidth or the spread range
+  const double alpha = alphaTop / alphaBottom;
+
+  weight = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
+
   outvalue = value;
 } // analyzeTilt
 }
@@ -298,7 +298,7 @@ public:
   {
     double v = Constants::DataUnavailable; // Final output data value
 
-    static const float ELEV_THRESH = .45; // Closest to current w2merger
+    static const float ELEV_THRESH = .45; // -E Smoothing of w2merger
 
     // ------------------------------------------------------------------------------
     // Query information for above and below the location
@@ -317,14 +317,14 @@ public:
     // values for this location in 3d space
     //
 
-    AngleDegs spread = 0.0; // want zero to use default beamwidth
+    AngleDegs spread = 0.0;
 
     if (haveLower && haveUpper) {
       // Actually not sure I like this..why should distance between
       // two tilts determine beam strength, but it's the paper math.
       // There's not much difference between using 1 degree extrapolation
-      // vs the spread
-      // spread = std::abs(vv.uLayer.elevation - vv.lLayer.elevation);
+      // vs the spread for close elevations in the VCP
+      spread = std::abs(vv.getUpperValue().elevation - vv.getLowerValue().elevation);
     }
 
     bool isGoodLower = false;
@@ -349,9 +349,9 @@ public:
         isGoodUpper, inBeamUpper, terrainBlockedUpper, uValue, upperWt);
     }
 
-    spread = 0.0; // want zero to use default beamwidth
+    spread = 0.0;
     if (haveLLower && haveUpper) {
-      // spread = std::abs(vv.uLayer.elevation - vv.lPrevLayer.elevation);
+      spread = std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation);
     }
     bool isGoodLower2 = false;
     bool inBeamLower2 = false;
@@ -366,7 +366,7 @@ public:
 
     spread = 0;
     if (haveLower && haveUUpper) {
-      // spread = std::abs(vv.uNextLayer.elevation - vv.lLayer.elevation);
+      spread = std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation);
     }
     bool isGoodUpper2 = false;
     bool inBeamUpper2 = false;
@@ -383,67 +383,61 @@ public:
     // Application stage
     //
 
-    // Mask stuff
-    if (inBeamLower || inBeamUpper || inBeamLower2 || inBeamUpper2) {
-      // Mask the beams if good or not (and not terrain blocked)
-      v = Constants::MissingData;
-    }
-    if (haveUpper && haveLower) { // Mask between.
-      // If you have an upper/upper, you must have an upper.
-      // If you have a lower/lower, you must have a lower.
-      v = Constants::MissingData;
+    // We always mask missing between the two main tilts that aren't blocked
+    if (haveUpper && haveLower) {
+      if (!terrainBlockedUpper && !terrainBlockedLower) {
+        v = Constants::MissingData;
+      }
     }
 
-    // Value stuff.  Needs cleanup
+    // Value stuff.  Needs cleanup.  Loop would be cleaner at some point
     double totalWt  = 0.0;
     double totalsum = 0.0;
     size_t count    = 0;
 
-    // if (inBeamLower){ Weight cutoff will be used
-    if (isGoodLower) {
-      // if (lowerWt > ELEV_THRESH){
-      totalWt  += lowerWt;
-      totalsum += (lowerWt * lValue);
-      count++;
-      // }
-    }
-    // }
-
-    if (isGoodLower2) {
-      // if (inBeamLower2){
-      // if (lowerWt2 > ELEV_THRESH){
-      totalWt  += lowerWt2;
-      totalsum += (lowerWt2 * lValue2);
-      count++;
-      // }
-      // }
+    if (lowerWt > ELEV_THRESH) {
+      if (isGoodLower) {
+        totalWt  += lowerWt;
+        totalsum += (lowerWt * lValue);
+        count++;
+      } else {
+        // Non-terrain blocked (> 0 weight) in threshold should be missing mask
+        v = Constants::MissingData;
+      }
     }
 
-    if (isGoodUpper) {
-      // if (inBeamUpper){
-      // if (upperWt > ELEV_THRESH){
-      totalWt  += upperWt;
-      totalsum += (upperWt * uValue);
-      count++;
-      // }
-      // }
+    if (lowerWt2 > ELEV_THRESH) {
+      if (isGoodLower2) {
+        totalWt  += lowerWt2;
+        totalsum += (lowerWt2 * lValue2);
+        count++;
+      } else {
+        v = Constants::MissingData;
+      }
     }
 
-    if (isGoodUpper2) {
-      // if (inBeamUpper2){
-      //  if (upperWt2 > ELEV_THRESH){
-      totalWt  += upperWt2;
-      totalsum += (upperWt2 * uValue2);
-      count++;
-      //  }
-      // }
+    if (upperWt > ELEV_THRESH) {
+      if (isGoodUpper) {
+        totalWt  += upperWt;
+        totalsum += (upperWt * uValue);
+        count++;
+      } else {
+        v = Constants::MissingData;
+      }
+    }
+
+    if (upperWt2 > ELEV_THRESH) {
+      if (isGoodUpper2) {
+        totalWt  += upperWt2;
+        totalsum += (upperWt2 * uValue2);
+        count++;
+      } else {
+        v = Constants::MissingData;
+      }
     }
 
     if (count > 0) {
-      //   if (totalWt > .35){
-      if (totalWt > ELEV_THRESH) {
-        v = totalsum / totalWt;
-      }
+      v = totalsum / totalWt;
     }
 
     vv.dataValue = v;
