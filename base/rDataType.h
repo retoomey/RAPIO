@@ -66,6 +66,23 @@ public:
     myDataType = d;
   }
 
+  /** An assigned ID for this DataType.  It's up to the caller to
+  * decide ID rotation/reuse.  For example, in the fusion algorithm we need
+  * to store large arrays referring to recent DataTypes.  By rotating an 8 byte id,
+  * or possibly a 16 byte id we can save memory vs by pointer. */
+  int
+  getID() const
+  {
+    return myID;
+  }
+
+  /** Assign an ID number.  Used by algorithms for whatever they want */
+  inline void
+  setID(int id)
+  {
+    myID = id;
+  }
+
   /** Return the TypeName of this DataType. */
   const std::string &
   getTypeName() const
@@ -288,8 +305,9 @@ public:
     to->myLocation    = myLocation;
     to->myReadFactory = myReadFactory;
     to->myDataType    = myDataType;
-    to->myTypeName    = myTypeName;
-    to->myUnits       = myUnits;
+    to->myID       = myID;
+    to->myTypeName = myTypeName;
+    to->myUnits    = myUnits;
   }
 
 protected:
@@ -309,6 +327,9 @@ protected:
 
   /** String used for sub writer/reader factory, such as 'RadialSet' */
   std::string myDataType;
+
+  /** The ID of the data contained.  */
+  int myID;
 
   /** The TypeName of the data contained.  */
   std::string myTypeName;

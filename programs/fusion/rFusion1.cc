@@ -901,6 +901,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
     }
 
+    // Assign the ID key for cache storage.  Note the size matters iff you have more
+    // DataTypes to keep track of than the key size.  Currently FusionKey defines the key
+    // size and max unique elevations we can hold at once.
+    static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
+    if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
+    r->setID(keycounter);
+
     // Always add to elevation volume
     myElevationVolume->addDataType(r);
 

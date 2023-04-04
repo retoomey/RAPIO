@@ -5,6 +5,12 @@
 #include "rTerrainBlockage.h"
 #include "rLLCoverageArea.h"
 
+/**  Use 8 bits for FusionKey, with a max value of 255.  This means our volume
+ * tilts need to be limited to 254 (0 key is no value) at a time in memory. This
+ * is usually fine for a single moment.
+ * This can be increased here safely if needed but it will cost more RAM. */
+typedef uint8_t FusionKey;
+
 namespace rapio {
 /** So many caches clean up needs to happen.  We need a single one of these per radar center and 2D coverage */
 class SinCosLatLonCache : public Utility
@@ -113,26 +119,34 @@ public:
 
   /** Store upper/lower markers. Return true if it changes.  When these change, we recalculate data values */
   inline bool
-  set(size_t x, size_t y, void * lower, void * upper, void * nextLower, void * nextUpper)
+  set(size_t x, size_t y, DataType * lower, DataType * upper, DataType * nextLower, DataType * nextUpper)
   {
     const size_t index = getIndex(x, y);
 
     bool changed = false;
 
-    if (myLowerElev[index] != lower) {
-      myLowerElev[index] = lower;
+    const FusionKey lowerKey = (lower == nullptr) ? 0 : lower->getID();
+
+    if (myLowerElev[index] != lowerKey) {
+      myLowerElev[index] = lowerKey;
       changed = true;
     }
-    if (myUpperElev[index] != upper) {
-      myUpperElev[index] = upper;
+    const FusionKey upperKey = (upper == nullptr) ? 0 : upper->getID();
+
+    if (myUpperElev[index] != upperKey) {
+      myUpperElev[index] = upperKey;
       changed = true;
     }
-    if (myNextLowerElev[index] != nextLower) {
-      myNextLowerElev[index] = nextLower;
+    const FusionKey nextLowerKey = (nextLower == nullptr) ? 0 : nextLower->getID();
+
+    if (myNextLowerElev[index] != nextLowerKey) {
+      myNextLowerElev[index] = nextLowerKey;
       changed = true;
     }
-    if (myNextUpperElev[index] != nextUpper) {
-      myNextUpperElev[index] = nextUpper;
+    const FusionKey nextUpperKey = (nextUpper == nullptr) ? 0 : nextUpper->getID();
+
+    if (myNextUpperElev[index] != nextUpperKey) {
+      myNextUpperElev[index] = nextUpperKey;
       changed = true;
     }
     return changed;
@@ -197,21 +211,17 @@ public:
   /** Store the terrain azimuth spacing for our cached terrain */
   AngleDegs myTerrainAzimuthSpacing;
 
-  /** Cached last upper elevation for this x, y.  This is only important as a number,
-   * and it might be an invalid pointer */
-  std::vector<void *> myUpperElev;
+  /** Cached last upper elevation for this x, y.  This is only important as a number */
+  std::vector<FusionKey> myUpperElev;
 
-  /** Cached last lower elevation for this x, y.  This is only important as a number,
-   * and it might be an invalid pointer */
-  std::vector<void *> myLowerElev;
+  /** Cached last lower elevation for this x, y.  This is only important as a number */
+  std::vector<FusionKey> myLowerElev;
 
-  /** Cached last next upper elevation for this x, y.  This is only important as a number,
-   * and it might be an invalid pointer */
-  std::vector<void *> myNextUpperElev;
+  /** Cached last next upper elevation for this x, y.  This is only important as a number */
+  std::vector<FusionKey> myNextUpperElev;
 
-  /** Cached last lower elevation for this x, y.  This is only important as a number,
-   * and it might be an invalid pointer */
-  std::vector<void *> myNextLowerElev;
+  /** Cached last lower elevation for this x, y.  This is only important as a number */
+  std::vector<FusionKey> myNextLowerElev;
 
   /** Current location for raw iteration */
   size_t myAt;
