@@ -13,19 +13,29 @@ DataGrid::DataGrid()
   myDataType = "DataGrid";
 }
 
-std::shared_ptr<DataGrid>
-DataGrid::Create(const std::vector<size_t>& dimsizes,
-  const std::vector<std::string>          & dimnames)
+DataGrid::DataGrid(const std::string& aTypeName,
+  const std::string                 & Units,
+  const LLH                         & center,
+  const Time                        & datatime,
+  const std::vector<size_t>         & dimsizes,
+  const std::vector<std::string>    & dimnames)
 {
-  auto datagridsp = std::make_shared<DataGrid>();
+  setTypeName(aTypeName);
+  setDataAttributeValue("Unit", "dimensionless", Units);
+  myLocation = center;
+  myTime     = datatime;
+  declareDims(dimsizes, dimnames);
+}
 
-  if (datagridsp == nullptr) {
-    LogSevere("Couldn't create DataGrid.\n");
-  } else {
-    datagridsp->declareDims(dimsizes, dimnames);
-  }
-  datagridsp->setTypeName("NONE");
-  return datagridsp;
+std::shared_ptr<DataGrid>
+DataGrid::Create(const std::string& aTypeName,
+  const std::string               & Units,
+  const LLH                       & center,
+  const Time                      & datatime,
+  const std::vector<size_t>       & dimsizes,
+  const std::vector<std::string>  & dimnames)
+{
+  return (std::make_shared<DataGrid>(aTypeName, Units, center, datatime, dimsizes, dimnames));
 }
 
 std::shared_ptr<DataAttributeList>

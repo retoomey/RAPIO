@@ -111,7 +111,7 @@ MakeFakeRadarData::execute()
   rs.setTypeName("BeamBlockage");
   // rs.setDataAttributeValue(Constants::ColorMap, "Fuzzy");
   rs.setDataAttributeValue(Constants::ColorMap, "Percentage");
-  rs.setDataAttributeValue(Constants::Unit, "dimensionless");
+  rs.setDataAttributeValue(Constants::Units, "dimensionless");
 
   // RadialSet is indexed Azimuth, Gates...
   auto & data = rs.getFloat2D()->ref();
@@ -155,7 +155,11 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
     LogInfo("Create DataGrid for chart named: '" << chartTitle << "'\n");
 
     LogSevere("..... creating generic data grid class " << myNumGates << "\n");
-    auto myDataGrid = DataGrid::Create({ myNumGates, 100 }, { "Range", "Height" });
+    Time aTime;
+    LLH aLocation;
+    auto myDataGrid = DataGrid::Create("TerrainElevationChartData", "dimensionless", aLocation, aTime, { myNumGates,
+                                                                                                         100 },
+        { "Range", "Height" });
 
     // Attributes can be a great way to pass strings and flags to your python:
     // Here I do the chart title
@@ -163,8 +167,6 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
     // This is the -unit -value ability from MRMS if you need units
     // myDataGrid->setDataAttributeValue("aAttribute", "AttributeName", "Dimensionless");
-
-    myDataGrid->setTypeName("TerrainElevationChartData");
 
     myDataGrid->addFloat1D("BaseHeight", "Kilometers", { 0 }); // Y1
     auto & base = myDataGrid->getFloat1DRef("BaseHeight");
@@ -403,7 +405,9 @@ MakeFakeRadarData::terrainAngleChart2(RadialSet& rs)
   const size_t numY = myNumGates;
 
   // We 'could' make a RadialSet here I think, or not
-  auto myDataGrid = DataGrid::Create({ numX, numY }, { "Azimuth", "Gate" });
+  Time aTime;
+  LLH aLocation;
+  auto myDataGrid = DataGrid::Create("NONE", "dimensionless", aLocation, aTime, { numX, numY }, { "Azimuth", "Gate" });
 
   // DEM projection. FIXME: make global probably better
   auto myDEMLookup = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myDEM.get());

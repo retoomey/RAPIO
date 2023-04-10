@@ -1,6 +1,5 @@
 #include "rFusion1.h"
 #include "rBinaryTable.h"
-#include "rVolumeValueResolver.h"
 #include "rConfigRadarInfo.h"
 
 using namespace rapio;
@@ -205,7 +204,8 @@ public:
       }
     }
 
-    vv.dataValue = v;
+    vv.dataValue   = v;
+    vv.dataWeight1 = vv.virtualRangeKMs;
   } // calc
 };
 
@@ -440,7 +440,8 @@ public:
       v = totalsum / totalWt;
     }
 
-    vv.dataValue = v;
+    vv.dataValue   = v;
+    vv.dataWeight1 = vv.virtualRangeKMs;
   } // calc
 };
 
@@ -503,6 +504,30 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
 } // RAPIOFusionOneAlg::declareOptions
+
+void
+RAPIOFusionOneAlg::declarePlugins()
+{
+  // Declare plugins here, this will allow the help to show a list
+  // of the available plugin names
+
+  // -------------------------------------------------------------
+  // Elevation Volume registration
+  Volume::introduceSelf();
+  // Volume::introduce("yourvolume", myVolumeClass); To add your own
+
+  // -------------------------------------------------------------
+  // VolumeValueResolver registration and creation
+  VolumeValueResolver::introduceSelf();
+  RobertLinear1Resolver::introduceSelf();
+  LakResolver1::introduceSelf();
+  // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
+
+  // -------------------------------------------------------------
+  // Terrain blockage registration and creation
+  TerrainBlockage::introduceSelf();
+  // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
+}
 
 /** RAPIOAlgorithms process options on start up */
 void
@@ -729,6 +754,109 @@ splitKeyParam(const std::string& commandline, std::string& key, std::string& par
 }
 }
 
+std::shared_ptr<RObsBinaryTable>
+RAPIOFusionOneAlg::createRawEntries(AngleDegs elevDegs,
+  AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
+  const std::string& aTypeName, const std::string& aUnits,
+  const time_t dataTime)
+{
+  // Entries to write out eventually
+  std::shared_ptr<RObsBinaryTable> entries = std::make_shared<RObsBinaryTable>();
+
+  entries->setReadFactory("raw"); // default to raw output if we write it
+  auto& t = *entries;
+
+  // FIXME: refactor/methods, etc. This isn't clean by a long shot
+  t.radarName = myRadarName;
+  t.vcp       = -9999; // Ok will merger be ok with this, need to check
+  t.elev      = elevDegs;
+  t.typeName  = aTypeName;
+  t.setUnits(aUnits);
+  t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
+  t.lat       = cLat;          // lat degrees
+  t.lon       = cLon;          // lon degrees
+  t.ht        = cHeight;       // kilometers assumed by w2merger
+  t.data_time = dataTime;
+  // Ok Lak guesses valid time based on vcp. What do we do here?
+  // I'm gonna use the provided history value
+  // If (valid_time < 1 || valid_time < blendingInterval ){
+  //   valid_time = blendingInterval;
+  // }
+  t.valid_time = getMaximumHistory().seconds(); // Use seconds of our -h option?
+  return entries;
+}
+
+void
+RAPIOFusionOneAlg::addRawEntry(const VolumeValue& vv, const Time& time, RObsBinaryTable& t, size_t x, size_t y,
+  size_t layer)
+{
+  // FIXME: Humm we could store time parts in vv.  This is a hack to match times between the two
+  // systems.
+  RObsBinaryTable::mrmstime aMRMSTime;
+
+  aMRMSTime.epoch_sec = time.getSecondsSinceEpoch();
+  aMRMSTime.frac_sec  = time.getFractional();
+  const LLCoverageArea& outg = myRadarGrid;
+
+  const size_t outX = x + outg.startX;
+  const size_t outY = y + outg.startY;
+
+  // Add entries
+  //   t.elevWeightScaled.push_back(int (0.5+(1+90)*100) );
+
+  #define ELEV_SCALE(x) ( int(0.5 + (x + 90) * 100) )
+  #define RANGE_SCALE 10
+
+  #if 0
+  if (outX > myFullGrid.numX) {
+    LogSevere(" CRITICAL X " << outX << " > " << myFullGrid.numX << "\n");
+    exit(1);
+  }
+  if (outY > myFullGrid.numY) {
+    LogSevere(" CRITICAL Y " << outY << " > " << myFullGrid.numY << "\n");
+    exit(1);
+  }
+  #endif
+  // Just realized Z will be wrong, since the stage 2 will assume all 33 layers, and
+  // we're just doing subsets maybe.  So we'll need to figure that out
+  // Lak: 33 2200 2600 as X, Y, Z.  Which seems non-intuitive to me.
+  // Me: 2200 2600 33 as X, Y, Z.
+  const size_t atZ = myHeightsIndex[layer]; // hack sparse height layer index (or we make object?)
+  t.addRawObservation(atZ, outX, outY, vv.dataValue,
+    int(vv.virtualRangeKMs * RANGE_SCALE + 0.5),
+    //	  entry.elevWeightScaled(), Can't figure this out.  Why a individual scale...oh weight because the
+    //	  cloud is the full cube.  Ok so we take current elev..no wait the virtual elevation and scale to char...
+    //	  takes -90 to 90 to 0-18000, can still fit into unsigned char...
+    //
+    ELEV_SCALE(vv.virtualElevDegs),
+    vv.virtualAzDegs, aMRMSTime);
+
+  // Per point (I'm gonna have to rework it if I do a new stage 2):
+  // t.azimuth  vector of azimuth of the point, right?  Ok we have that.
+  // t.aztime  vector of time of the azimuth.  Don't think we have that really.  Will make it the radial set
+  // t.x, y, z,  coordinates in the global grid
+  // newvalue,
+  // scaled_dist (short).   A Scale of the weight for the point:
+  // 'quality' was passed into as RadialSet...ignoring it for now not sure it's used
+  // RANGE_SCALE = 10
+  // int(rangeMeters*RANGE_SCALE_KM*quality + 0.5);
+  // int(rangeMeters*RANGE_SCALE_KM + 0.5);
+  //    RANGE_SCALE_KM = RANGE_SCALE/1000.0
+  // elevWeightScaled (char).
+  // AZIMUTH_SCALE 100
+  // ELEV_SCALE(x) = ( int (0.5+(x+90)*100) )
+  // ELEV_UNSCALE(y) ( (y*0.01)-90)
+  // ELEV_WT_SCALE 100
+  // I think the stage 2 entries are gonna be difficult to match, there's information
+  // that we can't include I think.  Stage 2 is trying to do things we already did?
+  // Bleh maybe it will be good enough.  We'll need a better stage 2 I think.
+  // FIXME: clean up so much here
+  // entries.azimuth.push_back(int(0.5+azDegs*100)); // scale right?
+  // RObsBinaryTable::mrmstime aTime;
+  // FIXME: fill in time.  Ok what time do we use here?
+  // entries.aztime.push_back(aTime); // scale right?
+} // RAPIOFusionOneAlg::addRawEntry
+
 void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 {
@@ -751,9 +879,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     AngleDegs elevDegs    = r->getElevationDegs();
     const Time rTime      = r->getTime();
     const time_t dataTime = rTime.getSecondsSinceEpoch();
-    RObsBinaryTable::mrmstime aMRMSTime;
-    aMRMSTime.epoch_sec = rTime.getSecondsSinceEpoch();
-    aMRMSTime.frac_sec  = rTime.getFractional();
     // Radar center coordinates
     const LLH center        = r->getRadarLocation();
     const AngleDegs cLat    = center.getLatitudeDeg();
@@ -803,12 +928,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
       std::string key, params;
 
-      // -------------------------------------------------------------
-      // VolumeValueResolver registration and creation
-      VolumeValueResolver::introduceSelf();
-      RobertLinear1Resolver::introduceSelf();
-      LakResolver1::introduceSelf();
-
+      // VolumeValueResolver creation
       splitKeyParam(myResolverAlg, key, params);
       resolversp = VolumeValueResolver::createVolumeValueResolver(key, params);
 
@@ -819,12 +939,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       } else {
         LogInfo("Using Volume Value Resolver algorithm '" << key << "'\n");
       }
-      // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
 
       // -------------------------------------------------------------
-      // Terrain blockage registration and creation
-      TerrainBlockage::introduceSelf();
-      // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
+      // Terrain blockage creation
 
       // Set up generic params for volume and terrain blockage classes
       // in form "--optionname=key,somestring"
@@ -844,13 +961,10 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       }
 
       // -------------------------------------------------------------
-      // Elevation volume registration and creation
+      // Elevation volume creation
       LogInfo(
         "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
           "'\n");
-      Volume::introduceSelf();
-      // Volume::introduce("yourvolume", myVolumeClass); To add your own
-
       splitKeyParam(myVolumeAlg, key, params);
       myElevationVolume = Volume::createVolume(key, params, myRadarName + "_" + myTypeName);
 
@@ -924,32 +1038,16 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     }
 
     // ------------------------------------------------------------------------------
-    // RAW file entry storage
-    //
-    // Entries to write out eventually
-    std::shared_ptr<RObsBinaryTable> entries = std::make_shared<RObsBinaryTable>();
-    entries->setReadFactory("raw"); // default to raw output if we write it
-    auto& t = *entries;
+    // RAW file entry storage (alpha doesn't work..leaning towards netcdf method)
+    const bool useRawEntries = true;
+    std::shared_ptr<RObsBinaryTable> entries;
+    if (useRawEntries) {
+      entries = createRawEntries(elevDegs, cLat, cLon, cHeight, aTypeName, aUnits, dataTime);
+    }
 
-    // FIXME: refactor/methods, etc. This isn't clean by a long shot
-    t.radarName = myRadarName;
-    t.vcp       = -9999; // Ok will merger be ok with this, need to check
-    t.elev      = elevDegs;
-    t.typeName  = aTypeName;
-    t.setUnits(aUnits);
-    t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
-    t.lat       = cLat;          // lat degrees
-    t.lon       = cLon;          // lon degrees
-    t.ht        = cHeight;       // kilometers assumed by w2merger
-    t.data_time = dataTime;
-    // Ok Lak guesses valid time based on vcp. What do we do here?
-    // I'm gonna use the provided history value
-    // If (valid_time < 1 || valid_time < blendingInterval ){
-    //   valid_time = blendingInterval;
-    // }
-    t.valid_time = getMaximumHistory().seconds(); // Use seconds of our -h option?
-    // End RAW file entry storage
     // ------------------------------------------------------------------------------
+    // Stage 2 netcdf
+    const bool useNetcdf2 = true;
 
     // Set the value object for resolvers
     VolumeValue vv;
@@ -963,6 +1061,12 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
     AngleDegs startLat = myRadarGrid.nwLat - (myRadarGrid.latSpacing / 2.0); // move south (lat decreasing)
     AngleDegs startLon = myRadarGrid.nwLon + (myRadarGrid.lonSpacing / 2.0); // move east (lon increasing)
+
+    // ALPHA: Stage 2 vectors...grow during loop..or possible all at once
+    std::vector<float> stage2Values;
+    std::vector<float> stage2Weights;
+    std::vector<short> stage2Xs; // Optimization: Possible byte could be enough with extra attribute info
+    std::vector<short> stage2Ys;
 
     // Each layer of merger we have to loop through
     LLCoverageArea outg = myRadarGrid;
@@ -1049,68 +1153,24 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           resolver.calc(vv);
 
           // Actually write to the value cache
+          // FIXME: Difference test may require multivalue probably including weights...
+          //        Time might be an issue here..this will increase gridtest size/cache
           if (gridtest[y][x] != vv.dataValue) {
             differenceCount++;
             gridtest[y][x] = vv.dataValue;
 
-            // Add entries
-
-            // We already scaled...so what to push here.  It might be double applied?
-            // no wait this would be weight for combining multiple radar values
-            //   t.elevWeightScaled.push_back(int (0.5+(1+90)*100) );
-
-            #define ELEV_SCALE(x) ( int(0.5 + (x + 90) * 100) )
-            #define RANGE_SCALE 10
-
-            // I think Lak rotates or flips
-            const size_t outX = x + outg.startX;
-            if (outX > myFullGrid.numX) {
-              LogSevere(" CRITICAL X " << outX << " > " << myFullGrid.numX << "\n");
-              exit(1);
+            if (useRawEntries) {
+              addRawEntry(vv, rTime, *entries, x, y, layer);
             }
-            const size_t outY = y + outg.startY;
-            if (outY > myFullGrid.numY) {
-              LogSevere(" CRITICAL Y " << outY << " > " << myFullGrid.numY << "\n");
-              exit(1);
+            if (useNetcdf2) {
+              // FIXME: reserve/resize could speed up things here
+              // FIXME: gonna need weights, etc..this is not set yet at all, we're starting
+              // with just reading things into stage2
+              stage2Values.push_back(vv.dataValue);
+              stage2Weights.push_back(vv.dataWeight1);
+              stage2Xs.push_back(x);
+              stage2Ys.push_back(y);
             }
-            // Just realized Z will be wrong, since the stage 2 will assume all 33 layers, and
-            // we're just doing subsets maybe.  So we'll need to figure that out
-            // Lak: 33 2200 2600 as X, Y, Z.  Which seems non-intuitive to me.
-            // Me: 2200 2600 33 as X, Y, Z.
-            const size_t atZ = myHeightsIndex[layer]; // hack sparse height layer index (or we make object?)
-            t.addRawObservation(atZ, outX, outY, vv.dataValue,
-              int(vv.virtualRangeKMs * RANGE_SCALE + 0.5),
-              //	  entry.elevWeightScaled(), Can't figure this out.  Why a individual scale...oh weight because the
-              //	  cloud is the full cube.  Ok so we take current elev..no wait the virtual elevation and scale to char...
-              //	  takes -90 to 90 to 0-18000, can still fit into unsigned char...
-              //
-              ELEV_SCALE(vv.virtualElevDegs),
-              vv.virtualAzDegs, aMRMSTime);
-
-            // Per point (I'm gonna have to rework it if I do a new stage 2):
-            // t.azimuth  vector of azimuth of the point, right?  Ok we have that.
-            // t.aztime  vector of time of the azimuth.  Don't think we have that really.  Will make it the radial set
-            // t.x, y, z,  coordinates in the global grid
-            // newvalue,
-            // scaled_dist (short).   A Scale of the weight for the point:
-            // 'quality' was passed into as RadialSet...ignoring it for now not sure it's used
-            // RANGE_SCALE = 10
-            // int(rangeMeters*RANGE_SCALE_KM*quality + 0.5);
-            // int(rangeMeters*RANGE_SCALE_KM + 0.5);
-            //    RANGE_SCALE_KM = RANGE_SCALE/1000.0
-            // elevWeightScaled (char).
-            // AZIMUTH_SCALE 100
-            // ELEV_SCALE(x) = ( int (0.5+(x+90)*100) )
-            // ELEV_UNSCALE(y) ( (y*0.01)-90)
-            // ELEV_WT_SCALE 100
-            // I think the stage 2 entries are gonna be difficult to match, there's information
-            // that we can't include I think.  Stage 2 is trying to do things we already did?
-            // Bleh maybe it will be good enough.  We'll need a better stage 2 I think.
-            // FIXME: clean up so much here
-            // entries.azimuth.push_back(int(0.5+azDegs*100)); // scale right?
-            // RObsBinaryTable::mrmstime aTime;
-            // FIXME: fill in time.  Ok what time do we use here?
-            // entries.aztime.push_back(aTime); // scale right?
           }
         }
       }
@@ -1143,9 +1203,49 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("      Difference count (number sent to stage2): " << differenceCount << "\n");
       LogInfo("      _New_ upper/Lower good hits: " << upperGood << " and " << lowerGood << "\n");
       LogInfo("----------------------------------------\n");
+      break;
     } // END HEIGHT LOOP
 
     LogInfo("Total all layer grid points: " << total << "\n");
+
+    // -------------------------------------------------------
+    // For moment code here.  FIXME: separate routine
+    if (useNetcdf2) {
+      LLH aLocation;
+      // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
+      Time aTime       = rTime;
+      size_t finalSize = stage2Xs.size();
+      if (finalSize < 1) {
+        // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
+        // Would be better if we don't have to
+        LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
+      } else {
+        auto stage2 = DataGrid::Create("Stage2", "dimensionless", aLocation, aTime, { finalSize }, { "I" });
+
+        auto netcdfXs = stage2->addShort1D("X", "dimensionless", { 0 });
+        auto& netcdfX = netcdfXs->ref();
+
+        auto netcdfYs = stage2->addShort1D("Y", "dimensionless", { 0 });
+        auto& netcdfY = netcdfYs->ref();
+
+        // Could be a double or float or whatever here...we could also
+        // trim to a precision
+        auto netcdfValues = stage2->addFloat1D(Constants::PrimaryDataName, myWriteOutputUnits, { 0 });
+        auto& s = netcdfValues->ref();
+
+        auto netcdfWeights = stage2->addFloat1D("Range", "dimensionless", { 0 });
+        auto& netcdfWeight = netcdfWeights->ref();
+
+
+        std::copy(stage2Xs.begin(), stage2Xs.end(), netcdfX.data());
+        std::copy(stage2Ys.begin(), stage2Ys.end(), netcdfY.data());
+        std::copy(stage2Values.begin(), stage2Values.end(), s.data());
+        std::copy(stage2Weights.begin(), stage2Weights.end(), netcdfWeight.data());
+
+        writeOutputProduct("Stage2", stage2);
+      }
+      // -------------------------------------------------------
+    }
 
     // ----------------------------------------------------------------------------
   }

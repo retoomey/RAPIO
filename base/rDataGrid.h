@@ -210,11 +210,23 @@ public:
    * factories.  You probably want the Create method */
   DataGrid();
 
+  /** Create a DataGrid */
+  DataGrid(const std::string       & aTypeName,
+    const std::string              & Units,
+    const LLH                      & center,
+    const Time                     & datatime,
+    const std::vector<size_t>      & dimsizes,
+    const std::vector<std::string> & dimnames);
+
   /** Public API for users to create a DataGrid,
    * usually you create a subclass like RadialSet.  This is
    * used if you need to create generic array data. */
   static std::shared_ptr<DataGrid>
-  Create(const std::vector<size_t> & dimsizes,
+  Create(const std::string         & aTypeName,
+    const std::string              & Units,
+    const LLH                      & center,
+    const Time                     & datatime,
+    const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);
 
   /** Declare the dimensions of array objects */

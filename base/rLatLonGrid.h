@@ -18,6 +18,22 @@ public:
    * factories.  You probably want the Create method */
   LatLonGrid();
 
+  /** Create a LatLonGrid */
+  LatLonGrid(
+    const std::string              & TypeName,
+    const std::string              & Units,
+    const LLH                      & northwest,
+    const Time                     & gridtime,
+    float                          lat_spacing,
+    float                          lon_spacing,
+    size_t                         num_lats,
+    size_t                         num_lons,
+    // Default for lat lon, subclasses can enhance/change this
+    const std::vector<size_t>      & dimsizes = { },
+    const std::vector<std::string> & dimnames = { }
+
+  );
+
   /** Public API for users to create a single band LatLonGrid quickly,
    * Note that data is uninitialized/random memory since most algorithms
    * you'll fill it in and it wastes time to double fill it. */
@@ -162,21 +178,6 @@ public:
    * return false on fail. */
   virtual bool
   initFromGlobalAttributes() override;
-
-private:
-
-  /** Post creation initialization of fields
-   * Resize can change data size. */
-  void
-  init(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & location,
-    const Time       & time,
-    const float      lat_spacing,
-    const float      lon_spacing,
-    size_t           num_lats,
-    size_t           num_lons);
 
 protected:
 

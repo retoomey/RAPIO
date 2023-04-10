@@ -15,6 +15,38 @@ LatLonGrid::LatLonGrid() : myLatSpacing(0), myLonSpacing(0)
   myDataType = "LatLonGrid";
 }
 
+LatLonGrid::LatLonGrid(
+  const std::string              & TypeName,
+  const std::string              & Units,
+  const LLH                      & location,
+  const Time                     & time,
+  const float                    lat_spacing,
+  const float                    lon_spacing,
+  size_t                         num_lats,
+  size_t                         num_lons,
+  // Allow override of default sizes by subclasses,  you can ignore this normally
+  const std::vector<size_t>      & dimsizes,
+  const std::vector<std::string> & dimnames
+) : DataGrid(TypeName, Units, location, time, dimsizes.empty() ? std::vector<size_t>{ num_lats, num_lons } : dimsizes,
+    dimnames.empty() ? std::vector<std::string>{ "Lat", "Lon" } : dimnames), myLatSpacing(lat_spacing), myLonSpacing(
+    lon_spacing)
+{
+  bool okLat = (myLatSpacing > 0);
+  bool okLon = (myLonSpacing > 0);
+
+  if (!(okLat && okLon)) {
+    LogSevere("*** WARNING *** non-positive element in grid spacing\n"
+      << "(" << lat_spacing << "," << lon_spacing << ")\n");
+  }
+
+  if (dimsizes.empty()) { // If not overridden by subclass, LatLonHeightGrid for instance
+    addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
+  }
+
+  // Store a single static layer matching height in meters
+  myLayerNumbers.push_back(location.getHeightKM() * 1000.0);
+}
+
 std::shared_ptr<LatLonGrid>
 LatLonGrid::Create(
   const std::string& TypeName,
@@ -31,52 +63,7 @@ LatLonGrid::Create(
   size_t num_lons
 )
 {
-  auto llgridsp = std::make_shared<LatLonGrid>();
-
-  if (llgridsp == nullptr) {
-    LogSevere("Couldn't create LatLonGrid\n");
-  } else {
-    // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
-    llgridsp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons);
-  }
-
-  return llgridsp;
-}
-
-void
-LatLonGrid::init(
-  const std::string& TypeName,
-  const std::string& Units,
-  const LLH        & location,
-  const Time       & time,
-  const float      lat_spacing,
-  const float      lon_spacing,
-  size_t           num_lats,
-  size_t           num_lons
-)
-{
-  setTypeName(TypeName);
-  setDataAttributeValue("Unit", "dimensionless", Units);
-
-  myLocation   = location;
-  myTime       = time;
-  myLatSpacing = lat_spacing;
-  myLonSpacing = lon_spacing;
-
-  bool okLat = (myLatSpacing > 0);
-  bool okLon = (myLonSpacing > 0);
-
-  if (!(okLat && okLon)) {
-    LogSevere("*** WARNING *** non-positive element in grid spacing\n"
-      << "(" << lat_spacing << "," << lon_spacing << ")\n");
-  }
-
-  // Update primary grid to the given size
-  declareDims({ num_lats, num_lons }, { "Lat", "Lon" });
-  addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
-
-  // Store a single static layer matching height in meters
-  myLayerNumbers.push_back(location.getHeightKM() * 1000.0);
+  return (std::make_shared<LatLonGrid>(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons));
 }
 
 bool

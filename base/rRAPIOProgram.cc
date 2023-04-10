@@ -47,6 +47,7 @@ RAPIOProgram::initializeOptions()
   RAPIOOptions o("Program");
 
   declareOptions(o);
+  declarePlugins();
 
   return o;
 }

@@ -103,9 +103,8 @@ public:
   double cosGcdIR;           ///< Cached cos GCD IR ratio
 
   // OUTPUTS ---------------------
-  double dataValue; ///< Final output calculated data value by resolver
-
-  // FIXME: weight probably here too
+  double dataValue;   ///< Final output calculated data value by resolver
+  double dataWeight1; ///< Final output weight1 by resolver
 };
 
 

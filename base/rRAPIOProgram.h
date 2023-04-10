@@ -32,6 +32,10 @@ public:
   virtual void
   declareOptions(RAPIOOptions& o){ };
 
+  /** Declare command line plugins */
+  virtual void
+  declarePlugins(){ };
+
   /** Process/setup from the given options */
   virtual void
   processOptions(RAPIOOptions& o){ };

@@ -4,6 +4,7 @@
 #include <RAPIO.h>
 #include "rTerrainBlockage.h"
 #include "rLLCoverageArea.h"
+#include "rVolumeValueResolver.h"
 
 /**  Use 8 bits for FusionKey, with a max value of 255.  This means our volume
  * tilts need to be limited to 254 (0 key is no value) at a time in memory. This
@@ -259,6 +260,10 @@ public:
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;
 
+  /** Declare all algorithm command line plugins */
+  virtual void
+  declarePlugins() override;
+
   /** Process all algorithm options */
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
@@ -294,6 +299,19 @@ public:
    * at the stage one level. */
   void
   writeOutputCAPPI(std::shared_ptr<LatLonGrid> output);
+
+  /** Create the old style raw file */
+  std::shared_ptr<RObsBinaryTable>
+  createRawEntries(AngleDegs elevDegs,
+    AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
+    const std::string& aTypeName, const std::string& aUnits,
+    const time_t dataTime);
+
+  /** Add entry to old style raw file
+   * FIXME: doesn't work with w2merger stage2. We're leaning towards netcdf method instead for now,
+   * this just keeps the code cleaner */
+  void
+  addRawEntry(const VolumeValue& vv, const Time& time, RObsBinaryTable& t, size_t x, size_t y, size_t layer);
 
   /** Process a new record/datatype */
   virtual void

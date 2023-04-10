@@ -274,6 +274,8 @@ RAPIOAlgorithm::initializeOptions()
                           // O...
   declareOptions(o);      // Allow algorithm to declare wanted general
                           // arguments...
+  declarePlugins();
+
   return o;
 }
 
