@@ -20,8 +20,7 @@ RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirst
   myDataType = "RadialSet";
 }
 
-std::shared_ptr<RadialSet>
-RadialSet::Create(
+RadialSet::RadialSet(
   const std::string& TypeName,
   const std::string& Units,
   const LLH        & center,
@@ -29,46 +28,15 @@ RadialSet::Create(
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
   const size_t     num_radials,
-  const size_t     num_gates)
+  const size_t     num_gates) : DataGrid(TypeName, Units, center, datatime,
+    { num_radials, num_gates }, { "Azimuth", "Gate" }),
+  myElevAngleDegs(elevationDegrees),
+  myElevCos(cos(myElevAngleDegs * DEG_TO_RAD)),
+  myElevTan(tan(myElevAngleDegs * DEG_TO_RAD)),
+  myFirstGateDistanceM(firstGateDistanceMeters)
 {
-  auto r = std::make_shared<RadialSet>();
-
-  if (r == nullptr) {
-    LogSevere("Couldn't create RadialSet.\n");
-  } else {
-    // We post constructor fill in details because many of the factories like netcdf 'chain' layers and settings
-    r->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters, num_radials, num_gates);
-  }
-
-  return r;
-}
-
-void
-RadialSet::init(
-  const std::string& TypeName,
-  const std::string& Units,
-  const LLH        & center,
-  const Time       & time,
-  const float      elevationDegrees,
-  const float      firstGateDistanceMeters,
-  const size_t     num_radials,
-  const size_t     num_gates)
-{
-  /** Declare/update the dimensions */
-  setTypeName(TypeName);
-  setDataAttributeValue("Unit", "dimensionless", Units);
-  myLocation      = center;
-  myTime          = time;
-  myElevAngleDegs = elevationDegrees;
-  myElevCos       = cos(myElevAngleDegs * DEG_TO_RAD);
-  myElevTan       = tan(myElevAngleDegs * DEG_TO_RAD);
-
-  myFirstGateDistanceM = firstGateDistanceMeters;
-
-  declareDims({ num_radials, num_gates }, { "Azimuth", "Gate" });
+  /** Primary data storage */
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
-
-  // These are the only ones we force...
 
   /** Azimuth per radial */
   // addFloat1D("Azimuth", "Degrees", {0}, 0.0f);
@@ -81,6 +49,21 @@ RadialSet::init(
   /** Gate width per radial */
   // addFloat1D("GateWidth", "Meters", {0}, 1000.0f);
   addFloat1D("GateWidth", "Meters", { 0 });
+}
+
+std::shared_ptr<RadialSet>
+RadialSet::Create(
+  const std::string& TypeName,
+  const std::string& Units,
+  const LLH        & center,
+  const Time       & datatime,
+  const float      elevationDegrees,
+  const float      firstGateDistanceMeters,
+  const size_t     num_radials,
+  const size_t     num_gates)
+{
+  return (std::make_shared<RadialSet>(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters,
+         num_radials, num_gates));
 }
 
 bool

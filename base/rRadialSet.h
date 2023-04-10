@@ -20,6 +20,17 @@ public:
    * factories.  You probably want the Create method */
   RadialSet();
 
+  /** Create a new RadialSet */
+  RadialSet(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & center,
+    const Time       & datatime,
+    const float      elevationDegrees,
+    const float      firstGateDistanceMeters,
+    const size_t     num_radials,
+    const size_t     num_gates);
+
   /** Public API for users to create a single band RadialSet quickly,
    * using polar grid style.  RadialSets are typically small enough that
    * we don't gain anything from variable radial length.
@@ -197,21 +208,6 @@ public:
   {
     return myLookup.get();
   }
-
-private:
-
-  /** Post creation initialization of fields
-   * Resize can change data size. */
-  void
-  init(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & location,
-    const Time       & time,
-    const float      elevationDegrees,
-    const float      firstGateDistanceMeters,
-    const size_t     num_radials,
-    const size_t     num_gates);
 
 protected:
   /** The elevation angle of radial set in degrees */
