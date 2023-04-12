@@ -94,13 +94,15 @@ IONetcdf::createDataType(const std::string& params)
       std::string type;
       retval = getAtt(ncid, Constants::sDataType, type);
       if (retval != NC_NOERR) {
-        LogSevere("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader\n");
+        // Not necessarily an error, we could have a custom format
+        LogInfo("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader\n");
         type = "DataGrid";
       }
 
       std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIOSpecializer(type);
       if (fmt == nullptr) {
-        LogSevere("No netcdf reader for DataType '" << type << "', using generic reader\n");
+        // Not necessarily an error, we could have a custom format
+        LogInfo("No netcdf reader for DataType '" << type << "', using generic reader\n");
         fmt = IONetcdf::getIOSpecializer("DataGrid");
       }
       if (fmt != nullptr) {

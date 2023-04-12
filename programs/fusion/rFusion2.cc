@@ -79,7 +79,50 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
-  LogSevere("Got something...\n");
+  #if 0
+  // FIXME: Add this ability to API?
+  std::string s = "Data received: ";
+  auto sel      = d.record().getSelections();
+
+  for (auto& s1:sel) {
+    s = s + s1 + " ";
+  }
+  LogInfo(s << " from index " << d.matchedIndexNumber() << "\n");
+  #endif
+
+  auto gsp = d.datatype<rapio::DataGrid>();
+
+  if (gsp != nullptr) {
+    if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
+      // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
+      std::string s;
+      auto sel = d.record().getSelections();
+      for (auto& s1:sel) {
+        s = s + s1 + " ";
+      }
+
+      LogInfo("Stage2 data noticed: " << s << "\n");
+      DataGrid& d = *gsp;
+
+      auto dims    = d.getDims();
+      size_t aSize = dims[0].size();
+      // const std::string name = d[0].name();
+      // Short code but no checks for failure
+      // FIXME: We're probably going to need a common shared class/library with Stage1 at some point
+      // so we don't end up offsyncing this stuff
+      auto& netcdfX      = d.getShort1DRef("X");
+      auto& netcdfY      = d.getShort1DRef("Y");
+      auto& netcdfValues = d.getFloat1DRef();
+      auto& netcdfWeight = d.getFloat1DRef("Range");
+      LogInfo("Size is " << aSize << "\n");
+      if (aSize > 10) { aSize = 10; }
+      for (size_t i = 0; i < aSize; i++) {
+        LogInfo(
+          "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfValues[i] << " with weight " <<
+            netcdfWeight[i] << "\n");
+      }
+    }
+  }
 } // RAPIOFusionTwoAlg::processNewData
 
 int

@@ -10,7 +10,7 @@ using namespace std;
 
 DataGrid::DataGrid()
 {
-  myDataType = "DataGrid";
+  setDataType("DataGrid");
 }
 
 DataGrid::DataGrid(const std::string& aTypeName,
@@ -20,6 +20,7 @@ DataGrid::DataGrid(const std::string& aTypeName,
   const std::vector<size_t>         & dimsizes,
   const std::vector<std::string>    & dimnames)
 {
+  setDataType("DataGrid");
   setTypeName(aTypeName);
   setDataAttributeValue("Unit", "dimensionless", Units);
   myLocation = center;

@@ -13,7 +13,7 @@
 #include <boost/optional.hpp>
 
 /* Macro for declaring all the convenience methods to help avoid mistyping
- * This creates getByte1D, getByte1DRef and addByte1D methods, etc.
+ * This creates getByte1D, getByte1DRef and addByte1D, addByte1DRef methods, etc.
  */
 #define DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, DIMENSION) \
   inline std::shared_ptr<Array<TYPE, DIMENSION> > \
@@ -31,6 +31,12 @@
     const std::vector<size_t>& dimindexes) \
   { \
     return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes); \
+  } \
+  inline boost::multi_array<TYPE, DIMENSION>& \
+  add ## TYPESTRING ## DIMENSION ## DRef(const std::string& name, const std::string& units, \
+    const std::vector<size_t>& dimindexes) \
+  { \
+    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes)->ref(); \
   }
 
 /** Declare up to 3D array access, haven't seen a need for anything higher 'yet'.

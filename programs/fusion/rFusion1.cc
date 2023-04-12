@@ -565,7 +565,8 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     exit(1);
   }
 
-  myWriteOutputName  = "None";          // will get from first radialset typename
+  myWriteStage2Name  = "None";          // will get from first radialset typename
+  myWriteCAPPIName   = "None";          // will get from first radialset typename
   myWriteOutputUnits = "Dimensionless"; // will get from first radialset units
   myWriteLLG         = o.getBoolean("llg");
   myWriteSubgrid     = o.getBoolean("subgrid");
@@ -702,7 +703,7 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
     // We don't worry about height, we'll set it for each layer
     if (myFullLLG == nullptr) {
       LogInfo("Creating a full CONUS buffer for outputting grids as full files\n");
-      myFullLLG = createLLG(myWriteOutputName, myWriteOutputUnits, myFullGrid, 0);
+      myFullLLG = createLLG(myWriteStage2Name, myWriteOutputUnits, myFullGrid, 0);
     }
 
     // Copy the current output subgrid into the full LLG for writing out...
@@ -729,10 +730,10 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
       }
     }
     // Full grid file (CONUS for regular merger)
-    writeOutputProduct(myWriteOutputName, myFullLLG);
+    writeOutputProduct(myWriteCAPPIName, myFullLLG);
   } else {
     // Just write the subgrid directly (typically smaller than the full grid)
-    writeOutputProduct(myWriteOutputName, output);
+    writeOutputProduct(myWriteCAPPIName, output);
   }
 } // RAPIOFusionOneAlg::writeOutputCAPPI
 
@@ -980,7 +981,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
 
       // Generate output name and units.
-      myWriteOutputName  = "Mapped" + r->getTypeName() + "Fused";
+      // FIXME: More control flags, maybe even name options
+      myWriteStage2Name  = "Mapped" + r->getTypeName();
+      myWriteCAPPIName   = "Fused1" + r->getTypeName();
       myWriteOutputUnits = r->getUnits();
       if (myWriteOutputUnits.empty()) {
         LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
@@ -988,7 +991,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       }
 
       // Create working LLG cache CAPPI storage per height level
-      createLLGCache(myWriteOutputName, myWriteOutputUnits, outg, myHeightsM);
+      createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg, myHeightsM);
     }
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need
@@ -1184,8 +1187,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
         if (myWriteLLG) {
           writeOutputCAPPI(output);
         } else {
-          // WRITE RAW (or whatever we eventually use for stage 2)
-          writeOutputProduct(myWriteOutputName, entries);
+          // Write any per tilt stage2 files.  I think we're just writing per
+          // 33 layer files, but never know
         }
         writeCount = 0;
       }
@@ -1203,7 +1206,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("      Difference count (number sent to stage2): " << differenceCount << "\n");
       LogInfo("      _New_ upper/Lower good hits: " << upperGood << " and " << lowerGood << "\n");
       LogInfo("----------------------------------------\n");
-      break;
+      // break;  Test for quick writing Stage2 files
     } // END HEIGHT LOOP
 
     LogInfo("Total all layer grid points: " << total << "\n");
@@ -1213,36 +1216,30 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     if (useNetcdf2) {
       LLH aLocation;
       // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
-      Time aTime       = rTime;
+      Time aTime       = rTime; // The time of the data matches the incoming data
       size_t finalSize = stage2Xs.size();
       if (finalSize < 1) {
         // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
         // Would be better if we don't have to
         LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
       } else {
-        auto stage2 = DataGrid::Create("Stage2", "dimensionless", aLocation, aTime, { finalSize }, { "I" });
-
-        auto netcdfXs = stage2->addShort1D("X", "dimensionless", { 0 });
-        auto& netcdfX = netcdfXs->ref();
-
-        auto netcdfYs = stage2->addShort1D("Y", "dimensionless", { 0 });
-        auto& netcdfY = netcdfYs->ref();
-
+        auto stage2 = DataGrid::Create(myWriteStage2Name, "dimensionless", aLocation, aTime, { finalSize }, { "I" });
+        stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
+        stage2->setSubType("Full");
+        auto& netcdfX = stage2->addShort1DRef("X", "dimensionless", { 0 });
+        auto& netcdfY = stage2->addShort1DRef("Y", "dimensionless", { 0 });
         // Could be a double or float or whatever here...we could also
         // trim to a precision
-        auto netcdfValues = stage2->addFloat1D(Constants::PrimaryDataName, myWriteOutputUnits, { 0 });
-        auto& s = netcdfValues->ref();
+        auto& netcdfValues = stage2->addFloat1DRef(Constants::PrimaryDataName, myWriteOutputUnits, { 0 });
+        auto& netcdfWeight = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
 
-        auto netcdfWeights = stage2->addFloat1D("Range", "dimensionless", { 0 });
-        auto& netcdfWeight = netcdfWeights->ref();
-
-
+        // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
         std::copy(stage2Xs.begin(), stage2Xs.end(), netcdfX.data());
         std::copy(stage2Ys.begin(), stage2Ys.end(), netcdfY.data());
-        std::copy(stage2Values.begin(), stage2Values.end(), s.data());
+        std::copy(stage2Values.begin(), stage2Values.end(), netcdfValues.data());
         std::copy(stage2Weights.begin(), stage2Weights.end(), netcdfWeight.data());
 
-        writeOutputProduct("Stage2", stage2);
+        writeOutputProduct(myWriteStage2Name, stage2);
       }
       // -------------------------------------------------------
     }

@@ -12,7 +12,7 @@ LatLonHeightGrid::getGeneratedSubtype() const
 
 LatLonHeightGrid::LatLonHeightGrid()
 {
-  myDataType = "LatLonHeightGrid";
+  setDataType("LatLonHeightGrid");
 }
 
 LatLonHeightGrid::LatLonHeightGrid(
@@ -32,6 +32,7 @@ LatLonHeightGrid::LatLonHeightGrid(
 ) : LatLonGrid(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons,
     { num_lats, num_lons, num_layers }, { "Lat", "Lon", "Ht" })
 {
+  setDataType("LatLonHeightGrid");
   // Our current LatLonHeight grid is implemented using a 3D array
   addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
 

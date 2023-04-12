@@ -352,8 +352,11 @@ protected:
   /** Coordinates for the total merger grid */
   LLCoverageArea myFullGrid;
 
-  /** The typename we use for all output products */
-  std::string myWriteOutputName;
+  /** The typename we use for stage 2 ingest products */
+  std::string myWriteStage2Name;
+
+  /** The typename we use for debug cappis */
+  std::string myWriteCAPPIName;
 
   /** The units we use for all output products */
   std::string myWriteOutputUnits;

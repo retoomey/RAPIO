@@ -12,7 +12,7 @@ LatLonGrid::getGeneratedSubtype() const
 
 LatLonGrid::LatLonGrid() : myLatSpacing(0), myLonSpacing(0)
 {
-  myDataType = "LatLonGrid";
+  setDataType("LatLonGrid");
 }
 
 LatLonGrid::LatLonGrid(
@@ -31,6 +31,7 @@ LatLonGrid::LatLonGrid(
     dimnames.empty() ? std::vector<std::string>{ "Lat", "Lon" } : dimnames), myLatSpacing(lat_spacing), myLonSpacing(
     lon_spacing)
 {
+  setDataType("LatLonGrid");
   bool okLat = (myLatSpacing > 0);
   bool okLon = (myLonSpacing > 0);
 

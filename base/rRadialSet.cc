@@ -17,7 +17,7 @@ RadialSet::getGeneratedSubtype() const
 
 RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirstGateDistanceM(0), myLookup(nullptr)
 {
-  myDataType = "RadialSet";
+  setDataType("RadialSet");
 }
 
 RadialSet::RadialSet(
@@ -35,6 +35,7 @@ RadialSet::RadialSet(
   myElevTan(tan(myElevAngleDegs * DEG_TO_RAD)),
   myFirstGateDistanceM(firstGateDistanceMeters)
 {
+  setDataType("RadialSet");
   /** Primary data storage */
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
