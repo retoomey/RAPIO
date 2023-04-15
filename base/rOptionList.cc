@@ -119,6 +119,21 @@ OptionList::optional(const std::string& opt,
   return (makeOption(false, false, false, opt, "", usage, defaultValue));
 }
 
+void
+OptionList::setRequiredValue(const std::string& opt,
+  const std::string                           & defaultValue)
+{
+  Option * op = getOption(opt);
+
+  if (op) {
+    auto& o = *op;
+    if (o.required) {
+      o.required     = false; // make optional
+      o.defaultValue = defaultValue;
+    }
+  }
+}
+
 /** Declare a boolean algorithm variable */
 Option *
 OptionList::boolean(const std::string& opt,

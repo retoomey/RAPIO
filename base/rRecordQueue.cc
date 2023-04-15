@@ -47,6 +47,7 @@ RecordQueue::action()
 {
   // Process one record if there...
   if (!myQueue.empty()) {
+    LogInfo("Record queue size is " << myQueue.size() << "\n");
     Record r = myQueue.top();
     myQueue.pop();
     poppedRecords++;

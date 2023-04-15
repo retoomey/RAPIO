@@ -17,6 +17,20 @@ target_link_libraries(rdump rapio)
 install(TARGETS rdump
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+add_executable(rcopy
+  rCopy.cc
+)
+target_link_libraries(rcopy rapio)
+install(TARGETS rcopy
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+add_executable(rwatch
+  rWatch.cc
+)
+target_link_libraries(rwatch rapio)
+install(TARGETS rwatch
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 
 ##################################################################
 # Fusion1

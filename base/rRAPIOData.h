@@ -36,6 +36,10 @@ public:
   int
   matchedIndexNumber();
 
+  /** Return a brief description of the data that can be used in application for feedback */
+  std::string
+  getDescription();
+
 protected:
 
   /** The record of the data. */

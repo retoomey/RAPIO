@@ -18,3 +18,20 @@ RAPIOData::matchedIndexNumber()
 {
   return (rec.getIndexNumber());
 }
+
+std::string
+RAPIOData::getDescription()
+{
+  std::stringstream s;
+  auto sel = record().getSelections();
+  const size_t size = sel.size();
+
+  for (size_t i = 0; i < size; i++) {
+    s << sel[i];
+    if (i != size - 1) {
+      s << " ";
+    }
+  }
+  s << " from index " << matchedIndexNumber();
+  return s.str();
+}

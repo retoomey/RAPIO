@@ -56,6 +56,14 @@ public:
     const std::string       & defaultValue,
     const std::string       & usage);
 
+  /** Turn a required into an optional by providing a default value.
+   * This can be called in declareOptions in order to turn a required value
+   * into an optional one.  We use this in rWatch for example since o becomes optional.
+   * The other way to do it could be a larger algorithm/program class tree. */
+  void
+  setRequiredValue(const std::string& opt,
+    const std::string               & defaultValue);
+
   /** Return sorted options */
   void
   sortOptions(std::vector<Option *>&,

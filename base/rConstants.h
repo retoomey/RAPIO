@@ -90,7 +90,6 @@ public:
   // DataType constants
   static const std::string ColorMap;
   static const std::string IsTableData;
-  static const std::string Unit;
   static const std::string ExpiryInterval;
   static const std::string FilenameDateTime; // Formatted as filename expected
 

@@ -6,7 +6,6 @@ void
 Dump::declareOptions(RAPIOOptions& o)
 {
   o.setDescription("Dump datatype to text tool");
-  o.setAuthors("Robert Toomey");
   o.setHeader(""); // turn off for first pass
   o.setExample("test.netcdf // ncdump style");
 

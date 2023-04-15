@@ -31,7 +31,6 @@ const time_t Constants::SecondsPerDay = 86400;
 // Datatype constants
 const std::string Constants::ColorMap         = "ColorMap";
 const std::string Constants::IsTableData      = "IsTableData";
-const std::string Constants::Unit             = "Unit";
 const std::string Constants::ExpiryInterval   = "ExpiryInterval";
 const std::string Constants::FilenameDateTime = "FilenameDateTime";
 
@@ -44,7 +43,10 @@ const std::string Constants::TerrainCBBPercent    = "TerrainCBBPercent";
 const std::string Constants::PrimaryDataName("primary");
 const std::string Constants::TypeName("TypeName");
 const std::string Constants::sDataType("DataType");
-const std::string Constants::Units("Units");
+// Note: W2 was changed to write 'units' instead of 'Units'.  So we have
+// archive cases with 'Units' but all new stuff is 'units'.
+// We'll make readers look for both, but this string will write
+const std::string Constants::Units("units");
 const std::string Constants::Latitude("Latitude");
 const std::string Constants::Longitude("Longitude");
 const std::string Constants::Height("Height");
