@@ -148,7 +148,8 @@ public:
    * FIXME: Has to be done in array to get correct template type. Might
    * be able to use a visitor class to have more control over printing. */
   void
-  printArray(std::ostream& out, const std::string& indent = "    ", const std::string& divider = ", ", size_t wrap = 9)
+  printArray(std::ostream& out = std::cout, const std::string& indent = "    ", const std::string& divider = ", ",
+    size_t wrap = 9)
   {
     myArray->printArray(out, indent, divider, wrap);
   }

@@ -3,199 +3,210 @@
 #
 
 # Set variable of all headers we use
+# We 'could' file(GLOB HEADER_FILES "*.h") but
+# this means when we add a file we have to force cmake
+# to recognize the change so for now we'll hard list the files
+# ls -1 *.h
 set(HEADER_FILES
   RAPIO.h
-  rRAPIOProgram.h
-  rTerrainBlockage.h
-  rTerrainBlockageLak.h
-  rTerrainBlockage2me.h
-  rArray.h
-  rBinaryIO.h
-  rColor.h
-  rColorMap.h
-  rDataFilter.h
-  rDataTable.h
-  rRapio.h
-  rRAPIOAlgorithm.h
-  rRAPIOOptions.h
-  rRAPIOData.h
-  rColorTerm.h
-  rCurlConnection.h
-  rData.h
-  rAlgorithm.h
-  rEvent.h
-  rEventLoop.h
-  rEventTimer.h
-  rIO.h
-  rFactory.h
-  rStaticMethodFactory.h
-  rXMLIndex.h
-  rStreamIndex.h
-  rURL.h
-  rProcessTimer.h
-  rWebIndex.h
-  rWebIndexWatcher.h
-  rWebServer.h
-  rDirWatcher.h
-  rSecure.h
-  rSignals.h
-  rIOIndex.h
-  rIOURL.h
-  rError.h
-  rConfig.h
-  rConfigIODataType.h
-  rConfigLogging.h
-  rConfigDirectoryMapping.h
-  rConfigParamGroup.h
-  rConfigRadarInfo.h
-  rOS.h
-  rIODataType.h
-  rNetcdfDataType.h
-  rGribDataType.h
-  rImageDataType.h
-  rGDALDataType.h
-  rIOFile.h
-  rIOXML.h
-  rIOJSON.h
-  rIndexType.h
-  rLLCoverageArea.h
-  rLLH.h
-  rXYZ.h
-  rIJK.h
-  rConstants.h
-  rArith.h
-  rLL.h
-  rTimeDuration.h
-  rUnit.h
-  rStrings.h
-  rBinaryIO.h
-  rLength.h
-  rTime.h
-  rDataStore.h
-  rDataStore2D.h
-  rDataType.h
-  rDataProjection.h
-  rPTreeData.h
-  rDataGrid.h
-  rBinaryTable.h
-  rRadialSet.h
-  rRadialSetLookup.h
-  rDataTypeHistory.h
-  rElevationVolume.h
-  rLatLonGrid.h
-  rLatLonHeightGrid.h
-  rFileIndex.h
-  rFMLIndex.h
-  rFMLRecordNotifier.h
-  rEXERecordNotifier.h
-  rHeartbeat.h
-  rIOWatcher.h
-  rFAMWatcher.h
-  rEXEWatcher.h
-  rOption.h
-  rOptionList.h
-  rSentinelDouble.h
-  rRecord.h
-  rRecordFilter.h
-  rRecordQueue.h
-  rRecordNotifier.h
-  rUtility.h
-  rAlgConfigFile.h
-  rAWS.h
-  rProject.h
-  rNamedAny.h
-  rVolumeValueResolver.h
+ccronexpr.h
+config.h
+rAlgConfigFile.h
+rAlgorithm.h
+rArith.h
+rArray.h
+rAWS.h
+rBinaryIO.h
+rBinaryTable.h
+rBitset.h
+rColor.h
+rColorMap.h
+rColorTerm.h
+rConfigDirectoryMapping.h
+rConfig.h
+rConfigIODataType.h
+rConfigLogging.h
+rConfigParamGroup.h
+rConfigRadarInfo.h
+rConstants.h
+rCurlConnection.h
+rDataFilter.h
+rDataGrid.h
+rData.h
+rDataProjection.h
+rDataStore2D.h
+rDataStore3D.h
+rDataStore.h
+rDataTable.h
+rDataType.h
+rDataTypeHistory.h
+rDirWatcher.h
+rElevationVolume.h
+rError.h
+rEvent.h
+rEventLoop.h
+rEventTimer.h
+rEXERecordNotifier.h
+rEXEWatcher.h
+rFactory.h
+rFAMWatcher.h
+rFileIndex.h
+rFMLIndex.h
+rFMLRecordNotifier.h
+rGDALDataType.h
+rGribDataType.h
+rHeartbeat.h
+rIJK.h
+rImageDataType.h
+rIndexType.h
+rIODataType.h
+rIOFile.h
+rIO.h
+rIOIndex.h
+rIOJSON.h
+rIOURL.h
+rIOWatcher.h
+rIOXML.h
+rLatLonGrid.h
+rLatLonHeightGrid.h
+rLength.h
+rLLCoverageArea.h
+rLL.h
+rLLH.h
+rNamedAny.h
+rNetcdfDataType.h
+rOption.h
+rOptionList.h
+rOS.h
+rProcessTimer.h
+rProject.h
+rPTreeData.h
+rRadialSet.h
+rRadialSetLookup.h
+rRAPIOAlgorithm.h
+rRAPIOData.h
+rRapio.h
+rRAPIOOptions.h
+rRAPIOProgram.h
+rRecordFilter.h
+rRecord.h
+rRecordNotifier.h
+rRecordQueue.h
+rSecure.h
+rSentinelDouble.h
+rSignals.h
+rSparseVector.h
+rStaticMethodFactory.h
+rStreamIndex.h
+rStrings.h
+rTerrainBlockage2me.h
+rTerrainBlockage.h
+rTerrainBlockageLak.h
+rTimeDuration.h
+rTime.h
+rUnit.h
+rURL.h
+rUtility.h
+rVolumeValueResolver.h
+rWebIndex.h
+rWebIndexWatcher.h
+rWebServer.h
+rXMLIndex.h
+rXYZ.h
 )
 
 # Set variable of all sources we use
+# ls -1 *.c *.cc
 set(SOURCE_FILES
-  rRAPIOProgram.cc
-  rTerrainBlockage.cc
-  rTerrainBlockageLak.cc
-  rTerrainBlockage2me.cc
-  rArray.cc
-  rBinaryIO.cc
-  rColor.cc
-  rColorMap.cc
-  rDataFilter.cc
-  rDataTable.cc
-  rRAPIOAlgorithm.cc
-  rRAPIOOptions.cc
-  rRAPIOData.cc
-  rColorTerm.cc
-  rCurlConnection.cc
-  rEventTimer.cc
-  rEventLoop.cc
-  rSecure.cc
-  rSignals.cc
-  rRecord.cc
-  rRecordFilter.cc
-  rRecordQueue.cc
-  rRecordNotifier.cc
-  rIOIndex.cc
-  rURL.cc
-  rConfig.cc
-  rConfigDirectoryMapping.cc
-  rConfigIODataType.cc
-  rConfigLogging.cc
-  rConfigParamGroup.cc
-  rConfigRadarInfo.cc
-  rIODataType.cc
-  rNetcdfDataType.cc
-  rGribDataType.cc
-  rImageDataType.cc
-  rGDALDataType.cc
-  rIndexType.cc
-  rError.cc
-  rIOFile.cc
-  rIOXML.cc
-  rIOJSON.cc
-  rIOURL.cc
-  rOS.cc
-  rWebIndex.cc
-  rWebIndexWatcher.cc
-  rWebServer.cc
-  rDirWatcher.cc
-  rProcessTimer.cc
-  rXMLIndex.cc
-  rStreamIndex.cc
-  rXYZ.cc
-  rIJK.cc
-  rConstants.cc
-  rLength.cc
-  rTimeDuration.cc
-  rTime.cc
-  rUnit.cc
-  rLL.cc
-  rLLCoverageArea.cc
-  rLLH.cc
-  rStrings.cc
-  rBinaryTable.cc
-  rDataGrid.cc
-  rLatLonGrid.cc
-  rLatLonHeightGrid.cc
-  rRadialSet.cc
-  rRadialSetLookup.cc
-  rDataTypeHistory.cc
-  rElevationVolume.cc
-  rDataType.cc
-  rDataProjection.cc
-  rPTreeData.cc
-  rFileIndex.cc
-  rFMLIndex.cc
-  rFMLRecordNotifier.cc
-  rEXERecordNotifier.cc
-  rHeartbeat.cc
-  rIOWatcher.cc
-  rFAMWatcher.cc
-  rEXEWatcher.cc
-  rOption.cc
-  rOptionList.cc
-  rAlgConfigFile.cc
-  rAWS.cc
-  rProject.cc
-  rVolumeValueResolver.cc
-  ccronexpr.c
+ccronexpr.c
+rAlgConfigFile.cc
+rArray.cc
+rAWS.cc
+rBinaryIO.cc
+rBinaryTable.cc
+rBitset.cc
+rColor.cc
+rColorMap.cc
+rColorTerm.cc
+rConfig.cc
+rConfigDirectoryMapping.cc
+rConfigIODataType.cc
+rConfigLogging.cc
+rConfigParamGroup.cc
+rConfigRadarInfo.cc
+rConstants.cc
+rCurlConnection.cc
+rDataFilter.cc
+rDataGrid.cc
+rDataProjection.cc
+rDataTable.cc
+rDataType.cc
+rDataTypeHistory.cc
+rDirWatcher.cc
+rElevationVolume.cc
+rError.cc
+rEventLoop.cc
+rEventTimer.cc
+rEXERecordNotifier.cc
+rEXEWatcher.cc
+rFAMWatcher.cc
+rFileIndex.cc
+rFMLIndex.cc
+rFMLRecordNotifier.cc
+rGDALDataType.cc
+rGribDataType.cc
+rHeartbeat.cc
+rIJK.cc
+rImageDataType.cc
+rIndexType.cc
+rIODataType.cc
+rIOFile.cc
+rIOIndex.cc
+rIOJSON.cc
+rIOURL.cc
+rIOWatcher.cc
+rIOXML.cc
+rLatLonGrid.cc
+rLatLonHeightGrid.cc
+rLength.cc
+rLL.cc
+rLLCoverageArea.cc
+rLLH.cc
+rNetcdfDataType.cc
+rOption.cc
+rOptionList.cc
+rOS.cc
+rProcessTimer.cc
+rProject.cc
+rPTreeData.cc
+rRadialSet.cc
+rRadialSetLookup.cc
+rRAPIOAlgorithm.cc
+rRAPIOData.cc
+rRAPIOOptions.cc
+rRAPIOProgram.cc
+rRecord.cc
+rRecordFilter.cc
+rRecordNotifier.cc
+rRecordQueue.cc
+rSecure.cc
+rSignals.cc
+rSparseVector.cc
+rStreamIndex.cc
+rStrings.cc
+rTerrainBlockage2me.cc
+rTerrainBlockage.cc
+rTerrainBlockageLak.cc
+rTime.cc
+rTimeDuration.cc
+rUnit.cc
+rURL.cc
+rVolumeValueResolver.cc
+rWebIndex.cc
+rWebIndexWatcher.cc
+rWebServer.cc
+rXMLIndex.cc
+rXYZ.cc
 )
 
 # Create RAPIO shared library

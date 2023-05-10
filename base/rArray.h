@@ -80,7 +80,8 @@ public:
 
   /** Convenience print of Array.  Has to print internal to get the templated method */
   virtual void
-  printArray(std::ostream& out, const std::string& indent, const std::string& divider, size_t wrap) = 0;
+  printArray(std::ostream& out = std::cout, const std::string& indent = "    ", const std::string& divider = ", ",
+    size_t wrap = 9) = 0;
 
 protected:
   /** Vector of sizes for each dimension */
@@ -156,7 +157,8 @@ public:
 
   /** Convenience print of Array.  Has to print internal to get the templated method */
   virtual void
-  printArray(std::ostream& out, const std::string& indent, const std::string& divider, size_t wrap) override
+  printArray(std::ostream& out = std::cout, const std::string& indent = "    ", const std::string& divider = ", ",
+    size_t wrap = 9) override
   {
     auto a_ref = refAs1D();
 
@@ -165,7 +167,8 @@ public:
     out << indent;
     for (auto i = a_ref.begin(); i != a_ref.end(); ++i) {
       // Need template specialization here, so 'we' have to do the print
-      out << *i;
+      C& z = *i;
+      out << z;
       if (std::next(i) != a_ref.end()) {
         out << divider;
       }
@@ -175,6 +178,11 @@ public:
       }
     }
   };
+
+  /** Standard stream for this..wraps to printArray default */
+  template <typename U, size_t P>
+  friend std::ostream&
+  operator << (std::ostream& os, const Array<U, P>& obj);
 
   /** Get a reference to raw array for iteration */
   boost::multi_array<C, N>&
@@ -207,6 +215,14 @@ protected:
   /** Boost array we wrap */
   boost::multi_array<C, N> myStorage;
 };
+
+template <typename U, size_t P>
+std::ostream&
+operator << (std::ostream& os, Array<U, P>& obj)
+{
+  obj.printArray(os);
+  return os;
+}
 
 class Arrays : public Data {
 public:

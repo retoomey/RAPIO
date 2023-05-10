@@ -182,6 +182,11 @@ public:
   replaceGroup(const std::string   & pattern,
     const std::vector<std::string> & froms,
     std::vector<std::string>       & tos);
+
+  /** (AI) Format a given number of bytes into human readable size.
+   * Useful for logging/debugging memory usage of things. */
+  static std::string
+  formatBytes(unsigned long long bytes);
 };
 
 /** A class for DFA parsing a word/token by character */

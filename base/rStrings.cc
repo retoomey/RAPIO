@@ -1,12 +1,10 @@
 #include "rStrings.h"
 
-// #include <algorithm>
-
 #include <rError.h>
 
 #include <boost/algorithm/string.hpp>
-
 #include <fstream>
+#include <iomanip>
 
 using namespace rapio;
 using namespace std;
@@ -590,3 +588,33 @@ Strings::replaceGroup(
   output += fill;
   return output;
 } // Strings::replaceGroup
+
+std::string
+Strings::formatBytes(unsigned long long bytes)
+{
+  const unsigned long long GB = 1ULL << 30;
+  const unsigned long long MB = 1ULL << 20;
+  const unsigned long long KB = 1ULL << 10;
+
+  std::string size;
+  double value;
+
+  if (bytes >= GB) {
+    size  = "GB";
+    value = static_cast<double>(bytes) / GB;
+  } else if (bytes >= MB) {
+    size  = "MB";
+    value = static_cast<double>(bytes) / MB;
+  } else if (bytes >= KB) {
+    size  = "KB";
+    value = static_cast<double>(bytes) / KB;
+  } else {
+    size  = "Bytes";
+    value = static_cast<double>(bytes);
+  }
+
+  std::ostringstream oss;
+
+  oss << std::fixed << std::setprecision(2) << value << " " << size;
+  return oss.str();
+}

@@ -99,6 +99,11 @@ DataType::initFromGlobalAttributes()
   // use them generically if we see them.
   getString(Constants::TypeName, myTypeName);
 
+  // This is set by object creation, so override now to handle
+  // variations.  For example, making a DataGrid object set the DataType
+  // to DataGrid, but attributes might have Stage2Ingest or a custom one
+  getString(Constants::sDataType, myDataType);
+
   // -------------------------------------------------------
   // Location
   float latDegs  = 0;
