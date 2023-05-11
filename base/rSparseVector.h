@@ -191,9 +191,9 @@ public:
   }
 
   /** Keeping for moment, this is how w2merger calculates its
-     linear index.  We made these match for consistency:
-     getOldIndex({x,y,z}) == getIndex({x,y,z}) for all values.
-  */
+   * linear index.  We made these match for consistency:
+   * getOldIndex({x,y,z}) == getIndex({x,y,z}) for all values.
+   */
   size_t
   getOldIndex(std::vector<size_t> i)
   {
@@ -201,6 +201,23 @@ public:
     size_t zsize   = myDimensions[2];
 
     return (i[0] * horsize + i[1] * zsize + i[2]);
+  }
+
+  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
+   * it's up to caller to first get(i) and handle memory management. */
+  inline T *
+  set(std::vector<size_t> v, T data)
+  {
+    return SparseVector<T>::set(getIndex(v), data);
+  }
+
+  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
+   * Note if T is declared as a pointer, you get a handle back, so
+   * then (*Value)->field will get the data out. */
+  inline T *
+  get(std::vector<size_t> v)
+  {
+    return SparseVector<T>::get(getIndex(v));
   }
 
 protected:

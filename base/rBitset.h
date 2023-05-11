@@ -130,7 +130,7 @@ public:
   void
   clearAllBits()
   {
-    myBits.clear();
+    myBits.reset();
   }
 
   /** Allow operator << to access our internal fields */
