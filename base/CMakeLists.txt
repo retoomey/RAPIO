@@ -16,6 +16,7 @@ rAlgorithm.h
 rArith.h
 rArray.h
 rAWS.h
+rBimap.h
 rBinaryIO.h
 rBinaryTable.h
 rBitset.h
@@ -107,6 +108,7 @@ rTime.h
 rUnit.h
 rURL.h
 rUtility.h
+rValueCompressor.h
 rVolumeValueResolver.h
 rWebIndex.h
 rWebIndexWatcher.h
@@ -122,6 +124,7 @@ ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
 rAWS.cc
+rBimap.cc
 rBinaryIO.cc
 rBinaryTable.cc
 rBitset.cc
@@ -201,6 +204,7 @@ rTime.cc
 rTimeDuration.cc
 rUnit.cc
 rURL.cc
+rValueCompressor.cc
 rVolumeValueResolver.cc
 rWebIndex.cc
 rWebIndexWatcher.cc

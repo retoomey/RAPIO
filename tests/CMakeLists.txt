@@ -13,12 +13,15 @@ link_directories(../../lib)
 enable_testing()
 
 add_executable(testrapio
+  rTestArray.cc
+  rTestBimap.cc
+  rTestBitset.cc
+  rTestIODataType.cc
   rTestMain.cc
+  rTestSparseVector.cc
   rTestTime.cc
   rTestURL.cc
-  rTestIODataType.cc
-  rTestArray.cc
-  rTestSparseVector.cc
+  rTestValueCompressor.cc
 )
 
 # Link to other libraries
