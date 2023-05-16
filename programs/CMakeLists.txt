@@ -35,6 +35,10 @@ install(TARGETS rwatch
 ##################################################################
 # Fusion1
 add_executable(rFusion1
+  fusion/rStage2Data.cc
+  fusion/rRobertLinear1Resolver.cc
+  fusion/rLakResolver1.cc
+  fusion/rLakRadialSmoother.cc
   fusion/rFusion1.cc
 )
 target_link_libraries(rFusion1 rapio)
@@ -43,6 +47,7 @@ install(TARGETS rFusion1
 )
 
 add_executable(rFusion2
+  fusion/rStage2Data.cc
   fusion/rFusion2.cc
 )
 target_link_libraries(rFusion2 rapio)

@@ -300,18 +300,10 @@ public:
   void
   writeOutputCAPPI(std::shared_ptr<LatLonGrid> output);
 
-  /** Create the old style raw file */
-  std::shared_ptr<RObsBinaryTable>
-  createRawEntries(AngleDegs elevDegs,
-    AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-    const std::string& aTypeName, const std::string& aUnits,
-    const time_t dataTime);
-
-  /** Add entry to old style raw file
-   * FIXME: doesn't work with w2merger stage2. We're leaning towards netcdf method instead for now,
-   * this just keeps the code cleaner */
+  /** Initialization done on first incoming data */
   void
-  addRawEntry(const VolumeValue& vv, const Time& time, RObsBinaryTable& t, size_t x, size_t y, size_t layer);
+  firstDataSetup(std::shared_ptr<RadialSet> r,
+    const std::string& radarName, const std::string& typeName);
 
   /** Process a new record/datatype */
   virtual void
@@ -396,5 +388,8 @@ protected:
 
   /** Cached set of LatLonGrids */
   LatLonGridSet myLLGCache;
+
+  /** The resolver we are using to calculate values */
+  std::shared_ptr<VolumeValueResolver> myResolver;
 };
 }

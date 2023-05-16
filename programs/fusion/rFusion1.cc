@@ -1,452 +1,16 @@
 #include "rFusion1.h"
 #include "rBinaryTable.h"
 #include "rConfigRadarInfo.h"
+#include "rStage2Data.h"
+
+// Value Resolvers
+#include "rRobertLinear1Resolver.h"
+#include "rLakResolver1.h"
+
+// Current moving average smoother, prefilter on RadialSets
+#include "rLakRadialSmoother.h"
 
 using namespace rapio;
-
-namespace {
-/** For first pass, implement Lak's radial set moving average smoother.
- * FIXME: Make generic plugin class for prefilters.  For now we'll have
- * a toggle flag to turn on/off
- *
- * A moving average replacing algotihm presented in the paper:
- * "A Real-Time, Three-Dimensional, Rapidly Updating, Heterogeneous Radar
- * Merger Technique for Reflectivity, Velocity, and Derived Products"
- * Weather and Forecasting October 2006
- * Valliappa Lakshmanan, Travis Smith, Kurt Hondl, Greg Stumpf
- *
- * In particular, page 10 describing Virtual Volumes and the elevation
- * influence.
- *
- * Notes:  I'm debating the accuracy of this smoothing technique
- * vs. one using weighted sampling in the CONUS plane.  This technique
- * is cheaper, which is likely why Lak choose it on older harder systems.
- * We could probably supersample around the CONUS cell center and possibly
- * improve the smooothing at the cost of more CPU.  Pictures will probably
- * be needed.  This alternative method might be more akin to the horizontal
- * interpolation attempted in w2merger.
- */
-void
-LakRadialSmoother(std::shared_ptr<RadialSet> rs, int half_size)
-{
-  RadialSet& r           = *rs;
-  const size_t radials   = r.getNumRadials();
-  const int scale_factor = half_size * 2;
-  const size_t gates     = r.getNumGates();
-  auto& data = r.getFloat2D()->ref();
-
-  // For each radial in the radial set....
-  for (size_t i = 0; i < radials; ++i) {
-    int N     = 0;
-    float sum = 0;
-
-    // Work on a copy of the gates
-    std::vector<float> workRadial(gates);
-
-    for (size_t j = 0; j < gates; ++j) {
-      workRadial[j] = data[i][j];
-      // Sum until we get enough (a window size of scale_factor)
-      if (j <= scale_factor) {
-        if (Constants::isGood(workRadial[j])) {
-          sum += workRadial[j];
-          N++;
-        }
-      } else {
-        // take off one if it's a good value - don't forget to keep track of the sum count.
-        if ((N > 0) && Constants::isGood(workRadial[j - scale_factor - 1])) {
-          sum -= workRadial[j - scale_factor - 1];
-          N--;
-        }
-        // add one onto the sum if it is a good one, and keep track of the sum count.
-        if (Constants::isGood(workRadial[j])) {
-          sum += workRadial[j];
-          N++;
-        }
-      }
-
-      // we have enough to compute the average for the window!
-      if ((j >= scale_factor) && (N > half_size)) {
-        data[i][j - half_size] = sum / (float) (N);
-      }
-    }
-  }
-} // LakRadialSmoother
-}
-
-// Volume value resolvers (alphas)
-// If you're interested in calculating values yourself, this acts as another
-// example, but the one matching w2merger the best is the LakResolver1 below
-// so I would skip this at first glance.
-class RobertLinear1Resolver : public VolumeValueResolver
-{
-public:
-
-  /** Introduce into VolumeValueResolver factory */
-  static void
-  introduceSelf()
-  {
-    std::shared_ptr<RobertLinear1Resolver> newOne = std::make_shared<RobertLinear1Resolver>();
-    Factory<VolumeValueResolver>::introduce("robert", newOne);
-  }
-
-  /** Create by factory */
-  virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
-  {
-    return std::make_shared<RobertLinear1Resolver>();
-  }
-
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    // ------------------------------------------------------------------------------
-    // Query information for above and below the location
-    bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
-    bool haveUpper = queryLayer(vv, VolumeValueResolver::upper);
-
-    // ------------------------------------------------------------------------------
-    // In beamwidth calculation
-    //
-    // FIXME: might be able to optimize by not always calculating in beam width,
-    // but it's making my head hurt so just do it always for now
-    // The issue is between tilts lots of tan, etc. we might skip
-
-    // Get height of half beamwidth higher
-    LengthKMs lowerHeightKMs;
-    bool inLowerBeamwidth = false;
-
-    if (haveLower) { // Do we hit the valid gates of the lower tilt?
-      heightForDegreeShift(vv, vv.getLower(), vv.getLowerValue().beamWidth / 2.0, lowerHeightKMs);
-      inLowerBeamwidth = (vv.layerHeightKMs <= lowerHeightKMs);
-    }
-
-    // Get height of half beamwidth lower
-    LengthKMs upperHeightKMs;
-    bool inUpperBeamwidth = false;
-
-    if (haveUpper) { // Do we hit the valid gates of the upper tilt?
-      heightForDegreeShift(vv, vv.getUpper(), -(vv.getUpperValue().beamWidth / 2.0), upperHeightKMs);
-      inUpperBeamwidth = (vv.layerHeightKMs >= upperHeightKMs);
-    }
-
-    // ------------------------------------------------------------------------------
-    // Background MASK calculation
-    //
-    // Keep background mask logic separate for now, though would probably be faster
-    // doing it in the value calculation.  I recommend doing it this way because
-    // logically it frys your brain a bit less.  You can 'have' an upper tilt,
-    // but have bad values or missing, etc..so the cases are not one to one
-    double v = Constants::DataUnavailable;
-
-    if (haveUpper && haveLower) { // 11 Four binary possibilities
-      v = Constants::MissingData;
-    } else {
-      if (haveUpper) { // 10
-        if (inUpperBeamwidth) {
-          v = Constants::MissingData;
-        }
-      } else if (haveLower) { // 01
-        if (inLowerBeamwidth) {
-          v = Constants::MissingData;
-        }
-      } else {
-        // v = Constants::DataUnavailable; // 00
-      }
-    }
-    // Make values unavailable if cumulative blockage is over 50%
-    // FIXME: Could be configurable
-    if (vv.getUpperValue().terrainCBBPercent > .50) {
-      vv.getUpperValue().value = Constants::DataUnavailable;
-    }
-    if (vv.getLowerValue().terrainCBBPercent > .50) {
-      vv.getLowerValue().value = Constants::DataUnavailable;
-    }
-    // Make values unavailable if elevation layer bottom hits terrain
-    if (vv.getLowerValue().beamHitBottom) {
-      vv.getLowerValue().value = Constants::DataUnavailable;
-    }
-    if (vv.getUpperValue().beamHitBottom) {
-      vv.getUpperValue().value = Constants::DataUnavailable;
-    }
-
-
-    // ------------------------------------------------------------------------------
-    // Interpolation and application of upper and lower data values
-    //
-    const double& lValue = vv.getLowerValue().value;
-    const double& uValue = vv.getUpperValue().value;
-
-    if (Constants::isGood(lValue) && Constants::isGood(uValue)) {
-      // Linear interpolate using heights.  With two values we can do interpolation
-      // between the values always, either linear or exponential
-      double wt = (vv.layerHeightKMs - vv.getLowerValue().heightKMs) / (upperHeightKMs - vv.getUpperValue().heightKMs);
-      if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
-      const double nwt = (1.0 - wt);
-
-      const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
-      const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
-
-      // v = (0.5 + nwt * lValue + wt * uValue);
-      v = (0.5 + nwt * lTerrain + wt * uTerrain);
-    } else if (inLowerBeamwidth) {
-      if (Constants::isGood(lValue)) {
-        const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
-        v = lTerrain;
-      } else {
-        v = lValue; // Use the gate value even if missing, RF, unavailable, etc.
-      }
-    } else if (inUpperBeamwidth) {
-      if (Constants::isGood(uValue)) {
-        const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
-        v = uTerrain;
-      } else {
-        v = uValue;
-      }
-    }
-
-    vv.dataValue   = v;
-    vv.dataWeight1 = vv.virtualRangeKMs;
-  } // calc
-};
-
-namespace {
-/** Analyze a tilt layer for contribution to final */
-static void inline
-analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
-  // OUTPUTS:
-  bool& isGood, bool& inBeam, bool& terrainBlocked, double& outvalue, double& weight)
-{
-  static const float ELEV_FACTOR = log(0.005); // Formula constant from paper
-  // FIXME: These could be parameters fairly easily and probably will be at some point
-  static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
-  static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
-  static const float BEAMWIDTH_THRESH = .50; // Assume half-degree to meet beamwidth test
-
-  // ------------------------------------------------------------------------------
-  // Discard tilts/values that hit terrain
-  if ((layer.terrainCBBPercent > TERRAIN_PERCENT) || (layer.beamHitBottom)) {
-    terrainBlocked = true;
-    return; // don't waste time on other math, or do we need to?
-  }
-
-  // ------------------------------------------------------------------------------
-  // Formula (6) on page 10 ----------------------------------------------
-  // This formula has a alphaTop and alphaBottom to calculate delta (the weight)
-  //
-  const double alphaTop = std::abs(at - layer.elevation);
-
-  inBeam = alphaTop <= BEAMWIDTH_THRESH;
-
-  const double& value = layer.value;
-
-  if (Constants::isGood(value)) {
-    isGood = true; // Use it if it's a good data value
-  }
-  // Max of beamwidth or the tilt below us.  If too large a spread we
-  // treat as if it's not there
-  // double alphaBottom = layer.beamWidth; 'spokes and jitter' on elevation intersections
-  // when using inBeam for mask.  Probably doesn't have effect anymore
-  double alphaBottom = 1.0;
-
-  // Update the alphaBottom based on if spread is reasonable
-  if (spreadDegs > alphaBottom) {
-    if (spreadDegs <= MAX_SPREAD_DEGS) { // if in the spread range, use the spread
-      alphaBottom = spreadDegs;          // Use full spread
-    }
-  }
-
-  // Weight based on the beamwidth or the spread range
-  const double alpha = alphaTop / alphaBottom;
-
-  weight = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
-
-  outvalue = value;
-} // analyzeTilt
-}
-
-/**
- * A resolver attempting to use the math presented in the paper:
- * "A Real-Time, Three-Dimensional, Rapidly Updating, Heterogeneous Radar
- * Merger Technique for Reflectivity, Velocity, and Derived Products"
- * Weather and Forecasting October 2006
- * Valliappa Lakshmanan, Travis Smith, Kurt Hondl, Greg Stumpf
- *
- * In particular, page 10 describing Virtual Volumes and the elevation
- * influence.
- */
-class LakResolver1 : public VolumeValueResolver
-{
-public:
-
-  /** Introduce into VolumeValueResolver factory */
-  static void
-  introduceSelf()
-  {
-    std::shared_ptr<LakResolver1> newOne = std::make_shared<LakResolver1>();
-    Factory<VolumeValueResolver>::introduce("lak", newOne);
-  }
-
-  /** Create by factory */
-  virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
-  {
-    return std::make_shared<LakResolver1>();
-  }
-
-  virtual void
-  calc(VolumeValue& vv) override
-  {
-    double v = Constants::DataUnavailable; // Final output data value
-
-    static const float ELEV_THRESH = .45; // -E Smoothing of w2merger
-
-    // ------------------------------------------------------------------------------
-    // Query information for above and below the location
-    // and reference the values above and below us (note post smoothing filters)
-    // This isn't done automatically because not every resolver will need all of it.
-    // FIXME: future ideas could do cressmen or other methods around sample point
-    // FIXME: couldn't we just have a flag inside vv that says have or not?
-    bool haveLower  = queryLayer(vv, VolumeValueResolver::lower);
-    bool haveUpper  = queryLayer(vv, VolumeValueResolver::upper);
-    bool haveLLower = queryLayer(vv, VolumeValueResolver::lower2);
-    bool haveUUpper = queryLayer(vv, VolumeValueResolver::upper2);
-
-    // ------------------------------------------------------------------------------
-    // Analyze stage
-    // Do our math on the raw information returned by the query database and calculate
-    // values for this location in 3d space
-    //
-
-    AngleDegs spread = 0.0;
-
-    if (haveLower && haveUpper) {
-      // Actually not sure I like this..why should distance between
-      // two tilts determine beam strength, but it's the paper math.
-      // There's not much difference between using 1 degree extrapolation
-      // vs the spread for close elevations in the VCP
-      spread = std::abs(vv.getUpperValue().elevation - vv.getLowerValue().elevation);
-    }
-
-    bool isGoodLower = false;
-    bool inBeamLower = false;
-    double lowerWt   = 0.0;
-    double lValue;
-    bool terrainBlockedLower = false;
-
-    if (haveLower) {
-      analyzeTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
-        isGoodLower, inBeamLower, terrainBlockedLower, lValue, lowerWt);
-    }
-
-    bool isGoodUpper = false;
-    bool inBeamUpper = false;
-    double upperWt   = 0.0;
-    double uValue;
-    bool terrainBlockedUpper = false;
-
-    if (haveUpper) {
-      analyzeTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
-        isGoodUpper, inBeamUpper, terrainBlockedUpper, uValue, upperWt);
-    }
-
-    spread = 0.0;
-    if (haveLLower && haveUpper) {
-      spread = std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation);
-    }
-    bool isGoodLower2 = false;
-    bool inBeamLower2 = false;
-    double lowerWt2   = 0.0;
-    double lValue2;
-    bool terrainBlockedLower2 = false;
-
-    if (haveLLower) {
-      analyzeTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread,
-        isGoodLower2, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2);
-    }
-
-    spread = 0;
-    if (haveLower && haveUUpper) {
-      spread = std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation);
-    }
-    bool isGoodUpper2 = false;
-    bool inBeamUpper2 = false;
-    double upperWt2   = 0.0;
-    double uValue2;
-    bool terrainBlockedUpper2 = false;
-
-    if (haveUUpper) {
-      analyzeTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread,
-        isGoodUpper2, inBeamUpper2, terrainBlockedUpper, uValue2, upperWt2);
-    }
-
-    // ------------------------------------------------------------------------------
-    // Application stage
-    //
-
-    // We always mask missing between the two main tilts that aren't blocked
-    if (haveUpper && haveLower) {
-      if (!terrainBlockedUpper && !terrainBlockedLower) {
-        v = Constants::MissingData;
-      }
-    }
-
-    // Value stuff.  Needs cleanup.  Loop would be cleaner at some point
-    double totalWt  = 0.0;
-    double totalsum = 0.0;
-    size_t count    = 0;
-
-    if (lowerWt > ELEV_THRESH) {
-      if (isGoodLower) {
-        totalWt  += lowerWt;
-        totalsum += (lowerWt * lValue);
-        count++;
-      } else {
-        // Non-terrain blocked (> 0 weight) in threshold should be missing mask
-        v = Constants::MissingData;
-      }
-    }
-
-    if (lowerWt2 > ELEV_THRESH) {
-      if (isGoodLower2) {
-        totalWt  += lowerWt2;
-        totalsum += (lowerWt2 * lValue2);
-        count++;
-      } else {
-        v = Constants::MissingData;
-      }
-    }
-
-    if (upperWt > ELEV_THRESH) {
-      if (isGoodUpper) {
-        totalWt  += upperWt;
-        totalsum += (upperWt * uValue);
-        count++;
-      } else {
-        v = Constants::MissingData;
-      }
-    }
-
-    if (upperWt2 > ELEV_THRESH) {
-      if (isGoodUpper2) {
-        totalWt  += upperWt2;
-        totalsum += (upperWt2 * uValue2);
-        count++;
-      } else {
-        v = Constants::MissingData;
-      }
-    }
-
-    if (count > 0) {
-      v = totalsum / totalWt;
-    }
-
-    vv.dataValue   = v;
-    vv.dataWeight1 = vv.virtualRangeKMs;
-  } // calc
-};
-
-// End Resolvers
-// -----------------------------------------------------------------------------------------------------
 
 /*
  * New merger stage 1, focusing on specialized on-the-fly caching
@@ -755,108 +319,106 @@ splitKeyParam(const std::string& commandline, std::string& key, std::string& par
 }
 }
 
-std::shared_ptr<RObsBinaryTable>
-RAPIOFusionOneAlg::createRawEntries(AngleDegs elevDegs,
-  AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-  const std::string& aTypeName, const std::string& aUnits,
-  const time_t dataTime)
-{
-  // Entries to write out eventually
-  std::shared_ptr<RObsBinaryTable> entries = std::make_shared<RObsBinaryTable>();
-
-  entries->setReadFactory("raw"); // default to raw output if we write it
-  auto& t = *entries;
-
-  // FIXME: refactor/methods, etc. This isn't clean by a long shot
-  t.radarName = myRadarName;
-  t.vcp       = -9999; // Ok will merger be ok with this, need to check
-  t.elev      = elevDegs;
-  t.typeName  = aTypeName;
-  t.setUnits(aUnits);
-  t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
-  t.lat       = cLat;          // lat degrees
-  t.lon       = cLon;          // lon degrees
-  t.ht        = cHeight;       // kilometers assumed by w2merger
-  t.data_time = dataTime;
-  // Ok Lak guesses valid time based on vcp. What do we do here?
-  // I'm gonna use the provided history value
-  // If (valid_time < 1 || valid_time < blendingInterval ){
-  //   valid_time = blendingInterval;
-  // }
-  t.valid_time = getMaximumHistory().seconds(); // Use seconds of our -h option?
-  return entries;
-}
-
 void
-RAPIOFusionOneAlg::addRawEntry(const VolumeValue& vv, const Time& time, RObsBinaryTable& t, size_t x, size_t y,
-  size_t layer)
+RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& radarName,
+  const std::string& typeName)
 {
-  // FIXME: Humm we could store time parts in vv.  This is a hack to match times between the two
-  // systems.
-  RObsBinaryTable::mrmstime aMRMSTime;
+  static bool setup = false;
 
-  aMRMSTime.epoch_sec = time.getSecondsSinceEpoch();
-  aMRMSTime.frac_sec  = time.getFractional();
-  const LLCoverageArea& outg = myRadarGrid;
+  if (setup) { return; }
 
-  const size_t outX = x + outg.startX;
-  const size_t outY = y + outg.startY;
+  setup = true;
 
-  // Add entries
-  //   t.elevWeightScaled.push_back(int (0.5+(1+90)*100) );
+  // Radar center coordinates
+  const LLH center        = r->getRadarLocation();
+  const AngleDegs cLat    = center.getLatitudeDeg();
+  const AngleDegs cLon    = center.getLongitudeDeg();
+  const LengthKMs cHeight = center.getHeightKM();
 
-  #define ELEV_SCALE(x) ( int(0.5 + (x + 90) * 100) )
-  #define RANGE_SCALE 10
+  // Link to first incoming radar and moment, we will ignore any others from now on
+  LogInfo(
+    "Linking this algorithm to radar '" << radarName << "' and typename '" << typeName <<
+      "' since first pass we only handle 1\n");
+  myTypeName  = typeName;
+  myRadarName = radarName;
 
-  #if 0
-  if (outX > myFullGrid.numX) {
-    LogSevere(" CRITICAL X " << outX << " > " << myFullGrid.numX << "\n");
+  // We inset the full merger grid to the subgrid covered by the radar.
+  // This is needed for massively large grids like the CONUS.
+  const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
+
+  myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
+  LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
+  LogInfo("Full coverage grid: " << myFullGrid << "\n");
+  LLCoverageArea outg = myRadarGrid;
+
+  LogInfo("Radar subgrid: " << outg << "\n");
+
+  std::string key, params;
+
+  // VolumeValueResolver creation
+  splitKeyParam(myResolverAlg, key, params);
+  myResolver = VolumeValueResolver::createVolumeValueResolver(key, params);
+
+  // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
+  if (myResolver == nullptr) {
+    LogSevere("Volume Value Resolver '" << key << "' requested, but failed to find and/or initialize.\n");
     exit(1);
+  } else {
+    LogInfo("Using Volume Value Resolver algorithm '" << key << "'\n");
   }
-  if (outY > myFullGrid.numY) {
-    LogSevere(" CRITICAL Y " << outY << " > " << myFullGrid.numY << "\n");
-    exit(1);
-  }
-  #endif
-  // Just realized Z will be wrong, since the stage 2 will assume all 33 layers, and
-  // we're just doing subsets maybe.  So we'll need to figure that out
-  // Lak: 33 2200 2600 as X, Y, Z.  Which seems non-intuitive to me.
-  // Me: 2200 2600 33 as X, Y, Z.
-  const size_t atZ = myHeightsIndex[layer]; // hack sparse height layer index (or we make object?)
-  t.addRawObservation(atZ, outX, outY, vv.dataValue,
-    int(vv.virtualRangeKMs * RANGE_SCALE + 0.5),
-    //	  entry.elevWeightScaled(), Can't figure this out.  Why a individual scale...oh weight because the
-    //	  cloud is the full cube.  Ok so we take current elev..no wait the virtual elevation and scale to char...
-    //	  takes -90 to 90 to 0-18000, can still fit into unsigned char...
-    //
-    ELEV_SCALE(vv.virtualElevDegs),
-    vv.virtualAzDegs, aMRMSTime);
 
-  // Per point (I'm gonna have to rework it if I do a new stage 2):
-  // t.azimuth  vector of azimuth of the point, right?  Ok we have that.
-  // t.aztime  vector of time of the azimuth.  Don't think we have that really.  Will make it the radial set
-  // t.x, y, z,  coordinates in the global grid
-  // newvalue,
-  // scaled_dist (short).   A Scale of the weight for the point:
-  // 'quality' was passed into as RadialSet...ignoring it for now not sure it's used
-  // RANGE_SCALE = 10
-  // int(rangeMeters*RANGE_SCALE_KM*quality + 0.5);
-  // int(rangeMeters*RANGE_SCALE_KM + 0.5);
-  //    RANGE_SCALE_KM = RANGE_SCALE/1000.0
-  // elevWeightScaled (char).
-  // AZIMUTH_SCALE 100
-  // ELEV_SCALE(x) = ( int (0.5+(x+90)*100) )
-  // ELEV_UNSCALE(y) ( (y*0.01)-90)
-  // ELEV_WT_SCALE 100
-  // I think the stage 2 entries are gonna be difficult to match, there's information
-  // that we can't include I think.  Stage 2 is trying to do things we already did?
-  // Bleh maybe it will be good enough.  We'll need a better stage 2 I think.
-  // FIXME: clean up so much here
-  // entries.azimuth.push_back(int(0.5+azDegs*100)); // scale right?
-  // RObsBinaryTable::mrmstime aTime;
-  // FIXME: fill in time.  Ok what time do we use here?
-  // entries.aztime.push_back(aTime); // scale right?
-} // RAPIOFusionOneAlg::addRawEntry
+  // -------------------------------------------------------------
+  // Terrain blockage creation
+
+  // Set up generic params for volume and terrain blockage classes
+  // in form "--optionname=key,somestring"
+  // We want a 'key' always to choose the algorithm, the rest is passed to the
+  // particular terrain algorithm to use as it wishes.
+  // The Lak and 2me ones take a DEM folder as somestring
+  splitKeyParam(myTerrainAlg, key, params);
+  myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
+      r->getLocation(), myRangeKMs, radarName);
+
+  // Stubbornly refuse to run if terrain requested by name and not found or failed
+  if (myTerrainBlockage == nullptr) {
+    LogSevere("Terrain blockage '" << key << "' requested, but failed to find and/or initialize.\n");
+    exit(1);
+  } else {
+    LogInfo("Using TerrainBlockage algorithm '" << key << "'\n");
+  }
+
+  // -------------------------------------------------------------
+  // Elevation volume creation
+  LogInfo(
+    "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
+      "'\n");
+  splitKeyParam(myVolumeAlg, key, params);
+  myElevationVolume = Volume::createVolume(key, params, myRadarName + "_" + myTypeName);
+
+  // Stubbornly refuse to run if terrain requested by name and not found or failed
+  if (myElevationVolume == nullptr) {
+    LogSevere("Volume '" << key << "' requested, but failed to find and/or initialize.\n");
+    exit(1);
+  } else {
+    LogInfo("Using Volume algorithm '" << key << "'\n");
+  }
+
+  // Look up from cells to az/range/elev for RADAR
+  createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
+
+  // Generate output name and units.
+  // FIXME: More control flags, maybe even name options
+  myWriteStage2Name  = "Mapped" + r->getTypeName();
+  myWriteCAPPIName   = "Fused1" + r->getTypeName();
+  myWriteOutputUnits = r->getUnits();
+  if (myWriteOutputUnits.empty()) {
+    LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
+    myWriteOutputUnits = "dBZ";
+  }
+
+  // Create working LLG cache CAPPI storage per height level
+  createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg, myHeightsM);
+} // RAPIOFusionOneAlg::firstDataSetup
 
 void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
@@ -882,8 +444,6 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     const time_t dataTime = rTime.getSecondsSinceEpoch();
     // Radar center coordinates
     const LLH center        = r->getRadarLocation();
-    const AngleDegs cLat    = center.getLatitudeDeg();
-    const AngleDegs cLon    = center.getLongitudeDeg();
     const LengthKMs cHeight = center.getHeightKM();
 
     // Get the radar name and typename from this RadialSet.
@@ -894,105 +454,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LogSevere("No radar name found in RadialSet, ignoring data\n");
       return;
     }
-    ;
 
     LogInfo(
       " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
         "\n");
 
-    // ----------------------------------------------------------------------------
-    // Every RADAR/MOMENT will require a elevation volume for virtual volume
-    // This is a time expiring auto sorted volume based on elevation angle (subtype)
-    // FIXME: Move this to own method when stable
-    static bool setup = false;
-
-    static std::shared_ptr<VolumeValueResolver> resolversp = nullptr;
-
-    if (!setup) {
-      setup = true;
-
-      // Link to first incoming radar and moment, we will ignore any others from now on
-      LogInfo(
-        "Linking this algorithm to radar '" << name << "' and typename '" << aTypeName <<
-          "' since first pass we only handle 1\n");
-      myTypeName  = aTypeName;
-      myRadarName = name;
-
-      // We inset the full merger grid to the subgrid covered by the radar.
-      // This is needed for massively large grids like the CONUS.
-      const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
-      myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
-      LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
-      LogInfo("Full coverage grid: " << myFullGrid << "\n");
-      LLCoverageArea outg = myRadarGrid;
-      LogInfo("Radar subgrid: " << outg << "\n");
-
-      std::string key, params;
-
-      // VolumeValueResolver creation
-      splitKeyParam(myResolverAlg, key, params);
-      resolversp = VolumeValueResolver::createVolumeValueResolver(key, params);
-
-      // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
-      if (resolversp == nullptr) {
-        LogSevere("Volume Value Resolver '" << key << "' requested, but failed to find and/or initialize.\n");
-        exit(1);
-      } else {
-        LogInfo("Using Volume Value Resolver algorithm '" << key << "'\n");
-      }
-
-      // -------------------------------------------------------------
-      // Terrain blockage creation
-
-      // Set up generic params for volume and terrain blockage classes
-      // in form "--optionname=key,somestring"
-      // We want a 'key' always to choose the algorithm, the rest is passed to the
-      // particular terrain algorithm to use as it wishes.
-      // The Lak and 2me ones take a DEM folder as somestring
-      splitKeyParam(myTerrainAlg, key, params);
-      myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
-          r->getLocation(), myRangeKMs, name);
-
-      // Stubbornly refuse to run if terrain requested by name and not found or failed
-      if (myTerrainBlockage == nullptr) {
-        LogSevere("Terrain blockage '" << key << "' requested, but failed to find and/or initialize.\n");
-        exit(1);
-      } else {
-        LogInfo("Using TerrainBlockage algorithm '" << key << "'\n");
-      }
-
-      // -------------------------------------------------------------
-      // Elevation volume creation
-      LogInfo(
-        "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
-          "'\n");
-      splitKeyParam(myVolumeAlg, key, params);
-      myElevationVolume = Volume::createVolume(key, params, myRadarName + "_" + myTypeName);
-
-      // Stubbornly refuse to run if terrain requested by name and not found or failed
-      if (myElevationVolume == nullptr) {
-        LogSevere("Volume '" << key << "' requested, but failed to find and/or initialize.\n");
-        exit(1);
-      } else {
-        LogInfo("Using Volume algorithm '" << key << "'\n");
-      }
-
-      // Look up from cells to az/range/elev for RADAR
-      createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
-
-      // Generate output name and units.
-      // FIXME: More control flags, maybe even name options
-      myWriteStage2Name  = "Mapped" + r->getTypeName();
-      myWriteCAPPIName   = "Fused1" + r->getTypeName();
-      myWriteOutputUnits = r->getUnits();
-      if (myWriteOutputUnits.empty()) {
-        LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
-        myWriteOutputUnits = "dBZ";
-      }
-
-      // Create working LLG cache CAPPI storage per height level
-      createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg, myHeightsM);
-    }
+    // Initialize everything related to this radar
+    firstDataSetup(r, name, aTypeName);
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need
     // all the setup for each radar/moment.  Which we 'could' do later maybe
@@ -1013,7 +481,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     if ((scale_factor > 1) && myUseLakSmoothing) {
       LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
       LogInfo("    Filter ratio scale is " << scale_factor << "\n");
-      LakRadialSmoother(r, scale_factor / 2);
+      LakRadialSmoother::smooth(r, scale_factor / 2);
     } else {
       LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
     }
@@ -1041,16 +509,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     }
 
     // ------------------------------------------------------------------------------
-    // RAW file entry storage (alpha doesn't work..leaning towards netcdf method)
-    const bool useRawEntries = true;
-    std::shared_ptr<RObsBinaryTable> entries;
-    if (useRawEntries) {
-      entries = createRawEntries(elevDegs, cLat, cLon, cHeight, aTypeName, aUnits, dataTime);
-    }
-
-    // ------------------------------------------------------------------------------
-    // Stage 2 netcdf
-    const bool useNetcdf2 = true;
+    // Do we try to output Stage 2 files for fusion2?
+    const bool outputStage2 = true;
 
     // Set the value object for resolvers
     VolumeValue vv;
@@ -1065,15 +525,12 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     AngleDegs startLat = myRadarGrid.nwLat - (myRadarGrid.latSpacing / 2.0); // move south (lat decreasing)
     AngleDegs startLon = myRadarGrid.nwLon + (myRadarGrid.lonSpacing / 2.0); // move east (lon increasing)
 
-    // ALPHA: Stage 2 vectors...grow during loop..or possible all at once
-    std::vector<float> stage2Values;
-    std::vector<float> stage2Weights;
-    std::vector<short> stage2Xs; // Optimization: Possible byte could be enough with extra attribute info
-    std::vector<short> stage2Ys;
+    // Keep stage 2 output code separate, cheap to make this if we don't use it
+    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center);
 
     // Each layer of merger we have to loop through
     LLCoverageArea outg = myRadarGrid;
-    auto& resolver      = *resolversp;
+    auto& resolver      = *myResolver;
     size_t total        = 0;
     for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
@@ -1161,18 +618,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           if (gridtest[y][x] != vv.dataValue) {
             differenceCount++;
             gridtest[y][x] = vv.dataValue;
-
-            if (useRawEntries) {
-              addRawEntry(vv, rTime, *entries, x, y, layer);
-            }
-            if (useNetcdf2) {
-              // FIXME: reserve/resize could speed up things here
-              // FIXME: gonna need weights, etc..this is not set yet at all, we're starting
-              // with just reading things into stage2
-              stage2Values.push_back(vv.dataValue);
-              stage2Weights.push_back(vv.dataWeight1);
-              stage2Xs.push_back(x);
-              stage2Ys.push_back(y);
+            if (outputStage2) {
+              stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
             }
           }
         }
@@ -1211,37 +658,12 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     LogInfo("Total all layer grid points: " << total << "\n");
 
-    // -------------------------------------------------------
-    // For moment code here.  FIXME: separate routine
-    if (useNetcdf2) {
+    // Send stage2 data (note this is a full conus volume)
+    if (outputStage2) {
       LLH aLocation;
       // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
-      Time aTime       = rTime; // The time of the data matches the incoming data
-      size_t finalSize = stage2Xs.size();
-      if (finalSize < 1) {
-        // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
-        // Would be better if we don't have to
-        LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
-      } else {
-        auto stage2 = DataGrid::Create(myWriteStage2Name, "dimensionless", aLocation, aTime, { finalSize }, { "I" });
-        stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
-        stage2->setSubType("Full");
-        auto& netcdfX = stage2->addShort1DRef("X", "dimensionless", { 0 });
-        auto& netcdfY = stage2->addShort1DRef("Y", "dimensionless", { 0 });
-        // Could be a double or float or whatever here...we could also
-        // trim to a precision
-        auto& netcdfValues = stage2->addFloat1DRef(Constants::PrimaryDataName, myWriteOutputUnits, { 0 });
-        auto& netcdfWeight = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
-
-        // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
-        std::copy(stage2Xs.begin(), stage2Xs.end(), netcdfX.data());
-        std::copy(stage2Ys.begin(), stage2Ys.end(), netcdfY.data());
-        std::copy(stage2Values.begin(), stage2Values.end(), netcdfValues.data());
-        std::copy(stage2Weights.begin(), stage2Weights.end(), netcdfWeight.data());
-
-        writeOutputProduct(myWriteStage2Name, stage2);
-      }
-      // -------------------------------------------------------
+      Time aTime = rTime; // The time of the data matches the incoming data
+      stage2.send(this, aTime, myWriteStage2Name);
     }
 
     // ----------------------------------------------------------------------------
