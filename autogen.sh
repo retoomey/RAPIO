@@ -21,7 +21,7 @@
 #            #       the S in the cmake command is the source code location
 #
 # autogen.sh --prefix=/myinstall/path # cmake to ./BUILD in script directory
-# autogen.sh --prefix=/myinstall/path --output=/home/me/buildhere # build to /home/me/buildhere
+# autogen.sh --prefix=/myinstall/path --build=/home/me/buildhere # build to /home/me/buildhere
 # autogen.sh --prefix=/myinstall/path --usescanbuild  # Build using clang-analyzer
 #
 # You can ignore this script if you're comfortable with cmake and do the basic commands.
@@ -41,7 +41,7 @@ BUILDPREFIX="$PARENT_DIR"   # Where we install stuff (--prefix), default is up f
 SOURCEDIR="$SCRIPT_DIR"  # Use the source from the location of this autogen.sh script
 USESCANBUILD="false" # Do we try the scan-build static analyzer? I think this auto uses clang compiler
                      # We wrap this around cmake only
-OUTFOLDER="./BUILD"  # Default output folder for build (--output)
+OUTFOLDER="./BUILD"  # Default output folder for build (--build)
 DRYRUN="false"       # Dry run similiar to aws cli (--dry-run)
 
 # Hack for PATHS.  The set PATH gets searched for libraries but the cmake version isn't
@@ -55,35 +55,46 @@ if test -f "/etc/redhat-release"; then
   PATH="/bin:/usr/sbin:/usr/bin:/usr/lib64/ccache:/usr/local/bin"
 fi
 
+# Match a boolean param --someparam
+boolParam() {
+  what="$1"
+  param="$2"
+  match=${what#"--$param"}
+  if [ "$match" = "$var" ]; then
+    return 1
+  fi
+  return 0
+}
+
+# Match a string param --someparam=string
+stringParam() {
+  what="$1"    #--prefix=test
+  param="$2"   #prefix
+  match=${what#"--$param="}
+  if [ "$match" = "$var" ]; then
+    echo "$3"
+  else
+    echo "$match"
+  fi
+}
+
 # Search for our special options.
 for var in "$@"
 do
-  # Get the "--dry-run"
-  DRYRUN=${var#"--dry-run"}
-  if [ ! "$dryrun" = "$var" ]; then
+  if boolParam "$var" "dry-run"; then
     DRYRUN="true"
   fi
-  # Get the "--prefix"
-  hasprefix=${var#"--prefix="}
-  if [ ! "$hasprefix" = "$var" ]; then
-    BUILDPREFIX=$hasprefix
-  fi
-  # Get the "--output"
-  hasoutput=${var#"--output="}
-  if [ ! "$hasoutput" = "$var" ]; then
-    OUTFOLDER=$hasoutput
-  fi
-  # Get the "--usecmake"
-  usecmake=${var#"--usecmake"}
-  if [ ! "$usecmake" = "$var" ]; then
-    USEAUTOTOOLS="false"
-  fi
-  # Get the "--usescanbuild"
-  usescanbuild=${var#"--usescanbuild"}
-  if [ ! "$usescanbuild" = "$var" ]; then
+  if boolParam "$var" "usescanbuild"; then
     USESCANBUILD="true"
   fi
+  BUILDPREFIX=$(stringParam "$var" "prefix" "$BUILDPREFIX")
+  OUTFOLDER=$(stringParam "$var" "build" "$OUTFOLDER")
+  SOURCEDIR=$(stringParam "$var" "source" "$SOURCEDIR")
 done
+
+if [ "$SOURCEDIR" = "$PWD" ]; then
+  SOURCEDIR="." # We're in the same directory
+fi
 
 # Check install directory location
 # I'm enforcing it preexisting at moment
@@ -131,20 +142,21 @@ if [ "$USESCANBUILD" = "true" ]; then
   extratext="scan-build "
 fi 
 
-echo "$CMAKEBINARY defaulting install prefix to $BUILDPREFIX."
+echo "$CMAKEBINARY install prefix is $BUILDPREFIX."
 
+docommand="$CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX -S$SOURCEDIR -B$OUTFOLDER"
 if [ "$DRYRUN" = "false" ]; then
   # This is just to do a fully 'fresh' build without the cache iff you call autogen.sh
-  if test -f "./BUILD/CMakeCache.txt"; then
+  if test -f "$OUTFOLDER/CMakeCache.txt"; then
     echo "-- Removing CMakeCache.txt for a fresh build (autogen.sh)"
-    rm ./BUILD/CMakeCache.txt
+    rm "$OUTFOLDER/CMakeCache.txt"
   fi
    # -DCMAKE_BUILD_TYPE="Debug"
-   $CMAKEBINARY -DCMAKE_INSTALL_PREFIX="$BUILDPREFIX" -S. -B./BUILD
+   $docommand
 else
   echo "TEST RUN"
 fi
 echo "CMake command used:"
-echo "  $CMAKEBINARY -DCMAKE_INSTALL_PREFIX="$BUILDPREFIX" -S. -B$OUTFOLDER"
+echo "  $docommand"
 echo "Now type 'cd $OUTFOLDER; ${extratext} make ' to compile $PROJECT."
 
