@@ -446,3 +446,54 @@ OS::deleteFile(const std::string& file)
   { }
   return ok;
 }
+
+std::string
+OS::getEnvVar(const std::string& name)
+{
+  std::string ret;
+  const char * envPath = ::getenv(name.c_str());
+
+  if (envPath) {
+    ret = envPath;
+  } else {
+    ret = "";
+  }
+  return (ret);
+}
+
+void
+OS::setEnvVar(const std::string& envVarName, const std::string& value)
+{
+  setenv(envVarName.c_str(), value.c_str(), 1);
+  LogDebug(envVarName << " = " << value << "\n");
+}
+
+bool
+OS::isContainer()
+{
+  static bool check       = true;
+  static bool isContainer = false;
+
+  if (check) {
+    // Various checks.  This doesn't seem to be 100% standard anywhere,
+    // even AI didn't give a good answer, lol.
+
+    // If you are designing a new container you can explicitly mark it with a file:
+    if (isRegularFile("/etc/container.txt")) {
+      isContainer = true;
+
+      // Otherwise some various checks, feel free to add more
+    } else if (getEnvVar("container") == "oci") { // redhat/fedora do this it seems
+      isContainer = true;
+    } else if (isRegularFile("/run/.containerenv")) { // podman
+      isContainer = true;
+    } else if (isRegularFile("/run/.dockerenv")) { // docker
+      isContainer = true;
+    }
+    if (isContainer) {
+      LogInfo("You appear to be running on a container.");
+    }
+    check = false;
+  }
+  return isContainer;
+}

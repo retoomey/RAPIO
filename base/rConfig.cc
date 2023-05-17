@@ -144,8 +144,8 @@ Config::setUpSearchPaths()
   // Look for global configuration file folder.
 
   // First priority is environment variables
-  const std::string rapio = enforceLastSlash(getEnvVar("RAPIO_CONFIG_LOCATION"));
-  const std::string w2    = enforceLastSlash(getEnvVar("W2_CONFIG_LOCATION"));
+  const std::string rapio = enforceLastSlash(OS::getEnvVar("RAPIO_CONFIG_LOCATION"));
+  const std::string w2    = enforceLastSlash(OS::getEnvVar("W2_CONFIG_LOCATION"));
 
   addSearchFromString(rapio);
   addSearchFromString(w2);
@@ -159,7 +159,7 @@ Config::setUpSearchPaths()
 
   // Fall back to home directory
   if (mySearchPaths.size() < 1) {
-    const std::string home(getEnvVar("HOME"));
+    const std::string home(OS::getEnvVar("HOME"));
     if (OS::isDirectory(home)) {
       addSearchFromString(home);
     }
@@ -235,27 +235,6 @@ Config::initialize()
   }
   return success;
 } // Config::initialize
-
-std::string
-Config::getEnvVar(const std::string& name)
-{
-  std::string ret;
-  const char * envPath = ::getenv(name.c_str());
-
-  if (envPath) {
-    ret = envPath;
-  } else {
-    ret = "";
-  }
-  return (ret);
-}
-
-void
-Config::setEnvVar(const std::string& envVarName, const std::string& value)
-{
-  setenv(envVarName.c_str(), value.c_str(), 1);
-  LogDebug(envVarName << " = " << value << "\n");
-}
 
 std::shared_ptr<PTreeData>
 Config::huntXML(const std::string& pathName)

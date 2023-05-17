@@ -58,18 +58,6 @@ public:
   readGlobalConfigFile();
 
   /**
-   * Find and return an environment variable.
-   * This string is empty if there is no such environment variable.
-   * Wrapper to the getenv method.
-   */
-  static std::string
-  getEnvVar(const std::string& envVarName);
-
-  /** Try to set this environment variable */
-  static void
-  setEnvVar(const std::string& envVarName, const std::string& value);
-
-  /**
    * Returns the absolute location of this file.
    * The first match in our search paths is returned.
    * @return empty url if the file doesn't exist in the search paths.

@@ -192,5 +192,21 @@ public:
     }
     return big;
   }
+
+  /**
+   * Find and return an environment variable.
+   * This string is empty if there is no such environment variable.
+   * Wrapper to the getenv method.
+   */
+  static std::string
+  getEnvVar(const std::string& envVarName);
+
+  /** Try to set this environment variable */
+  static void
+  setEnvVar(const std::string& envVarName, const std::string& value);
+
+  /** Determine if we're running in a container or not */
+  static bool
+  isContainer();
 };
 }
