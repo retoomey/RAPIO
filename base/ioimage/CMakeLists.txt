@@ -24,6 +24,10 @@ if (Magick_FOUND)
   # Eh conditional compile of some stuff...probably not needed
   add_definitions(-DHAVE_MAGICK)
 
+  # Turn off the deprecation warning since currently the 3rd party
+  # library is using deprecated std::unary_function
+  target_compile_options(rapioimage PRIVATE "-Wno-deprecated-declarations")
+
   # Include headers and libraries
   include_directories(${Magick_INCLUDE_DIR})
   target_link_libraries(rapioimage

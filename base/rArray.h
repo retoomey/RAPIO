@@ -224,34 +224,67 @@ operator << (std::ostream& os, Array<U, P>& obj)
   return os;
 }
 
+#define DeclareCreateArrayMethod1(TYPESTRING, TYPE) \
+  static std::shared_ptr<Array<TYPE, 1> > \
+  Create ## TYPESTRING ## 1 ## D(size_t x) \
+  { \
+    std::vector<size_t> dims = { x }; \
+    std::shared_ptr<Array<TYPE, 1> > a = \
+      std::make_shared<Array<TYPE, 1> >(dims); \
+    return a; \
+  }
+
+#define DeclareCreateArrayMethod2(TYPESTRING, TYPE) \
+  static std::shared_ptr<Array<TYPE, 2> > \
+  Create ## TYPESTRING ## 2 ## D(size_t x, size_t y) \
+  { \
+    std::vector<size_t> dims = { x, y }; \
+    std::shared_ptr<Array<TYPE, 2> > a = \
+      std::make_shared<Array<TYPE, 2> >(dims); \
+    return a; \
+  }
+
+#define DeclareCreateArrayMethod3(TYPESTRING, TYPE) \
+  static std::shared_ptr<Array<TYPE, 3> > \
+  Create ## TYPESTRING ## 3 ## D(size_t x, size_t y, size_t z) \
+  { \
+    std::vector<size_t> dims = { x, y, z }; \
+    std::shared_ptr<Array<TYPE, 3> > a = \
+      std::make_shared<Array<TYPE, 3> >(dims); \
+    return a; \
+  }
+
+/** Declare up to 3D array access, haven't seen a need for anything higher 'yet'.
+ * Make sure to sync these with the DeclareArrayFactoryMethods in the .cc  */
+#define DeclareCreateArrayMethods(TYPESTRING, TYPE) \
+  DeclareCreateArrayMethod1(TYPESTRING, TYPE) \
+  DeclareCreateArrayMethod2(TYPESTRING, TYPE) \
+  DeclareCreateArrayMethod3(TYPESTRING, TYPE)
+
 class Arrays : public Data {
 public:
   // ----------------------------------------------------------
   // Convenience routines to keep students from doing too much templating...
   // Having separate class allows creation without messing with template arguments
 
-  /** Convenience for returning a new 1d float array to auto */
-  static std::shared_ptr<Array<float, 1> >
-  CreateFloat1D(size_t x);
+  /** Functions for reference char/Byte arrays of 8 bit -128 to 127.
+   * CreateByte1D, CreateByte2D, CreateByte3D */
+  DeclareCreateArrayMethods(Byte, char);
 
-  /** Convenience for returning a new 1d int array to auto */
-  static std::shared_ptr<Array<int, 1> >
-  CreateInt1D(size_t x);
+  /** Functions for reference short arrays of 16 bit
+   * CreateShort1D, CreateShort2D, CreateShort3D */
+  DeclareCreateArrayMethods(Short, short);
 
-  /** Convenience for returning a new 2d float array to auto */
-  static std::shared_ptr<Array<float, 2> >
-  CreateFloat2D(size_t x, size_t y);
+  /** Functions for reference int arrays of 32 bit
+   * CreateInt1D, CreateInt2D, CreateInt3D */
+  DeclareCreateArrayMethods(Int, int);
 
-  /** Convenience for returning a new 1d float array to auto */
-  static std::shared_ptr<Array<int, 2> >
-  CreateInt2D(size_t x, size_t y);
+  /** Functions for reference float arrays of 32 bit
+   * CreateFloat1D, CreateFloat2D, CreateFloat3D */
+  DeclareCreateArrayMethods(Float, float);
 
-  /** Convenience for returning a new 3d float array to auto */
-  static std::shared_ptr<Array<float, 3> >
-  CreateFloat3D(size_t x, size_t y, size_t z);
-
-  /** Convenience for returning a new 3d int array to auto */
-  static std::shared_ptr<Array<int, 3> >
-  CreateInt3D(size_t x, size_t y, size_t z);
+  /** Functions for referencing double arrays of 64 bit
+   * CreateDouble1D, CreateDouble2D, CreateDouble3D */
+  DeclareCreateArrayMethods(Double, double);
 };
 }
