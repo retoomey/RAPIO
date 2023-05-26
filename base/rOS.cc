@@ -447,6 +447,19 @@ OS::deleteFile(const std::string& file)
   return ok;
 }
 
+size_t
+OS::getFileSize(const std::string& filepath)
+{
+  size_t aSize = 0;
+
+  try {
+    aSize = fs::file_size(filepath);
+  }
+  catch (const fs::filesystem_error &e)
+  { }
+  return aSize;
+}
+
 std::string
 OS::getEnvVar(const std::string& name)
 {

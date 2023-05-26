@@ -584,14 +584,21 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
     for (auto& w:writers) {
       std::vector<Record> records;
-      IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
+      const bool success = IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
 
-      // Get back the output folder for notifications
-      // and notify each notifier for this writer.
-      const std::string outputfolder = outputParams["outputfolder"];
-      for (auto& n:myNotifiers) {
-        n->writeRecords(outputfolder, records);
-      }
+      if (success) { // Only notify iff the file writes successfully
+        if (!outputParams["showfilesize"].empty()) {
+          LogInfo(outputParams["filename"] << " has filesize of " <<
+            Strings::formatBytes(OS::getFileSize(outputParams["filename"])) << "\n");
+        }
+
+        // Get back the output folder for notifications
+        // and notify each notifier for this writer.
+        const std::string outputfolder = outputParams["outputfolder"];
+        for (auto& n:myNotifiers) {
+          n->writeRecords(outputfolder, records);
+        }
+      } // Not gonna error..writers should be complaining
     }
 
     // Restore original typename, does matter since DataType might be reused.

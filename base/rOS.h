@@ -155,6 +155,10 @@ public:
   static bool
   deleteFile(const std::string& file);
 
+  /** Get the file size in bytes for a file, or 0 if unreadable */
+  static size_t
+  getFileSize(const std::string& file);
+
   /** Swap bytes for a given type for endian change */
   template <class T>
   static void

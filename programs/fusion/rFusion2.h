@@ -5,6 +5,36 @@
 #include "rLLCoverageArea.h"
 
 namespace rapio {
+/** (AI) Test using c++11 if a method exists or not in a class */
+// Doesn't work?
+template <typename T>
+class has_deepsize_method {
+  typedef char Yes;
+  typedef long No;
+
+  /** FIXME: could macro what's inside I think ... */
+  template <typename U>
+  static Yes test(decltype(std::declval<U>().deepsize()) *);
+
+  template <typename U>
+  static No
+  test(...);
+
+public:
+  static constexpr bool value = (sizeof(test<T>(nullptr)) == sizeof(Yes));
+};
+// do we have to declare also?
+template <typename U>
+constexpr bool has_deepsize_method<U>::value;
+
+// Helper function to get the total size
+template <typename V>
+constexpr bool
+has_deep()
+{
+  return has_deepsize_method<V>::value;
+}
+
 /**
  * Second stage merger/fusion algorithm.  Gathers input from single stage radar
  * processes for the intention of merging data into a final output.

@@ -492,6 +492,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
     if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
     r->setID(keycounter);
+    LogInfo("RadialSet short key: " << (int) keycounter << "\n");
 
     // Always add to elevation volume
     myElevationVolume->addDataType(r);
@@ -525,13 +526,15 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     AngleDegs startLat = myRadarGrid.nwLat - (myRadarGrid.latSpacing / 2.0); // move south (lat decreasing)
     AngleDegs startLon = myRadarGrid.nwLon + (myRadarGrid.lonSpacing / 2.0); // move east (lon increasing)
 
-    // Keep stage 2 output code separate, cheap to make this if we don't use it
-    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center);
-
     // Each layer of merger we have to loop through
     LLCoverageArea outg = myRadarGrid;
-    auto& resolver      = *myResolver;
-    size_t total        = 0;
+
+    // Keep stage 2 output code separate, cheap to make this if we don't use it
+    std::vector<size_t> bitsizes = { outg.numX, outg.numY, myHeightsM.size() };
+    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, bitsizes);
+
+    auto& resolver = *myResolver;
+    size_t total   = 0;
     for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
 
@@ -601,6 +604,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           // FIXME: Probably super rare to get same pointer, but maybe we add
           // a RadialSet or general DataType counter at some point to be sure.
           // Humm.  The tilt time 'might' work appending it to the pointer value.
+
+          // Think this is failing actually...it isn't always set depends on resolver
           const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
               vv.get2ndLower(), vv.get2ndUpper());
           if (!changedEnclosingTilts) { // The value won't change, so continue
@@ -663,6 +668,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LLH aLocation;
       // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
       Time aTime = rTime; // The time of the data matches the incoming data
+      LogSevere("Sending " << myWriteStage2Name << " at " << aTime << "\n");
       stage2.send(this, aTime, myWriteStage2Name);
     }
 

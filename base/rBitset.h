@@ -149,6 +149,97 @@ protected:
   boost::dynamic_bitset<> myBits;
 };
 
+/** Create a bitset with dimensions
+ * FIXME: should pull common code out of this and sparseVectorDims
+ */
+class BitsetDims : public Bitset {
+public:
+
+  /** Create a bitset using a dimension vector.  For example, passing
+   * {3,4,5} would create a bitset with max size 60 */
+  BitsetDims(std::vector<size_t> dimensions, size_t bitsPerValue) : Bitset(calculateSize(dimensions), bitsPerValue),
+    myDimensions(dimensions), myStrides(std::vector<size_t>(dimensions.size(), 1))
+  {
+    // (AI) Cache strides for our dimensions, this reduces the multiplications/additions
+    // when converting dimension coordinates into the linear index
+    for (int i = myDimensions.size() - 2; i >= 0; --i) {
+      myStrides[i] = myStrides[i + 1] * myDimensions[i + 1];
+    }
+  }
+
+  /** Calculate total size required to store all dimensions given.
+   * Used during creation to make the linear storage. */
+  static size_t
+  calculateSize(const std::vector<size_t>& values)
+  {
+    size_t total = 1;
+
+    for (size_t value: values) {
+      total *= value;
+    }
+    return total;
+  }
+
+  /** (AI) Calculate index in the dimension space, no checking */
+  size_t
+  getIndex(std::vector<size_t> indices)
+  {
+    size_t index = 0;
+
+    for (int i = myDimensions.size() - 1; i >= 0; --i) { // match w2merger ordering
+      index += indices[i] * myStrides[i];
+    }
+    return index;
+  }
+
+  /** Quick index for 3D when you know you have 3 dimensions.
+   * This is basically a collapsed form of the general getIndex.
+   */
+  inline size_t
+  getIndex3D(size_t x, size_t y, size_t z)
+  {
+    return ((z * myStrides[2]) + (y * myStrides[1]) + (x * myStrides[0]));
+  }
+
+  /** Keeping for moment, this is how w2merger calculates its
+   * linear index.  We made these match for consistency:
+   * getOldIndex({x,y,z}) == getIndex({x,y,z}) for all values.
+   */
+  size_t
+  getOldIndex(std::vector<size_t> i)
+  {
+    size_t horsize = myDimensions[1] * myDimensions[2];
+    size_t zsize   = myDimensions[2];
+
+    return (i[0] * horsize + i[1] * zsize + i[2]);
+  }
+
+  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
+   * it's up to caller to first get(i) and handle memory management. */
+  // inline T *
+  // set(std::vector<size_t> v, T data)
+  // {
+  //   return SparseVector<T>::set(getIndex(v), data);
+  // }
+
+  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
+   * Note if T is declared as a pointer, you get a handle back, so
+   * then (*Value)->field will get the data out. */
+  // inline T *
+  // get(std::vector<size_t> v)
+  // {
+  //   return SparseVector<T>::get(getIndex(v));
+  // }
+
+protected:
+
+  /** The number in each dimension */
+  std::vector<size_t> myDimensions;
+
+  /** Strides for each dimension.  Cache for calculating index */
+  std::vector<size_t> myStrides;
+};
+
 /** (AI) Stream class to toggle full vs brief output of bitset.
  * This general method can be used for setting properties for stream out.
  * It is intended to be used in the simple form:

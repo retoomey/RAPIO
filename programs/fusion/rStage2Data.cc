@@ -1,20 +1,96 @@
 #include "rStage2Data.h"
 #include "rFusion1.h"
+#include "rBitset.h"
 
 using namespace rapio;
 
 void
+Stage2Data::add(float v, float w, short x, short y, short z)
+{
+  if (v == Constants::MissingData) {
+    // Only store x,y,z for a missing
+    // Since missing tends to be grouped in space, we'll do a simple RLE to compress x,y,z locations
+    // FIXME: Should probably have a way to turn on/off this feature for testing/comparison
+    // Storing a bit per x,y,z. marking MissingData
+    size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
+    myMissingSet.set(i, 1);
+
+    // If not rle, we could just store x,y,z without any length value
+    // myXMissings.push_back(x);
+    // myYMissings.push_back(y);
+    // myZMissings.push_back(z); // We're hiding that z is a char
+  } else {
+    myValues.push_back(v);
+    myWeights.push_back(w);
+    myXs.push_back(x);
+    myYs.push_back(y);
+    myZs.push_back(z); // We're hiding that z is a char
+  }
+}
+
+void
+Stage2Data::RLE()
+{
+  // RLE in 2D space left to right.  Missing typically groups up in blocks, this is similar I think
+  // to the marked lines stuff in w2merger
+  // FIXME: Maybe create general RLE interface for other uses
+
+  size_t counter = 0;
+
+  for (size_t z = 0; z < myDimensions[2]; z++) {
+    for (size_t y = 0; y < myDimensions[1]; y++) {   // row
+      for (size_t x = 0; x < myDimensions[0]; x++) { // col
+        size_t index = myMissingSet.getIndex({ (size_t) x, (size_t) y, (size_t) z });
+        int flag     = myMissingSet.get<int>(index);
+        if (flag) {
+          counter++;
+          size_t startx = x;
+          size_t starty = y;
+          size_t startz = z;
+          size_t length = 1;
+          // Extend the run horizontally
+          while (x + 1 < myDimensions[0]) {
+            size_t index = myMissingSet.getIndex({ (size_t) x + 1, (size_t) y, (size_t) z });
+            int value    = myMissingSet.get<int>(index);
+            if (value) {
+              ++x;
+              ++length;
+            } else {
+              break;
+            }
+            // New RLE stuff to store...
+          }
+          if (counter < 10) {
+            //  std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
+          }
+          myXMissings.push_back(x);
+          myYMissings.push_back(y);
+          myZMissings.push_back(z);
+          myLMissings.push_back(length); // has to be big enough for all of conus
+        }
+      }
+    }
+  }
+} // Stage2Data::RLE
+
+void
 Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
 {
-  LLH aLocation;
-  size_t finalSize = stage2Xs.size();
+  // Run length encode the missing bit array.  Since missing groups up this saves quite
+  // a bit of space.
+  RLE();
 
-  if (finalSize < 1) {
+  LLH aLocation;
+  size_t finalSize  = myXs.size();
+  size_t finalSize2 = myXMissings.size(); // size from RLE
+
+  LogInfo("Sizes are " << finalSize << " values, with " << finalSize2 << " missing\n");
+  if ((finalSize < 1) && (finalSize2 < 1)) {
     // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
     // Would be better if we don't have to
     LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
   } else {
-    auto stage2 = DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize }, { "I" });
+    auto stage2 = DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
     stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
     stage2->setSubType("Full");
     stage2->setString("Radarname", myRadarName);
@@ -30,24 +106,90 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     auto& netcdfX = stage2->addShort1DRef("X", "dimensionless", { 0 });
     auto& netcdfY = stage2->addShort1DRef("Y", "dimensionless", { 0 });
     auto& netcdfZ = stage2->addByte1DRef("Z", "dimensionless", { 0 });
+
+    // Missing values aren't stored
+    auto& netcdfXM = stage2->addShort1DRef("Xm", "dimensionless", { 1 });
+    auto& netcdfYM = stage2->addShort1DRef("Ym", "dimensionless", { 1 });
+    auto& netcdfZM = stage2->addByte1DRef("Zm", "dimensionless", { 1 });
+    auto& netcdfLM = stage2->addShort1DRef("Lm", "dimensionless", { 1 }); // max 65000
     // Could be a double or float or whatever here...we could also
     // trim to a precision
     auto& netcdfValues = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
     auto& netcdfWeight = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
 
     // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
-    std::copy(stage2Xs.begin(), stage2Xs.end(), netcdfX.data());
-    std::copy(stage2Ys.begin(), stage2Ys.end(), netcdfY.data());
-    std::copy(stage2Zs.begin(), stage2Zs.end(), netcdfZ.data());
-    std::copy(stage2Values.begin(), stage2Values.end(), netcdfValues.data());
-    std::copy(stage2Weights.begin(), stage2Weights.end(), netcdfWeight.data());
+    std::copy(myXs.begin(), myXs.end(), netcdfX.data());
+    std::copy(myYs.begin(), myYs.end(), netcdfY.data());
+    std::copy(myZs.begin(), myZs.end(), netcdfZ.data());
+    std::copy(myValues.begin(), myValues.end(), netcdfValues.data());
+    std::copy(myWeights.begin(), myWeights.end(), netcdfWeight.data());
+
+    std::copy(myXMissings.begin(), myXMissings.end(), netcdfXM.data());
+    std::copy(myYMissings.begin(), myYMissings.end(), netcdfYM.data());
+    std::copy(myZMissings.begin(), myZMissings.end(), netcdfZM.data());
+    std::copy(myLMissings.begin(), myLMissings.end(), netcdfLM.data());
 
     // We 'could' return the stage2 object let the algorithm write it...but we can hide
     // it here I think for moment just in case we end up doing something different
-    alg->writeOutputProduct(asName, stage2);
+    std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
+    extraParams["showfilesize"] = "yes";
+    alg->writeOutputProduct(asName, stage2, extraParams);
   }
   // -------------------------------------------------------
 } // Stage2Data::send
+
+void
+Stage2Data::receive(RAPIOData& d)
+{
+  // Stage two reading in stage one files
+  auto gsp = d.datatype<rapio::DataGrid>();
+
+  if (gsp != nullptr) {
+    // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
+    if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
+      std::string s;
+      auto sel = d.record().getSelections();
+      for (auto& s1:sel) {
+        s = s + s1 + " ";
+      }
+
+      LogInfo("Stage2 data noticed: " << s << "\n");
+      DataGrid& d = *gsp;
+
+      auto dims     = d.getDims();
+      size_t aSize  = dims[0].size();
+      size_t aSize2 = dims[1].size();
+      // const std::string name = d[0].name();
+      // Short code but no checks for failure
+      // FIXME: We're probably going to need a common shared class/library with Stage1 at some point
+      // so we don't end up offsyncing this stuff
+      auto& netcdfX      = d.getShort1DRef("X");
+      auto& netcdfY      = d.getShort1DRef("Y");
+      auto& netcdfZ      = d.getShort1DRef("Z");
+      auto& netcdfValues = d.getFloat1DRef();
+      auto& netcdfWeight = d.getFloat1DRef("Range");
+
+      // Get the RLE total size
+      auto& RLElengths = d.getShort1DRef("Lm");
+      size_t length    = 0;
+      for (size_t i = 0; i < aSize2; i++) {
+        length += RLElengths[i];
+      }
+
+      LogInfo(
+        "Size is " << aSize << " x,y,z non-missing values, and " << aSize2 << " RLE missing values expanding to " << length <<
+          " total missing.\n");
+      if (aSize > 10) { aSize = 10; }
+      for (size_t i = 0; i < aSize; i++) {
+        LogInfo(
+          "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfValues[i] << " with weight " <<
+            netcdfWeight[i] << "\n");
+      }
+    } else {
+      LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
+    }
+  }
+} // Stage2Data::receive
 
 // Backing up the 'raw' file stuff from fusion1 but I don't want it in there.  If we implement
 // it then it would belong in this class
