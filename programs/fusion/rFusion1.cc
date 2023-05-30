@@ -533,8 +533,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     std::vector<size_t> bitsizes = { outg.numX, outg.numY, myHeightsM.size() };
     Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, bitsizes);
 
-    auto& resolver = *myResolver;
-    size_t total   = 0;
+    auto& resolver    = *myResolver;
+    bool useDiffCache = false;
+    size_t total      = 0;
     for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
       vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
 
@@ -606,11 +607,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           // Humm.  The tilt time 'might' work appending it to the pointer value.
 
           // Think this is failing actually...it isn't always set depends on resolver
-          const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
-              vv.get2ndLower(), vv.get2ndUpper());
-          if (!changedEnclosingTilts) { // The value won't change, so continue
-            sameTiltSkip++;
-            continue;
+          if (useDiffCache) {
+            const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
+                vv.get2ndLower(), vv.get2ndUpper());
+            if (!changedEnclosingTilts) { // The value won't change, so continue
+              sameTiltSkip++;
+              continue;
+            }
           }
 
           attemptCount++;

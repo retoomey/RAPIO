@@ -5,6 +5,7 @@
 #include <rLLH.h>
 #include <rBitset.h>
 #include <rRAPIOData.h>
+#include <rDataGrid.h>
 
 #include <vector>
 
@@ -27,32 +28,45 @@ public:
     const LLH                 & center,
     std::vector<size_t>       dims
   ) : myRadarName(radarName), myTypeName(typeName), myUnits(units), myCenter(center), myMissingSet(dims, 1),
-    myDimensions(dims)
+    myAddMissingCounter(0), myDimensions(dims), myCounter(0), myMCounter(0), myRLECounter(0)
   { };
 
-  /** Add data to us for sending to stage2 */
+  // -----------------------------------------------------------
+  // Stage one adding and sending or 'finalizing' values...
+
+  /** Add data to us for sending to stage2, only used by stage one */
   void
   add(float v, float w, short x, short y, short z);
-
-  /** RLE missing values, reduces size quite a bit since weather tends to clump up. */
-  void
-  RLE();
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
   void
   send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName);
 
+  // -----------------------------------------------------------
+  // Stage two receiving and getting values...
+
   /** Receive stage2 data.  Used by stage2 to read things back in */
-  static void
+  static std::shared_ptr<Stage2Data>
   receive(RAPIOData& d);
 
+  /** Get data from us, only used by stage two.
+   * Note this streams out until returning false */
+  bool
+  get(float& v, float& w, short& x, short& y, short& z);
+
 protected:
+
+  /** RLE missing values, reduces size quite a bit since weather tends to clump up. */
+  void
+  RLE();
+
   // Meta information for this output
   std::string myRadarName;
   std::string myTypeName;
   std::string myUnits;
   LLH myCenter;
   BitsetDims myMissingSet;
+  size_t myAddMissingCounter;
   std::vector<size_t> myDimensions;
 
   // Stored data to process
@@ -68,5 +82,10 @@ protected:
   std::vector<short> myYMissings;
   std::vector<char> myZMissings;
   std::vector<short> myLMissings;
+
+  // Getting back data counters...
+  size_t myCounter;
+  size_t myMCounter;
+  size_t myRLECounter;
 };
 }

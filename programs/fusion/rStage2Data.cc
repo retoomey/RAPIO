@@ -14,6 +14,7 @@ Stage2Data::add(float v, float w, short x, short y, short z)
     // Storing a bit per x,y,z. marking MissingData
     size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
     myMissingSet.set(i, 1);
+    myAddMissingCounter++;
 
     // If not rle, we could just store x,y,z without any length value
     // myXMissings.push_back(x);
@@ -84,7 +85,8 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
   size_t finalSize  = myXs.size();
   size_t finalSize2 = myXMissings.size(); // size from RLE
 
-  LogInfo("Sizes are " << finalSize << " values, with " << finalSize2 << " missing\n");
+  LogInfo(
+    "Sizes are " << finalSize << " values, with " << myAddMissingCounter << " missing " << finalSize2 << " (RLE).\n");
   if ((finalSize < 1) && (finalSize2 < 1)) {
     // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
     // Would be better if we don't have to
@@ -98,31 +100,33 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     // FIXME: general in MRMS and RAPIO
     stage2->setString("NetcdfWriterInfo", "RAPIO:Fusion stage 2 data");
     stage2->setLocation(myCenter); // Radar center location
-    //    const LLH center        = r->getRadarLocation();
-    // FIXME: Wondering if grouping x,y,z would work better with prefetch.  Difficult
-    // unless we use same size for all three
+
+    // ---------------------------------------------------
+    // Value per point storage (dim 0)
+    //
     // FIXME: We 'should' be able to use a 'baseX' and 'baseY' for small radars
     // and store this silly small.  Radar will only cover so many squares
-    auto& netcdfX = stage2->addShort1DRef("X", "dimensionless", { 0 });
-    auto& netcdfY = stage2->addShort1DRef("Y", "dimensionless", { 0 });
-    auto& netcdfZ = stage2->addByte1DRef("Z", "dimensionless", { 0 });
-
-    // Missing values aren't stored
-    auto& netcdfXM = stage2->addShort1DRef("Xm", "dimensionless", { 1 });
-    auto& netcdfYM = stage2->addShort1DRef("Ym", "dimensionless", { 1 });
-    auto& netcdfZM = stage2->addByte1DRef("Zm", "dimensionless", { 1 });
-    auto& netcdfLM = stage2->addShort1DRef("Lm", "dimensionless", { 1 }); // max 65000
-    // Could be a double or float or whatever here...we could also
-    // trim to a precision
-    auto& netcdfValues = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
-    auto& netcdfWeight = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
+    auto& netcdfX       = stage2->addShort1DRef("X", "dimensionless", { 0 });
+    auto& netcdfY       = stage2->addShort1DRef("Y", "dimensionless", { 0 });
+    auto& netcdfZ       = stage2->addByte1DRef("Z", "dimensionless", { 0 });
+    auto& netcdfValues  = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
+    auto& netcdfWeights = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
 
     // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
+    // Since we deal with 'small' radar coverage here, think we're ok for moment
     std::copy(myXs.begin(), myXs.end(), netcdfX.data());
     std::copy(myYs.begin(), myYs.end(), netcdfY.data());
     std::copy(myZs.begin(), myZs.end(), netcdfZ.data());
     std::copy(myValues.begin(), myValues.end(), netcdfValues.data());
-    std::copy(myWeights.begin(), myWeights.end(), netcdfWeight.data());
+    std::copy(myWeights.begin(), myWeights.end(), netcdfWeights.data());
+
+    // ---------------------------------------------------
+    // Missing value storage (dim 1)
+    //
+    auto& netcdfXM = stage2->addShort1DRef("Xm", "dimensionless", { 1 });
+    auto& netcdfYM = stage2->addShort1DRef("Ym", "dimensionless", { 1 });
+    auto& netcdfZM = stage2->addByte1DRef("Zm", "dimensionless", { 1 });
+    auto& netcdfLM = stage2->addShort1DRef("Lm", "dimensionless", { 1 }); // max 65000
 
     std::copy(myXMissings.begin(), myXMissings.end(), netcdfXM.data());
     std::copy(myYMissings.begin(), myYMissings.end(), netcdfYM.data());
@@ -133,63 +137,145 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     // it here I think for moment just in case we end up doing something different
     std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
     extraParams["showfilesize"] = "yes";
+    extraParams["compression"]  = "gz";
     alg->writeOutputProduct(asName, stage2, extraParams);
   }
   // -------------------------------------------------------
 } // Stage2Data::send
 
-void
-Stage2Data::receive(RAPIOData& d)
+std::shared_ptr<Stage2Data>
+Stage2Data::receive(RAPIOData& rData)
 {
   // Stage two reading in stage one files
-  auto gsp = d.datatype<rapio::DataGrid>();
+  auto gsp = rData.datatype<rapio::DataGrid>();
 
   if (gsp != nullptr) {
+    auto& d = *gsp;
     // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
     if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
-      std::string s;
-      auto sel = d.record().getSelections();
-      for (auto& s1:sel) {
-        s = s + s1 + " ";
-      }
-
-      LogInfo("Stage2 data noticed: " << s << "\n");
+      LogInfo("Stage2 data noticed: " << rData.getDescription() << "\n");
       DataGrid& d = *gsp;
 
-      auto dims     = d.getDims();
-      size_t aSize  = dims[0].size();
-      size_t aSize2 = dims[1].size();
-      // const std::string name = d[0].name();
-      // Short code but no checks for failure
-      // FIXME: We're probably going to need a common shared class/library with Stage1 at some point
-      // so we don't end up offsyncing this stuff
-      auto& netcdfX      = d.getShort1DRef("X");
-      auto& netcdfY      = d.getShort1DRef("Y");
-      auto& netcdfZ      = d.getShort1DRef("Z");
-      auto& netcdfValues = d.getFloat1DRef();
-      auto& netcdfWeight = d.getFloat1DRef("Range");
+      // ---------------------------------------------------
+      // Restore original Stage2Data object
+      // Not sure even need to copy things, we can stream it back without
+      // making copies
+      // FIXME: we 'could' have a seperate input/output class to avoid some copying.  The advantage to the
+      // copying/etc. is that the internals are hidden so we can do what we want, the disadvantage is
+      // having to convert things.
+      auto dims = d.getSizes();
+      size_t aSize = dims[0];
+      size_t aSize2 = dims[1];
+      std::string radarName, typeName, units;
+      d.getString("Radarname", radarName);
+      d.getString("Typename", typeName);
+      units = d.getUnits();
+      LLH center = d.getLocation();
+      std::shared_ptr<Stage2Data> insp =
+        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, units, center, dims));
+      auto& in = *insp;
 
-      // Get the RLE total size
+      // ---------------------------------------------------
+      // Value per point storage (dim 0)
+      //
+      auto& netcdfX       = d.getShort1DRef("X");
+      auto& netcdfY       = d.getShort1DRef("Y");
+      auto& netcdfZ       = d.getByte1DRef("Z");
+      auto& netcdfValues  = d.getFloat1DRef();
+      auto& netcdfWeights = d.getFloat1DRef("Range");
+
+      LogSevere("INCOMING SIZE IS " << aSize << "\n");
+      in.myXs.reserve(aSize);
+      in.myYs.reserve(aSize);
+      in.myZs.reserve(aSize);
+      in.myValues.reserve(aSize);
+      in.myWeights.reserve(aSize);
+      for (size_t i = 0; i < aSize; i++) {
+        in.myXs.push_back(netcdfX[i]);
+        in.myYs.push_back(netcdfY[i]);
+        in.myZs.push_back(netcdfZ[i]);
+        in.myValues.push_back(netcdfValues[i]);
+        in.myWeights.push_back(netcdfWeights[i]);
+      }
+
+      // ---------------------------------------------------
+      // Missing value storage (dim 1)
+      //
+
+      auto& netcdfXM   = d.getShort1DRef("Xm");
+      auto& netcdfYM   = d.getShort1DRef("Ym");
+      auto& netcdfZM   = d.getByte1DRef("Zm");
+      auto& netcdfLM   = d.getShort1DRef("Lm");
       auto& RLElengths = d.getShort1DRef("Lm");
-      size_t length    = 0;
+
+      // Get the RLE total size and dump for debugging
+      size_t length = 0;
       for (size_t i = 0; i < aSize2; i++) {
         length += RLElengths[i];
       }
 
       LogInfo(
         "Size is " << aSize << " x,y,z non-missing values, and " << aSize2 << " RLE missing values expanding to " << length <<
-          " total missing.\n");
+          " total missing.  Total: " << aSize2 + length << "\n");
       if (aSize > 10) { aSize = 10; }
       for (size_t i = 0; i < aSize; i++) {
         LogInfo(
           "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfValues[i] << " with weight " <<
-            netcdfWeight[i] << "\n");
+            netcdfWeights[i] << "\n");
       }
+
+      in.myXMissings.reserve(aSize2);
+      in.myYMissings.reserve(aSize2);
+      in.myZMissings.reserve(aSize2);
+      for (size_t i = 0; i < aSize2; i++) {
+        in.myXMissings.push_back(netcdfXM[i]);
+        in.myYMissings.push_back(netcdfYM[i]);
+        in.myZMissings.push_back(netcdfZM[i]);
+        in.myLMissings.push_back(RLElengths[i]);
+      }
+
+      return insp;
     } else {
       LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
     }
   }
+  return nullptr;
 } // Stage2Data::receive
+
+bool
+Stage2Data::get(float& v, float& w, short& x, short& y, short& z)
+{
+  if (myCounter < myValues.size()) {
+    x = myXs[myCounter];
+    y = myYs[myCounter];
+    z = myZs[myCounter];
+    v = myValues[myCounter];
+    w = myWeights[myCounter];
+    myCounter++;
+    return true;
+  } else if (myMCounter < myXMissings.size()) {
+    auto l = myLMissings[myMCounter];
+    //  std::cout << "AT: " << l << " ("<<myMCounter<<")\n";
+    // We'll always have at least ONE value to return
+    x = myXMissings[myMCounter] + myRLECounter; // I don't 'think' we're wrapping X
+    y = myYMissings[myMCounter];
+    z = myZMissings[myMCounter];
+    v = Constants::MissingData;
+    w = 0.0;
+
+    if (++myRLECounter >= l) { // Next RLE item
+      //    std::cout << "CHANGING AT: " << myRLECounter << " " << myMCounter << " \n";
+      myRLECounter = 0;
+      myMCounter++;
+    }
+    return true;
+  } else {
+    // std::cout << "END CONDITION " << myMCounter << " and " << myXMissings.size() << "\n";
+  }
+
+
+  return false;
+}
 
 // Backing up the 'raw' file stuff from fusion1 but I don't want it in there.  If we implement
 // it then it would belong in this class

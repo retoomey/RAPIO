@@ -249,7 +249,7 @@ DataGrid::factoryGetRawDataPointer(const std::string& name, const std::string& u
 
   const size_t dimCount = dimindexes.size();
 
-  DeclareArrayFactoryMethods(char, BYTE)
+  DeclareArrayFactoryMethods(int8_t, BYTE)
 
   DeclareArrayFactoryMethods(short, SHORT)
 

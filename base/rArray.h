@@ -168,7 +168,13 @@ public:
     for (auto i = a_ref.begin(); i != a_ref.end(); ++i) {
       // Need template specialization here, so 'we' have to do the print
       C& z = *i;
-      out << z;
+      // Netcdf ndump prints as unsigned int, we'll copy.
+      // We 'could' add a flag to toggle say character vs int output
+      if (std::is_same<C, int8_t>::value) {
+        out << (int) (z);
+      } else {
+        out << z;
+      }
       if (std::next(i) != a_ref.end()) {
         out << divider;
       }
@@ -269,7 +275,7 @@ public:
 
   /** Functions for reference char/Byte arrays of 8 bit -128 to 127.
    * CreateByte1D, CreateByte2D, CreateByte3D */
-  DeclareCreateArrayMethods(Byte, char);
+  DeclareCreateArrayMethods(Byte, int8_t);
 
   /** Functions for reference short arrays of 16 bit
    * CreateShort1D, CreateShort2D, CreateShort3D */

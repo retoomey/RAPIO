@@ -292,8 +292,8 @@ public:
   // NOTE: Adding DeclareArrayMethods here, you need to add to the
   // DeclareFactoryArrayMethods in the factoryGetRawDataPointer method
 
-  /** Functions for referencing char/Byte arrays of 8 bit */
-  DeclareArrayMethods(Byte, char, BYTE)
+  /** Functions for referencing signed byte arrays of 8 bit */
+  DeclareArrayMethods(Byte, int8_t, BYTE)
 
   /** Functions for referencing short arrays of 8 bit */
   DeclareArrayMethods(Short, short, SHORT)
@@ -320,6 +320,18 @@ public:
   /** Return dimensions */
   std::vector<DataGridDimension>
   getDims(){ return myDims; }
+
+  /** Return size of each dimension */
+  std::vector<size_t>
+  getSizes()
+  {
+    std::vector<size_t> sizes;
+
+    for (auto& d:myDims) {
+      sizes.push_back(d.size());
+    }
+    return sizes;
+  }
 
   /** Return nodes */
   std::vector<std::shared_ptr<DataArray> >
