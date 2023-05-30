@@ -33,5 +33,5 @@ if (Grib2C_FOUND)
     DESTINATION ${RAPIO_INSTALL_LIB}
   )
 else()
-  message(WARNING "Couldn't find G2C library, You won't be able to read Grib2 files.")
+  message(WARNING "Couldn't find G2C library, Only matters if you want to directly read Grib2 files.")
 endif(Grib2C_FOUND)
