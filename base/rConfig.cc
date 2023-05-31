@@ -19,6 +19,8 @@
 #include <unistd.h> // access()
 #include <iostream>
 
+#include "config.h"
+
 using namespace rapio;
 using namespace std;
 
@@ -73,6 +75,8 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
 bool
 Config::addSearchPath(const URL& absolutePath)
 {
+  if (absolutePath.empty()) { return false; }
+
   const bool exists = absolutePath.isLocal() &&
     OS::isDirectory(absolutePath.getPath());
 
@@ -95,9 +99,16 @@ Config::addSearchFromString(const std::string& pathgroup)
 
   Strings::splitWithoutEnds(pathgroup, ':', &paths);
   for (auto& it:paths) {
-    addSearchPath(URL(it));                  // Direct path maybe given
-    addSearchPath(URL(it + "/RAPIOConfig")); // RAPIO folder...
-    addSearchPath(URL(it + "/w2config"));    // W2 folder...
+    if (Strings::endsWith(it, "RAPIOConfig") ||
+      Strings::endsWith(it, "w2config"))
+    {
+      addSearchPath(URL(it)); // Direct path given
+    } else {
+      if (!it.empty()) {
+        addSearchPath(URL(it + "/RAPIOConfig")); // RAPIO folder...
+        addSearchPath(URL(it + "/w2config"));    // W2 folder...
+      }
+    }
   }
 }
 
@@ -141,8 +152,6 @@ enforceLastSlash(const std::string& str)
 bool
 Config::setUpSearchPaths()
 {
-  // Look for global configuration file folder.
-
   // First priority is environment variables
   const std::string rapio = enforceLastSlash(OS::getEnvVar("RAPIO_CONFIG_LOCATION"));
   const std::string w2    = enforceLastSlash(OS::getEnvVar("W2_CONFIG_LOCATION"));
@@ -150,20 +159,16 @@ Config::setUpSearchPaths()
   addSearchFromString(rapio);
   addSearchFromString(w2);
 
-  // Fall back to relative from binary when running example program
-  auto path = OS::getProcessPath() + "/../../RAPIOConfig/";
+  // Fall back to the compiled source RAPIOConfig location
+  std::string compilePath(SOURCE_PATH);
 
-  addSearchFromString(path);
-  path = OS::getProcessPath() + "/../RAPIO/RAPIOConfig/"; // From bin folder to source
-  addSearchFromString(path);
+  addSearchPath(compilePath + "/RAPIOConfig");
 
   // Fall back to home directory
-  if (mySearchPaths.size() < 1) {
-    const std::string home(OS::getEnvVar("HOME"));
-    if (OS::isDirectory(home)) {
-      addSearchFromString(home);
-    }
-  }
+  const std::string home(OS::getEnvVar("HOME"));
+
+  addSearchPath(home);
+
   if (mySearchPaths.size() < 1) {
     LogSevere(
       "No valid global configuration path found in environment variables RAPIO_CONFIG_LOCATION, W2_CONFIG_LOCATION or home directory.\n");

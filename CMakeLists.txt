@@ -22,10 +22,27 @@ project (RAPIO
     LANGUAGES CXX C
     VERSION 1.0)
 
-
 # Specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Generate a config.h (note this goes into the build so it's unique per build)
+get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
+get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
+string(TIMESTAMP BUILD_DATE "%Y-%m-%d")
+string(TIMESTAMP BUILD_TIME "%H:%M:%S" UTC)
+execute_process(COMMAND hostname OUTPUT_VARIABLE MACHINE_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+configure_file(base/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/config.h @ONLY)
+
+# Generate a RAPIO.h header file containing headers in base
+# Note, not GLOB_RECURSE since we don't want plugin headers here.
+set(PUBLIC_HEADER_BASE ${CMAKE_CURRENT_SOURCE_DIR}/base/)
+file(GLOB PUBLIC_HEADERS_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
+foreach(filename ${PUBLIC_HEADERS_LIST})
+  set (PUBLIC_HEADERS "${PUBLIC_HEADERS}#include \"${filename}\"\n")
+endforeach()
+#string(REPLACE ";" " " PUBLIC_HEADERS_STR "%{PUBLIC_HEADERS}")
+configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
 # Our package modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -142,6 +159,7 @@ set(RAPIO_INCLUDE_DIRS
   ${Proj_INCLUDE_DIR}
   ${BZip2_INCLUDE_DIRS}
   ${OPENSSL_INCLUDE_DIR} 
+  ${CMAKE_CURRENT_BINARY_DIR}/base
 )
 
 # Libraries

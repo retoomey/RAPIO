@@ -8,9 +8,9 @@
 # to recognize the change so for now we'll hard list the files
 # ls -1 *.h
 set(HEADER_FILES
-  RAPIO.h
+${CMAKE_CURRENT_BINARY_DIR}/RAPIO.h
+${CMAKE_CURRENT_BINARY_DIR}/config.h
 ccronexpr.h
-config.h
 rAlgConfigFile.h
 rAlgorithm.h
 rArith.h

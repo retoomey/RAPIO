@@ -1,0 +1,9 @@
+/* Generated file giving all headers from base to include in RAPIO.h
+ * We shouldn't including headers from the io+ directories since
+ * they are plugins.  In theory if we split up code into folders
+ * we'll have to include those.
+ */
+#pragma once
+
+// Include the base headers
+@PUBLIC_HEADERS@

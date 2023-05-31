@@ -2,7 +2,7 @@
 # CMakeLists for building this subdirectory of examples
 #
 link_directories(${RAPIO_INSTALL_LIB})
-include_directories(. ${CMAKE_INSTALL_PREFIX}/include  ../base/)
+include_directories(. ${RAPIO_INCLUDE_DIRS})
 
 # Need this to add the BOOST setting or the rError.cc will complain about v2
 # FIXME: not sure needed anymore
