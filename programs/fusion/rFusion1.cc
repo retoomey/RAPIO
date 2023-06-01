@@ -511,7 +511,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // ------------------------------------------------------------------------------
     // Do we try to output Stage 2 files for fusion2?
-    const bool outputStage2 = true;
+    // For the moment turn off stage2 if the --llg flag is on, since meteorologists
+    // might be working on the first stage resolver.
+    const bool outputStage2 = !myWriteLLG;
 
     // Set the value object for resolvers
     VolumeValue vv;
