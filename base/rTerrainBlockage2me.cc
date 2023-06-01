@@ -40,6 +40,12 @@ TerrainBlockage2me::introduceSelf()
   Factory<TerrainBlockage>::introduce("2me", newOne);
 }
 
+std::string
+TerrainBlockage2me::getHelpString(const std::string& fkey)
+{
+  return "Polar terrain based on Bech Et Al 2003.";
+}
+
 void
 TerrainBlockage2me::calculatePercentBlocked(
   // Constants in 3D space information (could be instance)

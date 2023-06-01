@@ -1,6 +1,8 @@
 #include "rElevationVolume.h"
 #include "rRadialSet.h"
 #include "rDataTypeHistory.h"
+#include "rColorTerm.h"
+#include "rStrings.h"
 
 // For the maximum history
 #include "rRAPIOAlgorithm.h"
@@ -21,6 +23,38 @@ void
 Volume::introduceSelf()
 {
   ElevationVolume::introduceSelf();
+}
+
+std::string
+Volume::introduceHelp()
+{
+  std::string help;
+
+  help += "Elevation volumes handle what tilts/levels are considered part of the current virtual volume.\n";
+  auto e = Factory<Volume>::getAll();
+
+  for (auto i: e) {
+    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
+  }
+  return help;
+}
+
+void
+Volume::introduceSuboptions(const std::string& name, RAPIOOptions& o)
+{
+  auto e = Factory<Volume>::getAll();
+
+  for (auto i: e) {
+    o.addSuboption(name, i.first, i.second->getHelpString(i.first));
+  }
+  // There's no 'non' volume
+  // o.setEnforcedSuboptions(name, false);
+}
+
+std::string
+ElevationVolume::getHelpString(const std::string& fkey)
+{
+  return "Stores all unique elevation angles within the history window (see help h).";
 }
 
 std::shared_ptr<Volume>
@@ -45,6 +79,17 @@ Volume::createVolume(
     }
   }
   return f;
+}
+
+std::shared_ptr<Volume>
+Volume::createFromCommandLineOption(
+  const std::string & option,
+  const std::string & historyKey)
+{
+  std::string key, params;
+
+  Strings::splitKeyParam(option, key, params);
+  return createVolume(key, params, historyKey);
 }
 
 void

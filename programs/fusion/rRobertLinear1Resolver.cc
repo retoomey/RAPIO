@@ -9,6 +9,12 @@ RobertLinear1Resolver::introduceSelf()
   Factory<VolumeValueResolver>::introduce("robert", newOne);
 }
 
+std::string
+RobertLinear1Resolver::getHelpString(const std::string& fkey)
+{
+  return "Silly simple linear interpolation between tilts.";
+}
+
 std::shared_ptr<VolumeValueResolver>
 RobertLinear1Resolver::create(const std::string & params)
 {

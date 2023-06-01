@@ -187,6 +187,11 @@ public:
    * Useful for logging/debugging memory usage of things. */
   static std::string
   formatBytes(unsigned long long bytes);
+
+  /** Used for param lines --param=key,stuff to split the
+   * string key,stuff into pieces */
+  static void
+  splitKeyParam(const std::string& commandline, std::string& key, std::string& params);
 };
 
 /** A class for DFA parsing a word/token by character */

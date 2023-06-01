@@ -65,6 +65,12 @@ LakResolver1::introduceSelf()
   Factory<VolumeValueResolver>::introduce("lak", newOne);
 }
 
+std::string
+LakResolver1::getHelpString(const std::string& fkey)
+{
+  return "Based on w2merger math and paper using S-curve interpolation.";
+}
+
 std::shared_ptr<VolumeValueResolver>
 LakResolver1::create(const std::string & params)
 {

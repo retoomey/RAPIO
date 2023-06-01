@@ -17,57 +17,6 @@ using namespace rapio;
  *
  * @author Robert Toomey
  **/
-void
-RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
-{
-  o.setDescription(
-    "RAPIO Fusion Stage One Algorithm.  Designed to run for a single radar/moment, this creates .raw files for the MRMS stage 2 merger.");
-  o.setAuthors("Robert Toomey");
-
-  // legacy use the t, b and s to define a grid
-  o.declareLegacyGrid();
-
-  // -----------------------------------------------
-  // Flags for outputting for testing/temp that I plan to change at some point.
-  // FIXME: Final algorithm this will probably need some rework since we'll
-  // be outputting differently for the stage 2 multiradar merging
-  o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
-  o.addGroup("llg", "debug");
-  o.boolean("subgrid",
-    "When on, subgrid any llg output such as netcdf/mrms.  Basically make files using the box around radar vs the full grid.");
-  o.addGroup("subgrid", "debug");
-  o.optional("throttle", "1",
-    "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
-  o.addGroup("throttle", "debug");
-  o.boolean("presmooth", "Apply Lak's moving average filter to the incoming radial set.");
-  o.addGroup("presmooth", "debug");
-  // -----------------------------------------------
-
-  // FIXME: Thinking general new plugin class in API here.  All three of these
-  // add similar abilities
-
-  // Volume value resolver
-  o.optional("resolver", "lak",
-    "Value Resolver Algorithm, such as 'lak', or your own. Params follow: lak,params.");
-  o.addAdvancedHelp("resolver",
-    "Value Resolver algorithms are registered by name, so you can add you own options here with this option.");
-
-  // Elevation volume
-  o.optional("volume", "simple",
-    "Volume algorithm, such as 'simple', or your own. Params follow: simple,params.");
-  o.addAdvancedHelp("volume",
-    "Volume algorithms are registered by name, so you can add you own options here with this option.  The default 'simple' algorithm uses a virtual volume that replaces incoming elevation angles by time.");
-
-  // Terrain blockage name
-  o.optional("terrain", "2me",
-    "Terrain blockage algorithm, such as 'lak', '2me', or your own. Params follow: lak,/DEMS.");
-  o.addAdvancedHelp("terrain",
-    "Terrain blockage algorithms are registered by name, so you can add your own options here with this option.  You have some general param support in the form 'key,params' where the params string is passed onto your terrain blockage instance. For example, the lak and 2me terrain algorithms want a DEM file of the form RADARNAME.nc The path for this can be given as 'lak,/MYDEMS' or '2me,/MYDEMS'.");
-
-  // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
-  // data for the radar
-  o.optional("rangekm", "460", "Range in kilometers for radar.");
-} // RAPIOFusionOneAlg::declareOptions
 
 void
 RAPIOFusionOneAlg::declarePlugins()
@@ -91,6 +40,66 @@ RAPIOFusionOneAlg::declarePlugins()
   // Terrain blockage registration and creation
   TerrainBlockage::introduceSelf();
   // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
+}
+
+void
+RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
+{
+  o.setDescription(
+    "RAPIO Fusion Stage One Algorithm.  Designed to run for a single radar/moment.");
+  o.setAuthors("Robert Toomey");
+
+  // legacy use the t, b and s to define a grid
+  o.declareLegacyGrid();
+
+  // -----------------------------------------------
+  // Flags for outputting for testing/temp that I plan to change at some point.
+  // FIXME: Final algorithm this will probably need some rework since we'll
+  // be outputting differently for the stage 2 multiradar merging
+  o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
+  o.addGroup("llg", "debug");
+  o.boolean("subgrid",
+    "When on, subgrid any llg output such as netcdf/mrms.  Basically make files using the box around radar vs the full grid.");
+  o.addGroup("subgrid", "debug");
+  o.optional("throttle", "1",
+    "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
+  o.addGroup("throttle", "debug");
+  o.boolean("presmooth", "Apply Lak's moving average filter to the incoming radial set.");
+  o.addGroup("presmooth", "debug");
+
+  // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
+  // data for the radar
+  o.optional("rangekm", "460", "Range in kilometers for radar.");
+
+  // -----------------------------------------------
+  // Plugins
+
+  // Volume value resolver plugin
+  o.optional("resolver", "lak",
+    "Value Resolver Algorithm, such as 'lak', or your own. Params follow: lak,params.");
+  VolumeValueResolver::introduceSuboptions("resolver", o);
+
+  // Elevation volume plugin
+  o.optional("volume", "simple",
+    "Volume algorithm, such as 'simple', or your own. Params follow: simple,params.");
+  Volume::introduceSuboptions("volume", o);
+
+  // Terrain blockage plugin
+  o.optional("terrain", "lak",
+    "Terrain blockage algorithm. Params follow: lak,/DEMS.  Most take root folder of DEMS.");
+  TerrainBlockage::introduceSuboptions("terrain", o);
+  o.addSuboption("terrain", "", "Don't apply any terrain algorithm.");
+} // RAPIOFusionOneAlg::declareOptions
+
+void
+RAPIOFusionOneAlg::declareAdvancedHelp(RAPIOOptions& o)
+{
+  // Add advanced help.  This is only called if 'help' is asked for and also forces
+  // loading of all dynamic modules and or modules from declarePlugins.
+  // Basically this allows the plugins to show up under each option.
+  o.addAdvancedHelp("resolver", VolumeValueResolver::introduceHelp());
+  o.addAdvancedHelp("volume", Volume::introduceHelp());
+  o.addAdvancedHelp("terrain", TerrainBlockage::introduceHelp());
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -301,24 +310,6 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
   }
 } // RAPIOFusionOneAlg::writeOutputCAPPI
 
-namespace {
-/** Split a param string into key,somestring */
-void
-splitKeyParam(const std::string& commandline, std::string& key, std::string& params)
-{
-  std::vector<std::string> twoparams;
-
-  Strings::splitOnFirst(commandline, ',', &twoparams);
-  if (twoparams.size() > 1) {
-    key    = twoparams[0];
-    params = twoparams[1];
-  } else {
-    key    = commandline;
-    params = "";
-  }
-}
-}
-
 void
 RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& radarName,
   const std::string& typeName)
@@ -355,36 +346,32 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 
   std::string key, params;
 
+  // -------------------------------------------------------------
   // VolumeValueResolver creation
-  splitKeyParam(myResolverAlg, key, params);
-  myResolver = VolumeValueResolver::createVolumeValueResolver(key, params);
+  myResolver = VolumeValueResolver::createFromCommandLineOption(myResolverAlg);
 
   // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
   if (myResolver == nullptr) {
-    LogSevere("Volume Value Resolver '" << key << "' requested, but failed to find and/or initialize.\n");
+    LogSevere("Volume Value Resolver '" << myResolverAlg << "' requested, but failed to find and/or initialize.\n");
     exit(1);
   } else {
-    LogInfo("Using Volume Value Resolver algorithm '" << key << "'\n");
+    LogInfo("Using Volume Value Resolver: '" << myResolverAlg << "'\n");
   }
 
   // -------------------------------------------------------------
   // Terrain blockage creation
-
-  // Set up generic params for volume and terrain blockage classes
-  // in form "--optionname=key,somestring"
-  // We want a 'key' always to choose the algorithm, the rest is passed to the
-  // particular terrain algorithm to use as it wishes.
-  // The Lak and 2me ones take a DEM folder as somestring
-  splitKeyParam(myTerrainAlg, key, params);
-  myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
-      r->getLocation(), myRangeKMs, radarName);
-
-  // Stubbornly refuse to run if terrain requested by name and not found or failed
-  if (myTerrainBlockage == nullptr) {
-    LogSevere("Terrain blockage '" << key << "' requested, but failed to find and/or initialize.\n");
-    exit(1);
+  if (myTerrainAlg.empty()) {
+    LogInfo("No terrain blockage algorithm requested.\n");
   } else {
-    LogInfo("Using TerrainBlockage algorithm '" << key << "'\n");
+    myTerrainBlockage = TerrainBlockage::createFromCommandLineOption(myTerrainAlg,
+        r->getLocation(), myRangeKMs, radarName);
+    // Stubbornly refuse to run if terrain requested by name and not found or failed
+    if (myTerrainBlockage == nullptr) {
+      LogSevere("Terrain blockage '" << myTerrainAlg << "' requested, but failed to find and/or initialize.\n");
+      exit(1);
+    } else {
+      LogInfo("Using Terrain Blockage: '" << myTerrainBlockage << "'\n");
+    }
   }
 
   // -------------------------------------------------------------
@@ -392,15 +379,13 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   LogInfo(
     "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
       "'\n");
-  splitKeyParam(myVolumeAlg, key, params);
-  myElevationVolume = Volume::createVolume(key, params, myRadarName + "_" + myTypeName);
-
-  // Stubbornly refuse to run if terrain requested by name and not found or failed
+  myElevationVolume = Volume::createFromCommandLineOption(myVolumeAlg, myRadarName + "_" + myTypeName);
+  // Stubbornly refuse to run if requested by name and not found or failed
   if (myElevationVolume == nullptr) {
-    LogSevere("Volume '" << key << "' requested, but failed to find and/or initialize.\n");
+    LogSevere("Volume '" << myVolumeAlg << "' requested, but failed to find and/or initialize.\n");
     exit(1);
   } else {
-    LogInfo("Using Volume algorithm '" << key << "'\n");
+    LogInfo("Using Volume algorithm: '" << myVolumeAlg << "'\n");
   }
 
   // Look up from cells to az/range/elev for RADAR

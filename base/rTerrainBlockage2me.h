@@ -44,6 +44,10 @@ public:
     const LengthKMs                              minTerrainKMs,
     const AngleDegs                              minAngleDegs);
 
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
   /** First attempt at general per gate method */
   virtual void
   calculatePercentBlocked(

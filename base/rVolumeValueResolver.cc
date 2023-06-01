@@ -3,6 +3,8 @@
 #include "rRadialSet.h"
 #include "rConfigRadarInfo.h"
 #include "rFactory.h"
+#include "rColorTerm.h"
+#include "rStrings.h"
 
 using namespace rapio;
 
@@ -45,12 +47,45 @@ TerrainVVResolver::calc(VolumeValue& vv)
 }
 
 void
+VolumeValueResolver::introduce(const std::string & key,
+  std::shared_ptr<VolumeValueResolver>           factory)
+{
+  Factory<VolumeValueResolver>::introduce(key, factory);
+}
+
+void
 VolumeValueResolver::introduceSelf()
 {
   // FIXME: no default yet, these are currently in fusion until debugged
   RangeVVResolver::introduceSelf();
   AzimuthVVResolver::introduceSelf();
   TerrainVVResolver::introduceSelf();
+}
+
+std::string
+VolumeValueResolver::introduceHelp()
+{
+  std::string help;
+
+  help += "Value Resolver algorithms determine how values/weights are calculated for a grid location.\n";
+  auto e = Factory<VolumeValueResolver>::getAll();
+
+  for (auto i: e) {
+    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
+  }
+  return help;
+}
+
+void
+VolumeValueResolver::introduceSuboptions(const std::string& name, RAPIOOptions& o)
+{
+  auto e = Factory<VolumeValueResolver>::getAll();
+
+  for (auto i: e) {
+    o.addSuboption(name, i.first, i.second->getHelpString(i.first));
+  }
+  // There's no 'non' volume value resolver
+  // o.setEnforcedSuboptions(name, false);
 }
 
 std::shared_ptr<VolumeValueResolver>
@@ -71,6 +106,17 @@ VolumeValueResolver::createVolumeValueResolver(
     f = f->create(params);
   }
   return f;
+}
+
+std::shared_ptr<VolumeValueResolver>
+VolumeValueResolver::createFromCommandLineOption(
+  const std::string & option)
+{
+  std::string key, params;
+
+  Strings::splitKeyParam(option, key, params);
+  return VolumeValueResolver::createVolumeValueResolver(
+    key, params);
 }
 
 void

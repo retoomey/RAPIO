@@ -4,6 +4,7 @@
 #include "rUtility.h"
 #include "rFactory.h"
 #include "rLatLonGrid.h"
+#include "rRAPIOOptions.h"
 
 namespace rapio
 {
@@ -52,6 +53,18 @@ public:
   introduce(const std::string        & key,
     std::shared_ptr<TerrainBlockage> factory);
 
+  /** Introduce dynamic help */
+  static std::string
+  introduceHelp();
+
+  /** Introduce suboptions */
+  static void
+  introduceSuboptions(const std::string& name, RAPIOOptions& o);
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey){ return ""; }
+
   /** Attempt to create TerrainBlockage by name.  This looks up any registered
    * classes and attempts to call the virtual create method on it.
    * FIXME: could key pair parameters for generalization, for now constant */
@@ -65,7 +78,15 @@ public:
     LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
     AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
 
-protected:
+  /** Attempt to create TerrainBlockage command param */
+  static std::shared_ptr<TerrainBlockage>
+  createFromCommandLineOption(
+    const std::string & option,
+    const LLH         & radarLocation,
+    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
+    const std::string & radarName,
+    LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
+    AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
 
   /** Called on subclasses by the TerrainBlockage to create/setup the TerrainBlockage.
    * To use by name, you would override this method and return a new instance of your
@@ -81,9 +102,6 @@ protected:
   {
     return nullptr;
   }
-
-public:
-  // --------------------------------------------------------
 
   /** Create TerrainBlockage given a DEM and radar information */
   TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,

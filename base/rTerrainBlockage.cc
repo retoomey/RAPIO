@@ -1,5 +1,7 @@
 #include "rTerrainBlockage.h"
 #include "rRadialSet.h"
+#include "rColorTerm.h"
+#include "rStrings.h"
 
 // Default terrain blockages
 #include "rTerrainBlockageLak.h"
@@ -23,6 +25,33 @@ TerrainBlockage::introduceSelf()
   // You can call introduce(key, another terrain) in your algorithm to add more or replace
   TerrainBlockageLak::introduceSelf();
   TerrainBlockage2me::introduceSelf();
+}
+
+std::string
+TerrainBlockage::introduceHelp()
+{
+  std::string help;
+
+  help +=
+    "Terrain blockage algorithms are registered by name, so you can add your own options here with this option.  You have some general param support in the form 'key,params' where the params string is passed onto your terrain blockage instance. For example, the lak and 2me terrain algorithms want a DEM file of the form RADARNAME.nc The path for this can be given as 'lak,/MYDEMS' or '2me,/MYDEMS'.\n";
+  auto e = Factory<TerrainBlockage>::getAll();
+
+  for (auto i: e) {
+    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
+  }
+  return help;
+}
+
+void
+TerrainBlockage::introduceSuboptions(const std::string& name, RAPIOOptions& o)
+{
+  auto e = Factory<TerrainBlockage>::getAll();
+
+  for (auto i: e) {
+    o.addSuboption(name, i.first, i.second->getHelpString(i.first));
+  }
+  // Turn off enforcement, since a plugin like 'lak' takes the form 'lak,params'
+  o.setEnforcedSuboptions(name, false);
 }
 
 std::shared_ptr<TerrainBlockage>
@@ -49,6 +78,22 @@ TerrainBlockage::createTerrainBlockage(
     f = f->create(params, radarLocation, radarRangeKMs, radarName, minTerrainKMs, minAngleDegs);
   }
   return f;
+}
+
+std::shared_ptr<TerrainBlockage>
+TerrainBlockage::createFromCommandLineOption(
+  const std::string & option,
+  const LLH         & radarLocation,
+  const LengthKMs   & radarRangeKMs,
+  const std::string & radarName,
+  LengthKMs         minTerrainKMs,
+  AngleDegs         minAngleDegs)
+{
+  std::string key, params;
+
+  Strings::splitKeyParam(option, key, params);
+  return TerrainBlockage::createTerrainBlockage(key, params,
+           radarLocation, radarRangeKMs, radarName, minTerrainKMs, minAngleDegs);
 }
 
 TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,

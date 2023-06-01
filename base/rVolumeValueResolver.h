@@ -3,6 +3,7 @@
 #include <rUtility.h>
 #include <rDataType.h>
 #include <rFactory.h>
+#include <rRAPIOOptions.h>
 
 namespace rapio {
 /** Organizer of outputs for a layer, typically upper tilt or lower tilt
@@ -125,12 +126,34 @@ public:
   static void
   introduceSelf();
 
+  /** Introduce a new VolumeValueResolver by name */
+  static void
+  introduce(const std::string            & key,
+    std::shared_ptr<VolumeValueResolver> factory);
+
+  /** Introduce dynamic help */
+  static std::string
+  introduceHelp();
+
+  /** Introduce suboptions */
+  static void
+  introduceSuboptions(const std::string& name, RAPIOOptions& o);
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey){ return ""; }
+
   /** Attempt to create VolumeValueResolver by name.  This looks up any registered
    * classes and attempts to call the virtual create method on it. */
   static std::shared_ptr<VolumeValueResolver>
   createVolumeValueResolver(
     const std::string & key,
     const std::string & params);
+
+  /** Attempt to create VolumeValueResolver command param */
+  static std::shared_ptr<VolumeValueResolver>
+  createFromCommandLineOption(
+    const std::string & option);
 
   /** Called on subclasses by the VolumeVolumeResolver to create/setup the Resolver.
    * To use by name, you would override this method and return a new instance of your
@@ -196,6 +219,10 @@ public:
 
   virtual void
   calc(VolumeValue& vv) override;
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override { return "Test pattern: Output range KMs from radar center."; }
 };
 
 /** Azimuth from 0 to 360 or so of virtual */
@@ -220,6 +247,10 @@ public:
 
   virtual void
   calc(VolumeValue& vv) override;
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override { return "Test pattern: Output virtual azimuth values for cells."; }
 };
 
 /** Projected terrain blockage of lower tilt.
@@ -244,5 +275,9 @@ public:
 
   virtual void
   calc(VolumeValue& vv) override;
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override { return "Test pattern: Output terrain CBB% scaled by 100."; }
 };
 }

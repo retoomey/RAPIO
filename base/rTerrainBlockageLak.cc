@@ -53,6 +53,12 @@ TerrainBlockageLak::introduceSelf()
   Factory<TerrainBlockage>::introduce("lak", newOne);
 }
 
+std::string
+TerrainBlockageLak::getHelpString(const std::string& fkey)
+{
+  return "Polar terrain based on Fulton, Breidenbach, Miller and Bannon 1998 and Zhang,Jian,Gourly,Howard 2002.";
+}
+
 void
 TerrainBlockageLak::initialize()
 {

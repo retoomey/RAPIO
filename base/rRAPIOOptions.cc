@@ -283,9 +283,10 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
 
         // s << fNormal;
       }
+      const bool advancedWillShow = (advancedHelp && (o->advancedHelp != ""));
 
       // Choices for suboptions....
-      if (o->suboptions.size() > 0) {
+      if ((o->suboptions.size() > 0) && (!advancedWillShow)) {
         for (auto& i: o->suboptions) {
           s << setw(c1 + 4) << left << ""; // Indent 1 column
           std::string optpad = i.opt;
@@ -302,7 +303,7 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
           ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
         }
       }
-      if (advancedHelp && (o->advancedHelp != "")) {
+      if (advancedWillShow) {
         std::vector<std::string> lines;
         Strings::splitWithoutEnds(o->advancedHelp, '\n', &lines);
         // s << fGreen;

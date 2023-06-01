@@ -28,21 +28,21 @@ public:
   virtual void
   initializeBaseline(){ };
 
-  /** Declare all options */
-  virtual void
-  declareOptions(RAPIOOptions& o){ };
-
   /** Declare command line plugins */
   virtual void
   declarePlugins(){ };
 
+  /** Declare all options */
+  virtual void
+  declareOptions(RAPIOOptions& o){ };
+
+  /** Declare advanced help */
+  virtual void
+  declareAdvancedHelp(RAPIOOptions& o){ };
+
   /** Process/setup from the given options */
   virtual void
   processOptions(RAPIOOptions& o){ };
-
-  /** Post load, advanced help request.  This help requires the system to be initialized */
-  virtual void
-  addPostLoadedHelp(RAPIOOptions& o){ };
 
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
@@ -52,6 +52,10 @@ public:
   virtual void
   executeFromArgs(int argc,
     char *            argv[]);
+
+  /** Post loaded help.  Algorithms should use declareAdvancedHelp */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o){ };
 
 protected:
 

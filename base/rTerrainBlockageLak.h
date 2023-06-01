@@ -89,6 +89,10 @@ public:
   void
   initialize();
 
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
   /**
    *
    * Returns 0 for non-blocked beams and 1 for fully blocked ones.

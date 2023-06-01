@@ -128,6 +128,10 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
     "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
   o.addAdvancedHelp("postwrite",
     "Allows you to run a command on a file output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
+
+  // Now let subclasses declare more things.
+  // We do it this way to keep the algorithms from having to call superclass first
+  declareAdvancedHelp(o);
 }
 
 void
@@ -271,10 +275,10 @@ RAPIOAlgorithm::initializeOptions()
   declareInputParams(o);  // Declare the input parameters used, default of
                           // i, I, l...
   declareOutputParams(o); // Declare the output parameters, default of o,
+  declarePlugins();       // Declare plugins before options, allows suboptions
                           // O...
   declareOptions(o);      // Allow algorithm to declare wanted general
                           // arguments...
-  declarePlugins();
 
   return o;
 }

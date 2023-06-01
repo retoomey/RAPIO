@@ -46,8 +46,8 @@ RAPIOProgram::initializeOptions()
 {
   RAPIOOptions o("Program");
 
+  declarePlugins(); // Declare plugins before options, allows suboptions
   declareOptions(o);
-  declarePlugins();
 
   return o;
 }

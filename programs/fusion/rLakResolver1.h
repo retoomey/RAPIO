@@ -21,6 +21,10 @@ public:
   static void
   introduceSelf();
 
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
+
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
   create(const std::string & params);

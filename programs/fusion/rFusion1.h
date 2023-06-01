@@ -256,13 +256,17 @@ public:
   /** Create tile algorithm */
   RAPIOFusionOneAlg(){ };
 
+  /** Declare all algorithm command line plugins */
+  virtual void
+  declarePlugins() override;
+
   /** Declare all algorithm options */
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;
 
-  /** Declare all algorithm command line plugins */
-  virtual void
-  declarePlugins() override;
+  /** Declare advanced help for introduced plugins */
+  void
+  declareAdvancedHelp(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void

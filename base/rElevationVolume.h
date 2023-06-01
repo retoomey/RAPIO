@@ -3,6 +3,7 @@
 #include <rData.h>
 #include <rDataType.h>
 #include <rFactory.h>
+#include <rRAPIOOptions.h>
 
 #include <memory>
 #include <vector>
@@ -45,12 +46,30 @@ public:
   introduce(const std::string & key,
     std::shared_ptr<Volume>   factory);
 
+  /** Introduce dynamic help */
+  static std::string
+  introduceHelp();
+
+  /** Introduce suboptions */
+  static void
+  introduceSuboptions(const std::string& name, RAPIOOptions& o);
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey){ return ""; }
+
   /** Attempt to create Volume by name.  This looks up any registered
    * classes and attempts to call the virtual create method on it. */
   static std::shared_ptr<Volume>
   createVolume(
     const std::string & key,
     const std::string & params,
+    const std::string & historyKey);
+
+  /** Attempt to create volume by command param */
+  static std::shared_ptr<Volume>
+  createFromCommandLineOption(
+    const std::string & option,
     const std::string & historyKey);
 
   /** Called on subclasses by the Volume to create/setup the Volume.
@@ -177,6 +196,10 @@ public:
 
   /** Create a new elevation volume */
   ElevationVolume(const std::string& k) : Volume(k){ };
+
+  /** Help function, subclasses return help information. */
+  virtual std::string
+  getHelpString(const std::string& fkey) override;
 
   /** Called on subclasses by the Volume to create/setup the Volume.
    * To use by name, you would override this method and return a new instance of your

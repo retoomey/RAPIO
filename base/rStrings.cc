@@ -618,3 +618,18 @@ Strings::formatBytes(unsigned long long bytes)
   oss << std::fixed << std::setprecision(2) << value << " " << size;
   return oss.str();
 }
+
+void
+Strings::splitKeyParam(const std::string& commandline, std::string& key, std::string& params)
+{
+  std::vector<std::string> twoparams;
+
+  Strings::splitOnFirst(commandline, ',', &twoparams);
+  if (twoparams.size() > 1) {
+    key    = twoparams[0];
+    params = twoparams[1];
+  } else {
+    key    = commandline;
+    params = "";
+  }
+}
