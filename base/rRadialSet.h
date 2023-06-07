@@ -20,17 +20,6 @@ public:
    * factories.  You probably want the Create method */
   RadialSet();
 
-  /** Create a new RadialSet */
-  RadialSet(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & center,
-    const Time       & datatime,
-    const float      elevationDegrees,
-    const float      firstGateDistanceMeters,
-    const size_t     num_radials,
-    const size_t     num_gates);
-
   /** Public API for users to create a single band RadialSet quickly,
    * using polar grid style.  RadialSets are typically small enough that
    * we don't gain anything from variable radial length.
@@ -200,6 +189,18 @@ public:
    * return false on fail. */
   virtual bool
   initFromGlobalAttributes() override;
+
+  /** Initialize a RadialSet to given parameters */
+  bool
+  init(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & center,
+    const Time       & datatime,
+    const float      elevationDegrees,
+    const float      firstGateDistanceMeters,
+    const size_t     num_radials,
+    const size_t     num_gates);
 
   /** Return pointer to the lookup for immediate access, only valid
    * while RadialSet is */

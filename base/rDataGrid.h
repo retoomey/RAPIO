@@ -217,19 +217,20 @@ public:
    * factories.  You probably want the Create method */
   DataGrid();
 
-  /** Create a DataGrid */
-  DataGrid(const std::string       & aTypeName,
+  /** Public API for users to create a DataGrid,
+   * usually you create a subclass like RadialSet.  This is
+   * used if you need to create generic array data. */
+  static std::shared_ptr<DataGrid>
+  Create(const std::string         & aTypeName,
     const std::string              & Units,
     const LLH                      & center,
     const Time                     & datatime,
     const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);
 
-  /** Public API for users to create a DataGrid,
-   * usually you create a subclass like RadialSet.  This is
-   * used if you need to create generic array data. */
-  static std::shared_ptr<DataGrid>
-  Create(const std::string         & aTypeName,
+  /** Extra initialization of a DataGrid */
+  bool
+  init(const std::string           & aTypeName,
     const std::string              & Units,
     const LLH                      & center,
     const Time                     & datatime,
@@ -247,37 +248,11 @@ public:
 
   /** Convenience to get the units of a given array name */
   virtual std::string
-  getUnits(const std::string& name = Constants::PrimaryDataName) override
-  {
-    std::string units;
-
-    if (name == Constants::PrimaryDataName) {
-      units = myUnits;
-    }
-    auto n = getNode(name);
-
-    if (n != nullptr) {
-      auto someunit = n->getAttribute<std::string>("Units");
-      if (someunit) {
-        units = *someunit;
-      }
-    }
-    return units;
-  }
+  getUnits(const std::string& name = Constants::PrimaryDataName) override;
 
   /** Convenience to set the units of a given array name */
   virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override
-  {
-    if (name == Constants::PrimaryDataName) {
-      myUnits = units;
-    }
-    auto n = getNode(name);
-
-    if (n != nullptr) {
-      n->putAttribute<std::string>("Units", units);
-    }
-  }
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
 
   /** Update global attribute list for RadialSet */
   virtual void
@@ -315,23 +290,13 @@ public:
   void * factoryGetRawDataPointer(const std::string& name, const std::string& units, const DataArrayType& type,
     const std::vector<size_t>& dimindexes);
 
-public:
-
   /** Return dimensions */
   std::vector<DataGridDimension>
   getDims(){ return myDims; }
 
   /** Return size of each dimension */
   std::vector<size_t>
-  getSizes()
-  {
-    std::vector<size_t> sizes;
-
-    for (auto& d:myDims) {
-      sizes.push_back(d.size());
-    }
-    return sizes;
-  }
+  getSizes();
 
   /** Return nodes */
   std::vector<std::shared_ptr<DataArray> >
@@ -395,33 +360,11 @@ public:
 
   /** Get node for this key */
   std::shared_ptr<DataArray>
-  getNode(const std::string& name)
-  {
-    size_t count = 0;
-
-    for (auto i:myNodes) {
-      if (i->getName() == name) {
-        return i;
-      }
-      count++;
-    }
-    return nullptr;
-  }
+  getNode(const std::string& name);
 
   /** Get index of node or -1 */
   int
-  getNodeIndex(const std::string& name)
-  {
-    int count = 0;
-
-    for (auto i:myNodes) {
-      if (i->getName() == name) {
-        return count;
-      }
-      count++;
-    }
-    return -1;
-  }
+  getNodeIndex(const std::string& name);
 
   /** Return attribute pointer for readers/writers */
   std::shared_ptr<DataAttributeList>

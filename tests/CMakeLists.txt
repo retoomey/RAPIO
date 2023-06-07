@@ -1,7 +1,6 @@
 # We wants headers in the current directory, even if bracketed. FIXME: Maybe we shouldn't bracket
 # Get headers from core above us, or where ever RAPIO headers are
-#include_directories(. ../ ${CMAKE_INSTALL_PREFIX}/include ${CMAKE_INSTALL_PREFIX}/include/rapiobase)
-include_directories(. ../base)
+include_directories(. ${RAPIO_INCLUDE_DIRS})
 
 # Not sure why we need this with cmake..we should be linking to rapio base
 link_directories(../../lib)

@@ -13,21 +13,6 @@ DataGrid::DataGrid()
   setDataType("DataGrid");
 }
 
-DataGrid::DataGrid(const std::string& aTypeName,
-  const std::string                 & Units,
-  const LLH                         & center,
-  const Time                        & datatime,
-  const std::vector<size_t>         & dimsizes,
-  const std::vector<std::string>    & dimnames)
-{
-  setDataType("DataGrid");
-  setTypeName(aTypeName);
-  setDataAttributeValue("Unit", "dimensionless", Units);
-  myLocation = center;
-  myTime     = datatime;
-  declareDims(dimsizes, dimnames);
-}
-
 std::shared_ptr<DataGrid>
 DataGrid::Create(const std::string& aTypeName,
   const std::string               & Units,
@@ -36,7 +21,26 @@ DataGrid::Create(const std::string& aTypeName,
   const std::vector<size_t>       & dimsizes,
   const std::vector<std::string>  & dimnames)
 {
-  return (std::make_shared<DataGrid>(aTypeName, Units, center, datatime, dimsizes, dimnames));
+  auto newonesp = std::make_shared<DataGrid>();
+
+  newonesp->init(aTypeName, Units, center, datatime, dimsizes, dimnames);
+  return newonesp;
+}
+
+bool
+DataGrid::init(const std::string & aTypeName,
+  const std::string              & Units,
+  const LLH                      & center,
+  const Time                     & datatime,
+  const std::vector<size_t>      & dimsizes,
+  const std::vector<std::string> & dimnames)
+{
+  setTypeName(aTypeName);
+  setDataAttributeValue("Unit", "dimensionless", Units);
+  myLocation = center;
+  myTime     = datatime;
+  declareDims(dimsizes, dimnames);
+  return true;
 }
 
 std::shared_ptr<DataAttributeList>
@@ -61,6 +65,77 @@ std::shared_ptr<DataArray>
 DataGrid::getDataArray(const std::string& name)
 {
   return getNode(name);
+}
+
+std::string
+DataGrid::getUnits(const std::string& name)
+{
+  std::string units;
+
+  if (name == Constants::PrimaryDataName) {
+    units = myUnits;
+  }
+  auto n = getNode(name);
+
+  if (n != nullptr) {
+    auto someunit = n->getAttribute<std::string>("Units");
+    if (someunit) {
+      units = *someunit;
+    }
+  }
+  return units;
+}
+
+void
+DataGrid::setUnits(const std::string& units, const std::string& name)
+{
+  if (name == Constants::PrimaryDataName) {
+    myUnits = units;
+  }
+  auto n = getNode(name);
+
+  if (n != nullptr) {
+    n->putAttribute<std::string>("Units", units);
+  }
+}
+
+std::vector<size_t>
+DataGrid::getSizes()
+{
+  std::vector<size_t> sizes;
+
+  for (auto& d:myDims) {
+    sizes.push_back(d.size());
+  }
+  return sizes;
+}
+
+std::shared_ptr<DataArray>
+DataGrid::getNode(const std::string& name)
+{
+  size_t count = 0;
+
+  for (auto i:myNodes) {
+    if (i->getName() == name) {
+      return i;
+    }
+    count++;
+  }
+  return nullptr;
+}
+
+int
+DataGrid::getNodeIndex(const std::string& name)
+{
+  int count = 0;
+
+  for (auto i:myNodes) {
+    if (i->getName() == name) {
+      return count;
+    }
+    count++;
+  }
+  return -1;
 }
 
 void

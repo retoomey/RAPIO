@@ -20,7 +20,8 @@ RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirst
   setDataType("RadialSet");
 }
 
-RadialSet::RadialSet(
+std::shared_ptr<RadialSet>
+RadialSet::Create(
   const std::string& TypeName,
   const std::string& Units,
   const LLH        & center,
@@ -28,13 +29,31 @@ RadialSet::RadialSet(
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
   const size_t     num_radials,
-  const size_t     num_gates) : DataGrid(TypeName, Units, center, datatime,
-    { num_radials, num_gates }, { "Azimuth", "Gate" }),
-  myElevAngleDegs(elevationDegrees),
-  myElevCos(cos(myElevAngleDegs * DEG_TO_RAD)),
-  myElevTan(tan(myElevAngleDegs * DEG_TO_RAD)),
-  myFirstGateDistanceM(firstGateDistanceMeters)
+  const size_t     num_gates)
 {
+  auto newonesp = std::make_shared<RadialSet>();
+
+  newonesp->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters,
+    num_radials, num_gates);
+  return newonesp;
+}
+
+bool
+RadialSet::init(
+  const std::string& TypeName,
+  const std::string& Units,
+  const LLH        & center,
+  const Time       & datatime,
+  const float      elevationDegrees,
+  const float      firstGateDistanceMeters,
+  const size_t     num_radials,
+  const size_t     num_gates)
+{
+  DataGrid::init(TypeName, Units, center, datatime, { num_radials, num_gates }, { "Azimuth", "Gate" });
+
+  setElevationDegs(elevationDegrees);
+  myFirstGateDistanceM = firstGateDistanceMeters;
+
   setDataType("RadialSet");
   /** Primary data storage */
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
@@ -50,21 +69,7 @@ RadialSet::RadialSet(
   /** Gate width per radial */
   // addFloat1D("GateWidth", "Meters", {0}, 1000.0f);
   addFloat1D("GateWidth", "Meters", { 0 });
-}
-
-std::shared_ptr<RadialSet>
-RadialSet::Create(
-  const std::string& TypeName,
-  const std::string& Units,
-  const LLH        & center,
-  const Time       & datatime,
-  const float      elevationDegrees,
-  const float      firstGateDistanceMeters,
-  const size_t     num_radials,
-  const size_t     num_gates)
-{
-  return (std::make_shared<RadialSet>(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters,
-         num_radials, num_gates));
+  return true;
 }
 
 bool

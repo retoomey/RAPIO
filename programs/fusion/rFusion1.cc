@@ -162,30 +162,6 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
 } // RAPIOFusionOneAlg::processOptions
 
-std::shared_ptr<LatLonGrid>
-RAPIOFusionOneAlg::createLLG(
-  const std::string   & outputName,
-  const std::string   & outputUnits,
-  const LLCoverageArea& g,
-  const LengthKMs     layerHeightKMs)
-{
-  // Create a new working space LatLonGrid for the layer
-  auto output = LatLonGrid::
-    Create(outputName, outputUnits, LLH(g.nwLat, g.nwLon, layerHeightKMs), Time(), g.latSpacing, g.lonSpacing,
-      g.numY, g.numX);
-
-  // Extra setup for any of our LLG objects
-
-  output->setReadFactory("netcdf"); // default to netcdf output if we write it
-
-  // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
-  auto array = output->getFloat2D();
-
-  array->fill(Constants::DataUnavailable);
-
-  return output;
-}
-
 void
 RAPIOFusionOneAlg::createLLGCache(
   const std::string        & outputName,
@@ -195,13 +171,21 @@ RAPIOFusionOneAlg::createLLGCache(
 {
   // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
   // turns out to be faster than 1 3D array.
-  if (myLLGCache.size() == 0) {
+  if (myLLGCache == nullptr) {
     ProcessTimer("Creating initial LLG value cache.");
+
+    myLLGCache = LLHGridN2D::Create(outputName, outputUnits, LLH(g.nwLat, g.nwLon, 0),
+        Time(), g.latSpacing, g.lonSpacing, g.numY, g.numX, heightsM.size());
 
     // For each of our height layers to process
     for (size_t layer = 0; layer < heightsM.size(); layer++) {
       const LengthKMs layerHeightKMs = heightsM[layer] / 1000.0;
-      myLLGCache.add(createLLG(outputName, outputUnits, g, layerHeightKMs));
+      myLLGCache->setLayerValue(layer, layerHeightKMs);
+      auto newone = myLLGCache->get(layer);
+      newone->setReadFactory("netcdf"); // default to netcdf output if we write it
+      // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
+      auto array = newone->getFloat2D();
+      array->fill(Constants::DataUnavailable);
     }
   }
 }
@@ -276,7 +260,9 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
     // We don't worry about height, we'll set it for each layer
     if (myFullLLG == nullptr) {
       LogInfo("Creating a full CONUS buffer for outputting grids as full files\n");
-      myFullLLG = createLLG(myWriteStage2Name, myWriteOutputUnits, myFullGrid, 0);
+      myFullLLG = LatLonGrid::Create(myWriteStage2Name, myWriteOutputUnits,
+          LLH(myFullGrid.nwLat, myFullGrid.nwLon, 0), Time(), myFullGrid.latSpacing, myFullGrid.lonSpacing,
+          myFullGrid.numY, myFullGrid.numX);
     }
 
     // Copy the current output subgrid into the full LLG for writing out...
@@ -536,7 +522,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       size_t attemptCount    = 0;
       size_t differenceCount = 0;
 
-      auto output = myLLGCache.get(layer);
+      auto output = myLLGCache->get(layer);
       // Update output time in case we write it out for debugging
       output->setTime(r->getTime());
 

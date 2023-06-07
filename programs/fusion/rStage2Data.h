@@ -54,6 +54,34 @@ public:
   bool
   get(float& v, float& w, short& x, short& y, short& z);
 
+  /** Get the radarname */
+  std::string
+  getRadarName()
+  {
+    return myRadarName;
+  }
+
+  /** Get the typename */
+  std::string
+  getTypeName()
+  {
+    return myTypeName;
+  }
+
+  /** Get the units */
+  std::string
+  getUnits()
+  {
+    return myUnits;
+  }
+
+  /** Get the location */
+  LLH
+  getLocation()
+  {
+    return myCenter;
+  }
+
 protected:
 
   /** RLE missing values, reduces size quite a bit since weather tends to clump up. */

@@ -15,37 +15,29 @@ LatLonGrid::LatLonGrid() : myLatSpacing(0), myLonSpacing(0)
   setDataType("LatLonGrid");
 }
 
-LatLonGrid::LatLonGrid(
-  const std::string              & TypeName,
-  const std::string              & Units,
-  const LLH                      & location,
-  const Time                     & time,
-  const float                    lat_spacing,
-  const float                    lon_spacing,
-  size_t                         num_lats,
-  size_t                         num_lons,
-  // Allow override of default sizes by subclasses,  you can ignore this normally
-  const std::vector<size_t>      & dimsizes,
-  const std::vector<std::string> & dimnames
-) : DataGrid(TypeName, Units, location, time, dimsizes.empty() ? std::vector<size_t>{ num_lats, num_lons } : dimsizes,
-    dimnames.empty() ? std::vector<std::string>{ "Lat", "Lon" } : dimnames), myLatSpacing(lat_spacing), myLonSpacing(
-    lon_spacing)
+bool
+LatLonGrid::init(
+  const std::string & TypeName,
+  const std::string & Units,
+  const LLH         & location,
+  const Time        & datatime,
+  const float       lat_spacing,
+  const float       lon_spacing,
+  size_t            num_lats,
+  size_t            num_lons
+)
 {
+  DataGrid::init(TypeName, Units, location, datatime, { num_lats, num_lons }, { "Lat", "Lon" });
+
   setDataType("LatLonGrid");
-  bool okLat = (myLatSpacing > 0);
-  bool okLon = (myLonSpacing > 0);
 
-  if (!(okLat && okLon)) {
-    LogSevere("*** WARNING *** non-positive element in grid spacing\n"
-      << "(" << lat_spacing << "," << lon_spacing << ")\n");
-  }
+  setSpacing(lat_spacing, lon_spacing);
 
-  if (dimsizes.empty()) { // If not overridden by subclass, LatLonHeightGrid for instance
-    addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
-  }
+  addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
   // Store a single static layer matching height in meters
   myLayerNumbers.push_back(location.getHeightKM() * 1000.0);
+  return true;
 }
 
 std::shared_ptr<LatLonGrid>
@@ -64,7 +56,24 @@ LatLonGrid::Create(
   size_t num_lons
 )
 {
-  return (std::make_shared<LatLonGrid>(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons));
+  auto newonesp = std::make_shared<LatLonGrid>();
+
+  newonesp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons);
+  return newonesp;
+}
+
+void
+LatLonGrid::setSpacing(float lat_spacing, float lon_spacing)
+{
+  myLatSpacing = lat_spacing;
+  myLonSpacing = lon_spacing;
+  bool okLat = (myLatSpacing > 0);
+  bool okLon = (myLonSpacing > 0);
+
+  if (!(okLat && okLon)) {
+    LogSevere("*** WARNING *** non-positive element in grid spacing\n"
+      << "(" << lat_spacing << "," << lon_spacing << ")\n");
+  }
 }
 
 bool
@@ -110,4 +119,40 @@ std::shared_ptr<DataProjection>
 LatLonGrid::getProjection(const std::string& layer)
 {
   return std::make_shared<LatLonGridProjection>(layer, this);
+}
+
+LLH
+LatLonGrid::getCenterLocation()
+{
+  // This simple one liner doesn't work, because the middle can be on a cell wall and
+  // not in the center of the cell.  Imagine 2 cells..the true middle is the line
+  // between them.  For three cells it is the middle of cell 1.
+  // return(getCenterLocationAt(getNumLats()/2, getNumLons()/2);
+  //
+  // However, this does:
+  const double latHalfWidth = (myLatSpacing * getNumLats()) / 2.0;
+  const double lonHalfWidth = (myLonSpacing * getNumLons()) / 2.0;
+  const double latDegs      = myLocation.getLatitudeDeg() - latHalfWidth;
+  const double lonDegs      = myLocation.getLongitudeDeg() + lonHalfWidth;
+
+  return LLH(latDegs, lonDegs, myLocation.getHeightKM());
+}
+
+LLH
+LatLonGrid::getTopLeftLocationAt(size_t i, size_t j)
+{
+  if (i == j == 0) { return myLocation; }
+  const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
+  const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * j);
+
+  return LLH(latDegs, lonDegs, myLocation.getHeightKM());
+}
+
+LLH
+LatLonGrid::getCenterLocationAt(size_t i, size_t j)
+{
+  const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * (i + 0.5));
+  const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * (j + 0.5));
+
+  return LLH(latDegs, lonDegs, myLocation.getHeightKM());
 }

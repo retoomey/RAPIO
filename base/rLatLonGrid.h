@@ -18,22 +18,6 @@ public:
    * factories.  You probably want the Create method */
   LatLonGrid();
 
-  /** Create a LatLonGrid */
-  LatLonGrid(
-    const std::string              & TypeName,
-    const std::string              & Units,
-    const LLH                      & northwest,
-    const Time                     & gridtime,
-    float                          lat_spacing,
-    float                          lon_spacing,
-    size_t                         num_lats,
-    size_t                         num_lons,
-    // Default for lat lon, subclasses can enhance/change this
-    const std::vector<size_t>      & dimsizes = { },
-    const std::vector<std::string> & dimnames = { }
-
-  );
-
   /** Public API for users to create a single band LatLonGrid quickly,
    * Note that data is uninitialized/random memory since most algorithms
    * you'll fill it in and it wastes time to double fill it. */
@@ -47,6 +31,10 @@ public:
     float            lon_spacing,
     size_t           num_lats,
     size_t           num_lons);
+
+  /** Set the latitude/longitude spacing used */
+  void
+  setSpacing(float lat_spacing, float lon_spacing);
 
   /** Get the latitude spacing in degrees between cells */
   float
@@ -75,11 +63,6 @@ public:
   {
     return myDims.size() > 1 ? myDims[1].size() : 0;
   }
-
-  // Layer interface.  A LatLonGrid only has one layer at its height, while
-  // LatLonHeightGrids have multiple
-  // FIXME: Could be virtual layer if other classes are made.  I can see
-  // doing something that stores non-height layers
 
   /** Get the number of layers */
   size_t
@@ -111,21 +94,7 @@ public:
 
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH
-  getCenterLocation() override
-  {
-    // This simple one liner doesn't work, because the middle can be on a cell wall and
-    // not in the center of the cell.  Imagine 2 cells..the true middle is the line
-    // between them.  For three cells it is the middle of cell 1.
-    // return(getCenterLocationAt(getNumLats()/2, getNumLons()/2);
-    //
-    // However, this does:
-    const double latHalfWidth = (myLatSpacing * getNumLats()) / 2.0;
-    const double lonHalfWidth = (myLonSpacing * getNumLons()) / 2.0;
-    const double latDegs      = myLocation.getLatitudeDeg() - latHalfWidth;
-    const double lonDegs      = myLocation.getLongitudeDeg() + lonHalfWidth;
-
-    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
-  }
+  getCenterLocation() override;
 
   /** Get the top left location of a cell in the LatLonGrid
    *  This is the point on the left top of grid (see X).
@@ -136,14 +105,7 @@ public:
    *  -------
    */
   LLH
-  getTopLeftLocationAt(size_t i, size_t j)
-  {
-    if (i == j == 0) { return myLocation; }
-    const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
-    const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * j);
-
-    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
-  }
+  getTopLeftLocationAt(size_t i, size_t j);
 
   /** Get the center location of a cell in the LatLonGrid
    *  This is the center point of the grid (see O).
@@ -154,13 +116,7 @@ public:
    *  -------
    */
   LLH
-  getCenterLocationAt(size_t i, size_t j)
-  {
-    const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * (i + 0.5));
-    const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * (j + 0.5));
-
-    return LLH(latDegs, lonDegs, myLocation.getHeightKM());
-  }
+  getCenterLocationAt(size_t i, size_t j);
 
   /** Generated default string for subtype from the data */
   virtual std::string
@@ -178,6 +134,19 @@ public:
    * return false on fail. */
   virtual bool
   initFromGlobalAttributes() override;
+
+  /** Initialize a LatLonGrid post create */
+  bool
+  init(
+    const std::string & TypeName,
+    const std::string & Units,
+    const LLH         & northwest,
+    const Time        & gridtime,
+    float             lat_spacing,
+    float             lon_spacing,
+    size_t            num_lats,
+    size_t            num_lons
+  );
 
 protected:
 

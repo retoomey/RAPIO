@@ -30,18 +30,6 @@ public:
    * factories.  You probably want the Create method */
   LatLonHeightGrid();
 
-  /** Create a LatLonHeightGrid */
-  LatLonHeightGrid(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & northwest,
-    const Time       & gridtime,
-    float            lat_spacing,
-    float            lon_spacing,
-    size_t           num_lats,
-    size_t           num_lons,
-    size_t           num_levels);
-
   /** Public API for users to create a single band LatLonHeightGrid quickly,
    * Note that data is uninitialized/random memory since most algorithms
    * you'll fill it in and it wastes time to double fill it. */
@@ -64,5 +52,18 @@ public:
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer) override;
+
+  /** Initialize a LatLonHeightGrid */
+  bool
+  init(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & northwest,
+    const Time       & gridtime,
+    float            lat_spacing,
+    float            lon_spacing,
+    size_t           num_lats,
+    size_t           num_lons,
+    size_t           num_levels);
 };
 }

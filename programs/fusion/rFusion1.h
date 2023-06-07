@@ -5,6 +5,7 @@
 #include "rTerrainBlockage.h"
 #include "rLLCoverageArea.h"
 #include "rVolumeValueResolver.h"
+#include "rLLHGridN2D.h"
 
 /**  Use 8 bits for FusionKey, with a max value of 255.  This means our volume
  * tilts need to be limited to 254 (0 key is no value) at a time in memory. This
@@ -228,28 +229,6 @@ public:
   size_t myAt;
 };
 
-/** Basically Implement a LatLonHeightGrid as a collection of 2D layers vs a 3D cube.  In some
- * cases this seems faster vs a 3D array.
- * FIXME: I think I could have two implementations in the core with an option to
- * toggle which is used.  So requesting a LatLonGrid from it would either copy, create a 'view'
- * or just return the 2D LatLonGrid, etc.
- */
-class LatLonGridSet : public Data // could also template/generalize to shared_ptr set
-{
-public:
-  /** Get the size */
-  size_t size(){ return myGrids.size(); }
-
-  /** Add grid */
-  void add(std::shared_ptr<LatLonGrid> a){ myGrids.push_back(a); }
-
-  /** Return grid number i */
-  std::shared_ptr<LatLonGrid> get(size_t i){ return myGrids[i]; }
-
-  /** The set of LatLonGrids */
-  std::vector<std::shared_ptr<LatLonGrid> > myGrids;
-};
-
 class RAPIOFusionOneAlg : public rapio::RAPIOAlgorithm {
 public:
 
@@ -271,14 +250,6 @@ public:
   /** Process all algorithm options */
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
-
-  /** Create an LLG for our output or caching */
-  std::shared_ptr<LatLonGrid>
-  createLLG(
-    const std::string   & outputName,
-    const std::string   & outputUnits,
-    const LLCoverageArea& g,
-    const LengthKMs     layerHeightKMs);
 
   /** Create the cache of interpolated layers */
   void
@@ -391,7 +362,7 @@ protected:
   size_t myThrottleCount;
 
   /** Cached set of LatLonGrids */
-  LatLonGridSet myLLGCache;
+  std::shared_ptr<LLHGridN2D> myLLGCache;
 
   /** The resolver we are using to calculate values */
   std::shared_ptr<VolumeValueResolver> myResolver;

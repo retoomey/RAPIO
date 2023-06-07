@@ -74,6 +74,7 @@ rLength.h
 rLLCoverageArea.h
 rLL.h
 rLLH.h
+rLLHGridN2D.h
 rNamedAny.h
 rNetcdfDataType.h
 rOption.h
@@ -175,6 +176,7 @@ rLength.cc
 rLL.cc
 rLLCoverageArea.cc
 rLLH.cc
+rLLHGridN2D.cc
 rNetcdfDataType.cc
 rOption.cc
 rOptionList.cc
