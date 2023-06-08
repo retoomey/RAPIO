@@ -764,6 +764,72 @@ GribMatcher::getMatch(size_t& at, size_t& fieldNumber)
   return myMatched;
 }
 
+namespace {
+/** Create my own copy of gbits and gbit.  It looks like the old implementation overflows
+ * on large files since it counts number of bits so large files say 1 GB can overflow
+ * the g2int size which is an int.
+ * g2clib isn't that big and it appears not updated, so we may branch and do some work here.*/
+void
+_gbits(unsigned char * in, g2int * iout, unsigned long long iskip, g2int nbyte, g2int nskip,
+  g2int n)
+
+/*          Get bits - unpack bits:  Extract arbitrary size values from a
+ * /          packed bit string, right justifying each value in the unpacked
+ * /          iout array.
+ * /           *in    = pointer to character array input
+ * /           *iout  = pointer to unpacked array output
+ * /            iskip = initial number of bits to skip
+ * /            nbyte = number of bits to take
+ * /            nskip = additional number of bits to skip on each iteration
+ * /            n     = number of iterations
+ * / v1.1
+ */
+{
+  g2int i, tbit, bitcnt, ibit, itmp;
+  unsigned long long nbit, index;
+  static g2int ones[] = { 1, 3, 7, 15, 31, 63, 127, 255 };
+
+  //     nbit is the start position of the field in bits
+  nbit = iskip;
+  for (i = 0; i < n; i++) {
+    bitcnt = nbyte;
+    index  = nbit / 8;
+    ibit   = nbit % 8;
+    nbit   = nbit + nbyte + nskip;
+
+    //        first byte
+    tbit = ( bitcnt < (8 - ibit) ) ? bitcnt : 8 - ibit; // find min
+
+    itmp = (int) *(in + index) & ones[7 - ibit];
+
+    if (tbit != 8 - ibit) { itmp >>= (8 - ibit - tbit); }
+    index++;
+    bitcnt = bitcnt - tbit;
+
+    //        now transfer whole bytes
+    while (bitcnt >= 8) {
+      itmp   = itmp << 8 | (int) *(in + index);
+      bitcnt = bitcnt - 8;
+      index++;
+    }
+
+    //        get data from last byte
+    if (bitcnt > 0) {
+      itmp = ( itmp << bitcnt ) | ( ((int) *(in + index) >> (8 - bitcnt)) & ones[bitcnt - 1] );
+    }
+
+    *(iout + i) = itmp;
+  }
+} // _gbits
+
+/** gbit just passes to gbit2 */
+void
+_gbit(unsigned char * in, g2int * iout, unsigned long long iskip, g2int nbyte)
+{
+  _gbits(in, iout, iskip, nbyte, (g2int) 0, (g2int) 1);
+}
+}
+
 bool
 IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
 {
@@ -778,20 +844,26 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
   // to us doing this is that we need to check future versions of seekdb.c
   // for bug fixes/changes.
   size_t messageCount = 0;
-  size_t k = 0;
+  // size_t k = 0;
+  unsigned long long k = 0;
+
 
   g2int lengrib = 0;
 
   while (k < aSize) {
     g2int start = 0;
     g2int vers  = 0;
-    gbit(bu, &start, (k + 0) * 8, 4 * 8);
-    gbit(bu, &vers, (k + 7) * 8, 1 * 8);
+    _gbit(bu, &start, (k + 0) * 8, 4 * 8);
+    _gbit(bu, &vers, (k + 7) * 8, 1 * 8);
 
     if (( start == 1196575042) && (( vers == 1) || ( vers == 2) )) {
       //  LOOK FOR '7777' AT END OF GRIB MESSAGE
-      if (vers == 1) { gbit(bu, &lengrib, (k + 4) * 8, 3 * 8); }
-      if (vers == 2) { gbit(bu, &lengrib, (k + 12) * 8, 4 * 8); }
+      if (vers == 1) {
+        _gbit(bu, &lengrib, (k + 4) * 8, 3 * 8);
+      }
+      if (vers == 2) {
+        _gbit(bu, &lengrib, (k + 12) * 8, 4 * 8);
+      }
       //    ret=fseek(lugb,ipos+k+lengrib-4,SEEK_SET);
       const size_t at = k + lengrib - 4;
       if (at + 3 < aSize) {
