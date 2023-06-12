@@ -848,21 +848,22 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
   unsigned long long k = 0;
 
 
+  LogInfo("Scan grib2 called with grib library version: " << G2_VERSION << "\n");
   g2int lengrib = 0;
 
   while (k < aSize) {
     g2int start = 0;
     g2int vers  = 0;
-    _gbit(bu, &start, (k + 0) * 8, 4 * 8);
-    _gbit(bu, &vers, (k + 7) * 8, 1 * 8);
+    gbit(bu, &start, (k + 0) * 8, 4 * 8);
+    gbit(bu, &vers, (k + 7) * 8, 1 * 8);
 
     if (( start == 1196575042) && (( vers == 1) || ( vers == 2) )) {
       //  LOOK FOR '7777' AT END OF GRIB MESSAGE
       if (vers == 1) {
-        _gbit(bu, &lengrib, (k + 4) * 8, 3 * 8);
+        gbit(bu, &lengrib, (k + 4) * 8, 3 * 8);
       }
       if (vers == 2) {
-        _gbit(bu, &lengrib, (k + 12) * 8, 4 * 8);
+        gbit(bu, &lengrib, (k + 12) * 8, 4 * 8);
       }
       //    ret=fseek(lugb,ipos+k+lengrib-4,SEEK_SET);
       const size_t at = k + lengrib - 4;

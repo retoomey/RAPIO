@@ -197,6 +197,7 @@ if (BUILD_GDAL_MODULE)
 endif (BUILD_GDAL_MODULE)
 
 option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
+option(USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
 if (BUILD_GRIB2_MODULE)
   add_subdirectory(base/iogrib)
 endif (BUILD_GRIB2_MODULE)
