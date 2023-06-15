@@ -2,6 +2,8 @@
 
 #include "rError.h"
 #include "rEventLoop.h"
+#include "rOS.h"
+#include "rStrings.h"
 
 #include <memory>
 #include <fstream>
@@ -122,27 +124,59 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
 
       if (web->isFile()) {
         // Simple attempt to send a file
-        // static vector<char> buffer(131072); // Safe when server is running on one thread
-        auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
-        ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
-        if (*ifs) {
-          // Ok get the length of the file we're gonna send, let the client know
-          auto length = ifs->tellg();
-          ifs->seekg(0, ios::beg);
-          SimpleWeb::CaseInsensitiveMultimap header;
-          header.emplace("Content-Length", to_string(length));
-          response->write(header);
+        const std::string path = web->getFile();
+        bool sendText = false;
 
-          FileServer::read_and_send(response, ifs);
-        } else {
-          LogSevere("Failed to open filename " << web->getFile() << "\n");
-          web->setMessage("Failed to open filename " + web->getFile());
+        if (OS::isDirectory(path)) {
+          LogSevere("Directory forbidden: " + web->getFile());
+          web->setMessage("Directory forbidden, though we could add this ability: " + web->getFile());
+          web->setError(403);
+          sendText = true;
+        } else if (OS::isRegularFile(path)) {
+          auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
+          const bool useMacros = (web->myMacroKeys.size() > 0);
+
+          if (useMacros) {
+            ifs->open(web->getFile());
+          } else {
+            ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
+          }
+
+          if ((*ifs) && ifs->is_open()) {
+            if (useMacros) {
+              // Parse entire file and replace all macros
+              std::stringstream stream;
+              std::string line;
+              while (std::getline(*ifs, line)) {
+                stream << Strings::replaceGroup(line, web->myMacroKeys, web->myMacroValues) << "\n";
+              }
+              // Final write
+              response->write(web->getErrorInternal(), stream);
+            } else {
+              // Ok get the length of the file we're gonna send, let the client know
+              auto length = ifs->tellg();
+              ifs->seekg(0, ios::beg);
+              SimpleWeb::CaseInsensitiveMultimap header;
+              header.emplace("Content-Length", to_string(length));
+              response->write(header);
+
+              FileServer::read_and_send(response, ifs);
+            }
+          } else {
+            LogSevere("Failed to open: " << path << "\n");
+            web->setMessage("Failed to open: " + path);
+            web->setError(404);
+            sendText = true;
+          }
+        }
+
+        if (sendText) {
           std::stringstream stream;
           stream << web->getMessage();
-          response->write(stream);
+          response->write(web->getErrorInternal(), stream);
         }
       } else {
-        LogSevere("Sending text:\n");
+        LogInfo("Sending text\n");
         //    response->write(SimpleWeb::StatusCode::client_error_bad_request, "Testing error");
         //         // FIXME: need to check message was ever set
 
@@ -158,8 +192,7 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
 
         std::stringstream stream;
         stream << web->getMessage();
-        LogSevere(web->getMessage());
-        response->write(stream, header);
+        response->write(web->getErrorInternal(), stream, header);
       }
     } else {
       // Algorithm basically reported an error maybe?

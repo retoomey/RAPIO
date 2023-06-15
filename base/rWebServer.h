@@ -17,9 +17,15 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 namespace rapio {
 class WebMessage : public Utility
 {
+  friend class WebServer;
+
 public:
+
   WebMessage(const std::string& path, const std::map<std::string, std::string>& map)
-    : myPath(path), myMap(map), message(""), file(""){ }
+    : myPath(path), myMap(map), message(""), file("")
+  {
+    setError(200); // Success by default
+  }
 
   /** Promise set by main worker when work complete */
   std::promise<bool> result;
@@ -86,7 +92,56 @@ public:
     myHeaders["Content-Type"] = type;
   }
 
+  /** Get the http error value */
+  size_t
+  getError()
+  {
+    return myErrorNumber;
+  }
+
+  /** Get the http error string */
+  std::string
+  getErrorString()
+  {
+    // We know it exists in map so just return the string directly
+    return SimpleWeb::status_code(myErrorInternal);
+  }
+
+  /** Set the response http error.  I don't want callers using
+   * the SimpleWeb::StatusCode in case the underlying library changes,
+   * so we map an error number to the enum.  The number is enough for us. */
+  void
+  setError(size_t error)
+  {
+    // The last enum value
+    size_t enumSize = static_cast<size_t>(SimpleWeb::StatusCode::server_error_network_authentication_required);
+
+    if (error > enumSize) {
+      LogSevere("Trying to set http error value to " << error << " which is out of range\n");
+      error = 0; // unknown
+    }
+    myErrorNumber   = error;
+    myErrorInternal = static_cast<SimpleWeb::StatusCode>(error);
+  }
+
+  /** Set macros, any file will be parsed and macros replaced.  Basically a cheap
+   * serverside ability */
+  void
+  addMacro(const std::string& macro, const std::string& value)
+  {
+    // FIXME: Not checking duplicates, first come first served
+    myMacroKeys.push_back("MACRO(" + macro + ")"); // Make it full match
+    myMacroValues.push_back(value);
+  }
+
 protected:
+
+  /** Get the http error value */
+  SimpleWeb::StatusCode
+  getErrorInternal()
+  {
+    return myErrorInternal;
+  }
 
   /** Path of the URL request */
   std::string myPath;
@@ -102,6 +157,18 @@ protected:
 
   /** File path, if any */
   std::string file;
+
+  /** Error status as a number, synced to SimpleWeb library */
+  size_t myErrorNumber;
+
+  /** Error status as SimpleWeb library, synced to error number */
+  SimpleWeb::StatusCode myErrorInternal;
+
+  /** Keys for macros */
+  std::vector<std::string> myMacroKeys;
+
+  /** Values for macros */
+  std::vector<std::string> myMacroValues;
 };
 
 /** Web queue holds message from a webserver thread for the main thread to

@@ -58,7 +58,12 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   // Steal the normal output location as suggested cache folder
   // This will probably work unless someone deliberately tries to break it by passing
   // our other crazier output options
-  myOverride["tilecachefolder"] = o.getString("o");
+  std::string cache = o.getString("o");
+
+  if (cache.empty()) {
+    cache = "CACHE";
+  }
+  myOverride["tilecachefolder"] = cache;
 }
 
 void
@@ -289,33 +294,263 @@ getJSONTimeList(const std::string& product, const std::string& subtype)
 }
 
 void
-RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
+RAPIOTileAlg::handlePathUI(WebMessage& w, std::vector<std::string>& pieces)
 {
-  // Alpha of doing a tile server (using WMS at moment)
-  // FIXME: need multiple file ability.  For now single file
-  // as we get projection done
+  LogSevere("Woooh...something calling our json stuff\n");
 
-  // The settings and overrides
-  const bool debuglog = false;
+  // Ok for now make json by hand.  We need to get the javascript to react
+  std::stringstream json;
 
-  myOverride["debug"] = debuglog;
+  json << "{";
+  json << " \"top\": ";
+  static bool toggle = false;
+
+  toggle = !toggle;
+
+  json << (toggle ? " \"red\" " : " \"green\" ");
+  json << "}";
+
+  // w->setMessage("{ \"date\": \"05-16-2021\", \"milliseconds_since_epoch\": 1621193354208, \"time\": \"07:29:14 PM\" }", "application/json");
+  w.setMessage(json.str(), "application/json");
+  return;
+}
+
+void
+RAPIOTileAlg::handlePathData(WebMessage& w, std::vector<std::string>& pieces)
+{
+  // We have to create a RECORD from the stuff passed in.
+  // Then create a RAPIOData?  Have to cache the datatype somehow or it will be snail slow
+  // From record we want 'up' and 'down' for example...navigation directions
+
+  /*
+   *    if (pieces.size() < 2){
+   *      w->setMessage("{ \"ERROR\": \"Unknown\"}", "application/json");
+   *      return;
+   *    }
+   *    // S3 requires the year top path added, right?
+   *    std::string rootproduct = pieces[1];
+   */
+
+  /*        // We could map this from say 'KTLX' to this path...a source lookup basically...
+   *      // So pieces[0] = ktlx --> this
+   *      std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/";
+   *      // FIXME: ensure ends with "/";
+   *
+   *      // Navigator::getProductList()
+   *      // s3 maybe?
+   *      // ls the product folder or s3 aws python call the list back, right?
+   *      //
+   *      // Open directory
+   *      DIR * dirp = opendir(rootdisk.c_str());
+   *      if (dirp == 0){
+   *        w->setMessage("{ \"ERROR\": \"Unknown\"", "application/json");
+   *        return;
+   *      }
+   *
+   *      // ----------------------------------------------------------------
+   *      // Create json from directory list.  We could create a PTree
+   *      std::stringstream json;
+   *      json << "{\"products\":[";
+   *      struct dirent * dp;
+   *      std::string add = "";
+   *      while ((dp = readdir(dirp)) != 0) {
+   *        const std::string full = rootdisk + dp->d_name;
+   *        //const std::string full = rootdisk + "/" + dp->d_name;
+   *        // Always ignore files starting with . (0 terminated so don't need length check)
+   *        if (dp->d_name[0] == '.') { continue; }
+   *        if (OS::isDirectory(full)) {
+   *          //json << add << "\"file\": \""<<dp->d_name<<"\"";
+   *          json << add << "\""<<dp->d_name<<"\"";
+   *          add = ","; // future adds need comma
+   *        }
+   *      }
+   *      json << "]}";
+   *      // ----------------------------------------------------------------
+   *      // */
+
+  /*
+   *      for(size_t i=1; i<pieces.size(); i++){
+   *        json << " \"value" << i  << "\": \"" << pieces[i] << "\"";
+   *        if (i != pieces.size()-1){
+   *          json << ", ";
+   *        }
+   *      }
+   */
+  if (pieces.size() < 2) {
+    w.setMessage(getJSONProductList(), "application/json");
+  } else {
+    if (pieces.size() < 3) {
+      const std::string s = pieces[1];
+      LogSevere("Getting subtypes for " << s << "\n");
+      w.setMessage(getJSONSubtypeList(s), "application/json");
+    } else {
+      const std::string s = pieces[1];
+      const std::string t = pieces[2];
+      LogSevere("Getting times for " << s << "\n");
+      w.setMessage(getJSONTimeList(s, t), "application/json");
+    }
+  }
+  return;
+}
+
+void
+RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout)
+{
+  // Write tile to cache using all the settings
+  if (!OS::isRegularFile(pathout)) {
+    writeDirectOutput(URL(pathout), myTileData, myOverride);
+  } else {
+    // LogInfo("IN CACHE:" << pathout << "\n");
+  }
+  w.setFile(pathout); // Web server file response
+}
+
+void
+RAPIOTileAlg::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces)
+{
+  // If our single file exists use it to make tiles
+  if (myTileData == nullptr) {
+    return; // FIXME: some sort of web error code or what?
+  }
+
+  // CACHE SETTING (post handleOverrides to avoid any hack there)
+  std::string cache = myOverride["tilecachefolder"];
+  // Go through the bbox parameters, check length/type, etc.
+  // Make sure they are numbers (harden URL for security)
+  std::vector<std::string> bbox;
+
+  Strings::splitWithoutEnds(myOverride["BBOX"], ',', &bbox);
+  if (bbox.size() != 4) {
+    LogSevere("Expected 4 parameters in BBOX for WMS server request, got " << bbox.size() << "\n");
+    return;
+  }
+  for (auto a:bbox) {
+    try{
+      std::stof(a);
+    }catch (const std::exception& e) {
+      LogSevere("Non number passed for BBOX parameter? " << a << "\n");
+      return;
+    }
+  }
+  // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
+  // We'll have to enhance this for time and multi product at some point
+  std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile.png";
+
+  LogInfo("WMS_BBOX:" << myOverride["BBOX"] << "\n");
+  myOverride["TILETEXT"] = "";
+
+  // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
+  // This divides the world into equal spherical mercator squares.  We'll translate to bbox
+  // for the writer
+  serveTile(w, pathout);
+} // RAPIOTileAlg::handlePathWMS
+
+void
+RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces)
+{
+  // If our single file exists use it to make tiles
+  if (myTileData == nullptr) {
+    return; // FIXME: some sort of web error code or what?
+  }
+
+  // CACHE SETTING (post handleOverrides to avoid any hack there)
   std::string cache = myOverride["tilecachefolder"];
 
-  if (cache.empty()) {
-    cache = "CACHE";
+  // Verify the z/y/x and that it's integers
+  if (pieces.size() < 4) {
+    LogSevere("Expected http://tms/z/x/y for start of tms path\n");
+    for (auto k:pieces) {
+      std::cout << "PIECE " << k << "\n";
+    }
+    return;
+  }
+  int x, y, z;
+
+  try{
+    z = std::stoi(pieces[1]);
+    x = std::stoi(pieces[2]);
+    // Google vs TMS can flip this.  Usually fixable with -y or y passed into URL
+    // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
+    y = std::stoi(pieces[3]);
+  }catch (const std::exception& e) {
+    LogSevere("Non number passed for z, x or y? " << pieces[1] << ", " << pieces[2] << ", " << pieces[3] << "\n");
+    return;
   }
 
+  // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
+  // We'll have to enhance this for time and multi product at some point
+  std::string pathout = cache + "/tms/" + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y)
+    + ".png";
+
+  // Slippy tiles to bbox... https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+  const double lon1 = tilex2long(x, z); // Maybe it's backwards?
+  const double lat1 = tiley2lat(y, z);
+  const double lon2 = tilex2long(x + 1, z);
+  const double lat2 = tiley2lat(y + 1, z);
+
+  myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
+    + std::to_string(lat1);
+  myOverride["BBOXSR"]   = "4326"; // Lat/Lon
+  myOverride["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
+
+  LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
+
+  serveTile(w, pathout);
+} // RAPIOTileAlg::handlePathTMS
+
+void
+RAPIOTileAlg::handlePathDefault(WebMessage& w)
+{
+  // First try to get the file
+  // FIXME: Note for security we should only go down from the root, no up tracking.
+  // filename remove all ".." from filename, etc.  Need to check this or caller can
+  // jailbreak.
+  // Note: We're running this behind a firewall as an alpha, lots of work
+  // to do to harden this stuff if used in production
+  const std::string WEBROOT = "web/rtile/"; // could be passed in from command line
+
+  std::string path = WEBROOT + w.getPath();
+
+  // Set this here instead of webserver since 'maybe' we'll want root
+  // directory someday
+  if (w.getPath() == "/") { path += "index.html"; }
+
+  // oops need the port from settings
+  std::string hostname = OS::getHostName();
+
+  // Just in case we pass back a png or something, don't try to macro it
+  if (Strings::endsWith(path, ".html")) {
+    w.addMacro("WMS", "http://" + hostname + ":8080/wms");
+    w.addMacro("HOSTNAME", hostname);
+    w.addMacro("PORT", std::to_string(WebServer::port));
+  }
+
+  // Find the file...
+  const URL loc = Config::getConfigFile(path);
+
+  w.setFile(loc.toString()); // Web server handles the cases
+}
+
+void
+RAPIOTileAlg::logWebMessage(const WebMessage& w)
+{
   std::ofstream myfile;
 
-  if (debuglog) {
-    myfile.open("logtile.txt", ios::app);
-    myfile << w->getPath() << " --- ";
+  myfile.open("logtile.txt", ios::app);
+  myfile << w.getPath() << " --- ";
+  for (auto& a:w.getMap()) {
+    myfile << a.first << "=" << a.second << ":";
   }
-  // LogSevere("PATH " << w->getPath() << "\n");
-  for (auto& a:w->getMap()) {
-    if (debuglog) {
-      myfile << a.first << "=" << a.second << ":";
-    }
+  myfile << "\n";
+  myfile.close();
+}
+
+void
+RAPIOTileAlg::handleOverrides(const std::map<std::string, std::string>& params)
+{
+  // Filter web GET params into ours if needed, WMS/TMS can use
+  // different strings.
+  for (auto& a:params) {
     myOverride[a.first] = a.second;
 
     // Leaflet WMS fields to ours...
@@ -334,204 +569,51 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> w)
     } // wms "format=image/jpeg" should probably handle it
       // LogSevere("Field " << a.first << " == " << a.second << "\n");
   }
+}
+
+void
+RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
+{
+  LogInfo("Incoming web url of " << wsp->getPath() << "\n");
+  auto& w = *wsp;
+
+  // Extra debugging logging to a 'server' file
+  const bool debuglog = false;
+
+  myOverride["debug"] = debuglog; // image write could use this for more info
   if (debuglog) {
-    myfile << "\n";
-    myfile.close();
+    logWebMessage(w);
   }
 
-  // If our single file exists use it to make tiles
-  if (myTileData != nullptr) {
-    std::string pathout = "";
+  // GET current URL params into myOverrides
+  handleOverrides(w.getMap());
 
-    // --------------------------------------------------------------------
-    // This should be broken up/reorganized into functions probably...
-    // parse the incoming url and params
-    // Look for supported URL formats...
-    std::vector<std::string> pieces;
-    Strings::splitWithoutEnds(w->getPath(), '/', &pieces);
-    if (pieces.size() > 0) {
-      auto& type = pieces[0];
+  // CACHE SETTING (post handleOverrides to avoid any hack there)
+  std::string cache = myOverride["tilecachefolder"];
 
-      // FIXME: I could see these being modules...
+  // Break up the URL path first to delegate further
+  std::vector<std::string> pieces;
 
-      // for WMS there's a BBOX sent by leaflet.tileLayer.wms or openlayers source.TileArcGISRest
-      if (type == "wms") {
-        // Go through the bbox parameters, check length/type, etc.
-        // Make sure they are numbers (harden URL for security)
-        std::vector<std::string> bbox;
-        Strings::splitWithoutEnds(myOverride["BBOX"], ',', &bbox);
-        if (bbox.size() != 4) {
-          LogSevere("Expected 4 parameters in BBOX for WMS server request, got " << bbox.size() << "\n");
-          return;
-        }
-        for (auto a:bbox) {
-          try{
-            std::stof(a);
-          }catch (const std::exception& e) {
-            LogSevere("Non number passed for BBOX parameter? " << a << "\n");
-            return;
-          }
-        }
-        // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
-        // We'll have to enhance this for time and multi product at some point
-        pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile.png";
-        LogInfo("WMS_BBOX:" << myOverride["BBOX"] << "\n");
-        myOverride["TILETEXT"] = "";
+  Strings::splitWithoutEnds(w.getPath(), '/', &pieces);
+  std::string type = "";
 
-        // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
-        // This divides the world into equal spherical mercator squares.  We'll translate to bbox
-        // for the writer
-      } else if (type == "tms") {
-        // Verify the z/y/x and that it's integers
-        if (pieces.size() < 4) {
-          LogSevere("Expected http://tms/z/x/y for start of tms path\n");
-          for (auto k:pieces) {
-            std::cout << "PIECE " << k << "\n";
-          }
-          return;
-        }
-        int x, y, z;
-        try{
-          z = std::stoi(pieces[1]);
-          x = std::stoi(pieces[2]);
-          // Google vs TMS can flip this.  Usually fixable with -y or y passed into URL
-          // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
-          y = std::stoi(pieces[3]);
-        }catch (const std::exception& e) {
-          LogSevere("Non number passed for z, x or y? " << pieces[1] << ", " << pieces[2] << ", " << pieces[3] << "\n");
-          return;
-        }
+  if (pieces.size() > 0) {
+    type = Strings::makeLower(pieces[0]);
+  }
 
-        // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
-        // We'll have to enhance this for time and multi product at some point
-        pathout = cache + "/tms/" + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".png";
-
-        // Slippy tiles to bbox... https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-        const double lon1 = tilex2long(x, z); // Maybe it's backwards?
-        const double lat1 = tiley2lat(y, z);
-        const double lon2 = tilex2long(x + 1, z);
-        const double lat2 = tiley2lat(y + 1, z);
-        myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
-          + std::to_string(lat1);
-        myOverride["BBOXSR"]   = "4326"; // Lat/Lon
-        myOverride["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
-
-        LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
-      } else if (type == "UI") {
-        LogSevere("Woooh...something calling our json stuff\n");
-
-        // Ok for now make json by hand.  We need to get the javascript to react
-        std::stringstream json;
-        json << "{";
-        json << " \"top\": ";
-        static bool toggle = false;
-        toggle = !toggle;
-
-        json << (toggle ? " \"red\" " : " \"green\" ");
-        json << "}";
-
-        // w->setMessage("{ \"date\": \"05-16-2021\", \"milliseconds_since_epoch\": 1621193354208, \"time\": \"07:29:14 PM\" }", "application/json");
-        w->setMessage(json.str(), "application/json");
-        return;
-      } else if (type == "DATA") {
-        // We have to create a RECORD from the stuff passed in.
-        // Then create a RAPIOData?  Have to cache the datatype somehow or it will be snail slow
-        // From record we want 'up' and 'down' for example...navigation directions
-
-        /*
-         *    if (pieces.size() < 2){
-         *      w->setMessage("{ \"ERROR\": \"Unknown\"}", "application/json");
-         *      return;
-         *    }
-         *    // S3 requires the year top path added, right?
-         *    std::string rootproduct = pieces[1];
-         */
-
-        /*        // We could map this from say 'KTLX' to this path...a source lookup basically...
-         *      // So pieces[0] = ktlx --> this
-         *      std::string rootdisk = "/home/dyolf/DATA2/MAY3KTLX/";
-         *      // FIXME: ensure ends with "/";
-         *
-         *      // Navigator::getProductList()
-         *      // s3 maybe?
-         *      // ls the product folder or s3 aws python call the list back, right?
-         *      //
-         *      // Open directory
-         *      DIR * dirp = opendir(rootdisk.c_str());
-         *      if (dirp == 0){
-         *        w->setMessage("{ \"ERROR\": \"Unknown\"", "application/json");
-         *        return;
-         *      }
-         *
-         *      // ----------------------------------------------------------------
-         *      // Create json from directory list.  We could create a PTree
-         *      std::stringstream json;
-         *      json << "{\"products\":[";
-         *      struct dirent * dp;
-         *      std::string add = "";
-         *      while ((dp = readdir(dirp)) != 0) {
-         *        const std::string full = rootdisk + dp->d_name;
-         *        //const std::string full = rootdisk + "/" + dp->d_name;
-         *        // Always ignore files starting with . (0 terminated so don't need length check)
-         *        if (dp->d_name[0] == '.') { continue; }
-         *        if (OS::isDirectory(full)) {
-         *          //json << add << "\"file\": \""<<dp->d_name<<"\"";
-         *          json << add << "\""<<dp->d_name<<"\"";
-         *          add = ","; // future adds need comma
-         *        }
-         *      }
-         *      json << "]}";
-         *      // ----------------------------------------------------------------
-         *      // */
-
-        /*
-         *      for(size_t i=1; i<pieces.size(); i++){
-         *        json << " \"value" << i  << "\": \"" << pieces[i] << "\"";
-         *        if (i != pieces.size()-1){
-         *          json << ", ";
-         *        }
-         *      }
-         */
-        if (pieces.size() < 2) {
-          w->setMessage(getJSONProductList(), "application/json");
-        } else {
-          if (pieces.size() < 3) {
-            const std::string s = pieces[1];
-            LogSevere("Getting subtypes for " << s << "\n");
-            w->setMessage(getJSONSubtypeList(s), "application/json");
-          } else {
-            const std::string s = pieces[1];
-            const std::string t = pieces[2];
-            LogSevere("Getting times for " << s << "\n");
-            w->setMessage(getJSONTimeList(s, t), "application/json");
-          }
-        }
-        return;
-      } else {
-        LogSevere("Expected either wms or tms server types. http://servername/wms/... \n");
-        return;
-      }
-      // LogInfo("Server request using " << pieces[0] << "\n");
-    }
-    // --------------------------------------------------------------------
-
-
-    // FIXME: Think I need to refactor the whole write methods now that I've
-    // added so many features to make it 'cleaner'
-    // writeOutputProduct(r->getTypeName(), r, myOverride); // Typename will be replaced by -O filters
-
-    // FIXME: for production check path doesn't go up (security)
-    if (!OS::isRegularFile(pathout)) {
-      // LogInfo("Make: " << pathout << "\n");
-      // FIXME: always the same input file for this first pass.  We need to add product name and
-      // time.  Also for a server we need more fetch API I think
-      writeDirectOutput(URL(pathout), myTileData, myOverride);
-    } else {
-      // LogInfo("IN CACHE:" << pathout << "\n");
-    }
-
-    // Ok webserver can auto respond with this given file..
-    w->setFile(pathout);
+  // Handle path
+  if (type == "wms") {
+    handlePathWMS(w, pieces);
+  } else if (type == "tms") {
+    handlePathTMS(w, pieces);
+    // These are more experimental alpha
+  } else if (type == "ui") {
+    handlePathUI(w, pieces);
+  } else if (type == "data") {
+    handlePathData(w, pieces);
+  } else {
+    // Default path webpage, probably table of contents or something
+    handlePathDefault(w);
   }
 } // RAPIOTileAlg::processWebMessage
 

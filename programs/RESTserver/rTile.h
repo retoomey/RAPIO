@@ -28,6 +28,38 @@ public:
 
 protected:
 
+  /** Debug server log write */
+  void
+  logWebMessage(const WebMessage& w);
+
+  /** Process web GET params pairs and update params to image writer */
+  void
+  handleOverrides(const std::map<std::string, std::string>& params);
+
+  /** Serve a web tile image from a cache */
+  void
+  serveTile(WebMessage& w, std::string& pathout);
+
+  /** Process a "/UI" message */
+  void
+  handlePathUI(WebMessage& w, std::vector<std::string>& pieces);
+
+  /** Process a "/WMS" message */
+  void
+  handlePathWMS(WebMessage& w, std::vector<std::string>& pieces);
+
+  /** Process a "/TMS" message */
+  void
+  handlePathTMS(WebMessage& w, std::vector<std::string>& pieces);
+
+  /** Process a "/DATA" message */
+  void
+  handlePathData(WebMessage& w, std::vector<std::string>& pieces);
+
+  /** Process a "/" message */
+  void
+  handlePathDefault(WebMessage& w);
+
   /** Override output params for image output */
   std::map<std::string, std::string> myOverride;
 
