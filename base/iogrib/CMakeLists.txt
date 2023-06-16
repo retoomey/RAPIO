@@ -60,6 +60,8 @@ endif()
 if (Grib2C_FOUND)
   # Build source as a shared library
   add_library(rapiogrib SHARED
+    rGribAction.cc
+    rGribDatabase.cc
     rGribDataTypeImp.cc
     rIOGrib.cc
   )

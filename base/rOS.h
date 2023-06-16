@@ -82,6 +82,11 @@ public:
   getUniqueTemporaryFile(const std::string& base = "wdssii");
 
   /** Return root file extension using OS ability, for example:
+   * xml.gz returns 'xml', and also returns the non-ending part */
+  static std::string
+  getRootFileExtension(const std::string& path, std::string& prefix);
+
+  /** Return root file extension using OS ability, for example:
    * xml.gz returns 'xml' */
   static std::string
   getRootFileExtension(const std::string& path);

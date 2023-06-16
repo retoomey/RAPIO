@@ -6,23 +6,36 @@
 #include <rLLH.h>
 #include <rIOGrib.h>
 #include <rGribDataType.h>
+#include <rOS.h>
+
+#include <rGribAction.h>
 
 #include <memory>
 
 namespace rapio {
 /** DataType for holding Grib data
  * Implement the GribDataTypeImp interface from RAPIO
- * to do provide Grib2 support.
+ * to provide Grib2 support.
  * @author Robert Toomey */
 class GribDataTypeImp : public GribDataType {
 public:
-  GribDataTypeImp(const std::vector<char>& buf) : myBuf(buf)
+  GribDataTypeImp(const URL& url, const std::vector<char>& buf) : myURL(url), myBuf(buf)
   {
     myDataType = "GribData";
+
+    // Figure out the index name of the ".idx" file
+    std::string root;
+    std::string ext = OS::getRootFileExtension(myURL.toString(), root);
+
+    myIndexURL = URL(root + ".idx");
+
+    // Hack to snag first time.
+    GribScanFirstMessage scan(this);
+
+    IOGrib::scanGribData(myBuf, &scan);
   }
 
-  /** Print the catalog for thie GribDataType.
-   * FIXME: better to be able to get a catalog I think */
+  /** Print the catalog for this GribDataType. */
   void
   printCatalog();
 
@@ -42,9 +55,17 @@ public:
   getFloat3D(const std::string& key, size_t& x, size_t& y, size_t& z, std::vector<std::string> zLevelsVec,
     float missing = -999.0);
 
-
 private:
-  /** Store the buffer of data (copy wraps around shared_ptr) */
+
+  /** Store the URL to the grib2 file locationif any */
+  URL myURL;
+
+  /** Store the URL to the index if any */
+  URL myIndexURL;
+
+  /** Store the buffer of data.  Note doing this can be a large amount of RAM
+   * for large grib2 files.  But it has the advantage of remote URL reading
+   * which is interesting. */
   std::vector<char> myBuf;
 };
 }

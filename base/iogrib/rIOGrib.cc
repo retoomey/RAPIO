@@ -6,6 +6,8 @@
 #include "rConfig.h"
 
 #include "rGribDataTypeImp.h"
+#include "rGribDatabase.h"
+#include "rGribAction.h"
 
 using namespace rapio;
 
@@ -24,218 +26,6 @@ createRAPIOIO(void)
 
 extern "C" {
 #include <grib2.h>
-}
-
-
-/** A simple lookup from number to string.
- * Using a vector which actually tends to be quicker than map in practice.
- * This is a two column table sorted as vectors.
- * FIXME: this should go somewhere or become generic
- *
- * @author Robert Toomey */
-namespace rapio {
-class NumberToStringLookup : public IO
-{
-public:
-  /** Column 1 **/
-  std::vector<int> myValues;
-
-  /** Column 2 **/
-  std::vector<std::string> myStrings;
-
-  /** Simple add */
-  void
-  add(int v, const std::string& s)
-  {
-    for (auto& i:myValues) {
-      if (i == v) {
-        LogSevere("-------------------->DUPLICATE ADD OF VALUE " << i << "\n");
-        return; // Can't duplicate
-      }
-    }
-    myValues.push_back(v);
-    myStrings.push_back(s);
-  }
-
-  /** Simple get */
-  std::string
-  get(int v)
-  {
-    for (size_t i = 0; i < myValues.size(); ++i) {
-      if (myValues[i] == v) {
-        return myStrings[i];
-      }
-    }
-    return "";
-  }
-
-  /** Print it out to see */
-  void
-  dump()
-  {
-    size_t s = myValues.size();
-
-    for (size_t i = 0; i < s; ++i) {
-      std::cout << myValues[i] << " == " << myStrings[i] << "\n";
-    }
-  }
-};
-}
-
-// Tables for moment
-NumberToStringLookup ncep;
-NumberToStringLookup levels;
-NumberToStringLookup table4dot4;
-
-/** Should be from disk probably */
-void
-readNCEPLocalLevels()
-{
-  ncep.add(200, "entire atmosphere (considered as a single layer)");
-  ncep.add(201, "entire ocean (considered as a single layer)");
-  ncep.add(204, "highest tropospheric freezing level");
-  ncep.add(206, "grid scale cloud bottom level");
-  ncep.add(207, "grid scale cloud top level");
-  ncep.add(209, "boundary layer cloud bottom level");
-  ncep.add(210, "boundary layer cloud top level");
-  ncep.add(211, "boundary layer cloud layer");
-  ncep.add(212, "low cloud bottom level");
-  ncep.add(213, "low cloud top level");
-  ncep.add(214, "low cloud layer");
-  ncep.add(215, "cloud ceiling");
-  ncep.add(220, "planetary boundary layer");
-  ncep.add(221, "layer between two hybrid levels");
-  ncep.add(222, "middle cloud bottom level");
-  ncep.add(223, "middle cloud top level");
-  ncep.add(224, "middle cloud layer");
-  ncep.add(232, "high cloud bottom level");
-  ncep.add(233, "high cloud top level");
-  ncep.add(234, "high cloud layer");
-  ncep.add(235, "ocean isotherm level (1/10 deg C)");
-  ncep.add(236, "layer between two depths below ocean surface");
-  ncep.add(237, "bottom of ocean mixed layer");
-  ncep.add(238, "bottom of ocean isothermal layer");
-  ncep.add(239, "layer ocean surface and 26C ocean isothermal level");
-  ncep.add(240, "ocean mixed layer");
-  ncep.add(241, "ordered sequence of data");
-  ncep.add(242, "convective cloud bottom level");
-  ncep.add(243, "convective cloud top level");
-  ncep.add(244, "convective cloud layer");
-  ncep.add(245, "lowest level of the wet bulb zero");
-  ncep.add(246, "maximum equivalent potential temperature level");
-  ncep.add(247, "equilibrium level");
-  ncep.add(248, "shallow convective cloud bottom level");
-  ncep.add(249, "shallow convective cloud top level");
-  ncep.add(251, "deep convective cloud bottom level");
-  ncep.add(252, "deep convective cloud top level");
-  ncep.add(253, "lowest bottom level of supercooled liquid water layer");
-  ncep.add(254, "highest top level of supercooled liquid water layer");
-} // readNCEPLocalLevels
-
-void
-readLevels()
-{
-  // Default is "reserved"
-  levels.add(1, "surface");
-  levels.add(2, "cloud base");
-  levels.add(3, "cloud top");
-  levels.add(4, "0C isotherm");
-  levels.add(5, "level of adiabatic condensation from sfc");
-  levels.add(6, "max wind");
-  levels.add(7, "tropopause");
-  levels.add(8, "top of atmosphere");
-  levels.add(9, "sea bottom");
-  levels.add(10, "entire atmosphere");
-  levels.add(11, "cumulonimbus base");
-  levels.add(12, "cumulonimbus top");
-
-  levels.add(20, "%g K level");
-
-  levels.add(100, "%g mb");
-  levels.add(101, "mean sea level");
-  levels.add(102, "%g m above mean sea level");
-  levels.add(103, "%g m above ground");
-  levels.add(104, "%g sigma level");
-  levels.add(105, "%g hybrid level");
-  levels.add(106, "%g m underground");
-  levels.add(107, "%g K isentropic level");
-  levels.add(108, "%g mb above ground");
-  levels.add(109, "PV=%g (Km^2/kg/s) surface");
-
-  levels.add(111, "%g Eta level");
-
-  levels.add(117, "mixed layer depth");
-  levels.add(118, "hybrid height level");
-  levels.add(119, "hybrid pressure level");
-
-  levels.add(160, "%g m below sea level");
-} // readLevels
-
-void
-readTable4dot4()
-{
-  table4dot4.add(0, "minute");
-  table4dot4.add(1, "hour");
-  table4dot4.add(2, "day");
-  table4dot4.add(3, "month");
-  table4dot4.add(4, "year");
-  table4dot4.add(5, "decade");
-  table4dot4.add(6, "normal (30 years)");
-  table4dot4.add(7, "century");
-  table4dot4.add(10, "3 hours");
-  table4dot4.add(11, "6 hours");
-  table4dot4.add(12, "12 hours");
-  table4dot4.add(13, "second");
-  table4dot4.add(255, "missing");
-}
-
-namespace rapio {
-class GribLookup : public IO
-{
-public:
-  GribLookup(int d, int m, int c, int l, int pc, int pn,
-    const std::string& k, const std::string& des,
-    const std::string& u) : disc(d), mtab(m), cntr(c), ltab(l),
-    pcat(pc), pnum(pn), key(k), description(des), units(u)
-  { }
-
-  int disc;
-  int mtab;
-  int cntr;
-  int ltab;
-  int pcat;
-  int pnum;
-  // Still debating if a map would be faster here
-  std::string key;
-  std::string description;
-  std::string units;
-};
-}
-
-static std::vector<GribLookup> myLookup;
-
-GribLookup *
-huntDatabase(int d, int m, int c, int l, int pc, int pn,
-  const std::string& k, const std::string& des)
-{
-  // GribLookup* l = huntDatabase(disc, 0, 0, 0, pcat, pnum, "", "");
-  for (auto &i:myLookup) {
-    bool match = true;
-    match &= ((d == -1) || (d == i.disc));
-    //     match &= ((m == -1) || (m == i.mtab));
-    //     match &= ((c == -1) || (c == i.cntr));
-    match &= ((pc == -1) || (pc == i.pcat));
-    match &= ((pn == -1) || (pn == i.pnum));
-
-    //     match &= ((k.empty()) || (k == i.key));
-    //     match &= ((des.empty()) || (des == i.description));
-
-    if (match) {
-      // LogSevere("MATCHED " << d <<", " << pc << ", " << "m in " << m << " == " << i.mtab << "\n");
-      return &i;
-    }
-  }
-  return nullptr;
 }
 
 std::string
@@ -263,289 +53,6 @@ IOGrib::getGrib2Error(g2int ierr)
         break;
   }
   return err;
-}
-
-void
-GribAction::setG2Info(size_t messageNum, size_t at, g2int listsec0[3], g2int listsec1[13], g2int numlocal)
-{
-  myMessageNum = messageNum;
-  myBufferAt   = at;
-  for (size_t i = 0; i < 3; ++i) {
-    mySection0[i] = listsec0[i];
-  }
-  for (size_t i = 0; i < 13; ++i) {
-    mySection1[i] = listsec1[i];
-  }
-  myNumLocal = numlocal;
-}
-
-std::string
-GribAction::getDateString()
-{
-  std::stringstream ss;
-
-  //                listsec1[5]=Reference Time - Year (4 digits)
-  //                listsec1[6]=Reference Time - Month
-  //                listsec1[7]=Reference Time - Day
-  //                listsec1[8]=Reference Time - Hour
-  //                listsec1[9]=Reference Time - Minute
-  //                listsec1[10]=Reference Time - Second
-  ss << mySection1[5]
-     << std::setfill('0') << std::setw(2) << mySection1[6]
-     << std::setfill('0') << std::setw(2) << mySection1[7]
-     << std::setfill('0') << std::setw(2) << mySection1[8];
-  // minute/second ignored here
-  return ss.str();
-}
-
-bool
-GribCatalog::action(gribfield * gfld, size_t fieldNumber)
-{
-  std::string productName;
-  std::string levelName;
-
-  // A Wgrib2 style dump.
-  IOGrib::toCatalog(gfld, productName, levelName);
-  std::cout << myMessageNum << ":" << myBufferAt << ":"
-            << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
-
-  return true; // Keep going, do all messages
-}
-
-bool
-IOGrib::match(gribfield * gfld,
-  const std::string       & productName,
-  const std::string       & levelName)
-{
-  // Product name is simplest
-  std::string pn = getProductName(gfld);
-
-  if (pn != productName) {
-    return false;
-  }
-
-  // Now go for level
-  std::string level = getLevelName(gfld);
-
-  if (level != levelName) {
-    return false;
-  }
-
-  return true;
-}
-
-std::string
-IOGrib::getProductName(gribfield * gfld)
-{
-  // Key1: Grib2 discipline is also in the header, but we can get it here
-  g2int disc = gfld->discipline;
-  // Grib2 Grid Definition Template (GDT) number.  This tells how the grid is projected...
-  // const g2int gdtn = gfld->igdtnum;
-
-  // Grib2 PRODUCT definition template number.  Tells you which Template 4.x defines
-  // the stuff in the ipdtmpl.  Technically we would have to check all of these to
-  // make sure the Product Category is the first number...
-  // g2int pdtn = gfld->ipdtnum;
-
-  // Identification of originating center Table C-1
-  g2int cntr = gfld->idsect[0];
-
-  // g2int subcntr = gfld->idsect[1];
-
-  // GRIB master tables version number Code Table 1.0 (0 experimental, 1 initial version )
-  // g2int master = gfld->idsect[2];
-
-  // GRIB Local Tables Version Number (see Code Table 1.1)
-  g2int localTable = gfld->idsect[3];
-  // FIXME: Field has its own time
-
-  // Key 2: Category  Section 4, Octet 10 (For all Templates 4.X)
-  g2int pcat = gfld->ipdtmpl[0];
-
-  // Key 3: Parameter Number.  Section 4, Octet 11
-  g2int pnum = gfld->ipdtmpl[1];
-
-  // We'll make a database.  Yay.
-  // Not sure why master isn't matching..do they not match it?
-  // LogSevere("MASTER TABLE " << master << "\n");
-  GribLookup * l = huntDatabase(disc, -1, cntr, localTable, pcat, pnum, "", "");
-
-  std::string pn;
-
-  if (l != nullptr) {
-    pn = l->key;
-  } else {
-    std::stringstream spn;
-    spn << "var discipline=" << disc << " center=" << cntr << " local_table=" << localTable
-        << " parmcat=" << pcat << " parm=" << pnum;
-    pn = spn.str();
-  }
-  return pn;
-} // IOGrib::getProductName
-
-std::string
-IOGrib::getLevelName(gribfield * gfld)
-{
-  // Grib2 PRODUCT definition template number.  Tells you which Template 4.x defines
-  // the stuff in the ipdtmpl.  Technically we would have to check all of these to
-  // make sure the Product Category is the first number...
-  g2int pdtn = gfld->ipdtnum;
-
-  // Identification of originating center Table C-1
-  g2int cntr = gfld->idsect[0];
-
-  // Get the level number? Section 4, Octet 23
-  g2int level  = -1;
-  g2int level2 = -1;
-  g2int value1 = -1;
-
-  std::string value1str;
-  // g2int scale1 = -1;
-  g2int value2 = -1;
-  std::string value2str;
-
-  // g2int scale2 = -1;
-
-  // Humm we aren't using time units?
-  // std::string timeunits = "";
-  // g2int timeForecast = -1;
-
-  // FIXME: We could make a class tree of the templates to enforce bounds
-  // checking
-  if (pdtn <= 15) {
-    // First fixed surface
-    level = gfld->ipdtmpl[9]; // Octet 23    Type of first fixed surface
-    // scale1 = gfld->ipdtmpl[10]; // Octet 24    Scale factor of first fixed surface
-    value1 = gfld->ipdtmpl[11]; // Octer 25-28 Scaled value of the first fixed surface
-
-    // Second fixed surface
-    level2 = gfld->ipdtmpl[12]; // Octet 29    Type of second fixed surface
-    // scale2 = gfld->ipdtmpl[13]; // Octet 30    Scale factor of second fixed surface
-    value2 = gfld->ipdtmpl[14]; // Octet 31-34 Scaled value of the second fixed surface
-
-    // FIXME: use time units?
-    // g2int timeUnit = gfld->ipdtmpl[7]; // Octet 18 Indicator of unit of time range table 4.4
-    // std::string l = table4dot4.get(timeUnit);
-    // if (!l.empty()) {
-    //  timeunits = l;
-    // }
-    // timeForecast = gfld->ipdtmpl[8];  // Octet 19-22 Forecast time
-  }
-
-  // Fixed surface stuff only for template 0-15
-  // No idea what they do outside this range.
-
-  // We'll call this the level/layer string.
-  std::string levelStr = "no_level";
-
-  if (level < 192) {
-    std::string l = levels.get(level);
-    if (l.empty()) {
-      l = "reserved";
-    }
-    levelStr = l;
-  }
-
-  // Wgrib does lots of extras for the layer strings, but they are just the
-  // single layer with %g-%g and layer instead of level
-  if (level2 == 255) { // MISSING
-    // We have a LEVEL
-    if (( cntr == 7) && ( level >= 192) && ( level <= 254) ) {
-      if (level == 235) {
-        //  levelStr = "%gC ocean isotherm";  Just use the table..kill me
-        value1 /= 10;
-      }
-      // if (level1 == 241){
-      //  levelStr = "%g in sequence";
-      // }
-
-      std::string l = ncep.get(level);
-      if (l.empty()) {
-        // FIXME: I don't check undef_val
-        levelStr = "NCEP level type " + std::to_string(level) + " " + std::to_string(value1);
-      } else {
-        levelStr = l;
-      }
-    }
-  } else {
-    // We have a LAYER not a level, update the string
-    Strings::replace(levelStr, "%g", "%g-%g");
-    Strings::replace(levelStr, "level", "layer");
-
-    // These are 'specials'
-    // if NCEP  and 235, 235  ocean isotherm layer
-    // if NCEP  and 236, 236  ocean layer
-    if (cntr == 7) {
-      if (( level == 235) && ( level2 == 235) ) {
-        levelStr = "%g-%gC ocean isotherm layer";
-        value1  /= 10;
-        value2  /= 10;
-      } else if (( level == 236) && ( level2 == 236) ) {
-        levelStr = "%g-%g m ocean layer";
-        value1  *= 10;
-        value2  *= 10;
-      }
-    }
-    if (( level == 1) && ( level2 == 8) ) { levelStr = "atmos col"; }
-    if (( level == 9) && ( level2 == 1) ) { levelStr = "ocean column"; }
-    // if (level == 255 && level2 == 255){ levelStr = "no_level"; } our default
-  }
-
-  // Scaling of the level values from Pa to mb.
-  // FIXME: Another table could give a unit conversion factor, avoid all this.
-  if (level == 100) {
-    value1 /= 100;
-  }
-  if (level2 == 100) {
-    value2 /= 100;
-  }
-  if (level == 108) {
-    value1 /= 100;
-  }
-  if (level2 == 108) {
-    value2 /= 100;
-  }
-
-  // Diff from wgrib2...DZDT in hrrr is decimal...humm
-  if (level == 104) {
-    // FIXME: definitely need to clean up/generalize all this
-    // artifacts from using c strings and sprintf.
-    std::ostringstream out;
-    out.precision(2);
-    out << std::fixed << ((double) value1) / 100.0;
-    value1str = out.str();
-    // value1 /= 100; Error goes to zero.
-  }
-  if (level2 == 104) {
-    std::ostringstream out;
-    out.precision(2);
-    out << std::fixed << ((double) value2) / 100.0;
-    value2str = out.str();
-    // value2 /= 100; Error goes to zero
-  }
-
-  if (value1str.empty()) {
-    value1str = std::to_string(value1);
-  }
-  if (value2str.empty()) {
-    value2str = std::to_string(value2);
-  }
-  if (level2 == 255) { // MISSING
-    Strings::replace(levelStr, "%g", value1str);
-  } else {
-    Strings::replace(levelStr, "%g-%g", value1str + "-" + value2str);
-  }
-
-  return levelStr;
-} // IOGrib::getLevelName
-
-void
-IOGrib::toCatalog(gribfield * gfld,
-  std::string                 & productName,
-  std::string                 & levelName)
-{
-  productName = getProductName(gfld);
-  levelName   = getLevelName(gfld);
 }
 
 std::shared_ptr<Array<float, 2> >
@@ -658,112 +165,6 @@ IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vecto
   return newOne; // nullptr;
 } // IOGrib::get3DData
 
-/*
- *  // A Wgrib2 style dump.
- *  std::cout << myMessageNum << ":"<<myBufferAt << ":" <<
- *    "d=" <<  getDateString() << ":" << pn << ":" << levelStr <<
- * //         "[" << level << "," << value1  << ", " << scale1 << "]" <<
- * //         "[" << level2 << "," << value2  << ", " << scale2 << "]" <<
- * //     "("<<disc<<")("<<pdtn <<")("<<pcat<<")("<<pnum << ")" <<
- * // FIXME: Not same as wgrib2.  Not sure we need '3-4 hour max fcst' for instance...
- * ":" << timeForecast << " " << timeunits <<  // "[" << level << ", " << level2 << "]" <<
- *   "\n";
- */
-
-/*
- *  LogSevere("Trying to read the data from it..\n");
- *      // Reread found data, but slower now, unpack it
- *  gribfield * gfld2 = 0; // output
- *  ierr         = g2_getfld(&bu[k], f, 1, 1, &gfld2);
- *  if (ierr == 0){
- *    LogSevere("UNPACK PASS WORKED?\n");
- *  }
- *  const g2int* gds = gfld->igdtmpl;
- *  int tX = gds[7]; // 31-34 Nx -- Number of points along the x-axis
- *  int tY = gds[8]; // 35-38 Ny -- Number of points along te y-axis
- *  size_t numX = (tX < 0)? 0 : (size_t)(tX);
- *  size_t numY = (tY < 0)? 0 : (size_t)(tY);
- *
- *  LogSevere("Grid size is " << numX << " * " << numY << "\n");
- *   g2float* g2grid =  gfld2->fld;
- *   DataStore2D<float> holder(numX, numY);
- *
- *  for(size_t x=0; x<numX; ++x){
- *    for(size_t y = 0; y<numY; ++y){
- *       holder.set(x,y,g2grid[y*numX+x]);
- *    }
- *  }
- *  for(size_t x = 0; x < 10; ++x){
- *    for(size_t y = 0; y < 10; ++y){
- *      std::cout << holder.get(x,y) << ",  ";
- *    }
- *    std::cout << "\n";
- *  }
- */
-// return false;
-
-GribMessageMatcher::GribMessageMatcher(g2int d, g2int c, g2int p) : myDisciplineNumber(d), myCategoryNumber(c),
-  myParameterNumber(p)
-{
-  myMode = 0;
-}
-
-bool
-GribMessageMatcher::action(gribfield * gfld, size_t fieldNumber)
-{
-  // Key1: Grib2 discipline is also in the header, but we can get it here
-  g2int disc = gfld->discipline;
-
-  if (disc != myDisciplineNumber) { return false; }
-  // FIXME: is this always valid?
-
-  // Grib2 PRODUCT definition template number.  Tells you which Template 4.x defines
-  // the stuff in the ipdtmpl.  Technically we would have to check all of these to
-  // make sure the Product Category is the first number...
-  // int pdtn = gfld->ipdtnum;
-  // Key 2: Category  Section 4, Octet 10 (For all Templates 4.X)
-  g2int pcat = gfld->ipdtmpl[0];
-
-  if (pcat != myCategoryNumber) { return false; }
-
-  // Key 3: Parameter Number.  Section 4, Octet 11
-  g2int pnum = gfld->ipdtmpl[1];
-
-  if (pnum != myParameterNumber) { return false; }
-
-  // Grib2 Grid Definition Template (GDT) number.  This tells how the grid is projected...
-  // const g2int gdtn = gfld->igdtnum;
-  return true; // stop scanning
-}
-
-GribMatcher::GribMatcher(const std::string& key,
-  const std::string                       & levelstr) : myKey(key), myLevelStr(levelstr),
-  myMatched(false), myMatchAt(0), myMatchFieldNumber(0)
-{ }
-
-bool
-GribMatcher::action(gribfield * gfld, size_t fieldNumber)
-{
-  bool match = IOGrib::match(gfld, myKey, myLevelStr);
-
-  if (match) {
-    LogSevere("**********MATCHED " << myKey << " and " << myLevelStr << "\n");
-    myMatched = true;
-    myMatchAt = myBufferAt;
-    myMatchFieldNumber = fieldNumber;
-  }
-
-  return true;
-}
-
-bool
-GribMatcher::getMatch(size_t& at, size_t& fieldNumber)
-{
-  at = myMatchAt;
-  fieldNumber = myMatchFieldNumber;
-  return myMatched;
-}
-
 namespace {
 /** Create my own copy of gbits and gbit.  It looks like the old implementation overflows
  * on large files since it counts number of bits so large files say 1 GB can overflow
@@ -829,6 +230,100 @@ _gbit(unsigned char * in, g2int * iout, unsigned long long iskip, g2int nbyte)
   _gbits(in, iout, iskip, nbyte, (g2int) 0, (g2int) 1);
 }
 }
+
+bool
+IOGrib::scanGribDataFILE(FILE * lugb, GribAction * a)
+{
+  LogSevere("Ok in the scan grib data file class\n");
+  LogSevere("Humm this doesn't work, ALPHA play here\n");
+
+  /*
+   * @param lugb FILE pointer for the file to search. File must be
+   * opened before this routine is called.
+   * @param iseek The number of bytes in the file to skip before search.
+   * @param mseek The maximum number of bytes to search at a time (must
+   * be at least 16, but larger numbers like 4092 will result in better
+   * perfomance).
+   * @param lskip Pointer that gets the number of bytes to skip from the
+   * beggining of the file to where the GRIB message starts.
+   * @param lgrib Pointer that gets the number of bytes in message (set
+   * to 0, if no message found).
+   * //seekgb(FILE *lugb, g2int iseek, g2int mseek, g2int *lskip, g2int *lgrib)
+   */
+  // Ugghgh grib2 is all c and messy and it could be done in c++ so easy, but
+  // then when they change the format the c++ will break.  So bleh.
+  //
+  // stuff passed in
+  //    FILE *lugb;
+  g2int iseek = 0;                 // Number of bytes to skip before search, eh?
+  g2int mseek = 100 * 1024 * 1024; // 100 MB
+  g2int buffer[2];
+  g2int * lskip = &buffer[0];
+  g2int * lgrib = &buffer[1];
+
+  g2int k, k4, ipos, nread, lim, start, vers, lengrib;
+  int end;
+  unsigned char * cbuf;
+
+  // LOG((3, "seekgb iseek %ld mseek %ld", iseek, mseek));
+
+  *lgrib = 0;
+  cbuf   = (unsigned char *) malloc(mseek);
+  nread  = mseek;
+  ipos   = iseek;
+
+  /* Loop until grib message is found. */
+  while (*lgrib == 0 && nread == mseek) {
+    /* Read partial section. */
+    fseek(lugb, ipos, SEEK_SET);
+    nread = fread(cbuf, sizeof(unsigned char), mseek, lugb);
+    lim   = nread - 8;
+
+    LogSevere("OK read in " << mseek << " size \n");
+    /* Look for 'grib...' in partial section. */
+    for (k = 0; k < lim; k++) {
+      /* Look at the first 4 bytes - should be 'GRIB'. */
+      gbit(cbuf, &start, k * BYTE, 4 * BYTE);
+      // LogSevere("..."<<cbuf[0]<<cbuf[1]<<cbuf[2]<<cbuf[3]<<"\n");
+
+      /* Look at the 8th byte, it has the GRIB version. */
+      gbit(cbuf, &vers, (k + 7) * BYTE, 1 * BYTE);
+
+      /* If the message starts with 'GRIB', and is version 1 or
+       * 2, then this is a GRIB message. */
+      LogSevere("GRIB VERSION: " << (int) (cbuf[0]) << "\n");
+      if ((start == 1196575042) && ((vers == 1) || (vers == 2))) {
+        /* Find the length of the message. */
+        if (vers == 1) {
+          gbit(cbuf, &lengrib, (k + 4) * BYTE, 3 * BYTE);
+        }
+        if (vers == 2) {
+          gbit(cbuf, &lengrib, (k + 12) * BYTE, 4 * BYTE);
+        }
+        // LOG((4, "lengrib %ld", lengrib));
+        LogSevere("Length of message " << lengrib << "\n");
+
+        /* Read the last 4 bytesof the message. */
+        fseek(lugb, ipos + k + lengrib - 4, SEEK_SET);
+        k4 = fread(&end, 4, 1, lugb);
+
+        /* Look for '7777' at end of grib message. */
+        if ((k4 == 1) && (end == 926365495) ) {
+          /* GRIB message found. */
+          *lskip = ipos + k;
+          *lgrib = lengrib;
+          // LOG((4, "found end of message lengrib %ld", lengrib));
+          LogSevere("End of message " << lengrib << "\n");
+          break;
+        }
+      }
+    }
+    ipos = ipos + lim;
+  }
+
+  free(cbuf);
+  return true;
+} // IOGrib::scanGribDataFILE
 
 bool
 IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
@@ -973,146 +468,33 @@ void
 IOGrib::initialize()
 { }
 
-/** a quick dirty wgrib2 gribtab.dat reader to make a lookup database.
- * Usually we look up by name and level and strings are easier for
- * the user.  Grib2 really should have just used a *@#*%) string in
- * it's original design.
- * We'll convert the format at some point to csv probably
- */
-void
-readGribDatabase()
-{
-  static bool firstTime = true;
-
-  if (!firstTime) { return; }
-  firstTime = false;
-
-  readLevels();
-  readNCEPLocalLevels(); // center == 7
-  readTable4dot4();      // Indicator of unit of time range
-
-  const URL url = Config::getConfigFile("gribtab.dat");
-
-  if (url.empty()) {
-    LogSevere("Grib2 reader requires a gribtab.dat file in your configuration\n");
-    exit(1);
-  }
-  std::vector<char> buf;
-
-  IOURL::read(url, buf);
-
-  if (!buf.empty()) {
-    LogSevere("Read the dat file\n");
-
-    size_t at       = 0;
-    size_t size     = buf.size();
-    size_t state    = 0;
-    size_t fieldnum = 0;
-    std::stringstream ss;
-
-    // What we're getting per line
-    int disc = -1;
-    int mtab = -1;
-    int cntr = -1;
-    int ltab = -1;
-    int pcat = -1;
-    int pnum = -1;
-    std::string key, description, units;
-
-    /*
-     * int disc;   Section 0 Discipline // field
-     * int mtab;   Section 1 Master Tables Version Number
-     * int cntr;   Section 1 originating centre, used for local tables // higher
-     * int ltab;   Section 1 Local Tables Version Number
-     * int pcat;   Section 4 Template 4.0 Parameter category // field
-     * int pnum;   Section 4 Template 4.0 Parameter number // field
-     *              //   { 0, 1, 0, 0, 5, 4, "ULWRF", "Upward Long-Wave Rad. Flux", "W/m^2"},
-     *              //   { 0, 0, 7, 1, 5, 193, "ULWRF", "Upward Long-Wave Rad. Flux", "W/m^2"}
-     */
-    // Stupid quick 10 min DFA.  Yay computer science classes, lol
-    // Of course if we end up using tables we'll make a better
-    // format.  This _will_ break easily with a bad data file
-    while (at < size) {
-      const char c = buf[at];
-      switch (state) {
-          case 0: /* begin */
-            if ((c == '{') | (c == '}') || (c == ' ') | (c == ',') || (c == '\n')) { break; } // keep eating
-            // otherwise start a field...
-            if (c == '"') {
-              state = 1; // now in a word
-            } else {     // assume number
-              ss << c;   // add to field data
-              state = 2; // now in a number
-            }
-            break;
-          case 1: /* inside a word, waiting for end quote */
-            if (c != '"') {
-              ss << c;
-            } else {
-              //  LogSevere(fieldnum << ": Word: '" << ss.str() << "'\n");
-              if (fieldnum == 6) {
-                key = ss.str();
-              } else if (fieldnum == 7) {
-                description = ss.str();
-              } else if (fieldnum == 8) {
-                units = ss.str();
-              }
-              ss.str("");
-              ss.clear();
-              state = 0;
-              if (++fieldnum > 8) {
-                fieldnum = 0;
-                //           LogSevere("Final: " << disc <<"," << mtab <<"," << cntr << "," << ltab << "," << pcat
-                //             << "," << pnum << " " << key << ":"<<description<<":"<<units<< "\n");
-                myLookup.push_back(GribLookup(disc, mtab, cntr, ltab, pcat, pnum, key, description, units));
-              }
-            }
-            break;
-          case 2: /* in a number */
-            if (c != ',') {
-              ss << c;
-            } else {
-              //  LogSevere(fieldnum << ": Number: '" << ss.str() << "'\n");
-              int f = std::stoi(ss.str());
-              // int disc, mtab, cntr, ltab, pcat, pnum;
-              if (fieldnum == 0) {
-                disc = f;
-              } else if (fieldnum == 1) {
-                mtab = f;
-              } else if (fieldnum == 2) {
-                cntr = f;
-              } else if (fieldnum == 3) {
-                ltab = f;
-              } else if (fieldnum == 4) {
-                pcat = f;
-              } else if (fieldnum == 5) {
-                pnum = f;
-              }
-              ss.str("");
-              ss.clear();
-              state = 0;
-              fieldnum++;
-              if (fieldnum > 8) { fieldnum = 0; }
-            }
-            break;
-          default:
-            break;
-      }
-      ++at;
-    }
-  }
-
-  // Ok the levels?
-
-  // exit(1);
-} // readGribDatabase
-
 std::shared_ptr<DataType>
 IOGrib::readGribDataType(const URL& url)
 {
+  #if 0
+  // g2c 2.0 which we probably won't have forever
+  int id;
+  // * - ::G2C_NOERROR - No error.
+  // * - ::G2C_EINVAL - Invalid input.
+  // * - ::G2C_ETOOMANYFILES - Trying to open too many files at the same time.
+  auto file = g2c_open(url.toString(), G2C_NOWRITE, &id);
+  switch (file) {
+      case G2C_NOERROR: LogSevere("NO error\n");
+        break;
+      case G2C_EINVAL: LogSevere("Invalid input calling g2c_open\n");
+        break;
+      case G2C_ETOOMANYFILES: LogSevere("Too open grib2 files open at same time on g2c_open\n");
+        break;
+      default: break;
+  }
+  g2c_close(id);
+  LogSevere("Opened...\n");
+  exit(1);
+  #endif // if 0
+
   // HACK IN MY GRIB.data thing for moment...
   // Could lazy read only on string matching...
-  readGribDatabase();
+  GribDatabase::readGribDatabase();
 
   // Note, in RAPIO we can read a grib file remotely too
   std::vector<char> buf;
@@ -1124,7 +506,7 @@ IOGrib::readGribDataType(const URL& url)
     // pass it onto the DataType object?
     //  GribSanity test;
     //  if scanGribData(buf, &test) good to go;
-    std::shared_ptr<GribDataTypeImp> g = std::make_shared<GribDataTypeImp>(buf);
+    std::shared_ptr<GribDataTypeImp> g = std::make_shared<GribDataTypeImp>(url, buf);
     return g;
   } else {
     LogSevere("Couldn't read data for grib2 at " << url << "\n");

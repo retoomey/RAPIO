@@ -168,23 +168,37 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 }
 
 std::string
-OS::getRootFileExtension(const std::string& path)
+OS::getRootFileExtension(const std::string& path, std::string& root)
 {
-  // We want to auto remove the compression field
-  // .xml.gz --> 'xml' .xml --> 'xml'
-  std::string e = fs::extension(path);
+  std::string p = path;                // test.xMl.Gz  or test.xMl
+  std::string e = fs::extension(path); // .Gz or .xMl
 
-  Strings::toLower(e);
-  Strings::removePrefix(e, ".");
+  Strings::removeSuffix(p, e); // root = test.xMl or test
+
+  // Now lowercase e and check the datafilter for it
+  Strings::toLower(e);           // .gz or empty
+  Strings::removePrefix(e, "."); // gz
   std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(e, "OS");
 
-  if (f != nullptr) {
-    std::string p = path;
-    Strings::removeSuffix(p, "." + e);
-    e = fs::extension(p);
-    Strings::toLower(e);
-    Strings::removePrefix(e, ".");
+  // Here if no factory found, we have root='test' and e='xml'
+  if (f != nullptr) { // found gz or another we auto handle
+    // p=test.xMl and e = gz
+    // Second extension, for example .xml.gz --> 'xml' case
+    e = fs::extension(p);          // test.xMl --> .xMl
+    Strings::removeSuffix(p, e);   // root = test
+    Strings::toLower(e);           // .xml
+    Strings::removePrefix(e, "."); // xml
   }
+  root = p;
+  return (e);
+}
+
+std::string
+OS::getRootFileExtension(const std::string& path)
+{
+  std::string p, e;
+
+  e = OS::getRootFileExtension(path, p);
   return (e);
 }
 
