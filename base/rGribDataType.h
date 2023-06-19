@@ -26,7 +26,6 @@ public:
 
   /** Get a 3D array from grib data */
   virtual std::shared_ptr<Array<float, 3> >
-  getFloat3D(const std::string& key, size_t&x, size_t&y, size_t&z, std::vector<std::string> zLevelsVec,
-    float missing = -999.0) = 0;
+  getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec, size_t&x, size_t&y, size_t&z) = 0;
 };
 }
