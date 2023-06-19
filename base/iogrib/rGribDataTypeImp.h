@@ -19,7 +19,7 @@ namespace rapio {
  * @author Robert Toomey */
 class GribDataTypeImp : public GribDataType {
 public:
-  GribDataTypeImp(const URL& url, const std::vector<char>& buf) : myURL(url), myBuf(buf)
+  GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) : myURL(url), myBuf(buf), myMode(mode)
   {
     myDataType = "GribData";
 
@@ -30,10 +30,16 @@ public:
     myIndexURL = URL(root + ".idx");
 
     // Hack to snag first time.
+    // Gonna force message mode here for the time snag
+    // Note this means direct URL reading breaks. Need field cleanup
     GribScanFirstMessage scan(this);
 
-    IOGrib::scanGribData(myBuf, &scan);
+    IOGrib::scanGribDataFILE(myURL, &scan);
   }
+
+  /** Call the correct IOGrib scan technique for our mode, and apply the given strategy */
+  void
+  scanGribData(GribAction * scan);
 
   /** Print the catalog for this GribDataType. */
   void
@@ -52,8 +58,7 @@ public:
    *    @param missing - OPTIONAL missing value; default is -999.0
    */
   std::shared_ptr<Array<float, 3> >
-  getFloat3D(const std::string& key, size_t& x, size_t& y, size_t& z, std::vector<std::string> zLevelsVec,
-    float missing = -999.0);
+  getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec, size_t& x, size_t& y, size_t& z);
 
 private:
 
@@ -63,9 +68,12 @@ private:
   /** Store the URL to the index if any */
   URL myIndexURL;
 
-  /** Store the buffer of data.  Note doing this can be a large amount of RAM
-   * for large grib2 files.  But it has the advantage of remote URL reading
-   * which is interesting. */
+  /** Mode from rapiosettings.xml.  Tells how we buffer grib2 files */
+  int myMode;
+
+  /** Store the buffer of the entire grib2 file of data in mode 1
+   * Note doing this in mode 1 can be a large amount of RAM
+   * for large grib2 files. */
   std::vector<char> myBuf;
 };
 }

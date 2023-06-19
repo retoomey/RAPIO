@@ -7,62 +7,55 @@
 using namespace rapio;
 
 void
+GribDataTypeImp::scanGribData(GribAction * a)
+{
+  // Call the correct helper function for us
+  if (myMode == 1) { // FULL read, use the prefilled in buffer
+    IOGrib::scanGribData(myBuf, a);
+  } else { // default to by message
+    IOGrib::scanGribDataFILE(myURL, a);
+  }
+}
+
+void
 GribDataTypeImp::printCatalog()
 {
   GribCatalog test;
 
-  IOGrib::scanGribData(myBuf, &test);
-
-  #if 0
-  bool tryFile = false;
-
-  if (tryFile) {
-    // Try with URL method instead of buffer....
-    // We could have two separate subclasses
-    LogSevere("My URL is " << myURL << "\n");
-    // a local file can read by scanning the file, vs buffering everything in ram
-    // FIXME: Check local file...
-    // std::fstream::file(myURL.getPath(), std::ios::in | std::ios::binary);
-    // if (!file){
-    //  LogSevere("Unable to read file at " << myURL << "\n");
-    // }
-    // file.close();
-    // Using c functions vs fstream here since g2c is a c library
-    FILE * file = fopen(myURL.getPath().c_str(), "r+b");
-    if (file == nullptr) {
-      LogSevere("Unable to read file at " << myURL << "\n");
-    } else {
-      IOGrib::scanGribDataFILE(file, nullptr);
-    }
-    // IOGrib::scanGribData(file, &test);
-    fclose(file);
-
-    exit(1);
-  } else {
-    IOGrib::scanGribData(myBuf, &test);
-  }
-  #endif // if 0
+  scanGribData(&test);
 } // GribDataTypeImp::printCatalog
 
 std::shared_ptr<Array<float, 2> >
 GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y)
 {
-  // Humm has vs is...a better way?
-  GribMatcher test(key, levelstr);
+  GribMatcher match1(key, levelstr);
 
-  IOGrib::scanGribData(myBuf, &test);
-  size_t at, fieldNumber;
+  scanGribData(&match1);
 
-  if (test.getMatch(at, fieldNumber)) {
-    return IOGrib::get2DData(myBuf, at, fieldNumber, x, y);
+  auto m = match1.getMatchedMessage();
+
+  if (m != nullptr) {
+    return IOGrib::get2DData(m, match1.getMatchedFieldNumber(), x, y);
   }
   return nullptr;
 }
 
 std::shared_ptr<Array<float, 3> >
-GribDataTypeImp::getFloat3D(const std::string& key, size_t& x, size_t& y, size_t& z,
-  std::vector<std::string> zLevelsVec, float missing)
+GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLevels, size_t& x, size_t& y, size_t& z)
 {
-  return IOGrib::get3DData(myBuf, key, zLevelsVec, x, y, z, missing);
-  // return nullptr;
+  size_t nz = zLevels.size();
+
+  if ((nz < 1)) {
+    LogSevere("Need at least 1 z level for 3D");
+    return nullptr;
+  }
+
+  GribNMatcher matchN(key, zLevels);
+
+  scanGribData(&matchN);
+
+  if (matchN.checkAllLevels()) {
+    return IOGrib::get3DData(matchN.getMatchedMessages(), matchN.getMatchedFieldNumbers(), zLevels, x, y, z);
+  }
+  return nullptr;
 }

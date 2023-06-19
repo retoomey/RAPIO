@@ -63,6 +63,7 @@ if (Grib2C_FOUND)
     rGribAction.cc
     rGribDatabase.cc
     rGribDataTypeImp.cc
+    rGribMessageImp.cc
     rIOGrib.cc
   )
 

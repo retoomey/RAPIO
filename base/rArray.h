@@ -70,6 +70,34 @@ public:
     return myDims;
   }
 
+  /** Convenience to get dim zero, 'X' */
+  size_t
+  getX()
+  {
+    return ((myDims.size() > 0) ? myDims[0] : 0);
+  }
+
+  /** Convenience to get dim one, 'Y' */
+  size_t
+  getY()
+  {
+    return ((myDims.size() > 1) ? myDims[1] : 0);
+  }
+
+  /** Convenience to get dim two, 'Z' */
+  size_t
+  getZ()
+  {
+    return ((myDims.size() > 2) ? myDims[2] : 0);
+  }
+
+  /** Convenience to get dim four, 'K' */
+  size_t
+  getK()
+  {
+    return ((myDims.size() > 3) ? myDims[3] : 0);
+  }
+
   /** Create the array for current dimensions */
   virtual bool
   syncToDims() = 0;

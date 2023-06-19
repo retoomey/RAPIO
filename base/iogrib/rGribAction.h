@@ -3,6 +3,8 @@
 #include "rIO.h"
 #include "rDataType.h"
 
+#include "rGribMessageImp.h"
+
 #include <vector>
 #include <string>
 
@@ -12,55 +14,36 @@ extern "C" {
 
 namespace rapio {
 /** Root class of an action taken on each message of a Grib2 file.
+ * Basically a scan is done where a GribAction gets to handle
+ * each GribMessage of a file. You can use readFieldInfo or
+ * readField to process data.
  *
  * @author Robert Toomey */
 class GribAction : public IO
 {
 public:
   virtual bool
-  action(gribfield * gfld, size_t fieldNumber)
+  action(std::shared_ptr<GribMessageImp>&, size_t fieldNumber)
   {
     return false; // Keep going?
   }
-
-  /** Info sent at start of a valid Grib2 message.  This information can be used in the action method.
-   * Debated copying this vs passing with each action call */
-  virtual void
-  setG2Info(size_t messageNum, size_t at, g2int listsec0[3], g2int listsec1[13], g2int numlocal);
-
-  /** Return a wgrib2 like date string 2019082023 from current g2info */
-  virtual std::string
-  getDateString();
-
-protected:
-  /** Current message number in Grib2 data */
-  size_t myMessageNum;
-
-  /** Current location in buffer */
-  size_t myBufferAt;
-
-  /** Current Section 0 fields */
-  g2int mySection0[3];
-
-  /** Current Section 1 fields */
-  g2int mySection1[13];
-
-  /** Current number of local */
-  g2int myNumLocal;
 };
 
+/** An action that simply prints the wgrib2 or idx format out
+ * for each message in the grib2 data */
 class GribCatalog : public GribAction
 {
 public:
   virtual bool
-  action(gribfield * gfld, size_t fieldNumber) override;
-
-protected:
-  std::vector<std::string> myList;
+  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
 };
 
+#if 0
+
 /** First attempt at a grib matcher class.  This simple one matches
- * Discipline, Category, Parameter for data */
+ * Discipline, Category, Parameter for data.
+ * FIXME: Nothing calls this.  I'm leaving it for now it might
+ * not even work anymore */
 class GribMessageMatcher : public GribAction
 {
 public:
@@ -73,24 +56,75 @@ public:
   GribMessageMatcher(g2int d, g2int c, g2int p);
 
   virtual bool
-  action(gribfield * gfld, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
 };
+#endif // if 0
 
 class GribMatcher : public GribAction
 {
+  /** The key we look for */
   std::string myKey;
-  std::string myLevelStr;
-  bool myMatched;
-  size_t myMatchAt;
-  size_t myMatchFieldNumber;
-public:
-  GribMatcher(const std::string& key, const std::string& levelstr);
-  virtual bool
-  action(gribfield * gfld, size_t fieldNumber) override;
 
-  /** Get match at and field number for grib reading */
+  /** The level we look for */
+  std::string myLevelStr;
+
+  /** Matched message, or nullptr */
+  std::shared_ptr<GribMessageImp> myMatchedMessage;
+
+  /** Match field number iff matched message */
+  size_t myMatchedFieldNumber;
+
+public:
+
+  /** Create a single field first come matcher */
+  GribMatcher(const std::string& key, const std::string& levelstr);
+
+  /** Matched message */
+  virtual bool
+  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+
+  /** The messsage we matched if any, and other info. */
+  std::shared_ptr<GribMessageImp> getMatchedMessage(){ return myMatchedMessage; }
+
+  /** The field number we matched if any */
+  size_t getMatchedFieldNumber(){ return myMatchedFieldNumber; }
+};
+
+/** Matcher matching N fields in the grib2 source.  Used for our 3D creation */
+class GribNMatcher : public GribAction
+{
+  /** The key we look for */
+  std::string myKey;
+
+  /** The vector of levels we look for */
+  std::vector<std::string> myLevels;
+
+  /** Matched message, or nullptr */
+  std::vector<std::shared_ptr<GribMessageImp> > myMatchedMessages;
+
+  /** Matched field numbers */
+  std::vector<size_t> myMatchedFieldNumbers;
+
+  /** Count of matched to know we got them all */
+  size_t myMatchedCount;
+
+public:
+  /** Create a N level, single pass matcher */
+  GribNMatcher(const std::string& key, std::vector<std::string>& levels);
+
+  /** Action to take on a GribMessage */
+  virtual bool
+  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+
+  /** Return true if we found all levels and tell what are missing */
   bool
-  getMatch(size_t& at, size_t& fieldNumber);
+  checkAllLevels();
+
+  /** The messages we matched if any. */
+  std::vector<std::shared_ptr<GribMessageImp> >& getMatchedMessages(){ return myMatchedMessages; }
+
+  /** The field numbers we matched if any. */
+  std::vector<size_t>& getMatchedFieldNumbers(){ return myMatchedFieldNumbers; }
 };
 
 /** Grib that snags the time info out of the very first field.
@@ -102,13 +136,13 @@ public:
  * will have to change somewhat.*/
 class GribScanFirstMessage : public GribAction
 {
-  /** The caller that want the time set */
+  /** The caller that wants the time set */
   DataType * myCaller;
 
 public:
   GribScanFirstMessage(DataType * caller) : myCaller(caller){ };
 
   virtual bool
-  action(gribfield * gfld, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
 };
 }

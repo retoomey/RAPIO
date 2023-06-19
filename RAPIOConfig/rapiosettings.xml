@@ -140,9 +140,19 @@ Information needed:
   </io>
 
 <!-- GRIB module
+     bmode: Buffer mode.  How to read file and buffer.
+              Example: 0: Read file by message (field buffer)
+                          Seek/read by grib2 message.
+                          RAM is only required for the current grib2 message.
+                          This is the default so we're RAM friendly with MRMS
+                          and other algorithms.
+                       1: Read file entirely into RAM then process
+                          This mode 'may' be quicker but you need RAM
+                          for the entire file and some grib2 files are
+                          fairly large say 1 GB or more.
 -->
   <io names="grib" module="librapiogrib.so">
-    <output />
+    <output bmode="0"/>
   </io>
 
 <!-- RAW module settings

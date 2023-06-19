@@ -4,8 +4,10 @@
 #include "rIOURL.h"
 #include "rStrings.h"
 #include "rConfig.h"
+#include "rConfigIODataType.h"
 
 #include "rGribDataTypeImp.h"
+#include "rGribMessageImp.h"
 #include "rGribDatabase.h"
 #include "rGribAction.h"
 
@@ -56,30 +58,33 @@ IOGrib::getGrib2Error(g2int ierr)
 }
 
 std::shared_ptr<Array<float, 2> >
-IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y)
+IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t& x, size_t& y)
 {
-  // size_t aSize       = b.size();
-  unsigned char * bu = (unsigned char *) (&b[0]);
-  // Reread found data, but slower now, unpack it
-  gribfield * gfld = 0; // output
-  int ierr         = g2_getfld(&bu[at], fieldNumber, 1, 1, &gfld);
+  // Fully read expand/unpack field fieldNumber from the GribMessage
+  gribfield * gfld = m->readField(fieldNumber);
 
-  if (ierr == 0) {
-    LogInfo("Grib2 field unpack successful\n");
+  if (gfld == nullptr) {
+    return nullptr;
   }
-  const g2int * gds = gfld->igdtmpl;
-  int tX      = gds[7]; // 31-34 Nx -- Number of points along the x-axis
-  int tY      = gds[8]; // 35-38 Ny -- Number of points along te y-axis
-  size_t numX = (tX < 0) ? 0 : (size_t) (tX);
-  size_t numY = (tY < 0) ? 0 : (size_t) (tY);
 
-  LogInfo("Grib2 2D field size " << numX << " * " << numY << "\n");
+  LogInfo("Grib2 field unpack successful\n");
+
+  // Dimensions
+  const g2int * gds = gfld->igdtmpl;
+  const size_t numX = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis
+  const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[9]); // 35-38 Ny -- Number of points along te y-axis
+
+  // Keep the dimensions
+  LogInfo("Grib2 2D field size: " << numX << " * " << numY << "\n");
   x = numX;
   y = numY;
-  g2float * g2grid = gfld->fld;
 
+  // Create 2D array class
   auto newOne = Arrays::CreateFloat2D(numX, numY);
   auto& data  = newOne->ref();
+
+  // Fill array with 2D data  FIXME: Verify ordering
+  g2float * g2grid = gfld->fld;
 
   for (size_t xf = 0; xf < numX; ++xf) {
     for (size_t yf = 0; yf < numY; ++yf) {
@@ -87,365 +92,298 @@ IOGrib::get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x
     }
   }
 
+  // Finally free the grib2 field
   g2_free(gfld);
 
   return newOne;
 } // IOGrib::get2DData
 
 std::shared_ptr<Array<float, 3> >
-IOGrib::get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string>& levelsStringVec,
-  size_t& x, size_t&y, size_t& z, float missing)
+IOGrib::get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::vector<size_t>& fieldN,
+  const std::vector<std::string>& levels,
+  size_t& x, size_t& y, size_t& z)
 {
-  size_t zVecSize = levelsStringVec.size();
-  size_t nz       = (zVecSize == 0) ? 40 : (size_t) zVecSize;
+  const size_t numZ = mv.size();
 
-  size_t nx   = (x == 0) ? 1 : x;
-  size_t ny   = (y == 0) ? 1 : y;
-  auto newOne = Arrays::CreateFloat3D(nx, ny, nz);
-  auto &data  = newOne->ref();
+  bool arrayCreated = false;
+  std::shared_ptr<Array<float, 3> > newOne;
 
-  // std::shared_ptr<RAPIO_3DF> newOne = std::make_shared<RAPIO_3DF>(RAPIO_DIM3(nx, ny, nz));
-  // auto &data = *newOne;
+  // For each level ...
+  for (size_t i = 0; i < mv.size(); i++) {
+    // Fully read expand/unpack field fieldNumber from the GribMessage
+    gribfield * gfld = mv[i]->readField(fieldN[i]);
+    if (gfld == nullptr) {
+      LogSevere("Couldn't unpack level " << i << " of request 3D field.\n");
+      return nullptr;
+    } else {
+      LogInfo("Unpack Level '" << levels[i] << "' (" << i << ") successfully.\n");
+    }
 
-  unsigned char * bu = (unsigned char *) (&b[0]);
+    // Get dimensions of the new 2D grid
+    const g2int * gds = gfld->igdtmpl;
+    const size_t numX = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis
+    const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along te y-axis
 
-  for (size_t k = 0; k < nz; ++k) {
-    GribMatcher test(key, levelsStringVec[k]);
-    IOGrib::scanGribData(b, &test);
+    // Create array storage if needed
+    if (!arrayCreated) {
+      LogInfo("Grib2 3D field size: " << numX << " * " << numY << " * " << numZ << "\n");
+      x            = numX;
+      y            = numY;
+      z            = numZ;
+      newOne       = Arrays::CreateFloat3D(numX, numY, numZ);
+      arrayCreated = true;
+    }
 
-    size_t at, fieldNumber;
-    if (test.getMatch(at, fieldNumber)) {
-      gribfield * gfld = 0; // output
+    if ((x != numX) || (y != numY) || (z != numZ)) {
+      LogSevere("Mismatch on secondary layer dimensions, can't create 3D: '" << levels[i] << "' "
+                                                                             << numX << " != " << x << " or "
+                                                                             << numY << " != " << y << " or "
+                                                                             << numY << " != " << z << "\n");
+      return nullptr;
+    }
 
-      int ierr = g2_getfld(&bu[at], fieldNumber, 1, 1, &gfld);
-
-      if (ierr == 0) {
-        LogInfo("Grib2 field unpack successful\n");
-      }
-      const g2int * gds = gfld->igdtmpl;
-      int tX      = gds[7]; // 31-34 Nx -- Number of points along the x-axis
-      int tY      = gds[8]; // 35-38 Ny -- Number of points along te y-axis
-      size_t numX = (tX < 0) ? 0 : (size_t) (tX);
-      size_t numY = (tY < 0) ? 0 : (size_t) (tY);
-
-      x = numX;
-      y = numY;
-
-      LogInfo("Grib2 3D field size " << numX << " * " << numY << " * " << nz << "\n");
-      if ((nx != x) || (ny != y)) {
-        LogInfo("Warning! sizes do not match" << nx << " != " << x << " and/or " << ny << " != " << y << "\n");
-      }
-
-      g2float * g2grid = gfld->fld;
-
-      for (size_t xf = 0; xf < numX; ++xf) {
-        for (size_t yf = 0; yf < numY; ++yf) {
-          data[xf][yf][k] = (float) (g2grid[yf * numX + xf]);
-        }
-      }
-
-      g2_free(gfld);
-    } // test.getMatch
-    else {
-      LogSevere("No data for " << key << " at " << levelsStringVec[k] << "\n");
-
-      // FIXME: The desired situation has to be confirmed - exit, which will help ensure the mistake is corrected, or a log
-      // exit(1);
-
-      for (size_t xf = 0; xf < nx; ++xf) {
-        for (size_t yf = 0; yf < ny; ++yf) {
-          data[xf][yf][k] = missing;
-        }
+    // Fill layer with 2D data  FIXME: Verify ordering
+    g2float * g2grid = gfld->fld;
+    auto& data       = newOne->ref();
+    for (size_t xf = 0; xf < numX; ++xf) {
+      for (size_t yf = 0; yf < numY; ++yf) {
+        data[xf][yf][i] = (float) (g2grid[yf * numX + xf]);
       }
     }
-  }
-  // g2_free(gfld);
-  z = nz;
 
-  return newOne; // nullptr;
+    g2_free(gfld);
+  }
+  return newOne;
 } // IOGrib::get3DData
 
 namespace {
-/** Create my own copy of gbits and gbit.  It looks like the old implementation overflows
- * on large files since it counts number of bits so large files say 1 GB can overflow
- * the g2int size which is an int.
- * g2clib isn't that big and it appears not updated, so we may branch and do some work here.*/
-void
-_gbits(unsigned char * in, g2int * iout, unsigned long long iskip, g2int nbyte, g2int nskip,
-  g2int n)
+// FIXME: Maybe these should be static to iogrib?
 
-/*          Get bits - unpack bits:  Extract arbitrary size values from a
- * /          packed bit string, right justifying each value in the unpacked
- * /          iout array.
- * /           *in    = pointer to character array input
- * /           *iout  = pointer to unpacked array output
- * /            iskip = initial number of bits to skip
- * /            nbyte = number of bits to take
- * /            nskip = additional number of bits to skip on each iteration
- * /            n     = number of iterations
- * / v1.1
- */
+/** My version of gbit which appears much smaller and faster */
+inline g2int
+rbit(unsigned char * bu, size_t start, size_t length)
 {
-  g2int i, tbit, bitcnt, ibit, itmp;
-  unsigned long long nbit, index;
-  static g2int ones[] = { 1, 3, 7, 15, 31, 63, 127, 255 };
+  g2int out;
+  size_t s = start;
 
-  //     nbit is the start position of the field in bits
-  nbit = iskip;
-  for (i = 0; i < n; i++) {
-    bitcnt = nbyte;
-    index  = nbit / 8;
-    ibit   = nbit % 8;
-    nbit   = nbit + nbyte + nskip;
-
-    //        first byte
-    tbit = ( bitcnt < (8 - ibit) ) ? bitcnt : 8 - ibit; // find min
-
-    itmp = (int) *(in + index) & ones[7 - ibit];
-
-    if (tbit != 8 - ibit) { itmp >>= (8 - ibit - tbit); }
-    index++;
-    bitcnt = bitcnt - tbit;
-
-    //        now transfer whole bytes
-    while (bitcnt >= 8) {
-      itmp   = itmp << 8 | (int) *(in + index);
-      bitcnt = bitcnt - 8;
-      index++;
-    }
-
-    //        get data from last byte
-    if (bitcnt > 0) {
-      itmp = ( itmp << bitcnt ) | ( ((int) *(in + index) >> (8 - bitcnt)) & ones[bitcnt - 1] );
-    }
-
-    *(iout + i) = itmp;
+  for (size_t i = 0; i < length; i++) {
+    out = (out << 8) | bu[s++];
   }
-} // _gbits
-
-/** gbit just passes to gbit2 */
-void
-_gbit(unsigned char * in, g2int * iout, unsigned long long iskip, g2int nbyte)
-{
-  _gbits(in, iout, iskip, nbyte, (g2int) 0, (g2int) 1);
+  return out;
 }
+
+/** Read X bytes from a file stream. Could be stuck in file utils */
+inline bool
+// readAt(std::fstream& file, std::streampos at, std::vector<unsigned char>& buffer, std::streamsize count)
+readAt(std::fstream& file, std::streampos at, unsigned char * buffer, std::streamsize count)
+{
+  file.seekg(at, std::ios::beg);
+  // Note: we use unsigned char everywhere else because of bit logic
+  file.read(reinterpret_cast<char *>(buffer), count);
+  if (file.fail()) {
+    LogSevere("Error reading: eof? " << file.eof() << " bad? " << file.bad() << "\n");
+    return false;
+  }
+  return true;
+}
+
+/** Get the parts of a grib2 message header we care about */
+inline bool
+getGrib2Header(unsigned char * b, g2int& version, g2int& length)
+{
+  // Check start for GRIB '1196575042' magic number
+  version = -1;
+  length  = 0;
+  if ((b[0] == 'G') && (b[1] == 'R') && (b[2] == 'I') &&
+    (b[3] == 'B') )
+  {
+    // Get version number and length
+    version = b[7];
+    if (version == 2) {
+      length = rbit(&b[12], 0, 4);
+    } else if (version == 1) {
+      length = rbit(&b[4], 0, 3); // FIXME: test this with a grib1 file?
+    } else {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+/** Do we have the end of GRIB2 message? */
+inline bool
+haveGrib2Footer(unsigned char * b)
+{
+  // '926365495' magic number or '7777'
+  return (b[0] == '7' && b[1] == '7' && b[2] == '7' && b[3] == '7');
+}
+
+/** Process a single grib2 message */
+inline bool
+processGribMessage(GribAction& a, size_t fileOffset, size_t messageCount, std::shared_ptr<GribMessageImp> mp)
+{
+  // If we can read a GRIB2 message...
+  auto& m = *mp;
+
+  if (m.readG2Info(messageCount, fileOffset)) {
+    size_t numfields = m.getNumberFields();
+
+    // ...then handle each field of the message
+    for (size_t f = 1; f <= numfields; ++f) {
+      // Allowing a GribAction to process it and gather information
+      const bool keepGoing = a.action(mp, f);
+      if (!keepGoing) {
+        return false;
+      } // stop if action asks
+    }
+  }
+  return true; // continue to next message since strategy didn't say stop
+} // processGribMessage
 }
 
 bool
-IOGrib::scanGribDataFILE(FILE * lugb, GribAction * a)
+IOGrib::scanGribDataFILE(const URL& url, GribAction * ap)
 {
-  LogSevere("Ok in the scan grib data file class\n");
-  LogSevere("Humm this doesn't work, ALPHA play here\n");
+  // For now since this can be a long operation, notify whenever we call it
+  LogInfo("Scanning grib2 using per field mode (RAM per message)...\n");
 
-  /*
-   * @param lugb FILE pointer for the file to search. File must be
-   * opened before this routine is called.
-   * @param iseek The number of bytes in the file to skip before search.
-   * @param mseek The maximum number of bytes to search at a time (must
-   * be at least 16, but larger numbers like 4092 will result in better
-   * perfomance).
-   * @param lskip Pointer that gets the number of bytes to skip from the
-   * beggining of the file to where the GRIB message starts.
-   * @param lgrib Pointer that gets the number of bytes in message (set
-   * to 0, if no message found).
-   * //seekgb(FILE *lugb, g2int iseek, g2int mseek, g2int *lskip, g2int *lgrib)
-   */
-  // Ugghgh grib2 is all c and messy and it could be done in c++ so easy, but
-  // then when they change the format the c++ will break.  So bleh.
-  //
-  // stuff passed in
-  //    FILE *lugb;
-  g2int iseek = 0;                 // Number of bytes to skip before search, eh?
-  g2int mseek = 100 * 1024 * 1024; // 100 MB
-  g2int buffer[2];
-  g2int * lskip = &buffer[0];
-  g2int * lgrib = &buffer[1];
+  // Make sure we always have an action/strategy defined to avoid checks in loop
+  // It doesn't make sense to scan without doing 'something' even if just printing
+  GribAction noAction;
+  GribAction& a = (ap == nullptr) ? noAction : *ap;
 
-  g2int k, k4, ipos, nread, lim, start, vers, lengrib;
-  int end;
-  unsigned char * cbuf;
+  // Get information on the file
+  // FIXME: check local?
+  std::fstream file(url.toString(), std::ios::in | std::ios::binary);
 
-  // LOG((3, "seekgb iseek %ld mseek %ld", iseek, mseek));
-
-  *lgrib = 0;
-  cbuf   = (unsigned char *) malloc(mseek);
-  nread  = mseek;
-  ipos   = iseek;
-
-  /* Loop until grib message is found. */
-  while (*lgrib == 0 && nread == mseek) {
-    /* Read partial section. */
-    fseek(lugb, ipos, SEEK_SET);
-    nread = fread(cbuf, sizeof(unsigned char), mseek, lugb);
-    lim   = nread - 8;
-
-    LogSevere("OK read in " << mseek << " size \n");
-    /* Look for 'grib...' in partial section. */
-    for (k = 0; k < lim; k++) {
-      /* Look at the first 4 bytes - should be 'GRIB'. */
-      gbit(cbuf, &start, k * BYTE, 4 * BYTE);
-      // LogSevere("..."<<cbuf[0]<<cbuf[1]<<cbuf[2]<<cbuf[3]<<"\n");
-
-      /* Look at the 8th byte, it has the GRIB version. */
-      gbit(cbuf, &vers, (k + 7) * BYTE, 1 * BYTE);
-
-      /* If the message starts with 'GRIB', and is version 1 or
-       * 2, then this is a GRIB message. */
-      LogSevere("GRIB VERSION: " << (int) (cbuf[0]) << "\n");
-      if ((start == 1196575042) && ((vers == 1) || (vers == 2))) {
-        /* Find the length of the message. */
-        if (vers == 1) {
-          gbit(cbuf, &lengrib, (k + 4) * BYTE, 3 * BYTE);
-        }
-        if (vers == 2) {
-          gbit(cbuf, &lengrib, (k + 12) * BYTE, 4 * BYTE);
-        }
-        // LOG((4, "lengrib %ld", lengrib));
-        LogSevere("Length of message " << lengrib << "\n");
-
-        /* Read the last 4 bytesof the message. */
-        fseek(lugb, ipos + k + lengrib - 4, SEEK_SET);
-        k4 = fread(&end, 4, 1, lugb);
-
-        /* Look for '7777' at end of grib message. */
-        if ((k4 == 1) && (end == 926365495) ) {
-          /* GRIB message found. */
-          *lskip = ipos + k;
-          *lgrib = lengrib;
-          // LOG((4, "found end of message lengrib %ld", lengrib));
-          LogSevere("End of message " << lengrib << "\n");
-          break;
-        }
-      }
-    }
-    ipos = ipos + lim;
+  if (!file) {
+    LogSevere("Unable to read local file at " << url << "\n");
+    return false;
   }
 
-  free(cbuf);
+  // Get the file size
+  file.seekg(0, std::ios::end);
+  std::streampos aSize = file.tellg();
+
+  file.seekg(0, std::ios::beg);
+
+  // Mini buffer for info reads
+  std::vector<unsigned char> mini(16);
+
+  // Full message buffer
+  std::vector<unsigned char> buffer;
+
+  // While we have grib2 messages...
+  size_t messageCount = 0;
+  size_t k      = 0;
+  g2int lengrib = 0;
+  g2int version = -1;
+
+  while (k < aSize) {
+    // Read 16 bytes to check GRIB, version number and message length
+    if (!readAt(file, k, mini.data(), 16)) { return false; }
+
+    // Now if we have a GRIB header...
+    if (getGrib2Header(&mini[0], version, lengrib)) {
+      // Go back 4 bytes from length to read the end length
+      // So we're skipping over message to the end
+      const size_t at = k + lengrib - 4;
+      if (at + 3 < aSize) {
+        // Read footer marker
+        if (!readAt(file, at, mini.data(), 4)) { return false; }
+
+        if (haveGrib2Footer(&mini[0])) {
+          // Get the message info
+          messageCount++;
+
+          // Actually read/store into the message since we don't have
+          // a global buffer.  We have to store temp to at least read the
+          // field info.
+          // Actions might want to hold onto us for future use, so use shared_ptr
+          // Might be faster to use objects and 'moves' but easy to mess that up
+          auto m = std::make_shared<GribMessageImp>((size_t) lengrib);
+
+          // Go ahead and read the entire record now
+          if (!readAt(file, k, m->getBufferPtr(), lengrib)) { return false; }
+
+          // And then process the field, sending to strategy, if
+          // we're not to continue, return true and we're done scanning
+          if (!processGribMessage(a, k, messageCount, m)) {
+            return true;
+          }
+        } else { // footer missing.  Short file maybe
+          LogSevere("GRIB footer 7777 missing.  Short data maybe?\n");
+          break;
+        }
+      } else {
+        LogSevere("GRIB buffer overflow. Short data maybe?\n");
+        break;
+      }
+    } else {
+      LogSevere("No GRIB data in buffer or unhandled GRIB version\n");
+      break;
+    }
+    k += lengrib; // next message...
+  }
+
+  LogInfo("Total messages: " << messageCount << "\n");
   return true;
 } // IOGrib::scanGribDataFILE
 
 bool
-IOGrib::scanGribData(std::vector<char>& b, GribAction * a)
+IOGrib::scanGribData(std::vector<char>& b, GribAction * ap)
 {
-  size_t aSize       = b.size();
+  // For now since this can be a long operation, notify whenever we call it
+  LogInfo("Scanning grib2 using FULL buffer mode (RAM hogging)...\n");
+
+  // Make sure we always have an action/strategy defined to avoid checks in loop
+  // It doesn't make sense to scan without doing 'something' even if just printing
+  GribAction noAction;
+  GribAction& a = (ap == nullptr) ? noAction : *ap;
+
+  // Get information on the buffer
+  const size_t aSize = b.size();
   unsigned char * bu = (unsigned char *) (&b[0]);
-  // LogSevere("GRIB2 incoming: buffer size " << aSize << "\n");
 
-  // Seekgb is actually kinda simple, it finds a single grib2 message and its
-  // length into a FILE*.  We want to use a buffer though..this gives us the
-  // advantage of being able to use a URL/ram, etc.
-  // seekdb.c has the c code for this from a FILE*.  The downside
-  // to us doing this is that we need to check future versions of seekdb.c
-  // for bug fixes/changes.
+  // Message information from g2_info
+  g2int listsec0[3], listsec1[13], numfields, numlocal;
+
+  // While we have grib2 messages...
   size_t messageCount = 0;
-  // size_t k = 0;
-  unsigned long long k = 0;
-
-
-  LogInfo("Scan grib2 called with grib library version: " << G2_VERSION << "\n");
+  size_t k      = 0;
   g2int lengrib = 0;
+  g2int version;
 
   while (k < aSize) {
-    g2int start = 0;
-    g2int vers  = 0;
-    gbit(bu, &start, (k + 0) * 8, 4 * 8);
-    gbit(bu, &vers, (k + 7) * 8, 1 * 8);
-
-    if (( start == 1196575042) && (( vers == 1) || ( vers == 2) )) {
-      //  LOOK FOR '7777' AT END OF GRIB MESSAGE
-      if (vers == 1) {
-        gbit(bu, &lengrib, (k + 4) * 8, 3 * 8);
-      }
-      if (vers == 2) {
-        gbit(bu, &lengrib, (k + 12) * 8, 4 * 8);
-      }
-      //    ret=fseek(lugb,ipos+k+lengrib-4,SEEK_SET);
+    // Now if we have a GRIB header...
+    if (getGrib2Header(&bu[k], version, lengrib)) {
+      // Go back 4 bytes from length to read the end length
+      // So we're skipping over message to the end
       const size_t at = k + lengrib - 4;
       if (at + 3 < aSize) {
-        g2int k4 = 1;
-        //    k4=fread(&end,4,1,lugb); ret fails overload
-        int end = int((unsigned char) (b[at]) << 24
-          | (unsigned char) (b[at + 1]) << 16
-          | (unsigned char) (b[at + 2]) << 8
-          | (unsigned char) (b[at + 3]));
-        if (( k4 == 1) && ( end == 926365495) ) { // GRIB message found
+        if (haveGrib2Footer(&bu[at])) {
+          // Get the message info
           messageCount++;
-          //   OUTPUT ARGUMENTS:
-          //     listsec0 - pointer to an array containing information decoded from
-          //                GRIB Indicator Section 0.
-          //                Must be allocated with >= 3 elements.
-          //                listsec0[0]=Discipline-GRIB Master Table Number
-          //                            (see Code Table 0.0)
-          //                listsec0[1]=GRIB Edition Number (currently 2)
-          //                listsec0[2]=Length of GRIB message
-          //     listsec1 - pointer to an array containing information read from GRIB
-          //                Identification Section 1.
-          //                Must be allocated with >= 13 elements.
-          //                listsec1[0]=Id of orginating centre (Common Code Table C-1)
-          //                listsec1[1]=Id of orginating sub-centre (local table)
-          //                listsec1[2]=GRIB Master Tables Version Number (Code Table 1.0)
-          //                listsec1[3]=GRIB Local Tables Version Number
-          //                listsec1[4]=Significance of Reference Time (Code Table 1.1)
-          //                listsec1[5]=Reference Time - Year (4 digits)
-          //                listsec1[6]=Reference Time - Month
-          //                listsec1[7]=Reference Time - Day
-          //                listsec1[8]=Reference Time - Hour
-          //                listsec1[9]=Reference Time - Minute
-          //                listsec1[10]=Reference Time - Second
-          //                listsec1[11]=Production status of data (Code Table 1.2)
-          //                listsec1[12]=Type of processed data (Code Table 1.3)
-          //     numfields- The number of gridded fields found in the GRIB message.
-          //                That is, the number of occurences of Sections 4 - 7.
-          //     numlocal - The number of Local Use Sections ( Section 2 ) found in
-          //                the GRIB message.
-          //
 
-          g2int listsec0[3], listsec1[13], numlocal;
-          g2int myNumFields = 0;
-          int ierr = g2_info(&bu[k], listsec0, listsec1, &myNumFields, &numlocal);
-          if (ierr > 0) {
-            LogSevere(getGrib2Error(ierr));
-          } else {
-            if (a != nullptr) {
-              a->setG2Info(messageCount, k, listsec0, listsec1, numlocal);
-            }
-            // Can check center first before info right?
-            // g2int cntr = listsec1[0]; // Id of orginating centre
-            // g2int mtab = listsec1[2]; // =GRIB Master Tables Version Number (Code Table 1.0)
+          auto m = std::make_shared<GribMessageImp>(bu + k);
 
-            const size_t fieldNum = (myNumFields < 0) ? 0 : (size_t) (myNumFields);
-            for (size_t f = 1; f <= fieldNum; ++f) {
-              gribfield * gfld = 0; // output
-              g2int unpack     = 0; // 0 do not unpack
-              g2int expand     = 0; // 1 expand the data?
-              ierr = g2_getfld(&bu[k], f, unpack, expand, &gfld);
-
-              if (ierr > 0) {
-                LogSevere(getGrib2Error(ierr));
-              } else {
-                if (a != nullptr) { // FIXME: if we're null what's the point of looping?
-                  bool keepGoing = a->action(gfld, f);
-                  if (keepGoing == false) {
-                    g2_free(gfld);
-                    return true;
-                  }
-                }
-              }
-              g2_free(gfld);
-            }
+          // And then process the field, sending to strategy, if
+          // we're not to continue, return true and we're done scanning
+          if (!processGribMessage(a, k, messageCount, m)) {
+            return true;
           }
-
           // End of message match...
-        } else { // No hit?  Forget it
+        } else { // footer missing.  Short file maybe
+          LogSevere("GRIB footer 7777 missing.  Short data maybe?\n");
           break;
         }
       } else {
-        LogSevere("Out of bounds\n");
+        LogSevere("GRIB buffer overflow. Short data maybe?\n");
         break;
       }
     } else {
-      LogSevere("No grib2 matched data in buffer\n");
+      LogSevere("No GRIB data in buffer or unhandled GRIB version\n");
       break;
     }
     k += lengrib; // next message...
@@ -466,60 +404,62 @@ IOGrib::getHelpString(const std::string& key)
 
 void
 IOGrib::initialize()
-{ }
+{
+  LogInfo("GRIB module using grib library version: " << G2_VERSION << "\n");
+}
 
 std::shared_ptr<DataType>
-IOGrib::readGribDataType(const URL& url)
+IOGrib::readGribDataType(const URL& url, int mode)
 {
-  #if 0
-  // g2c 2.0 which we probably won't have forever
-  int id;
-  // * - ::G2C_NOERROR - No error.
-  // * - ::G2C_EINVAL - Invalid input.
-  // * - ::G2C_ETOOMANYFILES - Trying to open too many files at the same time.
-  auto file = g2c_open(url.toString(), G2C_NOWRITE, &id);
-  switch (file) {
-      case G2C_NOERROR: LogSevere("NO error\n");
-        break;
-      case G2C_EINVAL: LogSevere("Invalid input calling g2c_open\n");
-        break;
-      case G2C_ETOOMANYFILES: LogSevere("Too open grib2 files open at same time on g2c_open\n");
-        break;
-      default: break;
-  }
-  g2c_close(id);
-  LogSevere("Opened...\n");
-  exit(1);
-  #endif // if 0
-
   // HACK IN MY GRIB.data thing for moment...
   // Could lazy read only on string matching...
   GribDatabase::readGribDatabase();
 
-  // Note, in RAPIO we can read a grib file remotely too
   std::vector<char> buf;
 
-  IOURL::read(url, buf);
+  // For mode 1, prefill in the entire buffer with the file.
+  if (mode == 1) {
+    IOURL::read(url, buf);
 
-  if (!buf.empty()) {
-    // FIXME: Validate the format of the GRIB2 file first, then
-    // pass it onto the DataType object?
-    //  GribSanity test;
-    //  if scanGribData(buf, &test) good to go;
-    std::shared_ptr<GribDataTypeImp> g = std::make_shared<GribDataTypeImp>(url, buf);
-    return g;
-  } else {
-    LogSevere("Couldn't read data for grib2 at " << url << "\n");
+    if (buf.empty()) {
+      LogSevere("Couldn't read data for grib2 at " << url << "\n");
+      return nullptr;
+    }
   }
 
-  return nullptr;
+  // Other modes just send onto the object to handle later
+  std::shared_ptr<GribDataTypeImp> g = std::make_shared<GribDataTypeImp>(url, buf, mode);
+
+  return g;
 } // IOGrib::readGribDataType
 
 std::shared_ptr<DataType>
 IOGrib::createDataType(const std::string& params)
 {
+  // Hack get rapiosetting.xml for grib
+  // FIXME: We probably should generalize higher up.  This is first time I've wanted
+  // a param for reading vs writing. So design should change and move this
+  // into IODataType
+  std::string theMode = "0"; // default to reading by message
+  int mode = 0;
+  std::shared_ptr<PTreeNode> dfs = ConfigIODataType::getSettings("grib");
+
+  if (dfs != nullptr) {
+    try{
+      auto output = dfs->getChild("output");
+      auto test   = output.getAttr("bmode", (std::string) "0");
+      if (test == "1") {
+        mode = 1;
+      } else {
+        mode = 0;
+      }
+    }catch (const std::exception& e) {
+      // It's ok, default to 0
+    }
+  }
+
   // virtual to static, we only handle file/url
-  return (IOGrib::readGribDataType(URL(params)));
+  return (IOGrib::readGribDataType(URL(params), mode));
 }
 
 bool

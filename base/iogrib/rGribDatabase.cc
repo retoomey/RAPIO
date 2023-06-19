@@ -427,7 +427,7 @@ GribDatabase::readGribDatabase()
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
-    LogSevere("Read the dat file\n");
+    LogInfo("Read the gribtab.dat wgrib style file...no .idx support (todo).\n");
 
     size_t at       = 0;
     size_t size     = buf.size();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rIODataType.h"
+#include "rGribMessageImp.h"
 
 extern "C" {
 #include <grib2.h>
@@ -34,7 +35,7 @@ public:
 
   /** Scan a grib2 file applying a function to each message */
   static bool
-  scanGribDataFILE(FILE * file, GribAction * a);
+  scanGribDataFILE(const URL& loc, GribAction * a);
 
   /**Scan a grib2 memory buffer applying a function to each message */
   static bool
@@ -49,16 +50,17 @@ public:
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<Array<float, 2> >
-  get2DData(std::vector<char>& b, size_t at, size_t fieldNumber, size_t& x, size_t& y);
+  get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t& x, size_t& y);
 
   /** Do a buffer read of a 3D field using 2D and input vector of levels */
   static std::shared_ptr<Array<float, 3> >
-  get3DData(std::vector<char>& b, const std::string& key, const std::vector<std::string>& levelsStringVec, size_t& x,
-    size_t& y, size_t& z, float missing = -999.0);
+  get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::vector<size_t>& fieldN,
+    const std::vector<std::string>& levelsStringVec, size_t& x,
+    size_t& y, size_t& z);
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
-  readGribDataType(const URL& path);
+  readGribDataType(const URL& path, int mode);
 
   // WRITING ------------------------------------------------------------
 
