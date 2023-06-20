@@ -212,7 +212,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
+  create(const std::string & params) override
   {
     return std::make_shared<RangeVVResolver>();
   }
@@ -240,7 +240,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
+  create(const std::string & params) override
   {
     return std::make_shared<AzimuthVVResolver>();
   }
@@ -268,7 +268,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
+  create(const std::string & params) override
   {
     return std::make_shared<TerrainVVResolver>();
   }

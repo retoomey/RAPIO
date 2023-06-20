@@ -60,6 +60,6 @@ public:
     // Partial beam blockage
     float& pbb,
     // Bottom beam hit
-    bool& hit);
+    bool& hit) override;
 };
 }

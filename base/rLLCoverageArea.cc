@@ -306,6 +306,7 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
     std::stringstream ss;
     for (size_t i = 0; i < heightsMs.size(); i++) {
       ss << heightsMs[i] / 1000.0;
+      heightsMs[i] = heightsMs[i] / 1000.0; // Make final in KMs
       if (i != heightsMs.size() - 1) {
         ss << " ";
       }
@@ -386,7 +387,7 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
   AngleDegs latSpacing = 0.01;
   AngleDegs lonSpacing = 0.01;
   bool failed = false;
-  std::vector<double> theHeightsM;
+  std::vector<double> theHeightsKM;
 
   for (auto entry: functions) {
     std::string f = entry.first;
@@ -398,7 +399,7 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
     } else if (f == "s") {
       failed |= parseDegrees(f, p, latSpacing, lonSpacing);
     } else if (f == "h") {
-      failed |= parseHeights(f, p, theHeightsM);
+      failed |= parseHeights(f, p, theHeightsKM);
     }
   }
   // Check nw and se corner ordering...we could fix/flip them probably or stop
@@ -430,7 +431,7 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
     latSpacing, lonSpacing,
     x,
     y);
-  heightsM = theHeightsM;
+  heightsKM = theHeightsKM;
 
   return true;
 } // LLCoverageArea::parse

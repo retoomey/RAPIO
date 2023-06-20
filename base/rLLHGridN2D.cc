@@ -8,10 +8,10 @@ std::shared_ptr<LLHGridN2D>
 LLHGridN2D::Create(
   const std::string& TypeName,
   const std::string& Units,
+  const Time       & time,
 
   // Projection information
   const LLH   & location,
-  const Time  & time,
   const float lat_spacing,
   const float lon_spacing,
 
@@ -24,6 +24,26 @@ LLHGridN2D::Create(
   auto newonesp = std::make_shared<LLHGridN2D>();
 
   newonesp->init(TypeName, Units, location, time, lat_spacing, lon_spacing, num_lats, num_lons, num_layers);
+  return newonesp;
+}
+
+std::shared_ptr<LLHGridN2D>
+LLHGridN2D::Create(
+  const std::string    & TypeName,
+  const std::string    & Units,
+  const Time           & time,
+  const LLCoverageArea & g)
+{
+  auto newonesp = std::make_shared<LLHGridN2D>();
+
+  newonesp->init(TypeName, Units, LLH(g.getNWLat(), g.getNWLon(), 0),
+    time, g.getLatSpacing(), g.getLonSpacing(), g.getNumY(), g.getNumX(), g.getNumZ());
+  // Copy CoverageArea heights into our layer numbers since we passed a coverage area
+  auto h = g.getHeightsKM();
+
+  for (size_t i = 0; i < h.size(); i++) {
+    newonesp->setLayerValue(i, h[i]);
+  }
   return newonesp;
 }
 
@@ -82,4 +102,18 @@ LLHGridN2D::get(size_t i)
   }
 
   return myGrids[i];
+}
+
+void
+LLHGridN2D::fillPrimary(float value)
+{
+  std::vector<int> myLayerNumbers;
+  const size_t size = myGrids.size();
+
+  for (size_t i = 0; i < size; i++) {
+    auto g = myGrids[i];
+    if (g == nullptr) { g = get(i); }
+    auto array = g->getFloat2D();
+    array->fill(value);
+  }
 }

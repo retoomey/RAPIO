@@ -4,6 +4,7 @@
 
 #include "rLatLonGrid.h"
 #include "rLatLonHeightGrid.h"
+#include "rLLCoverageArea.h"
 
 #include <vector>
 
@@ -27,17 +28,30 @@ public:
   Create(
     const std::string& TypeName,
     const std::string& Units,
-    const LLH        & northwest,
     const Time       & gridtime,
+    const LLH        & northwest,
     float            lat_spacing,
     float            lon_spacing,
     size_t           num_lats,
     size_t           num_lons,
     size_t           num_levels);
 
+  /** Public API for users to create a single band LLHGridN2D quickly */
+  static std::shared_ptr<LLHGridN2D>
+  Create(
+    const std::string    & TypeName,
+    const std::string    & Units,
+    const Time           & gridtime,
+    const LLCoverageArea & grid);
+
   /** Return grid number i, lazy creation */
   std::shared_ptr<LatLonGrid>
   get(size_t i);
+
+  /** Convenience for filling all primary layers with value.  Note
+   * other arrays you'll have to loop yourself. */
+  void
+  fillPrimary(float value = Constants::DataUnavailable);
 
   /** Initialize a LLHGridN2D */
   bool

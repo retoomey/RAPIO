@@ -62,8 +62,54 @@ public:
     AngleDegs cLat, AngleDegs cLon, LengthKMs rangeKMs
   ) const;
 
-  // FIXME: 'Maybe' get/set
+  inline AngleDegs
+  getNWLat() const { return nwLat; } ///<Get north side of box
 
+  inline AngleDegs
+  getNWLon() const { return nwLon; } ///<Get west side of box
+
+  inline AngleDegs
+  getSELat() const { return seLat; } ///<Get south side of box
+
+  inline AngleDegs
+  getSELon() const { return seLon; } ///<Get east side of box
+
+  inline AngleDegs
+  getLatSpacing() const { return latSpacing; } ///<Get the spacing per cell east to west
+
+  inline AngleDegs
+  getLonSpacing() const { return lonSpacing; } ///<Get the spacing per cell north to south
+
+  inline size_t
+  getStartX() const { return startX; } ///<Get the start X
+
+  inline size_t
+  getStartY() const { return startY; } ///<Get the start Y
+
+  inline size_t
+  getNumX() const { return numX; } ///<Get the total X count
+
+  inline size_t
+  getNumY() const { return numY; } ///<Get the total Y count
+
+  inline size_t
+  getNumZ() const { return heightsKM.size(); } // <Get the number of optional layers
+
+  inline LengthKMs
+  getLatKMPerPixel() const { return latKMPerPixel; } ///< Estimate of KMs per cell in latitude
+
+  inline LengthKMs
+  getLonKMPerPixel() const { return lonKMPerPixel; } ///< Estimate of KMS per cell in longitude
+
+  /** Get the list of optional heights */
+  std::vector<double>
+  getHeightsKM() const { return heightsKM; }
+
+  /** Allow operator << to access our internal fields */
+  friend std::ostream&
+  operator << (std::ostream&, const LLCoverageArea&);
+
+protected:
   // Angles of the four sides
   AngleDegs nwLat; ///< North side of box
   AngleDegs nwLon; ///< West side of box
@@ -77,14 +123,15 @@ public:
   // Index information
   size_t startX; ///< Starting grid X or longitude cell
   size_t startY; ///< Starting grid Y or latitude cell
-  size_t numX;   ///< Total number of longitude cells
-  size_t numY;   ///< Total number of latitude cells
+
+  size_t numX; ///< Total number of longitude cells
+  size_t numY; ///< Total number of latitude cells
 
   LengthKMs latKMPerPixel; ///< Estimate of KMs per cell in latitude
   LengthKMs lonKMPerPixel; ///< Estimate of KMS per cell in longitude
 
   /** An optional collection of heights in meters */
-  std::vector<double> heightsM;
+  std::vector<double> heightsKM;
 };
 
 std::ostream&

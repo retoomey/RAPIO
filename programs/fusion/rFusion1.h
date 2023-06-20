@@ -254,9 +254,9 @@ public:
   /** Create the cache of interpolated layers */
   void
   createLLGCache(
-    const std::string& outputName,
-    const std::string& outputUnits,
-    const LLCoverageArea& g, const std::vector<double>& heightsM);
+    const std::string   & outputName,
+    const std::string   & outputUnits,
+    const LLCoverageArea& g);
 
   // Projection requirements:
   // 1.  Project from the coverage grid (Lat, Lon, Height) specified by CONUS, etc. to a virtual az, range, elev
@@ -305,10 +305,7 @@ protected:
   std::string myTypeName;
 
   /** Heights we do */
-  std::vector<double> myHeightsM;
-
-  /** Height index for the height.  Only needed for debugging/sparse height output */
-  std::vector<size_t> myHeightsIndex;
+  // std::vector<double> myHeightsM;
 
   /** Cached lookup for radar to conus grid projection */
   std::vector<std::shared_ptr<AzRanElevCache> > myLLProjections;

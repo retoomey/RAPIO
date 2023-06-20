@@ -27,7 +27,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params);
+  create(const std::string & params) override;
 
   virtual void
   calc(VolumeValue& vv) override;

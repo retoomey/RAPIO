@@ -35,6 +35,9 @@ public:
   TerrainBlockage()
   { }
 
+  /** Destroy */
+  virtual ~TerrainBlockage(){ }
+
   // --------------------------------------------------------
   // Factory methods for doing things by name.  Usually if you
   // want to support command line choosing of a TerrainBlockage

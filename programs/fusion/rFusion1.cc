@@ -109,30 +109,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   // Get grid
   o.getLegacyGrid(myFullGrid);
 
-  // Still keeping the myHeightsIndex 'hack' which allows us
-  // to take a subset of the heights within full conus space,
-  // but at some point we can probably get rid of it
-  #if 1
-  myHeightsM = myFullGrid.heightsM;
-  for (size_t hh = 0; hh < myHeightsM.size(); hh++) {
-    myHeightsIndex.push_back(hh);
-  }
-  #else
-  myHeightsM = {
-    // up to 3000 starting from 1 km
-    // 500, 2000, 9000
-    // 500, 2000, 5000
-    5000
-  };
-  // We need the Z component for each height for outputting the layers, this
-  // hack is only needed because our current stage 2 has 33 layers and we're sparse doing them
-  myHeightsIndex = {
-    // 0, 6, 14
-    14
-  };
-  #endif // if 0
-
-  myLLProjections.resize(myHeightsM.size());
+  myLLProjections.resize(myFullGrid.getNumZ());
   if (myLLProjections.size() < 1) {
     LogSevere("No height layers to process, exiting\n");
     exit(1);
@@ -164,29 +141,29 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
 void
 RAPIOFusionOneAlg::createLLGCache(
-  const std::string        & outputName,
-  const std::string        & outputUnits,
-  const LLCoverageArea     & g,
-  const std::vector<double>& heightsM)
+  const std::string    & outputName,
+  const std::string    & outputUnits,
+  const LLCoverageArea & g)
 {
   // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
   // turns out to be faster than 1 3D array.
   if (myLLGCache == nullptr) {
     ProcessTimer("Creating initial LLG value cache.");
 
-    myLLGCache = LLHGridN2D::Create(outputName, outputUnits, LLH(g.nwLat, g.nwLon, 0),
-        Time(), g.latSpacing, g.lonSpacing, g.numY, g.numX, heightsM.size());
+    myLLGCache = LLHGridN2D::Create(outputName, outputUnits, Time(), g);
+    myLLGCache->fillPrimary(Constants::DataUnavailable); // Create/fill all sublayers to unavailable
 
-    // For each of our height layers to process
-    for (size_t layer = 0; layer < heightsM.size(); layer++) {
-      const LengthKMs layerHeightKMs = heightsM[layer] / 1000.0;
-      myLLGCache->setLayerValue(layer, layerHeightKMs);
-      auto newone = myLLGCache->get(layer);
-      newone->setReadFactory("netcdf"); // default to netcdf output if we write it
-      // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
-      auto array = newone->getFloat2D();
-      array->fill(Constants::DataUnavailable);
-    }
+    /*
+     * // For each of our height layers to process
+     * for (size_t layer = 0; layer < g.getNumZ(); layer++) {
+     * auto newone = myLLGCache->get(layer);
+     *
+     * newone->setReadFactory("netcdf"); // default to netcdf output if we write it
+     * // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
+     * auto array = newone->getFloat2D();
+     * array->fill(Constants::DataUnavailable);
+     * }
+     */
   }
 }
 
@@ -203,25 +180,28 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 
     // Create the sin/cos cache.  We just need one of these vs the Az cache below
     // that is per conus layer
-    mySinCosCache = std::make_shared<SinCosLatLonCache>(g.numX, g.numY);
+    mySinCosCache = std::make_shared<SinCosLatLonCache>(g.getNumX(), g.getNumY());
 
     // LogInfo("Projection LatLonHeight to AzRangeElev cache creation...\n");
+    auto heightsKM = g.getHeightsKM();
     for (size_t i = 0; i < myLLProjections.size(); i++) {
-      const LengthKMs layerHeightKMs = myHeightsM[i] / 1000.0;
-      LogInfo("  Layer: " << myHeightsM[i] << " meters.\n");
-      myLLProjections[i] = std::make_shared<AzRanElevCache>(g.numX, g.numY);
+      // const LengthKMs layerHeightKMs = myHeightsM[i]; //   1000.0;
+      const LengthKMs layerHeightKMs = heightsKM[i]; //   1000.0;
+      // LogInfo("  Layer: " << myHeightsM[i] * 1000.0 << " meters.\n");
+      LogInfo("  Layer: " << heightsKM[i] * 1000.0 << " meters.\n");
+      myLLProjections[i] = std::make_shared<AzRanElevCache>(g.getNumX(), g.getNumY());
       auto& llp = *(myLLProjections[i]);
       auto& ssc = *(mySinCosCache);
-      AngleDegs startLat = g.nwLat - (g.latSpacing / 2.0); // move south (lat decreasing)
-      AngleDegs startLon = g.nwLon + (g.lonSpacing / 2.0); // move east (lon increasing)
+      AngleDegs startLat = g.getNWLat() - (g.getLatSpacing() / 2.0); // move south (lat decreasing)
+      AngleDegs startLon = g.getNWLon() + (g.getLonSpacing() / 2.0); // move east (lon increasing)
       AngleDegs atLat    = startLat;
 
       llp.reset();
       ssc.reset();
 
-      for (size_t y = 0; y < g.numY; y++, atLat -= g.latSpacing) { // a north to south
+      for (size_t y = 0; y < g.getNumY(); y++, atLat -= g.getLatSpacing()) { // a north to south
         AngleDegs atLon = startLon;
-        for (size_t x = 0; x < g.numX; x++, atLon += g.lonSpacing) { // a east to west row, changing lon per cell
+        for (size_t x = 0; x < g.getNumX(); x++, atLon += g.getLonSpacing()) { // a east to west row, changing lon per cell
           //
           // The sin/cos attenuation factors from radar center to lat lon
           // This doesn't need height so it can be just a single layer
@@ -261,8 +241,9 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
     if (myFullLLG == nullptr) {
       LogInfo("Creating a full CONUS buffer for outputting grids as full files\n");
       myFullLLG = LatLonGrid::Create(myWriteStage2Name, myWriteOutputUnits,
-          LLH(myFullGrid.nwLat, myFullGrid.nwLon, 0), Time(), myFullGrid.latSpacing, myFullGrid.lonSpacing,
-          myFullGrid.numY, myFullGrid.numX);
+          LLH(myFullGrid.getNWLat(), myFullGrid.getNWLon(), 0), Time(),
+          myFullGrid.getLatSpacing(), myFullGrid.getLonSpacing(),
+          myFullGrid.getNumY(), myFullGrid.getNumX());
     }
 
     // Copy the current output subgrid into the full LLG for writing out...
@@ -281,10 +262,10 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
     myFullLLG->setLocation(fullLoc);
 
     // Copy subgrid into the full grid
-    size_t startY = myRadarGrid.startY;
-    size_t startX = myRadarGrid.startX;
-    for (size_t y = 0; y < myRadarGrid.numY; y++) {   // a north to south
-      for (size_t x = 0; x < myRadarGrid.numX; x++) { // a east to west row
+    size_t startY = myRadarGrid.getStartY();
+    size_t startX = myRadarGrid.getStartX();
+    for (size_t y = 0; y < myRadarGrid.getNumY(); y++) {   // a north to south
+      for (size_t x = 0; x < myRadarGrid.getNumX(); x++) { // a east to west row
         fullgrid[startY + y][startX + x] = subgrid[y][x];
       }
     }
@@ -388,7 +369,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   }
 
   // Create working LLG cache CAPPI storage per height level
-  createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg, myHeightsM);
+  createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg);
 } // RAPIOFusionOneAlg::firstDataSetup
 
 void
@@ -447,7 +428,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // FIXME: If we plugin the smoother we can pass params and choose the scale factor
     // manually.
     const LengthKMs radarDataScale = r->getGateWidthKMs();
-    const LengthKMs gridScale      = std::min(myFullGrid.latKMPerPixel, myFullGrid.lonKMPerPixel);
+    const LengthKMs gridScale      = std::min(myFullGrid.getLatKMPerPixel(), myFullGrid.getLonKMPerPixel());
     const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
     if ((scale_factor > 1) && myUseLakSmoothing) {
       LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
@@ -496,21 +477,25 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     myElevationVolume->getTempPointerVector(levels, pointers);
     LogInfo(*myElevationVolume << "\n");
     // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
-    AngleDegs startLat = myRadarGrid.nwLat - (myRadarGrid.latSpacing / 2.0); // move south (lat decreasing)
-    AngleDegs startLon = myRadarGrid.nwLon + (myRadarGrid.lonSpacing / 2.0); // move east (lon increasing)
+    AngleDegs startLat = myRadarGrid.getNWLat() - (myRadarGrid.getLatSpacing() / 2.0); // move south (lat decreasing)
+    AngleDegs startLon = myRadarGrid.getNWLon() + (myRadarGrid.getLonSpacing() / 2.0); // move east (lon increasing)
 
     // Each layer of merger we have to loop through
     LLCoverageArea outg = myRadarGrid;
 
     // Keep stage 2 output code separate, cheap to make this if we don't use it
-    std::vector<size_t> bitsizes = { outg.numX, outg.numY, myHeightsM.size() };
+    std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
     Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, bitsizes);
 
     auto& resolver    = *myResolver;
     bool useDiffCache = false;
     size_t total      = 0;
-    for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
-      vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
+    auto heightsKM    = outg.getHeightsKM();
+    // for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
+    for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+      // vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
+      // vv.layerHeightKMs = myHeightsM[layer]; // / 1000.0;
+      vv.layerHeightKMs = heightsKM[layer]; // / 1000.0;
 
       // FIXME: Do we put these into the output?
       size_t totalLayer   = 0;
@@ -538,10 +523,10 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
       // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
       AngleDegs atLat = startLat;
-      for (size_t y = 0; y < outg.numY; y++, atLat -= outg.latSpacing) { // a north to south
+      for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
         AngleDegs atLon = startLon;
         // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
-        for (size_t x = 0; x < outg.numX; x++, atLon += outg.lonSpacing) { // a east to west row, changing lon per cell
+        for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
           total++;
           totalLayer++;
           // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center

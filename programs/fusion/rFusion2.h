@@ -3,38 +3,10 @@
 /** RAPIO API */
 #include <RAPIO.h>
 #include "rLLCoverageArea.h"
+#include "rLLHGridN2D.h"
+#include "rStage2Data.h"
 
 namespace rapio {
-/** (AI) Test using c++11 if a method exists or not in a class */
-// Doesn't work?
-template <typename T>
-class has_deepsize_method {
-  typedef char Yes;
-  typedef long No;
-
-  /** FIXME: could macro what's inside I think ... */
-  template <typename U>
-  static Yes test(decltype(std::declval<U>().deepsize()) *);
-
-  template <typename U>
-  static No
-  test(...);
-
-public:
-  static constexpr bool value = (sizeof(test<T>(nullptr)) == sizeof(Yes));
-};
-// do we have to declare also?
-template <typename U>
-constexpr bool has_deepsize_method<U>::value;
-
-// Helper function to get the total size
-template <typename V>
-constexpr bool
-has_deep()
-{
-  return has_deepsize_method<V>::value;
-}
-
 /**
  * Second stage merger/fusion algorithm.  Gathers input from single stage radar
  * processes for the intention of merging data into a final output.
@@ -75,7 +47,33 @@ public:
 
 protected:
 
+  /** Initialization done on first incoming data */
+  void
+  firstDataSetup(std::shared_ptr<Stage2Data> d);
+
+  /** Create the cache of interpolated layers */
+  void
+  createLLGCache(
+    const std::string   & outputName,
+    const std::string   & outputUnits,
+    const LLCoverageArea& g);
+
   /** Coordinates for the total merger grid */
   LLCoverageArea myFullGrid;
+
+  /** The typename we use for writing cappis */
+  std::string myWriteCAPPIName;
+
+  /** The units we use for all output products */
+  std::string myWriteOutputUnits;
+
+  /** Cached set of LatLonGrids */
+  std::shared_ptr<LLHGridN2D> myLLGCache;
+
+  /** Radar linked to */
+  std::string myRadarName;
+
+  /** Typename linked to */
+  std::string myTypeName;
 };
 }

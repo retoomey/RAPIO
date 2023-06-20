@@ -206,7 +206,7 @@ public:
    * Volume class. */
   virtual std::shared_ptr<Volume>
   create(
-    const std::string& historyKey, const std::string & params)
+    const std::string& historyKey, const std::string & params) override
   {
     return std::make_shared<ElevationVolume>(ElevationVolume(historyKey));
   }

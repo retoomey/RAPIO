@@ -11,6 +11,8 @@ using namespace std;
 DataGrid::DataGrid()
 {
   setDataType("DataGrid");
+  // Current the default write for all grids is netcdf which makes sense
+  setReadFactory("netcdf");
 }
 
 std::shared_ptr<DataGrid>
@@ -252,6 +254,12 @@ DataGrid::createMetadata()
           break;
         case INT:
           typeStr = "int32";
+          break;
+        case BYTE:
+        case SHORT:
+        case DOUBLE:
+        default:
+          LogSevere("This type of data not supported, though should be easy to add.\n");
           break;
     }
     anArray.put("type", typeStr);
