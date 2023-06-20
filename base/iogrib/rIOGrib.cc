@@ -58,7 +58,7 @@ IOGrib::getGrib2Error(g2int ierr)
 }
 
 std::shared_ptr<Array<float, 2> >
-IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t& x, size_t& y)
+IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber)
 {
   // Fully read expand/unpack field fieldNumber from the GribMessage
   gribfield * gfld = m->readField(fieldNumber);
@@ -72,12 +72,10 @@ IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t
   // Dimensions
   const g2int * gds = gfld->igdtmpl;
   const size_t numX = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis
-  const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[9]); // 35-38 Ny -- Number of points along te y-axis
+  const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along te y-axis
 
   // Keep the dimensions
   LogInfo("Grib2 2D field size: " << numX << " * " << numY << "\n");
-  x = numX;
-  y = numY;
 
   // Create 2D array class
   auto newOne = Arrays::CreateFloat2D(numX, numY);
@@ -100,8 +98,7 @@ IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t
 
 std::shared_ptr<Array<float, 3> >
 IOGrib::get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::vector<size_t>& fieldN,
-  const std::vector<std::string>& levels,
-  size_t& x, size_t& y, size_t& z)
+  const std::vector<std::string>& levels)
 {
   const size_t numZ = mv.size();
 
@@ -109,6 +106,8 @@ IOGrib::get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::
   std::shared_ptr<Array<float, 3> > newOne;
 
   // For each level ...
+  size_t x, y, z;
+
   for (size_t i = 0; i < mv.size(); i++) {
     // Fully read expand/unpack field fieldNumber from the GribMessage
     gribfield * gfld = mv[i]->readField(fieldN[i]);

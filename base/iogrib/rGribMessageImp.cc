@@ -14,14 +14,26 @@ GribMessageImp::readG2Info(size_t messageNum, size_t at)
   myFileLocationAt = at;
 
   // We can just call g2_info ourselves, return false if error
-  g2int numfields;
-  int ierr = g2_info(getBufferPtr(), mySection0, mySection1, &numfields, &myNumLocalUse);
+  g2int numfields, localUse, section0[3], section1[13];
+
+  int ierr = g2_info(getBufferPtr(), &section0[0], &section1[0], &numfields, &localUse);
 
   if (ierr > 0) {
     LogSevere(IOGrib::getGrib2Error(ierr));
     return false;
   }
-  myNumberFields = (numfields < 0) ? 0 : (size_t) (numfields);
+
+  // Doing this copy in case g2int type changes from long..unlikely but older versions of
+  // library are different so compiler would complain
+  for (size_t i = 0; i < 3; ++i) {
+    mySection0[i] = (long) (section0[i]);
+  }
+  for (size_t i = 0; i < 13; ++i) {
+    mySection1[i] = (long) (section1[i]);
+  }
+
+  myNumberFields   = (numfields < 0) ? 0 : (size_t) (numfields);
+  myNumberLocalUse = (localUse < 0) ? 0 : (size_t) (localUse);
   return true;
 }
 
@@ -60,28 +72,4 @@ GribMessageImp::readField(size_t fieldNumber)
     }
   }
   return nullptr;
-}
-
-Time
-GribMessageImp::getTime()
-{
-  Time theTime = Time(mySection1[5], // year
-      mySection1[6],                 // month
-      mySection1[7],                 // day
-      mySection1[8],                 // hour
-      mySection1[9],                 // minute
-      mySection1[10],                // second
-      0.0                            // fractional
-  );
-
-  return theTime;
-}
-
-std::string
-GribMessageImp::getDateString()
-{
-  // Match idx and wgrib2 for now.  Strange they don't report min/sec
-  // FIXME: We could make the pattern a static settable
-  return (getTime().getString("%Y%m%d%H"));
-  // return(getTime().getString("%Y%m%d%H%M%S"));
 }

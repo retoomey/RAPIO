@@ -27,3 +27,13 @@ target_link_libraries(rsimpleprogram rapio)
 install(TARGETS rsimpleprogram
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+
+##################################################################
+# The grib example 
+add_executable(rgribexample
+  rGribExample.cc
+)
+target_link_libraries(rgribexample rapio)
+install(TARGETS rgribexample
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)

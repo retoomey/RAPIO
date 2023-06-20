@@ -116,118 +116,36 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
     }
     #endif // if 0
 
-    // Look for Grib2 data for Grib2
-    // std::shared_ptr<rapio::GribDataType> grib2 = d.datatype<rapio::GribDataType>();
-    auto grib2 = d.datatype<rapio::GribDataType>();
-    if (grib2 != nullptr) {
-      LogInfo("Grib2 data incoming...testing...\n");
-      // Test for moment for my wgrib2 style catalog listing
-      grib2->printCatalog();
-
-      // Grab the data for a particular grib2 record in style of an HMET
-      // hrrr algorithm...
-      // LogInfo("Reading 2m-air temperature from GRIB2...\n");
-      // auto t2m_sfc_ext =  grib2->get2DData("TMP", "2 m above ground"); // /Degrees K
-      // LogInfo("Reading dewpoint temperature from GRIB2...\n");
-      // auto dpt_sfc_ext = grib2->get2DData("DPT", "2 m above ground");
-      LogInfo("Reading upward longwave radiation product from GRIB2...\n");
-      size_t numX     = 0;
-      size_t numY     = 0;
-      auto uplwav_ext = grib2->getFloat2D("ULWRF", "surface", numX, numY);
-      LogInfo("Size back is " << numX << " by " << numY << "\n");
-
-      if (uplwav_ext != nullptr) {
-        auto& ref = uplwav_ext->ref();
-        LogInfo("First 10x10 values\n");
-        LogInfo("----------------------------------------------------\n");
-        // Dump grid.. Log needs a way to dump multiline
-        for (size_t x = 0; x < 10; ++x) {
-          for (size_t y = 0; y < 10; ++y) {
-            // std::cout << uplwav_ext->get(x, y) << ",  ";
-            std::cout << ref[x][y] << ",  ";
-            // std::cout << ref.get(x,y) << ",  ";
-          }
-          std::cout << "\n";
-        }
-        LogInfo("----------------------------------------------------\n");
-      } else {
-        LogSevere("Couldn't read 2D data from grib2\n");
-      }
-
-      // Create a completely NEW latlongrid for output in this case
-
-      // ------------------------------------------------
-      // ALPHA: Create projection lookup mapping
-
-      // Create a brand new LatLonGrid
-      float lat_spacing     = .01;
-      float lon_spacing     = .01;
-      const size_t num_lats = 3500; // 3500 conus
-      const size_t num_lons = 7000; // 7000 conus
-      auto llgridsp         = LatLonGrid::Create(
-        "ULWRF",
-        "dimensionless",         // wrong probably
-        LLH(55.0, -130.0, .500), // CONUS origin
-        Time::CurrentTime(),     // Now
-        lat_spacing,
-        lon_spacing,
-        num_lats, // X
-        num_lons  // Y
-      );
-
-      // ALPHA: For moment just make one without caching or anything.
-      // This is slow on first call, but we'd be able to cache in a
-      // real time situation.
-      // Also PROJ6 and up uses different strings
-      // But basically we'll 'declare' our projection somehow
-      Project * project = new ProjLibProject(
-        "+proj=lcc +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3",
-        // WDSSII default (probably doesn't even need to be parameter)
-        "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-      );
-      bool success = project->initialize();
-
-      LogInfo("Created projection:  " << success << "\n");
-      // Project from source project to output
-      project->toLatLonGrid(uplwav_ext, llgridsp);
-
-      /*
-       *    // General LatLonGrid fill test
-       *    // Get the 2D array from it.  FIXME: We should get x, y here I think.
-       *    // Users can't just 'add' new dimensions, only same size (Restricted DataGrid)
-       *    auto data2DF = llgridsp->getFloat2D("ULWRF");
-       *
-       *    float counter = 0;
-       *    for (size_t x = 0; x < num_lats; ++x) {
-       *      for (size_t y = 0; y < num_lons; ++y) {
-       *        (*data2DF)[x][y] = counter;
-       *        counter++;
-       *      }
-       *    }
-       */
-
-      // Write our LatLonGrid out.
-      // Typename will be replaced by -O filters
-      writeOutputProduct(llgridsp->getTypeName(), llgridsp);
-      return;
-    }
-
     // Look for a radial set
 
-    #if 0
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
       LogInfo("This is a radial set, do radial set stuff\n");
-      size_t radials = radialSet->getNumRadials(); // x
-      size_t gates   = radialSet->getNumGates();   // y
-      auto& data     = radialSet->getFloat2D()->ref();
-      for (size_t r = 0; r < radials; ++r) {
-        for (size_t g = 0; g < gates; ++g) {
-          data[r][g] = 5.0; // Replace every gate with 5 dbz
-        }
-      }
+      auto time = radialSet->getTime();
+      time += TimeDuration::Days(18250);
+
+      radialSet->setTime(time);
+
+
+      auto newLocation = radialSet->getLocation();
+      newLocation.setLatitudeDeg(35.3331);
+      newLocation.setLongitudeDeg(-97.2778);
+      newLocation.setHeightKM(.390);
+      radialSet->setLocation(newLocation);
+      radialSet->setUnits("dBZ");
+      radialSet->setRadarName("KTLX");
+
+      /*
+       * size_t radials = radialSet->getNumRadials(); // x
+       * size_t gates   = radialSet->getNumGates();   // y
+       * auto& data     = radialSet->getFloat2D()->ref();
+       * for (size_t r = 0; r < radials; ++r) {
+       * for (size_t g = 0; g < gates; ++g) {
+       *  data[r][g] = 5.0; // Replace every gate with 5 dbz
+       * }
+       * }
+       */
     }
-    #endif // if 0
 
     // Standard echo of data to output.  Note it's the same data out as in here
     LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");

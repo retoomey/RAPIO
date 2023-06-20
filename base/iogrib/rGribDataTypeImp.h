@@ -45,20 +45,20 @@ public:
   void
   printCatalog();
 
+  /** Get matched message itself by key and level */
+  std::shared_ptr<GribMessage>
+  getMessage(const std::string& key, const std::string& levelstr);
+
   /** One way to get 2D data, using key and level string like our HMET library */
   std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y);
+  getFloat2D(const std::string& key, const std::string& levelstr);
 
   /** Read the GRIB2 data and put it in a 3-D pointer.
    *    @param key - GRIB2 parameter "TMP"
-   *    @param x - if 0 then the dimension's size will be returned, otherwise use the one given
-   *    @param y - if 0 then the dimension's size will be returned, otherwise use the one given
-   *    @param z - if 0 then the dimension's size will be returned, otherwise use the one given
    *    @param zLevelsVec - a vector of strings containing the levels desired, e.g. ["100 mb", "250 mb"]. An empty string will return all
-   *    @param missing - OPTIONAL missing value; default is -999.0
    */
   std::shared_ptr<Array<float, 3> >
-  getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec, size_t& x, size_t& y, size_t& z);
+  getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec);
 
 private:
 

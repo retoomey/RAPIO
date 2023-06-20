@@ -176,7 +176,12 @@ set(RAPIO_THIRD_LIBRARIES
 ###########################################################################
 # Directories
 add_subdirectory(base)
-add_subdirectory(rexample)
+
+# Examples with option to turn off since it will grow probably
+option(BUILD_EXAMPLES "Build example directory rexample" YES)
+if (BUILD_EXAMPLES)
+  add_subdirectory(rexample)
+endif (BUILD_EXAMPLES)
 
 ###########################################################################
 # Independent module building

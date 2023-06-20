@@ -25,8 +25,21 @@ GribDataTypeImp::printCatalog()
   scanGribData(&test);
 } // GribDataTypeImp::printCatalog
 
+std::shared_ptr<GribMessage>
+GribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr)
+{
+  GribMatcher match1(key, levelstr);
+
+  scanGribData(&match1);
+
+  // Subclass humm
+  auto m = match1.getMatchedMessage();
+
+  return m;
+}
+
 std::shared_ptr<Array<float, 2> >
-GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, size_t&x, size_t&y)
+GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
 {
   GribMatcher match1(key, levelstr);
 
@@ -35,13 +48,13 @@ GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr,
   auto m = match1.getMatchedMessage();
 
   if (m != nullptr) {
-    return IOGrib::get2DData(m, match1.getMatchedFieldNumber(), x, y);
+    return IOGrib::get2DData(m, match1.getMatchedFieldNumber());
   }
   return nullptr;
 }
 
 std::shared_ptr<Array<float, 3> >
-GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLevels, size_t& x, size_t& y, size_t& z)
+GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLevels)
 {
   size_t nz = zLevels.size();
 
@@ -55,7 +68,7 @@ GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLe
   scanGribData(&matchN);
 
   if (matchN.checkAllLevels()) {
-    return IOGrib::get3DData(matchN.getMatchedMessages(), matchN.getMatchedFieldNumbers(), zLevels, x, y, z);
+    return IOGrib::get3DData(matchN.getMatchedMessages(), matchN.getMatchedFieldNumbers(), zLevels);
   }
   return nullptr;
 }

@@ -50,13 +50,12 @@ public:
 
   /** Do a buffer read of a 2D field */
   static std::shared_ptr<Array<float, 2> >
-  get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber, size_t& x, size_t& y);
+  get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber);
 
   /** Do a buffer read of a 3D field using 2D and input vector of levels */
   static std::shared_ptr<Array<float, 3> >
   get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::vector<size_t>& fieldN,
-    const std::vector<std::string>& levelsStringVec, size_t& x,
-    size_t& y, size_t& z);
+    const std::vector<std::string>& levels);
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
