@@ -68,25 +68,30 @@ IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber)
   }
 
   LogInfo("Grib2 field unpack successful\n");
+  LogInfo("-------> Grid Definition Template Number: " << gfld->igdtnum << "\n");
 
   // Dimensions
+  // FIXME: We need to generally handle the Grid Definition Template Number (table 3.1),
+  // which I suspect we will be doing soon for projection information.
   const g2int * gds = gfld->igdtmpl;
-  const size_t numX = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis
-  const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along te y-axis
+
+  const size_t numLon = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis (W-E)
+  const size_t numLat = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along the y-axis (N-S)
 
   // Keep the dimensions
-  LogInfo("Grib2 2D field size: " << numX << " * " << numY << "\n");
+  LogInfo("Grib2 2D field size: " << numLat << " (lat) * " << numLon << " (lon).\n");
 
   // Create 2D array class
-  auto newOne = Arrays::CreateFloat2D(numX, numY);
+  auto newOne = Arrays::CreateFloat2D(numLat, numLon); // MRMS ordering
   auto& data  = newOne->ref();
 
-  // Fill array with 2D data  FIXME: Verify ordering
+  // Fill array with 2D data
   g2float * g2grid = gfld->fld;
 
-  for (size_t xf = 0; xf < numX; ++xf) {
-    for (size_t yf = 0; yf < numY; ++yf) {
-      data[xf][yf] = (float) (g2grid[yf * numX + xf]);
+  for (size_t lat = 0; lat < numLat; ++lat) {
+    for (size_t lon = 0; lon < numLon; ++lon) {
+      const size_t flipLat = numLat - (lat + 1);
+      data[lat][lon] = (float) (g2grid[(flipLat * numLon) + lon]);
     }
   }
 
@@ -119,34 +124,35 @@ IOGrib::get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::
     }
 
     // Get dimensions of the new 2D grid
-    const g2int * gds = gfld->igdtmpl;
-    const size_t numX = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis
-    const size_t numY = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along te y-axis
+    const g2int * gds   = gfld->igdtmpl;
+    const size_t numLon = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis (W-E)
+    const size_t numLat = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along the y-axis (N-S)
 
     // Create array storage if needed
     if (!arrayCreated) {
-      LogInfo("Grib2 3D field size: " << numX << " * " << numY << " * " << numZ << "\n");
-      x            = numX;
-      y            = numY;
+      LogInfo("Grib2 3D field size: " << numLat << " (lat) * " << numLon << " (lon) * " << numZ << " levels.\n");
+      x            = numLat;
+      y            = numLon;
       z            = numZ;
-      newOne       = Arrays::CreateFloat3D(numX, numY, numZ);
+      newOne       = Arrays::CreateFloat3D(numLat, numLon, numZ);
       arrayCreated = true;
     }
 
-    if ((x != numX) || (y != numY) || (z != numZ)) {
+    if ((x != numLat) || (y != numLon) || (z != numZ)) {
       LogSevere("Mismatch on secondary layer dimensions, can't create 3D: '" << levels[i] << "' "
-                                                                             << numX << " != " << x << " or "
-                                                                             << numY << " != " << y << " or "
-                                                                             << numY << " != " << z << "\n");
+                                                                             << numLat << " != " << x << " or "
+                                                                             << numLon << " != " << y << " or "
+                                                                             << numZ << " != " << z << "\n");
       return nullptr;
     }
 
-    // Fill layer with 2D data  FIXME: Verify ordering
+    // Fill layer with 2D data
     g2float * g2grid = gfld->fld;
     auto& data       = newOne->ref();
-    for (size_t xf = 0; xf < numX; ++xf) {
-      for (size_t yf = 0; yf < numY; ++yf) {
-        data[xf][yf][i] = (float) (g2grid[yf * numX + xf]);
+    for (size_t lat = 0; lat < numLat; ++lat) {
+      for (size_t lon = 0; lon < numLon; ++lon) {
+        const size_t flipLat = numLat - (lat + 1);
+        data[lat][lon][z] = (float) (g2grid[(flipLat * numLon) + lon]);
       }
     }
 

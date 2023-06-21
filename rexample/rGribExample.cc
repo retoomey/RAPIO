@@ -62,7 +62,7 @@ GribExampleAlg::processNewData(rapio::RAPIOData& d)
     // ------------------------------------------------------------------------
     // 2D test
     //
-    const std::string name2D = "ULWRF";
+    const std::string name2D = "TMP";
     const std::string layer  = "surface";
 
     LogInfo("Trying to read " << name2D << " as direct 2D from data...\n");
@@ -103,45 +103,71 @@ GribExampleAlg::processNewData(rapio::RAPIOData& d)
         LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
       }
 
-      return;
-
-      // ------------------------------------------------
-      // ALPHA: Create projection lookup mapping
-      // FIXME: Ok projection needs a LOT more work we need info
-      // from the grib message on source projection, etc.
 
       // Create a brand new LatLonGrid
-      float lat_spacing     = .01;
-      float lon_spacing     = .01;
-      const size_t num_lats = 3500; // 3500 conus
-      const size_t num_lons = 7000; // 7000 conus
-      auto llgridsp         = LatLonGrid::Create(
-        name2D,
-        "dimensionless",         // wrong probably
+      size_t num_lats, num_lons;
+
+      // Raw copy for orientation test.  Good for checking data orientation correct
+      const bool rawCopy = false;
+      if (rawCopy) {
+        num_lats = array2D->getX();
+        num_lons = array2D->getY();
+      } else {
+        num_lats = 1750;
+        num_lons = 3500;
+      }
+
+      // Reverse spacing from the cells and range
+      // FIXME: We could have another create method using degrees I think
+      float lat_spacing = (55.0 - 10.0) / (float) (num_lats); // degree spread/cell count
+      float lon_spacing = (130.0 - 60.0) / (float) num_lons;
+
+      auto llgridsp = LatLonGrid::Create(
+        "SurfaceTemp",           // MRMS name and also colormap
+        "degreeK",               // Units
         LLH(55.0, -130.0, .500), // CONUS origin
-        Time::CurrentTime(),     // Now
+        message->getTime(),
         lat_spacing,
         lon_spacing,
         num_lats, // X
         num_lons  // Y
       );
 
-      // ALPHA: For moment just make one without caching or anything.
-      // This is slow on first call, but we'd be able to cache in a
-      // real time situation.
-      // Also PROJ6 and up uses different strings
-      // But basically we'll 'declare' our projection somehow
-      Project * project = new ProjLibProject(
-        "+proj=lcc +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3",
-        // WDSSII default (probably doesn't even need to be parameter)
-        "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-      );
-      bool success = project->initialize();
-
-      LogInfo("Created projection:  " << success << "\n");
-      // Project from source project to output
-      project->toLatLonGrid(array2D, llgridsp);
-
+      // Just copy to check lat/lon orientation
+      if (rawCopy) {
+        auto& out   = llgridsp->getFloat2DRef();
+        size_t numX = array2D->getX();
+        size_t numY = array2D->getY();
+        LogSevere("OUTPUT NUMX NUMY " << numX << ", " << numY << "\n");
+        for (size_t x = 0; x < numX; ++x) {
+          for (size_t y = 0; y < numY; ++y) {
+            out[x][y] = ref[x][y];
+          }
+        }
+      } else {
+        // ------------------------------------------------
+        // ALPHA: Create projection lookup mapping
+        // FIXME: Ok projection needs a LOT more work we need info
+        // from the grib message on source projection, etc.
+        // ALPHA: For moment just make one without caching or anything.
+        // This is slow on first call, but we'd be able to cache in a
+        // real time situation.
+        // Also PROJ6 and up uses different strings
+        // But basically we'll 'declare' our projection somehow
+        Project * project = new ProjLibProject(
+          // axis: Tell project that our data is east and south heading
+          "+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
+        );
+        bool success = project->initialize();
+        LogInfo("Created projection:  " << success << "\n");
+        // Project from source project to output
+        if (success) {
+          project->toLatLonGrid(array2D, llgridsp);
+        } else {
+          LogSevere("Failed to create projection\n");
+          return;
+        }
+      }
       // Typename will be replaced by -O filters
       writeOutputProduct(llgridsp->getTypeName(), llgridsp);
     } else {

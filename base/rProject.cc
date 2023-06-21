@@ -656,6 +656,7 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
 {
   auto data2DFA = out->getFloat2D(Constants::PrimaryDataName); // size could be nice right?
   auto& data2DF = data2DFA->ref();
+  // data2DFA->fill(Constants::DataUnavailable); // fill anything not touched
 
   // ----------------------------------------------------------
   // source projection system (non geometric)
@@ -720,14 +721,19 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   // For each point in output lat lon
   double atLat = nwLat;
 
+  const bool border = false;
+
   for (size_t x = 0; x < num_lats; ++x) { // x,y in the space of LatLonGrid
     double atLon = nwLon;
     for (size_t y = 0; y < num_lons; ++y) {
+      data2DF[x][y] = Constants::DataUnavailable; // Default for anything not touched
       // Border/band debugging
-      if (x <= 10) { data2DF[x][y] = 53; continue; }
-      if ((x <= num_lats - 1) && (x >= num_lats - 10)) { data2DF[x][y] = 53; continue; }
-      if (y <= 11) { data2DF[x][y] = 53; continue; }
-      if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
+      if (border) {
+        if (x <= 10) { data2DF[x][y] = 53; continue; }
+        if ((x <= num_lats - 1) && (x >= num_lats - 10)) { data2DF[x][y] = 53; continue; }
+        if (y <= 11) { data2DF[x][y] = 53; continue; }
+        if ((y <= num_lons - 1) && (y >= num_lons - 10)) { data2DF[x][y] = 53; continue; }
+      }
 
       // double radLat = atLat * DEG_TO_RAD;
       // double radLon = atLon * DEG_TO_RAD;

@@ -212,7 +212,7 @@ class ProjLibProject : public Project
 public:
 
   /** Send needed information to the class for initialization */
-  ProjLibProject(const std::string& src, const std::string& dst);
+  ProjLibProject(const std::string& src, const std::string& dst = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 
   ~ProjLibProject()
   {
