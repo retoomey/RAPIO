@@ -21,6 +21,8 @@ add_executable(testrapio
   rTestTime.cc
   rTestURL.cc
   rTestValueCompressor.cc
+  rTestStage2Data.cc
+  ../programs/fusion/rStage2Data.cc
 )
 
 # Link to other libraries

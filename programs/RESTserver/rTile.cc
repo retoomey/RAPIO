@@ -520,9 +520,10 @@ RAPIOTileAlg::handlePathDefault(WebMessage& w)
 
   // Just in case we pass back a png or something, don't try to macro it
   if (Strings::endsWith(path, ".html")) {
-    w.addMacro("WMS", "http://" + hostname + ":8080/wms");
+    const std::string portStr = std::to_string(WebServer::port);
+    w.addMacro("WMS", "http://" + hostname + ":" + portStr + "/wms");
     w.addMacro("HOSTNAME", hostname);
-    w.addMacro("PORT", std::to_string(WebServer::port));
+    w.addMacro("PORT", portStr);
   }
 
   // Find the file...

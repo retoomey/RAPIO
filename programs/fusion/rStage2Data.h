@@ -26,8 +26,11 @@ public:
     const std::string         & typeName,
     const std::string         & units,
     const LLH                 & center,
+    size_t                    xBase,
+    size_t                    yBase,
     std::vector<size_t>       dims
-  ) : myRadarName(radarName), myTypeName(typeName), myUnits(units), myCenter(center), myMissingSet(dims, 1),
+  ) : myRadarName(radarName), myTypeName(typeName), myUnits(units), myCenter(center), myXBase(xBase), myYBase(yBase),
+    myMissingSet(dims, 1),
     myAddMissingCounter(0), myDimensions(dims), myCounter(0), myMCounter(0), myRLECounter(0)
   { };
 
@@ -75,6 +78,20 @@ public:
     return myUnits;
   }
 
+  /** Get sent time, or epoch */
+  Time
+  getTime()
+  {
+    return myTime;
+  }
+
+  /** Set sent time */
+  void
+  setTime(const Time& t)
+  {
+    myTime = t;
+  }
+
   /** Get the location */
   LLH
   getLocation()
@@ -82,38 +99,58 @@ public:
     return myCenter;
   }
 
-protected:
+  /** Get the XBase value or starting Lon/X cell of the grid we represent */
+  size_t
+  getXBase()
+  {
+    return myXBase;
+  }
 
-  /** RLE missing values, reduces size quite a bit since weather tends to clump up. */
+  /** Get the YBase value or starting Lat/Y cell of the grid we represent */
+  size_t
+  getYBase()
+  {
+    return myYBase;
+  }
+
+  /** Compress bit array in RLE.
+   *  This reduces size quite a bit since weather tends to clump up.
+   */
   void
   RLE();
 
+protected:
+
   // Meta information for this output
-  std::string myRadarName;
-  std::string myTypeName;
-  std::string myUnits;
-  LLH myCenter;
-  BitsetDims myMissingSet;
-  size_t myAddMissingCounter;
-  std::vector<size_t> myDimensions;
+  std::string myRadarName; ///< Radar name such as KTLX
+  std::string myTypeName;  ///< Type name such as Reflectivity
+  std::string myUnits;     ///< Units such as dBZ
+  Time myTime;             ///< Global time for this
+  LLH myCenter;            ///< Location center of radar
+  size_t myXBase;          ///< Base offset of X in the global grid
+  size_t myYBase;          ///< Base offset of Y in the global grid
+
+  BitsetDims myMissingSet;          ///< Bitfield of missing values gathered during creation
+  size_t myAddMissingCounter;       ///< Number of missing values in bitfield
+  std::vector<size_t> myDimensions; ///< Sizes of the grid in x,y,z
 
   // Stored data to process
-  std::vector<float> myValues;
-  std::vector<float> myWeights;
-  std::vector<short> myXs; // Optimization: Possible byte could be enough with extra attribute info
-  std::vector<short> myYs;
-  std::vector<char> myZs; // z assumed small
+  std::vector<float> myValues;  ///< True data values, not missing
+  std::vector<float> myWeights; ///< Weights for true data values
+  std::vector<short> myXs;      ///< X location for a true value
+  std::vector<short> myYs;      ///< Y location for a true value
+  std::vector<char> myZs;       ///< Z value, height for a true value
 
   // We should never weight against a missing value...so store all of them separate to save space.
   // Since we're sparse we can just store the x,y,z RLE
-  std::vector<short> myXMissings;
-  std::vector<short> myYMissings;
-  std::vector<char> myZMissings;
-  std::vector<short> myLMissings;
+  std::vector<short> myXMissings; ///< X start for RLE missing range
+  std::vector<short> myYMissings; ///< Y start for RLE missing range
+  std::vector<char> myZMissings;  ///< Z start for RLE missing range
+  std::vector<short> myLMissings; ///< The length of the run in X horizontal
 
   // Getting back data counters...
-  size_t myCounter;
-  size_t myMCounter;
-  size_t myRLECounter;
+  size_t myCounter;    ///< get() stream true value counter iterator
+  size_t myMCounter;   ///< get() stream RLE missing counter iterator
+  size_t myRLECounter; ///< get() stream RLE length within missing counter iterator
 };
 }

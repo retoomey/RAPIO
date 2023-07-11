@@ -231,6 +231,11 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 void
 RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
 {
+  std::map<std::string, std::string> extraParams;
+
+  extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
+  extraParams["compression"]  = "gz";
+
   if (!myWriteSubgrid) {
     // FIXME: check grids aren't already same size or this is wasted
 
@@ -244,6 +249,9 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
           LLH(myFullGrid.getNWLat(), myFullGrid.getNWLon(), 0), Time(),
           myFullGrid.getLatSpacing(), myFullGrid.getLonSpacing(),
           myFullGrid.getNumY(), myFullGrid.getNumX());
+      // Make sure outside our effective area is unavailable
+      auto fullgrid = myFullLLG->getFloat2D();
+      fullgrid->fill(Constants::DataUnavailable);
     }
 
     // Copy the current output subgrid into the full LLG for writing out...
@@ -270,10 +278,10 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
       }
     }
     // Full grid file (CONUS for regular merger)
-    writeOutputProduct(myWriteCAPPIName, myFullLLG);
+    writeOutputProduct(myWriteCAPPIName, myFullLLG, extraParams);
   } else {
     // Just write the subgrid directly (typically smaller than the full grid)
-    writeOutputProduct(myWriteCAPPIName, output);
+    writeOutputProduct(myWriteCAPPIName, output, extraParams);
   }
 } // RAPIOFusionOneAlg::writeOutputCAPPI
 
@@ -485,7 +493,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Keep stage 2 output code separate, cheap to make this if we don't use it
     std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
-    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, bitsizes);
+    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, outg.getStartX(), outg.getStartY(),
+      bitsizes);
 
     auto& resolver    = *myResolver;
     bool useDiffCache = false;

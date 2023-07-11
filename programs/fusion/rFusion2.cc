@@ -1,6 +1,7 @@
 #include "rFusion2.h"
 
 #include "rStage2Data.h"
+#include <vector>
 
 using namespace rapio;
 
@@ -80,7 +81,9 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
-  auto data = Stage2Data::receive(d); // Hide internal format in the stage2 data
+  const bool WRITELLG = true; // write out llg from input field
+
+  auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
 
   LogInfo("Fusion2 Got data, counting for now:\n");
 
@@ -89,19 +92,20 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   size_t points         = 0;
   size_t total = 0;
 
-  if (data) {
+  if (datasp) {
+    auto& data = *datasp;
     float v;
     float w;
     short x;
     short y;
     short z;
-    std::string name      = data->getRadarName();
-    std::string aTypeName = data->getTypeName();
+    std::string name      = data.getRadarName();
+    std::string aTypeName = data.getTypeName();
 
     LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
 
     // Initialize everything related to this radar
-    firstDataSetup(data);
+    firstDataSetup(datasp);
 
     // Check if incoming radar/moment matches our single setup, otherwise we'd need
     // all the setup for each radar/moment.  Which we 'could' do later maybe
@@ -112,7 +116,28 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
       return;
     }
 
-    while (data->get(v, w, x, y, z)) { // add time, other stuff
+    // Keep a count of 'hits' in the output layer for now
+    auto heightsKM = myFullGrid.getHeightsKM();
+    std::vector<size_t> hitCount;
+    hitCount.resize(heightsKM.size());
+
+    if (WRITELLG) {
+      // If we're writing out input LLG clones
+      // then wipe them to unavailable
+      // FIXME: frames vs I-frames we'll have to check.  Here
+      // we're assuming a full frame of output data.
+      myLLGCache->fillPrimary(Constants::DataUnavailable);
+      auto heightsKM = myFullGrid.getHeightsKM();
+      for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+        auto output = myLLGCache->get(layer);
+        output->setTime(data.getTime());
+      }
+    }
+
+    const size_t xBase = data.getXBase();
+    const size_t yBase = data.getYBase();
+
+    while (data.get(v, w, x, y, z)) { // add time, other stuff
       // TODO: point cloud fun stuff....
       if (counter++ < 10) {
         LogInfo("SAMPLE: " << v << ", " << w << ", (" << x << "," << y << "," << z << ")\n");
@@ -123,9 +148,33 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         points++;
       }
       total++;
+      hitCount[z]++;
+
+      // if we're writing LLG layers...then fill in the data value
+      // uniquely in the layer
+      if (WRITELLG) {
+        auto output = myLLGCache->get(z); // FIXME: Cache should/could provide quick references
+        if (output) {
+          auto& gridtest = output->getFloat2DRef();
+          gridtest[yBase + y][xBase + x] = v;
+        }
+      }
     }
+
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
+    if (WRITELLG) {
+      auto heightsKM = myFullGrid.getHeightsKM();
+      for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+        auto output = myLLGCache->get(layer);
+        const std::string myWriteCAPPIName = "Fused2" + myTypeName;
+        LogInfo("Writing layer " << layer << " hitCount: " << hitCount[layer] << "\n");
+        std::map<std::string, std::string> extraParams;
+        extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
+        extraParams["compression"]  = "gz";
+        writeOutputProduct(myWriteCAPPIName, output, extraParams);
+      }
+    }
   }
 } // RAPIOFusionTwoAlg::processNewData
 

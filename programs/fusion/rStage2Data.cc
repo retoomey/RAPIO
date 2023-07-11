@@ -7,25 +7,21 @@ using namespace rapio;
 void
 Stage2Data::add(float v, float w, short x, short y, short z)
 {
-  if (v == Constants::MissingData) {
+  const bool compressMissing = true;
+
+  if (compressMissing && (v == Constants::MissingData)) {
     // Only store x,y,z for a missing
     // Since missing tends to be grouped in space, we'll do a simple RLE to compress x,y,z locations
-    // FIXME: Should probably have a way to turn on/off this feature for testing/comparison
     // Storing a bit per x,y,z. marking MissingData
     size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
     myMissingSet.set(i, 1);
     myAddMissingCounter++;
-
-    // If not rle, we could just store x,y,z without any length value
-    // myXMissings.push_back(x);
-    // myYMissings.push_back(y);
-    // myZMissings.push_back(z); // We're hiding that z is a char
   } else {
     myValues.push_back(v);
     myWeights.push_back(w);
-    myXs.push_back(x);
-    myYs.push_back(y);
-    myZs.push_back(z); // We're hiding that z is a char
+    myXs.push_back(x); // X represents LON
+    myYs.push_back(y); // Y represents LAT
+    myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
   }
 }
 
@@ -61,17 +57,18 @@ Stage2Data::RLE()
             }
             // New RLE stuff to store...
           }
-          if (counter < 10) {
-            //  std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
-          }
-          myXMissings.push_back(x);
-          myYMissings.push_back(y);
-          myZMissings.push_back(z);
+          // if (counter < 10) {
+          //    std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
+          // }
+          myXMissings.push_back(startx);
+          myYMissings.push_back(starty);
+          myZMissings.push_back(startz);
           myLMissings.push_back(length); // has to be big enough for all of conus
         }
       }
     }
   }
+  // LogInfo("RLE found " << counter << " start locations.  Dim size: " << myDimensions[0] << " , " << myDimensions[1] << ", " << myDimensions[2] <<  "\n");
 } // Stage2Data::RLE
 
 void
@@ -97,6 +94,8 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     stage2->setSubType("Full");
     stage2->setString("Radarname", myRadarName);
     stage2->setString("Typename", myTypeName);
+    stage2->setLong("xBase", myXBase);
+    stage2->setLong("yBase", myYBase);
     // FIXME: general in MRMS and RAPIO
     stage2->setString("NetcdfWriterInfo", "RAPIO:Fusion stage 2 data");
     stage2->setLocation(myCenter); // Radar center location
@@ -169,11 +168,15 @@ Stage2Data::receive(RAPIOData& rData)
       std::string radarName, typeName, units;
       d.getString("Radarname", radarName);
       d.getString("Typename", typeName);
+      long xBase = 0, yBase = 0;
+      d.getLong("xBase", xBase);
+      d.getLong("yBase", yBase);
       units = d.getUnits();
       LLH center = d.getLocation();
       std::shared_ptr<Stage2Data> insp =
-        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, units, center, dims));
+        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, units, center, xBase, yBase, dims));
       auto& in = *insp;
+      in.setTime(d.getTime());
 
       // ---------------------------------------------------
       // Value per point storage (dim 0)
@@ -184,7 +187,6 @@ Stage2Data::receive(RAPIOData& rData)
       auto& netcdfValues  = d.getFloat1DRef();
       auto& netcdfWeights = d.getFloat1DRef("Range");
 
-      LogSevere("INCOMING SIZE IS " << aSize << "\n");
       in.myXs.reserve(aSize);
       in.myYs.reserve(aSize);
       in.myZs.reserve(aSize);
@@ -245,6 +247,7 @@ Stage2Data::receive(RAPIOData& rData)
 bool
 Stage2Data::get(float& v, float& w, short& x, short& y, short& z)
 {
+  // First read the non-missing values...
   if (myCounter < myValues.size()) {
     x = myXs[myCounter];
     y = myYs[myCounter];
@@ -253,134 +256,50 @@ Stage2Data::get(float& v, float& w, short& x, short& y, short& z)
     w = myWeights[myCounter];
     myCounter++;
     return true;
-  } else if (myMCounter < myXMissings.size()) {
-    auto l = myLMissings[myMCounter];
-    //  std::cout << "AT: " << l << " ("<<myMCounter<<")\n";
-    // We'll always have at least ONE value to return
-    x = myXMissings[myMCounter] + myRLECounter; // I don't 'think' we're wrapping X
+  }
+
+  // ...then read the missing values from RLE arrays
+  if (myMCounter < myXMissings.size()) {
+    // Run length encoding expansion I goofed a few times,
+    // so extra description here:
+    // lengths: 5, 3
+    // values:  1  2
+    // --> 1 1 1 1 1 2 2 2  Expected output
+    //     0 1 2 3 4 0 1 2  RLECounter
+    //     0 0 0 0 0 1 1 1  MCounter
+    //     5 5 5 5 5 3 3 3  l (current length)
+    // The Simple way, but we want reentrant
+    // for (i =0 i < lengths.size() ++i){
+    //  for (j = 0; j < lengths[i]; ++j){
+    //      return values[i];
+    //  }
+    // }
+
+    static size_t countout = 0;
+    bool more = true;
+    auto l    = myLMissings[myMCounter]; // Current length
+
+    // Always snag the current missing
+    x = myXMissings[myMCounter] + myRLECounter; // Since we RLE in the X (with no row wrapping)
     y = myYMissings[myMCounter];
     z = myZMissings[myMCounter];
+    // if (countout++ < 30) {
+    //   std::cout << "AT: " << myXMissings.size() << " " << myMCounter << ", length " << l << " position " <<
+    //     myRLECounter << " and (" << x << ", " << y << ", " << z << ")\n";
+    // }
     v = Constants::MissingData;
     w = 0.0;
 
-    if (++myRLECounter >= l) { // Next RLE item
-      //    std::cout << "CHANGING AT: " << myRLECounter << " " << myMCounter << " \n";
+    // Update for the next missing, if any
+    myRLECounter++;
+    if (myRLECounter >= l) { // overflow
       myRLECounter = 0;
       myMCounter++;
     }
     return true;
-  } else {
-    // std::cout << "END CONDITION " << myMCounter << " and " << myXMissings.size() << "\n";
   }
 
-
+  // Nothing left...
+  // std::cout << "END CONDITION " << myMCounter << " and " << myXMissings.size() << "\n";
   return false;
-}
-
-// Backing up the 'raw' file stuff from fusion1 but I don't want it in there.  If we implement
-// it then it would belong in this class
-#if 0
-
-std::shared_ptr<RObsBinaryTable>
-RAPIOFusionOneAlg::createRawEntries(AngleDegs elevDegs,
-  AngleDegs cLat, AngleDegs cLon, LengthKMs cHeight,
-  const std::string& aTypeName, const std::string& aUnits,
-  const time_t dataTime)
-{
-  // Entries to write out eventually
-  std::shared_ptr<RObsBinaryTable> entries = std::make_shared<RObsBinaryTable>();
-
-  entries->setReadFactory("raw"); // default to raw output if we write it
-  auto& t = *entries;
-
-  // FIXME: refactor/methods, etc. This isn't clean by a long shot
-  t.radarName = myRadarName;
-  t.vcp       = -9999; // Ok will merger be ok with this, need to check
-  t.elev      = elevDegs;
-  t.typeName  = aTypeName;
-  t.setUnits(aUnits);
-  t.markedLinesCacheFile = ""; // We ignore marked lines.  We'll see how it goes...
-  t.lat       = cLat;          // lat degrees
-  t.lon       = cLon;          // lon degrees
-  t.ht        = cHeight;       // kilometers assumed by w2merger
-  t.data_time = dataTime;
-  // Ok Lak guesses valid time based on vcp. What do we do here?
-  // I'm gonna use the provided history value
-  // If (valid_time < 1 || valid_time < blendingInterval ){
-  //   valid_time = blendingInterval;
-  // }
-  t.valid_time = getMaximumHistory().seconds(); // Use seconds of our -h option?
-  return entries;
-}
-
-void
-RAPIOFusionOneAlg::addRawEntry(const VolumeValue& vv, const Time& time, RObsBinaryTable& t, size_t x, size_t y,
-  size_t layer)
-{
-  // FIXME: Humm we could store time parts in vv.  This is a hack to match times between the two
-  // systems.
-  RObsBinaryTable::mrmstime aMRMSTime;
-
-  aMRMSTime.epoch_sec = time.getSecondsSinceEpoch();
-  aMRMSTime.frac_sec  = time.getFractional();
-  const LLCoverageArea& outg = myRadarGrid;
-
-  const size_t outX = x + outg.startX;
-  const size_t outY = y + outg.startY;
-
-  // Add entries
-  //   t.elevWeightScaled.push_back(int (0.5+(1+90)*100) );
-
-  # define ELEV_SCALE(x) ( int(0.5 + (x + 90) * 100) )
-  # define RANGE_SCALE 10
-
-  // if (outX > myFullGrid.numX) {
-  //  LogSevere(" CRITICAL X " << outX << " > " << myFullGrid.numX << "\n");
-  //  exit(1);
-  // }
-  // if (outY > myFullGrid.numY) {
-  //  LogSevere(" CRITICAL Y " << outY << " > " << myFullGrid.numY << "\n");
-  //  exit(1);
-  // }
-
-  // Just realized Z will be wrong, since the stage 2 will assume all 33 layers, and
-  // we're just doing subsets maybe.  So we'll need to figure that out
-  // Lak: 33 2200 2600 as X, Y, Z.  Which seems non-intuitive to me.
-  // Me: 2200 2600 33 as X, Y, Z.
-  const size_t atZ = myHeightsIndex[layer]; // hack sparse height layer index (or we make object?)
-  t.addRawObservation(atZ, outX, outY, vv.dataValue,
-    int(vv.virtualRangeKMs * RANGE_SCALE + 0.5),
-    //	  entry.elevWeightScaled(), Can't figure this out.  Why a individual scale...oh weight because the
-    //	  cloud is the full cube.  Ok so we take current elev..no wait the virtual elevation and scale to char...
-    //	  takes -90 to 90 to 0-18000, can still fit into unsigned char...
-    //
-    ELEV_SCALE(vv.virtualElevDegs),
-    vv.virtualAzDegs, aMRMSTime);
-
-  // Per point (I'm gonna have to rework it if I do a new stage 2):
-  // t.azimuth  vector of azimuth of the point, right?  Ok we have that.
-  // t.aztime  vector of time of the azimuth.  Don't think we have that really.  Will make it the radial set
-  // t.x, y, z,  coordinates in the global grid
-  // newvalue,
-  // scaled_dist (short).   A Scale of the weight for the point:
-  // 'quality' was passed into as RadialSet...ignoring it for now not sure it's used
-  // RANGE_SCALE = 10
-  // int(rangeMeters*RANGE_SCALE_KM*quality + 0.5);
-  // int(rangeMeters*RANGE_SCALE_KM + 0.5);
-  //    RANGE_SCALE_KM = RANGE_SCALE/1000.0
-  // elevWeightScaled (char).
-  // AZIMUTH_SCALE 100
-  // ELEV_SCALE(x) = ( int (0.5+(x+90)*100) )
-  // ELEV_UNSCALE(y) ( (y*0.01)-90)
-  // ELEV_WT_SCALE 100
-  // I think the stage 2 entries are gonna be difficult to match, there's information
-  // that we can't include I think.  Stage 2 is trying to do things we already did?
-  // Bleh maybe it will be good enough.  We'll need a better stage 2 I think.
-  // FIXME: clean up so much here
-  // entries.azimuth.push_back(int(0.5+azDegs*100)); // scale right?
-  // RObsBinaryTable::mrmstime aTime;
-  // FIXME: fill in time.  Ok what time do we use here?
-  // entries.aztime.push_back(aTime); // scale right?
-} // RAPIOFusionOneAlg::addRawEntry
-
-#endif // if 0
+} // Stage2Data::get
