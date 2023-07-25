@@ -4,171 +4,32 @@
 #include <rUtility.h>
 
 #include <boost/dynamic_bitset.hpp>
+#include <cmath>
 
 namespace rapio {
-/** Bitset class that allows convenient storing of N values using B bits each.
- * This could be reimplemented using std::bitset depending on C++ version.
- * The advantage to this is reducing memory for large datasets that have to be
- * stored in RAM.
- *
+/** A class that maps N dimensions to a single dimension.
  * @author Robert Toomey
  */
-class Bitset : public Data {
+class DimensionMapper : public Data {
 public:
 
-  /** Construct a bitset of using N values of B given size in bits each */
-  Bitset(size_t numValues, size_t bitsPerValue) : myNumValues(numValues), myNumBits(bitsPerValue),
-    myBits(numValues * bitsPerValue)
-  { }
-
-  /** (AI) Calculate the number of bits required to store a given unsigned number.  Usually
-   * we can pass a max such as '255' to get 8 returned since 0-255 can be stored in 8 bits.
-   * So if you want a Bitset to store X numbers from 0 to 255 in the smallest amount of space,
-   * you could call Bitset(X, Bitset::smallestBitsToStore(255)), which would generate
-   * a Bitset using 5 bits for each of the X numbers.
-   */
-  static unsigned int
-  smallestBitsToStore(unsigned int x);
-
-  /** Get number of unique values we're storing */
-  size_t
-  getNumValues() const
-  {
-    return myNumValues;
-  }
-
-  /** Get 'size' of items which is just getNumValues */
-  size_t
-  size() const
-  {
-    return myNumValues;
-  }
-
-  /** Dump bits at location to stream, useful for debugging.
-   * Note that boost::dynamic_bitset is just bits, we're the ones breaking it down into N values.
-   */
-  void
-  bits(std::ostream& os, size_t at) const
-  {
-    size_t count = 0;
-    size_t i     = at * myNumBits;
-
-    while (count++ < myNumBits) {
-      os << myBits[i++];
-    }
-  }
-
-  /** Get number of bits per value we use */
-  size_t
-  getNumBits() const
-  {
-    return myNumBits;
-  }
-
-  /** A guess of deep size in bytes, useful for debugging and memory tracking */
-  size_t
-  deepsize() const
-  {
-    size_t size = sizeof(*this);
-
-    size += myBits.capacity() / CHAR_BIT;
-
-    return size;
-  }
-
-  /** Get value at i */
-  template <typename T>
-  T
-  get(size_t i) const
-  {
-    T y         = 0;
-    size_t base = i * myNumBits;
-
-    // Pull big endian first (human reading order)
-    for (int j = myNumBits - 1; j >= 0; j--) {
-      bool bit = myBits[base++];
-      y |= bit << j;
-    }
-    return y;
-  }
-
-  /** Set value at i */
-  template <typename T>
-  void
-  set(size_t i, T value)
-  {
-    size_t base = i * myNumBits;
-
-    // Push big endian first (human reading order)
-    for (int j = myNumBits - 1; j >= 0; j--) {
-      bool bit = (value >> j) & 1;
-      myBits[base++] = bit;
-    }
-  }
-
-  /** (AI) Calculate the max unsigned value with all bits set.
-   * Up to a unsigned long long that is, which hopefully we never go
-   * over or you should rethink your choice of data structure. */
-  unsigned long long
-  calculateMaxValue()
-  {
-    if (myNumBits >= std::numeric_limits<unsigned long long>::digits) {
-      return std::numeric_limits<unsigned long long>::max();
-    } else {
-      return (1ULL << myNumBits) - 1;
-    }
-  }
-
-  /** Set all bits to 1 or max value */
-  void
-  setAllBits()
-  {
-    myBits.set();
-  }
-
-  /** Set all bits to 0 or min value */
-  void
-  clearAllBits()
-  {
-    myBits.reset();
-  }
-
-  /** Allow operator << to access our internal fields */
-  friend std::ostream&
-  operator << (std::ostream&, const Bitset&);
-
-protected:
-
-  /** Number of values that we are storing */
-  size_t myNumValues;
-
-  /** Number of bits that we are storing */
-  size_t myNumBits;
-
-  /** Bit storage for values */
-  boost::dynamic_bitset<> myBits;
-};
-
-/** Create a bitset with dimensions
- * FIXME: should pull common code out of this and sparseVectorDims
- */
-class BitsetDims : public Bitset {
-public:
-
-  /** Create a bitset using a dimension vector.  For example, passing
-   * {3,4,5} would create a bitset with max size 60 */
-  BitsetDims(std::vector<size_t> dimensions, size_t bitsPerValue) : Bitset(calculateSize(dimensions), bitsPerValue),
+  /** Create a dimension mapper from a vector of max dimensions */
+  DimensionMapper(std::vector<size_t> dimensions) :
     myDimensions(dimensions), myStrides(std::vector<size_t>(dimensions.size(), 1))
   {
-    // (AI) Cache strides for our dimensions, this reduces the multiplications/additions
-    // when converting dimension coordinates into the linear index
-    for (int i = myDimensions.size() - 2; i >= 0; --i) {
-      myStrides[i] = myStrides[i + 1] * myDimensions[i + 1];
-    }
+    calculateStrides();
+  }
+
+  /** Single dimension */
+  DimensionMapper(size_t dimension) :
+    myDimensions({ dimension }), myStrides(std::vector<size_t>(1, 1))
+  {
+    calculateStrides();
   }
 
   /** Calculate total size required to store all dimensions given.
-   * Used during creation to make the linear storage. */
+   * Used during creation to make any linear non-sparse storage.
+   * This is just multiplication of all values */
   static size_t
   calculateSize(const std::vector<size_t>& values)
   {
@@ -178,6 +39,16 @@ public:
       total *= value;
     }
     return total;
+  }
+
+  /* (AI) Cache strides for our dimensions, this reduces the multiplications/additions
+   *  when converting dimension coordinates into the linear index */
+  void
+  calculateStrides()
+  {
+    for (int i = myDimensions.size() - 2; i >= 0; --i) {
+      myStrides[i] = myStrides[i + 1] * myDimensions[i + 1];
+    }
   }
 
   /** (AI) Calculate index in the dimension space, no checking */
@@ -214,22 +85,19 @@ public:
     return (i[0] * horsize + i[1] * zsize + i[2]);
   }
 
-  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
-   * it's up to caller to first get(i) and handle memory management. */
-  // inline T *
-  // set(std::vector<size_t> v, T data)
-  // {
-  //   return SparseVector<T>::set(getIndex(v), data);
-  // }
+  /** Return list of dimension sizes */
+  std::vector<size_t>
+  getDimensions()
+  {
+    return myDimensions;
+  }
 
-  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
-   * Note if T is declared as a pointer, you get a handle back, so
-   * then (*Value)->field will get the data out. */
-  // inline T *
-  // get(std::vector<size_t> v)
-  // {
-  //   return SparseVector<T>::get(getIndex(v));
-  // }
+  /** Return list of strides for debugging */
+  std::vector<size_t>
+  getStrides()
+  {
+    return myStrides;
+  }
 
 protected:
 
@@ -238,6 +106,299 @@ protected:
 
   /** Strides for each dimension.  Cache for calculating index */
   std::vector<size_t> myStrides;
+};
+
+/** A class allowing different ways to store a std::vector of things choosing memory vs speed.
+ * Note: Number of elements is fixed on creation at moment.
+ *       Assumption is unsigned values at moment.
+ * FIXME: Feels like this could merge with Array, but will require some work and testing there.
+ *
+ * @author Robert Toomey
+ */
+class StaticVector : public DimensionMapper {
+public:
+
+  /** Empty constructor */
+  StaticVector() : DimensionMapper({ 0 }){ }
+
+  /** Pass along dimensions if wanted */
+  StaticVector(std::vector<size_t> dimensions) : DimensionMapper(dimensions){ }
+
+  /** Single dimension */
+  StaticVector(size_t dimension) : DimensionMapper(dimension){ }
+
+  /** Factory method that returns a subclass of StaticVector depending on size.
+   * If trim is true, pin to the smallest power of 2 that works.  This is a tradeoff on speed vs
+   * memory.  For example, if you require 5 bits per element, than trim will return either
+   * a bitset of 5 bits (smaller but slower), vs a std::vector<char> based implementation using
+   * 8 bits per element.
+   * Note this is meant for dynamic usage where you don't know the size in advance, otherwise
+   * just make a std::vector<stuff> big enough.
+   */
+  static std::unique_ptr<StaticVector>
+  Create(size_t maxSize, bool trim = true);
+
+  /** (AI) Calculate the number of bits required to store a given unsigned number.  Usually
+   * we can pass a max such as '255' to get 8 returned since 0-255 can be stored in 8 bits.
+   * So if you want a Bitset to store X numbers from 0 to 255 in the smallest amount of space,
+   * you could call Bitset(X, Bitset::smallestBitsToStore(255)), which would generate
+   * a Bitset using 5 bits for each of the X numbers.
+   */
+  static unsigned int
+  smallestBitsToStore(unsigned int x);
+
+  /** Get size of the vector */
+  virtual size_t
+  size() const = 0;
+
+  /** Get number of bits per value we use */
+  virtual size_t
+  getNumBits() const = 0;
+
+  /** (AI) Calculate the max unsigned value with all bits set.
+   * Up to a unsigned long long that is, which hopefully we never go
+   * over or you should rethink your choice of data structure. */
+  virtual unsigned long long
+  calculateMaxValue() const = 0;
+
+  /** Set all bits to 1 or max value */
+  virtual void
+  setAllBits() = 0;
+
+  /** Clear all bits to 0 or min value */
+  virtual void
+  clearAllBits() = 0;
+
+  // Humm could we implement operators here?
+
+  /** Get a value back into a size_t.  Can overflow if not large enough for storage */
+  virtual size_t
+  get(size_t i) const = 0;
+
+  /** Set a value back from a size_t.  Can overflow if not large enough for storage */
+  virtual void
+  set(size_t i, size_t v) = 0;
+
+  /** A guess of deep size in bytes, useful for debugging and memory tracking */
+  virtual size_t
+  deepsize() const = 0;
+};
+
+/** Just wrap a std::vector.  This allows us to abstractly
+ * pass other methods of storage around. */
+template <typename T>
+class StaticVectorT : public StaticVector {
+public:
+
+  /** Empty constructor */
+  StaticVectorT(){ }
+
+  /** Make vector of size */
+  StaticVectorT(size_t size) : myData(size){ }
+
+  /** Get size of the vector */
+  virtual size_t
+  size() const override
+  {
+    return myData.size();
+  }
+
+  /** Get number of bits per value we use */
+  virtual size_t
+  getNumBits() const override
+  {
+    return (sizeof(T) * 8);
+  }
+
+  /** (AI) Calculate the max unsigned value with all bits set.
+   * Up to a unsigned long long that is, which hopefully we never go
+   * over or you should rethink your choice of data structure. */
+  virtual unsigned long long
+  calculateMaxValue() const override
+  {
+    return static_cast<unsigned long long>(std::pow(2, getNumBits()) - 1);
+  }
+
+  /** Set all bits to 1 or max value */
+  virtual void
+  setAllBits() override
+  {
+    myData.assign(myData.size(), calculateMaxValue());
+  }
+
+  /** Clear all bits to 0 or min value */
+  virtual void
+  clearAllBits() override
+  {
+    myData.assign(myData.size(), 0);
+  }
+
+  /** Get a value back into a size_t.  Can overflow if not large enough for storage */
+  size_t
+  get(size_t i) const override
+  {
+    return static_cast<T>(myData[i]);
+  }
+
+  /** Set a value back from a size_t.  Can overflow if not large enough for storage */
+  void
+  set(size_t i, size_t v) override
+  {
+    myData[i] = static_cast<T>(v);
+  }
+
+  /** A guess of deep size in bytes, useful for debugging and memory tracking */
+  virtual size_t
+  deepsize() const override
+  {
+    size_t size = sizeof(*this);
+
+    size += myData.size();
+
+    return size;
+  }
+
+protected:
+
+  /** The storage here is just a std::vector */
+  std::vector<T> myData;
+};
+
+/** Bitset class that allows convenient storing of N values using B bits each.
+ * This could be reimplemented using std::bitset depending on C++ version.
+ * The advantage to this is reducing memory for large datasets that have to be
+ * stored in RAM.
+ *
+ * @author Robert Toomey
+ */
+class Bitset : public StaticVector {
+public:
+
+  /** Empty constructor */
+  Bitset(){ }
+
+  /** Construct a bitset of using N values of B given size in bits each */
+  Bitset(size_t numValues, size_t bitsPerValue) : StaticVector(numValues),
+    myNumValues(numValues), myNumBits(bitsPerValue),
+    myBits(numValues * bitsPerValue)
+  { }
+
+  /** Create a bitset of N dimensions */
+  Bitset(std::vector<size_t> dimensions, size_t bitsPerValue) : StaticVector(dimensions),
+    myNumValues(calculateSize(dimensions)), myNumBits(bitsPerValue),
+    myBits(calculateSize(dimensions) * bitsPerValue)
+  { }
+
+  /** Get 'size' of items which is just getNumValues */
+  size_t
+  size() const override
+  {
+    return myNumValues;
+  }
+
+  /** Get number of bits per value we use */
+  size_t
+  getNumBits() const override
+  {
+    return myNumBits;
+  }
+
+  /** (AI) Calculate the max unsigned value with all bits set.
+   * Up to a unsigned long long that is, which hopefully we never go
+   * over or you should rethink your choice of data structure. */
+  unsigned long long
+  calculateMaxValue() const override
+  {
+    if (myNumBits >= std::numeric_limits<unsigned long long>::digits) {
+      return std::numeric_limits<unsigned long long>::max();
+    } else {
+      return (1ULL << myNumBits) - 1;
+    }
+  }
+
+  /** Set all bits to 1 or max value */
+  void
+  setAllBits() override
+  {
+    myBits.set();
+  }
+
+  /** Set all bits to 0 or min value */
+  void
+  clearAllBits() override
+  {
+    myBits.reset();
+  }
+
+  /** A guess of deep size in bytes, useful for debugging and memory tracking */
+  size_t
+  deepsize() const override
+  {
+    size_t size = sizeof(*this);
+
+    size += myBits.capacity() / CHAR_BIT;
+
+    return size;
+  }
+
+  /** Get a value back into a size_t.  Can overflow if not large enough for storage */
+  size_t
+  get(size_t i) const override
+  {
+    size_t y    = 0;
+    size_t base = i * myNumBits;
+
+    // Pull big endian first (human reading order)
+    for (int j = myNumBits - 1; j >= 0; j--) {
+      bool bit = myBits[base++];
+      y |= bit << j;
+    }
+    return y;
+  }
+
+  /** Set a value back from a size_t.  Can overflow if not large enough for storage */
+  void
+  set(size_t i, size_t value) override
+  {
+    size_t base = i * myNumBits;
+
+    // Push big endian first (human reading order)
+    for (int j = myNumBits - 1; j >= 0; j--) {
+      bool bit = (value >> j) & 1;
+      myBits[base++] = bit;
+    }
+  }
+
+  // Unique methods to bitset
+
+  /** Dump bits at location to stream, useful for debugging.
+   * Note that boost::dynamic_bitset is just bits, we're the ones breaking it down into N values.
+   */
+  void
+  bits(std::ostream& os, size_t at) const
+  {
+    size_t count = 0;
+    size_t i     = at * myNumBits;
+
+    while (count++ < myNumBits) {
+      os << myBits[i++];
+    }
+  }
+
+  /** Allow operator << to access our internal fields */
+  friend std::ostream&
+  operator << (std::ostream&, const Bitset&);
+
+protected:
+
+  /** Number of values that we are storing */
+  size_t myNumValues;
+
+  /** Number of bits that we are storing */
+  size_t myNumBits;
+
+  /** Bit storage for values */
+  boost::dynamic_bitset<> myBits;
 };
 
 /** (AI) Stream class to toggle full vs brief output of bitset.

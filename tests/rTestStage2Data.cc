@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_READWRITE)
   size_t numY = 100; // lat marching north to south
   size_t numZ = 1;   // heights
   std::shared_ptr<Stage2Data> insp =
-    std::make_shared<Stage2Data>(Stage2Data("KTLX", "Reflectivity", "dBZ", center, 10, 10, { numX, numY, numZ }));
+    std::make_shared<Stage2Data>(Stage2Data("KTLX", "Reflectivity", 0.50, "dBZ", center, 10, 10, { numX, numY, numZ }));
 
   // Write to stage2 class
   size_t inCounter      = 0;

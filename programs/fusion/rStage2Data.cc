@@ -16,6 +16,7 @@ Stage2Data::add(float v, float w, short x, short y, short z)
     size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
     myMissingSet.set(i, 1);
     myAddMissingCounter++;
+  } else if (v == Constants::DataUnavailable) { // We shouldn't send this right?
   } else {
     myValues.push_back(v);
     myWeights.push_back(w);
@@ -38,7 +39,7 @@ Stage2Data::RLE()
     for (size_t y = 0; y < myDimensions[1]; y++) {   // row
       for (size_t x = 0; x < myDimensions[0]; x++) { // col
         size_t index = myMissingSet.getIndex({ (size_t) x, (size_t) y, (size_t) z });
-        int flag     = myMissingSet.get<int>(index);
+        auto flag    = myMissingSet.get(index);
         if (flag) {
           counter++;
           size_t startx = x;
@@ -48,7 +49,7 @@ Stage2Data::RLE()
           // Extend the run horizontally
           while (x + 1 < myDimensions[0]) {
             size_t index = myMissingSet.getIndex({ (size_t) x + 1, (size_t) y, (size_t) z });
-            int value    = myMissingSet.get<int>(index);
+            auto value   = myMissingSet.get(index);
             if (value) {
               ++x;
               ++length;
@@ -94,6 +95,7 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     stage2->setSubType("Full");
     stage2->setString("Radarname", myRadarName);
     stage2->setString("Typename", myTypeName);
+    stage2->setFloat("ElevationDegs", myElevationDegs);
     stage2->setLong("xBase", myXBase);
     stage2->setLong("yBase", myYBase);
     // FIXME: general in MRMS and RAPIO
@@ -166,15 +168,17 @@ Stage2Data::receive(RAPIOData& rData)
       size_t aSize = dims[0];
       size_t aSize2 = dims[1];
       std::string radarName, typeName, units;
+      float elevDegs;
       d.getString("Radarname", radarName);
       d.getString("Typename", typeName);
+      d.getFloat("ElevationDegs", elevDegs);
       long xBase = 0, yBase = 0;
       d.getLong("xBase", xBase);
       d.getLong("yBase", yBase);
       units = d.getUnits();
       LLH center = d.getLocation();
       std::shared_ptr<Stage2Data> insp =
-        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, units, center, xBase, yBase, dims));
+        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, elevDegs, units, center, xBase, yBase, dims));
       auto& in = *insp;
       in.setTime(d.getTime());
 
@@ -238,7 +242,7 @@ Stage2Data::receive(RAPIOData& rData)
 
       return insp;
     } else {
-      LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
+      //   LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
     }
   }
   return nullptr;

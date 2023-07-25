@@ -49,9 +49,9 @@ public:
   }
 
   // Test a 3d array of the index
-  SparseVectorDims<teststorage> sv2({ 1, 2, 3 });
+  SparseVector<teststorage> sv2({ 1, 2, 3 });
 
-  BOOST_CHECK_EQUAL(SparseVectorDims<teststorage>::calculateSize({ 20, 30, 40, 50 }), 20 * 30 * 40 * 50);
+  BOOST_CHECK_EQUAL(SparseVector<teststorage>::calculateSize({ 20, 30, 40, 50 }), 20 * 30 * 40 * 50);
 
   // Set all values and check get index methods
   bool flag = true;
@@ -63,7 +63,7 @@ public:
         A.x = x;
         A.y = y;
         A.z = z;
-        sv2.set({ x, y, z }, A);
+        sv2.setDims({ x, y, z }, A);
         if (sv2.getIndex({ x, y, z }) != sv2.getIndex3D(x, y, z)) {
           flag = false;
         }
@@ -80,7 +80,7 @@ public:
   for (size_t x = 0; x < 1; x++) {
     for (size_t y = 0; y < 2; y++) {
       for (size_t z = 0; z < 3; z++) {
-        auto A = sv2.get({ x, y, z });
+        auto A = sv2.getDims({ x, y, z });
         if ((A->x != x) || (A->y != y) || (A->z != z)) {
           flag = false;
         }

@@ -3,8 +3,6 @@
 #include <rData.h>
 #include <rBitset.h>
 
-#include <iostream>
-
 namespace rapio {
 /* SparseVector stores a growing/shrinking sparse vector of a given type.
  * Given a size, allocate a set base memory lookup index into
@@ -34,12 +32,21 @@ namespace rapio {
  *
  */
 template <typename T>
-class SparseVector : public Data {
+class SparseVector : public DimensionMapper {
 public:
 
   /** Construct a sparse vector of a given maxSize.  Note it's really maxSize-1 since one key is reserved
    * for missing (the max). */
-  SparseVector(size_t maxSize) : myLookup(maxSize, Bitset::smallestBitsToStore(maxSize))
+  SparseVector(size_t maxSize) : DimensionMapper(maxSize),
+    myLookupPtr(StaticVector::Create(maxSize, true)), myLookup(*myLookupPtr)
+  {
+    myLookup.setAllBits(); // Make 'empty'
+    myMissing = myLookup.calculateMaxValue();
+  }
+
+  /** Construct a sparse vector of dimensions. */
+  SparseVector(std::vector<size_t> dimensions) : DimensionMapper(dimensions),
+    myLookupPtr(StaticVector::Create(calculateSize(dimensions), true)), myLookup(*myLookupPtr)
   {
     myLookup.setAllBits(); // Make 'empty'
     myMissing = myLookup.calculateMaxValue();
@@ -51,11 +58,24 @@ public:
   inline T *
   get(size_t i)
   {
-    const size_t offset = myLookup.get<size_t>(i);
+    #if 0
+    if (i > myLookup.size()) {
+      LogSevere("OUT OF RANGE " << i << " > " << myLookup.size());
+      return nullptr;
+    }
+    #endif
+    // const size_t offset = myLookup.get(i);
+    size_t offset = myLookup.get(i);
 
     if (offset == myMissing) {
       return nullptr;
     } else {
+      #if 0
+      if (offset > myStorage.size()) {
+        LogSevere("Detected out of bounds " << offset << " and size is " << myStorage.size() << "\n");
+        exit(1);
+      }
+      #endif
       return &myStorage[offset];
     }
   }
@@ -65,16 +85,45 @@ public:
   inline T *
   set(size_t i, T data)
   {
-    size_t offset = myLookup.get<size_t>(i);
+    #if 0
+    if (i > myLookup.size()) {
+      LogSevere("SET OUT OF RANGE " << i << " > " << myLookup.size());
+      return nullptr;
+    }
+    #endif
+    size_t offset = myLookup.get(i);
 
     if (offset == myMissing) {
       offset = myStorage.size();
-      myLookup.set<size_t>(i, offset);
+      myLookup.set(i, offset);
       myStorage.push_back(data);
     } else {
       myStorage[offset] = data;
     }
+    #if 0
+    if (offset > myStorage.size()) {
+      LogSevere("Detected out of bounds " << offset << " and size is " << myStorage.size() << "\n");
+      exit(1);
+    }
+    #endif
     return &myStorage[offset];
+  }
+
+  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
+   * it's up to caller to first get(i) and handle memory management. */
+  inline T *
+  setDims(std::vector<size_t> v, T data)
+  {
+    return set(getIndex(v), data);
+  }
+
+  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
+   * Note if T is declared as a pointer, you get a handle back, so
+   * then (*Value)->field will get the data out. */
+  inline T *
+  getDims(std::vector<size_t> v)
+  {
+    return get(getIndex(v));
   }
 
   /** (AI) Percentage full on the sparse storage.  This doesn't count any deep memory
@@ -112,7 +161,10 @@ public:
 protected:
 
   /** Our lookup into our storage vector */
-  Bitset myLookup;
+  std::unique_ptr<StaticVector> myLookupPtr;
+
+  /** Our lookup reference for speed */
+  StaticVector& myLookup;
 
   /** Our storage of given typename/class */
   std::vector<T> myStorage;
@@ -133,99 +185,4 @@ operator << (std::ostream& os,
   os << "Total percent filled: " << sv.getPercentFull() << "\n";
   return (os);
 }
-
-/** A subclass of SparseVector that allows referencing items by
- * a simple dimension vector.  SparseVector stores a single
- * dimension storage, this allows dimensional referencing.
- *
- * @author Robert Toomey, (original ideas from Lak)
- */
-template <typename T>
-class SparseVectorDims : public SparseVector<T> {
-public:
-
-  /** Create a sparse vector using a dimension vector.  For example, passing
-   * {3,4,5} would create a sparse vector with max size 60 */
-  SparseVectorDims(std::vector<size_t> dimensions) : SparseVector<T>(calculateSize(dimensions)),
-    myDimensions(dimensions), myStrides(std::vector<size_t>(dimensions.size(), 1))
-  {
-    // (AI) Cache strides for our dimensions, this reduces the multiplications/additions
-    // when converting dimension coordinates into the linear index
-    for (int i = myDimensions.size() - 2; i >= 0; --i) {
-      myStrides[i] = myStrides[i + 1] * myDimensions[i + 1];
-    }
-  }
-
-  /** Calculate total size required to store all dimensions given.
-   * Used during creation to make the linear storage. */
-  static size_t
-  calculateSize(const std::vector<size_t>& values)
-  {
-    size_t total = 1;
-
-    for (size_t value: values) {
-      total *= value;
-    }
-    return total;
-  }
-
-  /** (AI) Calculate index in the dimension space, no checking */
-  size_t
-  getIndex(std::vector<size_t> indices)
-  {
-    size_t index = 0;
-
-    for (int i = myDimensions.size() - 1; i >= 0; --i) { // match w2merger ordering
-      index += indices[i] * myStrides[i];
-    }
-    return index;
-  }
-
-  /** Quick index for 3D when you know you have 3 dimensions.
-   * This is basically a collapsed form of the general getIndex.
-   */
-  inline size_t
-  getIndex3D(size_t x, size_t y, size_t z)
-  {
-    return ((z * myStrides[2]) + (y * myStrides[1]) + (x * myStrides[0]));
-  }
-
-  /** Keeping for moment, this is how w2merger calculates its
-   * linear index.  We made these match for consistency:
-   * getOldIndex({x,y,z}) == getIndex({x,y,z}) for all values.
-   */
-  size_t
-  getOldIndex(std::vector<size_t> i)
-  {
-    size_t horsize = myDimensions[1] * myDimensions[2];
-    size_t zsize   = myDimensions[2];
-
-    return (i[0] * horsize + i[1] * zsize + i[2]);
-  }
-
-  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
-   * it's up to caller to first get(i) and handle memory management. */
-  inline T *
-  set(std::vector<size_t> v, T data)
-  {
-    return SparseVector<T>::set(getIndex(v), data);
-  }
-
-  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
-   * Note if T is declared as a pointer, you get a handle back, so
-   * then (*Value)->field will get the data out. */
-  inline T *
-  get(std::vector<size_t> v)
-  {
-    return SparseVector<T>::get(getIndex(v));
-  }
-
-protected:
-
-  /** The number in each dimension */
-  std::vector<size_t> myDimensions;
-
-  /** Strides for each dimension.  Cache for calculating index */
-  std::vector<size_t> myStrides;
-};
 }

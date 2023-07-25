@@ -32,24 +32,58 @@ BOOST_AUTO_TEST_CASE(BITSET_CREATION)
 
   // Set all values in bitset
   for (size_t i = 0; i < numValues; i++) {
-    b.set<char>(i, i);
+    b.set(i, i);
   }
   // Test ends
   b.set(0, 31);
   b.set(numValues - 1, 7);
-  BOOST_CHECK_EQUAL(b.get<short>(0), 31);
-  BOOST_CHECK_EQUAL(b.get<int>(numValues - 1), 7);
+  BOOST_CHECK_EQUAL(b.get(0), 31);
+  BOOST_CHECK_EQUAL(b.get(numValues - 1), 7);
   // Test rest
   for (size_t i = 1; i < numValues - 1; i++) {
-    auto z = b.get<long>(i);
+    auto z = b.get(i);
     BOOST_CHECK_EQUAL(z, i);
   }
 
   b.setAllBits();
-  BOOST_CHECK_EQUAL(b.get<size_t>(5), 31);
+  BOOST_CHECK_EQUAL(b.get(5), 31);
 
   b.clearAllBits();
-  BOOST_CHECK_EQUAL(b.get<size_t>(5), 0);
+  BOOST_CHECK_EQUAL(b.get(5), 0);
+
+  // Multi dimension
+  size_t counter = 0;
+  const std::vector<size_t> dims = { 1, 2, 3 };
+  Bitset bd(dims, numBits);
+
+  for (size_t x = 0; x < 1; x++) {
+    for (size_t y = 0; y < 2; y++) {
+      for (size_t z = 0; z < 3; z++) {
+        // size_t i = bd.getIndex3D(x,y,z);
+        size_t i = bd.getIndex({ x, y, z });
+        // std::cout << " IN " << i << " " << counter << "\n";
+        bd.set(i, counter);
+        counter++;
+      }
+    }
+  }
+
+  bool good = true;
+
+  counter = 0;
+  for (size_t x = 0; x < 1; x++) {
+    for (size_t y = 0; y < 2; y++) {
+      for (size_t z = 0; z < 3; z++) {
+        // size_t i = bd.getIndex3D(x,y,z);
+        size_t i = bd.getIndex({ x, y, z });
+        // std::cout << " OUT " << i << " " << bd.get(i) << "\n";
+        good &= (bd.get(i) == counter);
+        counter++;
+      }
+    }
+  }
+
+  BOOST_CHECK_EQUAL(true, good);
 }
 
 BOOST_AUTO_TEST_SUITE_END();

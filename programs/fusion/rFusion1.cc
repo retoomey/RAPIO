@@ -473,7 +473,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // Do we try to output Stage 2 files for fusion2?
     // For the moment turn off stage2 if the --llg flag is on, since meteorologists
     // might be working on the first stage resolver.
-    const bool outputStage2 = !myWriteLLG;
+    // const bool outputStage2 = !myWriteLLG;
+    const bool outputStage2 = true;
 
     // Set the value object for resolvers
     VolumeValue vv;
@@ -493,7 +494,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 
     // Keep stage 2 output code separate, cheap to make this if we don't use it
     std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
-    Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, center, outg.getStartX(), outg.getStartY(),
+    Stage2Data stage2(myRadarName, myTypeName, elevDegs, myWriteOutputUnits, center, outg.getStartX(), outg.getStartY(),
       bitsizes);
 
     auto& resolver    = *myResolver;
@@ -638,7 +639,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
       LLH aLocation;
       // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
       Time aTime = rTime; // The time of the data matches the incoming data
-      LogSevere("Sending " << myWriteStage2Name << " at " << aTime << "\n");
+      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
       stage2.send(this, aTime, myWriteStage2Name);
     }
 

@@ -26,6 +26,15 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 
   // legacy use the t, b and s to define a grid
   o.declareLegacyGrid();
+
+  // Debug options
+  // Note, normal w2merger writes at a particular time, not per
+  // input..so this probably won't keep up.  It's for debugging
+  o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
+  o.addGroup("llg", "debug");
+  o.optional("throttle", "1",
+    "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
+  o.addGroup("throttle", "debug");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -33,6 +42,14 @@ void
 RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 {
   o.getLegacyGrid(myFullGrid);
+
+  myWriteLLG = o.getBoolean("llg");
+  myThrottleCount = o.getInteger("throttle");
+  if (myThrottleCount > 10) {
+    myThrottleCount = 10;
+  } else if (myThrottleCount < 1) {
+    myThrottleCount = 1;
+  }
 } // RAPIOFusionTwoAlg::processOptions
 
 void
@@ -58,9 +75,8 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 
   if (setup) { return; }
 
-  setup       = true;
-  myRadarName = data->getRadarName();
-  myTypeName  = data->getTypeName();
+  setup      = true;
+  myTypeName = data->getTypeName();
 
   // Generate output name and units.
   // FIXME: More control flags, maybe even name options
@@ -76,16 +92,28 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   // FIXME: We could try implementing a LLHGridN2D sparsely but then
   // we'd also have to do writer/reader work
   createLLGCache(myWriteCAPPIName, myWriteOutputUnits, myFullGrid);
+
+  // Finally, create the point cloud database with N observations per point
+  myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
+  // LogInfo("DATABASE IS " << (void*)(myDatabase.get()) << "\n");
 }
 
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
-  const bool WRITELLG = true; // write out llg from input field
+  // Write out entire llg stack from input field, mostly for
+  // testing what we 'have' for the radar matches closely to stage1
+  bool WRITELLG         = false;
+  static int writeCount = 0;
+
+  if (++writeCount >= myThrottleCount) {
+    if (myWriteLLG) {
+      WRITELLG = true;
+    }
+    writeCount = 0;
+  }
 
   auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
-
-  LogInfo("Fusion2 Got data, counting for now:\n");
 
   size_t counter        = 0;
   size_t missingcounter = 0;
@@ -101,17 +129,18 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     short z;
     std::string name      = data.getRadarName();
     std::string aTypeName = data.getTypeName();
+    float elevDegs        = data.getElevationDegs();
 
-    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
+    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << " " << elevDegs << "\n");
 
     // Initialize everything related to this radar
     firstDataSetup(datasp);
 
-    // Check if incoming radar/moment matches our single setup, otherwise we'd need
-    // all the setup for each radar/moment.  Which we 'could' do later maybe
-    if ((myRadarName != name) || (myTypeName != aTypeName)) {
+    // Check if incoming moment matches our single setup, otherwise we'd need
+    // all the setup for each moment.  Which we 'could' do later maybe
+    if (myTypeName != aTypeName) {
       LogSevere(
-        "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
+        "We are linked to moment '" << myTypeName << "', ignoring '" << name << "-" << aTypeName <<
           "'\n");
       return;
     }
@@ -124,8 +153,9 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     if (WRITELLG) {
       // If we're writing out input LLG clones
       // then wipe them to unavailable
-      // FIXME: frames vs I-frames we'll have to check.  Here
+      // FIXME: B-frames vs I-frames we'll have to check.  Here
       // we're assuming a full frame of output data.
+      // We can't have P-frames at least in real time
       myLLGCache->fillPrimary(Constants::DataUnavailable);
       auto heightsKM = myFullGrid.getHeightsKM();
       for (size_t layer = 0; layer < heightsKM.size(); layer++) {
@@ -137,8 +167,31 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     const size_t xBase = data.getXBase();
     const size_t yBase = data.getYBase();
 
+    auto& db = *myDatabase;
+
+    // Note: This should be a reference or you'll copy
+    auto& radar = db.getRadar(name, elevDegs);
+
+    LogInfo("Key back is " << radar.myID << "\n");
+    // For moment try brute force remove a radar/elev.  How fast?
+    db.clearObservations(radar);
+
+    ProcessTimer timer("Ingest Radar/Tilt");
+
+    // Stream read stage2
     while (data.get(v, w, x, y, z)) { // add time, other stuff
-      // TODO: point cloud fun stuff....
+      if ((x >= myFullGrid.getNumX()) ||
+        (y >= myFullGrid.getNumY()) ||
+        (z >= myFullGrid.getNumZ()))
+      {
+        LogSevere("Getting stage2 x,y,z values out of range of current grid: " << x << ", " << y << ", " << z << "\n");
+        break;
+      }
+
+      // Point cloud
+      db.addObservation(radar, v, w, z, y, z);
+
+      // Debug sampling
       if (counter++ < 10) {
         LogInfo("SAMPLE: " << v << ", " << w << ", (" << x << "," << y << "," << z << ")\n");
       }
@@ -160,9 +213,16 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         }
       }
     }
+    LogInfo(timer << "\n");
+
+    // Dump radar tree for now
+    db.dumpRadars();
+
+    // db.countNodes(key);
 
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
+
     if (WRITELLG) {
       auto heightsKM = myFullGrid.getHeightsKM();
       for (size_t layer = 0; layer < heightsKM.size(); layer++) {
@@ -177,6 +237,12 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     }
   }
 } // RAPIOFusionTwoAlg::processNewData
+
+void
+RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
+{
+  LogInfo("Received heartbeat for " << n << " at " << p << ", doing nothing.\n");
+}
 
 int
 main(int argc, char * argv[])
