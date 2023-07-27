@@ -591,13 +591,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
           // Actually write to the value cache
           // FIXME: Difference test may require multivalue probably including weights...
           //        Time might be an issue here..this will increase gridtest size/cache
-          if (gridtest[y][x] != vv.dataValue) {
-            differenceCount++;
-            gridtest[y][x] = vv.dataValue;
-            if (outputStage2) {
-              stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
-            }
+          //    if (gridtest[y][x] != vv.dataValue) {
+          differenceCount++;
+          gridtest[y][x] = vv.dataValue;
+          if (outputStage2) {
+            stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
           }
+          //     }
         }
       }
 

@@ -41,8 +41,10 @@ LLHGridN2D::Create(
   // Copy CoverageArea heights into our layer numbers since we passed a coverage area
   auto h = g.getHeightsKM();
 
+  // Copy into the layer values.  However, these are int, so since the heights
+  // are partial KMs, we need to upscale to fit it.
   for (size_t i = 0; i < h.size(); i++) {
-    newonesp->setLayerValue(i, h[i]);
+    newonesp->setLayerValue(i, h[i] * 1000); // meters
   }
   return newonesp;
 }
@@ -93,14 +95,17 @@ LLHGridN2D::get(size_t i)
   // Lazy creation or explicit creation method?
   // Create a new working space LatLonGrid for the layer
   if (myGrids[i] == nullptr) {
-    Time t = myTime;     // Default time to our time, caller can change it later
-    LLH l  = myLocation; // Default location and height is our layer number
-    l.setHeightKM(myLayerNumbers[i]);
+    Time t = myTime;                           // Default time to our time, caller can change it later
+    LLH l  = myLocation;                       // Default location and height is our layer number
+    l.setHeightKM(myLayerNumbers[i] / 1000.0); // We stored meter level resolution
     myGrids[i] = LatLonGrid::Create(myTypeName, myUnits, l, t, myLatSpacing, myLonSpacing,
         getNumLats(), getNumLons());
     // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
   }
 
+  if (myGrids[i] == nullptr) {
+    LogSevere("Failed to get grid " << i << " from LLHGridN2D\n");
+  }
   return myGrids[i];
 }
 

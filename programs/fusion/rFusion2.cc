@@ -35,6 +35,10 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
   o.optional("throttle", "1",
     "Skip count for output files to avoid IO spam during testing, 2 is every other file.  The higher the number, the more files are skipped before writing.");
   o.addGroup("throttle", "debug");
+
+  // Default sync heartbeat to 2 mins
+  // Format is seconds then mins
+  o.setRequiredValue("sync", "0 */2 * * * *");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -43,7 +47,7 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 {
   o.getLegacyGrid(myFullGrid);
 
-  myWriteLLG = o.getBoolean("llg");
+  myWriteLLG      = o.getBoolean("llg");
   myThrottleCount = o.getInteger("throttle");
   if (myThrottleCount > 10) {
     myThrottleCount = 10;
@@ -91,7 +95,9 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   // Note this will be full LLG in ram.
   // FIXME: We could try implementing a LLHGridN2D sparsely but then
   // we'd also have to do writer/reader work
+  // if (myWriteLLG){ // 3 GB for conus oh yay
   createLLGCache(myWriteCAPPIName, myWriteOutputUnits, myFullGrid);
+  // }
 
   // Finally, create the point cloud database with N observations per point
   myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
@@ -106,12 +112,12 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   bool WRITELLG         = false;
   static int writeCount = 0;
 
-  if (++writeCount >= myThrottleCount) {
-    if (myWriteLLG) {
-      WRITELLG = true;
-    }
-    writeCount = 0;
-  }
+  // if (++writeCount >= myThrottleCount) {
+  //  if (myWriteLLG) {
+  //    WRITELLG = true;
+  //  }
+  //  writeCount = 0;
+  // }
 
   auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
 
@@ -138,12 +144,17 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
     // Check if incoming moment matches our single setup, otherwise we'd need
     // all the setup for each moment.  Which we 'could' do later maybe
-    if (myTypeName != aTypeName) {
-      LogSevere(
-        "We are linked to moment '" << myTypeName << "', ignoring '" << name << "-" << aTypeName <<
-          "'\n");
-      return;
-    }
+    // Ok so we have things like ReflectivityDPQC and CASSF-CorrectedRefDPQC so it's up
+    // to the user to not try to merge velocity and reflectivity, lol.
+    // FIXME:  I think we'll add a units sanity check here on the data.
+    // My concern is at some point someone will misconfigure and try to merge
+    // Reflectivity with Velocity or something and we get crazy output
+    // if (myTypeName != aTypeName) {
+    //  LogSevere(
+    //    "We are linked to moment '" << myTypeName << "', ignoring '" << name << "-" << aTypeName <<
+    //      "'\n");
+    //  return;
+    // }
 
     // Keep a count of 'hits' in the output layer for now
     auto heightsKM = myFullGrid.getHeightsKM();
@@ -180,6 +191,9 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
     // Stream read stage2
     while (data.get(v, w, x, y, z)) { // add time, other stuff
+      x += xBase;                     // FIXME: data.get should do this right? Not 100% sure yet
+      y += yBase;
+
       if ((x >= myFullGrid.getNumX()) ||
         (y >= myFullGrid.getNumY()) ||
         (z >= myFullGrid.getNumZ()))
@@ -189,10 +203,10 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
       }
 
       // Point cloud
-      db.addObservation(radar, v, w, z, y, z);
+      db.addObservation(radar, v, w, x, y, z);
 
       // Debug sampling
-      if (counter++ < 10) {
+      if (counter++ < 5) {
         LogInfo("SAMPLE: " << v << ", " << w << ", (" << x << "," << y << "," << z << ")\n");
       }
       if (v == Constants::MissingData) {
@@ -209,7 +223,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         auto output = myLLGCache->get(z); // FIXME: Cache should/could provide quick references
         if (output) {
           auto& gridtest = output->getFloat2DRef();
-          gridtest[yBase + y][xBase + x] = v;
+          gridtest[y][x] = v;
         }
       }
     }
@@ -217,8 +231,6 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
     // Dump radar tree for now
     db.dumpRadars();
-
-    // db.countNodes(key);
 
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
@@ -241,8 +253,51 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  LogInfo("Received heartbeat for " << n << " at " << p << ", doing nothing.\n");
-}
+  LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+
+  // Note: firstDataSetup might not be called yet...
+  // so check database, etc...
+  if (myDatabase == nullptr) {
+    LogInfo("Haven't received any data yet, so nothing to merge/write.\n");
+    return;
+  }
+  if (myLLGCache == nullptr) {
+    LogInfo("We don't have an LLG cache to write to?.\n");
+    return;
+  }
+
+  myDatabase->dumpXYZ(); // only valid after firstDataSetup (currently)
+
+  LogInfo("Here goes nothing...we're trying...\n");
+
+  // ----------------
+  // Alpha Merge data and write... (fun times)
+  // Time, etc. needs to be added
+  // ----------------
+
+  // For moment just take everything as an I-frame
+  // and use real time
+  myLLGCache->fillPrimary(Constants::DataUnavailable);
+
+  // Write out
+  myDatabase->mergeTo(myLLGCache);
+
+  auto heightsKM = myFullGrid.getHeightsKM();
+  // Time aTime = Time::CurrentTime();
+  Time aTime = p;
+
+  for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+    auto output = myLLGCache->get(layer);
+    output->setTime(aTime); // For moment use current real time
+    const std::string myWriteCAPPIName = "Fused2" + myTypeName;
+    // LogInfo("Writing layer " << layer << " hitCount: " << hitCount[layer] << "\n");
+    LogInfo("Writing fused layer " << layer << "\n");
+    std::map<std::string, std::string> extraParams;
+    extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
+    extraParams["compression"]  = "gz";
+    writeOutputProduct(myWriteCAPPIName, output, extraParams);
+  }
+} // RAPIOFusionTwoAlg::processHeartbeat
 
 int
 main(int argc, char * argv[])

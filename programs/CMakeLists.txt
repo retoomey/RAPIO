@@ -48,6 +48,7 @@ install(TARGETS rFusion1
 
 add_executable(rFusion2
   fusion/rStage2Data.cc
+  fusion/rFusionDatabase.cc
   fusion/rFusion2.cc
 )
 

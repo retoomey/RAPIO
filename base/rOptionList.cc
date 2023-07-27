@@ -128,9 +128,9 @@ OptionList::setRequiredValue(const std::string& opt,
   if (op) {
     auto& o = *op;
     if (o.required) {
-      o.required     = false; // make optional
-      o.defaultValue = defaultValue;
+      o.required = false; // make optional
     }
+    o.defaultValue = defaultValue;
   }
 }
 
