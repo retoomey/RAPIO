@@ -109,8 +109,8 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
   // Write out entire llg stack from input field, mostly for
   // testing what we 'have' for the radar matches closely to stage1
-  bool WRITELLG         = false;
-  static int writeCount = 0;
+  //  bool WRITELLG         = false;
+  //  static int writeCount = 0;
 
   // if (++writeCount >= myThrottleCount) {
   //  if (myWriteLLG) {
@@ -121,7 +121,6 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
   auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
 
-  size_t counter        = 0;
   size_t missingcounter = 0;
   size_t points         = 0;
   size_t total = 0;
@@ -136,6 +135,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     std::string name      = data.getRadarName();
     std::string aTypeName = data.getTypeName();
     float elevDegs        = data.getElevationDegs();
+    Time dataTime         = data.getTime();
 
     LogInfo("Incoming stage2 data for " << name << " " << aTypeName << " " << elevDegs << "\n");
 
@@ -161,6 +161,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     std::vector<size_t> hitCount;
     hitCount.resize(heightsKM.size());
 
+    #if 0
     if (WRITELLG) {
       // If we're writing out input LLG clones
       // then wipe them to unavailable
@@ -174,6 +175,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         output->setTime(data.getTime());
       }
     }
+    #endif // if 0
 
     const size_t xBase = data.getXBase();
     const size_t yBase = data.getYBase();
@@ -184,14 +186,37 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     auto& radar = db.getRadar(name, elevDegs);
 
     LogInfo("Key back is " << radar.myID << "\n");
-    // For moment try brute force remove a radar/elev.  How fast?
-    db.clearObservations(radar);
+
+    // The time for all the current new observations
+    radar.myTime    = data.getTime();
+    radar.myExpired = false;
+
+    const Time cutoff = myLastDataTime - myMaximumHistory; // FIXME: add util to time
+    if (radar.myTime < cutoff) {
+      db.clearObservations(radar);
+      radar.myExpired = true;
+      LogSevere("Ignoring data for " << radar.myName << " " << radar.myElevDegs << " since it's too old.\n");
+      return;
+    }
 
     ProcessTimer timer("Ingest Radar/Tilt");
 
+    // Delete observations for radar (and xyz references)
+    db.clearObservations(radar);
+
+    // Important to reserve sizes of incoming data to avoid any std::vector
+    // memory movement
+    db.reserveSizes(radar, data.getValueCount(), data.getMissingCount());
+
+    // Could store shorts and then do a move forward pass in output
+    const time_t t = radar.myTime.getSecondsSinceEpoch();
+
     // Stream read stage2
     while (data.get(v, w, x, y, z)) { // add time, other stuff
-      x += xBase;                     // FIXME: data.get should do this right? Not 100% sure yet
+      total++;
+      hitCount[z]++;
+
+      x += xBase; // FIXME: data.get should do this right? Not 100% sure yet
       y += yBase;
 
       if ((x >= myFullGrid.getNumX()) ||
@@ -202,23 +227,20 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         break;
       }
 
-      // Point cloud
-      db.addObservation(radar, v, w, x, y, z);
-
-      // Debug sampling
-      if (counter++ < 5) {
-        LogInfo("SAMPLE: " << v << ", " << w << ", (" << x << "," << y << "," << z << ")\n");
-      }
       if (v == Constants::MissingData) {
         missingcounter++;
+        db.addMissing(x, y, z, t); // update mask
+        continue;                  // Skip storing missing values
       } else {
         points++;
       }
-      total++;
-      hitCount[z]++;
+
+      // Point cloud
+      db.addObservation(radar, v, w, x, y, z);
 
       // if we're writing LLG layers...then fill in the data value
       // uniquely in the layer
+      #if 0
       if (WRITELLG) {
         auto output = myLLGCache->get(z); // FIXME: Cache should/could provide quick references
         if (output) {
@@ -226,15 +248,18 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
           gridtest[y][x] = v;
         }
       }
+      #endif
     }
     LogInfo(timer << "\n");
 
     // Dump radar tree for now
+    myDatabase->timePurge(myLastDataTime, myMaximumHistory);
     db.dumpRadars();
 
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
 
+    #if 0
     if (WRITELLG) {
       auto heightsKM = myFullGrid.getHeightsKM();
       for (size_t layer = 0; layer < heightsKM.size(); layer++) {
@@ -247,6 +272,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
         writeOutputProduct(myWriteCAPPIName, output, extraParams);
       }
     }
+    #endif // if 0
   }
 } // RAPIOFusionTwoAlg::processNewData
 
@@ -266,7 +292,10 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
     return;
   }
 
-  myDatabase->dumpXYZ(); // only valid after firstDataSetup (currently)
+  // myDatabase->dumpXYZ(); // only valid after firstDataSetup (currently)
+
+  // First time purge attempt (at write)
+  // myDatabase->timePurge(myLastDataTime, myMaximumHistory);
 
   LogInfo("Here goes nothing...we're trying...\n");
 

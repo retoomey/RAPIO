@@ -223,7 +223,7 @@ Stage2Data::receive(RAPIOData& rData)
       LogInfo(
         "Size is " << aSize << " x,y,z non-missing values, and " << aSize2 << " RLE missing values expanding to " << length <<
           " total missing.  Total: " << aSize2 + length << "\n");
-      if (aSize > 10) { aSize = 10; }
+      if (aSize > 1) { aSize = 1; }
       for (size_t i = 0; i < aSize; i++) {
         LogInfo(
           "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfValues[i] << " with weight " <<

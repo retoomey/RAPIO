@@ -358,7 +358,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string compress = keys["compression"];
 
   if (!compress.empty()) {
-    LogSevere("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
+    LogInfo("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
     keys["compression"] = ""; // global for this run unless alg setting it
   }
 

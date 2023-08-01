@@ -54,6 +54,20 @@ public:
   static std::shared_ptr<Stage2Data>
   receive(RAPIOData& d);
 
+  /** Number of true non-missing values expected */
+  size_t
+  getValueCount()
+  {
+    return myValues.size();
+  }
+
+  /** Number of missing values expected */
+  size_t
+  getMissingCount()
+  {
+    return myXMissings.size();
+  }
+
   /** Get data from us, only used by stage two.
    * Note this streams out until returning false */
   bool

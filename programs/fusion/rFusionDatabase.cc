@@ -4,8 +4,6 @@ using namespace rapio;
 
 // ---------------------------------------
 // First merge
-// No time expiration so long running will get a bit messy,
-// but baby steps..time will be next checkin
 //
 void
 FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
@@ -13,11 +11,11 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
   static bool firstTime = true;
   size_t failed         = 0;
   size_t failed2        = 0;
+  size_t missingHit     = 0;
 
   ProcessTimer test("Merging XYZ tree\n");
 
   for (size_t z = 0; z < myNumZ; z++) {
-    // auto output = cache->get(z);
     std::shared_ptr<LatLonGrid> output = cache->get(z);
 
     if (output == nullptr) {
@@ -28,44 +26,36 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
     auto& gridtest = output->getFloat2DRef();
     for (size_t x = 0; x < myNumX; x++) { // x currently LON for stage2 right..so xy swapped
       for (size_t y = 0; y < myNumY; y++) {
-        size_t i  = myXYZs.getIndex3D(x, y, z);
-        auto node = myXYZs.get(i); // Sparse so could be null
+        // ----------------------------------------------
+        // Mask calculation (special snowflake due to sizes)
+        float v    = Constants::DataUnavailable; // mask
+        size_t i2  = myMissings.getIndex3D(x, y, z);
+        auto mnode = myMissings.get(i2);
+        if (mnode != nullptr) {
+          v = Constants::MissingData;
+          missingHit++;
+        }
 
+        // ----------------------------------------------
         // Silly simple weighted average of everything we got
+        // This is the logic for combining values
+        size_t i          = myXYZs.getIndex3D(x, y, z);
+        auto node         = myXYZs.get(i); // Sparse so could be null
         float weightedSum = 0.0;
         float totalWeight = 0.0;
-        float v = Constants::DataUnavailable; // mask
-
         if (node != nullptr) {
           bool haveValues = false;
           for (const auto& n: node->obs) {
-            // For moment during alpha check sizes of things...
-            if (n.myID >= myRadars.size()) {
-              failed2 += 1;
-              continue;
-            }
-            const auto &r = myRadars[n.myID];
-
-            // For moment during alpha check sizes of things...
-            if (n.myOffset >= r.myObs.size()) {
-              static size_t analyze = 0;
-              // Let's check things out here...
-              if (analyze++ < 20) {
-                LogInfo(" ---> " << n.myOffset << " and size of " << r.myObs.size() << "\n");
-              }
-
+            // Quick check for now
+            if (n.myAt == nullptr) {
               failed += 1;
               continue;
             }
-            const auto &data = r.myObs[n.myOffset];
+            const auto &data = *(n.myAt); // Pointer should be good
 
-            if (data.v != Constants::MissingData) {
-              weightedSum += data.v * data.w;
-              totalWeight += data.w;
-              haveValues   = true;
-            } else {
-              v = Constants::MissingData; // mask
-            }
+            weightedSum += data.v * data.w;
+            totalWeight += data.w;
+            haveValues   = true;
           }
 
           // Final v
@@ -75,51 +65,67 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
         }
 
         gridtest[y][x] = v;
+        // ----------------------------------------------
       }
     }
   }
   if ((failed > 0) || (failed2 > 0)) {
     LogSevere("Failed hits: " << failed << " and " << failed2 << "\n");
   }
+  LogSevere(">>MISSING COUNT: " << missingHit << "\n");
   firstTime = false;
 } // FusionDatabase::mergeTo
+
+void
+FusionDatabase::timePurge(Time atTime, TimeDuration d)
+{
+  // Time to expire data
+  const Time cutoff = atTime - d;
+
+  // Extra time to expire from our list (so we can see expires)
+  Time cutoffList = atTime - (d + TimeDuration::Minutes(5));
+
+  LogInfo("Cutoff time: " << cutoff.getString("%H:%M:%S") << " from " << atTime.getString("%H:%M:%S") << "\n");
+
+  // Since we have one time currently per tilt/radar, this is just
+  // clearing the observations for any tilt/radar outside the time window
+  for (auto it = myRadarObsManager.begin(); it != myRadarObsManager.end(); ++it) {
+    auto &r = it->second;
+
+    if (r.myTime < cutoff) {
+      // Expire observations for this radar list
+      if (r.myObs.size() > 0) {
+        LogInfo("--->" << r.myName << " " << r.myElevDegs << " has expired. " << r.myTime.getString("%H:%M:%S") <<
+          "\n");
+        clearObservations(r);
+        r.myExpired = true;
+      }
+
+      // Remove radar list from the list (so we don't infinitely grow)
+      if (r.myTime < cutoffList) { // also remove from list
+        myRadarObsManager.remove(it->second);
+        LogInfo("--->" << r.myName << " " << r.myElevDegs << " has been removed.\n");
+      }
+    }
+  }
+}
 
 RadarObsList&
 FusionDatabase::getRadar(const std::string& radarname, float elevDegs)
 {
-  // Get key ID for observation back referencing (if we even need this);
-  // I'm pretty sure at some point observations will have to back reference the source radar info,
-  // this key will allow a metadata access
-  // Radar/Elev/Z would be nice...
-  std::stringstream keymaker;
-
-  keymaker << radarname << elevDegs; // create unique key
-  std::string theKey = keymaker.str();
-
-  for (size_t i = 0; i < myKeys.size(); ++i) { // O(N) but only on new file once
-    if (myKeys[i] == theKey) {
-      return (myRadars[i]);
-    }
-  }
-  auto newID = myKeys.size();
-
-  myRadars.push_back(RadarObsList(radarname, newID, elevDegs));
-  myKeys.push_back(theKey);
-  return (myRadars[newID]);
+  return myRadarObsManager.getRadar(radarname, elevDegs);
 }
 
 void
 FusionDatabase::addObservation(RadarObsList& list, float v, float w, size_t x, size_t y, size_t z)
 {
-  // Add observation to the radar list (<< small)
-  // Could speed up length pointer calculations by external
-  // FIXME: could/probably should preallocate list size
-  size_t s = list.myObs.size();
-
   // -----------------------------------------
   // Update radar tree
   //
+  size_t s = list.myObs.size();
+
   list.myObs.push_back(RadarObs(x, y, z, v, w));
+  auto * at = &list.myObs[s]; // only good if vector doesn't move
 
   // -----------------------------------------
   // Update xyz tree
@@ -130,17 +136,23 @@ FusionDatabase::addObservation(RadarObsList& list, float v, float w, size_t x, s
   XYZObsList * node = myXYZs.get(i); // Sparse so could be null
 
   if (node == nullptr) {
-    // FIXME: sparse could have a set(i) with a default, might be quicker
-    // or we could have a getForce method or something that forces create
     XYZObsList newlist;
     node = myXYZs.set(i, newlist); // bleh means sparse vector always grows, never shrinks.  Need to handle that
     // though to be fair I don't think w2merger shrinks either
     if (node != nullptr) {
-      node->obs.push_back(XYZObs(list.myID, s));
+      node->obs.push_back(XYZObs(list.myID, s, at));
     }
   } else {
-    node->obs.push_back(XYZObs(list.myID, s));
+    node->obs.push_back(XYZObs(list.myID, s, at));
   }
+} // FusionDatabase::addObservation
+
+void
+FusionDatabase::addMissing(size_t x, size_t y, size_t z, time_t time)
+{
+  size_t i = myMissings.getIndex3D(x, y, z); // FIXME: passing i might be faster
+
+  myMissings.set(i, time); // FIXME: Humm technically we should update iff the new time if greater
 }
 
 void
@@ -156,7 +168,13 @@ FusionDatabase::clearObservations(RadarObsList& list)
       auto& l = node->obs;
       // Find first (we should have only one radar/elev stored per node)
       auto it = std::find_if(l.begin(), l.end(), [&](const XYZObs& obj) {
-        return obj.myID == list.myID;
+        const auto& o = list.myObs;
+        // return obj.myID == list.myID; ID check
+        // Pointer in range of myObs? Note myObs is still full right now
+        if (o.empty()) { return false; } // If empty can't be in it
+        const auto * s = &o.front();
+        const auto * e = &o.back() + 1;
+        return obj.myAt >= s && obj.myAt < e;
       });
       if (it != l.end()) {
         // Swap the element with the last element and kill it
@@ -180,18 +198,40 @@ FusionDatabase::clearObservations(RadarObsList& list)
 } // FusionDatabase::clearObservations
 
 void
+FusionDatabase::reserveSizes(RadarObsList& list, size_t values, size_t missings)
+{
+  if (list.myObs.size() > 0) {
+    LogSevere("Trying to reserve sizes for a radar containing " << list.myObs.size() << " observations!\n");
+    return;
+  }
+  list.myObs.reserve(values); // no size change but reserve the memory. This 'should' keep vector from
+                              // moving and breaking xyz back reference pointers
+}
+
+void
 FusionDatabase::dumpRadars()
 {
-  size_t counter = 0;
+  size_t counter     = 0;
+  size_t sizeCounter = 0;
 
-  for (size_t i = 0; i < myKeys.size(); ++i) { // O(N) but only on new file once
-    auto &r = myRadars[i];
+  size_t obsDelta = 0;
+
+  for (auto it = myRadarObsManager.begin(); it != myRadarObsManager.end(); ++it) {
+    auto &r = it->second;
+    std::string extra = r.myExpired ? " EXPIRED " : "";
     LogInfo(
-      i << ": (" << r.myID << ") " << r.myName << " " << r.myElevDegs << "  is storing " << r.myObs.size() <<
-        " observations.\n");
+      r.myID << ": " << r.myName << " " << r.myElevDegs << ": " << r.myObs.size() <<
+        " observations at " << r.myTime.getString("%H:%M:%S") << extra << "\n");
     counter += r.myObs.size();
+    // Size is the actual capacity of vector
+    sizeCounter += (r.myObs.capacity() * (sizeof(RadarObs)));
+    // Guess with size times XYZObs.  We'd have to actually check each vector of XYZObs to get 100% here
+    sizeCounter += (r.myObs.size() * sizeof(XYZObs));
+    // Different in stored vs allocated 'should' be minor but checking
+    obsDelta += (r.myObs.capacity() - r.myObs.size());
   }
-  LogInfo("Total observations: " << counter << "\n");
+  LogInfo("Total observations: " << counter << " Guessed RAM: " << Strings::formatBytes(sizeCounter)
+                                 << " , VWaste: " << Strings::formatBytes(obsDelta) << "\n");
 }
 
 void
