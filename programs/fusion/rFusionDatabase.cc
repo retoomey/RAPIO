@@ -2,8 +2,11 @@
 
 using namespace rapio;
 
+std::shared_ptr<std::unordered_set<size_t> > FusionDatabase::myMarked = nullptr;
+
 // ---------------------------------------
 // First merge
+// This will become a plug-in probably for various merging options
 //
 void
 FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
@@ -80,83 +83,84 @@ void
 FusionDatabase::timePurge(Time atTime, TimeDuration d)
 {
   // Time to expire data
-  const Time cutoff = atTime - d;
+  const Time cutoffTime = atTime - d;
+  const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
-  // Extra time to expire from our list (so we can see expires)
-  Time cutoffList = atTime - (d + TimeDuration::Minutes(5));
-
-  LogInfo("Cutoff time: " << cutoff.getString("%H:%M:%S") << " from " << atTime.getString("%H:%M:%S") << "\n");
-
-  // Since we have one time currently per tilt/radar, this is just
-  // clearing the observations for any tilt/radar outside the time window
-  for (auto it = myRadarObsManager.begin(); it != myRadarObsManager.end(); ++it) {
+  for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
     auto &r = it->second;
+    // We can expire by merging with ourselves..but this think will take too long
+    // in operations.  We don't need to do the merge unless it's possible we have a value
+    // outside a minimum timestamp, which we could store in the list.  Remember
+    // we drop old values when a new value comes in.
 
-    if (r.myTime < cutoff) {
-      // Expire observations for this radar list
-      if (r.myObs.size() > 0) {
-        LogInfo("--->" << r.myName << " " << r.myElevDegs << " has expired. " << r.myTime.getString("%H:%M:%S") <<
-          "\n");
-        clearObservations(r);
-        r.myExpired = true;
-      }
+    // FIXME: dedicated method, optimize taking into account new data is time purging
+    // already.
 
-      // Remove radar list from the list (so we don't infinitely grow)
-      if (r.myTime < cutoffList) { // also remove from list
-        myRadarObsManager.remove(it->second);
-        LogInfo("--->" << r.myName << " " << r.myElevDegs << " has been removed.\n");
-      }
-    }
+    // Hack for moment.  Any 'old' not cutoff get pushed into the newSource
+    myMarked = std::make_shared<std::unordered_set<size_t> >();
+    SourceList newSource = getNewSourceList("newone");
+    mergeObservations(r, newSource, cutoff);
+    myMarked = nullptr;
   }
-}
+} // FusionDatabase::timePurge
 
-RadarObsList&
-FusionDatabase::getRadar(const std::string& radarname, float elevDegs)
+SourceList&
+FusionDatabase::getSourceList(const std::string& name)
 {
-  return myRadarObsManager.getRadar(radarname, elevDegs);
+  return myObservationManager.getSourceList(name);
 }
 
 void
-FusionDatabase::addObservation(RadarObsList& list, float v, float w, size_t x, size_t y, size_t z)
+FusionDatabase::addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t)
 {
   // -----------------------------------------
-  // Update radar tree
+  // add to the source list
   //
-  size_t s = list.myObs.size();
+  list.myObs.push_back(Observation(x, y, z, v, w, t));
 
-  list.myObs.push_back(RadarObs(x, y, z, v, w));
-  auto * at = &list.myObs[s]; // only good if vector doesn't move
+  // We'll merge source so we need to know to remove old values now replaced by new observations
+  // Use the missing grid here to get i, should be fine
+  size_t i = myMissings.getIndex3D(x, y, z); // FIXME: passing i might be faster
 
-  // -----------------------------------------
-  // Update xyz tree
-  //
-  // This is slow for entire x,y,z.  Since radar will be much smaller
-  // in theory it will be fast enough
-  size_t i = myXYZs.getIndex3D(x, y, z);
-  XYZObsList * node = myXYZs.get(i); // Sparse so could be null
-
-  if (node == nullptr) {
-    XYZObsList newlist;
-    node = myXYZs.set(i, newlist); // bleh means sparse vector always grows, never shrinks.  Need to handle that
-    // though to be fair I don't think w2merger shrinks either
-    if (node != nullptr) {
-      node->obs.push_back(XYZObs(list.myID, s, at));
-    }
-  } else {
-    node->obs.push_back(XYZObs(list.myID, s, at));
-  }
-} // FusionDatabase::addObservation
+  myMarked->insert(i);
+}
 
 void
-FusionDatabase::addMissing(size_t x, size_t y, size_t z, time_t time)
+FusionDatabase::addMissing(SourceList& source, size_t x, size_t y, size_t z, time_t time)
 {
   size_t i = myMissings.getIndex3D(x, y, z); // FIXME: passing i might be faster
 
   myMissings.set(i, time); // FIXME: Humm technically we should update iff the new time if greater
+  myMarked->insert(i);
 }
 
 void
-FusionDatabase::clearObservations(RadarObsList& list)
+FusionDatabase::linkObservations(SourceList& list)
+{
+  size_t s = 0;
+
+  for (auto& o: list.myObs) {
+    size_t i = myXYZs.getIndex3D(o.x, o.y, o.z);
+    XYZObsList * node = myXYZs.get(i); // Sparse so could be null
+
+    auto * at = &list.myObs[s]; // only good if vector doesn't move
+
+    if (node == nullptr) {
+      XYZObsList newlist;
+      node = myXYZs.set(i, newlist); // bleh means sparse vector always grows, never shrinks.  Need to handle that
+      // though to be fair I don't think w2merger shrinks either
+      if (node != nullptr) {
+        node->obs.push_back(XYZObs(list.myID, s, at));
+      }
+    } else {
+      node->obs.push_back(XYZObs(list.myID, s, at));
+    }
+    s++;
+  }
+}
+
+void
+FusionDatabase::unlinkObservations(SourceList& list)
 {
   // -----------------------------------------
   // Update xyz tree
@@ -190,41 +194,94 @@ FusionDatabase::clearObservations(RadarObsList& list)
       exit(1);
     }
   }
+} // FusionDatabase::unlinkObservations
 
-  // -----------------------------------------
-  // Update radar tree
-  // ...then clear the radar list
+void
+FusionDatabase::clearObservations(SourceList& list)
+{
+  // Update xyz tree removing each observation back reference
+  unlinkObservations(list);
   list.myObs.clear();
 } // FusionDatabase::clearObservations
 
 void
-FusionDatabase::reserveSizes(RadarObsList& list, size_t values, size_t missings)
+FusionDatabase::mergeObservations(SourceList& oldSource, SourceList& newSource, const time_t cutoff)
 {
-  if (list.myObs.size() > 0) {
-    LogSevere("Trying to reserve sizes for a radar containing " << list.myObs.size() << " observations!\n");
-    return;
+  // Make list have same identifiers..
+  newSource.myName = oldSource.myName;
+  newSource.myID   = oldSource.myID;
+  newSource.myTime = oldSource.myTime; // deprecated
+
+  // Remove all old source back references in the x, y, z tree
+  // but keep the observations
+  size_t hadSize = oldSource.myObs.size();
+
+  unlinkObservations(oldSource);
+
+  // Mark/keep track of x,y,z values we have in the new source.
+  // We'll put back old values that don't have new values, which
+  // basically replaces all x,y,z values that are new
+  // addMissing already marked some
+  auto& have = *myMarked;
+
+  for (const auto& n: newSource.myObs) {
+    size_t i = myXYZs.getIndex3D(n.x, n.y, n.z);
+    have.insert(i);
   }
-  list.myObs.reserve(values); // no size change but reserve the memory. This 'should' keep vector from
-                              // moving and breaking xyz back reference pointers
-}
+
+  // Put back in the old source not in the new list that are still in the cutoff time
+  // We want the list finalized before using x, y, z back pointer references,
+  // because changing vectors can move them in memory
+  size_t oldRestore = 0;
+  size_t timePurged = 0;
+  size_t newSize    = newSource.myObs.size();
+
+  for (auto& o: oldSource.myObs) {
+    // If not a value already in new source, add the old source value
+    size_t i = myXYZs.getIndex3D(o.x, o.y, o.z);
+    if (have.find(i) == have.end()) {
+      if (o.t >= cutoff) { // Go ahead expire.  We already removed from x, y, z so it's safe
+        newSource.myObs.push_back(o);
+        oldRestore++;
+      } else {
+        timePurged++;
+      }
+    }
+  }
+
+  // Clean it up, don't need to store it
+  have.clear();
+
+  // Assign first, allow memory moving if needed
+  myObservationManager.setSourceListRef(newSource.myID, newSource);
+
+  // -----------------------------------------
+  // Update xyz tree the new list. This was time purged during creation
+  auto& theSource = myObservationManager.getSourceListRef(newSource.myID);
+
+  linkObservations(theSource);
+
+  LogInfo(newSource.myName << " Had: " << hadSize << " New: " <<
+    newSize << " Kept: " << oldRestore << " Expired: " <<
+    timePurged << " Final: " << theSource.myObs.size() << "\n");
+} // FusionDatabase::mergeObservations
 
 void
-FusionDatabase::dumpRadars()
+FusionDatabase::dumpSources()
 {
   size_t counter     = 0;
   size_t sizeCounter = 0;
 
   size_t obsDelta = 0;
 
-  for (auto it = myRadarObsManager.begin(); it != myRadarObsManager.end(); ++it) {
+  for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
     auto &r = it->second;
-    std::string extra = r.myExpired ? " EXPIRED " : "";
     LogInfo(
-      r.myID << ": " << r.myName << " " << r.myElevDegs << ": " << r.myObs.size() <<
-        " observations at " << r.myTime.getString("%H:%M:%S") << extra << "\n");
+      r.myID << ": " << r.myName << ": " << r.myObs.size() <<
+        " obs. Latest: " << r.myTime.getString("%H:%M:%S") << "\n");
     counter += r.myObs.size();
     // Size is the actual capacity of vector
-    sizeCounter += (r.myObs.capacity() * (sizeof(RadarObs)));
+    sizeCounter += (r.myObs.capacity() * (sizeof(Observation)));
     // Guess with size times XYZObs.  We'd have to actually check each vector of XYZObs to get 100% here
     sizeCounter += (r.myObs.size() * sizeof(XYZObs));
     // Different in stored vs allocated 'should' be minor but checking

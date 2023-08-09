@@ -16,111 +16,78 @@ namespace rapio {
  * We need to be able to add a new X,Y,Z value sparsely.
  * We need to be able to delete from X,Y,Z based on time expiration (in observation)
  * We need to be able to iterate over X,Y,Z and get the observations quickly per cell
- * We need index ability to reference X,Y,Z values by radar
+ * We need index ability to reference X,Y,Z values by source
  *
  * I'm gonna abstract this because eh we could put the data into a dynamodb or something
  * later or even a real database if we can get it fast enough.  This first class will
  * just use ram to store things.
  *
- * In merger we stored by radar/elev to quickly dump off old values.  I 'think' we can
- * brute force our x,y,z tree and avoid having to store x,y,z values in the radar/elev lists.
- * This would drop ram at the cost of cpu, so we'll see how this scales.
- * In other words, if we only store an x,y,z array...we have to iterate over it for any
- * action..and the grid can be large.
  */
 
-/** Sparse tree stores nodes in the lookup, vs a single vector.  The single vector has
- * the downsize of being difficult to delete N objects due to the references being related.
- * Sparse tree uses pointers per lookup. */
-class SparseTree : public DimensionMapper {
-public:
-
-  #if 0
-
-  /** Construct a sparse tree of a given maxSize.  Note it's really maxSize-1 since one key is reserved
-   * for missing (the max). */
-  SparseTree(size_t maxSize) : DimensionMapper(maxSize),
-    myLookupPtr(StaticVector::Create(maxSize, true)), myLookup(*myLookupPtr)
-  {
-    myLookup.clearAllBits(); // Make 'empty' with 0
-    myMissing = nullptr;
-  }
-
-  /** Construct a sparse tree of dimensions. */
-  SparseTree(std::vector<size_t> dimensions) : DimensionMapper(dimensions),
-    myLookupPtr(StaticVector::Create(calculateSize(dimensions), true)), myLookup(*myLookupPtr)
-  {
-    myLookup.clearAllBits(); // Make 'empty' with 0
-    myMissing = nullptr;
-  }
-
-  #endif // if 0
-};
-
 /** Ultimate observation stored. Size here is stupid important.
- * Due to conus size, we need radar tree to reduce x,y,z grid sampling on incoming tilts
+ * Due to conus size, we need to minimize observation handling on incoming data
  * The storage here is required per x,y,z point, so the smaller the better.
- * Why no time or radar name?  When merging we always come from the XYZObs,
- * which has an id reference to the RadarObsList which contains all that metadata. */
-class RadarObs : public Data {
+ */
+class Observation : public Data {
 public:
-  RadarObs(short xin, short yin, char zin, float vin, float win) :
-    x(xin), y(yin), z(zin), v(vin), w(win){ }
+  Observation(short xin, short yin, char zin, float vin, float win, time_t tin) :
+    x(xin), y(yin), z(zin), v(vin), w(win), t(tin){ }
 
-  // Reference to XYZ Tree (to delete/modify in XYZ by Radar)
+  // Reference to XYZ Tree (to delete/modify/merge in XYZ by source)
   // This is 5 bytes.  We 'could' use a size_t i into data, but that's 8 bytes
   short x;
   short y;
-  char z; // for moment..can pull up I think
+  char z;
 
+  // FIXME: We could use a short (2 bytes) and use relative time from the source,
+  // but this will require updating the relative times.  Future RAM optimization
+  time_t t; // 8 bytes (we could do 2 with relative times)
+
+  // Data we store for merging.  Currently simple weight average
   float v; // 4 bytes
   float w; // 4 bytes
 };
 
-/** Store a Radar Observation List.  Due to the size of things we group
- * observations by radar to allow quickly handling incoming data. */
-class RadarObsList : public Data {
+/** Store a Source Observation List.  Due to the size of output CONUS we group
+ * observations by source to allow quickly updating incoming data. */
+class SourceList : public Data {
 public:
   /** STL unordered map */
-  RadarObsList(){ }
+  SourceList(){ }
 
-  RadarObsList(const std::string& n, short i, float e) : myName(n), myID(i), myElevDegs(e), myTime(0), myExpired(false)
+  SourceList(const std::string& n, short i) : myName(n), myID(i), myTime(0)
   { }
+
+  // FIXME: 'maybe' we inline get/set methods when things get stable
 
   // Meta data stored for this observation list
   std::string myName;
   short myID; // needed? This will probably have to be IN the obs for fast reverse lookup
-  float myElevDegs;
 
-  // The time for all points within this tilt of data
-  // Well, ok..the 3D points that came from this tilt of data
+  // The time given by the group of 3D points that came from this tilt of data.
+  // There can be older non-expired points
   Time myTime;
 
-  // Was this cleared by expiration?
-  bool myExpired;
-
   // Points stored for the meta data
-  std::vector<RadarObs> myObs;
+  std::vector<Observation> myObs;
 };
 
-/** (AI) Handle a group of radar obs lists that have unique ID keys
- * that can be back-referenced by the observation.  This allows
+/** (AI) Handle a group of source observation lists that have unique ID keys
+ * that can be back-referenced by an x,y,z array.  This allows
  * pulling meta data for observation points during merging if
  * needed. */
 template <typename T>
-class RadarObsManager : public Data {
+class ObservationManager : public Data {
 public:
 
-  /** Given radar information, find the already created radar observation list,
+  /** Given source information, find the already created source observation list,
    * or create a new unique one and return it */
-  RadarObsList&
-  getRadar(const std::string& radarname, float elevDegs)
+  SourceList&
+  getSourceList(const std::string& name)
   {
-    // Hunt for radarname/elevDegs
-    for (auto& pair: myRadarObsMap) { // O(N) with hashing
-      if ((pair.second.myName == radarname) &&
-        (pair.second.myElevDegs == elevDegs))
-      {
+    // Hunt for source list by name
+    for (auto& pair: myObservationMap) { // O(N) with hashing
+      if (pair.second.myName == name) {
         return pair.second;
       }
     }
@@ -136,50 +103,62 @@ public:
       newKey = *myAvailableKeys.begin();
       myAvailableKeys.erase(myAvailableKeys.begin());
     }
-    myRadarObsMap[newKey] = RadarObsList(radarname, newKey, elevDegs);
+    myObservationMap[newKey] = SourceList(name, newKey);
 
     // Return the reference
-    return myRadarObsMap.at(newKey);
+    return myObservationMap.at(newKey);
   }
 
-  /** Remove a radar/elevation from our list */
+  /** Replace the reference to source list in the lookup */
   void
-  remove(RadarObsList& r)
+  setSourceListRef(const T& key, SourceList& r)
   {
-    const auto radarname = r.myName;
-    const auto elevDegs  = r.myElevDegs;
+    myObservationMap[key] = r;
+  }
 
-    // Hunt for radarname/elevDegs
-    // for(auto& pair: myRadarObsMap){ // O(N) with hashing
-    for (auto it = myRadarObsMap.begin(); it != myRadarObsMap.end(); ++it) {
-      if ((it->second.myName == radarname) &&
-        (it->second.myElevDegs == elevDegs))
-      {
+  /** Get the raw reference to source list in the lookup */
+  SourceList&
+  getSourceListRef(const T& key)
+  {
+    return myObservationMap.at(key);
+  }
+
+  /** Remove a source list from our lookup */
+  void
+  remove(SourceList& r)
+  {
+    const auto name = r.myName;
+
+    for (auto it = myObservationMap.begin(); it != myObservationMap.end(); ++it) {
+      if (it->second.myName == name) {
         myAvailableKeys.push_back(it->second.myID);
-        myRadarObsMap.erase(it);
+        myObservationMap.erase(it);
         break;
       }
     }
+    // for (size_t i = 0; i < myAvailableKeys.size(); ++i) {
+    //  LogInfo("Keys: " << myAvailableKeys[i] << "\n");
+    // }
   }
 
   /** Iterators for begin access, hiding implementation details */
-  typename std::unordered_map<T, RadarObsList>::iterator
+  typename std::unordered_map<T, SourceList>::iterator
   begin()
   {
-    return myRadarObsMap.begin();
+    return myObservationMap.begin();
   }
 
   /** Iterators for end access, hiding implementation details */
-  typename std::unordered_map<T, RadarObsList>::iterator
+  typename std::unordered_map<T, SourceList>::iterator
   end()
   {
-    return myRadarObsMap.end();
+    return myObservationMap.end();
   }
 
 protected:
 
-  /** The map of keys to Radar Observation Lists */
-  std::unordered_map<T, RadarObsList> myRadarObsMap;
+  /** The map of keys to Source Observation Lists */
+  std::unordered_map<T, SourceList> myObservationMap;
 
   /** Old keys we can reuse */
   std::vector<T> myAvailableKeys;
@@ -188,33 +167,23 @@ protected:
   short myNextKey = 0;
 };
 
-/** Structure stored in the xyz tree.  References data in the radar tree */
+/** Structure stored in the xyz tree.  References data in the source list tree */
 class XYZObs : public Data {
 public:
-  // STL
-  //   XYZObs();
 
-  // overflow
-  // XYZObs(short i, short e) : myID(i), myOffset(e){ }
-  // XYZObs(short i, size_t e, RadarObs* at) : myID(i), myOffset(e){ }
-  XYZObs(short i, size_t e, RadarObs * at) : myAt(at){ }
+  /** Create a XYZ back reference observation into a source */
+  XYZObs(short i, size_t e, Observation * at) : myAt(at){ }
 
-  // For 'find' operation when purging
-  // bool operator==(const XYZObs& other) const {
-  //   return ((this->myID == other.myID) && (this->myOffset == other.myOffset));
-  // }
-
-  // RadarObs* obs;  Vector resizes can move pointers to elements around..
-  short myID; // ID for which Radar storage
+  short myID; // ID for which Source storage
   //  size_t myOffset; // Element in the xyz...
-  RadarObs * myAt; // Pointer possibly saves memory but we have to be careful with vector resizes
-                   // and 'bleh' if we have to store ID anyway for meta info then memory
-                   // will be the same.  If we end up not needing myID then we can save some
-                   // One advantage to the direct pointer is possibly speed in the merge loop,
-                   // since we don't have to add offset to the id lookup
+  Observation * myAt; // Pointer possibly saves memory but we have to be careful with vector resizes
+                      // and 'bleh' if we have to store ID anyway for meta info then memory
+                      // will be the same.  If we end up not needing myID then we can save some
+                      // One advantage to the direct pointer is possibly speed in the merge loop,
+                      // since we don't have to add offset to the id lookup
 };
 
-/** Structure stored in the xyz tree.  References data in the radar tree */
+/** Structure stored in the xyz tree.  References a set of XYZObs */
 class XYZObsList : public Data {
 public:
   // Possible meta info later for debugging or speedup...
@@ -230,29 +199,44 @@ public:
     myMissings({ x, y, z })
   { };
 
-  /** Get a radar node for a given key */
-  RadarObsList&
-  getRadar(const std::string& radarname, float elevDegs);
+  /** Get a source node for a given key */
+  SourceList&
+  getSourceList(const std::string& name);
 
-  /** Add observation to a radar node */
+  /** Get a new empty source for gathering new observations. */
+  SourceList
+  getNewSourceList(const std::string& name)
+  {
+    return SourceList(name, -1);
+  }
+
+  /** Add observation to a source list */
   void
-  addObservation(RadarObsList& list, float v, float w, size_t x, size_t y, size_t z);
+  addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t);
+
+  /** Merge observations from an old source and new source with overlap reduction */
+  void
+  mergeObservations(SourceList& oldSource, SourceList& newSource, const time_t cutoff);
 
   /** Add missing mask observation */
   void
-  addMissing(size_t x, size_t y, size_t z, time_t time);
+  addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time);
 
-  /** Clear all observations for a given radar node */
+  /** Link back references to observations in the x,y,z tree */
   void
-  clearObservations(RadarObsList& list);
+  linkObservations(SourceList& list);
 
-  /** Reserve any memory for incoming data */
+  /** Unlink back references to observations in the x,y,z tree */
   void
-  reserveSizes(RadarObsList& list, size_t values, size_t missings);
+  unlinkObservations(SourceList& list);
 
-  /** Debugging print out each radar/elev key and points held */
+  /** Clear all observations for a given source list */
   void
-  dumpRadars();
+  clearObservations(SourceList& list);
+
+  /** Debugging print out each source list and points held */
+  void
+  dumpSources();
 
   /** Debugging print out for full XYZ (which is slower) */
   void
@@ -266,6 +250,8 @@ public:
   void
   timePurge(Time atTime, TimeDuration interval);
 
+  /** Utility marked points */
+  static std::shared_ptr<std::unordered_set<size_t> > myMarked;
 protected:
   /** Size in X of entire database */
   size_t myNumX;
@@ -276,8 +262,11 @@ protected:
   /** Size in Z of entire database */
   size_t myNumZ;
 
-  /** Radar obs manager handling radar tree */
-  RadarObsManager<short> myRadarObsManager;
+  /** Observation manager handling a list of named sources */
+  ObservationManager<short> myObservationManager;
+
+  // FIXME: These grow forever until RAM is swallowed up.
+  // We need to allow deleting of empty nodes in the sparse trees here
 
   /** My xyz back reference list/tree */
   SparseVector<XYZObsList> myXYZs;

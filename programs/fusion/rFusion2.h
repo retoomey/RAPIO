@@ -80,13 +80,6 @@ protected:
   /** Typename (moment) linked to */
   std::string myTypeName;
 
-  /** Write lat lon grids to output when ingesting a file */
-  bool myWriteLLG;
-
-  /** Throttle skip counter to avoid IO spamming during testing.
-  * The good news is we're too fast for the current pipeline. */
-  size_t myThrottleCount;
-
   /** My database of 3D point observations */
   std::shared_ptr<FusionDatabase> myDatabase;
 };

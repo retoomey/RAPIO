@@ -89,6 +89,10 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
     "Terrain blockage algorithm. Params follow: lak,/DEMS.  Most take root folder of DEMS.");
   TerrainBlockage::introduceSuboptions("terrain", o);
   o.addSuboption("terrain", "", "Don't apply any terrain algorithm.");
+
+  // Default sync heartbeat to 30 seconds
+  // Format is seconds then mins
+  o.setRequiredValue("sync", "*/30 * * * * *");
 } // RAPIOFusionOneAlg::declareOptions
 
 void
@@ -152,18 +156,6 @@ RAPIOFusionOneAlg::createLLGCache(
 
     myLLGCache = LLHGridN2D::Create(outputName, outputUnits, Time(), g);
     myLLGCache->fillPrimary(Constants::DataUnavailable); // Create/fill all sublayers to unavailable
-
-    /*
-     * // For each of our height layers to process
-     * for (size_t layer = 0; layer < g.getNumZ(); layer++) {
-     * auto newone = myLLGCache->get(layer);
-     *
-     * newone->setReadFactory("netcdf"); // default to netcdf output if we write it
-     * // Default the LatLonGrid to DataUnvailable, we'll fill in good values later
-     * auto array = newone->getFloat2D();
-     * array->fill(Constants::DataUnavailable);
-     * }
-     */
   }
 }
 
@@ -305,8 +297,9 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   LogInfo(
     "Linking this algorithm to radar '" << radarName << "' and typename '" << typeName <<
       "' since first pass we only handle 1\n");
-  myTypeName  = typeName;
-  myRadarName = radarName;
+  myTypeName    = typeName;
+  myRadarName   = radarName;
+  myRadarCenter = center;
 
   // We inset the full merger grid to the subgrid covered by the radar.
   // This is needed for massively large grids like the CONUS.
@@ -381,6 +374,81 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 } // RAPIOFusionOneAlg::firstDataSetup
 
 void
+RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
+{
+  // Need a radar name in data to handle it currently
+  std::string name = "UNKNOWN";
+
+  if (!r->getString("radarName-value", name)) {
+    LogSevere("No radar name found in RadialSet, ignoring data\n");
+    return;
+  }
+
+  // Get the radar name and typename from this RadialSet.
+  const std::string aTypeName = r->getTypeName();
+  const std::string aUnits    = r->getUnits();
+  ProcessTimer ingest("Ingest tilt");
+
+  LogInfo(
+    " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
+      "\n");
+
+  // Initialize everything related to this radar
+  firstDataSetup(r, name, aTypeName);
+
+  // Check if incoming radar/moment matches our single setup, otherwise we'd need
+  // all the setup for each radar/moment.  Which we 'could' do later maybe
+  if ((myRadarName != name) || (myTypeName != aTypeName)) {
+    LogSevere(
+      "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
+        "'\n");
+    return;
+  }
+
+  // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
+  // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
+  // FIXME: If we plugin the smoother we can pass params and choose the scale factor
+  // manually.
+  const LengthKMs radarDataScale = r->getGateWidthKMs();
+  const LengthKMs gridScale      = std::min(myFullGrid.getLatKMPerPixel(), myFullGrid.getLonKMPerPixel());
+  const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
+
+  if ((scale_factor > 1) && myUseLakSmoothing) {
+    LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
+    LogInfo("    Filter ratio scale is " << scale_factor << "\n");
+    LakRadialSmoother::smooth(r, scale_factor / 2);
+  } else {
+    LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
+  }
+
+  // Assign the ID key for cache storage.  Note the size matters iff you have more
+  // DataTypes to keep track of than the key size.  Currently FusionKey defines the key
+  // size and max unique elevations we can hold at once.
+  static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
+
+  if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
+  r->setID(keycounter);
+  LogInfo("RadialSet short key: " << (int) keycounter << "\n");
+
+  // Always add to elevation volume
+  myElevationVolume->addDataType(r);
+
+  // ----------------------------------------------------------------------------
+  // Every Unique RadialSet product will require a RadialSetLookup.
+  // This is a projection from range, angle to gate/radial index.
+  r->getProjection();
+
+  // Every RadialSet will require terrain per gate for filters.
+  // Run a polar terrain algorithm where the results are added to the RadialSet as
+  // another array.
+  if (myTerrainBlockage != nullptr) {
+    myTerrainBlockage->calculateTerrainPerGate(r);
+  }
+
+  LogSevere(ingest << "\n");
+} // RAPIOFusionOneAlg::processRadialSet
+
+void
 RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 {
   // Look for any data the system knows how to read...
@@ -388,263 +456,321 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
   auto r = d.datatype<rapio::RadialSet>();
 
   if (r != nullptr) {
-    // ------------------------------------------------------------------------------
-    // Gather information on the current RadialSet
-    //
-    // FIXME: Actually I think with the shift to polar terrain we don't actually use azimuthSpacing.
-    //        Polar only requires the azimuth center of the gate
-    auto azimuthSpacingArray = r->getAzimuthSpacingVector();
-    double azimuthSpacing    = 1.0;
-    if (azimuthSpacingArray != nullptr) {
-      auto& ref = azimuthSpacingArray->ref();
-      azimuthSpacing = ref[0];
-    }
-    AngleDegs elevDegs    = r->getElevationDegs();
-    const Time rTime      = r->getTime();
-    const time_t dataTime = rTime.getSecondsSinceEpoch();
-    // Radar center coordinates
-    const LLH center        = r->getRadarLocation();
-    const LengthKMs cHeight = center.getHeightKM();
+    processRadialSet(r);
 
-    // Get the radar name and typename from this RadialSet.
-    std::string name = "UNKNOWN";
-    const std::string aTypeName = r->getTypeName();
-    const std::string aUnits    = r->getUnits();
-    if (!r->getString("radarName-value", name)) {
-      LogSevere("No radar name found in RadialSet, ignoring data\n");
-      return;
-    }
+    // Humm stage2 involving radar info for moment and maybe it shouldn't?
+    // I didn't want to store elevation/time in stage2 to reduce IO but we may have
+    // to. Currently if we batch by radar/elev it speeds up purging of old data points
+    // Looks like we 'have' to batch some things since Canada is being non-realtimey
+    // this will change our design somewhat
+    AngleDegs elevDegs = r->getElevationDegs();
+    const Time rTime   = r->getTime();
+    //    updateDirty(elevDegs, rTime);
+    processVolume(elevDegs, rTime);
+  }
+}
 
-    LogInfo(
-      " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
-        "\n");
+void
+RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
+{
+  // LogInfo("Got heartbeat..we'll probably do work here at some point\n");
+}
 
-    // Initialize everything related to this radar
-    firstDataSetup(r, name, aTypeName);
+void
+RAPIOFusionOneAlg::updateDirty(const AngleDegs elevDegs, const Time rTime)
+{
+  // Set the value object for resolvers
+  VolumeValue vv;
 
-    // Check if incoming radar/moment matches our single setup, otherwise we'd need
-    // all the setup for each radar/moment.  Which we 'could' do later maybe
-    if ((myRadarName != name) || (myTypeName != aTypeName)) {
-      LogSevere(
-        "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-          "'\n");
-      return;
-    }
+  // Volume value needs radar height.  FIXME: Why not all location info?
+  vv.cHeight = myRadarCenter.getHeightKM();
 
-    // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
-    // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
-    // FIXME: If we plugin the smoother we can pass params and choose the scale factor
-    // manually.
-    const LengthKMs radarDataScale = r->getGateWidthKMs();
-    const LengthKMs gridScale      = std::min(myFullGrid.getLatKMPerPixel(), myFullGrid.getLonKMPerPixel());
-    const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
-    if ((scale_factor > 1) && myUseLakSmoothing) {
-      LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
-      LogInfo("    Filter ratio scale is " << scale_factor << "\n");
-      LakRadialSmoother::smooth(r, scale_factor / 2);
-    } else {
-      LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
-    }
+  // Get the elevation volume pointers and levels for speed
+  std::vector<double> levels;
+  std::vector<DataType *> pointers;
 
-    // Assign the ID key for cache storage.  Note the size matters iff you have more
-    // DataTypes to keep track of than the key size.  Currently FusionKey defines the key
-    // size and max unique elevations we can hold at once.
-    static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
-    if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
-    r->setID(keycounter);
-    LogInfo("RadialSet short key: " << (int) keycounter << "\n");
+  myElevationVolume->getTempPointerVector(levels, pointers);
+  LogInfo(*myElevationVolume << "\n");
+  // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
+  AngleDegs startLat = myRadarGrid.getNWLat() - (myRadarGrid.getLatSpacing() / 2.0); // move south (lat decreasing)
+  AngleDegs startLon = myRadarGrid.getNWLon() + (myRadarGrid.getLonSpacing() / 2.0); // move east (lon increasing)
 
-    // Always add to elevation volume
-    myElevationVolume->addDataType(r);
+  // Each layer of merger we have to loop through
+  LLCoverageArea outg = myRadarGrid;
 
-    // ----------------------------------------------------------------------------
-    // Every Unique RadialSet product will require a RadialSetLookup.
-    // This is a projection from range, angle to gate/radial index.
-    r->getProjection();
+  bool useDiffCache = true;
+  size_t total      = 0;
+  auto heightsKM    = outg.getHeightsKM();
 
-    // Every RadialSet will require terrain per gate for filters.
-    // Run a polar terrain algorithm where the results are added to the RadialSet as
-    // another array.
-    if (myTerrainBlockage != nullptr) {
-      myTerrainBlockage->calculateTerrainPerGate(r);
-    }
+  for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+    vv.layerHeightKMs = heightsKM[layer];
 
-    // ------------------------------------------------------------------------------
-    // Do we try to output Stage 2 files for fusion2?
-    // For the moment turn off stage2 if the --llg flag is on, since meteorologists
-    // might be working on the first stage resolver.
-    // const bool outputStage2 = !myWriteLLG;
-    const bool outputStage2 = true;
+    // FIXME: Do we put these into the output?
+    size_t totalLayer   = 0;
+    size_t rangeSkipped = 0; // Skip by range (outside circle)
+    size_t upperGood    = 0; // Have tilt above
+    size_t lowerGood    = 0; // Have tilt below
+    size_t sameTiltSkip = 0;
 
-    // Set the value object for resolvers
-    VolumeValue vv;
-    vv.cHeight = cHeight;
+    size_t attemptCount    = 0;
+    size_t differenceCount = 0;
 
-    // Get the elevation volume pointers and levels for speed
-    std::vector<double> levels;
-    std::vector<DataType *> pointers;
-    myElevationVolume->getTempPointerVector(levels, pointers);
-    LogInfo(*myElevationVolume << "\n");
-    // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
-    AngleDegs startLat = myRadarGrid.getNWLat() - (myRadarGrid.getLatSpacing() / 2.0); // move south (lat decreasing)
-    AngleDegs startLon = myRadarGrid.getNWLon() + (myRadarGrid.getLonSpacing() / 2.0); // move east (lon increasing)
+    auto output = myLLGCache->get(layer);
+    // Update output time in case we write it out for debugging
+    output->setTime(rTime);
 
-    // Each layer of merger we have to loop through
-    LLCoverageArea outg = myRadarGrid;
+    auto& gridtest = output->getFloat2DRef();
 
-    // Keep stage 2 output code separate, cheap to make this if we don't use it
-    std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
-    Stage2Data stage2(myRadarName, myTypeName, elevDegs, myWriteOutputUnits, center, outg.getStartX(), outg.getStartY(),
-      bitsizes);
+    LogInfo("Starting processing loop for height " << vv.layerHeightKMs * 1000 << " meters...\n");
+    ProcessTimer process1("Actual calculation guess of speed: ");
 
-    auto& resolver    = *myResolver;
-    bool useDiffCache = false;
-    size_t total      = 0;
-    auto heightsKM    = outg.getHeightsKM();
-    // for (size_t layer = 0; layer < myHeightsM.size(); layer++) {
-    for (size_t layer = 0; layer < heightsKM.size(); layer++) {
-      // vv.layerHeightKMs = myHeightsM[layer] / 1000.0;
-      // vv.layerHeightKMs = myHeightsM[layer]; // / 1000.0;
-      vv.layerHeightKMs = heightsKM[layer]; // / 1000.0;
+    auto& llp = *myLLProjections[layer];
+    auto& ssc = *(mySinCosCache);
+    llp.reset();
+    ssc.reset();
 
-      // FIXME: Do we put these into the output?
-      size_t totalLayer   = 0;
-      size_t rangeSkipped = 0; // Skip by range (outside circle)
-      size_t upperGood    = 0; // Have tilt above
-      size_t lowerGood    = 0; // Have tilt below
-      size_t sameTiltSkip = 0;
+    // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
+    AngleDegs atLat = startLat;
+    for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
+      AngleDegs atLon = startLon;
+      // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
+      for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
+        total++;
+        totalLayer++;
+        // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
+        llp.get(vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
+        ssc.get(vv.sinGcdIR, vv.cosGcdIR);
 
-      size_t attemptCount    = 0;
-      size_t differenceCount = 0;
+        // Create lat lon grid of a particular field...
+        // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
+        // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
 
-      auto output = myLLGCache->get(layer);
-      // Update output time in case we write it out for debugging
-      output->setTime(r->getTime());
+        // Anything over terrain range Kms hard ignore.
+        if (vv.virtualRangeKMs > myRangeKMs) {
+          // Since this is outside range it should never be different from the initialization
+          // gridtest[y][x] = Constants::DataUnavailable;
+          rangeSkipped++;
+          continue;
+        }
 
-      auto& gridtest = output->getFloat2DRef();
+        // Search the virtual volume for elevations above/below our virtual one
+        // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
+        myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
+          vv.getUpper(), vv.get2ndLower(),
+          vv.get2ndUpper());
+        if (vv.getLower() != nullptr) { lowerGood++; }
+        if (vv.getUpper() != nullptr) { upperGood++; }
 
-      LogInfo("Starting processing loop for height " << vv.layerHeightKMs * 1000 << " meters...\n");
-      ProcessTimer process1("Actual calculation guess of speed: ");
-
-      auto& llp = *myLLProjections[layer];
-      auto& ssc = *(mySinCosCache);
-      llp.reset();
-      ssc.reset();
-
-      // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
-      AngleDegs atLat = startLat;
-      for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
-        AngleDegs atLon = startLon;
-        // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
-        for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
-          total++;
-          totalLayer++;
-          // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
-          llp.get(azimuthSpacing, vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
-          ssc.get(vv.sinGcdIR, vv.cosGcdIR);
-
-          // Create lat lon grid of a particular field...
-          // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
-          // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
-
-          // Anything over terrain range Kms hard ignore.
-          if (vv.virtualRangeKMs > myRangeKMs) {
-            // Since this is outside range it should never be different from the initialization
-            // gridtest[y][x] = Constants::DataUnavailable;
-            rangeSkipped++;
+        // If the upper and lower for this point are the _same_ RadialSets as before, then
+        // the interpolation will end up with the same data value.
+        // This takes advantage that in a volume if a couple tilts change, then
+        // the space time affected is fairly small compared to the entire volume's 3D coverage.
+        if (useDiffCache) {
+          const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
+              vv.get2ndLower(), vv.get2ndUpper());
+          if (!changedEnclosingTilts) { // The value won't change, so continue
+            sameTiltSkip++;
             continue;
           }
-
-          // Search the virtual volume for elevations above/below our virtual one
-          // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
-          myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
-            vv.getUpper(), vv.get2ndLower(),
-            vv.get2ndUpper());
-          if (vv.getLower() != nullptr) { lowerGood++; }
-          if (vv.getUpper() != nullptr) { upperGood++; }
-
-          // If the upper and lower for this point are the _same_ RadialSets as before, then
-          // the interpolation will end up with the same data value.
-          // This takes advantage that in a volume if a couple tilts change, then
-          // the space time affected is fairly small compared to the entire volume's 3D coverage.
-
-          // I'm gonna start with the pointers as keys, which are numbers, but it's 'possible'
-          // a new radialset could get same pointer (expire/new).
-          // FIXME: Probably super rare to get same pointer, but maybe we add
-          // a RadialSet or general DataType counter at some point to be sure.
-          // Humm.  The tilt time 'might' work appending it to the pointer value.
-
-          // Think this is failing actually...it isn't always set depends on resolver
-          if (useDiffCache) {
-            const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
-                vv.get2ndLower(), vv.get2ndUpper());
-            if (!changedEnclosingTilts) { // The value won't change, so continue
-              sameTiltSkip++;
-              continue;
-            }
-          }
-
-          attemptCount++;
-
-          resolver.calc(vv);
-
-          // Actually write to the value cache
-          // FIXME: Difference test may require multivalue probably including weights...
-          //        Time might be an issue here..this will increase gridtest size/cache
-          //    if (gridtest[y][x] != vv.dataValue) {
-          differenceCount++;
-          gridtest[y][x] = vv.dataValue;
-          if (outputStage2) {
-            stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
-          }
-          //     }
         }
+
+        attemptCount++;
+
+        // Actually write to the value cache
+        // FIXME: Difference test may require multivalue probably including weights...
+        //        Time might be an issue here..this will increase gridtest size/cache
+        //  We will revisit this when we start doing I-frame vs P-frame transmission
+        //    if (gridtest[y][x] != vv.dataValue) {
+        differenceCount++;
       }
-
-      // --------------------------------------------------------
-      // Write LatLonGrid or Raw merger files (FIXME: Maybe more flag control)
-      //
-
-      static int writeCount = 0;
-      if (++writeCount >= myThrottleCount) {
-        if (myWriteLLG) {
-          writeOutputCAPPI(output);
-        } else {
-          // Write any per tilt stage2 files.  I think we're just writing per
-          // 33 layer files, but never know
-        }
-        writeCount = 0;
-      }
-
-      // --------------------------------------------------------
-      // Log info on the layer calculations
-      //
-      double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
-      LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. " << totalLayer << " left.\n");
-      totalLayer -= rangeSkipped;
-      LogInfo("    Range skipped: " << rangeSkipped << ". " << totalLayer << " left.\n");
-      totalLayer -= sameTiltSkip;
-      LogInfo("    Same cached upper/lower skip: " << sameTiltSkip << ". " << totalLayer << " left.\n");
-      LogInfo("    Attempting: " << attemptCount << " or " << percentAttempt << " %.\n");
-      LogInfo("      Difference count (number sent to stage2): " << differenceCount << "\n");
-      LogInfo("      _New_ upper/Lower good hits: " << upperGood << " and " << lowerGood << "\n");
-      LogInfo("----------------------------------------\n");
-      // break;  Test for quick writing Stage2 files
-    } // END HEIGHT LOOP
-
-    LogInfo("Total all layer grid points: " << total << "\n");
-
-    // Send stage2 data (note this is a full conus volume)
-    if (outputStage2) {
-      LLH aLocation;
-      // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
-      Time aTime = rTime; // The time of the data matches the incoming data
-      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
-      stage2.send(this, aTime, myWriteStage2Name);
     }
 
-    // ----------------------------------------------------------------------------
+    // --------------------------------------------------------
+    // Log info on the layer calculations
+    //
+    double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
+    LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. \n");
+    LogInfo("  Dirty count:" << attemptCount << "\n");
+  } // END HEIGHT LOOP
+
+  LogInfo("Total all layer grid points: " << total << "\n");
+
+  // ----------------------------------------------------------------------------
+} // RAPIOFusionOneAlg::updateDirty
+
+void
+RAPIOFusionOneAlg::processVolume(const AngleDegs elevDegs, const Time rTime)
+{
+  // ------------------------------------------------------------------------------
+  // Do we try to output Stage 2 files for fusion2?
+  // For the moment turn off stage2 if the --llg flag is on, since meteorologists
+  // might be working on the first stage resolver.
+  // const bool outputStage2 = !myWriteLLG;
+  const bool outputStage2 = true;
+
+  // Set the value object for resolvers
+  VolumeValue vv;
+
+  // Volume value needs radar height.  FIXME: Why not all location info?
+  vv.cHeight = myRadarCenter.getHeightKM();
+
+  // Get the elevation volume pointers and levels for speed
+  std::vector<double> levels;
+  std::vector<DataType *> pointers;
+
+  myElevationVolume->getTempPointerVector(levels, pointers);
+  LogInfo(*myElevationVolume << "\n");
+  // F(Lat,Lat,Height) --> Virtual Az, Elev, Range projection add spacing/2 to get cell cellcenters
+  AngleDegs startLat = myRadarGrid.getNWLat() - (myRadarGrid.getLatSpacing() / 2.0); // move south (lat decreasing)
+  AngleDegs startLon = myRadarGrid.getNWLon() + (myRadarGrid.getLonSpacing() / 2.0); // move east (lon increasing)
+
+  // Each layer of merger we have to loop through
+  LLCoverageArea outg = myRadarGrid;
+
+  // Keep stage 2 output code separate, cheap to make this if we don't use it
+  std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
+  Stage2Data stage2(myRadarName, myTypeName, elevDegs, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
+    outg.getStartY(),
+    bitsizes);
+
+  auto& resolver    = *myResolver;
+  bool useDiffCache = true;
+  size_t total      = 0;
+  auto heightsKM    = outg.getHeightsKM();
+
+  for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+    vv.layerHeightKMs = heightsKM[layer];
+
+    // FIXME: Do we put these into the output?
+    size_t totalLayer   = 0;
+    size_t rangeSkipped = 0; // Skip by range (outside circle)
+    size_t upperGood    = 0; // Have tilt above
+    size_t lowerGood    = 0; // Have tilt below
+    size_t sameTiltSkip = 0;
+
+    size_t attemptCount    = 0;
+    size_t differenceCount = 0;
+
+    auto output = myLLGCache->get(layer);
+    // Update output time in case we write it out for debugging
+    output->setTime(rTime);
+
+    auto& gridtest = output->getFloat2DRef();
+
+    LogInfo("Starting processing loop for height " << vv.layerHeightKMs * 1000 << " meters...\n");
+    ProcessTimer process1("Actual calculation guess of speed: ");
+
+    auto& llp = *myLLProjections[layer];
+    auto& ssc = *(mySinCosCache);
+    llp.reset();
+    ssc.reset();
+
+    // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
+    AngleDegs atLat = startLat;
+    for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
+      AngleDegs atLon = startLon;
+      // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
+      for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
+        total++;
+        totalLayer++;
+        // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
+        llp.get(vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
+        ssc.get(vv.sinGcdIR, vv.cosGcdIR);
+
+        // Create lat lon grid of a particular field...
+        // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
+        // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
+
+        // Anything over terrain range Kms hard ignore.
+        if (vv.virtualRangeKMs > myRangeKMs) {
+          // Since this is outside range it should never be different from the initialization
+          // gridtest[y][x] = Constants::DataUnavailable;
+          rangeSkipped++;
+          continue;
+        }
+
+        // Search the virtual volume for elevations above/below our virtual one
+        // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
+        myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
+          vv.getUpper(), vv.get2ndLower(),
+          vv.get2ndUpper());
+        if (vv.getLower() != nullptr) { lowerGood++; }
+        if (vv.getUpper() != nullptr) { upperGood++; }
+
+        // If the upper and lower for this point are the _same_ RadialSets as before, then
+        // the interpolation will end up with the same data value.
+        // This takes advantage that in a volume if a couple tilts change, then
+        // the space time affected is fairly small compared to the entire volume's 3D coverage.
+        if (useDiffCache) {
+          const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
+              vv.get2ndLower(), vv.get2ndUpper());
+          if (!changedEnclosingTilts) { // The value won't change, so continue
+            sameTiltSkip++;
+            continue;
+          }
+        }
+
+        attemptCount++;
+
+        resolver.calc(vv);
+
+        // Actually write to the value cache
+        // FIXME: Difference test may require multivalue probably including weights...
+        //        Time might be an issue here..this will increase gridtest size/cache
+        //  We will revisit this when we start doing I-frame vs P-frame transmission
+        //    if (gridtest[y][x] != vv.dataValue) {
+        differenceCount++;
+        gridtest[y][x] = vv.dataValue;
+        if (outputStage2) {
+          stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
+        }
+        //     }
+      }
+    }
+
+    // --------------------------------------------------------
+    // Write debugging LatLonGrid
+    //
+
+    static int writeCount = 0;
+    if (++writeCount >= myThrottleCount) {
+      if (myWriteLLG) {
+        writeOutputCAPPI(output);
+      } else {
+        // Write any per tilt stage2 files.  I think we're just writing per
+        // 33 layer files, but never know
+      }
+      writeCount = 0;
+    }
+
+    // --------------------------------------------------------
+    // Log info on the layer calculations
+    //
+    double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
+    LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. " << totalLayer << " left.\n");
+    totalLayer -= rangeSkipped;
+    LogInfo("    Range skipped: " << rangeSkipped << ". " << totalLayer << " left.\n");
+    totalLayer -= sameTiltSkip;
+    LogInfo("    Same cached upper/lower skip: " << sameTiltSkip << ". " << totalLayer << " left.\n");
+    LogInfo("    Attempting: " << attemptCount << " or " << percentAttempt << " %.\n");
+    LogInfo("      Difference count (number sent to stage2): " << differenceCount << "\n");
+    LogInfo("      _New_ upper/Lower good hits: " << upperGood << " and " << lowerGood << "\n");
+    LogInfo("----------------------------------------\n");
+    // break;  Test for quick writing Stage2 files
+  } // END HEIGHT LOOP
+
+  LogInfo("Total all layer grid points: " << total << "\n");
+
+  // Send stage2 data (note this is a full conus volume)
+  if (outputStage2) {
+    LLH aLocation;
+    // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
+    Time aTime = rTime; // The time of the data matches the incoming data
+    LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
+    stage2.send(this, aTime, myWriteStage2Name);
   }
+
+  // ----------------------------------------------------------------------------
 } // RAPIOFusionOneAlg::processNewData
 
 int

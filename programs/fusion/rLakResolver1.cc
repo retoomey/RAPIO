@@ -88,12 +88,17 @@ LakResolver1::calc(VolumeValue& vv)
   // Query information for above and below the location
   // and reference the values above and below us (note post smoothing filters)
   // This isn't done automatically because not every resolver will need all of it.
-  // FIXME: future ideas could do cressmen or other methods around sample point
-  // FIXME: couldn't we just have a flag inside vv that says have or not?
-  bool haveLower  = queryLayer(vv, VolumeValueResolver::lower);
-  bool haveUpper  = queryLayer(vv, VolumeValueResolver::upper);
-  bool haveLLower = queryLayer(vv, VolumeValueResolver::lower2);
-  bool haveUUpper = queryLayer(vv, VolumeValueResolver::upper2);
+  // bool haveLower  = queryLayer(vv, VolumeValueResolver::lower);
+  // bool haveUpper  = queryLayer(vv, VolumeValueResolver::upper);
+  // bool haveLLower = queryLayer(vv, VolumeValueResolver::lower2);
+  // bool haveUUpper = queryLayer(vv, VolumeValueResolver::upper2);
+
+  // Get all four layers in their glorious CPU intensitivity
+  // FIXME: Probably want to query closest two and conditionally query
+  // the further ones at some point, which will be faster
+  bool haveLower, haveUpper, haveLLower, haveUUpper;
+
+  queryLayers(vv, haveLower, haveUpper, haveLLower, haveUUpper);
 
   // ------------------------------------------------------------------------------
   // Analyze stage

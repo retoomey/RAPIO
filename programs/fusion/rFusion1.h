@@ -78,10 +78,6 @@ public:
  *
  * Basically the entire output of BeamPath_LLHtoAzRangeElev.
  *
- * Also, Terrain percentage uses the same az, range, elev.  The difference here though
- * is that the calculatePercentBlocked needs the AzimuthSpacing.  So technicaly we
- * will need to cache it per unique AzimuthSpacing.
- *
  * This would be per _RADAR_ and _OUTPUT_ grid.  So for N moments or incoming tilts this
  * can be shared.  Awesome.
  *
@@ -173,7 +169,7 @@ public:
 
   /** Get at current position (a bit faster) */
   inline void
-  get(AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
+  get(AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
   {
     outAzDegs   = myAzimuths[myAt];
     outElevDegs = myVirtualElevations[myAt];
@@ -183,7 +179,7 @@ public:
 
   /** Cache lookup given x and y */
   inline void
-  get(size_t x, size_t y, AngleDegs azimuthSpacing, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
+  get(size_t x, size_t y, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
   {
     const size_t index = getIndex(x, y);
 
@@ -280,9 +276,27 @@ public:
   firstDataSetup(std::shared_ptr<RadialSet> r,
     const std::string& radarName, const std::string& typeName);
 
+  /** Process a new incoming RadialSet */
+  void
+  processRadialSet(std::shared_ptr<RadialSet> r);
+
+  /** Update dirty array */
+  void
+  updateDirty(const AngleDegs elevDegs, const Time rTime);
+
+  /** Process a volume generating stage 2 output */
+  void
+  processVolume(const AngleDegs elevDegs, const Time rTime);
+
   /** Process a new record/datatype */
   virtual void
   processNewData(rapio::RAPIOData& d) override;
+
+  /** Process heartbeat in subclasses.
+   * @param n The actual now time triggering the event.
+   * @param p The pinned sync time we're firing for. */
+  virtual void
+  processHeartbeat(const Time& n, const Time& p) override;
 
 protected:
 
@@ -304,8 +318,8 @@ protected:
   /** Store first type name.  Currently we can only handle 1 typename */
   std::string myTypeName;
 
-  /** Heights we do */
-  // std::vector<double> myHeightsM;
+  /** Store first radar location.  Currently we can only handle 1 radar */
+  LLH myRadarCenter;
 
   /** Cached lookup for radar to conus grid projection */
   std::vector<std::shared_ptr<AzRanElevCache> > myLLProjections;

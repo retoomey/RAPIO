@@ -12,14 +12,16 @@ void
 AzimuthVVResolver::calc(VolumeValue& vv)
 {
   // Output value is the virtual azimuth
-  vv.dataValue = vv.virtualAzDegs;
+  vv.dataValue   = vv.virtualAzDegs;
+  vv.dataWeight1 = 1.0;
 }
 
 void
 RangeVVResolver::calc(VolumeValue& vv)
 {
   // Output value is the virtual range
-  vv.dataValue = vv.virtualRangeKMs;
+  vv.dataValue   = vv.virtualRangeKMs;
+  vv.dataWeight1 = 1.0;
 }
 
 void
@@ -44,6 +46,7 @@ TerrainVVResolver::calc(VolumeValue& vv)
       vv.dataValue  = vv.dataValue * vv.dataValue;
     }
   }
+  vv.dataWeight1 = 1.0;
 }
 
 void
@@ -132,6 +135,17 @@ VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, Angle
 
   Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
     vv.sinGcdIR, vv.cosGcdIR, elevTan, elevCos, heightKMs, outRangeKMs);
+}
+
+void
+VolumeValueResolver::queryLayers(VolumeValue& vv,
+  bool& haveLower, bool& haveUpper, bool& haveLLower, bool& haveUUpper)
+{
+  // We can avoid the switching in queryLayer here by doing bulk
+  haveLower  = queryLayer(vv, vv.getLower(), vv.getLowerValue());
+  haveUpper  = queryLayer(vv, vv.getUpper(), vv.getUpperValue());
+  haveLLower = queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue());
+  haveUUpper = queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue());
 }
 
 bool

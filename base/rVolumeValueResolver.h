@@ -179,8 +179,15 @@ private:
   queryLayer(VolumeValue& vv, DataType * set, LayerValue& l);
 public:
 
+  /** Query a lot of layers a bit more efficiently.  This gets all four effective tilts
+   * for advanced calculation. */
+  void
+  queryLayers(VolumeValue& vv, bool& haveLower, bool& haveUpper, bool& haveLLower,
+    bool& haveUUpper);
+
   /** Fill in data query layer for a tilt/layer above/below.  This isn't done
-   * automatically since it takes time and some resolvers may not need this information */
+   * automatically since it takes time and some resolvers may not need this information.
+   * This is convenient but slow for a lot of layers. */
   inline bool
   queryLayer(VolumeValue& vv, const Layer& l)
   {
