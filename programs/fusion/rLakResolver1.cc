@@ -226,9 +226,29 @@ LakResolver1::calc(VolumeValue& vv)
   }
 
   if (count > 0) {
-    v = totalsum / totalWt;
-  }
+    // Calculate range weight factor here, we can still add it in
+    // We're assuming range weight factor is the same for each contributing
+    // value, which is different from e1, e2...en elevation weights
+    const auto rw = 1.0 / std::pow(vv.virtualRangeKMs, 2); // inverse square
 
-  vv.dataValue   = v;
-  vv.dataWeight1 = vv.virtualRangeKMs;
+    // Don't wanna lose weight info
+    // v = totalsum / totalWt; // Actual value which loses info..so
+
+    // To weight average multiple radars we need the numerator/denominator
+    // in order to keep weight normalization when multiplying with other weights
+    // Either we send v1e1+v2e2 and e1+e2 and multiple R in stage 2, or we send
+    // R(v1e1+v1e2) and R(e1+e2)
+    // This is because to add to another radar:
+    // R(v1e1+v1e2) + R2(v3e3+v4e4) is needed for numerator and
+    // R(e1+e2) + R2(e3+e4) is needed for denominator. Where the ei are the elevation
+    // weights for each contributing angle.
+    // In other words, you lose weight normalization ability by dividing in advance
+    // Ugggh hard to explain..or did I?  We'll have to draw up the formulas in
+    // presentation for this to be understood by most.
+    vv.dataValue   = rw * totalsum; // num
+    vv.dataWeight1 = rw * totalWt;  // dem
+  } else {
+    vv.dataValue   = v; // v = missing
+    vv.dataWeight1 = 0; // mark missing
+  }
 } // calc

@@ -9,7 +9,7 @@ std::shared_ptr<std::unordered_set<size_t> > FusionDatabase::myMarked = nullptr;
 // This will become a plug-in probably for various merging options
 //
 void
-FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
+FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
 {
   static bool firstTime = true;
   size_t failed         = 0;
@@ -35,8 +35,10 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
         size_t i2  = myMissings.getIndex3D(x, y, z);
         auto mnode = myMissings.get(i2);
         if (mnode != nullptr) {
-          v = Constants::MissingData;
-          missingHit++;
+          if (*mnode >= cutoff) {
+            v = Constants::MissingData;
+            missingHit++;
+          }
         }
 
         // ----------------------------------------------
@@ -56,14 +58,34 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
             }
             const auto &data = *(n.myAt); // Pointer should be good
 
-            weightedSum += data.v * data.w;
+            //  const auto& wi = 1.0/std::pow(data.w, 2);
+            // weightedSum += data.v * wi;
+            weightedSum += data.v;
             totalWeight += data.w;
             haveValues   = true;
+            #if 0
+            // data.w is range...so 0 range is actually weight 1
+            // and we pin the weight to max
+            if (data.w < 0.001) {
+              weightedSum += data.v; // 1.0/1
+              totalWeight += 1.0;
+              haveValues   = true;
+            } else {
+              const auto& wi = 1.0 / std::pow(data.w, 2);
+              weightedSum += data.v * wi;
+              totalWeight += wi;
+              haveValues   = true;
+            }
+            #endif // if 0
           }
 
           // Final v
-          if (haveValues && (totalWeight > 0.001)) {
+          if (haveValues) {
             v = weightedSum / totalWeight;
+            // hack precision for moment to .5
+            int intValue        = static_cast<int>(v * 2);
+            int roundedIntValue = std::round(intValue);
+            v = static_cast<float>(roundedIntValue) / 2.0f;
           }
         }
 
@@ -75,7 +97,6 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache)
   if ((failed > 0) || (failed2 > 0)) {
     LogSevere("Failed hits: " << failed << " and " << failed2 << "\n");
   }
-  LogSevere(">>MISSING COUNT: " << missingHit << "\n");
   firstTime = false;
 } // FusionDatabase::mergeTo
 

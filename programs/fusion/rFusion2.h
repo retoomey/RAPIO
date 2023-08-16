@@ -54,6 +54,10 @@ public:
 
 protected:
 
+  /** Called to merge what we have and output it */
+  void
+  mergeAndWriteOutput(const Time& n, const Time& p);
+
   /** Initialization done on first incoming data */
   void
   firstDataSetup(std::shared_ptr<Stage2Data> d);

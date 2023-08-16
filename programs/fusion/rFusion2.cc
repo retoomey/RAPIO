@@ -211,14 +211,28 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
+
+    // If we're realtime we'll get a heartbeat for us, if not we need to process at
+    // 'some' point for archive.  We could add more settings/controls for this later
+    // This will try to merge and output every incoming record
+    if (isArchive()) {
+      mergeAndWriteOutput(myLastDataTime, myLastDataTime);
+    }
   }
 } // RAPIOFusionTwoAlg::processNewData
 
 void
 RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+  if (isDaemon()) { // just checking, don't think we get message if we're not
+    LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+    mergeAndWriteOutput(n, p);
+  }
+}
 
+void
+RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
+{
   // Note: firstDataSetup might not be called yet...
   // so check database, etc...
   if (myDatabase == nullptr) {
@@ -234,6 +248,14 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 
   ProcessTimer timepurge("Full time purge. Can still be optimized.");
 
+  // Time to expire data
+  // We might not have gotten data in a while..slowly expire off
+  // the heartbeat time.  Archive won't have a heartbeat so we'll need
+  // some work for that.
+  // const Time cutoffTime = myLastDataTime - myMaximumHistory;
+  const Time cutoffTime = p - myMaximumHistory;
+  const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
+
   myDatabase->timePurge(myLastDataTime, myMaximumHistory);
   LogInfo(timepurge << "\n");
 
@@ -247,7 +269,7 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
   myLLGCache->fillPrimary(Constants::DataUnavailable);
 
   // Write out
-  myDatabase->mergeTo(myLLGCache);
+  myDatabase->mergeTo(myLLGCache, cutoff);
 
   auto heightsKM = myFullGrid.getHeightsKM();
   // Time aTime = Time::CurrentTime();
