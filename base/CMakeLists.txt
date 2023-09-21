@@ -41,6 +41,8 @@ rDataStore.h
 rDataTable.h
 rDataType.h
 rDataTypeHistory.h
+rDimensionMapper.h
+rDirWalker.h
 rDirWatcher.h
 rElevationVolume.h
 rError.h
@@ -89,6 +91,7 @@ rRAPIOAlgorithm.h
 rRAPIOData.h
 rRapio.h
 rRAPIOOptions.h
+rRAPIOPlugin.h
 rRAPIOProgram.h
 rRecordFilter.h
 rRecord.h
@@ -146,6 +149,8 @@ rDataProjection.cc
 rDataTable.cc
 rDataType.cc
 rDataTypeHistory.cc
+rDimensionMapper.cc
+rDirWalker.cc
 rDirWatcher.cc
 rElevationVolume.cc
 rError.cc
@@ -189,6 +194,7 @@ rRadialSetLookup.cc
 rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc
+rRAPIOPlugin.cc
 rRAPIOProgram.cc
 rRecord.cc
 rRecordFilter.cc

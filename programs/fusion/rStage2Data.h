@@ -41,7 +41,7 @@ public:
 
   /** Add data to us for sending to stage2, only used by stage one */
   void
-  add(float v, float w, short x, short y, short z);
+  add(float v, float w, float r, short x, short y, short z);
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
   void
@@ -71,7 +71,7 @@ public:
   /** Get data from us, only used by stage two.
    * Note this streams out until returning false */
   bool
-  get(float& v, float& w, short& x, short& y, short& z);
+  get(float& v, float& w, float& w2, short& x, short& y, short& z);
 
   /** Get the radarname */
   std::string
@@ -161,9 +161,10 @@ protected:
   // Stored data to process
   std::vector<float> myValues;  ///< True data values, not missing
   std::vector<float> myWeights; ///< Weights for true data values
-  std::vector<short> myXs;      ///< X location for a true value
-  std::vector<short> myYs;      ///< Y location for a true value
-  std::vector<char> myZs;       ///< Z value, height for a true value
+  std::vector<float> myWeights2;///< Weights for true data values
+  std::vector<short> myXs; ///< X location for a true value
+  std::vector<short> myYs; ///< Y location for a true value
+  std::vector<char> myZs;  ///< Z value, height for a true value
 
   // We should never weight against a missing value...so store all of them separate to save space.
   // Since we're sparse we can just store the x,y,z RLE

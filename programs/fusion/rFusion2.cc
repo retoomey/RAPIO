@@ -84,6 +84,9 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 
   // Finally, create the point cloud database with N observations per point
   myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
+  LogInfo(
+    "Created XYZ array of " << myFullGrid.getNumX() << "*" << myFullGrid.getNumY() << "*" << myFullGrid.getNumZ() <<
+      " size\n");
   // LogInfo("DATABASE IS " << (void*)(myDatabase.get()) << "\n");
 }
 
@@ -137,7 +140,8 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // a cloud database this will have to be even more generic than this.
 
     // Note: This should be a reference or you'll copy
-    auto& radar = db.getSourceList(name);
+    auto radarPtr = db.getSourceList(name);
+    auto& radar   = *radarPtr;
 
     // The time for all the current new observations
     radar.myTime = data.getTime(); // deprecated
@@ -146,7 +150,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     const Time cutoffTime = myLastDataTime - myMaximumHistory; // FIXME: add util to time
     const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
     if (radar.myTime < cutoffTime) {
-      LogSevere("Ignoring data for " << radar.myName << " since it's too old.\n");
+      LogSevere("Ignoring " << radar.myName << " OLD: " << radar.myTime.getString("%H:%M:%S") << "\n");
       return;
     }
 
@@ -156,20 +160,26 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     const time_t t = radar.myTime.getSecondsSinceEpoch();
 
     // Stream read stage2 into a new observation list
-    float v, w;
+    float v, w, w2;
     short x, y, z;
 
     // Add to a new list of observations or update missing mask
-    SourceList newSource = db.getNewSourceList("newone");
+    // SourceList newSource = db.getNewSourceList("newone");
+    auto newSourcePtr = db.getNewSourceList("newone");
+    auto& newSource   = *newSourcePtr;
 
     // We use a shared ptr since set seems to be flaky about releasing memory
     // where clear() doesn't release the hash, and shrink_to_fit is not available
     // This is just flag for 'hit' values, might be better as a bitset.  We'll
     // revisit this later
+    // FIXME: Should be hidden in the database
     db.myMarked = std::make_shared<std::unordered_set<size_t> >();
+    //  db.myMarked2 = std::make_shared<SparseVector<size_t> >(SparseVector<size_t>({myFullGrid.getNumX(),
+    //         myFullGrid.getNumY(), myFullGrid.getNumZ()}));
+
     auto& mark = *db.myMarked;
 
-    while (data.get(v, w, x, y, z)) {
+    while (data.get(v, w, w2, x, y, z)) {
       total++;
       hitCount[z]++;
 
@@ -186,14 +196,14 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
       if (v == Constants::MissingData) {
         missingcounter++;
-        db.addMissing(newSource, x, y, z, t); // update mask
-        continue;                             // Skip storing missing values
+        db.addMissing(newSource, w, w2, x, y, z, t); // update mask
+        continue;                                    // Skip storing missing values
       } else {
         points++;
       }
 
       // Point cloud
-      db.addObservation(newSource, v, w, x, y, z, t);
+      db.addObservation(newSource, v, w, w2, x, y, z, t);
     }
     LogInfo(timer << "\n");
 
@@ -201,16 +211,29 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // These can be overlapping sets.  Since x,y,z are created in order this 'could'
     // be optimized by double marching vs delete/add, but it would be confusing so eh.
     // FIXME: Can we do this fast enough is the question.
-    db.mergeObservations(radar, newSource, cutoff);
+
+    // double vm, rssm;
+    // OS::getProcessSizeKB(vm, rssm);
+    // vm *=1024; rssm *=1024;
+    // LogSevere("Current RAM doing nothing is " << Strings::formatBytes(rssm) << "\n");
+    { ProcessTimer fail("MERGE:");
+
+      db.mergeObservations(radarPtr, newSourcePtr, cutoff);
+      LogInfo(fail << "\n");
+    }
+
 
     // clear the marked array
-    db.myMarked = nullptr;
+    db.myMarked  = nullptr;
+    db.myMarked2 = nullptr;
 
     // Dump source list
     db.dumpSources();
 
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
+
+    //    db.dumpXYZ();
 
     // If we're realtime we'll get a heartbeat for us, if not we need to process at
     // 'some' point for archive.  We could add more settings/controls for this later

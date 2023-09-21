@@ -20,7 +20,8 @@ typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_back
 namespace rapio {
 /** Enum class for log pattern tokens */
 enum class LogToken {
-  filler, time, timems, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off, threadid
+  filler, time, timems, timec, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off,
+  threadid
 };
 
 /** Flushes the log on a timer in main event loop */
@@ -105,6 +106,9 @@ public:
 
   /** The standard format string date of form [date UTC] we use for logging with MS. */
   static std::string LOG_TIMESTAMP_MS;
+
+  /** The standard format string date of form [date UTC] we use for logging just clock. */
+  static std::string LOG_TIMESTAMP_C;
 
   /** Log singleton */
   static std::shared_ptr<Log> mySingleton;

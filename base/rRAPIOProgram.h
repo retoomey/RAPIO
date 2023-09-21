@@ -4,6 +4,8 @@
 #include <rRAPIOOptions.h>
 
 namespace rapio {
+class RAPIOPlugin;
+
 /**
  *  The stock default program and all its options and processing
  *  This is used for simple tools, etc. where all the abilities
@@ -57,6 +59,13 @@ public:
   virtual void
   addPostLoadedHelp(RAPIOOptions& o){ };
 
+  /** Add a plugin (called by RAPIOPlugin to register) */
+  void
+  addPlugin(RAPIOPlugin * p)
+  {
+    myPlugins.push_back(p);
+  }
+
 protected:
 
   /** Declare all default options for this layer,
@@ -73,7 +82,18 @@ protected:
   bool
   isMacroApplied(){ return myMacroApplied; }
 
+
+  /** Clean up plugins */
+  // ~RAPIOProgram(){
+  //   for(auto p: myPlugins){
+  //     delete p;
+  //   }
+  // }
+
 protected:
   bool myMacroApplied;
+
+  /** List of plugins we own */
+  std::vector<RAPIOPlugin *> myPlugins;
 };
 }

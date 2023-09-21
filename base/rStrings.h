@@ -186,7 +186,7 @@ public:
   /** (AI) Format a given number of bytes into human readable size.
    * Useful for logging/debugging memory usage of things. */
   static std::string
-  formatBytes(unsigned long long bytes);
+  formatBytes(long long bytes, bool plusSign = false);
 
   /** Used for param lines --param=key,stuff to split the
    * string key,stuff into pieces */

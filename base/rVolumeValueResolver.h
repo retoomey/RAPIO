@@ -106,6 +106,7 @@ public:
   // OUTPUTS ---------------------
   double dataValue;   ///< Final output calculated data value by resolver
   double dataWeight1; ///< Final output weight1 by resolver
+  double dataWeight2; ///< Final output weight2 by resolver FIXME: More generic for all resolver/merger plugins
 };
 
 

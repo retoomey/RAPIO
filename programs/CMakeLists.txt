@@ -33,27 +33,46 @@ install(TARGETS rwatch
 )
 
 ##################################################################
+# Shared code
+add_library(fusionshared STATIC 
+  fusion/rStage2Data.cc
+  fusion/rFusionCache.cc
+)
+
+##################################################################
 # Fusion1
 add_executable(rFusion1
-  fusion/rStage2Data.cc
   fusion/rRobertLinear1Resolver.cc
   fusion/rLakResolver1.cc
   fusion/rLakRadialSmoother.cc
   fusion/rFusion1.cc
 )
-target_link_libraries(rFusion1 rapio)
+target_link_libraries(rFusion1 PRIVATE fusionshared PUBLIC rapio)
 install(TARGETS rFusion1
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+##################################################################
+# Fusion2
 add_executable(rFusion2
   fusion/rStage2Data.cc
   fusion/rFusionDatabase.cc
   fusion/rFusion2.cc
 )
 
-target_link_libraries(rFusion2 rapio)
+target_link_libraries(rFusion2 PRIVATE fusionshared PUBLIC rapio)
 install(TARGETS rFusion2
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
+# FusionRoster
+add_executable(rFusionRoster
+  fusion/rFusionRoster.cc
+)
+
+target_link_libraries(rFusionRoster PRIVATE fusionshared PUBLIC rapio)
+install(TARGETS rFusionRoster
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 

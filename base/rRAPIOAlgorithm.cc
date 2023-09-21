@@ -1,6 +1,7 @@
 #include "rRAPIOAlgorithm.h"
 
 #include "rRAPIOOptions.h"
+#include "rRAPIOPlugin.h"
 #include "rError.h"
 #include "rEventLoop.h"
 #include "rEventTimer.h"
@@ -55,9 +56,6 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
   o.addSuboption(r, "new", "Only process new incoming records. Same as -r");
   o.addSuboption(r, "", "Same as new, original realtime flag.");
   o.addSuboption(r, "all", "All old records, then wait for new.");
-
-  o.optional("sync", "", "Sync data option. Cron format style algorithm heartbeat.");
-  o.addGroup("sync", "TIME");
 
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
@@ -118,8 +116,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   // Static advanced on demand (lazy add)
   o.addAdvancedHelp("I",
     "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
-  o.addAdvancedHelp("sync",
-    "In daemon/realtime sends heartbeat to algorithm.  Note if your algorithm lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
   o.addAdvancedHelp("h",
     "For indexes, this will be the global time in minutes for all indexes provided.");
   o.addAdvancedHelp("O",
@@ -198,7 +194,6 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
       LogInfo("      If you want webserver to run as a daemon, set your -r to a realtime mode\n");
     }
   }
-  myCronList = o.getString("sync");
 } // RAPIOAlgorithm::processInputParams
 
 TimeDuration
@@ -275,10 +270,20 @@ RAPIOAlgorithm::initializeOptions()
   declareInputParams(o);  // Declare the input parameters used, default of
                           // i, I, l...
   declareOutputParams(o); // Declare the output parameters, default of o,
-  declarePlugins();       // Declare plugins before options, allows suboptions
-                          // O...
-  declareOptions(o);      // Allow algorithm to declare wanted general
-                          // arguments...
+
+  // Standard plugins for algorithm
+  PluginHeartbeat::declare(this);
+
+  declarePlugins(); // Declare plugins before options, allows suboptions
+                    // O...
+
+  // Plugins get to go first in case an algorithm tries to use our standard flag
+  for (auto p: myPlugins) {
+    p->declareOptions(o);
+  }
+
+  declareOptions(o); // Allow algorithm to declare wanted general
+                     // arguments...
 
   return o;
 }
@@ -288,6 +293,10 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
 {
   processInputParams(o);  // Process stock input params declared above
   processOutputParams(o); // Process stock output params declared above
+  // Plugins get to go first in case an algorithm tries to use our standard flag
+  for (auto p: myPlugins) {
+    p->processOptions(o);
+  }
   processOptions(o);
 }
 
@@ -309,6 +318,9 @@ RAPIOAlgorithm::setUpRecordFilter()
 void
 RAPIOAlgorithm::setUpHeartbeat()
 {
+  #if 0
+  Replacing with plugin model ...
+
   // Add Heartbeat (if wanted)
   std::shared_ptr<Heartbeat> heart = nullptr;
 
@@ -321,6 +333,7 @@ RAPIOAlgorithm::setUpHeartbeat()
     }
     EventLoop::addEventHandler(heart);
   }
+  #endif // if 0
 }
 
 void
@@ -402,10 +415,13 @@ RAPIOAlgorithm::setUpRecordQueue()
 void
 RAPIOAlgorithm::execute()
 {
-  // FIXME: Probably move some of these things 'up' to program as
-  // requestable abilities
+  // Alpha (heartbeat) Plugins
+  // FIXME: Will clean up more as tested
+  for (auto p: myPlugins) {
+    p->execute(this);
+  }
 
-  setUpHeartbeat();
+  //  setUpHeartbeat();
 
   setUpRecordQueue();
 
@@ -415,13 +431,13 @@ RAPIOAlgorithm::execute()
 
   setUpInitialIndexes();
 
+  // Always set up web server for algorithms for now
+  setUpWebserver();
+
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
   static std::shared_ptr<ProcessTimer> fulltime(
     new ProcessTimer("Algorithm total runtime"));
-
-  // Always set up web server for algorithms for now
-  setUpWebserver();
 
   EventLoop::doEventLoop();
 } // RAPIOAlgorithm::execute

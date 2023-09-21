@@ -23,6 +23,7 @@
      pattern: Logging pattern with following tokens:
              %TIME% Current UTC time
              %TIMEMS% Current UTC time with milliseconds
+             %TIMEC% Current clock with milliseconds
              %LEVEL% The logging level of the message such as 'severe'
              %MESSAGE% The raw logging message
              %THREADID% The thread id responsible for printing
@@ -40,7 +41,9 @@
 
         For MRMS w2algrun stuff, I recommand this pattern:
             This is because the logger adds its own timestamp, etc.
-            pattern="%LEVEL%:%FILE%:%LINE%: %MESSAGE%"
+            The timec will still add just the clock so you'll know
+            difference between log time and output time.
+            pattern="%TIMEC%%LEVEL%:%FILE%:%LINE%: %MESSAGE%"
         General developers:
             pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%YELLOW%%FILE%:%GREEN%%LINE%:%OFF% %MESSAGE%"
         General operations:
@@ -50,7 +53,7 @@
          flush="900" 
          color="true" 
          helpcolor="true" 
-         pattern="%GREEN%[%TIMEMS%]%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
+         pattern="%TIMEC%%ECOLOR% %LEVEL%:%OFF% %MESSAGE%"
 >
 </logging>
 

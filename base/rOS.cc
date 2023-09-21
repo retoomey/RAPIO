@@ -393,7 +393,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
 } // OS::runDataProcess
 
 void
-OS::getProcessSize(double& vm_usage, double& resident_set)
+OS::getProcessSizeKB(double& vm_usage, double& resident_set)
 {
   // https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
   // Credited to Don Wakefield

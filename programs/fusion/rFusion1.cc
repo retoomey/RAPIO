@@ -3,6 +3,8 @@
 #include "rConfigRadarInfo.h"
 #include "rStage2Data.h"
 
+#include "rRAPIOPlugin.h"
+
 // Value Resolvers
 #include "rRobertLinear1Resolver.h"
 #include "rLakResolver1.h"
@@ -357,7 +359,12 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   }
 
   // Look up from cells to az/range/elev for RADAR
+  // {
+  //   ProcessTimer rangeCache("Testing time for range cache..");
   createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
+  //   LogSevere(rangeCache << "\n");
+  //   exit(1);
+  // }
 
   // Generate output name and units.
   // FIXME: More control flags, maybe even name options
@@ -371,6 +378,21 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 
   // Create working LLG cache CAPPI storage per height level
   createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg);
+
+  #if 0
+  // Test writing a range cache file..roster will need this info
+  std::string directory;
+  std::string filename = FusionCache::getRangeFilename(myRadarName, myFullGrid, directory);
+  std::string fullpath = directory + filename;
+
+  LogSevere("Directory is " << directory << "\n");
+  LogSevere("Filename is " << filename << "\n");
+  LogSevere("Fullpath is " << fullpath << "\n");
+  OS::ensureDirectory(directory);
+  FusionCache::writeRangeFile(fullpath, myRadarGrid,
+    myLLProjections, myRangeKMs);
+  exit(1);
+  #endif // if 0
 } // RAPIOFusionOneAlg::firstDataSetup
 
 void
@@ -404,6 +426,26 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
         "'\n");
     return;
   }
+
+  #if 0
+FIXME: More to do{
+    here in realtime
+    // Write a range cache file..roster will need this info
+    std::string directory;
+  }
+  std::string filename = FusionCache::getRangeFilename(myRadarName, myFullGrid, directory);
+  std::string fullpath = directory + filename;
+
+  LogSevere("Directory is " << directory << "\n");
+  LogSevere("Filename is " << filename << "\n");
+  LogSevere("Fullpath is " << fullpath << "\n");
+  OS::ensureDirectory(directory);
+  FusionCache::writeRangeFile(fullpath, myRadarGrid,
+    myLLProjections, myRangeKMs);
+  LogInfo("Wrote a range file, returning for now\n");
+  return;
+
+  #endif // if 0
 
   // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
   // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
@@ -722,7 +764,7 @@ RAPIOFusionOneAlg::processVolume(const AngleDegs elevDegs, const Time rTime)
         differenceCount++;
         gridtest[y][x] = vv.dataValue;
         if (outputStage2) {
-          stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
+          stage2.add(vv.dataValue, vv.dataWeight1, vv.dataWeight2, x, y, layer);
         }
         //     }
       }

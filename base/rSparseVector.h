@@ -173,6 +173,136 @@ protected:
   unsigned long long myMissing;
 };
 
+/** This just stores pointers in a regular vector but gives us the dimension stuff.
+ * Lol.  Well ok maybe we just use a regular vector of pointers at this point, this
+ * abstraction came from experimenting with different methods.
+ */
+template <typename T>
+class SparseVector2 : public DimensionMapper  {
+public:
+
+  /** Construct a sparse vector of a given maxSize. */
+  SparseVector2(size_t maxSize) : DimensionMapper(maxSize), myStorage(maxSize, nullptr)
+  { }
+
+  /** Construct a sparse vector of dimensions. */
+  SparseVector2(std::vector<size_t> dimensions) : DimensionMapper(dimensions),
+    myStorage(calculateSize(dimensions), nullptr)
+  { }
+
+  /** Get a T* at lookup index i, if any.  This will return nullptr if missing.
+   * Note if T is declared as a pointer, you get a handle back, so
+   * then (*Value)->field will get the data out. */
+  inline T *
+  get(size_t i)
+  {
+    #if 0
+    if (i > myStorage.size()) {
+      LogSevere("OUT OF RANGE " << i << " > " << myStorage.size());
+      return nullptr;
+    }
+    #endif
+    return myStorage[i];
+  }
+
+  /** Set field at index i.  This will replace any old value.  Note if T is a pointer then
+   * it's up to caller to first get(i) and handle memory management. */
+  inline T *
+  set(size_t i, T * newdata)
+  {
+    #if 0
+    if (i > myStorage.size()) {
+      LogSevere("SET OUT OF RANGE " << i << " > " << myStorage.size());
+      return nullptr;
+    }
+    #endif
+    if (newdata != nullptr) {
+      T * data = myStorage[i];
+      if ((data != nullptr) && (data != newdata)) {
+        delete data;
+        //  mySize-- but then adding back new;
+      } else {
+        mySize++;
+      }
+      data = myStorage[i] = newdata;
+      return data;
+    } else {
+      clear(i);
+      return nullptr;
+    }
+  }
+
+  /** Clear node */
+  void
+  clear(size_t i)
+  {
+    T * data = myStorage[i];
+
+    if (data != nullptr) {
+      myStorage[i] = nullptr;
+      delete data;
+      mySize--;
+    }
+  }
+
+  /** Set field at dimensions v.  This will replace any old value.  Note if T is a pointer then
+   * it's up to caller to first get(i) and handle memory management. */
+  inline T *
+  setDims(std::vector<size_t> v, T * data)
+  {
+    return set(getIndex(v), data);
+  }
+
+  /** Get a T* at dimensions v, if any.  This will return nullptr if missing.
+   * Note if T is declared as a pointer, you get a handle back, so
+   * then (*Value)->field will get the data out. */
+  inline T *
+  getDims(std::vector<size_t> v)
+  {
+    return get(getIndex(v));
+  }
+
+  /** (AI) Percentage full on the sparse storage.  This doesn't count any deep memory
+   * stored in each node.  If this number is close to 100% you might be better off
+   * as non-sparse. */
+  float
+  getPercentFull() const
+  {
+    return (1.0 * mySize) / (1.0 * myStorage.size()) * 100.0;
+  }
+
+  /** A guess of deep size in bytes, useful for debugging and memory tracking */
+  size_t
+  deepsize() const
+  {
+    size_t size = sizeof(*this);
+
+    // Max size of storage, not including whatever T holds dynamically
+    size_t full = myStorage.capacity() * sizeof(T);
+
+    // Some of our cells store nullptr, some not
+    float p = getPercentFull() / 100.0;
+
+    size += std::floor(p * full);                   // items of T
+    size += std::floor((1.0 - p) * sizeof(void *)); // nullptr
+
+    return size;
+  }
+
+  /** Allow operator << to access our internal fields */
+  template <typename U>
+  friend std::ostream&
+  operator << (std::ostream&, const SparseVector2<U>&);
+
+protected:
+
+  /** Our storage of given typename/class */
+  std::vector<T *> myStorage;
+
+  /** A size counter of non nullptr nodes */
+  size_t mySize;
+};
+
 /** Stream print for a SparseVector */
 template <typename U>
 std::ostream&
@@ -182,6 +312,17 @@ operator << (std::ostream& os,
   os << sv.myLookup << "\n";
   os << "Total size of storage: " << sv.myStorage.size() << "\n";
   os << "Total possible size of storage: " << sv.myLookup.size() << "\n";
+  os << "Total percent filled: " << sv.getPercentFull() << "\n";
+  return (os);
+}
+
+/** Stream print for a SparseVector2 */
+template <typename U>
+std::ostream&
+operator << (std::ostream& os,
+  const SparseVector2<U> & sv)
+{
+  os << "Total size of storage: " << sv.myStorage.size() << "\n";
   os << "Total percent filled: " << sv.getPercentFull() << "\n";
   return (os);
 }

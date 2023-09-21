@@ -4,6 +4,7 @@
 
 #include <rError.h>
 #include <rTimeDuration.h>
+#include <rColorTerm.h>
 
 /** Using boost timer class now internally */
 #include <boost/timer/timer.hpp>
@@ -11,17 +12,25 @@
 namespace rapio {
 class ProcessTimer;
 
-/** Allow aggregation of timers to add up accumulated multiple timer calls.  Memory is saved as min and maximum usage.
+/** Allow aggregation of timers to add up accumulated multiple timer calls.
+ *
+ * @code
+ * ProcessTimerSum sum("Exact sum timers\n");
+ * for(size_t i = 0; i<10; ++i){
+ *   ProcessTimer timer("Time this action\n");
+ *   // Do stuff that takes CPU and/or increases RAM
+ *   LogInfo(timer);
+ *   sum.add(timer);
+ * }
+ * LogInfo(sum);
+ * @endcode
+ *
  * @author Robert Toomey
  */
 class ProcessTimerSum : public Utility {
 public:
   /** Create a new process timer sum */
-  ProcessTimerSum() : myCounter(0){ };
-
-  /** Operator << write out a ProcessTimerSum */
-  friend std::ostream&
-  operator << (std::ostream& os, const ProcessTimerSum&);
+  ProcessTimerSum(const std::string& message = "");
 
   /** Add a given process timer at current timer state to our summery information */
   void
@@ -30,6 +39,10 @@ public:
   /** Get number of ProcessTimers added */
   size_t
   getCount(){ return myCounter; }
+
+  /** Operator << write out a ProcessTimerSum */
+  friend std::ostream&
+  operator << (std::ostream& os, const ProcessTimerSum&);
 
 protected:
 
@@ -44,6 +57,21 @@ protected:
 
   /** Total user time for all added ProcessTimers */
   TimeDuration mySystem;
+
+  /** Total CPU percentages for N ProcessTimers */
+  float myCPU;
+
+  /** The message to print on destruction */
+  std::string myMsg;
+
+  /** Newline given at end of the message? */
+  bool myHaveNewline;
+
+  /** Resident set size memory in kilobytes at start or post reset */
+  double myRSS_KB;
+
+  /** Virtual memory in kilobytes at start or post reset */
+  double myVM_KB;
 };
 
 /** Output a ProcessTimerSum */
@@ -54,13 +82,21 @@ operator << (std::ostream&,
 /**
  * The ProcessTimer object will LogInfo the msg string along with the
  * time and memory information when destroyed, iff the msg is not blank
+ *
+ * @code
+ * ProcessTimer timer("Time this action\n");
+ * // Do stuff that takes CPU and/or increases RAM
+ * LogInfo(timer);
+ * @endcode
+ *
+ * @author Robert Toomey
  */
 class ProcessTimer : public Utility {
 public:
   friend ProcessTimerSum;
 
-  /** Process time with a final message on destruction */
-  ProcessTimer(const std::string& message = "", Log::Severity at = Log::Severity::DEBUG);
+  /** Create a process timer keeping track of time and memory */
+  ProcessTimer(const std::string& message = "");
 
   /** Operator << write out a ProcessTimer */
   friend std::ostream&
@@ -70,6 +106,14 @@ public:
    * this can be used to reset later if needed */
   void
   reset();
+
+  /** Get virtual memory in kilobytes used/freed since beginning of timer */
+  double
+  getVirtualKB();
+
+  /** Get resident memory in kilobytes used/freed since beginning of timer */
+  double
+  getResidentKB();
 
   /**
    * The time this ran based on clock on the wall
@@ -96,19 +140,22 @@ public:
   TimeDuration
   getCPUTime();
 
-  /** Destroy a process timer, possibly printing final timer state */
-  ~ProcessTimer();
-
 protected:
 
   /** The message to print on destruction */
   std::string myMsg;
 
-  /** The Log Severity to display messages */
-  Log::Severity mySeverity;
+  /** Newline given at end of the message? */
+  bool myHaveNewline;
 
   /** Boost internal timer */
   boost::timer::cpu_timer myTimer;
+
+  /** Resident set size memory in kilobytes at start or post reset */
+  double myRSS_KB;
+
+  /** Virtual memory in kilobytes at start or post reset */
+  double myVM_KB;
 };
 
 /** Output a process timer */

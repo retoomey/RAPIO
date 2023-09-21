@@ -5,9 +5,9 @@
 using namespace rapio;
 
 void
-Stage2Data::add(float v, float w, short x, short y, short z)
+Stage2Data::add(float v, float w, float w2, short x, short y, short z)
 {
-  const bool compressMissing = true;
+  const bool compressMissing = false;
 
   if (compressMissing && (v == Constants::MissingData)) {
     // Only store x,y,z for a missing
@@ -20,6 +20,7 @@ Stage2Data::add(float v, float w, short x, short y, short z)
   } else {
     myValues.push_back(v);
     myWeights.push_back(w);
+    myWeights2.push_back(w2);
     myXs.push_back(x); // X represents LON
     myYs.push_back(y); // Y represents LAT
     myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
@@ -94,6 +95,7 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
     stage2->setSubType("Full");
     stage2->setString("Radarname", myRadarName);
+    //   stage2->setString("radarName-value", myRadarName); // for IODataType base add.  FIXME: clean up
     stage2->setString("Typename", myTypeName);
     stage2->setFloat("ElevationDegs", myElevationDegs);
     stage2->setLong("xBase", myXBase);
@@ -107,11 +109,12 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     //
     // FIXME: We 'should' be able to use a 'baseX' and 'baseY' for small radars
     // and store this silly small.  Radar will only cover so many squares
-    auto& netcdfX       = stage2->addShort1DRef("X", "dimensionless", { 0 });
-    auto& netcdfY       = stage2->addShort1DRef("Y", "dimensionless", { 0 });
-    auto& netcdfZ       = stage2->addByte1DRef("Z", "dimensionless", { 0 });
-    auto& netcdfValues  = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
-    auto& netcdfWeights = stage2->addFloat1DRef("Range", "dimensionless", { 0 });
+    auto& netcdfX        = stage2->addShort1DRef("X", "dimensionless", { 0 });
+    auto& netcdfY        = stage2->addShort1DRef("Y", "dimensionless", { 0 });
+    auto& netcdfZ        = stage2->addByte1DRef("Z", "dimensionless", { 0 });
+    auto& netcdfValues   = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
+    auto& netcdfWeights  = stage2->addFloat1DRef("W1", "dimensionless", { 0 });
+    auto& netcdfWeights2 = stage2->addFloat1DRef("W2", "dimensionless", { 0 });
 
     // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
     // Since we deal with 'small' radar coverage here, think we're ok for moment
@@ -120,6 +123,7 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     std::copy(myZs.begin(), myZs.end(), netcdfZ.data());
     std::copy(myValues.begin(), myValues.end(), netcdfValues.data());
     std::copy(myWeights.begin(), myWeights.end(), netcdfWeights.data());
+    std::copy(myWeights2.begin(), myWeights2.end(), netcdfWeights2.data());
 
     // ---------------------------------------------------
     // Missing value storage (dim 1)
@@ -185,23 +189,26 @@ Stage2Data::receive(RAPIOData& rData)
       // ---------------------------------------------------
       // Value per point storage (dim 0)
       //
-      auto& netcdfX       = d.getShort1DRef("X");
-      auto& netcdfY       = d.getShort1DRef("Y");
-      auto& netcdfZ       = d.getByte1DRef("Z");
-      auto& netcdfValues  = d.getFloat1DRef();
-      auto& netcdfWeights = d.getFloat1DRef("Range");
+      auto& netcdfX        = d.getShort1DRef("X");
+      auto& netcdfY        = d.getShort1DRef("Y");
+      auto& netcdfZ        = d.getByte1DRef("Z");
+      auto& netcdfValues   = d.getFloat1DRef();
+      auto& netcdfWeights  = d.getFloat1DRef("W1");
+      auto& netcdfWeights2 = d.getFloat1DRef("W2");
 
       in.myXs.reserve(aSize);
       in.myYs.reserve(aSize);
       in.myZs.reserve(aSize);
       in.myValues.reserve(aSize);
       in.myWeights.reserve(aSize);
+      in.myWeights2.reserve(aSize);
       for (size_t i = 0; i < aSize; i++) {
         in.myXs.push_back(netcdfX[i]);
         in.myYs.push_back(netcdfY[i]);
         in.myZs.push_back(netcdfZ[i]);
         in.myValues.push_back(netcdfValues[i]);
         in.myWeights.push_back(netcdfWeights[i]);
+        in.myWeights2.push_back(netcdfWeights2[i]);
       }
 
       // ---------------------------------------------------
@@ -249,15 +256,16 @@ Stage2Data::receive(RAPIOData& rData)
 } // Stage2Data::receive
 
 bool
-Stage2Data::get(float& v, float& w, short& x, short& y, short& z)
+Stage2Data::get(float& v, float& w, float& w2, short& x, short& y, short& z)
 {
   // First read the non-missing values...
   if (myCounter < myValues.size()) {
-    x = myXs[myCounter];
-    y = myYs[myCounter];
-    z = myZs[myCounter];
-    v = myValues[myCounter];
-    w = myWeights[myCounter];
+    x  = myXs[myCounter];
+    y  = myYs[myCounter];
+    z  = myZs[myCounter];
+    v  = myValues[myCounter];
+    w  = myWeights[myCounter];
+    w2 = myWeights2[myCounter];
     myCounter++;
     return true;
   }
@@ -291,8 +299,9 @@ Stage2Data::get(float& v, float& w, short& x, short& y, short& z)
     //   std::cout << "AT: " << myXMissings.size() << " " << myMCounter << ", length " << l << " position " <<
     //     myRLECounter << " and (" << x << ", " << y << ", " << z << ")\n";
     // }
-    v = Constants::MissingData;
-    w = 0.0;
+    v  = Constants::MissingData;
+    w  = 0.0;
+    w2 = 0.0;
 
     // Update for the next missing, if any
     myRLECounter++;

@@ -128,7 +128,7 @@ public:
 
     if (mode == 1) { // ZLIB
       std::vector<unsigned char> compressed;
-      ProcessTimer timer("ZLIB compression " + label + " took:", Log::Severity::DEBUG);
+      ProcessTimer timer("ZLIB compression " + label + " took:");
       bool success = compressZLIB<T>(vec, compressed);
 
       if (success) {
@@ -170,6 +170,7 @@ public:
         LogSevere("ZLIB compression failure, failing back to uncompressed column\n");
         mode = 0;
       }
+      LogDebug(timer << "\n");
     }
 
     /** Normal uncompressed data */

@@ -32,6 +32,7 @@ bool Log::useColors               = false;
 bool Log::useHelpColors           = false;
 std::string Log::LOG_TIMESTAMP    = "%Y %m/%d %H:%M:%S UTC";
 std::string Log::LOG_TIMESTAMP_MS = "%Y %m/%d %H:%M:%S.%/ms UTC";
+std::string Log::LOG_TIMESTAMP_C  = "%H:%M:%S.%/ms";
 
 std::vector<int> Log::outputtokens;
 std::vector<LogToken> Log::outputtokensENUM;
@@ -108,16 +109,22 @@ dump(T& strm, std::stringstream& buffer, const Log::Severity& mode, const std::s
   // Logging is configurable by pattern string
   size_t fat = 0;
 
+  // Keep time constant for entire output string
+  const auto time = Time::CurrentTime();
+
   for (auto a:Log::outputtokensENUM) {
     switch (a) {
         case LogToken::filler:
           strm << Log::fillers[fat++];
           break;
         case LogToken::time:
-          strm << Time::CurrentTime().getString(Log::LOG_TIMESTAMP);
+          strm << time.getString(Log::LOG_TIMESTAMP);
           break;
         case LogToken::timems:
-          strm << Time::CurrentTime().getString(Log::LOG_TIMESTAMP_MS);
+          strm << time.getString(Log::LOG_TIMESTAMP_MS);
+          break;
+        case LogToken::timec:
+          strm << time.getString(Log::LOG_TIMESTAMP_C);
           break;
         case LogToken::message:
           strm << buffer.str();
@@ -315,9 +322,9 @@ void
 Log::setLogPattern(const std::string& pattern)
 {
   std::vector<std::string> tokens =
-  { "%TIME%",   "%TIMEMS%", "%MESSAGE%", "%FILE%", "%LINE%",   "%FUNCTION%",
+  { "%TIME%",   "%TIMEMS%", "%TIMEC%", "%MESSAGE%", "%FILE%",   "%LINE%", "%FUNCTION%",
     "%LEVEL%",
-    "%ECOLOR%", "%RED%",    "%GREEN%",   "%BLUE%", "%YELLOW%", "%CYAN%",
+    "%ECOLOR%", "%RED%",    "%GREEN%", "%BLUE%",    "%YELLOW%", "%CYAN%",
     "%OFF%",    "%THREADID%" };
   // Output
   std::vector<int> outputtokens;    // Token numbers in order

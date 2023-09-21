@@ -146,7 +146,7 @@ public:
    * The current virtual memory and resident set size in KB for this program.
    */
   static void
-  getProcessSize(double& vm, double& rss);
+  getProcessSizeKB(double& vm, double& rss);
 
   /**
    * Rename a file path, even between different file systems

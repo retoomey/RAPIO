@@ -698,11 +698,11 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   double scaleX = rangeX / (imageCols); // per cell size
   double scaleY = rangeY / (imageRows);
 
-  LogSevere("StartX StartY = " << startX << ", " << startY << "\n");
-  LogSevere("EndX EndY = " << endX << ", " << endY << "\n");
-  LogSevere("rangeX rangeY = " << rangeX << ", " << rangeY << "\n");
-  LogSevere("scaleX scaleY = " << scaleX << ", " << scaleY << "\n");
-  LogSevere("num_lat num_lon = " << num_lats << ", " << num_lons << "\n");
+  LogDebug("StartX StartY = " << startX << ", " << startY << "\n");
+  LogDebug("EndX EndY = " << endX << ", " << endY << "\n");
+  LogDebug("rangeX rangeY = " << rangeX << ", " << rangeY << "\n");
+  LogDebug("scaleX scaleY = " << scaleX << ", " << scaleY << "\n");
+  LogDebug("num_lat num_lon = " << num_lats << ", " << num_lons << "\n");
 
   // ----------------------------------------------------------
   // destination projection information

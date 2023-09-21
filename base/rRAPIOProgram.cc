@@ -1,4 +1,5 @@
 #include "rRAPIOProgram.h"
+#include "rRAPIOPlugin.h"
 
 #include "rOS.h"
 #include "rFactory.h"
@@ -47,6 +48,12 @@ RAPIOProgram::initializeOptions()
   RAPIOOptions o("Program");
 
   declarePlugins(); // Declare plugins before options, allows suboptions
+
+  // Plugins get to go first in case an algorithm tries to use our standard flag
+  for (auto p: myPlugins) {
+    p->declareOptions(o);
+  }
+
   declareOptions(o);
 
   return o;
@@ -55,6 +62,10 @@ RAPIOProgram::initializeOptions()
 void
 RAPIOProgram::finalizeOptions(RAPIOOptions& o)
 {
+  // Plugins get to go first in case an algorithm tries to use our standard flag
+  for (auto p: myPlugins) {
+    p->processOptions(o);
+  }
   processOptions(o);
 }
 
@@ -93,6 +104,10 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     // Dump help and stop
     if (wantHelp) {
       // Dump advanced
+      // Plugins get to go first in case an algorithm tries to use our standard flag
+      for (auto p: myPlugins) {
+        p->addPostLoadedHelp(o);
+      }
       addPostLoadedHelp(o);
       o.addPostLoadedHelp();
       o.finalizeArgs(wantHelp);
@@ -124,5 +139,9 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
 void
 RAPIOProgram::execute()
 {
+  // Plugins
+  for (auto p: myPlugins) {
+    p->execute(this);
+  }
   LogInfo("This program doesn't do anything, override execute() method.\n");
 }

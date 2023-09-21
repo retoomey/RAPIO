@@ -590,8 +590,12 @@ Strings::replaceGroup(
 } // Strings::replaceGroup
 
 std::string
-Strings::formatBytes(unsigned long long bytes)
+Strings::formatBytes(long long bytesin, bool plusSign)
 {
+  const std::string sign = (bytesin < 0) ? "-" : (plusSign ? "+" : "");
+
+  unsigned long long bytes = std::abs(bytesin);
+
   const unsigned long long GB = 1ULL << 30;
   const unsigned long long MB = 1ULL << 20;
   const unsigned long long KB = 1ULL << 10;
@@ -615,7 +619,7 @@ Strings::formatBytes(unsigned long long bytes)
 
   std::ostringstream oss;
 
-  oss << std::fixed << std::setprecision(2) << value << " " << size;
+  oss << sign << std::fixed << std::setprecision(2) << value << " " << size;
   return oss.str();
 }
 
