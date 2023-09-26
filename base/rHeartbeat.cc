@@ -2,12 +2,12 @@
 
 #include "rError.h"
 #include "rStrings.h"
-#include "rRAPIOAlgorithm.h"
+#include "rRAPIOProgram.h"
 
 using namespace rapio;
 using namespace std;
 
-Heartbeat::Heartbeat(RAPIOAlgorithm * alg, size_t milliseconds) : EventTimer(milliseconds, "Heartbeat"), myAlg(alg),
+Heartbeat::Heartbeat(RAPIOProgram * prog, size_t milliseconds) : EventTimer(milliseconds, "Heartbeat"), myProgram(prog),
   myFirstPulse(true), myParsed(false), myCronExpr(cron_expr())
 { }
 
@@ -48,7 +48,7 @@ Heartbeat::action()
       // ignore first one, it's 0
       myFirstPulse = false;
     } else {
-      myAlg->handleTimedEvent(n, myLastPulseTime);
+      myProgram->processHeartbeat(n, myLastPulseTime);
     }
     myLastPulseTime = pulse;
     // LogSevere("PULSE: "<<n << " --- " << pulse << "\n");

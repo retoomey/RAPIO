@@ -2,9 +2,10 @@
 
 #include <rUtility.h>
 #include <rEventTimer.h>
-#include <rRAPIOAlgorithm.h>
+#include <rRAPIOProgram.h>
 #include <future>
 #include <mutex>
+#include <queue>
 
 // We can do a local include here since this is a header only library
 // if installed, algorithms won't have this header, that's ok
@@ -185,7 +186,7 @@ public:
   std::mutex myQueueLock;
 
   WebMessageQueue(
-    RAPIOAlgorithm * alg
+    RAPIOProgram * prog
   );
 
   /** Add given record to queue */
@@ -201,8 +202,8 @@ public:
 
 protected:
 
-  /** The algorithm we send records to */
-  RAPIOAlgorithm * myAlg;
+  /** The program we send records to */
+  RAPIOProgram * myProgram;
 
   /** Records.  We'll need a lock here I think.  Webserver will push, Main will pull. */
   std::queue<std::shared_ptr<rapio::WebMessage> > myQueue;
@@ -224,7 +225,7 @@ public:
 
   /** Simple start web server */
   static void
-  startWebServer(const std::string& params, RAPIOAlgorithm * alg);
+  startWebServer(const std::string& params, RAPIOProgram * prog);
 
   /** Handle GET */
   static void

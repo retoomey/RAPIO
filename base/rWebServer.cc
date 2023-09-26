@@ -48,8 +48,8 @@ public:
 };
 
 WebMessageQueue::WebMessageQueue(
-  RAPIOAlgorithm * alg
-) : EventHandler("WebMessageQueue"), myAlg(alg)
+  RAPIOProgram * prog
+) : EventHandler("WebMessageQueue"), myProgram(prog)
 { }
 
 void
@@ -71,7 +71,7 @@ WebMessageQueue::action()
     myQueue.pop();
 
     // Process the web message within the algorithm worker thread
-    myAlg->processWebMessage(r);
+    myProgram->processWebMessage(r);
 
     // We promised to fill in the data when handled, the web thread is waiting
     // for us.
@@ -225,7 +225,7 @@ WebServer::runningWebServer()
 }
 
 void
-WebServer::startWebServer(const std::string& params, RAPIOAlgorithm * alg)
+WebServer::startWebServer(const std::string& params, RAPIOProgram * prog)
 {
   // HTTP-server at give port using 1 thread
   // Unless you do more heavy non-threaded processing in the resources,
@@ -245,7 +245,7 @@ WebServer::startWebServer(const std::string& params, RAPIOAlgorithm * alg)
   WebServer::port = port;
 
   // Create web message queue first
-  std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(alg);
+  std::shared_ptr<WebMessageQueue> wmq = std::make_shared<WebMessageQueue>(prog);
 
   WebMessageQueue::theWebMessageQueue = wmq;
 

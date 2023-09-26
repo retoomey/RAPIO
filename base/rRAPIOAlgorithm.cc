@@ -13,10 +13,8 @@
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
 #include "rFactory.h"
-#include "rHeartbeat.h"
 #include "rDataTypeHistory.h"
 #include "rRecordFilter.h"
-#include "rWebServer.h"
 
 // Baseline initialize
 #include "rDataFilter.h"
@@ -32,9 +30,6 @@ using namespace std;
 
 TimeDuration RAPIOAlgorithm::myMaximumHistory;
 Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
-
-RAPIOAlgorithm::RAPIOAlgorithm()
-{ }
 
 void
 RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
@@ -88,11 +83,6 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "",
     "The notifier for newly created files/records.");
   o.addGroup("n", "I/O");
-  o.optional("web",
-    "off",
-    "Web server ability for REST pull algorithms. Use a number to assign a port.");
-  o.setHidden("web");
-  o.addGroup("web", "I/O");
   o.optional("postwrite",
     "",
     "Simple executable to call post file writing using %filename%.");
@@ -120,8 +110,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
     "For indexes, this will be the global time in minutes for all indexes provided.");
   o.addAdvancedHelp("O",
     "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
-  o.addAdvancedHelp("web",
-    "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
   o.addAdvancedHelp("postwrite",
     "Allows you to run a command on a file output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
 
@@ -153,8 +141,6 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 
   // Gather postwrite option
   myPostWrite = o.getString("postwrite");
-
-  myWebServerMode = o.getString("web");
 } // RAPIOAlgorithm::processOutputParams
 
 void
@@ -183,17 +169,6 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   paramI.readString(o.getString("I"));
 
   myReadMode = o.getString("r");
-  std::string web = o.getString("web");
-
-  // I can now see a case where we run a webserver for a large archive, however maybe we notify
-  // since the algorithm and webserver will 'stop' after we process the archive.
-  // This means we need -r to be a daemon mode to keep webserver running
-  if (web != "off") {
-    if (!isDaemon()) {
-      LogInfo("NOTE: Not in realtime mode, so webserver will stop after processing.\n");
-      LogInfo("      If you want webserver to run as a daemon, set your -r to a realtime mode\n");
-    }
-  }
 } // RAPIOAlgorithm::processInputParams
 
 TimeDuration
@@ -232,7 +207,13 @@ RAPIOAlgorithm::isArchive()
 bool
 RAPIOAlgorithm::isWebServer()
 {
-  return myWebServerOn;
+  for (auto p: myPlugins) {
+    if (p->getName() == "web") {
+      return p->isActive();
+    }
+  }
+  return false;
+  // return myWebServerOn;
 }
 
 void
@@ -262,30 +243,28 @@ RAPIOAlgorithm::initializeBaseline()
   Unit::initialize();
 } // RAPIOAlgorithm::initializeBaseline
 
-RAPIOOptions
-RAPIOAlgorithm::initializeOptions()
+void
+RAPIOAlgorithm::initializePlugins()
 {
-  RAPIOOptions o("Algorithm");
+  // Stock plugins for Algorithm we setup.  Most user algorithms
+  // will want these things, so we default to having them rather
+  // than forcing subclass to call us to setup.
+  // FIXME: We could not add them unless wanted in the particular
+  // algorithm, might be better to be consistent though.
+  PluginHeartbeat::declare(this, "sync"); // Heartbeat ability/options
+  PluginWebserver::declare(this, "web");  // Webserver ability/options
 
+  return RAPIOProgram::initializePlugins();
+}
+
+void
+RAPIOAlgorithm::initializeOptions(RAPIOOptions& o)
+{
   declareInputParams(o);  // Declare the input parameters used, default of
                           // i, I, l...
   declareOutputParams(o); // Declare the output parameters, default of o,
 
-  // Standard plugins for algorithm
-  PluginHeartbeat::declare(this);
-
-  declarePlugins(); // Declare plugins before options, allows suboptions
-                    // O...
-
-  // Plugins get to go first in case an algorithm tries to use our standard flag
-  for (auto p: myPlugins) {
-    p->declareOptions(o);
-  }
-
-  declareOptions(o); // Allow algorithm to declare wanted general
-                     // arguments...
-
-  return o;
+  return RAPIOProgram::initializeOptions(o);
 }
 
 void
@@ -293,11 +272,8 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
 {
   processInputParams(o);  // Process stock input params declared above
   processOutputParams(o); // Process stock output params declared above
-  // Plugins get to go first in case an algorithm tries to use our standard flag
-  for (auto p: myPlugins) {
-    p->processOptions(o);
-  }
-  processOptions(o);
+
+  return RAPIOProgram::finalizeOptions(o);
 }
 
 void
@@ -310,30 +286,9 @@ RAPIOAlgorithm::setUpRecordNotifier()
 void
 RAPIOAlgorithm::setUpRecordFilter()
 {
-  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>(this);
+  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
 
   Record::theRecordFilter = f;
-}
-
-void
-RAPIOAlgorithm::setUpHeartbeat()
-{
-  #if 0
-  Replacing with plugin model ...
-
-  // Add Heartbeat (if wanted)
-  std::shared_ptr<Heartbeat> heart = nullptr;
-
-  if (!myCronList.empty()) { // None required, don't make it
-    LogInfo("Attempting to create heartbeat for " << myCronList << "\n");
-    heart = std::make_shared<Heartbeat>(this, 1000);
-    if (!heart->setCronList(myCronList)) {
-      LogSevere("Bad format for -sync string, aborting\n");
-      exit(1);
-    }
-    EventLoop::addEventHandler(heart);
-  }
-  #endif // if 0
 }
 
 void
@@ -391,18 +346,6 @@ RAPIOAlgorithm::setUpInitialIndexes()
 } // RAPIOAlgorithm::setUpInitialIndexes
 
 void
-RAPIOAlgorithm::setUpWebserver()
-{
-  // Launch event loop, either along with web server, or solo
-  const bool wantWeb = (myWebServerMode != "off");
-
-  myWebServerOn = wantWeb;
-  if (wantWeb) {
-    WebServer::startWebServer(myWebServerMode, this);
-  }
-}
-
-void
 RAPIOAlgorithm::setUpRecordQueue()
 {
   // Create record queue and record filter/notifier
@@ -415,14 +358,6 @@ RAPIOAlgorithm::setUpRecordQueue()
 void
 RAPIOAlgorithm::execute()
 {
-  // Alpha (heartbeat) Plugins
-  // FIXME: Will clean up more as tested
-  for (auto p: myPlugins) {
-    p->execute(this);
-  }
-
-  //  setUpHeartbeat();
-
   setUpRecordQueue();
 
   setUpRecordNotifier();
@@ -431,8 +366,10 @@ RAPIOAlgorithm::execute()
 
   setUpInitialIndexes();
 
-  // Always set up web server for algorithms for now
-  setUpWebserver();
+  // Plugins
+  for (auto p: myPlugins) {
+    p->execute(this);
+  }
 
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
@@ -480,6 +417,8 @@ RAPIOAlgorithm::processNewData(RAPIOData&)
 void
 RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
 {
+  LogInfo("Received web message, ignoring.\n");
+  #if 0
   static int counter = 0;
 
   std::stringstream stream;
@@ -493,6 +432,7 @@ RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
     stream << "Field: " << a.first << " == " << a.second << "<br>";
   }
   w->setMessage(stream.str());
+  #endif // if 0
 }
 
 void
@@ -510,16 +450,6 @@ RAPIOAlgorithm::handleEndDatasetEvent()
   } else {
     // Realtime queue is empty, hey we're caught up...
   }
-}
-
-void
-RAPIOAlgorithm::handleTimedEvent(const Time& n, const Time& p)
-{
-  // Debug dump heartbeat for now from the -sync option
-  LogDebug(
-    "sync heartbeat:" << n.getHour() << ":" << n.getMinute() << ":" << n.getSecond() << " and for: " << p.getHour() << ":" << p.getMinute() << ":" << p.getSecond()
-                      << "\n");
-  processHeartbeat(n, p);
 }
 
 bool

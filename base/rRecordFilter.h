@@ -4,8 +4,6 @@
 #include <rRecord.h>
 
 namespace rapio {
-class RAPIOAlgorithm;
-
 /** A filter of records, the default return all records */
 class RecordFilter : public Data
 {
@@ -14,16 +12,13 @@ public:
   wanted(const Record& rec){ return true; }
 };
 
-/** A filter of records using the -I option of RAPIOAlgorithm */
+/** A filter of records using a ConfigParamGroupI */
 class AlgRecordFilter : public RecordFilter
 {
 public:
-  AlgRecordFilter(RAPIOAlgorithm * a) : myAlg(a){ };
+  AlgRecordFilter(){ };
 
   virtual bool
   wanted(const Record& rec) override;
-
-protected:
-  RAPIOAlgorithm * myAlg;
 };
 }

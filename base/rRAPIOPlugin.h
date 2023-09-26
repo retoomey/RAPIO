@@ -7,18 +7,37 @@
 #include <rEventLoop.h>
 #include <rRAPIOAlgorithm.h> // patch temp
 
+#include <rHeartbeat.h>
+#include <rWebServer.h>
+
 namespace rapio {
 /** A program plugin interface.
  * The design idea here is to encapsulate abilities like heartbeat, etc. within
  * its own module along with its related member fields.
  *
- * Plugins call back to the algorithm, how to handle this?  If it's too
- * generic could be confusing, if not general enough we lose the point of the plugin.
+ * Plugins currently call back to the program using virtual plug methods in RAPIOProgram
  *
  * @author Robert Toomey
  */
 class RAPIOPlugin : public Utility {
 public:
+
+  /** Declare plugin with unique name */
+  RAPIOPlugin(const std::string& name) : myName(name), myActive(false){ }
+
+  /** Get name of plugin */
+  std::string
+  getName()
+  {
+    return myName;
+  }
+
+  /** Return if plugin is active */
+  virtual bool
+  isActive()
+  {
+    return myActive;
+  }
 
   /** Declare options used */
   virtual void
@@ -39,45 +58,54 @@ public:
   virtual void
   execute(RAPIOProgram * caller)
   { }
+
+protected:
+  /** Name of plug, typically related to command line such as 'sync', 'web' */
+  std::string myName;
+
+  /** Simple flag telling if plugin is active/running, etc. */
+  bool myActive;
 };
 
 /** Subclass of plugin adding a heartbeat ability */
 class PluginHeartbeat : public RAPIOPlugin {
 public:
 
-  #define PLUGINHEART "sync"
+  /** Create a heartbeat plugin */
+  PluginHeartbeat(const std::string& name) : RAPIOPlugin(name){ }
 
-  /** Declare plugin.  Humm could be a create right? */
+  /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner)
+  declare(RAPIOProgram * owner, const std::string& name = "sync")
   {
-    owner->addPlugin(new PluginHeartbeat()); // Humm exposes unness
-    return true;                             // success
+    owner->addPlugin(new PluginHeartbeat(name));
+    return true;
   }
 
   /** Declare options for the plugin */
   virtual void
   declareOptions(RAPIOOptions& o) override
   {
-    o.optional(PLUGINHEART, "", "Sync data option. Cron format style algorithm heartbeat.");
-    o.addGroup(PLUGINHEART, "TIME");
+    o.optional(myName, "", "Sync data option. Cron format style algorithm heartbeat.");
+    o.addGroup(myName, "TIME");
   }
 
   /** Declare advanced help for the plugin */
   virtual void
   addPostLoadedHelp(RAPIOOptions& o) override
   {
-    o.addAdvancedHelp(PLUGINHEART,
-      "In daemon/realtime sends heartbeat to algorithm.  Note if your algorithm lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
+    o.addAdvancedHelp(myName,
+      "Sends heartbeat to program.  Note if your program lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
   }
 
   /** Process our options */
   virtual void
   processOptions(RAPIOOptions& o) override
   {
-    myCronList = o.getString(PLUGINHEART);
+    myCronList = o.getString(myName);
   }
 
+  /** Execute/run the plugin */
   virtual void
   execute(RAPIOProgram * caller) override
   {
@@ -85,16 +113,15 @@ public:
     std::shared_ptr<Heartbeat> heart = nullptr;
 
     if (!myCronList.empty()) { // None required, don't make it
-      LogInfo("Attempting to create heartbeat for " << myCronList << "\n");
+      LogInfo("Attempting to create a heartbeat for " << myCronList << "\n");
 
-      // FIXME: humm should be more generic timer class without relying on RAPIOAlgorithm?
-      // If it were more generic wouldn't need Heartbeat subclass here at all
       heart = std::make_shared<Heartbeat>((RAPIOAlgorithm *) (caller), 1000);
       if (!heart->setCronList(myCronList)) {
-        LogSevere("Bad format for -sync string, aborting\n");
+        LogSevere("Bad format for -" << myName << " string, aborting\n");
         exit(1);
       }
       EventLoop::addEventHandler(heart);
+      myActive = true;
     }
   }
 
@@ -107,44 +134,59 @@ protected:
 /** Subclass of plugin doing webserver ability */
 class PluginWebserver : public RAPIOPlugin {
 public:
-  // Ok so the hooks for command line stuff...
 
-  // void options(RAPIOOptions& o){
-  void
-  options()
+  /** Create a web server plugin */
+  PluginWebserver(const std::string& name) : RAPIOPlugin(name){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "web")
   {
-    // o.optional("web",
-    //   "off",
-    //   "Web server ability for REST pull algorithms. Use a number to assign a port.");
-    // o.setHidden("web");
+    owner->addPlugin(new PluginWebserver(name));
+    return true;
   }
 
-  // void addPostLoadedHelp(RAPIOOptions& o)
-  void
-  addPostLoadedHelp()
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override
   {
-    //  o.addAdvancedHelp("web",
-    //    "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
+    o.optional(myName,
+      "off",
+      "Web server ability for REST pull algorithms. Use a number to assign a port.");
+    o.setHidden(myName);
+    o.addGroup("web", "I/O");
   }
 
-  void
-  processOptions()
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override
   {
-    // myWebServerMode = o.getString("web");
+    o.addAdvancedHelp(myName,
+      "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
   }
 
-  void
-  execute()
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override
   {
-    /*
-     * // Launch event loop, either along with web server, or solo
-     * const bool wantWeb = (myWebServerMode != "off");
-     *
-     * myWebServerOn = wantWeb;
-     * if (wantWeb) {
-     *  WebServer::startWebServer(myWebServerMode, this);
-     * }
-     */
+    myWebServerMode = o.getString(myName);
   }
+
+  /** Execute/run the plugin */
+  virtual void
+  execute(RAPIOProgram * caller) override
+  {
+    const bool wantWeb = (myWebServerMode != "off");
+
+    myActive = wantWeb;
+    if (wantWeb) {
+      WebServer::startWebServer(myWebServerMode, caller);
+    }
+  }
+
+protected:
+
+  /** The mode of web server, if any */
+  std::string myWebServerMode;
 };
 }

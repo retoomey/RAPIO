@@ -10,11 +10,11 @@
 #include "ccronexpr.h"
 
 namespace rapio {
-class RAPIOAlgorithm;
+class RAPIOProgram;
 
 /**
  * A baby cron format timer, except we have seconds as well
- * This is used to fire timed events at an algorithm for
+ * This is used to fire timed events at a program for
  * accumulative non-data drive actions.
  *
  * @author Robert Toomey
@@ -22,10 +22,10 @@ class RAPIOAlgorithm;
 class Heartbeat : public EventTimer {
 public:
   /** Build the heartbeat */
-  Heartbeat(RAPIOAlgorithm * alg, size_t milliseconds);
+  Heartbeat(RAPIOProgram * prog, size_t milliseconds);
 
   /** Parse our special crontablike language string
-   * @param cronlist The string from the algorithm parameters. */
+   * @param cronlist The string from the program parameters. */
   bool
   setCronList(const std::string& cronlist);
 
@@ -34,8 +34,8 @@ public:
   action() override;
 
 protected:
-  /** The algorithm we send events to */
-  RAPIOAlgorithm * myAlg;
+  /** The program we send events to */
+  RAPIOProgram * myProgram;
 
   /** Last pulse time (the pinned time) */
   Time myLastPulseTime;

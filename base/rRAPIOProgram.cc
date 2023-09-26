@@ -42,21 +42,26 @@ RAPIOProgram::initializeBaseParsers()
   file->initialize();
 }
 
-RAPIOOptions
-RAPIOProgram::initializeOptions()
+void
+RAPIOProgram::initializePlugins()
 {
-  RAPIOOptions o("Program");
+  // Any ability base to program called here
+  // Currently for program we don't add anything extra at
+  // the class level
 
-  declarePlugins(); // Declare plugins before options, allows suboptions
+  // Subclass extra
+  declarePlugins();
+}
 
+void
+RAPIOProgram::initializeOptions(RAPIOOptions& o)
+{
   // Plugins get to go first in case an algorithm tries to use our standard flag
   for (auto p: myPlugins) {
     p->declareOptions(o);
   }
 
   declareOptions(o);
-
-  return o;
 }
 
 void
@@ -96,8 +101,13 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     }
 
     // ------------------------------------------------------------
+    // Declare plugins
+    initializePlugins();
+
+    // ------------------------------------------------------------
     // Option handling
-    RAPIOOptions o      = initializeOptions();
+    RAPIOOptions o(myDisplayClass);
+    initializeOptions(o);
     const bool wantHelp = o.processArgs(argc, argv);
     o.initToSettings(); // log colors
 

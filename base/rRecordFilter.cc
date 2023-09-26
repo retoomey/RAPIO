@@ -1,6 +1,6 @@
 #include "rRecordFilter.h"
-#include "rRAPIOAlgorithm.h"
 #include "rStrings.h"
+#include "rConfigParamGroup.h"
 
 using namespace rapio;
 
