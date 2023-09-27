@@ -15,6 +15,7 @@
 #include "rFactory.h"
 #include "rDataTypeHistory.h"
 #include "rRecordFilter.h"
+#include "rRecordNotifier.h"
 
 // Baseline initialize
 #include "rDataFilter.h"
@@ -39,8 +40,6 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
     "/data/radar/KTLX/code_index.xml",
     "The input sources");
   o.addGroup("i", "I/O");
-  o.optional("I", "*", "The input type filter patterns");
-  o.addGroup("I", "I/O");
 
   // The realtime option for reading archive, realtime, etc.
   const std::string r = "r";
@@ -79,10 +78,6 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "*",
     "The output types patterns, controlling product names and writing");
   o.addGroup("O", "I/O");
-  o.optional("n",
-    "",
-    "The notifier for newly created files/records.");
-  o.addGroup("n", "I/O");
   o.optional("postwrite",
     "",
     "Simple executable to call post file writing using %filename%.");
@@ -95,7 +90,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
 {
   // Dispatch advanced help to the mega static classes
   o.addAdvancedHelp("i", IOIndex::introduceHelp());
-  o.addAdvancedHelp("n", RecordNotifier::introduceHelp());
 
   // Datatype will try to load all dynamic modules, so we want to avoid that
   // unless help is requested
@@ -104,8 +98,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   }
 
   // Static advanced on demand (lazy add)
-  o.addAdvancedHelp("I",
-    "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
   o.addAdvancedHelp("h",
     "For indexes, this will be the global time in minutes for all indexes provided.");
   o.addAdvancedHelp("O",
@@ -126,12 +118,6 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
   ConfigParamGroupO paramO;
 
   paramO.readString(param);
-
-  // Gather notifier list and output directory
-  myNotifierList = o.getString("n");
-  ConfigParamGroupn paramn;
-
-  paramn.readString(myNotifierList);
 
   // Gather output -o settings
   const std::string write = o.getString("o");
@@ -163,10 +149,6 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
   ConfigParamGroupi parami;
 
   parami.readString(o.getString("i"));
-
-  ConfigParamGroupI paramI;
-
-  paramI.readString(o.getString("I"));
 
   myReadMode = o.getString("r");
 } // RAPIOAlgorithm::processInputParams
@@ -213,7 +195,6 @@ RAPIOAlgorithm::isWebServer()
     }
   }
   return false;
-  // return myWebServerOn;
 }
 
 void
@@ -235,10 +216,6 @@ RAPIOAlgorithm::initializeBaseline()
   IOIndex::introduceSelf();
 
   // -------------------------------------------------------------------
-  // Notification support (Send xml records somewhere on processing)
-  RecordNotifier::introduceSelf();
-
-  // -------------------------------------------------------------------
   // Unit conversion support
   Unit::initialize();
 } // RAPIOAlgorithm::initializeBaseline
@@ -253,6 +230,10 @@ RAPIOAlgorithm::initializePlugins()
   // algorithm, might be better to be consistent though.
   PluginHeartbeat::declare(this, "sync"); // Heartbeat ability/options
   PluginWebserver::declare(this, "web");  // Webserver ability/options
+  // I/O plugins
+  PluginNotifier::declare(this, "n");     // Notification ability (fam, etc.)
+  PluginRecordFilter::declare(this, "I"); // Record filter ability (ingest)
+  // PluginProductFilter::declare(this, "O");  // Product filter ability (output)
 
   return RAPIOProgram::initializePlugins();
 }
@@ -274,21 +255,6 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
   processOutputParams(o); // Process stock output params declared above
 
   return RAPIOProgram::finalizeOptions(o);
-}
-
-void
-RAPIOAlgorithm::setUpRecordNotifier()
-{
-  // Let record notifier factory create them, we will hold them though
-  myNotifiers = RecordNotifier::createNotifiers();
-}
-
-void
-RAPIOAlgorithm::setUpRecordFilter()
-{
-  std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
-
-  Record::theRecordFilter = f;
 }
 
 void
@@ -359,10 +325,6 @@ void
 RAPIOAlgorithm::execute()
 {
   setUpRecordQueue();
-
-  setUpRecordNotifier();
-
-  setUpRecordFilter();
 
   setUpInitialIndexes();
 
@@ -453,8 +415,8 @@ RAPIOAlgorithm::handleEndDatasetEvent()
 }
 
 bool
-RAPIOAlgorithm::productMatch(const std::string& key,
-  std::string                                 & productName)
+RAPIOAlgorithm::isProductWanted(const std::string& key,
+  std::string                                    & productName)
 {
   bool found = false;
 
@@ -485,14 +447,6 @@ RAPIOAlgorithm::productMatch(const std::string& key,
 }
 
 bool
-RAPIOAlgorithm::isProductWanted(const std::string& key)
-{
-  std::string newProductName = "";
-
-  return (productMatch(key, newProductName));
-}
-
-bool
 RAPIOAlgorithm::writeDirectOutput(const URL& path,
   std::shared_ptr<DataType>                outputData,
   std::map<std::string, std::string>       & outputParams)
@@ -516,7 +470,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
 
   std::string newProductName = "";
 
-  if (productMatch(key, newProductName)) {
+  if (isProductWanted(key, newProductName)) {
     // Original typeName, which may match key or not
     const std::string typeName = outputData->getTypeName();
 
@@ -545,7 +499,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
         // Get back the output folder for notifications
         // and notify each notifier for this writer.
         const std::string outputfolder = outputParams["outputfolder"];
-        for (auto& n:myNotifiers) {
+        for (auto& n:PluginNotifier::theNotifiers) { // if any, use
           n->writeRecords(outputfolder, records);
         }
       } // Not gonna error..writers should be complaining
