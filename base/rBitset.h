@@ -196,6 +196,13 @@ public:
     return myNumValues;
   }
 
+  /** A count of on bits, useful for debugging */
+  size_t const
+  getAllOnBits() const
+  {
+    return myBits.count();
+  }
+
   /** Get number of bits per value we use */
   size_t
   getNumBits() const override
@@ -284,6 +291,14 @@ public:
       os << myBits[i++];
     }
   }
+
+  /** Write our bits to an ofstream */
+  bool
+  writeBits(std::ofstream& file) const;
+
+  /** Read our bits from an ifstream. */
+  bool
+  readBits(std::ifstream& file);
 
   /** Allow operator << to access our internal fields */
   friend std::ostream&

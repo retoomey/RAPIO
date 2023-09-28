@@ -56,7 +56,7 @@ RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
 {
-  ProcessTimer merge("Nearest merge\n");
+  ProcessTimer merge("Reading range/merging 1 took:\n");
 
   size_t startX, startY, numX, numY; // subgrid coordinates
 
@@ -119,7 +119,7 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   if (myWalkTimer != nullptr) {
     myWalkTimer->add(merge);
   }
-  LogInfo(merge);
+  // LogInfo(merge);
   myWalkCount++;
 } // RAPIOFusionRosterAlg::ingest
 
@@ -168,29 +168,55 @@ RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t
 } // RAPIOFusionRosterAlg::nearestNeighbor
 
 void
+RAPIOFusionRosterAlg::generateMasks()
+{
+  ProcessTimer maskGen("Generating coverage bit masks.\n");
+
+  // Clear old bits
+  for (auto& s:mySourceInfos) {
+    s.mask.clearAllBits();
+  }
+
+  // Mask generation algorithm
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
+      for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
+        size_t i = myNearestIndex.getIndex3D(x, y, z);
+        auto& c  = myNearest[i];
+
+        for (size_t k = 0; k < FUSION_MAX_CONTRIBUTING; ++k) {
+          // if we find a 0 id, then since we're insertion sorted by range,
+          // then this means all are 0 later...so continue
+          if (c.id[k] == 0) {
+            continue;
+          }
+          // If not zero, we need the sourceInfo for it.  This is why
+          // we store as ids in a vector it makes this lookup fast
+          SourceInfo * info = &mySourceInfos[c.id[k]];
+          Bitset& b         = info->mask; // refer to mask
+
+          // FIXME: it's possible locally caching 'hits' would speed up things
+          // since we know weather clumps...
+          const size_t lx = x - (info->startX); // "shouldn't" underflow
+          const size_t ly = y - (info->startY);
+          const size_t li = b.getIndex3D(lx, ly, z);
+          // My class here could be faster...let's see if it matters...
+          info->mask.set(li, 1); // humm this loops..FIXME: the 1 case can be faster
+        }
+      }
+    }
+  }
+  LogInfo(maskGen);
+} // RAPIOFusionRosterAlg::generateMasks
+
+void
 RAPIOFusionRosterAlg::scanCacheDirectory()
 {
   // FIXME: Roster won't be a typical algorithm, it will probably
   // only handle the processHeartbeat
   LogInfo("Grid is " << myFullGrid << "\n");
 
-  // Ok simulate the subgrid of a radar...we'll be putting all this code in
-  // one place at some point...with stage1 we 'trust' the data pulled, we
-  // should check, etc.
-  const LengthKMs myRangeKMs = 460;
-  const LengthKMs fudgeKMs   = 5; // Extra to include so circle is inside box a bit
-  // const LLH center        = r->getRadarLocation();
-  const LLH center = ConfigRadarInfo::getLocation("KBOX");
-
-  const AngleDegs cLat    = center.getLatitudeDeg();
-  const AngleDegs cLon    = center.getLongitudeDeg();
-  const LengthKMs cHeight = center.getHeightKM();
-
-  LLCoverageArea myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
-
-  // 1. Roster will need to know the grid used by stage1 and stage2
   int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
-  int N     = myRadarGrid.getNumX() * myRadarGrid.getNumY() * myRadarGrid.getNumZ();
 
   firstTimeSetup();
 
@@ -253,15 +279,17 @@ protected:
   LogInfo("Total walk/merge time " << *myWalkTimer << " (" << myWalkCount << ") sources active.\n");
   delete myWalkTimer;
 
-  LogInfo("************MASK ALGORITHM **************\n");
-  ProcessTimer help("HELP Showstopper!\n");
+  ProcessTimer maskGen("Generating coverage bit masks.\n");
 
   // Temp dump found radar list
-  for (auto& s:myNameToInfo) {
-    LogInfo("Name is " << s.first << "\n");
-    //  myNameToInfo.mask.clearAllBits();
-  }
+  // for (auto& s:myNameToInfo) {
+  //  LogInfo("Name is " << s.first << "\n");
+  //  myNameToInfo.mask.clearAllBits();
+  // }
 
+  generateMasks();
+
+  #if 0
   // Mask generation algorithm
   for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
     for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
@@ -291,14 +319,35 @@ protected:
       }
     }
   }
-  LogInfo(help);
+  LogInfo(maskGen);
+  #endif // if 0
 
 
-  /*
-   * for(auto& s:myNameToInfo){
-   * // WRITE  myNameToInfo.mask;
-   * }
-   */
+  // std::string maskDir = FusionCache::getMaskDirectory(myFullGrid);
+
+  // write masks to disk
+
+  ProcessTimer maskTimer("");
+  size_t maskCount = 0;
+  directory = FusionCache::getMaskDirectory(myFullGrid);
+  OS::ensureDirectory(directory);
+  LogSevere("Make directory is " << directory << "\n");
+  size_t all = 0;
+  size_t on  = 0;
+  for (auto& s:myNameToInfo) {
+    SourceInfo& source   = mySourceInfos[s.second];
+    std::string maskFile = FusionCache::getMaskFilename(source.name, myFullGrid, directory);
+    std::string fullpath = directory + maskFile;
+    FusionCache::writeMaskFile(source.name, fullpath, source.mask);
+    on += source.mask.getAllOnBits();
+    all  += source.mask.size();
+    maskCount++;
+  }
+  LogInfo("Writing " << maskCount << " masks took: " << maskTimer << "\n");
+
+  float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
+  percent = 100.0 - (percent * 100.0);
+  LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
 
   return;
 
@@ -323,6 +372,7 @@ protected:
   // center for each radar for each cell of its subgrid.  This is done in
   // stage1, so that code should become common.
 
+  #if 0
   // Create a vector of uint8_t (1 byte per storage location)
   std::vector<uint8_t> bitArray((N + 7) / 8, 0);
 
@@ -367,8 +417,8 @@ protected:
       //  std::cout << "Unable to write test array...\n";
     }
   }
-
-  LogSevere("Test post write time is " << test << "\n");
+  // LogSevere("Test post write time is " << test << "\n");
+  #endif // if 0
 } // RAPIOFusionRosterAlg::processNewData
 
 void

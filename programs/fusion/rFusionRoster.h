@@ -51,6 +51,19 @@ public:
  * This requires stage ones to generate metainformation, such
  * as a range map.
  *
+ * We let stage 1 generate the ranges since this horizontally
+ * scales.  It can currently take several seconds to generate
+ * the ranges from source center and we don't want roster having
+ * to do this math for 300 radars.
+ *
+ * This range/meta file is read in by scanning/walking the
+ * directory.  The nearest neighbor algorithm then inserts each
+ * of these into our 'big' data structure.  Finally, we create a 1/0
+ * bit mask for each source and write back. This mask is then
+ * used by stage1 to turn on/off generated grid points for that
+ * source.  The area of coverage for the range and bit masks is
+ * the covered subgrid of the CONUS or larger fusion we're running.
+ *
  * @author Robert Toomey
  *
  **/
@@ -76,14 +89,20 @@ public:
   void
   ingest(const std::string& sourcename, const std::string& fullpath);
 
-  /** Do nearest neighbor algorithm */
+  /** Do nearest neighbor algorithm ingest for a single source.
+  * This modifies the current nearest list with the new one. */
   void
   nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id,
     size_t startX, size_t startY, size_t numX, size_t numY);
 
-  /** Scan cache directory */
+  /** Scan cache directory looking for range files from stage1 */
   void
   scanCacheDirectory();
+
+  /** Generate masks from nearest neighbor results into individual
+   * bit masks for each source */
+  void
+  generateMasks();
 
   /** Process heartbeat in subclasses.
    * @param n The actual now time triggering the event.

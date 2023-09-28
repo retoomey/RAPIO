@@ -72,6 +72,20 @@ StaticVector::smallestBitsToStore(unsigned int x)
   return static_cast<unsigned int>(std::log2(x) + 1);
 }
 
+bool
+Bitset::writeBits(std::ofstream& file) const
+{
+  file << myBits;
+  return true;
+}
+
+bool
+Bitset::readBits(std::ifstream& file)
+{
+  file >> myBits; // Humm rounded to 8 or not need to check
+  return true;
+}
+
 ostream&
 rapio::operator << (ostream& os, const BitsetOutSettings& b)
 {

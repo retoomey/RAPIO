@@ -160,3 +160,34 @@ FusionCache::readRangeFile(const std::string& filename,
 
   return data;
 } // FusionCache::readRangeFile
+
+bool
+FusionCache::writeMaskFile(const std::string& name, const std::string& filename, const Bitset& mask)
+{
+  bool success = true;
+
+  // FIXME: any 'extra' header stuff
+  std::ofstream outFile(filename, std::ios::binary);
+
+  if (outFile.is_open()) {
+    mask.writeBits(outFile);
+    size_t on     = mask.getAllOnBits();
+    size_t all    = mask.size();
+    float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
+    percent = 100.0 - (percent * 100.0);
+
+    // LogInfo("Wrote " << filename << " ("<< percent << ") " << on << " of " << all << "\n");
+    LogInfo("Wrote " << name << " (" << percent << " % saved) " << on << " of " << all << "\n");
+  } else {
+    LogSevere("Couldn't write bitset to " << filename << "\n");
+    success = false;
+  }
+  outFile.close();
+  return success;
+}
+
+bool
+FusionCache::readMaskFile(const std::string& filename)
+{
+  return true;
+}

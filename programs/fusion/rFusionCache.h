@@ -260,11 +260,12 @@ public:
 
   /** Common code for filenames for stage1/roster */
   static std::string
-  getFilename(const std::string& name, const std::string& subfolder, const LLCoverageArea& grid,
-    std::string& directory)
+  getFilename(const std::string& name, const std::string& subfolder,
+    const std::string& suffix,
+    const LLCoverageArea& grid, std::string& directory)
   {
     directory = getDirectory(subfolder, grid);
-    return (name + ".cache"); // simple for now
+    return (name + suffix);
   };
 
   /** Get the directory for range/marker files */
@@ -279,7 +280,7 @@ public:
   getRangeFilename(const std::string& name, const LLCoverageArea& grid,
     std::string& directory)
   {
-    return getFilename(name, "active", grid, directory);
+    return getFilename(name, "active", ".cache", grid, directory);
   }
 
   /** Get the directory for mask files */
@@ -291,10 +292,10 @@ public:
 
   /** Get the mask from roster filename and directory */
   static std::string
-  getMasksFilename(const std::string& name, const LLCoverageArea& grid,
+  getMaskFilename(const std::string& name, const LLCoverageArea& grid,
     std::string& directory)
   {
-    return getFilename(name, "mask", grid, directory);
+    return getFilename(name, "mask", ".mask", grid, directory);
   }
 
   /** Write ranges to a binary file.
@@ -320,9 +321,15 @@ public:
    * nearest active neighbor calculation.  There is one written
    * intended for each stage1.
    */
-  // static void
-  // writeMaskFile(const std::string& filename, LLCoverageArea& outg,
-  //  std::vector<std::shared_ptr<AzRanElevCache> >& myLLProjections,
-  //  LengthKMs maxRangeKMs);
+  static bool
+  writeMaskFile(const std::string& name, const std::string& filename, const Bitset& mask);
+
+  /** Read mask to a binary file.
+   * Masks are 1 and 0 small files, written by roster after the
+   * nearest active neighbor calculation.  There is one written
+   * intended for each stage1.
+   */
+  static bool
+  readMaskFile(const std::string& filename);
 };
 }
