@@ -8,6 +8,7 @@
 #include "rLLHGridN2D.h"
 
 #include "rFusionCache.h"
+#include "rStage2Data.h"
 
 namespace rapio {
 /** Stage 1 algorithm.  This handles projection and resolving values
@@ -70,9 +71,14 @@ public:
   void
   processRadialSet(std::shared_ptr<RadialSet> r);
 
-  /** Update dirty array */
-  void
-  updateDirty(const AngleDegs elevDegs, const Time rTime);
+  /** Process a single height layer */
+  size_t
+  processHeightLayer(size_t       layer,
+    const std::vector<double>     levels,
+    const std::vector<DataType *> pointers,
+    const Time                    & rTime,
+    Stage2Data                    & stage2
+  );
 
   /** Process a volume generating stage 2 output */
   void
@@ -167,5 +173,13 @@ protected:
 
   /** The resolver we are using to calculate values */
   std::shared_ptr<VolumeValueResolver> myResolver;
+
+  /** The mask from roster covering current nearest neighbor.
+   * Basically we don't need to calculate values currently covered by
+   * other radars. */
+  Bitset myMask;
+
+  /** Do we have a mask? */
+  bool myHaveMask;
 };
 }

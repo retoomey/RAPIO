@@ -518,9 +518,6 @@ public:
   /** Utility marked points */
   static std::shared_ptr<std::unordered_set<size_t> > myMarked;
 
-  /** The marked array only grows so our sparsevector is useful */
-  static std::shared_ptr<SparseVector<size_t> > myMarked2;
-
 protected:
   /** Size in X of entire database */
   size_t myNumX;

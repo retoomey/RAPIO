@@ -174,8 +174,6 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // revisit this later
     // FIXME: Should be hidden in the database
     db.myMarked = std::make_shared<std::unordered_set<size_t> >();
-    //  db.myMarked2 = std::make_shared<SparseVector<size_t> >(SparseVector<size_t>({myFullGrid.getNumX(),
-    //         myFullGrid.getNumY(), myFullGrid.getNumZ()}));
 
     auto& mark = *db.myMarked;
 
@@ -224,8 +222,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
 
     // clear the marked array
-    db.myMarked  = nullptr;
-    db.myMarked2 = nullptr;
+    db.myMarked = nullptr;
 
     // Dump source list
     db.dumpSources();

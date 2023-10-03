@@ -7,6 +7,8 @@
 #include <boost/dynamic_bitset.hpp>
 #include <cmath>
 
+#include <rError.h>
+
 namespace rapio {
 /** A class allowing different ways to store a std::vector of things choosing memory vs speed.
  * Note: Number of elements is fixed on creation at moment.
@@ -53,7 +55,7 @@ public:
 
   /** Get number of bits per value we use */
   virtual size_t
-  getNumBits() const = 0;
+  getNumBitsPerValue() const = 0;
 
   /** (AI) Calculate the max unsigned value with all bits set.
    * Up to a unsigned long long that is, which hopefully we never go
@@ -105,7 +107,7 @@ public:
 
   /** Get number of bits per value we use */
   virtual size_t
-  getNumBits() const override
+  getNumBitsPerValue() const override
   {
     return (sizeof(T) * 8);
   }
@@ -116,7 +118,7 @@ public:
   virtual unsigned long long
   calculateMaxValue() const override
   {
-    return static_cast<unsigned long long>(std::pow(2, getNumBits()) - 1);
+    return static_cast<unsigned long long>(std::pow(2, getNumBitsPerValue()) - 1);
   }
 
   /** Set all bits to 1 or max value */
@@ -164,6 +166,122 @@ protected:
   std::vector<T> myData;
 };
 
+/** Bitset1 stores N values of 1 bit each */
+class Bitset1 : public StaticVector {
+public:
+
+  /** Empty constructor */
+  Bitset1(){ }
+
+  /** Construct a bitset of using N values of 1 bit each */
+  Bitset1(size_t numValues) : StaticVector(numValues),
+    myBits(numValues)
+  { }
+
+  /** Create a bitset of N dimensions */
+  Bitset1(std::vector<size_t> dimensions) : StaticVector(dimensions),
+    myBits(calculateSize(dimensions))
+  { }
+
+  /** Get 'size' of items, which is number of bits */
+  size_t
+  size() const override
+  {
+    return myBits.size();
+  }
+
+  /** A count of on bits, useful for debugging */
+  size_t const
+  getAllOnBits() const
+  {
+    return myBits.count();
+  }
+
+  /** Get number of bits per value we use */
+  size_t
+  getNumBitsPerValue() const override
+  {
+    return 1;
+  }
+
+  /** (AI) Calculate the max unsigned value with all bits set.
+   * Up to a unsigned long long that is, which hopefully we never go
+   * over or you should rethink your choice of data structure. */
+  unsigned long long
+  calculateMaxValue() const override
+  {
+    return 1;
+  }
+
+  /** Set all bits to 1 or max value */
+  void
+  setAllBits() override
+  {
+    myBits.set();
+  }
+
+  /** Set all bits to 0 or min value */
+  void
+  clearAllBits() override
+  {
+    myBits.reset();
+  }
+
+  /** A guess of deep size in bytes, useful for debugging and memory tracking */
+  size_t
+  deepsize() const override
+  {
+    size_t size = sizeof(*this);
+
+    size += myBits.capacity() / CHAR_BIT;
+
+    return size;
+  }
+
+  /** Get a value back into a size_t.  Can overflow if not large enough for storage */
+  size_t
+  get(size_t i) const override
+  {
+    return myBits[i];
+  }
+
+  /** Set a value back from a size_t.  Can overflow if not large enough for storage */
+  void
+  set(size_t i, size_t value) override
+  {
+    myBits[i] = (value != 0); // any non-zero is a 1
+  }
+
+  /** Dump bits at location to stream, useful for debugging.
+   * Note that boost::dynamic_bitset is just bits, we're the ones breaking it down into N values.
+   */
+  void
+  bits(std::ostream& os, size_t at) const
+  {
+    os << myBits[at];
+  }
+
+  /** Write our bits to an ofstream */
+  bool
+  writeBits(std::ofstream& file) const
+  {
+    file << myBits;
+    return true;
+  }
+
+  /** Read our bits from an ifstream. */
+  bool
+  readBits(std::ifstream& file)
+  {
+    file >> myBits; // Humm rounded to 8 or not need to check
+    return true;
+  }
+
+protected:
+  /** Bit storage for values */
+  boost::dynamic_bitset<> myBits;
+};
+
 /** Bitset class that allows convenient storing of N values using B bits each.
  * This could be reimplemented using std::bitset depending on C++ version.
  * The advantage to this is reducing memory for large datasets that have to be
@@ -179,13 +297,13 @@ public:
 
   /** Construct a bitset of using N values of B given size in bits each */
   Bitset(size_t numValues, size_t bitsPerValue) : StaticVector(numValues),
-    myNumValues(numValues), myNumBits(bitsPerValue),
+    myNumValues(numValues), myNumBitsPerValue(bitsPerValue),
     myBits(numValues * bitsPerValue)
   { }
 
   /** Create a bitset of N dimensions */
   Bitset(std::vector<size_t> dimensions, size_t bitsPerValue) : StaticVector(dimensions),
-    myNumValues(calculateSize(dimensions)), myNumBits(bitsPerValue),
+    myNumValues(calculateSize(dimensions)), myNumBitsPerValue(bitsPerValue),
     myBits(calculateSize(dimensions) * bitsPerValue)
   { }
 
@@ -205,9 +323,9 @@ public:
 
   /** Get number of bits per value we use */
   size_t
-  getNumBits() const override
+  getNumBitsPerValue() const override
   {
-    return myNumBits;
+    return myNumBitsPerValue;
   }
 
   /** (AI) Calculate the max unsigned value with all bits set.
@@ -216,10 +334,10 @@ public:
   unsigned long long
   calculateMaxValue() const override
   {
-    if (myNumBits >= std::numeric_limits<unsigned long long>::digits) {
+    if (myNumBitsPerValue >= std::numeric_limits<unsigned long long>::digits) {
       return std::numeric_limits<unsigned long long>::max();
     } else {
-      return (1ULL << myNumBits) - 1;
+      return (1ULL << myNumBitsPerValue) - 1;
     }
   }
 
@@ -253,27 +371,45 @@ public:
   get(size_t i) const override
   {
     size_t y    = 0;
-    size_t base = i * myNumBits;
+    size_t base = i * myNumBitsPerValue;
 
     // Pull big endian first (human reading order)
-    for (int j = myNumBits - 1; j >= 0; j--) {
+    for (int j = myNumBitsPerValue - 1; j >= 0; j--) {
       bool bit = myBits[base++];
       y |= bit << j;
     }
     return y;
   }
 
+  /** Single bit get (specialization for 1 bit N value) */
+  bool
+  get1(size_t i) const
+  {
+    if (i > myBits.size()) {
+      LogSevere("BIT AT " << i << " is GREATER " << myBits.size() << "\n");
+      exit(1);
+    }
+    return myBits[i];
+  }
+
   /** Set a value back from a size_t.  Can overflow if not large enough for storage */
   void
   set(size_t i, size_t value) override
   {
-    size_t base = i * myNumBits;
+    size_t base = i * myNumBitsPerValue;
 
     // Push big endian first (human reading order)
-    for (int j = myNumBits - 1; j >= 0; j--) {
+    for (int j = myNumBitsPerValue - 1; j >= 0; j--) {
       bool bit = (value >> j) & 1;
       myBits[base++] = bit;
     }
+  }
+
+  /** Single bit get (specialization for 1 bit N value) */
+  void
+  set1(size_t i)
+  {
+    myBits[i] = true;
   }
 
   // Unique methods to bitset
@@ -285,9 +421,9 @@ public:
   bits(std::ostream& os, size_t at) const
   {
     size_t count = 0;
-    size_t i     = at * myNumBits;
+    size_t i     = at * myNumBitsPerValue;
 
-    while (count++ < myNumBits) {
+    while (count++ < myNumBitsPerValue) {
       os << myBits[i++];
     }
   }
@@ -310,7 +446,7 @@ protected:
   size_t myNumValues;
 
   /** Number of bits that we are storing */
-  size_t myNumBits;
+  size_t myNumBitsPerValue;
 
   /** Bit storage for values */
   boost::dynamic_bitset<> myBits;

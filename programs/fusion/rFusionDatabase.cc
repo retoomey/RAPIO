@@ -4,9 +4,6 @@ using namespace rapio;
 
 std::shared_ptr<std::unordered_set<size_t> > FusionDatabase::myMarked = nullptr;
 
-std::shared_ptr<SparseVector<size_t> > FusionDatabase::myMarked2 = nullptr;
-
-// ---------------------------------------
 // First merge
 // This will become a plug-in probably for various merging options
 //
@@ -145,11 +142,9 @@ FusionDatabase::timePurge(Time atTime, TimeDuration d)
 
     // Hack for moment.  Any 'old' not cutoff get pushed into the newSource
     myMarked = std::make_shared<std::unordered_set<size_t> >();
-    //  myMarked2 = std::make_shared<SparseVector<size_t> >(SparseVector<size_t>({myNumX, myNumY, myNumZ}));
     auto newSource = getNewSourceList("newone");
     mergeObservations(r, newSource, cutoff);
     myMarked = nullptr;
-    //   myMarked2 = nullptr;
   }
 } // FusionDatabase::timePurge
 
@@ -269,8 +264,7 @@ FusionDatabase::mergeObservations(std::shared_ptr<SourceList> oldSourcePtr,
   // We'll put back old values that don't have new values, which
   // basically replaces all x,y,z values that are new
   // addMissing already marked some
-  auto& have  = *myMarked;
-  auto& have2 = *myMarked2;
+  auto& have = *myMarked;
 
   #if 0
   for (const auto& n: newSource.myObs) {

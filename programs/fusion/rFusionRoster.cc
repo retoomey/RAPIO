@@ -289,136 +289,32 @@ protected:
 
   generateMasks();
 
-  #if 0
-  // Mask generation algorithm
-  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
-    for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
-      for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
-        size_t i = myNearestIndex.getIndex3D(x, y, z);
-        auto& c  = myNearest[i];
-
-        for (size_t k = 0; k < FUSION_MAX_CONTRIBUTING; ++k) {
-          // if we find a 0 id, then since we're insertion sorted by range,
-          // then this means all are 0 later...so continue
-          if (c.id[k] == 0) {
-            continue;
-          }
-          // If not zero, we need the sourceInfo for it.  This is why
-          // we store as ids in a vector it makes this lookup fast
-          SourceInfo * info = &mySourceInfos[c.id[k]];
-          Bitset& b         = info->mask; // refer to mask
-
-          // FIXME: it's possible locally caching 'hits' would speed up things
-          // since we know weather clumps...
-          const size_t lx = x - (info->startX); // "shouldn't" underflow
-          const size_t ly = y - (info->startY);
-          const size_t li = b.getIndex3D(lx, ly, z);
-          // My class here could be faster...let's see if it matters...
-          info->mask.set(li, 1); // humm this loops..FIXME: the 1 case can be faster
-        }
-      }
-    }
-  }
-  LogInfo(maskGen);
-  #endif // if 0
-
-
-  // std::string maskDir = FusionCache::getMaskDirectory(myFullGrid);
-
-  // write masks to disk
-
+  // Write masks to disk
   ProcessTimer maskTimer("");
   size_t maskCount = 0;
+
   directory = FusionCache::getMaskDirectory(myFullGrid);
   OS::ensureDirectory(directory);
-  LogSevere("Make directory is " << directory << "\n");
+  LogInfo("Mask directory is " << directory << "\n");
   size_t all = 0;
   size_t on  = 0;
+
   for (auto& s:myNameToInfo) {
     SourceInfo& source   = mySourceInfos[s.second];
     std::string maskFile = FusionCache::getMaskFilename(source.name, myFullGrid, directory);
     std::string fullpath = directory + maskFile;
     FusionCache::writeMaskFile(source.name, fullpath, source.mask);
-    on += source.mask.getAllOnBits();
-    all  += source.mask.size();
+    LogInfo("dimensions: " << source.numX << ", " << source.numY << "\n");
+    on  += source.mask.getAllOnBits();
+    all += source.mask.size();
     maskCount++;
   }
   LogInfo("Writing " << maskCount << " masks took: " << maskTimer << "\n");
 
   float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
+
   percent = 100.0 - (percent * 100.0);
   LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
-
-  return;
-
-  // exit(1);
-
-  // FIXME: Humm Bitset could have a read/write method to a file
-
-  // Simulate storing array of XYZ.  Tomorrow I think
-
-  // For each radar, we'll have to synchronize the subgrid math, etc.
-  // or it will break pretty badly.  Most likely we'll need the
-  // folders/etc. names based on the grid dimensions. Two things:
-  // 1.  If a radar 'does' change lat/lon/height center location don't break.
-  // 2.  If the merger cube changes, don't break..auto fill
-
-
-  // 2. Roster should probably know the subgrid per radar.  This would
-  // mean range needs to be in radarinfo or known globally.  Ups and downs
-  // to this.
-
-  // 3. To get nearest X radars, we'll have to calculate the range from
-  // center for each radar for each cell of its subgrid.  This is done in
-  // stage1, so that code should become common.
-
-  #if 0
-  // Create a vector of uint8_t (1 byte per storage location)
-  std::vector<uint8_t> bitArray((N + 7) / 8, 0);
-
-  int indexToSet = 0;
-
-  ProcessTimer test("Testing speed of write\n");
-
-  // Random access set...full grid.  Though in order we 'should' be faster
-  for (size_t i = 0; i < N; ++i) {
-    bitArray[i / 8] |= (1 << (i % 8));
-  }
-
-  //  int indexToGet = 0;
-  //  bool bitValue = (bitArray[indexToGet/8] >> (indexToGet %8)) & 1;
-  //  std::cout << "Bit at index " << indexToGet << ": " << bitValue << "\n";
-
-  // Simulating masks for 300 radars...
-  for (size_t j = 0; j < 300; j++) {
-    std::stringstream ss;
-    ss << "bits";
-    ss << j;
-    ss << ".roster";
-
-    // std::cout << "Writing file " << ss.str() << "\n";
-    std::ofstream outFile(ss.str(), std::ios::binary | std::ios::trunc | std::ios::out);
-    if (outFile.is_open()) {
-      outFile.write(reinterpret_cast<char *>(bitArray.data()), bitArray.size());
-      outFile.close();
-      if (outFile.fail()) {
-        std::cout << "Error on file " << ss.str() << "\n";
-        if (outFile.bad()) {
-          std::cout << "BADBIT\n";
-        } else if (outFile.eof()) {
-          std::cout << "EOG\n";
-        } else if (outFile.fail()) {
-          std::cout << "fAIL\n";
-        }
-        exit(1);
-      }
-      //   std::cout << "Wrote test array...\n";
-    } else {
-      //  std::cout << "Unable to write test array...\n";
-    }
-  }
-  // LogSevere("Test post write time is " << test << "\n");
-  #endif // if 0
 } // RAPIOFusionRosterAlg::processNewData
 
 void

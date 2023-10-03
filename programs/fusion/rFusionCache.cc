@@ -187,7 +187,18 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filename,
 }
 
 bool
-FusionCache::readMaskFile(const std::string& filename)
+FusionCache::readMaskFile(const std::string& filename, Bitset& mask)
 {
-  return true;
+  bool success = true;
+
+  // FIXME: any 'extra' header stuff
+  std::ifstream inFile(filename, std::ios::binary);
+
+  if (inFile.is_open()) {
+    mask.readBits(inFile);
+  } else {
+    LogInfo("Couldn't read mask " << filename << "\n");
+    success = false;
+  }
+  return success;
 }

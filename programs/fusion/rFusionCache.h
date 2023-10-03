@@ -330,6 +330,6 @@ public:
    * intended for each stage1.
    */
   static bool
-  readMaskFile(const std::string& filename);
+  readMaskFile(const std::string& filename, Bitset& mask);
 };
 }

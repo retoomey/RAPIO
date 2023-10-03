@@ -268,9 +268,6 @@ computeTerrainPoints(
       terrainPoints[i].minRayNumber, terrainPoints[i].maxRayNumber);
   }
   LogInfo("Found " << terrainPoints.size() << " terrain blockers.\n");
-  LogInfo(
-    "Sizes: " << (numLats * numLons) << " - " << 2 * (numLats) + 2 * (numLons - 2) << " == " << terrainPoints.size() <<
-      "\n");
 } // TerrainBlockageLak::computeTerrainPoints
 
 void
