@@ -24,13 +24,12 @@ public:
   /** Create a stage two data */
   Stage2Data(const std::string& radarName,
     const std::string         & typeName,
-    float                     elevDegs,
     const std::string         & units,
     const LLH                 & center,
     size_t                    xBase,
     size_t                    yBase,
     std::vector<size_t>       dims
-  ) : myRadarName(radarName), myTypeName(typeName), myElevationDegs(elevDegs), myUnits(units), myCenter(center),
+  ) : myRadarName(radarName), myTypeName(typeName), myUnits(units), myCenter(center),
     myXBase(xBase), myYBase(yBase),
     myMissingSet(dims, 1),
     myAddMissingCounter(0), myDimensions(dims), myCounter(0), myMCounter(0), myRLECounter(0)
@@ -87,13 +86,6 @@ public:
     return myTypeName;
   }
 
-  /** Get the elevation degrees */
-  float
-  getElevationDegs()
-  {
-    return myElevationDegs;
-  }
-
   /** Get the units */
   std::string
   getUnits()
@@ -147,7 +139,6 @@ protected:
   // Meta information for this output
   std::string myRadarName; ///< Radar name such as KTLX
   std::string myTypeName;  ///< Type name such as Reflectivity
-  float myElevationDegs;   ///< Elevation angle in degrees for this data
   std::string myUnits;     ///< Units such as dBZ
   Time myTime;             ///< Global time for this
   LLH myCenter;            ///< Location center of radar

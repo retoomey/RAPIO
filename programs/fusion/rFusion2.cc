@@ -103,10 +103,9 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     auto& data            = *datasp;
     std::string name      = data.getRadarName();
     std::string aTypeName = data.getTypeName();
-    float elevDegs        = data.getElevationDegs(); // Got to go sorry
     Time dataTime         = data.getTime();
 
-    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << " " << elevDegs << "\n");
+    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
 
     // Initialize everything related to this radar
     firstDataSetup(datasp);

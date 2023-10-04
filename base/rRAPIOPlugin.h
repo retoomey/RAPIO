@@ -1,19 +1,14 @@
 #pragma once
 
-#include <rRAPIOOptions.h>
-#include <rRAPIOProgram.h>
-#include <rError.h>
-#include <rEventLoop.h>
-#include <rRAPIOAlgorithm.h> // patch temp
-
-// FIXME: Eventually break up the plugins into files
-#include <rHeartbeat.h>
-#include <rWebServer.h>
-#include <rConfigParamGroup.h>
-#include <rRecordFilter.h>
 #include <rRecordNotifier.h>
+#include <rVolumeValueResolver.h>
+#include <rTerrainBlockage.h>
+#include <rElevationVolume.h>
 
 namespace rapio {
+class RAPIOProgram;
+class RAPIOOptions;
+
 /** A program plugin interface.
  * The design idea here is to encapsulate abilities like heartbeat, etc. within
  * its own module along with its related member fields.
@@ -79,54 +74,23 @@ public:
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "sync")
-  {
-    owner->addPlugin(new PluginHeartbeat(name));
-    return true;
-  }
+  declare(RAPIOProgram * owner, const std::string& name = "sync");
 
   /** Declare options for the plugin */
   virtual void
-  declareOptions(RAPIOOptions& o) override
-  {
-    o.optional(myName, "", "Sync data option. Cron format style algorithm heartbeat.");
-    o.addGroup(myName, "TIME");
-  }
+  declareOptions(RAPIOOptions& o) override;
 
   /** Declare advanced help for the plugin */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o) override
-  {
-    o.addAdvancedHelp(myName,
-      "Sends heartbeat to program.  Note if your program lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
-  }
+  addPostLoadedHelp(RAPIOOptions& o) override;
 
   /** Process our options */
   virtual void
-  processOptions(RAPIOOptions& o) override
-  {
-    myCronList = o.getString(myName);
-  }
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute/run the plugin */
   virtual void
-  execute(RAPIOProgram * caller) override
-  {
-    // Add Heartbeat (if wanted)
-    std::shared_ptr<Heartbeat> heart = nullptr;
-
-    if (!myCronList.empty()) { // None required, don't make it
-      LogInfo("Attempting to create a heartbeat for " << myCronList << "\n");
-
-      heart = std::make_shared<Heartbeat>((RAPIOAlgorithm *) (caller), 1000);
-      if (!heart->setCronList(myCronList)) {
-        LogSevere("Bad format for -" << myName << " string, aborting\n");
-        exit(1);
-      }
-      EventLoop::addEventHandler(heart);
-      myActive = true;
-    }
-  }
+  execute(RAPIOProgram * caller) override;
 
 protected:
 
@@ -143,49 +107,23 @@ public:
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "web")
-  {
-    owner->addPlugin(new PluginWebserver(name));
-    return true;
-  }
+  declare(RAPIOProgram * owner, const std::string& name = "web");
 
   /** Declare options for the plugin */
   virtual void
-  declareOptions(RAPIOOptions& o) override
-  {
-    o.optional(myName,
-      "off",
-      "Web server ability for REST pull algorithms. Use a number to assign a port.");
-    o.setHidden(myName);
-    o.addGroup("web", "I/O");
-  }
+  declareOptions(RAPIOOptions& o) override;
 
   /** Declare advanced help for the plugin */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o) override
-  {
-    o.addAdvancedHelp(myName,
-      "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
-  }
+  addPostLoadedHelp(RAPIOOptions& o) override;
 
   /** Process our options */
   virtual void
-  processOptions(RAPIOOptions& o) override
-  {
-    myWebServerMode = o.getString(myName);
-  }
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute/run the plugin */
   virtual void
-  execute(RAPIOProgram * caller) override
-  {
-    const bool wantWeb = (myWebServerMode != "off");
-
-    myActive = wantWeb;
-    if (wantWeb) {
-      WebServer::startWebServer(myWebServerMode, caller);
-    }
-  }
+  execute(RAPIOProgram * caller) override;
 
 protected:
 
@@ -203,63 +141,23 @@ public:
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "n")
-  {
-    static bool once = true;
-
-    if (once) {
-      // Humm some plugins might require dynamic loading so
-      // this might change.  Used to do this in initializeBaseline
-      // now we're lazy loading.  Upside is save some memory
-      // if no notifications wanted
-      RecordNotifier::introduceSelf();
-      owner->addPlugin(new PluginNotifier(name));
-      once = false;
-    } else {
-      LogSevere("Code error, can only declare notifiers once\n");
-      exit(1);
-    }
-    return true;
-  }
+  declare(RAPIOProgram * owner, const std::string& name = "n");
 
   /** Declare options for the plugin */
   virtual void
-  declareOptions(RAPIOOptions& o) override
-  {
-    o.optional(myName,
-      "",
-      "The notifier for newly created files/records.");
-    o.addGroup(myName, "I/O");
-  }
+  declareOptions(RAPIOOptions& o) override;
 
   /** Declare advanced help for the plugin */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o) override
-  {
-    // FIXME: plug could just do it
-    o.addAdvancedHelp(myName, RecordNotifier::introduceHelp());
-  }
+  addPostLoadedHelp(RAPIOOptions& o) override;
 
   /** Process our options */
   virtual void
-  processOptions(RAPIOOptions& o) override
-  {
-    // Gather notifier list and output directory
-    myNotifierList = o.getString("n");
-    // FIXME: might move to plugin? Seems overkill now
-    ConfigParamGroupn paramn;
-
-    paramn.readString(myNotifierList);
-  }
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute/run the plugin */
   virtual void
-  execute(RAPIOProgram * caller) override
-  {
-    // Let record notifier factory create them, we will hold them though
-    theNotifiers = RecordNotifier::createNotifiers();
-    myActive     = true;
-  }
+  execute(RAPIOProgram * caller) override;
 
 public:
 
@@ -282,67 +180,147 @@ public:
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "I")
-  {
-    static bool once = true;
-
-    if (once) {
-      // FIXME: ability to subclass/replace?
-      std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
-      Record::theRecordFilter = f;
-      owner->addPlugin(new PluginRecordFilter(name));
-      once = false;
-    } else {
-      LogSevere("Code error, can only declare record filter once\n");
-      exit(1);
-    }
-    return true;
-  }
+  declare(RAPIOProgram * owner, const std::string& name = "I");
 
   /** Declare options for the plugin */
   virtual void
-  declareOptions(RAPIOOptions& o) override
-  {
-    o.optional(myName, "*", "The input type filter patterns");
-    o.addGroup(myName, "I/O");
-  }
+  declareOptions(RAPIOOptions& o) override;
 
   /** Declare advanced help for the plugin */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o) override
-  {
-    o.addAdvancedHelp("I",
-      "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
-  }
+  addPostLoadedHelp(RAPIOOptions& o) override;
 
   /** Process our options */
   virtual void
-  processOptions(RAPIOOptions& o) override
-  {
-    ConfigParamGroupI paramI;
-
-    paramI.readString(o.getString(myName));
-  }
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute/run the plugin */
   virtual void
-  execute(RAPIOProgram * caller) override
-  {
-    // Possibly could create here instead of in declare?
-    // doesn't matter much in this case, maybe later it will
-    // std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
-    // Record::theRecordFilter = f;
-    myActive = true;
-  }
+  execute(RAPIOProgram * caller) override;
+};
 
+/** Wrap the VolumeValueResolver in the newer generic plugin model.
+ * Possibly we could cleanup/refactor a bit...for now we wrap the
+ * global VolumeValueResolver class. */
+class PluginVolumeValueResolver : public RAPIOPlugin {
 public:
 
-  /** Global notifiers we are sending notification of new records to */
-  static std::vector<std::shared_ptr<RecordNotifierType> > theNotifiers;
+  /** Create a VolumeValueResolver plugin */
+  PluginVolumeValueResolver(const std::string& name) : RAPIOPlugin(name){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "resolver");
+
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override;
+
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override;
+
+  /** Execute/run the plugin */
+  virtual void
+  execute(RAPIOProgram * caller) override;
+
+  /** Return the resolver we have.  Use getPlugin(name) to access this. */
+  std::shared_ptr<VolumeValueResolver>
+  getVolumeValueResolver();
+
+protected:
+  /** The value of the command line argument */
+  std::string myResolverAlg;
+
+  /** The resolver we represent */
+  std::shared_ptr<VolumeValueResolver> myResolver;
+};
+
+/** Wrap the TerrainBlockage in the newer generic plugin model.
+ * Possibly we could cleanup/refactor a bit...for now we wrap the
+ * global TerrainBlockage class. */
+class PluginTerrainBlockage : public RAPIOPlugin {
+public:
+
+  /** Create a TerrainBlockage plugin */
+  PluginTerrainBlockage(const std::string& name) : RAPIOPlugin(name){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "terrain");
+
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override;
+
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override;
+
+  /** Execute/run the plugin */
+  virtual void
+  execute(RAPIOProgram * caller) override;
+
+  /** Attempt to create a new TerrainBlockage from our param */
+  std::shared_ptr<TerrainBlockage>
+  getNewTerrainBlockage(
+    const LLH         & radarLocation,
+    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
+    const std::string & radarName,
+    LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
+    AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
 
 protected:
 
-  /** The mode of web server, if any */
-  std::string myNotifierList;
+  /** The value of the command line argument */
+  std::string myTerrainAlg;
 };
+
+/** Wrap the Volume in the newer generic plugin model.
+ * Possibly we could cleanup/refactor a bit...for now we wrap the
+ * global Volume class. */
+class PluginVolume : public RAPIOPlugin {
+public:
+
+  /** Create a Volume plugin */
+  PluginVolume(const std::string& name) : RAPIOPlugin(name){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "volume");
+
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override;
+
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override;
+
+  /** Execute/run the plugin */
+  virtual void
+  execute(RAPIOProgram * caller) override;
+
+  /** Get our volume */
+  std::shared_ptr<Volume>
+  getNewVolume(const std::string & historyKey);
+
+protected:
+
+  /** The value of the command line argument */
+  std::string myVolumeAlg;
+};
+;
 }

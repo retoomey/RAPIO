@@ -97,7 +97,6 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     stage2->setString("Radarname", myRadarName);
     //   stage2->setString("radarName-value", myRadarName); // for IODataType base add.  FIXME: clean up
     stage2->setString("Typename", myTypeName);
-    stage2->setFloat("ElevationDegs", myElevationDegs);
     stage2->setLong("xBase", myXBase);
     stage2->setLong("yBase", myYBase);
     // FIXME: general in MRMS and RAPIO
@@ -172,17 +171,15 @@ Stage2Data::receive(RAPIOData& rData)
       size_t aSize = dims[0];
       size_t aSize2 = dims[1];
       std::string radarName, typeName, units;
-      float elevDegs;
       d.getString("Radarname", radarName);
       d.getString("Typename", typeName);
-      d.getFloat("ElevationDegs", elevDegs);
       long xBase = 0, yBase = 0;
       d.getLong("xBase", xBase);
       d.getLong("yBase", yBase);
       units = d.getUnits();
       LLH center = d.getLocation();
       std::shared_ptr<Stage2Data> insp =
-        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, elevDegs, units, center, xBase, yBase, dims));
+        std::make_shared<Stage2Data>(Stage2Data(radarName, typeName, units, center, xBase, yBase, dims));
       auto& in = *insp;
       in.setTime(d.getTime());
 

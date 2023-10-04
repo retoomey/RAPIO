@@ -19,7 +19,6 @@ using namespace rapio;
  *
  * @author Robert Toomey
  **/
-
 void
 RAPIOFusionOneAlg::declarePlugins()
 {
@@ -28,19 +27,19 @@ RAPIOFusionOneAlg::declarePlugins()
 
   // -------------------------------------------------------------
   // Elevation Volume registration
-  Volume::introduceSelf();
+  PluginVolume::declare(this, "volume");
   // Volume::introduce("yourvolume", myVolumeClass); To add your own
 
   // -------------------------------------------------------------
-  // VolumeValueResolver registration and creation
-  VolumeValueResolver::introduceSelf();
+  // VolumeValueResolver plugin registration and creation
+  PluginVolumeValueResolver::declare(this, "resolver");
   RobertLinear1Resolver::introduceSelf();
   LakResolver1::introduceSelf();
   // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
 
   // -------------------------------------------------------------
-  // Terrain blockage registration and creation
-  TerrainBlockage::introduceSelf();
+  // TerrainBlockage plugin registration and creation
+  PluginTerrainBlockage::declare(this, "terrain");
   // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
 }
 
@@ -73,40 +72,10 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
 
-  // -----------------------------------------------
-  // Plugins
-
-  // Volume value resolver plugin
-  o.optional("resolver", "lak",
-    "Value Resolver Algorithm, such as 'lak', or your own. Params follow: lak,params.");
-  VolumeValueResolver::introduceSuboptions("resolver", o);
-
-  // Elevation volume plugin
-  o.optional("volume", "simple",
-    "Volume algorithm, such as 'simple', or your own. Params follow: simple,params.");
-  Volume::introduceSuboptions("volume", o);
-
-  // Terrain blockage plugin
-  o.optional("terrain", "lak",
-    "Terrain blockage algorithm. Params follow: lak,/DEMS.  Most take root folder of DEMS.");
-  TerrainBlockage::introduceSuboptions("terrain", o);
-  o.addSuboption("terrain", "", "Don't apply any terrain algorithm.");
-
   // Default sync heartbeat to 30 seconds
   // Format is seconds then mins
   o.setRequiredValue("sync", "*/30 * * * * *");
 } // RAPIOFusionOneAlg::declareOptions
-
-void
-RAPIOFusionOneAlg::declareAdvancedHelp(RAPIOOptions& o)
-{
-  // Add advanced help.  This is only called if 'help' is asked for and also forces
-  // loading of all dynamic modules and or modules from declarePlugins.
-  // Basically this allows the plugins to show up under each option.
-  o.addAdvancedHelp("resolver", VolumeValueResolver::introduceHelp());
-  o.addAdvancedHelp("volume", Volume::introduceHelp());
-  o.addAdvancedHelp("terrain", TerrainBlockage::introduceHelp());
-}
 
 /** RAPIOAlgorithms process options on start up */
 void
@@ -127,9 +96,6 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   myWriteLLG         = o.getBoolean("llg");
   myWriteSubgrid     = o.getBoolean("subgrid");
   myUseLakSmoothing  = o.getBoolean("presmooth");
-  myResolverAlg      = o.getString("resolver");
-  myTerrainAlg       = o.getString("terrain");
-  myVolumeAlg        = o.getString("volume");
   myThrottleCount    = o.getInteger("throttle");
   if (myThrottleCount > 10) {
     myThrottleCount = 10;
@@ -168,7 +134,8 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 {
   // We cache a bunch of repeated trig functions that save us a lot of CPU time
   if (myLLProjections[0] == nullptr) {
-    LogInfo("-------------------------------Projection AzRangeElev cache generation.\n");
+    ProcessTimer projtime("Projection AzRangeElev cache generation.\n");
+    // LogInfo("Projection AzRangeElev cache generation.\n");
     LengthKMs virtualRangeKMs;
     AngleDegs virtualAzDegs, virtualElevDegs;
 
@@ -181,8 +148,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
     for (size_t i = 0; i < myLLProjections.size(); i++) {
       // const LengthKMs layerHeightKMs = myHeightsM[i]; //   1000.0;
       const LengthKMs layerHeightKMs = heightsKM[i]; //   1000.0;
-      // LogInfo("  Layer: " << myHeightsM[i] * 1000.0 << " meters.\n");
-      LogInfo("  Layer: " << heightsKM[i] * 1000.0 << " meters.\n");
+      // LogDebug("  Layer: " << heightsKM[i] * 1000.0 << " meters.\n");
       myLLProjections[i] = std::make_shared<AzRanElevCache>(g.getNumX(), g.getNumY());
       auto& llp = *(myLLProjections[i]);
       auto& ssc = *(mySinCosCache);
@@ -218,7 +184,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
         }
       }
     }
-    LogInfo("-------------------------------Projection AzRangeElev cache complete.\n");
+    LogInfo(projtime);
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
 
@@ -288,6 +254,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   if (setup) { return; }
 
   setup = true;
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -318,44 +285,27 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 
   // -------------------------------------------------------------
   // VolumeValueResolver creation
-  myResolver = VolumeValueResolver::createFromCommandLineOption(myResolverAlg);
+  auto vp = getPlugin<PluginVolumeValueResolver>("resolver");
 
-  // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
-  if (myResolver == nullptr) {
-    LogSevere("Volume Value Resolver '" << myResolverAlg << "' requested, but failed to find and/or initialize.\n");
-    exit(1);
-  } else {
-    LogInfo("Using Volume Value Resolver: '" << myResolverAlg << "'\n");
+  if (vp) {
+    myResolver = vp->getVolumeValueResolver(); // This will exit if not available
   }
 
   // -------------------------------------------------------------
   // Terrain blockage creation
-  if (myTerrainAlg.empty()) {
-    LogInfo("No terrain blockage algorithm requested.\n");
-  } else {
-    myTerrainBlockage = TerrainBlockage::createFromCommandLineOption(myTerrainAlg,
-        r->getLocation(), myRangeKMs, radarName);
-    // Stubbornly refuse to run if terrain requested by name and not found or failed
-    if (myTerrainBlockage == nullptr) {
-      LogSevere("Terrain blockage '" << myTerrainAlg << "' requested, but failed to find and/or initialize.\n");
-      exit(1);
-    } else {
-      LogInfo("Using Terrain Blockage: '" << myTerrainBlockage << "'\n");
-    }
+  auto tp = getPlugin<PluginTerrainBlockage>("terrain");
+
+  if (tp) {
+    // This is allowed to be nullptr
+    myTerrainBlockage = tp->getNewTerrainBlockage(r->getLocation(), myRangeKMs, radarName);
   }
 
   // -------------------------------------------------------------
   // Elevation volume creation
-  LogInfo(
-    "Creating virtual volume for '" << myRadarName << "' and typename '" << myTypeName <<
-      "'\n");
-  myElevationVolume = Volume::createFromCommandLineOption(myVolumeAlg, myRadarName + "_" + myTypeName);
-  // Stubbornly refuse to run if requested by name and not found or failed
-  if (myElevationVolume == nullptr) {
-    LogSevere("Volume '" << myVolumeAlg << "' requested, but failed to find and/or initialize.\n");
-    exit(1);
-  } else {
-    LogInfo("Using Volume algorithm: '" << myVolumeAlg << "'\n");
+  auto volp = getPlugin<PluginVolume>("volume");
+
+  if (volp) {
+    myElevationVolume = volp->getNewVolume(myRadarName + "_" + myTypeName);
   }
 
   // Look up from cells to az/range/elev for RADAR
@@ -395,77 +345,8 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 } // RAPIOFusionOneAlg::firstDataSetup
 
 void
-RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
+RAPIOFusionOneAlg::readCoverageMask()
 {
-  // Need a radar name in data to handle it currently
-  std::string name = "UNKNOWN";
-
-  if (!r->getString("radarName-value", name)) {
-    LogSevere("No radar name found in RadialSet, ignoring data\n");
-    return;
-  }
-
-  // Get the radar name and typename from this RadialSet.
-  const std::string aTypeName = r->getTypeName();
-  const std::string aUnits    = r->getUnits();
-  ProcessTimer ingest("Ingest tilt");
-
-  LogInfo(
-    " " << r->getTypeName() << " (" << r->getNumRadials() << " * " << r->getNumGates() << ")  Radials * Gates,  Time: " << r->getTime() <<
-      "\n");
-
-  // Initialize everything related to this radar
-  firstDataSetup(r, name, aTypeName);
-
-  // Check if incoming radar/moment matches our single setup, otherwise we'd need
-  // all the setup for each radar/moment.  Which we 'could' do later maybe
-  if ((myRadarName != name) || (myTypeName != aTypeName)) {
-    LogSevere(
-      "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-        "'\n");
-    return;
-  }
-
-  // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
-  // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
-  // FIXME: If we plugin the smoother we can pass params and choose the scale factor
-  // manually.
-  const LengthKMs radarDataScale = r->getGateWidthKMs();
-  const LengthKMs gridScale      = std::min(myFullGrid.getLatKMPerPixel(), myFullGrid.getLonKMPerPixel());
-  const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
-
-  if ((scale_factor > 1) && myUseLakSmoothing) {
-    LogInfo("--->Applying Lak's moving average smoothing filter to radialset\n");
-    LogInfo("    Filter ratio scale is " << scale_factor << "\n");
-    LakRadialSmoother::smooth(r, scale_factor / 2);
-  } else {
-    LogInfo("--->Not applying smoothing since scale factor is " << scale_factor << "\n");
-  }
-
-  // Assign the ID key for cache storage.  Note the size matters iff you have more
-  // DataTypes to keep track of than the key size.  Currently FusionKey defines the key
-  // size and max unique elevations we can hold at once.
-  static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
-
-  if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
-  r->setID(keycounter);
-  LogInfo("RadialSet short key: " << (int) keycounter << "\n");
-
-  // Always add to elevation volume
-  myElevationVolume->addDataType(r);
-
-  // ----------------------------------------------------------------------------
-  // Every Unique RadialSet product will require a RadialSetLookup.
-  // This is a projection from range, angle to gate/radial index.
-  r->getProjection();
-
-  // Every RadialSet will require terrain per gate for filters.
-  // Run a polar terrain algorithm where the results are added to the RadialSet as
-  // another array.
-  if (myTerrainBlockage != nullptr) {
-    myTerrainBlockage->calculateTerrainPerGate(r);
-  }
-
   // Read a mask file
   // if useRoster set..otherwise all points or 1
   std::string directory;
@@ -499,6 +380,82 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       }
     }
   }
+} // RAPIOFusionOneAlg::readCoverageMask
+
+void
+RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
+{
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---RadialSet---" << ColorTerm::fNormal << "\n");
+  // Need a radar name in data to handle it currently
+  std::string name = "UNKNOWN";
+
+  if (!r->getString("radarName-value", name)) {
+    LogSevere("No radar name found in RadialSet, ignoring data\n");
+    return;
+  }
+
+  // Get the radar name and typename from this RadialSet.
+  const std::string aTypeName = r->getTypeName();
+  const std::string aUnits    = r->getUnits();
+  ProcessTimer ingest("Ingest tilt");
+
+  LogInfo(
+    r->getTypeName() << " (" << r->getNumRadials() << " Radials * " << r->getNumGates() << " Gates), " <<
+      r->getElevationDegs() << ", Time: " << r->getTime() << "\n");
+
+  // Initialize everything related to this radar
+  firstDataSetup(r, name, aTypeName);
+
+  // Check if incoming radar/moment matches our single setup, otherwise we'd need
+  // all the setup for each radar/moment.  Which we 'could' do later maybe
+  if ((myRadarName != name) || (myTypeName != aTypeName)) {
+    LogSevere(
+      "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
+        "'\n");
+    return;
+  }
+
+  // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
+  // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
+  // FIXME: If we plugin the smoother we can pass params and choose the scale factor
+  // manually.
+  const LengthKMs radarDataScale = r->getGateWidthKMs();
+  const LengthKMs gridScale      = std::min(myFullGrid.getLatKMPerPixel(), myFullGrid.getLonKMPerPixel());
+  const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
+
+  if ((scale_factor > 1) && myUseLakSmoothing) {
+    LogInfo("Applying Lak's moving average smoothing filter to RadialSet, " << scale_factor <<
+      " filter ratio scale.\n");
+    LakRadialSmoother::smooth(r, scale_factor / 2);
+  } else {
+    LogInfo("Not applying smoothing since scale factor is " << scale_factor << "\n");
+  }
+
+  // Assign the ID key for cache storage.  Note the size matters iff you have more
+  // DataTypes to keep track of than the key size.  Currently FusionKey defines the key
+  // size and max unique elevations we can hold at once.
+  static FusionKey keycounter = 0; // 0 is reserved for nothing and not used
+
+  if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
+  r->setID(keycounter);
+  // LogDebug("RadialSet short key: " << (int) keycounter << "\n");
+
+  // Always add to elevation volume
+  myElevationVolume->addDataType(r);
+
+  // ----------------------------------------------------------------------------
+  // Every Unique RadialSet product will require a RadialSetLookup.
+  // This is a projection from range, angle to gate/radial index.
+  r->getProjection();
+
+  // Every RadialSet will require terrain per gate for filters.
+  // Run a polar terrain algorithm where the results are added to the RadialSet as
+  // another array.
+  if (myTerrainBlockage != nullptr) {
+    ProcessTimer terrain("Applying terrain blockage\n");
+    myTerrainBlockage->calculateTerrainPerGate(r);
+    LogInfo(terrain);
+  }
 } // RAPIOFusionOneAlg::processRadialSet
 
 void
@@ -511,21 +468,23 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
   if (r != nullptr) {
     processRadialSet(r);
 
-    // Humm stage2 involving radar info for moment and maybe it shouldn't?
-    // I didn't want to store elevation/time in stage2 to reduce IO but we may have
-    // to. Currently if we batch by radar/elev it speeds up purging of old data points
-    // Looks like we 'have' to batch some things since Canada is being non-realtimey
-    // this will change our design somewhat
-    AngleDegs elevDegs = r->getElevationDegs();
-    const Time rTime   = r->getTime();
-    processVolume(elevDegs, rTime);
+    // Per incoming tilt triggering.  Issue here is if we get a 'burst'
+    // say with a full Canada volume then we do a silly amount of
+    // duplicate processing since tilts overlap in effective output.
+    // So instead, we'll try waiting for a heartbeat...
+    // FIXME: note that archive won't work properly.  I'm really leaning
+    // towards removal of realtime flags and doing the simulation technique
+    // const Time rTime   = r->getTime();
+    // processVolume(rTime);
+    myDirty++;
   }
 }
 
 void
 RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  // LogInfo("Got heartbeat..we'll probably do work here at some point\n");
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
+  processVolume(p); // n or p is the question...?
 }
 
 size_t
@@ -574,8 +533,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   auto output    = myLLGCache->get(layer);
   auto& gridtest = output->getFloat2DRef();
 
-  LogInfo("Starting processing loop for height " << vv.layerHeightKMs * 1000 << " meters...\n");
-  ProcessTimer process1("Actual calculation guess of speed: ");
+  LogInfo("Processing " << vv.layerHeightKMs << " KM layer...\n");
 
   auto& llp = *myLLProjections[layer];
   auto& ssc = *(mySinCosCache);
@@ -669,7 +627,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // or we just print a single line (probably easier)
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
 
-  LogInfo("  Completed Layer " << vv.layerHeightKMs << " KMs. \n");
   LogInfo("    Mask, Range, Same enclosing tilts skipped: " << maskSkipped << ", " << rangeSkipped << ", " <<
     sameTiltSkip << "\n");
   LogInfo("    Resolved: " << attemptCount << " (" << percentAttempt << "%).\n");
@@ -680,8 +637,16 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
 } // RAPIOFusionOneAlg::processHeightLayer
 
 void
-RAPIOFusionOneAlg::processVolume(const AngleDegs elevDegs, const Time rTime)
+RAPIOFusionOneAlg::processVolume(const Time rTime)
 {
+  // Don't do anything unless we got some new data since last time
+  if (myDirty < 1) { return; }
+  LogInfo("Processing full volume, " << myDirty << " file(s) have been received.\n");
+  myDirty = 0;
+
+  // Read the coverage mask (in real time it could change due to radars up/down)
+  readCoverageMask();
+
   // Get the elevation volume pointers and levels for speed
   std::vector<double> levels;
   std::vector<DataType *> pointers;
@@ -694,7 +659,7 @@ RAPIOFusionOneAlg::processVolume(const AngleDegs elevDegs, const Time rTime)
   auto heightsKM               = outg.getHeightsKM();
   std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
   size_t totalLayer            = outg.getNumX() * outg.getNumY() * outg.getNumZ();
-  Stage2Data stage2(myRadarName, myTypeName, elevDegs, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
+  Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
     outg.getStartY(),
     bitsizes);
 
