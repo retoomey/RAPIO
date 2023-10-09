@@ -189,7 +189,7 @@ PluginRecordFilter::declareOptions(RAPIOOptions& o)
 void
 PluginRecordFilter::addPostLoadedHelp(RAPIOOptions& o)
 {
-  o.addAdvancedHelp("I",
+  o.addAdvancedHelp(myName,
     "Use quotes and spaces for multiple patterns.  For example, -I \"Ref* Vel*\" means match any product starting with Ref or Vel such as Ref10, Vel12. Or for example use \"Reflectivity\" to ingest stock Reflectivity from all -i sources.");
 }
 

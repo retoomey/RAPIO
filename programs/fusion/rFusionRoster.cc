@@ -16,6 +16,12 @@ RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
   // legacy use the t, b and s to define a grid
   o.declareLegacyGrid();
 
+  // Set roster directory to home by default for the moment.
+  // We might want to turn it off in archive mode or testing at some point
+  const std::string home(OS::getEnvVar("HOME"));
+
+  o.optional("roster", home, "Location of roster/cache folder.");
+
   // Default sync heartbeat to 1 mins
   // Note that roster probably takes longer than this, but that's fine
   // we'll just get another trigger immediately
@@ -28,6 +34,8 @@ void
 RAPIOFusionRosterAlg::processOptions(RAPIOOptions& o)
 {
   o.getLegacyGrid(myFullGrid);
+
+  FusionCache::setRosterDir(o.getString("roster"));
 } // RAPIOFusionRosterAlg::processOptions
 
 void
@@ -50,7 +58,7 @@ void
 RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
 {
   // We won't be running this way probably
-  // scanCacheDirectory();
+  // performRoster();
 }
 
 void
@@ -60,8 +68,6 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
 
   size_t startX, startY, numX, numY; // subgrid coordinates
 
-  // FIXME: We 'could' put the grid in the filename...then read the file later.  It
-  // might make the nearest neighbor cleaner boxing it that way.
   // We're reading to get the data and grid..which we need to generate the mask
   auto out = FusionCache::readRangeFile(fullpath, startX, startY, numX, numY);
 
@@ -99,7 +105,7 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
 
     info->id     = mySourceInfos.size() - 1;
     info->startX = startX; // gotta keep info to generate matching mask later
-    info->startY = startY;
+    info->startY = startY; // start NORTH (lat)
     info->numX   = numX;
     info->numY   = numY;
 
@@ -119,109 +125,12 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   if (myWalkTimer != nullptr) {
     myWalkTimer->add(merge);
   }
-  // LogInfo(merge);
   myWalkCount++;
 } // RAPIOFusionRosterAlg::ingest
 
 void
-RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id, size_t startX, size_t startY,
-  size_t numX, size_t numY)
+RAPIOFusionRosterAlg::generateNearest()
 {
-  size_t counter = 0;
-
-  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
-    for (size_t x = startX; x < startX + numX; ++x) {
-      for (size_t y = startY; y < startY + numY; ++y) {
-        size_t i = myNearestIndex.getIndex3D(x, y, z);
-
-        // Update the 'nearest' for this radar id, etc.
-        auto v  = out[counter++];
-        auto& c = myNearest[i];
-
-        // Maintain sorted from lowest to highest.
-
-        const size_t size = FUSION_MAX_CONTRIBUTING;
-        // Find the correct position to insert v using linear search (small N)
-        int index = 0;
-        while (index < size && v >= c.range[index]) {
-          ++index;
-        }
-
-        // If not pass end of array...
-        if (index < size) {
-          // ...then shift elements to make room for v
-          // which pushes out the largest
-          if (index < size - 1) {
-            for (int i = size - 1; i > index; --i) {
-              c.range[i] = c.range[i - 1];
-              c.id[i]    = c.id[i - 1];
-            }
-          }
-
-          // and add v
-          c.range[index] = v;
-          c.id[index]    = id;
-        }
-      }
-    }
-  }
-} // RAPIOFusionRosterAlg::nearestNeighbor
-
-void
-RAPIOFusionRosterAlg::generateMasks()
-{
-  ProcessTimer maskGen("Generating coverage bit masks.\n");
-
-  // Clear old bits
-  for (auto& s:mySourceInfos) {
-    s.mask.clearAllBits();
-  }
-
-  // Mask generation algorithm
-  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
-    for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
-      for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
-        size_t i = myNearestIndex.getIndex3D(x, y, z);
-        auto& c  = myNearest[i];
-
-        for (size_t k = 0; k < FUSION_MAX_CONTRIBUTING; ++k) {
-          // if we find a 0 id, then since we're insertion sorted by range,
-          // then this means all are 0 later...so continue
-          if (c.id[k] == 0) {
-            continue;
-          }
-          // If not zero, we need the sourceInfo for it.  This is why
-          // we store as ids in a vector it makes this lookup fast
-          SourceInfo * info = &mySourceInfos[c.id[k]];
-          Bitset& b         = info->mask; // refer to mask
-
-          // FIXME: it's possible locally caching 'hits' would speed up things
-          // since we know weather clumps...
-          const size_t lx = x - (info->startX); // "shouldn't" underflow
-          const size_t ly = y - (info->startY);
-          const size_t li = b.getIndex3D(lx, ly, z);
-          // My class here could be faster...let's see if it matters...
-          info->mask.set(li, 1); // humm this loops..FIXME: the 1 case can be faster
-        }
-      }
-    }
-  }
-  LogInfo(maskGen);
-} // RAPIOFusionRosterAlg::generateMasks
-
-void
-RAPIOFusionRosterAlg::scanCacheDirectory()
-{
-  // FIXME: Roster won't be a typical algorithm, it will probably
-  // only handle the processHeartbeat
-  LogInfo("Grid is " << myFullGrid << "\n");
-
-  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
-
-  firstTimeSetup();
-
-  std::string directory = FusionCache::getRangeDirectory(myFullGrid);
-
   // Link cache files to our ingest method...
   class myDirWalker : public DirWalker
   {
@@ -270,30 +179,115 @@ protected:
     RAPIOFusionRosterAlg * myOwner;
   };
 
-  myDirWalker walk(this);
-
-  // This will call ingest for each cache file
   myWalkTimer = new ProcessTimerSum();
   myWalkCount = 0;
+  LogInfo("Grid is " << myFullGrid << "\n");
+  //  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
+  firstTimeSetup();
+  std::string directory = FusionCache::getRangeDirectory(myFullGrid);
+  myDirWalker walk(this);
+
   walk.traverse(directory);
   LogInfo("Total walk/merge time " << *myWalkTimer << " (" << myWalkCount << ") sources active.\n");
   delete myWalkTimer;
+} // RAPIOFusionRosterAlg::generateNearest
 
+void
+RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id, size_t startX, size_t startY,
+  size_t numX, size_t numY)
+{
+  size_t counter = 0;
+
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = startY; y < startY + numY; ++y) {   // north to south
+      for (size_t x = startX; x < startX + numX; ++x) { // east to west
+        size_t i = myNearestIndex.getIndex3D(x, y, z);
+
+        // Update the 'nearest' for this radar id, etc.
+        auto v  = out[counter++];
+        auto& c = myNearest[i];
+
+        // Maintain sorted from lowest to highest.
+
+        const size_t size = FUSION_MAX_CONTRIBUTING;
+        // Find the correct position to insert v using linear search (small N)
+        int index = 0;
+        while (index < size && v >= c.range[index]) {
+          ++index;
+        }
+
+        // If not pass end of array...
+        if (index < size) {
+          // ...then shift elements to make room for v
+          // which pushes out the largest
+          if (index < size - 1) {
+            for (int i = size - 1; i > index; --i) {
+              c.range[i] = c.range[i - 1];
+              c.id[i]    = c.id[i - 1];
+            }
+          }
+
+          // and add v
+          c.range[index] = v;
+          c.id[index]    = id;
+        }
+      }
+    }
+  }
+} // RAPIOFusionRosterAlg::nearestNeighbor
+
+void
+RAPIOFusionRosterAlg::generateMasks()
+{
   ProcessTimer maskGen("Generating coverage bit masks.\n");
 
-  // Temp dump found radar list
-  // for (auto& s:myNameToInfo) {
-  //  LogInfo("Name is " << s.first << "\n");
-  //  myNameToInfo.mask.clearAllBits();
-  // }
+  // Clear old bits
+  for (auto& s:mySourceInfos) {
+    s.mask.clearAllBits();
+  }
 
-  generateMasks();
+  // Mask generation algorithm
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
+      for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
+        size_t i = myNearestIndex.getIndex3D(x, y, z);
+        auto& c  = myNearest[i];
 
+        for (size_t k = 0; k < FUSION_MAX_CONTRIBUTING; ++k) {
+          // if we find a 0 id, then since we're insertion sorted by range,
+          // then this means all are 0 later...so continue
+          if (c.id[k] == 0) {
+            continue;
+          }
+          // If not zero, we need the sourceInfo for it.  This is why
+          // we store as ids in a vector it makes this lookup fast
+          SourceInfo * info = &mySourceInfos[c.id[k]];
+          Bitset& b         = info->mask; // refer to mask
+
+          // FIXME: it's possible locally caching 'hits' would speed up things
+          // since we know weather clumps...
+          const size_t lx = x - (info->startX); // "shouldn't" underflow
+          const size_t ly = y - (info->startY);
+          const size_t li = b.getIndex3D(lx, ly, z);
+          // My class here could be faster...let's see if it matters...
+          // info->mask.set(li, 1); // humm this loops..FIXME: the 1 case can be faster
+          info->mask.set1(li); // Set one bit
+        }
+      }
+    }
+  }
+  LogInfo(maskGen);
+} // RAPIOFusionRosterAlg::generateMasks
+
+void
+RAPIOFusionRosterAlg::writeMasks()
+{
   // Write masks to disk
-  ProcessTimer maskTimer("");
+  ProcessTimer maskTimer("Writing masks took:\n");
   size_t maskCount = 0;
 
-  directory = FusionCache::getMaskDirectory(myFullGrid);
+  std::string directory = FusionCache::getMaskDirectory(myFullGrid);
+
   OS::ensureDirectory(directory);
   LogInfo("Mask directory is " << directory << "\n");
   size_t all = 0;
@@ -304,7 +298,6 @@ protected:
     std::string maskFile = FusionCache::getMaskFilename(source.name, myFullGrid, directory);
     std::string fullpath = directory + maskFile;
     FusionCache::writeMaskFile(source.name, fullpath, source.mask);
-    LogInfo("dimensions: " << source.numX << ", " << source.numY << "\n");
     on  += source.mask.getAllOnBits();
     all += source.mask.size();
     maskCount++;
@@ -315,6 +308,23 @@ protected:
 
   percent = 100.0 - (percent * 100.0);
   LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
+  LogInfo(maskTimer);
+}
+
+void
+RAPIOFusionRosterAlg::performRoster()
+{
+  generateNearest(); // Read all stage1 info files, for example "KTLX.cache" and merge nearest values
+
+  generateMasks(); // In RAM, create 1/0 bit array for each source
+
+  writeMasks(); // Write bit array, for example "KTLX.mask" for stage1
+
+  LogInfo("Finished one pass...\n");
+  ;
+
+  // For now exit since still running by hand
+  exit(1);
 } // RAPIOFusionRosterAlg::processNewData
 
 void
@@ -322,7 +332,7 @@ RAPIOFusionRosterAlg::processHeartbeat(const Time& n, const Time& p)
 {
   if (isDaemon()) { // just checking, don't think we get message if we're not
     LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
-    scanCacheDirectory();
+    performRoster();
   }
 }
 

@@ -242,7 +242,7 @@ public:
   {
     std::stringstream ss;
 
-    ss << "/home/mrms/"; // FIXME: hardcoded at moment for testing
+    ss << theRosterDir;
 
     ss << "GRID" << "_";
     ss << grid.getNWLat() << "_";
@@ -298,11 +298,15 @@ public:
     return getFilename(name, "mask", ".mask", grid, directory);
   }
 
+  /** Set the base directory used for rostering */
+  static void
+  setRosterDir(const std::string& folder);
+
   /** Write ranges to a binary file.
    * The range files are written by a running stage1 since the range
    * math can take a bit and this allows horizontal scaling.
    */
-  static void
+  static bool
   writeRangeFile(const std::string& filename, LLCoverageArea& outg,
     std::vector<std::shared_ptr<AzRanElevCache> >& myLLProjections,
     LengthKMs maxRangeKMs);
@@ -331,5 +335,8 @@ public:
    */
   static bool
   readMaskFile(const std::string& filename, Bitset& mask);
+
+  /** The base directory used for rostering */
+  static std::string theRosterDir;
 };
 }

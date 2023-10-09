@@ -6,22 +6,27 @@
 
 using namespace rapio;
 
-void
-FusionCache::writeRangeFile(const std::string& filename, LLCoverageArea& outg,
+std::string FusionCache::theRosterDir = "/home/mrms";
+
+bool
+FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   std::vector<std::shared_ptr<AzRanElevCache> >& myLLProjections,
   LengthKMs maxRangeKMs)
 {
+  bool success = true;
+
+  // Letting stage1 overwrite file each time for moment.  This 'could'
+  // possibly be good enough for a marker.  These files are tiny so should be
+  // ok....we'll see in practice.
+  std::string filename = OS::getUniqueTemporaryFile("fusion");
+
   std::ifstream fileExists(filename);
 
-  if (fileExists.good()) {
-    LogInfo("Cache file " << filename << " exists, not writing..\n");
-    return;
-  }
   std::ofstream outFile(filename, std::ios::binary);
 
   if (!outFile.is_open()) {
-    LogSevere("Can't write cache file " << filename << "\n");
-    return;
+    LogSevere("Can't write cache tmp file: " << filename << "\n");
+    return false;
   }
 
   // FIXME: Could I create an iterator for this?
@@ -89,7 +94,14 @@ FusionCache::writeRangeFile(const std::string& filename, LLCoverageArea& outg,
   outFile.write(reinterpret_cast<char *>(buffer.data()), count * sizeof(FusionRangeCache));
 
   outFile.close();
-  LogInfo("Wrote cache file to " << filename << " with " << count << " points.\n");
+
+  if (OS::moveFile(filename, filefinal)) {
+    LogInfo("Wrote cache file to " << filefinal << " with " << count << " points.\n");
+  } else {
+    LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
+    success = false;
+  }
+  return success;
 } // AzRanElevCache::writeRangeFile
 
 std::vector<FusionRangeCache>
@@ -162,9 +174,11 @@ FusionCache::readRangeFile(const std::string& filename,
 } // FusionCache::readRangeFile
 
 bool
-FusionCache::writeMaskFile(const std::string& name, const std::string& filename, const Bitset& mask)
+FusionCache::writeMaskFile(const std::string& name, const std::string& filefinal, const Bitset& mask)
 {
   bool success = true;
+
+  std::string filename = OS::getUniqueTemporaryFile("fusion");
 
   // FIXME: any 'extra' header stuff
   std::ofstream outFile(filename, std::ios::binary);
@@ -183,8 +197,19 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filename,
     success = false;
   }
   outFile.close();
+
+  // On successful write, move tmp file
+  if (success) {
+    if (OS::moveFile(filename, filefinal)) {
+      LogInfo("Wrote mask file to " << filefinal << "\n");
+    } else {
+      LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
+      success = false;
+    }
+  }
+
   return success;
-}
+} // FusionCache::writeMaskFile
 
 bool
 FusionCache::readMaskFile(const std::string& filename, Bitset& mask)
@@ -201,4 +226,19 @@ FusionCache::readMaskFile(const std::string& filename, Bitset& mask)
     success = false;
   }
   return success;
+}
+
+void
+FusionCache::setRosterDir(const std::string& folder)
+{
+  if (!OS::isDirectory(folder)) {
+    if (!OS::ensureDirectory(folder)) {
+      LogSevere("Roster folder path '" << folder << "' can't be accessed or created.\n");
+      exit(1);
+    }
+  }
+  theRosterDir = folder;
+  if (!Strings::endsWith(theRosterDir, "/")) {
+    theRosterDir += "/";
+  }
 }

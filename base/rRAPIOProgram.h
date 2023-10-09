@@ -3,9 +3,10 @@
 #include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
+#include <rRAPIOPlugin.h>
 
 namespace rapio {
-class RAPIOPlugin;
+// class RAPIOPlugin;
 class WebMessage;
 
 /**
@@ -18,6 +19,7 @@ class WebMessage;
  */
 class RAPIOProgram : public Algorithm {
 public:
+
   /** Construct a stock program */
   RAPIOProgram(const std::string& display = "Program") : myMacroApplied(false), myDisplayClass(display){ };
 
@@ -66,6 +68,25 @@ public:
   addPlugin(RAPIOPlugin * p)
   {
     myPlugins.push_back(p);
+  }
+
+  /** Get back a plugin type for use */
+  template <typename T>
+  T *
+  getPlugin(const std::string& name)
+  {
+    for (RAPIOPlugin * p:myPlugins) {
+      if (p->getName() == name) {
+        T * derived = dynamic_cast<T *>(p);
+        if (derived == nullptr) {
+          LogSevere("Plugin '" << name << "' doesn't not match requested type!\n");
+          exit(1);
+        }
+        return derived;
+      }
+    }
+    LogSevere("Plugin '" << name << "' not found or declared!\n");
+    return nullptr;
   }
 
   // Callback hooks

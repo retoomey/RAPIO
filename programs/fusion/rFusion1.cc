@@ -72,6 +72,12 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
 
+  // Set roster directory to home by default for the moment.
+  // We might want to turn it off in archive mode or testing at some point
+  const std::string home(OS::getEnvVar("HOME"));
+
+  o.optional("roster", home, "Location of roster/cache folder.");
+
   // Default sync heartbeat to 30 seconds
   // Format is seconds then mins
   o.setRequiredValue("sync", "*/30 * * * * *");
@@ -108,6 +114,8 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   } else if (myRangeKMs > 1000) {
     myRangeKMs = 1000;
   }
+  FusionCache::setRosterDir(o.getString("roster"));
+
   LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
 } // RAPIOFusionOneAlg::processOptions
 
@@ -380,6 +388,7 @@ RAPIOFusionOneAlg::readCoverageMask()
       }
     }
   }
+  // myHaveMask = false;
 } // RAPIOFusionOneAlg::readCoverageMask
 
 void
@@ -550,17 +559,20 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
     for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
       totalLayer++;
 
+      // Warning to future me: These values stream so always get them or it will be off on next call
+      // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
+      llp.get(vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
+      ssc.get(vv.sinGcdIR, vv.cosGcdIR);
+
       // Mask check..
       if (myHaveMask) {
         size_t mi = myMask.getIndex3D(x, y, layer);
         if (!myMask.get1(mi)) {
+          gridtest[y][x] = 50;
           maskSkipped++;
           continue;
         }
       }
-
-      // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
-      llp.get(vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
 
       // Create lat lon grid of a particular field...
       // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
@@ -574,7 +586,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         continue;
       }
 
-      ssc.get(vv.sinGcdIR, vv.cosGcdIR);
 
       // Search the virtual volume for elevations above/below our virtual one
       // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
@@ -600,7 +611,16 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
       attemptCount++;
       resolver.calc(vv);
 
-      gridtest[y][x] = vv.dataValue;
+      // Bleh need to be cleaner here.  Our Lak resolver using num/dem
+      // so currently resolvers aren't compatible.  FIXME: clean up
+      // need some sort of 'final value' function or something
+      // gridtest[y][x] = vv.dataValue;
+      if (vv.dataWeight1 == 0) {
+        gridtest[y][x] = vv.dataValue;
+      } else {
+        gridtest[y][x] = vv.dataValue / vv.dataWeight1;
+      }
+
       if (outputStage2) {
         stage2.add(vv.dataValue, vv.dataWeight1, vv.dataWeight2, x, y, layer);
       }

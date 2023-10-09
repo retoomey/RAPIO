@@ -6,7 +6,7 @@
 #include <RAPIO.h>
 
 // Nearest 'n' basically.  RAM will explode with larger values
-#define FUSION_MAX_CONTRIBUTING 4
+#define FUSION_MAX_CONTRIBUTING 2
 
 namespace rapio {
 /** Key to reduce size of nearest grid */
@@ -18,12 +18,22 @@ public:
 
   /** Make sure we're set to the null id and maximum range possible
    * before running the nearest algorithm */
-  NearestIDs() : id{0, 0, 0, 0},
-    range{std::numeric_limits<float>::max(),
-      std::numeric_limits<float>::max(),
-      std::numeric_limits<float>::max(),
-      std::numeric_limits<float>::max()}
-  { }
+  NearestIDs()
+  {
+    #if 0
+    // Optimized but doesn't allow changing FUSION_MAX_CONTRIBUTING
+    : id{ 0, 0, 0, 0 },
+    range{ std::numeric_limits<float>::max(),
+           std::numeric_limits<float>::max(),
+           std::numeric_limits<float>::max(),
+           std::numeric_limits<float>::max() }
+    {
+    #endif
+    for (size_t i = 0; i < FUSION_MAX_CONTRIBUTING; ++i) {
+      id[i]    = 0;
+      range[i] = std::numeric_limits<float>::max();
+    }
+  }
 
   // Why not vector? Because it's 24 bytes just for size/capacity
   SourceIDKey id[FUSION_MAX_CONTRIBUTING];
@@ -95,14 +105,22 @@ public:
   nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id,
     size_t startX, size_t startY, size_t numX, size_t numY);
 
-  /** Scan cache directory looking for range files from stage1 */
+  /** Generate nearest array for all sources. */
   void
-  scanCacheDirectory();
+  generateNearest();
+
+  /** Do the entire roster process one time */
+  void
+  performRoster();
 
   /** Generate masks from nearest neighbor results into individual
    * bit masks for each source */
   void
   generateMasks();
+
+  /** Write masks for each stage1 */
+  void
+  writeMasks();
 
   /** Process heartbeat in subclasses.
    * @param n The actual now time triggering the event.
