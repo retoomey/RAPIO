@@ -22,7 +22,8 @@ public:
   /** Default constant for a fam watcher */
   static const std::string FAM_WATCH;
 
-  FAMWatcher() : WatcherType(2000, 1, "FAM Watcher"){ }
+  // FAMWatcher() : WatcherType(2000, 20, "FAM Watcher"){ }
+  FAMWatcher() : WatcherType(100, 20, "FAM Watcher"){ }
 
   /** Introduce this to the global factory */
   static void

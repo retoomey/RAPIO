@@ -62,7 +62,9 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 
   if (setup) { return; }
 
-  setup      = true;
+  setup = true;
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
+
   myTypeName = data->getTypeName();
 
   // Generate output name and units.
@@ -88,11 +90,39 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
     "Created XYZ array of " << myFullGrid.getNumX() << "*" << myFullGrid.getNumY() << "*" << myFullGrid.getNumZ() <<
       " size\n");
   // LogInfo("DATABASE IS " << (void*)(myDatabase.get()) << "\n");
-}
+} // RAPIOFusionTwoAlg::firstDataSetup
 
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Stage2---" << ColorTerm::fNormal << "\n");
+  // We'll check the record time before reading all the data.  This should be >= all the times
+  // in the stage2, so we can pretoss out data _before_ reading it in (which is slower)
+  // This means we're falling behind somewhat.
+  // Quick toss/expire incoming data, anything > cutoff time is too old
+  // The global time for all the current new observations. Note we batch observations,
+  // so each point can have a unique time.
+  // FIXME: I'm not updating radar.myTime here...maybe we're ok?
+  // FIXME: Couldn't the record filter do the history cutoff?
+  // FIXME: I'm concerned about stage1 grouping things like Canada into a single stage1 data file,
+  // since we're only keeping one time per file.  For example, a volume might have times per tilt, yet
+  // we're considering it 'new' to a single time.  It's complicated.
+  auto record  = d.record();
+  auto recTime = record.getTime();
+  const Time cutoffTime = myLastDataTime - myMaximumHistory; // FIXME: add util to time
+  const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
+
+  if (recTime < cutoffTime) {
+    LogSevere("Ignoring OLD record: (" << recTime.getString("%H:%M:%S") << ") " << d.getDescription() << "\n");
+    return;
+  }
+  // If the queue is high we're falling behind probably.
+  size_t aSize = Record::theRecordQueue->size(); // FIXME: probably hide the ->
+
+  if (aSize > 30) {
+    LogSevere("We have " << aSize << " unprocessed records, probably lagging...\n");
+  }
+
   auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
 
   size_t missingcounter = 0;
@@ -142,16 +172,19 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     auto radarPtr = db.getSourceList(name);
     auto& radar   = *radarPtr;
 
-    // The time for all the current new observations
-    radar.myTime = data.getTime(); // deprecated
-
     // Quick toss/expire incoming data, anything > cutoff time is too old
+    // The global time for all the current new observations. Note we batch observations,
+    // so each point can have a unique time.
+    // Humm the record time check should make this redundant I think...
+    radar.myTime = dataTime;
+    #if 0
     const Time cutoffTime = myLastDataTime - myMaximumHistory; // FIXME: add util to time
     const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
     if (radar.myTime < cutoffTime) {
       LogSevere("Ignoring " << radar.myName << " OLD: " << radar.myTime.getString("%H:%M:%S") << "\n");
       return;
     }
+    #endif
 
     ProcessTimer timer("Ingest Source");
 
@@ -162,8 +195,6 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     float v, w, w2;
     short x, y, z;
 
-    // Add to a new list of observations or update missing mask
-    // SourceList newSource = db.getNewSourceList("newone");
     auto newSourcePtr = db.getNewSourceList("newone");
     auto& newSource   = *newSourcePtr;
 
@@ -209,12 +240,8 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // be optimized by double marching vs delete/add, but it would be confusing so eh.
     // FIXME: Can we do this fast enough is the question.
 
-    // double vm, rssm;
-    // OS::getProcessSizeKB(vm, rssm);
-    // vm *=1024; rssm *=1024;
-    // LogSevere("Current RAM doing nothing is " << Strings::formatBytes(rssm) << "\n");
-    { ProcessTimer fail("MERGE:");
-
+    {
+      ProcessTimer fail("Merge source");
       db.mergeObservations(radarPtr, newSourcePtr, cutoff);
       LogInfo(fail << "\n");
     }
@@ -230,6 +257,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
       "\n");
 
     //    db.dumpXYZ();
+    myDirty++;
 
     // If we're realtime we'll get a heartbeat for us, if not we need to process at
     // 'some' point for archive.  We could add more settings/controls for this later
@@ -244,8 +272,13 @@ void
 RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 {
   if (isDaemon()) { // just checking, don't think we get message if we're not
-    LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+    // LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+    // Trying a slight throttle. Wait for 20 stage2 before writing
+    LogInfo(
+      ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << " (" << myDirty <<
+        " ingested since last)\n");
     mergeAndWriteOutput(n, p);
+    myDirty = 0;
   }
 }
 

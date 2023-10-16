@@ -37,7 +37,7 @@ class Observation : public Data {
 public:
   /** Create an observation */
   Observation(short xin, short yin, char zin, time_t tin, float rin) :
-    x(xin), y(yin), t(tin), r(1000.0 * rin){ } // z(zin), t(tin){ } // , r(rin){ }
+    x(xin), y(yin), t(tin){ } // r(1000.0 * rin), z(zin), t(tin){ }
 
   // All observations will have to forward reference the giant x,y,z tree
   // that back-references them.
@@ -53,7 +53,16 @@ public:
 
   // We store range as meters (2 bytes)  Need this for dynamic nearest comparison
   // Assuming here that meter resolution is high enough
-  short r;
+
+  // Ok we're gonna trust FusionRoster completely on the ranges.  If we do any
+  // trimming of the list of values per point we'll use time I think.
+  //
+  // Example: Radars A,B,C. Radar A goes down. We still have 3 radars for the point..haven't expired yet.
+  // Roster turns on radar D. We now get radar D. Now we have 4 radars worth of data since A hasn't 'quite' expired yet.
+  // So we actuallly merge 4 values instead of the 3 we set we wanted. A does expire out though so things 'fix' themselves.
+  // It's a temp issue of having more data than expected if radars toggle status a lot.
+  // However the benefit of no range is allowing faster merge and less IO sending stage2 data.
+  // short r;
 };
 
 /** Observation storing a non-missing data value */

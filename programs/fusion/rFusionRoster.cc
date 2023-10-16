@@ -22,6 +22,12 @@ RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
 
   o.optional("roster", home, "Location of roster/cache folder.");
 
+  #if USE_STATIC_NEAREST
+  // In this case, we'll use FUSION_MAX_CONTRIBUTING
+  #else
+  o.optional("nearest", "3", "How many sources contribute? Note: The largest this is the more RAM to run roster.");
+  #endif
+
   // Default sync heartbeat to 1 mins
   // Note that roster probably takes longer than this, but that's fine
   // we'll just get another trigger immediately
@@ -36,20 +42,45 @@ RAPIOFusionRosterAlg::processOptions(RAPIOOptions& o)
   o.getLegacyGrid(myFullGrid);
 
   FusionCache::setRosterDir(o.getString("roster"));
+
+  #ifdef USE_STATIC_NEAREST
+  myNearestCount = FUSION_MAX_CONTRIBUTING;
+  #else
+  myNearestCount = o.getInteger("nearest");
+  if (myNearestCount < 1) {
+    LogInfo("Setting nearest to 1\n");
+    myNearestCount = 1;
+  }
+  if (myNearestCount > 6) {
+    LogInfo("Setting nearest to 6\n");
+    myNearestCount = 6;
+  }
+  #endif // ifdef USE_STATIC_NEAREST
+  LogInfo(">>>>>>Using a nearest neighbor value of " << myNearestCount << "\n");
 } // RAPIOFusionRosterAlg::processOptions
 
 void
 RAPIOFusionRosterAlg::firstTimeSetup()
 {
   // Full tile/CONUS we represent
-  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
+  size_t size = myNearestCount;
+  int NFULL   = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
   ProcessTimer createGrid("Created");
 
-  LogInfo("Creating nearest array of size " << NFULL << ", each cell " << sizeof(NearestIDs) << " bytes.\n");
-  // FIXME: StaticVectorT<NearestIDs>({dimensions})
-  // All the SparseVector/etc. I need a clean up pass on that design
-  myNearest      = std::vector<NearestIDs>(NFULL);
   myNearestIndex = DimensionMapper({ myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ() });
+
+  #ifdef USE_STATIC_NEAREST
+  // Old way, grouped by static nearest (compile only size, probably slightly quicker)
+  LogInfo("Creating nearest array of size " << NFULL << ", each cell " << sizeof(NearestIDs) << " bytes.\n");
+  myNearest = std::vector<NearestIDs>(NFULL);
+  #else
+
+  // New way, grouped separately (dynamic for possible memory locality issues)
+  LogInfo("Creating nearest array of size " << NFULL << ", each cell " <<
+    (sizeof(SourceIDKey) + sizeof(float)) * (NFULL * size) << " bytes.\n");
+  myNearestSourceIDKeys = std::vector<SourceIDKey>(NFULL * size, 0);
+  myNearestRanges       = std::vector<float>(NFULL * size, std::numeric_limits<float>::max()); // The ranges per location
+  #endif
 
   LogInfo(createGrid << "\n");
 }
@@ -196,20 +227,22 @@ void
 RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id, size_t startX, size_t startY,
   size_t numX, size_t numY)
 {
-  size_t counter = 0;
+  size_t counter    = 0;
+  const size_t size = myNearestCount;
+
+  #if USER_STATIC_NEAREST
 
   for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
     for (size_t y = startY; y < startY + numY; ++y) {   // north to south
       for (size_t x = startX; x < startX + numX; ++x) { // east to west
-        size_t i = myNearestIndex.getIndex3D(x, y, z);
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
 
         // Update the 'nearest' for this radar id, etc.
-        auto v  = out[counter++];
-        auto& c = myNearest[i];
+        auto v = out[counter++];
 
         // Maintain sorted from lowest to highest.
+        auto& c = myNearest[at];
 
-        const size_t size = FUSION_MAX_CONTRIBUTING;
         // Find the correct position to insert v using linear search (small N)
         int index = 0;
         while (index < size && v >= c.range[index]) {
@@ -234,48 +267,118 @@ RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t
       }
     }
   }
+  #else // if USER_STATIC_NEAREST
+
+  // NEW WAY TESTING
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = startY; y < startY + numY; ++y) {   // north to south
+      for (size_t x = startX; x < startX + numX; ++x) { // east to west
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        // Update the 'nearest' for this radar id, etc.
+        auto v = out[counter++];
+
+        // Find the correct position to insert v using linear search (small N)
+        const size_t atr = at * size; // relative into group
+        auto& k       = myNearestSourceIDKeys;
+        auto& r       = myNearestRanges;
+        size_t index2 = 0;
+        while (index2 < size && v >= r[atr + index2]) {
+          ++index2;
+        }
+
+        // If not pass end of array...
+        if (index2 < size) {
+          // ...then shift elements to make room for v
+          // which pushes out the largest
+          if (index2 < size - 1) {
+            for (int i = size - 1; i > index2; --i) {
+              r[atr + i] = r[atr + i - 1];
+              k[atr + i] = k[atr + i - 1];
+            }
+          }
+
+          // and add v
+          k[atr + index2] = id;
+          r[atr + index2] = v;
+        }
+      }
+    }
+  }
+  #endif // if USER_STATIC_NEAREST
 } // RAPIOFusionRosterAlg::nearestNeighbor
 
 void
 RAPIOFusionRosterAlg::generateMasks()
 {
-  ProcessTimer maskGen("Generating coverage bit masks.\n");
+  LogInfo("Generating converage bit masks...\n");
+  ProcessTimer maskGen("Generating coverage bit masks took:\n");
+  const size_t size = myNearestCount;
 
   // Clear old bits
   for (auto& s:mySourceInfos) {
     s.mask.clearAllBits();
   }
 
+  #if USE_STATIC_NEAREST
   // Mask generation algorithm
   for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
     for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
       for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
-        size_t i = myNearestIndex.getIndex3D(x, y, z);
-        auto& c  = myNearest[i];
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
 
-        for (size_t k = 0; k < FUSION_MAX_CONTRIBUTING; ++k) {
+        auto& c = myNearest[at];
+
+        for (size_t i = 0; i < size; ++i) {
           // if we find a 0 id, then since we're insertion sorted by range,
           // then this means all are 0 later...so continue
-          if (c.id[k] == 0) {
+          if (c.id[i] == 0) {
             continue;
           }
           // If not zero, we need the sourceInfo for it.  This is why
           // we store as ids in a vector it makes this lookup fast
-          SourceInfo * info = &mySourceInfos[c.id[k]];
-          Bitset& b         = info->mask; // refer to mask
+          SourceInfo * info = &mySourceInfos[c.id[i]];
+          Bitset& b         = info->mask;         // refer to mask
+          const size_t lx   = x - (info->startX); // "shouldn't" underflow
+          const size_t ly   = y - (info->startY);
+          const size_t li   = b.getIndex3D(lx, ly, z);
+          info->mask.set1(li); // Set one bit
+          counter++;
+        }
+      }
+    }
+  }
+  #else // if USE_STATIC_NEAREST
 
-          // FIXME: it's possible locally caching 'hits' would speed up things
-          // since we know weather clumps...
-          const size_t lx = x - (info->startX); // "shouldn't" underflow
-          const size_t ly = y - (info->startY);
-          const size_t li = b.getIndex3D(lx, ly, z);
-          // My class here could be faster...let's see if it matters...
-          // info->mask.set(li, 1); // humm this loops..FIXME: the 1 case can be faster
+  // Mask generation algorithm
+  auto& k = myNearestSourceIDKeys;
+  auto& r = myNearestRanges;
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
+      for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        const size_t atr = at * size; // relative into group
+
+        for (size_t i = 0; i < size; ++i) {
+          // if we find a 0 id, then since we're insertion sorted by range,
+          // then this means all are 0 later...so continue
+          if (k[atr + i] == 0) {
+            continue;
+          }
+          // If not zero, we need the sourceInfo for it.  This is why
+          // we store as ids in a vector it makes this lookup fast
+          SourceInfo * info = &mySourceInfos[k[atr + i]];
+          Bitset& b         = info->mask;         // refer to mask
+          const size_t lx   = x - (info->startX); // "shouldn't" underflow
+          const size_t ly   = y - (info->startY);
+          const size_t li   = b.getIndex3D(lx, ly, z);
           info->mask.set1(li); // Set one bit
         }
       }
     }
   }
+  #endif // if USE_STATIC_NEAREST
   LogInfo(maskGen);
 } // RAPIOFusionRosterAlg::generateMasks
 

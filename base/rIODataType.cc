@@ -172,33 +172,29 @@ IODataType::generateFileName(std::shared_ptr<DataType> dt,
 
   std::string dirbase = forFull.getDirName();
 
-  // FIXME:  My temp hack for multi-radar output to avoid data overwrite stomping
-  // We should generalize file output ability with a smart configuration
-  // instead of hardcoding it here
-  // This is bug in mrms imo, so may have to change it there as well
-  std::string radar = "";
+  // Allow a source in the datatype attributes to prevent data overwrite
+  // stomping from multiple sources
+  std::string sourcename = "";
 
-  dt->getString("radarName-value", radar);
-
-  if (!radar.empty()) {
-    dirbase = dirbase + '/' + radar;
+  dt->getString("Sourcename", sourcename);
+  if (sourcename.empty()) {
+    dt->getString("radarName-value", sourcename); // Some have this
   }
+
   // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
 
   // Should be able to keep constant
   const std::vector<std::string> tokens =
-  { "{base}", "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}" };
+  { "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}", "{source}", "{/source}" };
   const std::string sub1       = subType.empty() ? ("") : ('/' + subType);
   const std::string sub2       = subType.empty() ? ("") : ('_' + subType);
   const std::string time       = rsTime.getString(Record::RECORD_TIMESTAMP);
+  const std::string source2    = sourcename.empty() ? ("") : ('/' + sourcename);
   std::vector<std::string> tos =
-  { dirbase, dataType, sub1, sub2, subType, time };
+  { dataType, sub1, sub2, subType, time, sourcename, source2 };
   std::string p = Strings::replaceGroup(basepattern, tokens, tos);
-  URL path      = URL(p);
-
-  // Ensure directory tree exists for this path.  Should be done by caller I think...because this might
-  // be a bucket prefix instead..muahhahhaa
-  OS::ensureDirectory(path.getDirName());
+  // dirbase is always at front of course
+  URL path = URL(dirbase + "/" + p);
 
   return path;
 } // IODataType::generateFileName
@@ -249,11 +245,15 @@ IODataType::generateRecord(std::shared_ptr<DataType> dt,
     selections.push_back(spec);
   }
   Record rec(params, selections, rsTime);
-  std::string radar;
 
-  if (dt->getString("radarName-value", radar)) {
-    rec.setSourceName(radar);
+  std::string source;
+
+  if (dt->getString("Sourcename", source)) {
+    rec.setSourceName(source);
+  } else if (dt->getString("radarName-value", source)) {
+    rec.setSourceName(source);
   }
+
   records.push_back(rec);
 } // IODataType::generateRecord
 

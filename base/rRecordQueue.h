@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <queue>
 
 namespace rapio {
 /** Sort records for queue.  Usually this is in decreasing time order */

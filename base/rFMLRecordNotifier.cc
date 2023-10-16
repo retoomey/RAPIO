@@ -74,9 +74,11 @@ FMLRecordNotifier::~FMLRecordNotifier()
 
 
 void
-FMLRecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
+FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
 {
   if (!rec.isValid()) { return; }
+
+  const std::string outputinfo = outputParams["outputfolder"];
 
   // We assume the outputinfo is a directory.  Override with myOutputDir if requested
   // on the notifier param line:

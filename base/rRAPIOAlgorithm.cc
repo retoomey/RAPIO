@@ -16,6 +16,7 @@
 #include "rDataTypeHistory.h"
 #include "rRecordFilter.h"
 #include "rRecordNotifier.h"
+#include "rConfigParamGroup.h"
 
 // Baseline initialize
 #include "rDataFilter.h"
@@ -35,12 +36,6 @@ Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
 void
 RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
 {
-  // These are the standard generic 'input' parameters we support
-  o.require("i",
-    "/data/radar/KTLX/code_index.xml",
-    "The input sources");
-  o.addGroup("i", "I/O");
-
   // The realtime option for reading archive, realtime, etc.
   const std::string r = "r";
 
@@ -88,9 +83,6 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
 void
 RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
 {
-  // Dispatch advanced help to the mega static classes
-  o.addAdvancedHelp("i", IOIndex::introduceHelp());
-
   // Datatype will try to load all dynamic modules, so we want to avoid that
   // unless help is requested
   if (o.wantAdvancedHelp("o")) {
@@ -143,12 +135,6 @@ RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
       "History -h value set too small, changing to " << history << "seconds.\n");
   }
   myMaximumHistory = TimeDuration::Seconds(history);
-
-  // Standard -i, -I -r handling of the input parameters,
-  // most algorithms do it this way.
-  ConfigParamGroupi parami;
-
-  parami.readString(o.getString("i"));
 
   myReadMode = o.getString("r");
 } // RAPIOAlgorithm::processInputParams
@@ -233,6 +219,7 @@ RAPIOAlgorithm::initializePlugins()
   // I/O plugins
   PluginNotifier::declare(this, "n");     // Notification ability (fam, etc.)
   PluginRecordFilter::declare(this, "I"); // Record filter ability (ingest)
+  PluginIngestor::declare(this, "i");     // Ingestor index ability and record queue
   // PluginProductFilter::declare(this, "O");  // Product filter ability (output)
 
   return RAPIOProgram::initializePlugins();
@@ -258,76 +245,8 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
 }
 
 void
-RAPIOAlgorithm::setUpInitialIndexes()
-{
-  // Try to create an index for each source we want data from
-  // and add sorted records to queue
-  // FIXME: Archive should probably skip queue in case of giant archive cases,
-  // otherwise we load a lot of memory.  We need better handling of this..
-  // though for small archives we load all and sort, which is a nice ability
-  size_t count      = 0;
-  const auto& infos = ConfigParamGroupi::getIndexInputInfo();
-  size_t wanted     = infos.size();
-  bool daemon       = isDaemon();
-  bool archive      = isArchive();
-  std::string what  = daemon ? "daemon" : "archive";
-
-  if (daemon && archive) { what = "allrecords"; }
-
-  for (size_t p = 0; p < wanted; ++p) {
-    const auto& i = infos[p];
-    std::shared_ptr<IndexType> in;
-
-    bool success = false;
-    in = IOIndex::createIndex(i.protocol, i.indexparams, myMaximumHistory);
-    myConnectedIndexes.push_back(in);
-
-    if (in != nullptr) {
-      in->setIndexLabel(p); // Mark in order
-      success = in->initialRead(daemon, archive);
-      if (success) {
-        count++;
-      }
-    }
-
-    std::string how = success ? "Successful" : "Failed";
-    LogInfo(how << " " << what << " connection to '" << i.protocol << "-->" << i.indexparams << "'\n");
-  }
-
-  // Failed to connect to all needed sources...
-  if (count != wanted) {
-    LogSevere("Only connected to " << count << " of " << wanted
-                                   << " data sources, ending.\n");
-    exit(1);
-  }
-  const size_t rSize = Record::theRecordQueue->size();
-
-  LogInfo(rSize << " initial records from " << wanted << " sources\n");
-  LogDebug("Outputs:\n");
-  const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
-
-  for (auto& w:writers) {
-    LogDebug("   " << w.factory << "--> " << w.outputinfo << "\n");
-  }
-} // RAPIOAlgorithm::setUpInitialIndexes
-
-void
-RAPIOAlgorithm::setUpRecordQueue()
-{
-  // Create record queue and record filter/notifier
-  std::shared_ptr<RecordQueue> q = std::make_shared<RecordQueue>(this);
-
-  Record::theRecordQueue = q;
-  EventLoop::addEventHandler(q);
-}
-
-void
 RAPIOAlgorithm::execute()
 {
-  setUpRecordQueue();
-
-  setUpInitialIndexes();
-
   // Plugins
   for (auto p: myPlugins) {
     p->execute(this);
@@ -418,6 +337,8 @@ bool
 RAPIOAlgorithm::isProductWanted(const std::string& key,
   std::string                                    & productName)
 {
+  // FIXME: This will go with the "O" plugin
+
   bool found = false;
 
   std::string newProductName = "";
@@ -498,9 +419,8 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
 
         // Get back the output folder for notifications
         // and notify each notifier for this writer.
-        const std::string outputfolder = outputParams["outputfolder"];
         for (auto& n:PluginNotifier::theNotifiers) { // if any, use
-          n->writeRecords(outputfolder, records);
+          n->writeRecords(outputParams, records);
         }
       } // Not gonna error..writers should be complaining
     }

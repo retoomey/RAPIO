@@ -17,12 +17,12 @@ public:
 
   /** Notify about this record. */
   virtual void
-  writeRecord(const std::string& outputinfo, const Record& rec) = 0;
+  writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) = 0;
 
   /** The default implementation loops through the records,
    *  passing each to writeRecord(). */
   virtual void
-  writeRecords(const std::string& outputinfo, const std::vector<Record>& rec);
+  writeRecords(std::map<std::string, std::string>& outputParams, const std::vector<Record>& rec);
 
   /** Set the initial params this record notifier */
   virtual void

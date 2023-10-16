@@ -32,7 +32,7 @@ class RAPIOFusionTwoAlg : public rapio::RAPIOAlgorithm {
 public:
 
   /** Create tile algorithm */
-  RAPIOFusionTwoAlg(){ };
+  RAPIOFusionTwoAlg() : myDirty(0){ };
 
   /** Declare all algorithm options */
   virtual void
@@ -86,5 +86,8 @@ protected:
 
   /** My database of 3D point observations */
   std::shared_ptr<FusionDatabase> myDatabase;
+
+  /** How many data files have come in since a process volume? */
+  size_t myDirty;
 };
 }

@@ -4,8 +4,7 @@
 #include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
-#include <rIndexType.h>
-#include <rConfigParamGroup.h>
+// #include <rIndexType.h>
 
 #include <string>
 #include <vector>
@@ -71,14 +70,6 @@ public:
   isProductWanted(const std::string& key,
     std::string                    & productName);
 
-  /** Set up initial indexes and initial loading */
-  virtual void
-  setUpInitialIndexes();
-
-  /** Set up the record queue */
-  virtual void
-  setUpRecordQueue();
-
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
   execute() override;
@@ -141,9 +132,6 @@ public:
   isWebServer();
 
 protected:
-
-  /** Indexes we are successfully attached to */
-  std::vector<std::shared_ptr<IndexType> > myConnectedIndexes;
 
   /** Hold the "n" list of notifiers */
   std::string myNotifierList;

@@ -74,12 +74,12 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
         // FusionRangeCache storedMeters = std::round(aLengthKMs * 1000.0);
         FusionRangeCache storedMeters = aLengthKMs;
 
-        static size_t counter = 0;
+        // static size_t counter = 0;
         //        outFile.write(reinterpret_cast<char *>(&storedMeters), sizeof(FusionRangeCache));
         buffer.push_back(storedMeters);
-        if (counter++ == 1000) {
-          LogSevere("VALUE at location 1000 is " << storedMeters << " and " << aLengthKMs << "\n");
-        }
+        // if (counter++ == 1000) {
+        //  LogSevere("VALUE at location 1000 is " << storedMeters << " and " << aLengthKMs << "\n");
+        // }
         // outFile.write(reinterpret_cast<char *>(&aLengthKMs), sizeof(LengthKMs));
         // myRanges[myAt];
 

@@ -7,7 +7,7 @@ using namespace rapio;
 void
 Stage2Data::add(float v, float w, float w2, short x, short y, short z)
 {
-  const bool compressMissing = false;
+  const bool compressMissing = true;
 
   if (compressMissing && (v == Constants::MissingData)) {
     // Only store x,y,z for a missing
@@ -93,9 +93,9 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
   } else {
     auto stage2 = DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
     stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
-    stage2->setSubType("Full");
+    stage2->setSubType("S2");
     stage2->setString("Radarname", myRadarName);
-    //   stage2->setString("radarName-value", myRadarName); // for IODataType base add.  FIXME: clean up
+    stage2->setString("Sourcename", myRadarName);
     stage2->setString("Typename", myTypeName);
     stage2->setLong("xBase", myXBase);
     stage2->setLong("yBase", myYBase);
@@ -157,7 +157,7 @@ Stage2Data::receive(RAPIOData& rData)
     auto& d = *gsp;
     // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
     if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
-      LogInfo("Stage2 data noticed: " << rData.getDescription() << "\n");
+      LogInfo("Stage2 data noticed record: " << rData.getDescription() << "\n");
       DataGrid& d = *gsp;
 
       // ---------------------------------------------------

@@ -49,9 +49,11 @@ EXERecordNotifier::~EXERecordNotifier()
 { }
 
 void
-EXERecordNotifier::writeRecord(const std::string& outputinfo, const Record& rec)
+EXERecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
 {
   if (!rec.isValid()) { return; }
+
+  // const std::string outputinfo = outputParams["outputfolder"];
 
   // FIXME: More advanced ability at some point
   // I'm just calling system and background at moment

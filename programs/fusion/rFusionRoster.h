@@ -5,12 +5,18 @@
 /** RAPIO API */
 #include <RAPIO.h>
 
+// Keeping the 'static' way for now in case the dynamic nearest number way is too slow
+// #define USE_STATIC_NEAREST
 // Nearest 'n' basically.  RAM will explode with larger values
-#define FUSION_MAX_CONTRIBUTING 2
 
 namespace rapio {
 /** Key to reduce size of nearest grid */
 typedef unsigned short SourceIDKey;
+
+#ifdef USE_STATIC_NEAREST
+
+// We have a set nearest at compile time in this case
+# define FUSION_MAX_CONTRIBUTING 4
 
 /** Store the nearest data.  Size matters here */
 class NearestIDs : public Data {
@@ -20,7 +26,7 @@ public:
    * before running the nearest algorithm */
   NearestIDs()
   {
-    #if 0
+    # if 0
     // Optimized but doesn't allow changing FUSION_MAX_CONTRIBUTING
     : id{ 0, 0, 0, 0 },
     range{ std::numeric_limits<float>::max(),
@@ -28,7 +34,7 @@ public:
            std::numeric_limits<float>::max(),
            std::numeric_limits<float>::max() }
     {
-    #endif
+    # endif
     for (size_t i = 0; i < FUSION_MAX_CONTRIBUTING; ++i) {
       id[i]    = 0;
       range[i] = std::numeric_limits<float>::max();
@@ -39,6 +45,7 @@ public:
   SourceIDKey id[FUSION_MAX_CONTRIBUTING];
   float range[FUSION_MAX_CONTRIBUTING];
 };
+#endif // ifdef USE_STATIC_NEAREST
 
 /** Store a unique id per source and grid information when reading files from stage1 */
 class SourceInfo : public Data {
@@ -137,8 +144,17 @@ protected:
   /** Coordinates for the total merger grid */
   LLCoverageArea myFullGrid;
 
+  #ifdef USE_STATIC
   /** The full tile/CONUS grid of nearest for a x,y,z location */
   std::vector<NearestIDs> myNearest;
+  #else
+
+  /** List of SourceIDKeys, 1 per grid cell */
+  std::vector<SourceIDKey> myNearestSourceIDKeys;
+
+  /** List of ranges per cell, 1 per grid cell * contribution number */
+  std::vector<float> myNearestRanges;
+  #endif
 
   /** Dimension mapper to get index into myNearest */
   DimensionMapper myNearestIndex;
@@ -155,5 +171,8 @@ protected:
 
   /** Count files/sources processed in a walk */
   size_t myWalkCount;
+
+  /** My nearest count (how many contribute) */
+  size_t myNearestCount;
 };
 }
