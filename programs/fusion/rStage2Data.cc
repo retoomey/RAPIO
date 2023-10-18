@@ -5,25 +5,24 @@
 using namespace rapio;
 
 void
-Stage2Data::add(float v, float w, float w2, short x, short y, short z)
+Stage2Data::add(float n, float d, short x, short y, short z)
 {
   const bool compressMissing = true;
 
-  if (compressMissing && (v == Constants::MissingData)) {
+  if (compressMissing && (n == Constants::MissingData)) {
     // Only store x,y,z for a missing
     // Since missing tends to be grouped in space, we'll do a simple RLE to compress x,y,z locations
     // Storing a bit per x,y,z. marking MissingData
     size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
     myMissingSet.set(i, 1);
     myAddMissingCounter++;
-  } else if (v == Constants::DataUnavailable) { // We shouldn't send this right?
+  } else if (n == Constants::DataUnavailable) { // We shouldn't send this right?
   } else {
-    myValues.push_back(v);
-    myWeights.push_back(w);
-    myWeights2.push_back(w2);
-    myXs.push_back(x); // X represents LON
-    myYs.push_back(y); // Y represents LAT
-    myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
+    myTable->myNums.push_back(n);
+    myTable->myDems.push_back(d);
+    myTable->myXs.push_back(x); // X represents LON
+    myTable->myYs.push_back(y); // Y represents LAT
+    myTable->myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
   }
 }
 
@@ -62,10 +61,10 @@ Stage2Data::RLE()
           // if (counter < 10) {
           //    std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
           // }
-          myXMissings.push_back(startx);
-          myYMissings.push_back(starty);
-          myZMissings.push_back(startz);
-          myLMissings.push_back(length); // has to be big enough for all of conus
+          myTable->myXMissings.push_back(startx);
+          myTable->myYMissings.push_back(starty);
+          myTable->myZMissings.push_back(startz);
+          myTable->myLMissings.push_back(length); // has to be big enough for all of conus
         }
       }
     }
@@ -80,9 +79,10 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
   // a bit of space.
   RLE();
 
+  // Info from our data
   LLH aLocation;
-  size_t finalSize  = myXs.size();
-  size_t finalSize2 = myXMissings.size(); // size from RLE
+  size_t finalSize  = myTable->myXs.size();
+  size_t finalSize2 = myTable->myXMissings.size(); // size from RLE
 
   LogInfo(
     "Sizes are " << finalSize << " values, with " << myAddMissingCounter << " missing " << finalSize2 << " (RLE).\n");
@@ -91,58 +91,82 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     // Would be better if we don't have to
     LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
   } else {
-    auto stage2 = DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
-    stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
-    stage2->setSubType("S2");
-    stage2->setString("Radarname", myRadarName);
-    stage2->setString("Sourcename", myRadarName);
-    stage2->setString("Typename", myTypeName);
-    stage2->setLong("xBase", myXBase);
-    stage2->setLong("yBase", myYBase);
-    // FIXME: general in MRMS and RAPIO
-    stage2->setString("NetcdfWriterInfo", "RAPIO:Fusion stage 2 data");
-    stage2->setLocation(myCenter); // Radar center location
+    bool writeNetcdf = false;
+    bool writeRaw    = true;
 
-    // ---------------------------------------------------
-    // Value per point storage (dim 0)
-    //
-    // FIXME: We 'should' be able to use a 'baseX' and 'baseY' for small radars
-    // and store this silly small.  Radar will only cover so many squares
-    auto& netcdfX        = stage2->addShort1DRef("X", "dimensionless", { 0 });
-    auto& netcdfY        = stage2->addShort1DRef("Y", "dimensionless", { 0 });
-    auto& netcdfZ        = stage2->addByte1DRef("Z", "dimensionless", { 0 });
-    auto& netcdfValues   = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
-    auto& netcdfWeights  = stage2->addFloat1DRef("W1", "dimensionless", { 0 });
-    auto& netcdfWeights2 = stage2->addFloat1DRef("W2", "dimensionless", { 0 });
+    // Writing netcdf.  This is more generic readable so I like it for that reason, however
+    // our I/O is so critical we tend to use a custom binary for read/write speed at the cost
+    // of external readability.
+    if (writeNetcdf) {
+      auto stage2 =
+        DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
 
-    // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
-    // Since we deal with 'small' radar coverage here, think we're ok for moment
-    std::copy(myXs.begin(), myXs.end(), netcdfX.data());
-    std::copy(myYs.begin(), myYs.end(), netcdfY.data());
-    std::copy(myZs.begin(), myZs.end(), netcdfZ.data());
-    std::copy(myValues.begin(), myValues.end(), netcdfValues.data());
-    std::copy(myWeights.begin(), myWeights.end(), netcdfWeights.data());
-    std::copy(myWeights2.begin(), myWeights2.end(), netcdfWeights2.data());
+      // This is general settings for pathing...
+      stage2->setString("Sourcename", getRadarName());
+      stage2->setDataType("Stage2Ingest"); // DataType attribute in the file not filename
+      stage2->setSubType("S2");
 
-    // ---------------------------------------------------
-    // Missing value storage (dim 1)
-    //
-    auto& netcdfXM = stage2->addShort1DRef("Xm", "dimensionless", { 1 });
-    auto& netcdfYM = stage2->addShort1DRef("Ym", "dimensionless", { 1 });
-    auto& netcdfZM = stage2->addByte1DRef("Zm", "dimensionless", { 1 });
-    auto& netcdfLM = stage2->addShort1DRef("Lm", "dimensionless", { 1 }); // max 65000
+      // Netcdf specific stuff (FIXME: could have a copy all atrributes?)
+      stage2->setString("Radarname", getRadarName());
+      stage2->setString("Typename", getTypeName());
+      stage2->setLong("xBase", getXBase());
+      stage2->setLong("yBase", getYBase());
+      stage2->setUnits(getUnits());
+      stage2->setLocation(getLocation()); // Radar center location
+      // FIXME: general in MRMS and RAPIO
+      stage2->setString("NetcdfWriterInfo", "RAPIO:Fusion stage 2 data");
 
-    std::copy(myXMissings.begin(), myXMissings.end(), netcdfXM.data());
-    std::copy(myYMissings.begin(), myYMissings.end(), netcdfYM.data());
-    std::copy(myZMissings.begin(), myZMissings.end(), netcdfZM.data());
-    std::copy(myLMissings.begin(), myLMissings.end(), netcdfLM.data());
+      // ---------------------------------------------------
+      // Value per point storage (dim 0)
+      //
+      // FIXME: We 'should' be able to use a 'baseX' and 'baseY' for small radars
+      // and store this silly small.  Radar will only cover so many squares
+      auto& netcdfX    = stage2->addShort1DRef("X", "dimensionless", { 0 });
+      auto& netcdfY    = stage2->addShort1DRef("Y", "dimensionless", { 0 });
+      auto& netcdfZ    = stage2->addByte1DRef("Z", "dimensionless", { 0 });
+      auto& netcdfNums = stage2->addFloat1DRef(Constants::PrimaryDataName, getUnits(), { 0 });
+      auto& netcdfDems = stage2->addFloat1DRef("D", "dimensionless", { 0 });
 
-    // We 'could' return the stage2 object let the algorithm write it...but we can hide
-    // it here I think for moment just in case we end up doing something different
-    std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
-    extraParams["showfilesize"] = "yes";
-    extraParams["compression"]  = "gz";
-    alg->writeOutputProduct(asName, stage2, extraParams);
+      // Copying because size is dynamic.  FIXME: Could improve API to handle dynamic arrays?
+      // Since we deal with 'small' radar coverage here, think we're ok for moment
+      std::copy(myTable->myXs.begin(), myTable->myXs.end(), netcdfX.data());
+      std::copy(myTable->myYs.begin(), myTable->myYs.end(), netcdfY.data());
+      std::copy(myTable->myZs.begin(), myTable->myZs.end(), netcdfZ.data());
+      std::copy(myTable->myNums.begin(), myTable->myNums.end(), netcdfNums.data());
+      std::copy(myTable->myDems.begin(), myTable->myDems.end(), netcdfDems.data());
+
+      // ---------------------------------------------------
+      // Missing value storage (dim 1)
+      //
+      auto& netcdfXM = stage2->addShort1DRef("Xm", "dimensionless", { 1 });
+      auto& netcdfYM = stage2->addShort1DRef("Ym", "dimensionless", { 1 });
+      auto& netcdfZM = stage2->addByte1DRef("Zm", "dimensionless", { 1 });
+      auto& netcdfLM = stage2->addShort1DRef("Lm", "dimensionless", { 1 }); // max 65000
+
+      std::copy(myTable->myXMissings.begin(), myTable->myXMissings.end(), netcdfXM.data());
+      std::copy(myTable->myYMissings.begin(), myTable->myYMissings.end(), netcdfYM.data());
+      std::copy(myTable->myZMissings.begin(), myTable->myZMissings.end(), netcdfZM.data());
+      std::copy(myTable->myLMissings.begin(), myTable->myLMissings.end(), netcdfLM.data());
+
+      // We 'could' return the stage2 object let the algorithm write it...but we can hide
+      // it here I think for moment just in case we end up doing something different
+      std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
+      extraParams["showfilesize"] = "yes";
+      extraParams["compression"]  = "gz";
+      alg->writeOutputProduct(asName, stage2, extraParams);
+    }
+
+    if (writeRaw) {
+      // Faster but less generally readable.  Though rdump 'should' be able to read it if iotext if up2date.
+      myTable->setSubType("S2");
+      myTable->setTime(aTime);
+
+      // Write the raw file out with notification, etc.
+      std::map<std::string, std::string> extraParams;
+      extraParams["showfilesize"] = "yes";
+      // extraParams["compression"]  = "gz"; BinaryTable compresses columns
+      alg->writeOutputProduct(asName, myTable, extraParams);
+    }
   }
   // -------------------------------------------------------
 } // Stage2Data::send
@@ -151,13 +175,15 @@ std::shared_ptr<Stage2Data>
 Stage2Data::receive(RAPIOData& rData)
 {
   // Stage two reading in stage one files
-  auto gsp = rData.datatype<rapio::DataGrid>();
+  auto gsp = rData.datatype<rapio::DataGrid>(); // netcdf
 
   if (gsp != nullptr) {
     auto& d = *gsp;
     // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
+    // FIXME: we could let it be DataGrid and check fields instead.  This would stop the
+    // warning we get for missing reader
     if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
-      LogInfo("Stage2 data noticed record: " << rData.getDescription() << "\n");
+      LogInfo("Stage2 data noticed (netcdf) record: " << rData.getDescription() << "\n");
       DataGrid& d = *gsp;
 
       // ---------------------------------------------------
@@ -186,26 +212,23 @@ Stage2Data::receive(RAPIOData& rData)
       // ---------------------------------------------------
       // Value per point storage (dim 0)
       //
-      auto& netcdfX        = d.getShort1DRef("X");
-      auto& netcdfY        = d.getShort1DRef("Y");
-      auto& netcdfZ        = d.getByte1DRef("Z");
-      auto& netcdfValues   = d.getFloat1DRef();
-      auto& netcdfWeights  = d.getFloat1DRef("W1");
-      auto& netcdfWeights2 = d.getFloat1DRef("W2");
+      auto& netcdfX    = d.getShort1DRef("X");
+      auto& netcdfY    = d.getShort1DRef("Y");
+      auto& netcdfZ    = d.getByte1DRef("Z");
+      auto& netcdfNums = d.getFloat1DRef();
+      auto& netcdfDems = d.getFloat1DRef("D");
 
-      in.myXs.reserve(aSize);
-      in.myYs.reserve(aSize);
-      in.myZs.reserve(aSize);
-      in.myValues.reserve(aSize);
-      in.myWeights.reserve(aSize);
-      in.myWeights2.reserve(aSize);
+      in.myTable->myXs.reserve(aSize);
+      in.myTable->myYs.reserve(aSize);
+      in.myTable->myZs.reserve(aSize);
+      in.myTable->myNums.reserve(aSize);
+      in.myTable->myDems.reserve(aSize);
       for (size_t i = 0; i < aSize; i++) {
-        in.myXs.push_back(netcdfX[i]);
-        in.myYs.push_back(netcdfY[i]);
-        in.myZs.push_back(netcdfZ[i]);
-        in.myValues.push_back(netcdfValues[i]);
-        in.myWeights.push_back(netcdfWeights[i]);
-        in.myWeights2.push_back(netcdfWeights2[i]);
+        in.myTable->myXs.push_back(netcdfX[i]);
+        in.myTable->myYs.push_back(netcdfY[i]);
+        in.myTable->myZs.push_back(netcdfZ[i]);
+        in.myTable->myNums.push_back(netcdfNums[i]);
+        in.myTable->myDems.push_back(netcdfDems[i]);
       }
 
       // ---------------------------------------------------
@@ -230,18 +253,19 @@ Stage2Data::receive(RAPIOData& rData)
       if (aSize > 1) { aSize = 1; }
       for (size_t i = 0; i < aSize; i++) {
         LogInfo(
-          "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfValues[i] << " with weight " <<
-            netcdfWeights[i] << "\n");
+          "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfNums[i] << " with weight " <<
+            netcdfDems[i] << "\n");
       }
 
-      in.myXMissings.reserve(aSize2);
-      in.myYMissings.reserve(aSize2);
-      in.myZMissings.reserve(aSize2);
+      in.myTable->myXMissings.reserve(aSize2);
+      in.myTable->myYMissings.reserve(aSize2);
+      in.myTable->myZMissings.reserve(aSize2);
+      in.myTable->myLMissings.reserve(aSize2);
       for (size_t i = 0; i < aSize2; i++) {
-        in.myXMissings.push_back(netcdfXM[i]);
-        in.myYMissings.push_back(netcdfYM[i]);
-        in.myZMissings.push_back(netcdfZM[i]);
-        in.myLMissings.push_back(RLElengths[i]);
+        in.myTable->myXMissings.push_back(netcdfXM[i]);
+        in.myTable->myYMissings.push_back(netcdfYM[i]);
+        in.myTable->myZMissings.push_back(netcdfZM[i]);
+        in.myTable->myLMissings.push_back(RLElengths[i]);
       }
 
       return insp;
@@ -249,26 +273,36 @@ Stage2Data::receive(RAPIOData& rData)
       //   LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
     }
   }
+
+  // Stage two reading in raw files (a bit simplier right?)
+  auto ft = rData.datatype<FusionBinaryTable>();
+
+  if (ft != nullptr) {
+    LogInfo("Stage2 data noticed (raw) record: " << rData.getDescription() << "\n");
+    std::vector<size_t> dims         = { ft->myXs.size(), ft->myLMissings.size() };
+    std::shared_ptr<Stage2Data> insp =
+      std::make_shared<Stage2Data>(Stage2Data(ft, dims));
+    return insp;
+  }
   return nullptr;
 } // Stage2Data::receive
 
 bool
-Stage2Data::get(float& v, float& w, float& w2, short& x, short& y, short& z)
+Stage2Data::get(float& n, float& d, short& x, short& y, short& z)
 {
   // First read the non-missing values...
-  if (myCounter < myValues.size()) {
-    x  = myXs[myCounter];
-    y  = myYs[myCounter];
-    z  = myZs[myCounter];
-    v  = myValues[myCounter];
-    w  = myWeights[myCounter];
-    w2 = myWeights2[myCounter];
+  if (myCounter < myTable->myNums.size()) {
+    x = myTable->myXs[myCounter];
+    y = myTable->myYs[myCounter];
+    z = myTable->myZs[myCounter];
+    n = myTable->myNums[myCounter];
+    d = myTable->myDems[myCounter];
     myCounter++;
     return true;
   }
 
   // ...then read the missing values from RLE arrays
-  if (myMCounter < myXMissings.size()) {
+  if (myMCounter < myTable->myXMissings.size()) {
     // Run length encoding expansion I goofed a few times,
     // so extra description here:
     // lengths: 5, 3
@@ -286,19 +320,18 @@ Stage2Data::get(float& v, float& w, float& w2, short& x, short& y, short& z)
 
     static size_t countout = 0;
     bool more = true;
-    auto l    = myLMissings[myMCounter]; // Current length
+    auto l    = myTable->myLMissings[myMCounter]; // Current length
 
     // Always snag the current missing
-    x = myXMissings[myMCounter] + myRLECounter; // Since we RLE in the X (with no row wrapping)
-    y = myYMissings[myMCounter];
-    z = myZMissings[myMCounter];
+    x = myTable->myXMissings[myMCounter] + myRLECounter; // Since we RLE in the X (with no row wrapping)
+    y = myTable->myYMissings[myMCounter];
+    z = myTable->myZMissings[myMCounter];
     // if (countout++ < 30) {
     //   std::cout << "AT: " << myXMissings.size() << " " << myMCounter << ", length " << l << " position " <<
     //     myRLECounter << " and (" << x << ", " << y << ", " << z << ")\n";
     // }
-    v  = Constants::MissingData;
-    w  = 0.0;
-    w2 = 0.0;
+    n = Constants::MissingData;
+    d = 1.0; // doesn't matter weighted average ignores missing
 
     // Update for the next missing, if any
     myRLECounter++;

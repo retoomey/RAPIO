@@ -58,7 +58,7 @@ protected:
 public:
 
   /** Ensure cleared out on construction..it should be */
-  VolumeValue()
+  VolumeValue() : dataValue(0.0), dataWeight1(1.0) // Default to 1.0 since final = v/w
   {
     layer[0] = layer[1] = layer[2] = layer[3] = nullptr;
   }
@@ -105,8 +105,7 @@ public:
 
   // OUTPUTS ---------------------
   double dataValue;   ///< Final output calculated data value by resolver
-  double dataWeight1; ///< Final output weight1 by resolver
-  double dataWeight2; ///< Final output weight2 by resolver FIXME: More generic for all resolver/merger plugins
+  double dataWeight1; ///< Final output weight1 by resolver (1 by default for averaging)
 };
 
 

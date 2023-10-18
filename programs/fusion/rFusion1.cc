@@ -611,18 +611,11 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
       attemptCount++;
       resolver.calc(vv);
 
-      // Bleh need to be cleaner here.  Our Lak resolver using num/dem
-      // so currently resolvers aren't compatible.  FIXME: clean up
-      // need some sort of 'final value' function or something
-      // gridtest[y][x] = vv.dataValue;
-      if (vv.dataWeight1 == 0) {
-        gridtest[y][x] = vv.dataValue;
-      } else {
-        gridtest[y][x] = vv.dataValue / vv.dataWeight1;
-      }
+      // Ok all resolvers pass 1 for the weight by default
+      gridtest[y][x] = vv.dataValue / vv.dataWeight1;
 
       if (outputStage2) {
-        stage2.add(vv.dataValue, vv.dataWeight1, vv.dataWeight2, x, y, layer);
+        stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
       }
     }
   }

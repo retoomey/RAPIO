@@ -36,8 +36,8 @@ namespace rapio {
 class Observation : public Data {
 public:
   /** Create an observation */
-  Observation(short xin, short yin, char zin, time_t tin, float rin) :
-    x(xin), y(yin), t(tin){ } // r(1000.0 * rin), z(zin), t(tin){ }
+  Observation(short xin, short yin, char zin, time_t tin) :
+    x(xin), y(yin), t(tin){ }
 
   // All observations will have to forward reference the giant x,y,z tree
   // that back-references them.
@@ -62,14 +62,15 @@ public:
   // So we actuallly merge 4 values instead of the 3 we set we wanted. A does expire out though so things 'fix' themselves.
   // It's a temp issue of having more data than expected if radars toggle status a lot.
   // However the benefit of no range is allowing faster merge and less IO sending stage2 data.
+  // Note: if we get more values and we can store we can always pick the 'newest' 3 vs range in this case
   // short r;
 };
 
 /** Observation storing a non-missing data value */
 class VObservation : public Observation {
 public:
-  VObservation(short xin, short yin, char zin, float vin, float win, time_t tin, float rin) :
-    v(vin), w(win), Observation(xin, yin, zin, tin, rin){ }
+  VObservation(short xin, short yin, char zin, float vin, float win, time_t tin) :
+    v(vin), w(win), Observation(xin, yin, zin, tin){ }
 
   // Data we store for merging.  Currently simple weight average
   float v; // 4 bytes
@@ -79,8 +80,8 @@ public:
 /** Observation storing a missing data value */
 class MObservation : public Observation {
 public:
-  MObservation(short xin, short yin, char zin, time_t tin, float rin) :
-    Observation(xin, yin, zin, tin, rin){ }
+  MObservation(short xin, short yin, char zin, time_t tin) :
+    Observation(xin, yin, zin, tin){ }
 };
 
 /** Store a Source Observation List.  Due to the size of output CONUS we group
@@ -90,41 +91,29 @@ public:
   /** STL unordered map */
   SourceList(){ }
 
-  /** Create a source list with a number of levels.
-   * FIXME: levels are hardcoded..should be the Z passed in.
-   * It's cheap to have 'more' layers since they will just be empty */
+  /** Create a source list with a number of levels. **/
   SourceList(const std::string& n, short i, size_t levels = 35) : myName(n), myID(i), myTime(0), myLevels(levels),
     myAObs(levels), myAMObs(levels)
   { }
 
   /** Add observation to observation list */
   inline void
-  addObservation(short x, short y, char z, float v, float w, time_t t, float r)
+  addObservation(short x, short y, char z, float v, float w, time_t t)
   {
-    // Old stuff (direct Z stored):
-    //   myObs.push_back(VObservation(x, y, z, v, w, t, r));
-    // New stuff:
-    myAObs[z].push_back(VObservation(x, y, z, v, w, t, r));
+    myAObs[z].push_back(VObservation(x, y, z, v, w, t));
   }
 
   /** Add missing to missing list */
   inline void
-  addMissing(short x, short y, char z, time_t t, float r)
+  addMissing(short x, short y, char z, time_t t)
   {
-    // Old stuff (direct Z stored):
-    //   myMObs.push_back(MObservation(x, y, z, t, r));
-    // New stuff:
-    myAMObs[z].push_back(MObservation(x, y, z, t, r));
+    myAMObs[z].push_back(MObservation(x, y, z, t));
   }
 
   /** Clear observations */
   inline void
   clear()
   {
-    // Old stuff (direct Z stored):
-    //    myObs.clear();
-    //    myMObs.clear();
-    // New stuff:
     for (size_t i = 0; i < myLevels; ++i) {
       myAObs[i].clear();
       myAMObs[i].clear();
@@ -367,7 +356,7 @@ public:
 
   /** Add observation to a source list */
   void
-  addObservation(SourceList& list, float v, float w, float w2, size_t x, size_t y, size_t z, time_t t);
+  addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t);
 
   /** Merge observations from an old source and new source with overlap reduction */
   void
@@ -377,7 +366,7 @@ public:
 
   /** Add missing mask observation */
   void
-  addMissing(SourceList& fromSource, float w, float w2, size_t x, size_t y, size_t z, time_t time);
+  addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time);
 
   /** Link a vector of observations to X,Y,Z grid */
   template <typename T>

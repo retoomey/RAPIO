@@ -46,9 +46,7 @@ IORaw::readRawDataType(const URL& url)
   std::vector<char> buf;
 
   IOURL::read(url, buf);
-  if (!buf.empty()) {
-    LogSevere("RAW READER: " << url << " SIZE: " << buf.size() << "\n");
-  } else {
+  if (buf.empty()) {
     LogSevere("Couldn't read raw datatype at " << url << "\n");
     return nullptr;
   }
@@ -60,11 +58,36 @@ IORaw::readRawDataType(const URL& url)
     return nullptr;
   }
 
-  // See chicken egg.  What we really want is to 'read' the entire tree..then use the data
-  // to determine the 'class' right?  How to do this coolly?
-  // Need a registered 'tree' factory that knows the headers and creates the object...
-  std::shared_ptr<RObsBinaryTable> r = std::make_shared<RObsBinaryTable>();
+  // Read all generic BinaryTable readBlock header, which contains the
+  // datatype. This will allow us to specialize
+  std::shared_ptr<BinaryTable> r = std::make_shared<BinaryTable>();
   bool success = r->readBlock(fp);
+
+  if (success) {
+    // Recreate the subclass.  Header is small we're ok to reread it
+    fseek(fp, 0, SEEK_SET); // != 0 error check.  FIXME: use c++ right?
+
+    // FIXME: We have IOSpecializers for this, hacking for now
+    // 'ioraw' and 'iotext' are both special pets vs the other library
+    // based modules.
+    std::string datatype = r->getDataType();
+    if (datatype == "Toomey was here") { // Make MRMS files work
+      datatype = "RObsBinaryTable";
+    }
+
+    if (datatype == "FusionBinaryTable") {
+      r = std::make_shared<FusionBinaryTable>();
+    } else if (datatype == "RObsBinaryTable") {
+      r = std::make_shared<RObsBinaryTable>();
+    } else if (datatype == "WObsBinaryTable") {
+      r = std::make_shared<WObsBinaryTable>();
+    } else {
+      success = false;
+    }
+    if (success) {
+      success = r->readBlock(fp);
+    }
+  }
 
   fclose(fp);
 

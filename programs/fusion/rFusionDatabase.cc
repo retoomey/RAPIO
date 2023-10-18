@@ -156,36 +156,29 @@ FusionDatabase::getSourceList(const std::string& name)
 }
 
 void
-FusionDatabase::addObservation(SourceList& list, float v, float w, float w2, size_t x, size_t y, size_t z, time_t t)
+FusionDatabase::addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t)
 {
   // -----------------------------------------
   // add to the source list
-  //
-  //  list.myObs.push_back(VObservation(x, y, z, v, w, t, w2));
-  list.addObservation(x, y, z, v, w, t, w2);
+  list.addObservation(x, y, z, v, w, t);
 
   // We'll merge source so we need to know to remove old values now replaced by new observations
   // Use the missing grid here to get i, should be fine
-  // size_t i = myMissings.getIndex3D(x, y, z); // FIXME: passing i might be faster
-  size_t i = myXYZs.getIndex3D(x, y, z); // FIXME: passing i might be faster
+  size_t i = myXYZs.getIndex3D(x, y, z);
 
   myMarked->insert(i);
 }
 
 void
-FusionDatabase::addMissing(SourceList& list, float w, float w2, size_t x, size_t y, size_t z, time_t t)
+FusionDatabase::addMissing(SourceList& list, size_t x, size_t y, size_t z, time_t t)
 {
   // -----------------------------------------
   // add to the source missing list
-  //
-  //  list.myMObs.push_back(MObservation(x, y, z, t, w2));
-  list.addMissing(x, y, z, t, w2);
+  list.addMissing(x, y, z, t);
 
-  // Old time mark way..keep for moment
-  // size_t i = myMissings.getIndex3D(x, y, z); // FIXME: passing i might be faster
-  size_t i = myXYZs.getIndex3D(x, y, z); // FIXME: passing i might be faster
+  // Mark that we have this point
+  size_t i = myXYZs.getIndex3D(x, y, z);
 
-  //  myMissings.set(i, t); // FIXME: Humm technically we should update iff the new time if greater
   myMarked->insert(i);
 }
 

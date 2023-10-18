@@ -192,7 +192,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     const time_t t = radar.myTime.getSecondsSinceEpoch();
 
     // Stream read stage2 into a new observation list
-    float v, w, w2;
+    float v, w;
     short x, y, z;
 
     auto newSourcePtr = db.getNewSourceList("newone");
@@ -207,7 +207,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 
     auto& mark = *db.myMarked;
 
-    while (data.get(v, w, w2, x, y, z)) {
+    while (data.get(v, w, x, y, z)) {
       total++;
       hitCount[z]++;
 
@@ -223,15 +223,12 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
       }
 
       if (v == Constants::MissingData) {
+        db.addMissing(newSource, x, y, z, t); // update mask
         missingcounter++;
-        db.addMissing(newSource, w, w2, x, y, z, t); // update mask
-        continue;                                    // Skip storing missing values
       } else {
+        db.addObservation(newSource, v, w, x, y, z, t);
         points++;
       }
-
-      // Point cloud
-      db.addObservation(newSource, v, w, w2, x, y, z, t);
     }
     LogInfo(timer << "\n");
 

@@ -247,10 +247,8 @@ LakResolver1::calc(VolumeValue& vv)
     // presentation for this to be understood by most.
     vv.dataValue   = rw * totalsum; // num
     vv.dataWeight1 = rw * totalWt;  // dem
-    vv.dataWeight2 = rw;            // range weighted at moment
   } else {
-    vv.dataValue   = v;  // v = missing
-    vv.dataWeight1 = 0;  // mark missing
-    vv.dataWeight2 = rw; // range weighted at moment
+    vv.dataValue   = v; // v = missing
+    vv.dataWeight1 = 1.0;
   }
 } // calc

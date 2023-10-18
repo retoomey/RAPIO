@@ -14,6 +14,14 @@ const size_t BinaryTable::BLOCK_LEVEL = 1;
 // Subclasses of BinaryTable
 size_t WObsBinaryTable::BLOCK_LEVEL;
 size_t RObsBinaryTable::BLOCK_LEVEL;
+size_t FusionBinaryTable::BLOCK_LEVEL;
+
+BinaryTable::BinaryTable() : myLastFileVersion(0)
+{
+  setDataType("BinaryTable");
+  // Current the default write for all binary tables is raw which makes sense
+  setReadFactory("raw");
+}
 
 void
 BinaryTable::getBlockLevels(std::vector<std::string>& levels)
@@ -154,9 +162,8 @@ BinaryTable::readBlock(FILE * fp)
     return (false);
   }
 
-  std::string test2;
-
-  BinaryIO::read_string8(test2, fp);
+  // Get the full data type (specialization)
+  BinaryIO::read_string8(myDataType, fp);
 
   return (true);
 } // BinaryTable::readBlock
@@ -177,9 +184,12 @@ BinaryTable::writeBlock(FILE * fp)
 
   BinaryIO::write_type<size_t>(version, fp);
 
-  std::string test2 = "Toomey was here";
+  // 3. Write a data type always.  We can use this to create the
+  // proper class on read.  Makes the whole block thing kinda silly
+  // but we need to be able to back read MRMS at least for now
+  // "Toomey was here" still in MRMS, we'll assume RObsBinaryTable;
 
-  BinaryIO::write_string8(test2, fp);
+  BinaryIO::write_string8(myDataType, fp);
 
   return (true);
 }
@@ -229,13 +239,6 @@ WObsBinaryTable::readBlock(FILE * fp)
     std::vector<Line> markedLines;
     if (markedLinesCacheFile == "") {
       BinaryIO::read_vector(markedLines, fp);
-      size_t aSize = markedLines.size();
-      LogInfo("SIZE OF LINES IS " << aSize << "\n");
-      if (aSize > 5) { aSize = 5; }
-      for (int i = 0; i < aSize; i++) {
-        std::cout << "      line: " << i << "(" << markedLines[i].len << ") ( " << markedLines[i].x << ","
-                  << markedLines[i].y << "," << markedLines[i].z << ")\n";
-      }
     } else {
       LogSevere("RAWERROR: RAW File wants us to read a cached file, not supported.\n");
     }
@@ -358,3 +361,218 @@ RObsBinaryTable::writeBlock(FILE * fp)
   }
   return false;
 }
+
+bool
+RObsBinaryTable::dumpToText(std::ostream& o)
+{
+  const std::string i = "\t";
+
+  o << "MRMS RObsBinaryTable (Used by w2merger)\n";
+
+  auto& t = *this;
+
+  // ---------------------------------------------------------
+  //  RObsBinaryTable stuff...
+  o << i << "RadarName: " << t.radarName << "\n"; // RObsBinaryTable
+  o << i << "VCP: " << t.vcp << "\n";             // RObsBinaryTable
+  o << i << "Elevation: " << t.elev << "\n";      // RObsBinaryTable
+  o << i << "Units: " << t.getUnits() << "\n";    // DataType
+
+  // WObsBinaryTable.  FIXME: probably don't need multiple classes anymore?
+  o << i << "TypeName: " << t.typeName << "\n";
+  o << i << "MarkedLinesCacheFile: " << t.markedLinesCacheFile << "\n";
+  o << i << "MarkedLinesInternalSize: " << t.markedLines.size() << "\n";
+  o << i << "Latitude: " << t.lat << " Degrees.\n";
+  o << i << "Longitude: " << t.lon << " Degrees.\n";
+  o << i << "Height: " << t.ht << " Kilometers.\n";
+  o << i << "Time: " << t.data_time << " Epoch.\n";
+  o << i << "Valid Time: " << t.valid_time << " Seconds.\n";
+  o << "\n------------------------------\n";
+
+  // Marked lines for WObsBinarytable
+  size_t aSize = markedLines.size();
+
+  o << i << "Marked line array size: " << aSize << "\n";
+  if (aSize > 5) { aSize = 5; }
+  for (int i = 0; i < aSize; i++) {
+    o << "  Line: " << i << "(" << markedLines[i].len << ") ( " << markedLines[i].x << ","
+      << markedLines[i].y << "," << markedLines[i].z << ")\n";
+  }
+
+  // Arrays for WObsBinaryTable
+  // Ok do we dump per point, or do separate arrays like ncdump?
+  // Could be a key option passed in..
+  // RObsBinaryTable adds azimuth, aztime
+  size_t s = t.x.size();
+
+  o << i << "Points: " << s << "\n";
+  if (s > 100) { s = 100; } // For now dump just s points for debugging
+  o << i << "Sampling first " << s << " data points:\n";
+
+  // Dumping info per point vs per array.  Having a toggle even with ncdump would
+  // be a nice ability
+  auto& x = t.x; // WObs
+  auto& y = t.y;
+  auto& z = t.z;
+
+  for (size_t j = 0; j < s; j++) {
+    o << j << ":\n";
+    o << i << x[j] << ", " << y[j] << ", " << z[j] << " (xyz)\n";
+    o << i << t.newvalue[j] << ", " << t.scaled_dist[j] << ", " << (int) t.elevWeightScaled[j] <<
+      " (value, w1-dist, w2-elev)\n";
+    // Only RObs:
+    o << i << t.azimuth[j] << ", " << t.aztime[j].epoch_sec << "." << t.aztime[j].frac_sec << ", " <<
+      "(az, aztime)\n";
+  }
+
+  return true;
+} // RObsBinaryTable::dumpToText
+
+void
+FusionBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+{
+  // Level stack
+  BinaryTable::getBlockLevels(levels);
+  levels.push_back("F");
+  FusionBinaryTable::BLOCK_LEVEL = levels.size();
+}
+
+bool
+FusionBinaryTable::readBlock(FILE * fp)
+{
+  // Blocks have to be ordered by magic string
+  // If superclass was able to read its block, then...
+  if (BinaryTable::readBlock(fp) &&
+    matchBlockLevel(FusionBinaryTable::BLOCK_LEVEL))
+  {
+    LogInfo("Fusion binary table read,,,\n");
+    // More header for us....
+    // FIXME: We 'could' generalize all DataType attributes by storing name/type and count.
+    // But that would make larger files.  We'll just do this for the moment.  Maybe a
+    // subclass that handles general DataGrids could be useful?
+    // I'm curious how much faster than netcdf we'd be doing it
+
+    std::string radarName, typeName, units;
+    long xBase = 0, yBase = 0;
+    BinaryIO::read_string8(radarName, fp);
+    setString("Radarname", radarName);
+    BinaryIO::read_string8(typeName, fp);
+    setString("Typename", typeName);
+    BinaryIO::read_string8(units, fp);
+    setUnits(units);
+    BinaryIO::read_type<long>(xBase, fp);
+    setLong("xBase", xBase);
+    BinaryIO::read_type<long>(yBase, fp);
+    setLong("yBase", yBase);
+
+    LLH center;
+    Time t;
+    BinaryIO::read_type<LLH>(center, fp);
+    setLocation(center);
+    BinaryIO::read_type<Time>(t, fp);
+    setTime(t);
+
+    // The data fields
+    BinaryIO::read_vector(myXs, fp);
+    BinaryIO::read_vector(myYs, fp);
+    BinaryIO::read_vector(myZs, fp);
+    BinaryIO::read_vector(myNums, fp);
+    BinaryIO::read_vector(myDems, fp);
+
+    BinaryIO::read_vector(myXMissings, fp);
+    BinaryIO::read_vector(myYMissings, fp);
+    BinaryIO::read_vector(myZMissings, fp);
+    BinaryIO::read_vector(myLMissings, fp);
+    return true;
+  }
+  return false;
+} // FusionBinaryTable::readBlock
+
+bool
+FusionBinaryTable::writeBlock(FILE * fp)
+{
+  if (BinaryTable::writeBlock(fp)) {
+    // ----------------------------------------------------------
+    // Write our data block if available (match with read above)
+
+    // Header (attributes)
+    // FIXME: We 'could' generalize all DataType attributes by storing name/type and count.
+    // But that would make larger files.  We'll just do this for the moment.  Maybe a
+    // subclass that handles general DataGrids could be useful?
+    std::string radarName, typeName, units;
+    getString("Radarname", radarName);
+    getString("Typename", typeName);
+    units = getUnits();
+    long xBase = 0, yBase = 0;
+    getLong("xBase", xBase);
+    getLong("yBase", yBase);
+
+    LLH center = getLocation(); // next
+    Time t     = getTime();
+
+    // Write it
+    BinaryIO::write_string8(radarName, fp);
+    BinaryIO::write_string8(typeName, fp);
+    BinaryIO::write_string8(units, fp);
+    BinaryIO::write_type<long>(xBase, fp);
+    BinaryIO::write_type<long>(yBase, fp);
+    BinaryIO::write_type<LLH>(center, fp);
+    BinaryIO::write_type<Time>(t, fp);
+
+    // The data fields
+    BinaryIO::write_vector("X", myXs, fp);
+    BinaryIO::write_vector("Y", myYs, fp);
+    BinaryIO::write_vector("Z", myZs, fp);
+    BinaryIO::write_vector("N", myNums, fp);
+    BinaryIO::write_vector("D", myDems, fp);
+
+    BinaryIO::write_vector("Xm", myXMissings, fp);
+    BinaryIO::write_vector("Ym", myYMissings, fp);
+    BinaryIO::write_vector("Zm", myZMissings, fp);
+    BinaryIO::write_vector("Lm", myLMissings, fp);
+
+    return true;
+  }
+  return false;
+} // FusionBinaryTable::writeBlock
+
+bool
+FusionBinaryTable::dumpToText(std::ostream& o)
+{
+  const std::string i = "\t";
+
+  o << "RAPIO FusionBinaryTable (Used by Fusion)\n";
+
+  auto& t = *this;
+
+  // ---------------------------------------------------------
+  //  RObsBinaryTable stuff...
+  std::string r;
+  long v;
+
+  o << "Header:\n";
+  t.getString("Radarname", r);
+  o << i << "RadarName: '" << r << "'\n";
+  t.getString("Typename", r);
+  o << i << "Typename: '" << r << "'\n";
+  r = t.getUnits();
+  o << i << "Units: '" << r << "'\n";
+  t.getLong("xBase", v);
+  o << i << "xBase: '" << v << "'\n";
+  t.getLong("yBase", v);
+  o << i << "yBase: '" << v << "'\n";
+  o << i << "Time: '" << t.getTime() << "'\n";
+  o << i << "Center: '" << t.getLocation() << "'\n";
+  o << "Data:\n";
+  o << i << "X:  " << myXs.size() << "\n";
+  o << i << "Y:  " << myYs.size() << "\n";
+  o << i << "Z:  " << myZs.size() << "\n";
+  o << i << "N:  " << myNums.size() << "\n";
+
+  o << i << "D:  " << myDems.size() << "\n";
+  o << i << "Xm: " << myXMissings.size() << "\n";
+  o << i << "Ym: " << myYMissings.size() << "\n";
+  o << i << "Zm: " << myZMissings.size() << "\n";
+  o << i << "Lm: " << myLMissings.size() << "\n";
+  return true;
+} // FusionBinaryTable::dumpToText

@@ -25,11 +25,8 @@ namespace rapio {
 class BinaryTable : public DataType {
 public:
 
-  BinaryTable() : myLastFileVersion(0)
-  {
-    // Lookup for read/write factories
-    myDataType = "BinaryTable";
-  }
+  /** Construct a BinaryTable */
+  BinaryTable();
 
   /** Get the block level magic vector for this class.  Subclasses MUST override
    * to call their
@@ -150,6 +147,17 @@ public:
     return (std::vector<unsigned short>());
   }
 
+  /** Send human readable output to a ostream.  This is
+   * called by iotext and rdump to view the file */
+  virtual bool
+  dumpToText(std::ostream& s)
+  {
+    const std::string i = "\t";
+
+    s << i << "This is a binary table.\n";
+    return true;
+  };
+
 protected:
 
   /** The last magic levels of a read block call.  Levels are from a string
@@ -167,9 +175,61 @@ protected:
   static const size_t BLOCK_LEVEL;
 };
 
+/** Binary table for fusion (netcdf is averaging 0.5 to 1.8 sec per read) */
+class FusionBinaryTable : public BinaryTable
+{
+public:
+
+  /** Create a fusion binary table */
+  FusionBinaryTable()
+  {
+    // Lookup for read/write factories
+    myDataType = "FusionBinaryTable";
+  }
+
+  /** Read our block from file if it exists at current location */
+  virtual bool
+  readBlock(FILE * fp) override;
+
+  /** Write our block to file at current location */
+  virtual bool
+  writeBlock(FILE * fp) override;
+
+  /** Our block level...which is level 1 and the first always.  Every subclass
+   * should increase their count by 1 (depth of subclass tree.  Siblings have same value) */
+  static size_t BLOCK_LEVEL;
+
+  /** Get the block level magic vector for this class. */
+  virtual void
+  getBlockLevels(std::vector<std::string>& levels) override;
+
+  /** Send human readable output to a ostream.  This is
+   * called by iotext and rdump to view the file */
+  virtual bool
+  dumpToText(std::ostream& s);
+
+  // Data stored
+  std::vector<float> myNums;      ///< Numerators for global weighted average
+  std::vector<float> myDems;      ///< Denominators for global weighted averag
+  std::vector<short> myXs;        ///< X location for a true value
+  std::vector<short> myYs;        ///< Y location for a true value
+  std::vector<char> myZs;         ///< Z value, height for a true value
+  std::vector<short> myXMissings; ///< X start for RLE missing range
+  std::vector<short> myYMissings; ///< Y start for RLE missing range
+  std::vector<char> myZMissings;  ///< Z start for RLE missing range
+  std::vector<short> myLMissings; ///< The length of the run in X horizontal
+};
+
 class WObsBinaryTable : public BinaryTable
 {
 public:
+
+  /** Create a weighted observation binary table.  Think this is deprecated in MRMS */
+  WObsBinaryTable()
+  {
+    // Lookup for read/write factories
+    myDataType = "WObsBinaryTable";
+  }
 
   /** Write our block to file at current location */
   virtual bool
@@ -228,11 +288,29 @@ public:
   /** Read our block from file if it exists at current location */
   virtual bool
   readBlock(FILE * fp) override;
+
+  /** Send human readable output to a ostream.  This is
+   * called by iotext and rdump to view the file */
+  virtual bool
+  dumpToText(std::ostream& s)
+  {
+    const std::string i = "\t";
+
+    s << i << "This is a WObs binary table.\n";
+    return true;
+  };
 };
 
 class RObsBinaryTable : public WObsBinaryTable
 {
 public:
+
+  /** Create a weighted observation binary table.  Think this is deprecated in MRMS */
+  RObsBinaryTable()
+  {
+    // Lookup for read/write factories
+    myDataType = "RObsBinaryTable";
+  }
 
   /** Write our block to file at current location */
   virtual bool
@@ -286,5 +364,10 @@ public:
   /** Read our block from file if it exists at current location */
   virtual bool
   readBlock(FILE * fp) override;
+
+  /** Send human readable output to a ostream.  This is
+   * called by iotext and rdump to view the file */
+  virtual bool
+  dumpToText(std::ostream& s) override;
 };
 }
