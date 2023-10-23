@@ -37,21 +37,18 @@ IORaw::~IORaw()
 std::shared_ptr<DataType>
 IORaw::readRawDataType(const URL& url)
 {
-  // I've gotten in the habit of fully buffering data
-  // since there are libraries like netcdf that require it,
-  // but we 'could' get some speed ups in certain areas by
-  // doing more standard c++ stream reading.
-  // Double reading here for now, I want the size for debugging
-  // or when I'm less lazy I'll at least file seek
+  LogInfo("Raw reader: " << url << "\n");
+  #if 0
+  // From a buffer (web read, etc)
   std::vector<char> buf;
-
   IOURL::read(url, buf);
   if (buf.empty()) {
     LogSevere("Couldn't read raw datatype at " << url << "\n");
     return nullptr;
   }
+  #endif
 
-  FILE * fp = fopen(url.toString().c_str(), "r");
+  FILE * fp = fopen(url.toString().c_str(), "rb");
 
   if (fp == nullptr) {
     LogSevere("Couldn't open file at " << url << "\n");

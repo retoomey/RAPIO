@@ -445,7 +445,6 @@ FusionBinaryTable::readBlock(FILE * fp)
   if (BinaryTable::readBlock(fp) &&
     matchBlockLevel(FusionBinaryTable::BLOCK_LEVEL))
   {
-    LogInfo("Fusion binary table read,,,\n");
     // More header for us....
     // FIXME: We 'could' generalize all DataType attributes by storing name/type and count.
     // But that would make larger files.  We'll just do this for the moment.  Maybe a

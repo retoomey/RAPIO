@@ -252,6 +252,34 @@ public:
     myBits[i] = (value != 0); // any non-zero is a 1
   }
 
+  /** Set a value direct (unique to this subclass) */
+  inline void
+  set1(size_t i)
+  {
+    myBits[i] = 1;
+  }
+
+  /** Set a value direct as 3D (assumed) (unique to this subclass) */
+  inline void
+  set13D(size_t x, size_t y, size_t z)
+  {
+    myBits[getIndex3D(x, y, z)] = 1;
+  }
+
+  /** Get a value direct (unique to this subclass) */
+  inline bool
+  get1(size_t i)
+  {
+    return (myBits[i]);
+  }
+
+  /** Set a value direct as 3D (assumed) (unique to this subclass) */
+  inline bool
+  get13D(size_t x, size_t y, size_t z)
+  {
+    return (myBits[getIndex3D(x, y, z)]);
+  }
+
   /** Dump bits at location to stream, useful for debugging.
    * Note that boost::dynamic_bitset is just bits, we're the ones breaking it down into N values.
    */

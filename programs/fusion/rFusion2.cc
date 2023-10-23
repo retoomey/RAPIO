@@ -48,10 +48,25 @@ RAPIOFusionTwoAlg::createLLGCache(
   // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
   // turns out to be faster than 1 3D array.
   if (myLLGCache == nullptr) {
-    ProcessTimer("Creating initial LLG value cache.");
+    ProcessTimer cache("Creating initial LLG value cache:\n");
 
     myLLGCache = LLHGridN2D::Create(outputName, outputUnits, Time(), g);
     myLLGCache->fillPrimary(Constants::DataUnavailable);
+
+    for (size_t z = 0; z < g.getNumZ(); z++) {
+      std::shared_ptr<LatLonGrid> output = myLLGCache->get(z);
+
+      // Create a secondary float buffer for accumulating weights.  Crazy idea
+      auto w = output->addFloat2D("weights", "Dimensionless", { 0, 1 });
+      w->fill(0);
+
+      // Create a buffer for accumulating mask.  Tried playing with v/w to do this,
+      // but it's just better separate
+      auto m = output->addByte2D("masks", "Dimensionless", { 0, 1 });
+      m->fill(0);
+    }
+
+    LogInfo(cache);
   }
 }
 
@@ -123,11 +138,10 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     LogSevere("We have " << aSize << " unprocessed records, probably lagging...\n");
   }
 
+  ProcessTimer reading("Reading I/O file:\n");
   auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
 
-  size_t missingcounter = 0;
-  size_t points         = 0;
-  size_t total = 0;
+  LogInfo(reading);
 
   if (datasp) {
     auto& data            = *datasp;
@@ -154,29 +168,8 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     //  return;
     // }
 
-    // Keep a count of 'hits' in the output layer for now
-    auto heightsKM = myFullGrid.getHeightsKM();
-    std::vector<size_t> hitCount;
-    hitCount.resize(heightsKM.size());
-
-    const size_t xBase = data.getXBase();
-    const size_t yBase = data.getYBase();
-
     auto& db = *myDatabase;
 
-    // FIXME: We probably will have a db.ingestNewData() or something
-    // Because this is mostly db interacting with itself.  If we want to implement
-    // a cloud database this will have to be even more generic than this.
-
-    // Note: This should be a reference or you'll copy
-    auto radarPtr = db.getSourceList(name);
-    auto& radar   = *radarPtr;
-
-    // Quick toss/expire incoming data, anything > cutoff time is too old
-    // The global time for all the current new observations. Note we batch observations,
-    // so each point can have a unique time.
-    // Humm the record time check should make this redundant I think...
-    radar.myTime = dataTime;
     #if 0
     const Time cutoffTime = myLastDataTime - myMaximumHistory; // FIXME: add util to time
     const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
@@ -187,65 +180,10 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     #endif
 
     ProcessTimer timer("Ingest Source");
-
-    // Could store shorts and then do a move forward pass in output
-    const time_t t = radar.myTime.getSecondsSinceEpoch();
-
-    // Stream read stage2 into a new observation list
-    float v, w;
-    short x, y, z;
-
-    auto newSourcePtr = db.getNewSourceList("newone");
-    auto& newSource   = *newSourcePtr;
-
-    // We use a shared ptr since set seems to be flaky about releasing memory
-    // where clear() doesn't release the hash, and shrink_to_fit is not available
-    // This is just flag for 'hit' values, might be better as a bitset.  We'll
-    // revisit this later
-    // FIXME: Should be hidden in the database
-    db.myMarked = std::make_shared<std::unordered_set<size_t> >();
-
-    auto& mark = *db.myMarked;
-
-    while (data.get(v, w, x, y, z)) {
-      total++;
-      hitCount[z]++;
-
-      x += xBase; // FIXME: data.get should do this right? Not 100% sure yet
-      y += yBase;
-
-      if ((x >= myFullGrid.getNumX()) ||
-        (y >= myFullGrid.getNumY()) ||
-        (z >= myFullGrid.getNumZ()))
-      {
-        LogSevere("Getting stage2 x,y,z values out of range of current grid: " << x << ", " << y << ", " << z << "\n");
-        break;
-      }
-
-      if (v == Constants::MissingData) {
-        db.addMissing(newSource, x, y, z, t); // update mask
-        missingcounter++;
-      } else {
-        db.addObservation(newSource, v, w, x, y, z, t);
-        points++;
-      }
-    }
-    LogInfo(timer << "\n");
-
-    // Now merge the newSource with the oldOne, expiring data points if needed
-    // These can be overlapping sets.  Since x,y,z are created in order this 'could'
-    // be optimized by double marching vs delete/add, but it would be confusing so eh.
-    // FIXME: Can we do this fast enough is the question.
-
-    {
-      ProcessTimer fail("Merge source");
-      db.mergeObservations(radarPtr, newSourcePtr, cutoff);
-      LogInfo(fail << "\n");
-    }
-
-
-    // clear the marked array
-    db.myMarked = nullptr;
+    size_t missingcounter = 0;
+    size_t points         = 0;
+    size_t total = 0;
+    db.ingestNewData(data, cutoff, missingcounter, points, total);
 
     // Dump source list
     db.dumpSources();
@@ -305,6 +243,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   const Time cutoffTime = p - myMaximumHistory;
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
+  // LogSevere("Cut off epoch: " << cutoff << " vs NOW " << Time::CurrentTime().getSecondsSinceEpoch() << "\n");
   myDatabase->timePurge(myLastDataTime, myMaximumHistory);
   LogInfo(timepurge << "\n");
 

@@ -6,8 +6,6 @@
 #include "rLLHGridN2D.h"
 #include "rStage2Data.h"
 
-#include <unordered_map>
-
 // Gives 2^9-1 or 511 source/radar support
 #define SOURCE_KEY_BITS 9
 
@@ -16,10 +14,9 @@ namespace rapio {
  * This is for a single moment.
  *
  * We need a database storing N observations at each X,Y,Z.
- * We need to be able to add a new X,Y,Z value sparsely.
  * We need to be able to delete from X,Y,Z based on time expiration (in observation)
  * We need to be able to iterate over X,Y,Z and get the observations quickly per cell
- * We need index ability to reference X,Y,Z values by source
+ *   --Well actually, we just need to hit all the X,Y,Z, but don't have to be in order
  *
  * I'm gonna abstract this because eh we could put the data into a dynamodb or something
  * later or even a real database if we can get it fast enough.  This first class will
@@ -120,10 +117,72 @@ public:
     }
   }
 
+  /** General vector time purge. We delete by swapping to the end of
+   * vector and popping. */
+  template <typename T>
+  inline void
+  timePurgeV(std::vector<T>& v, time_t cutoff)
+  {
+    size_t i = 0;
+
+    while (i < v.size()) {
+      if (v[i].t < cutoff) { // Our epoch less than cutoff epoch
+        // Swap and pop item
+        v[i] = v.back();
+        v.pop_back();
+      } else {
+        ++i;
+      }
+    }
+  }
+
+  /** Purge time cutoff */
+  inline void
+  timePurge(time_t cutoff)
+  {
+    for (size_t z = 0; z < myLevels; ++z) {
+      timePurgeV(myAObs[z], cutoff);
+      timePurgeV(myAMObs[z], cutoff);
+    }
+  }
+
+  /** Add points to a new source not marked in mask and still time valid */
+  template <typename T>
+  inline void
+  unionMergeV(Bitset1& mask, size_t z, std::vector<T>& new1, std::vector<T>& old1, time_t cutoff, size_t& timePurged,
+    size_t& restored)
+  {
+    for (auto& o: old1) {
+      if (!mask.get13D(o.x, o.y, z)) {
+        if (o.t < cutoff) { // We could wait until global time purge?
+          timePurged++;
+        } else {
+          new1.push_back(o);
+          // Do we need to update mask...think we don't have to
+          // mask.set13D(o.x, o.y, z);
+          restored++;
+        }
+      }
+    }
+  }
+
+  /** Add our points to a new source not marked in mask and still time valid. Marked
+   * is used to avoid duplicates and properly union the sets. */
+  inline void
+  unionMerge(SourceList& newSource, Bitset1& mask, time_t cutoff, size_t& timePurged, size_t& restored)
+  {
+    for (size_t z = 0; z < myLevels; ++z) {
+      unionMergeV(mask, z, newSource.myAObs[z], myAObs[z], cutoff, timePurged, restored);
+      unionMergeV(mask, z, newSource.myAMObs[z], myAMObs[z], cutoff, timePurged, restored);
+    }
+  }
+
   // FIXME: 'maybe' we inline get/set methods when things get stable
 
   // Meta data stored for this observation list
   std::string myName;
+
+  // deprecated.  Think we can do everything at stage1
   unsigned short myID : SOURCE_KEY_BITS; // needed? This will probably have to be IN the obs for fast reverse lookup
 
   // The late 'main' time of a group of data coming in ingest.
@@ -132,21 +191,12 @@ public:
 
   /** Number of levels we store */
   size_t myLevels;
-  // ---------------------------------------------------
-  // Stuff we store separately to save memory.
-  // Store by a vector of Z (to remove Z storage from observations)
-  // and typically Z is small so we can loop here.
-  // and seperate by storage type, since values store different
-  // stuff then missing values.
+
+  /** Vector of value observations */
   std::vector<std::vector<VObservation> > myAObs;
+
+  /** Vector of missing observations */
   std::vector<std::vector<MObservation> > myAMObs;
-
-  // Experimental Z array.  This allows us to save RAM.
-  // Values non-missing stored for this source
-  //  std::vector<VObservation> myObs;
-
-  // Missing values stored for this source
-  //  std::vector<MObservation> myMObs;
 };
 
 /** (AI) Handle a group of source observation lists that have unique ID keys
@@ -159,7 +209,6 @@ public:
 
   /** Given source information, find the already created source observation list,
    * or create a new unique one and return it */
-  // SourceList&
   std::shared_ptr<SourceList>
   getSourceList(const std::string& name)
   {
@@ -195,24 +244,6 @@ public:
     myObservationMap[key] = r;
   }
 
-  #if 0
-  /** Replace the reference to source list in the lookup */
-  void
-  setSourceListRef(const T& key, SourceList& r)
-  {
-    myObservationMap[key] = r;
-  }
-
-  /** Get the raw reference to source list in the lookup */
-  // SourceList&
-  std::shared_ptr<SourceList>
-  getSourceListRef(const T& key)
-  {
-    return myObservationMap.at(key);
-  }
-
-  #endif // if 0
-
   /** Remove a source list from our lookup */
   void
   remove(SourceList& r)
@@ -232,7 +263,6 @@ public:
   }
 
   /** Iterators for begin access, hiding implementation details */
-  // typename std::unordered_map<T, SourceList>::iterator
   typename std::unordered_map<T, std::shared_ptr<SourceList> >::iterator
   begin()
   {
@@ -240,7 +270,6 @@ public:
   }
 
   /** Iterators for end access, hiding implementation details */
-  // typename std::unordered_map<T, SourceList>::iterator
   typename std::unordered_map<T, std::shared_ptr<SourceList> >::iterator
   end()
   {
@@ -250,7 +279,6 @@ public:
 protected:
 
   /** The map of keys to Source Observation Lists */
-  // std::unordered_map<T, SourceList> myObservationMap;
   std::unordered_map<T, std::shared_ptr<SourceList> > myObservationMap;
 
   /** Old keys we can reuse */
@@ -260,85 +288,19 @@ protected:
   short myNextKey = 0;
 };
 
-/** Structure stored in the xyz tree.  References data in the source list tree */
-class XYZObs : public Data {
-public:
-
-  /** Create a XYZ back reference observation into a source */
-  XYZObs(short i, size_t e, bool missing, Observation * at) : myID(i), isMissing(missing), myAt(at){ }
-
-  /** Update in place */
-  inline void
-  set(short i, bool missing, Observation * at)
-  {
-    myID      = i;
-    isMissing = missing;
-    myAt      = at;
-  }
-
-  // Things are byte aligned, so multiple of 8 get stored anyway, but we want to minimize it
-  // short myID; // ID for which Source storage
-  unsigned short myID : SOURCE_KEY_BITS; // Gives 2^SOURCE_KEY_BITS-1 radars
-  bool isMissing : 1;                    // What does our pointer point to? Currently value or missing arrays
-  //  size_t myOffset; // Element in the xyz...
-  Observation * myAt; // Pointer possibly saves memory but we have to be careful with vector resizes
-                      // and 'bleh' if we have to store ID anyway for meta info then memory
-                      // will be the same.  If we end up not needing myID then we can save some
-                      // One advantage to the direct pointer is possibly speed in the merge loop,
-                      // since we don't have to add offset to the id lookup
-};
-
-/** Structure stored in the xyz tree.  References a set of XYZObs */
-class XYZObsList : public Data {
-public:
-  /** Size of observation references stored */
-  inline size_t size(){ return obs.size(); }
-
-  /** Add raw observation reference stored */
-  inline void
-  add(short id, size_t s, bool missing, Observation * at)
-  {
-    for (size_t i = 0; i < obs.size(); ++i) {
-      // Found a reusable node
-      if (obs[i].myAt == nullptr) {
-        obs[i].set(id, missing, at);
-        return;
-      }
-    }
-    // Create a new node (slow ram allocation, etc.)
-    obs.push_back(XYZObs(id, s, missing, at));
-  }
-
-  /** Iterator for begin access, hiding implementation details */
-  typename std::vector<XYZObs>::iterator
-  begin()
-  {
-    return obs.begin();
-  }
-
-  /** Iterators for end access, hiding implementation details */
-  typename std::vector<XYZObs>::iterator
-  end()
-  {
-    return obs.end();
-  }
-
-  // protected: to do
-  // Possible meta info later for debugging or speedup...
-  // Possibly doing custom storage here might make things smaller could
-  // be worth doing
-  std::vector<XYZObs> obs;
-};
-
 /** FusionDatabase maintains the collection of sources which store various types
  * of observations.  It also maintains a X,Y,Z grid that backreferences various
  * observations */
 class FusionDatabase : public Data {
 public:
   /** The Database is for a 3D cube */
-  FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z })// ,
-  // myMissings({ x, y, z })
+  FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z }), myHaves({ x, y,
+                                                                                                                 z })
   { };
+
+  /** Ingest new stage2 data */
+  void
+  ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingcounter, size_t& points, size_t& total);
 
   /** Get a source node for a given key */
   // SourceList&
@@ -368,142 +330,9 @@ public:
   void
   addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time);
 
-  /** Link a vector of observations to X,Y,Z grid */
-  template <typename T>
-  inline void
-  linkVector(std::vector<T>& in, unsigned short id, bool missing, size_t z)
-  {
-    size_t s = 0;
-
-    for (auto& o: in) {
-      size_t i = myXYZs.getIndex3D(o.x, o.y, z);
-      XYZObsList * node = myXYZs.get(i); // Sparse so could be null
-
-      auto * at = &in[s]; // only good if vector doesn't move
-
-      if (node == nullptr) {
-        node = new XYZObsList(); // humm class can auto new I think
-        myXYZs.set(i, node);
-      }
-      node->add(id, s, missing, at);
-      // node->obs.push_back(XYZObs(id, s, missing, at));
-      s++;
-    }
-  }
-
-  /** Unlink vector of observations from X,Y,Z grid */
-  template <typename T>
-  inline void
-  unlinkVector(std::vector<T>& in, size_t z)
-  {
-    auto& have = *myMarked;
-    // -----------------------------------------
-    // Update xyz tree
-    size_t deleted = 0;
-
-    for (auto& o: in) {
-      // Find the x,y,z tree node we're in...
-      size_t i = myXYZs.getIndex3D(o.x, o.y, z);
-
-
-      auto node = myXYZs.get(i); // Sparse so could be null
-      if (node != nullptr) {
-        bool found = false;
-
-        auto& l = node->obs;
-
-        // This code easier to actually understand
-        // const size_t s = l.size();
-        const size_t s = node->size();
-        size_t at      = 0;
-        while (at < s) {
-          if (l[at].myAt == &o) {
-            // ------------------------------
-            // We only actually delete nodes that aren't being replaced with new
-            // in a bit.  Otherwise we stick nullptr in there temporarily and the link vector will
-            // replace it.  We 'could' do in single pass but would require something
-            // connecting the random new x,y,z points to the old x,y,z points (move memory)
-            if (have.find(i) != have.end()) {
-              l[at].myAt = nullptr; // mark available for the link vector function
-            } else {
-              // ------------------------------
-              // Implement swap and pop for deletion
-              // This is not being replaced with new values
-              //
-              // Copy the last in the list into our position...
-              l[at] = l[s - 1];
-              l.pop_back();
-              if (l.size() < 1) {
-                myXYZs.clear(i); // Release all memory for empty nodes
-                deleted++;
-              }
-              // ------------------------------
-            }
-            found = true;
-            break; // only have one
-          }
-
-          at++;
-        }
-
-        if (!found) {
-          LogSevere("Missing node, exiting\n");
-          exit(1);
-        }
-        #if 0
-        // Find first (we should have only one radar/elev stored per node)
-        auto it = std::find_if(l.begin(), l.end(), [&](const XYZObs& obj) {
-            const auto& o = in;
-            // return obj.myID == list.myID; ID check
-            // Pointer in range of myObs? Note myObs is still full right now
-            if (o.empty()) { return false; } // If empty can't be in it
-            const auto * s = &o.front();
-            const auto * e = &o.back() + 1;
-            return obj.myAt >= s && obj.myAt < e;
-          });
-        if (it != l.end()) {
-          // Swap the element with the last element and kill it
-          // this avoids moving memory around "swap and pop"
-          std::iter_swap(it, l.end() - 1);
-          l.pop_back();
-          if (l.size() < 1) {
-            myXYZs.clear(i); // Release all memory for empty nodes
-          }
-        } else {
-          LogSevere("Radar/XYZ tree missing expected error, shouldn't happen so exiting.\n");
-          exit(1);
-        }
-        #endif // if 0
-      } else {
-        // Maybe warn..I don't think this should happen ever...
-        // FIXME: Maybe do some recovery/fixing if this happens to happen,
-        // we don't like algorithms just crashing
-        LogSevere("Radar/XYZ tree mismatch error, shouldn't happen so exiting.\n");
-        exit(1);
-      }
-    }
-    // LogSevere("Deleted oh boy like " << deleted << "\n");
-  } // unlinkVector
-
-  /** Link back references to observations in the x,y,z tree */
-  //  void
-  //  linkObservations(SourceList& list);
-
-  /** Unlink back references to observations in the x,y,z tree */
-  //  void
-  //  unlinkObservations(SourceList& list);
-
-  /** Clear all observations for a given source list */
-  //  void
-  //  clearObservations(SourceList& list);
-
   /** Debugging print out each source list and points held */
   void
   dumpSources();
-
-  /** Debugging print out for full XYZ (which is slower) */
-  void
-  dumpXYZ();
 
   /** First silly simple weighted merger */
   void
@@ -513,10 +342,8 @@ public:
   void
   timePurge(Time atTime, TimeDuration interval);
 
-  /** Utility marked points */
-  static std::shared_ptr<std::unordered_set<size_t> > myMarked;
-
 protected:
+
   /** Size in X of entire database */
   size_t myNumX;
 
@@ -529,13 +356,10 @@ protected:
   /** Observation manager handling a list of named sources */
   ObservationManager<short> myObservationManager;
 
-  // FIXME: These grow forever until RAM is swallowed up.
-  // We need to allow deleting of empty nodes in the sparse trees here
-
   /** My xyz back reference list/tree */
-  SparseVector2<XYZObsList> myXYZs;
+  DimensionMapper myXYZs;
 
-  /** My missing mask */
-  // SparseVector<time_t> myMissings;
+  /** My have marked array (bits) */
+  Bitset1 myHaves;
 };
 }
