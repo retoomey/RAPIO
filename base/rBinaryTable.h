@@ -77,7 +77,7 @@ public:
 
   /** Read our block from file if it exists at current location */
   virtual bool
-  readBlock(FILE * fp);
+  readBlock(const std::string& path, FILE * fp);
 
   /** Write our block to file at current location */
   virtual bool
@@ -184,12 +184,44 @@ public:
   FusionBinaryTable()
   {
     // Lookup for read/write factories
-    myDataType = "FusionBinaryTable";
+    myDataType     = "FusionBinaryTable";
+    myDataPosition = 0;
   }
+
+  /** Read as a stream using get() vs reading into storage.  This
+   * is for reading massive datasets.  The default is false  */
+  static bool myStreamRead;
+
+  /** Non-stream add ability (possibly could stream as well but need API changes) */
+  inline void
+  add(float& n, float& d, short& x, short& y, short& z)
+  {
+    myNums.push_back(n);
+    myDems.push_back(d);
+    myXs.push_back(x); // X represents LON
+    myYs.push_back(y); // Y represents LAT
+    myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
+    myValueSize = myNums.size();
+  }
+
+  /** Non-stream add RLE missing ability */
+  inline void
+  addMissing(size_t& x, size_t& y, size_t& z, size_t& l)
+  {
+    myXMissings.push_back(x); // reducing size_t to short...
+    myYMissings.push_back(y);
+    myZMissings.push_back(z);
+    myLMissings.push_back(l);
+    myMissingSize = myXMissings.size();
+  }
+
+  /** Stream read ability */
+  bool
+  get(float& n, float& d, short& x, short& y, short& z);
 
   /** Read our block from file if it exists at current location */
   virtual bool
-  readBlock(FILE * fp) override;
+  readBlock(const std::string& path, FILE * fp) override;
 
   /** Write our block to file at current location */
   virtual bool
@@ -208,7 +240,33 @@ public:
   virtual bool
   dumpToText(std::ostream& s);
 
-  // Data stored
+  /** Number of values stored (non-missing) */
+  size_t getValueSize(){ return myValueSize; }
+
+  /** Number of missing stored */
+  size_t getMissingSize(){ return myMissingSize; }
+
+protected:
+  size_t myValueSize;   ///< Sizes of X,Y,Z value storage
+  size_t myMissingSize; ///< Sizes of missing value storage
+
+  // State information for streaming
+  long myDataPosition;    ///< Position in file for streaming mode
+  std::string myFilePath; ///< File path for streaming mode
+  FILE * myFile;          ///< FILE pointer for streaming mode
+  size_t myValueAt;       ///< Stream count of values
+  size_t myMissingAt;     ///< Stream count of missings
+
+  size_t myRLECounter; ///< Current location in RLE block
+  short myXBlock;      ///< X current
+  short myYBlock;      ///< Y current
+  char myZBlock;       ///< Z current
+  short myLengthBlock; ///< Length current
+
+public:
+  // Data stored (ONLY if self contained. With fusion data is so large we don't
+  // want to double buffer/etc.  We use streamer mode with get() and these are ignored.
+  // this is especially important during reading in fusion stage2 where memory is at a premium.
   std::vector<float> myNums;      ///< Numerators for global weighted average
   std::vector<float> myDems;      ///< Denominators for global weighted averag
   std::vector<short> myXs;        ///< X location for a true value
@@ -287,7 +345,7 @@ public:
 
   /** Read our block from file if it exists at current location */
   virtual bool
-  readBlock(FILE * fp) override;
+  readBlock(const std::string& path, FILE * fp) override;
 
   /** Send human readable output to a ostream.  This is
    * called by iotext and rdump to view the file */
@@ -363,7 +421,7 @@ public:
 
   /** Read our block from file if it exists at current location */
   virtual bool
-  readBlock(FILE * fp) override;
+  readBlock(const std::string& path, FILE * fp) override;
 
   /** Send human readable output to a ostream.  This is
    * called by iotext and rdump to view the file */

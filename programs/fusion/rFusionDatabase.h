@@ -295,8 +295,13 @@ class FusionDatabase : public Data {
 public:
   /** The Database is for a 3D cube */
   FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z }), myHaves({ x, y,
-                                                                                                                 z })
-  { };
+                                                                                                                 z }),
+    myMissings(x * y * z)
+  {
+    for (size_t i = 0; i < myMissings.size(); ++i) {
+      myMissings[i] = std::numeric_limits<time_t>::min();
+    }
+  };
 
   /** Ingest new stage2 data */
   void
@@ -361,5 +366,8 @@ protected:
 
   /** My have marked array (bits) */
   Bitset1 myHaves;
+
+  /** My latest missing array mask */
+  std::vector<time_t> myMissings;
 };
 }

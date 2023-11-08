@@ -139,6 +139,9 @@ protected:
   /** Hold the postwrite command, if any */
   std::string myPostWrite;
 
+  /** Hold the postfml command, if any */
+  std::string myPostFML;
+
   /** History time for index storage */
   static TimeDuration myMaximumHistory;
 

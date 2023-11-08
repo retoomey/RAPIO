@@ -48,7 +48,9 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
       (y >= myNumY) ||
       (z >= myNumZ))
     {
-      LogSevere("Getting stage2 x,y,z values out of range of current grid: " << x << ", " << y << ", " << z << "\n");
+      LogSevere(
+        "Getting stage2 x,y,z values out of range of current grid: " << x << ", " << y << ", " << z << " and (" << myNumX << ", " << myNumY << ", " << myNumZ <<
+          ")\n");
       break;
     }
     if (v == Constants::MissingData) {
@@ -87,10 +89,10 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
     w->fill(0);
     auto& wa = output->getFloat2DRef("weights");
 
-    // Accumulate 2D masks
-    auto m = output->getByte2D("masks");
-    m->fill(0);
-    auto& ma = output->getByte2DRef("masks");
+    // Accumulate 2D masks (when storing per radar).
+    // auto m = output->getByte2D("masks");
+    // m->fill(0);
+    // auto& ma = output->getByte2DRef("masks");
 
     // Accumulate 2D values (borrow final output to save RAM)
     auto gridtestP = output->getFloat2D();
@@ -103,9 +105,9 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
       auto &r = *(it->second);
 
       // Missing observations just set the mask flag (background)
-      for (auto& m:r.myAMObs[z]) {
-        ma[m.y][m.x] = 1;
-      }
+      // for (auto& m:r.myAMObs[z]) {
+      //  ma[m.y][m.x] = 1;
+      // }
 
       // Value observations accumulate values and weights
       for (auto& v:r.myAObs[z]) {
@@ -119,15 +121,17 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
   // Finialization pass, divide all values/weights and handle mask
   for (size_t z = 0; z < myNumZ; z++) {
     std::shared_ptr<LatLonGrid> output = cache->get(z);
-    auto& wa       = output->getFloat2DRef("weights");
-    auto& ma       = output->getByte2DRef("masks");
+    auto& wa = output->getFloat2DRef("weights");
+    // auto& ma       = output->getByte2DRef("masks");
     auto& gridtest = output->getFloat2DRef();
     for (size_t x = 0; x < myNumX; x++) { // x currently LON for stage2 right..so xy swapped
       for (size_t y = 0; y < myNumY; y++) {
         // if no values with enough weight...
         if (wa[y][x] < 0.0000001) {
           // Use the missing flag array....
-          if (ma[y][x] > 0) {
+          // if (ma[y][x] > 0) {
+          // FIXME: Feel like with some ordering could skip the indexing calculation
+          if (myMissings[myHaves.getIndex3D(x, y, z)] >= cutoff) {
             gridtest[y][x] = Constants::MissingData;
           } else {
             gridtest[y][x] = Constants::DataUnavailable;
@@ -180,10 +184,17 @@ FusionDatabase::addMissing(SourceList& list, size_t x, size_t y, size_t z, time_
 {
   // -----------------------------------------
   // add to the source missing list
-  list.addMissing(x, y, z, t);
+  //  list.addMissing(x, y, z, t);
+  // Add to global missing array mask
+  size_t i = myHaves.getIndex3D(x, y, z);
+
+  if (myMissings[i] < t) { // Always update to latest time from all
+    myMissings[i] = t;
+  }
 
   // Mark that we have this point
-  myHaves.set13D(x, y, z);
+  // myHaves.set13D(x, y, z); // still 'expire' old valid values replaced by missing now (moving storm)
+  myHaves.set1(i); // still 'expire' old valid values replaced by missing now (moving storm)
 }
 
 void

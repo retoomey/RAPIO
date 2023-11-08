@@ -166,6 +166,10 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
 
   if (result == 0) {
     LogDebug("FML Notify File -->>" << outfilename << "\n");
+    // -----------------------------------------------------------------------
+    // Post write command on a written file (comes from postfml key)
+    const std::string postCommand = outputParams["postfml"];
+    OS::runCommandOnFile(postCommand, outfilename, true);
   } else {
     LogSevere("Unable to rename tmp .fml file " << tmpfilename << " to final location " << outfilename << "\n");
   }

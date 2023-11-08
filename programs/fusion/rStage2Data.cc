@@ -18,11 +18,7 @@ Stage2Data::add(float n, float d, short x, short y, short z)
     myAddMissingCounter++;
   } else if (n == Constants::DataUnavailable) { // We shouldn't send this right?
   } else {
-    myTable->myNums.push_back(n);
-    myTable->myDems.push_back(d);
-    myTable->myXs.push_back(x); // X represents LON
-    myTable->myYs.push_back(y); // Y represents LAT
-    myTable->myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
+    myTable->add(n, d, x, y, z);
   }
 }
 
@@ -61,10 +57,7 @@ Stage2Data::RLE()
           // if (counter < 10) {
           //    std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
           // }
-          myTable->myXMissings.push_back(startx);
-          myTable->myYMissings.push_back(starty);
-          myTable->myZMissings.push_back(startz);
-          myTable->myLMissings.push_back(length); // has to be big enough for all of conus
+          myTable->addMissing(startx, starty, startz, length);
         }
       }
     }
@@ -81,8 +74,8 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
 
   // Info from our data
   LLH aLocation;
-  size_t finalSize  = myTable->myXs.size();
-  size_t finalSize2 = myTable->myXMissings.size(); // size from RLE
+  const size_t finalSize  = myTable->getValueSize();
+  const size_t finalSize2 = myTable->getMissingSize();
 
   LogInfo(
     "Sizes are " << finalSize << " values, with " << myAddMissingCounter << " missing " << finalSize2 << " (RLE).\n");
@@ -97,6 +90,8 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     // Writing netcdf.  This is more generic readable so I like it for that reason, however
     // our I/O is so critical we tend to use a custom binary for read/write speed at the cost
     // of external readability.
+
+    // FIXME: probably should have a toDataGrid method or something in BinaryTable.
     if (writeNetcdf) {
       auto stage2 =
         DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
@@ -164,7 +159,6 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
       // Write the raw file out with notification, etc.
       std::map<std::string, std::string> extraParams;
       extraParams["showfilesize"] = "yes";
-      // extraParams["compression"]  = "gz"; BinaryTable compresses columns
       alg->writeOutputProduct(asName, myTable, extraParams);
     }
   }
@@ -279,70 +273,11 @@ Stage2Data::receive(RAPIOData& rData)
 
   if (ft != nullptr) {
     LogInfo("Stage2 data noticed (raw) record: " << rData.getDescription() << "\n");
-    std::vector<size_t> dims         = { ft->myXs.size(), ft->myLMissings.size() };
+    std::vector<size_t> dims = { ft->getValueSize(), ft->getMissingSize() };
+    LogInfo("Value/missing dims: " << ft->getValueSize() << ", " << ft->getMissingSize() << "\n");
     std::shared_ptr<Stage2Data> insp =
       std::make_shared<Stage2Data>(Stage2Data(ft, dims));
     return insp;
   }
   return nullptr;
 } // Stage2Data::receive
-
-bool
-Stage2Data::get(float& n, float& d, short& x, short& y, short& z)
-{
-  // First read the non-missing values...
-  if (myCounter < myTable->myNums.size()) {
-    x = myTable->myXs[myCounter];
-    y = myTable->myYs[myCounter];
-    z = myTable->myZs[myCounter];
-    n = myTable->myNums[myCounter];
-    d = myTable->myDems[myCounter];
-    myCounter++;
-    return true;
-  }
-
-  // ...then read the missing values from RLE arrays
-  if (myMCounter < myTable->myXMissings.size()) {
-    // Run length encoding expansion I goofed a few times,
-    // so extra description here:
-    // lengths: 5, 3
-    // values:  1  2
-    // --> 1 1 1 1 1 2 2 2  Expected output
-    //     0 1 2 3 4 0 1 2  RLECounter
-    //     0 0 0 0 0 1 1 1  MCounter
-    //     5 5 5 5 5 3 3 3  l (current length)
-    // The Simple way, but we want reentrant
-    // for (i =0 i < lengths.size() ++i){
-    //  for (j = 0; j < lengths[i]; ++j){
-    //      return values[i];
-    //  }
-    // }
-
-    static size_t countout = 0;
-    bool more = true;
-    auto l    = myTable->myLMissings[myMCounter]; // Current length
-
-    // Always snag the current missing
-    x = myTable->myXMissings[myMCounter] + myRLECounter; // Since we RLE in the X (with no row wrapping)
-    y = myTable->myYMissings[myMCounter];
-    z = myTable->myZMissings[myMCounter];
-    // if (countout++ < 30) {
-    //   std::cout << "AT: " << myXMissings.size() << " " << myMCounter << ", length " << l << " position " <<
-    //     myRLECounter << " and (" << x << ", " << y << ", " << z << ")\n";
-    // }
-    n = Constants::MissingData;
-    d = 1.0; // doesn't matter weighted average ignores missing
-
-    // Update for the next missing, if any
-    myRLECounter++;
-    if (myRLECounter >= l) { // overflow
-      myRLECounter = 0;
-      myMCounter++;
-    }
-    return true;
-  }
-
-  // Nothing left...
-  // std::cout << "END CONDITION " << myMCounter << " and " << myXMissings.size() << "\n";
-  return false;
-} // Stage2Data::get

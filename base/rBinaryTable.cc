@@ -4,6 +4,8 @@
 #include "rBinaryIO.h"
 #include "rStrings.h"
 
+#include <iomanip>
+
 using namespace rapio;
 using namespace std;
 
@@ -15,6 +17,8 @@ const size_t BinaryTable::BLOCK_LEVEL = 1;
 size_t WObsBinaryTable::BLOCK_LEVEL;
 size_t RObsBinaryTable::BLOCK_LEVEL;
 size_t FusionBinaryTable::BLOCK_LEVEL;
+
+bool FusionBinaryTable::myStreamRead = false;
 
 BinaryTable::BinaryTable() : myLastFileVersion(0)
 {
@@ -130,7 +134,7 @@ BinaryTable::magicToBlockLevels(
 }
 
 bool
-BinaryTable::readBlock(FILE * fp)
+BinaryTable::readBlock(const std::string& path, FILE * fp)
 {
   // 1. Read the magic marker name...
   std::string disk_magic;
@@ -206,11 +210,11 @@ WObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 }
 
 bool
-WObsBinaryTable::readBlock(FILE * fp)
+WObsBinaryTable::readBlock(const std::string& path, FILE * fp)
 {
   // Blocks have to be ordered by magic string
   // If superclass was able to read its block, then...
-  if (BinaryTable::readBlock(fp) &&
+  if (BinaryTable::readBlock(path, fp) &&
     matchBlockLevel(WObsBinaryTable::BLOCK_LEVEL))
   {
     // ----------------------------------------------------------
@@ -310,11 +314,11 @@ RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 }
 
 bool
-RObsBinaryTable::readBlock(FILE * fp)
+RObsBinaryTable::readBlock(const std::string& path, FILE * fp)
 {
   // Blocks have to be ordered by magic string
   // If superclass was able to read its block, then...
-  if (WObsBinaryTable::readBlock(fp) &&
+  if (WObsBinaryTable::readBlock(path, fp) &&
     matchBlockLevel(RObsBinaryTable::BLOCK_LEVEL))
   {
     // ----------------------------------------------------------
@@ -438,11 +442,11 @@ FusionBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 }
 
 bool
-FusionBinaryTable::readBlock(FILE * fp)
+FusionBinaryTable::readBlock(const std::string& path, FILE * fp)
 {
   // Blocks have to be ordered by magic string
   // If superclass was able to read its block, then...
-  if (BinaryTable::readBlock(fp) &&
+  if (BinaryTable::readBlock(path, fp) &&
     matchBlockLevel(FusionBinaryTable::BLOCK_LEVEL))
   {
     // More header for us....
@@ -471,21 +475,139 @@ FusionBinaryTable::readBlock(FILE * fp)
     BinaryIO::read_type<Time>(t, fp);
     setTime(t);
 
-    // The data fields
-    BinaryIO::read_vector(myXs, fp);
-    BinaryIO::read_vector(myYs, fp);
-    BinaryIO::read_vector(myZs, fp);
-    BinaryIO::read_vector(myNums, fp);
-    BinaryIO::read_vector(myDems, fp);
+    // Read the sizes of the value/missing arrays
+    BinaryIO::read_type<size_t>(myValueSize, fp);
+    BinaryIO::read_type<size_t>(myMissingSize, fp);
 
-    BinaryIO::read_vector(myXMissings, fp);
-    BinaryIO::read_vector(myYMissings, fp);
-    BinaryIO::read_vector(myZMissings, fp);
-    BinaryIO::read_vector(myLMissings, fp);
+    // If not streaming, store in our internal fields (which can be large),
+    // otherwise we wait for a get() call
+    if (!myStreamRead) {
+      myDataPosition = 0; // which marks it since we always have a header
+
+      myXs.resize(myValueSize);
+      myYs.resize(myValueSize);
+      myZs.resize(myValueSize);
+      myNums.resize(myValueSize);
+      myDems.resize(myValueSize);
+      myXMissings.resize(myMissingSize);
+      myYMissings.resize(myMissingSize);
+      myZMissings.resize(myMissingSize);
+      myLMissings.resize(myMissingSize);
+      for (size_t i = 0; i < myValueSize; ++i) {
+        BinaryIO::read_type<short>(myXs[i], fp);
+        BinaryIO::read_type<short>(myYs[i], fp);
+        BinaryIO::read_type<char>(myZs[i], fp);
+        BinaryIO::read_type<float>(myNums[i], fp);
+        BinaryIO::read_type<float>(myDems[i], fp);
+      }
+      for (size_t i = 0; i < myMissingSize; ++i) {
+        BinaryIO::read_type<short>(myXMissings[i], fp);
+        BinaryIO::read_type<short>(myYMissings[i], fp);
+        BinaryIO::read_type<char>(myZMissings[i], fp);
+        BinaryIO::read_type<short>(myLMissings[i], fp);
+      }
+
+      /*
+       *  // The data fields
+       *  BinaryIO::read_vector(myXs, fp);
+       *  BinaryIO::read_vector(myYs, fp);
+       *  BinaryIO::read_vector(myZs, fp);
+       *  BinaryIO::read_vector(myNums, fp);
+       *  BinaryIO::read_vector(myDems, fp);
+       *
+       *  BinaryIO::read_vector(myXMissings, fp);
+       *  BinaryIO::read_vector(myYMissings, fp);
+       *  BinaryIO::read_vector(myZMissings, fp);
+       *  BinaryIO::read_vector(myLMissings, fp);
+       */
+    } else {
+      myDataPosition = ftell(fp);
+      myFilePath     = path;
+      myFile         = 0;
+      myValueAt      = 0;
+      myMissingAt    = 0;
+      myRLECounter   = 0;
+    }
     return true;
   }
   return false;
 } // FusionBinaryTable::readBlock
+
+bool
+FusionBinaryTable::get(float& n, float& d, short& x, short& y, short& z)
+{
+  // We didn't read in streaming mode
+  if (myDataPosition < 1) {
+    return false;
+  }
+
+  // First time, try to reopen the file...
+  if (myFile == 0) {
+    myFile = fopen(myFilePath.c_str(), "rb");
+    if (fseek(myFile, myDataPosition, (SEEK_SET != 0))) {
+      LogSevere("Couldn't read at position " << myDataPosition << "...\n");
+      fclose(myFile);
+      myFile = 0;
+      return false;
+    }
+  }
+
+  // First read the non-missing values...
+  if (myValueSize > 0) {
+    if (myValueAt < myValueSize) {
+      BinaryIO::read_type<short>(x, myFile);
+      BinaryIO::read_type<short>(y, myFile);
+      char zc;
+      BinaryIO::read_type<char>(zc, myFile);
+      z = zc;
+      BinaryIO::read_type<float>(n, myFile);
+      BinaryIO::read_type<float>(d, myFile);
+      myValueAt++;
+      return true;
+    }
+  }
+
+  // skip missing for moment
+  // ...then read the missing values from RLE arrays and expand
+  if (myMissingSize > 0) {
+    if (myMissingAt < myMissingSize) {
+      n = Constants::MissingData;
+      d = 1.0; // doesn't matter weighted average ignores missing
+
+      // Run length encoding expansion I goofed a few times,
+      // so extra description here:
+      // lengths: 5, 3
+      // values:  1  2
+      // --> 1 1 1 1 1 2 2 2  Expected output
+      //     0 1 2 3 4 0 1 2  RLECounter
+      //     0 0 0 0 0 1 1 1  MCounter
+      //     5 5 5 5 5 3 3 3  l (current length)
+
+      // If the first in the sequence...
+      if (myRLECounter == 0) {
+        // Read the current RLE block
+        BinaryIO::read_type<short>(myXBlock, myFile);
+        BinaryIO::read_type<short>(myYBlock, myFile);
+        BinaryIO::read_type<char>(myZBlock, myFile);
+        BinaryIO::read_type<short>(myLengthBlock, myFile);
+      }
+      x = myXBlock + myRLECounter;
+      y = myYBlock;
+      z = myZBlock;
+      // Update for the next missing, if any
+      myRLECounter++;
+      if (myRLECounter >= myLengthBlock) { // overflow
+        myRLECounter = 0;
+        myMissingAt++;
+      }
+      return true;
+    }
+  }
+  // Nothing left...close file
+  fclose(myFile);
+  myFile = 0;
+  return false;
+} // FusionBinaryTable::get
 
 bool
 FusionBinaryTable::writeBlock(FILE * fp)
@@ -518,17 +640,43 @@ FusionBinaryTable::writeBlock(FILE * fp)
     BinaryIO::write_type<LLH>(center, fp);
     BinaryIO::write_type<Time>(t, fp);
 
-    // The data fields
-    BinaryIO::write_vector("X", myXs, fp);
-    BinaryIO::write_vector("Y", myYs, fp);
-    BinaryIO::write_vector("Z", myZs, fp);
-    BinaryIO::write_vector("N", myNums, fp);
-    BinaryIO::write_vector("D", myDems, fp);
+    // Write the sizes of the value/missing arrays
+    myValueSize   = myXs.size();
+    myMissingSize = myXMissings.size();
+    BinaryIO::write_type<size_t>(myValueSize, fp);
+    BinaryIO::write_type<size_t>(myMissingSize, fp);
 
-    BinaryIO::write_vector("Xm", myXMissings, fp);
-    BinaryIO::write_vector("Ym", myYMissings, fp);
-    BinaryIO::write_vector("Zm", myZMissings, fp);
-    BinaryIO::write_vector("Lm", myLMissings, fp);
+    // The data fields.  Ok we wanna stream them back to save ram,
+    // so make the order streamable...
+    // which is probably slower.  We'll probably have to make blocks
+    // also this won't compress.  Kill me.
+    // FIXME: We'll probably have to block and byte-align and compress
+    for (size_t i = 0; i < myXs.size(); ++i) {
+      BinaryIO::write_type<short>(myXs[i], fp);
+      BinaryIO::write_type<short>(myYs[i], fp);
+      BinaryIO::write_type<char>(myZs[i], fp);
+      BinaryIO::write_type<float>(myNums[i], fp);
+      BinaryIO::write_type<float>(myDems[i], fp);
+    }
+    for (size_t i = 0; i < myXMissings.size(); ++i) {
+      BinaryIO::write_type<short>(myXMissings[i], fp);
+      BinaryIO::write_type<short>(myYMissings[i], fp);
+      BinaryIO::write_type<char>(myZMissings[i], fp);
+      BinaryIO::write_type<short>(myLMissings[i], fp);
+    }
+
+    /*
+     *  BinaryIO::write_vector("X", myXs, fp);
+     *  BinaryIO::write_vector("Y", myYs, fp);
+     *  BinaryIO::write_vector("Z", myZs, fp);
+     *  BinaryIO::write_vector("N", myNums, fp);
+     *  BinaryIO::write_vector("D", myDems, fp);
+     *
+     *  BinaryIO::write_vector("Xm", myXMissings, fp);
+     *  BinaryIO::write_vector("Ym", myYMissings, fp);
+     *  BinaryIO::write_vector("Zm", myZMissings, fp);
+     *  BinaryIO::write_vector("Lm", myLMissings, fp);
+     */
 
     return true;
   }
@@ -573,5 +721,39 @@ FusionBinaryTable::dumpToText(std::ostream& o)
   o << i << "Ym: " << myYMissings.size() << "\n";
   o << i << "Zm: " << myZMissings.size() << "\n";
   o << i << "Lm: " << myLMissings.size() << "\n";
+
+  // Dump the values
+  size_t perRow = 0;
+  size_t ipr    = 3;
+
+  //  o << std::fixed << std::setprecision(2);
+  o << "0: ";
+  for (size_t r = 0; r < myXs.size(); ++r) {
+    o << "(" << myXs[r] << "," << myYs[r] << "," << (int) myZs[r] << ", [" << myNums[r] << "/" << myDems[r] << "])";
+    // o << "("<<myXs[r]<<","<<myYs[r]<<","<<(int)(myZs[r])<<" ;
+    if (++perRow > ipr) {
+      o << "\n" << r << ":";
+      perRow = 0;
+    } else {
+      o << ",";
+    }
+  }
+  o << "\n";
+  o << "-------------------\n";
+  perRow = 0;
+  ipr    = 5;
+  for (size_t r = 0; r < myXMissings.size(); ++r) {
+    o << "(" << myXMissings[r] << "," << myYMissings[r] << "," << (int) (myZMissings[r]) << "," << myLMissings[r] <<
+      ")";
+    if (++perRow > ipr) {
+      o << "\n" << r << ":";
+      perRow = 0;
+    } else {
+      o << ",";
+    }
+  }
+  o << "\n";
+  o << std::defaultfloat;
+
   return true;
 } // FusionBinaryTable::dumpToText

@@ -18,6 +18,9 @@ class RAPIOFusionOneAlg;
  * files similar to w2merger or a different file or even
  * web sockets or whatever ends up working best.
  *
+ * Mostly this wraps our FusionBinaryTable class, but I'm leaving this
+ * here since to hide the internals of how stage1 to stage2 data is handled.
+ *
  * @author Robert Toomey
  */
 class Stage2Data : public Data {
@@ -31,7 +34,7 @@ public:
     size_t                    yBase,
     std::vector<size_t>       dims
   ) : myMissingSet(dims, 1),
-    myAddMissingCounter(0), myDimensions(dims), myCounter(0), myMCounter(0), myRLECounter(0)
+    myAddMissingCounter(0), myDimensions(dims)
   {
     // Offload to a binary table, even though we might write netcdf
     // FIXME: The netcdf requires a copy vs raw which doesn't.  We could make two
@@ -46,11 +49,11 @@ public:
     myTable->setLong("yBase", yBase);
   };
 
-  /** Create a stage two data from existing table */
+  /** Create a stage two data from existing table for reading. */
   Stage2Data(std::shared_ptr<FusionBinaryTable> t,
     std::vector<size_t>                         dims)
-    : myMissingSet(dims, 1),
-    myAddMissingCounter(0), myDimensions(dims), myCounter(0), myMCounter(0), myRLECounter(0)
+    : myMissingSet({ 1, 1 }),
+    myAddMissingCounter(0), myDimensions({ 1, 1 })
   {
     myTable = t;
   };
@@ -89,8 +92,11 @@ public:
 
   /** Get data from us, only used by stage two.
    * Note this streams out until returning false */
-  bool
-  get(float& n, float& d, short& x, short& y, short& z);
+  inline bool
+  get(float& n, float& d, short& x, short& y, short& z)
+  {
+    return myTable->get(n, d, x, y, z);
+  }
 
   /** Get the radarname */
   std::string
@@ -169,16 +175,9 @@ public:
 protected:
 
   // Meta information for this output
-  Bitset myMissingSet;              ///< Bitfield of missing values gathered during creation
-  size_t myAddMissingCounter;       ///< Number of missing values in bitfield
-  std::vector<size_t> myDimensions; ///< Sizes of the grid in x,y,z
-
-  // We store in a raw binary table
-  std::shared_ptr<FusionBinaryTable> myTable;
-
-  // Getting back data counters...
-  size_t myCounter;    ///< get() stream true value counter iterator
-  size_t myMCounter;   ///< get() stream RLE missing counter iterator
-  size_t myRLECounter; ///< get() stream RLE length within missing counter iterator
+  Bitset myMissingSet;                        ///< Bitfield of missing values gathered during creation
+  size_t myAddMissingCounter;                 ///< Number of missing values in bitfield
+  std::vector<size_t> myDimensions;           ///< Sizes of the grid in x,y,z (only used for RLE calculation write)
+  std::shared_ptr<FusionBinaryTable> myTable; ///< Table used for storage
 };
 }

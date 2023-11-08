@@ -58,7 +58,7 @@ IORaw::readRawDataType(const URL& url)
   // Read all generic BinaryTable readBlock header, which contains the
   // datatype. This will allow us to specialize
   std::shared_ptr<BinaryTable> r = std::make_shared<BinaryTable>();
-  bool success = r->readBlock(fp);
+  bool success = r->readBlock(url.toString(), fp);
 
   if (success) {
     // Recreate the subclass.  Header is small we're ok to reread it
@@ -82,7 +82,7 @@ IORaw::readRawDataType(const URL& url)
       success = false;
     }
     if (success) {
-      success = r->readBlock(fp);
+      success = r->readBlock(url.toString(), fp);
     }
   }
 

@@ -217,5 +217,9 @@ public:
   /** Determine if we're running in a container or not */
   static bool
   isContainer();
+
+  /** Run a command on a file supporting file macros */
+  static bool
+  runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut = true);
 };
 }

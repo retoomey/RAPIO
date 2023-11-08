@@ -62,8 +62,8 @@ RAPIOFusionTwoAlg::createLLGCache(
 
       // Create a buffer for accumulating mask.  Tried playing with v/w to do this,
       // but it's just better separate
-      auto m = output->addByte2D("masks", "Dimensionless", { 0, 1 });
-      m->fill(0);
+      // auto m = output->addByte2D("masks", "Dimensionless", { 0, 1 });
+      // m->fill(0);
     }
 
     LogInfo(cache);
@@ -139,7 +139,15 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   }
 
   ProcessTimer reading("Reading I/O file:\n");
-  auto datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
+  std::shared_ptr<Stage2Data> datasp;
+
+  try{
+    datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
+  }catch (const std::exception& e) {
+    LogSevere("Error receiving data: " << e.what() << ", ignoring!\n");
+    exit(1);
+    return;
+  }
 
   LogInfo(reading);
 
@@ -279,6 +287,8 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 int
 main(int argc, char * argv[])
 {
+  // Use the stream ability of binary table to avoid copying on read
+  FusionBinaryTable::myStreamRead = true;
   RAPIOFusionTwoAlg alg = RAPIOFusionTwoAlg();
 
   alg.executeFromArgs(argc, argv);

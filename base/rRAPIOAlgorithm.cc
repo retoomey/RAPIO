@@ -78,6 +78,11 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "Simple executable to call post file writing using %filename%.");
   o.addGroup("postwrite", "I/O");
   o.setHidden("postwrite");
+  o.optional("postfml",
+    "",
+    "Simple executable to call post FML file writing using %filename%.");
+  o.addGroup("postfml", "I/O");
+  o.setHidden("postfml");
 }
 
 void
@@ -97,6 +102,8 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   o.addAdvancedHelp("postwrite",
     "Allows you to run a command on a file output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
 
+  o.addAdvancedHelp("postfml",
+    "Allows you to run a command on a FML output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
   // Now let subclasses declare more things.
   // We do it this way to keep the algorithms from having to call superclass first
   declareAdvancedHelp(o);
@@ -119,6 +126,7 @@ RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 
   // Gather postwrite option
   myPostWrite = o.getString("postwrite");
+  myPostFML   = o.getString("postfml");
 } // RAPIOAlgorithm::processOutputParams
 
 void
@@ -377,6 +385,7 @@ RAPIOAlgorithm::writeDirectOutput(const URL& path,
 
   outputParams["filepathmode"] = "direct";
   outputParams["postwrite"]    = myPostWrite;
+  outputParams["postfml"]      = myPostFML;
 
   return IODataType::write(outputData, path.toString(), blackHole, "", outputParams); // Default write single file
 }
@@ -388,6 +397,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
 {
   outputParams["filepathmode"] = "datatype";
   outputParams["postwrite"]    = myPostWrite;
+  outputParams["postfml"]      = myPostFML;
 
   std::string newProductName = "";
 

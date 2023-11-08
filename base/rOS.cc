@@ -524,3 +524,41 @@ OS::isContainer()
   }
   return isContainer;
 }
+
+bool
+OS::runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut)
+{
+  // Run a command with macro for %filename%.  Could generalize even more I think.
+  // This is called by postwrite option for data files, and postfml for the fml notifier
+  // though it is becoming more generalized
+
+  if (!postCommandIn.empty()) {
+    std::string postCommand = postCommandIn;
+    // ----------------------------------------------------------------
+    // Macros.  Could be in configuration file?  This is our silly standard ldm insert
+    //
+    if (postCommandIn == "ldm") {
+      postCommand = "pqinsert -v -f EXP %filename%"; // stock ldm and in path
+    }
+
+    // ----------------------------------------------------------------
+    // Key substitution. Usually, things like final filename would be important
+    // for post success
+    Strings::replace(postCommand, "%filename%", finalFile);
+
+    // ----------------------------------------------------------------
+    // Run command and log the output
+    //
+    std::vector<std::string> output;
+    bool successful = (OS::runProcess(postCommand, output) != -1);
+    if (captureOut) {
+      if (successful) {
+        for (auto& i: output) {
+          LogInfo("   " << i << "\n");
+        }
+      }
+    }
+    return successful;
+  }
+  return true;
+} // OS::runCommandOnFile
