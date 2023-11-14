@@ -285,6 +285,50 @@ public:
     fread(&s, sizeof(T), 1, fp);
   }
 
+  // Functions for direct read/write to gzfile.  Debating subclass and or
+  // making API consistent with 'non-gzfile' calls above.  I'll leave that
+  // for yet another clean up pass
+
+  /** Read a value scaled by another */
+  static float
+  readScaledInt(gzFile fp, float scale);
+
+  /** Write a scaled integer with correct endian */
+  static void
+  writeScaledInt(gzFile fp, float w, float scale);
+
+  /** Read an integer with correct endian and return as an int */
+  static int
+  readInt(gzFile fp);
+
+  /** Write an integer with correct endian and return as an int */
+  static void
+  writeInt(gzFile fp, int w);
+
+  /** Read a float with correct endian and return as a float */
+  static int
+  readFloat(gzFile fp);
+
+  /** Write a float with correct endian and return as a float */
+  static void
+  writeFloat(gzFile fp, float w);
+
+  /** Read up to length characters into a std::string */
+  static std::string
+  readChar(gzFile fp, size_t length);
+
+  /** Write up to length characters from a std::string */
+  static void
+  writeChar(gzFile fp, std::string c, size_t length);
+
+  /** Convenience method to read time, with optional predefined year */
+  static Time
+  readTime(gzFile fp, int year = -99);
+
+  /** Convenience method to write time */
+  static void
+  writeTime(gzFile fp, const Time& time);
+
   /*
    * // Toomey: Simple run-length encoding of data values. There's a lot of
    *    repeating patterns in these

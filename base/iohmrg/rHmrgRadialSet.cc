@@ -2,6 +2,7 @@
 
 #include "rOS.h"
 #include "rRadialSet.h"
+#include "rBinaryIO.h"
 
 using namespace rapio;
 
@@ -57,10 +58,10 @@ std::shared_ptr<DataType>
 HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
 {
   // name passed in was used to check type
-  const int headerScale      = IOHmrg::readInt(fp);                    // 5-8
-  const float radarMSLmeters = IOHmrg::readScaledInt(fp, headerScale); // 9-12
-  const float radarLatDegs   = IOHmrg::readFloat(fp);                  // 13-16
-  const float radarLonDegs   = IOHmrg::readFloat(fp);                  // 17-20
+  const int headerScale      = BinaryIO::readInt(fp);                    // 5-8
+  const float radarMSLmeters = BinaryIO::readScaledInt(fp, headerScale); // 9-12
+  const float radarLatDegs   = BinaryIO::readFloat(fp);                  // 13-16
+  const float radarLonDegs   = BinaryIO::readFloat(fp);                  // 17-20
 
   #if 0
   // Time
@@ -71,41 +72,41 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   const int min   = IOHmrg::readInt(fp); // 37-40
   const int sec   = IOHmrg::readInt(fp); // 41-44
   #endif
-  Time dataTime = IOHmrg::readTime(fp);
+  Time dataTime = BinaryIO::readTime(fp);
 
-  const float nyquest = IOHmrg::readScaledInt(fp, headerScale); // 45-48  // FIXME: Volume number?
-  const int vcp       = IOHmrg::readInt(fp);                    // 49-52
+  const float nyquest = BinaryIO::readScaledInt(fp, headerScale); // 45-48  // FIXME: Volume number?
+  const int vcp       = BinaryIO::readInt(fp);                    // 49-52
 
-  const int tiltNumber      = IOHmrg::readInt(fp);                    // 53-56
-  const float elevAngleDegs = IOHmrg::readScaledInt(fp, headerScale); // 57-60
+  const int tiltNumber      = BinaryIO::readInt(fp);                    // 53-56
+  const float elevAngleDegs = BinaryIO::readScaledInt(fp, headerScale); // 57-60
 
-  const int num_radials = IOHmrg::readInt(fp); // 61-64
-  const int num_gates   = IOHmrg::readInt(fp); // 65-68
+  const int num_radials = BinaryIO::readInt(fp); // 61-64
+  const int num_gates   = BinaryIO::readInt(fp); // 65-68
 
-  const float firstAzimuthDegs = IOHmrg::readScaledInt(fp, headerScale);          // 69-72
-  const float azimuthResDegs   = IOHmrg::readScaledInt(fp, headerScale);          // 73-76
-  const float distanceToFirstGateMeters = IOHmrg::readScaledInt(fp, headerScale); // 77-80
-  const float gateSpacingMeters         = IOHmrg::readScaledInt(fp, headerScale); // 81-84
+  const float firstAzimuthDegs = BinaryIO::readScaledInt(fp, headerScale);          // 69-72
+  const float azimuthResDegs   = BinaryIO::readScaledInt(fp, headerScale);          // 73-76
+  const float distanceToFirstGateMeters = BinaryIO::readScaledInt(fp, headerScale); // 77-80
+  const float gateSpacingMeters         = BinaryIO::readScaledInt(fp, headerScale); // 81-84
 
-  std::string name = IOHmrg::readChar(fp, 20); // 85-104
+  std::string name = BinaryIO::readChar(fp, 20); // 85-104
 
   // Convert HMRG names etc to w2 expected
   std::string orgName = name;
   IOHmrg::HmrgToW2Name(name, name);
   LogInfo("Convert: " << orgName << " to " << name << "\n");
 
-  const std::string units = IOHmrg::readChar(fp, 6); // 105-110
+  const std::string units = BinaryIO::readChar(fp, 6); // 105-110
 
-  int dataScale = IOHmrg::readInt(fp);
+  int dataScale = BinaryIO::readInt(fp);
 
   if (dataScale == 0) {
     LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
     dataScale = 1;
   }
-  const int dataMissingValue = IOHmrg::readInt(fp);
+  const int dataMissingValue = BinaryIO::readInt(fp);
 
   // The placeholder.. 8 ints
-  const std::string placeholder = IOHmrg::readChar(fp, 8 * sizeof(int)); // 119-150
+  const std::string placeholder = BinaryIO::readChar(fp, 8 * sizeof(int)); // 119-150
 
   // RAPIO types
   LLH center(radarLatDegs, radarLonDegs, radarMSLmeters); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
@@ -159,7 +160,6 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
 
-  const bool needSwap = OS::isBigEndian(); // data is little
   // size_t countm = 0;
   size_t rawBufferIndex = 0;
 
@@ -178,7 +178,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
     gatewidths[i] = gateSpacingMeters;
     for (size_t j = 0; j < num_gates; ++j) {
       auto old = rawBuffer[rawBufferIndex];
-      data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], needSwap, dataUnavailable, dataMissing,
+      data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], dataUnavailable, dataMissing,
           dataScale);
       #if 0
       if (i == 0) {
@@ -195,15 +195,16 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
 } // IOHmrg::readRadialSet
 
 bool
-HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
+HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
 {
   bool success = false;
 
   // HMRG radial sets have to have a starting azimuth and a delta that works for
   // all azimuths
-  const auto num_radials = radialset->getNumRadials();
-  const auto num_gates   = radialset->getNumGates();
-  auto azimuth = radialset->getFloat1DRef("Azimuth");
+  auto& radialset        = *radialsetp;
+  const auto num_radials = radialset.getNumRadials();
+  const auto num_gates   = radialset.getNumGates();
+  auto& azimuth = radialset.getFloat1DRef("Azimuth");
 
   // for (size_t i = 0; i < num_radials; ++i) {
   //   std::cout << azimuth[i] << ",";
@@ -238,8 +239,8 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
 
   // ----------------------------------------------------------------------------
   // Check all gatewidths are the same (FIXME: function)
-  auto gatewidth = radialset->getFloat1DRef("GateWidth");
-  float gateW    = 0;
+  auto& gatewidth = radialset.getFloat1DRef("GateWidth");
+  float gateW     = 0;
 
   for (size_t i = 0; i < num_radials; ++i) {
     if (i == 0) { gateW = gatewidth[i]; continue; }
@@ -257,80 +258,80 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
 
   std::string radarName = "NONE";
 
-  radialset->getString("radarName-value", radarName); // FIXME: API getRadarName I think for clarity
-  std::string typeName = radialset->getTypeName();
+  radialset.getString("radarName-value", radarName); // FIXME: API getRadarName I think for clarity
+  std::string typeName = radialset.getTypeName();
 
   // With the writer we want the radar name.
   ERRNO(gzwrite(fp, &radarName[0], 4 * sizeof(unsigned char)));
 
   // name passed in was used to check type
-  IOHmrg::writeInt(fp, headerScale);
+  BinaryIO::writeInt(fp, headerScale);
 
-  auto loc = radialset->getLocation();
+  auto loc = radialset.getLocation();
   auto radarMSLmeters = loc.getHeightKM() * 1000;
   auto radarLatDegs   = loc.getLatitudeDeg();
   auto radarLonDegs   = loc.getLongitudeDeg();
 
-  IOHmrg::writeScaledInt(fp, radarMSLmeters, headerScale); // 9-12
-  IOHmrg::writeFloat(fp, radarLatDegs);                    // 13-16
-  IOHmrg::writeFloat(fp, radarLonDegs);                    // 17-20
+  BinaryIO::writeScaledInt(fp, radarMSLmeters, headerScale); // 9-12
+  BinaryIO::writeFloat(fp, radarLatDegs);                    // 13-16
+  BinaryIO::writeFloat(fp, radarLonDegs);                    // 17-20
 
   // Time
-  IOHmrg::writeTime(fp, radialset->getTime());
+  BinaryIO::writeTime(fp, radialset.getTime());
 
   const float nyquest = 10;
 
-  IOHmrg::writeScaledInt(fp, nyquest, headerScale); // 45-48  // FIXME: Volume number?
+  BinaryIO::writeScaledInt(fp, nyquest, headerScale); // 45-48  // FIXME: Volume number?
 
   int vcp = -99;
   std::string vcpstr = "";
 
-  radialset->getString("vcp-value", vcpstr); // FIXME: API getVCP I think for clarity
+  radialset.getString("vcp-value", vcpstr); // FIXME: API getVCP I think for clarity
   try{
     vcp = std::stoi(vcpstr);
   }catch (const std::exception&) { }
-  IOHmrg::writeInt(fp, vcp); // 49-52
+  BinaryIO::writeInt(fp, vcp); // 49-52
 
   const int tiltNumber = 1; // FIXME: we could have an optional tiltNumber stored
 
-  IOHmrg::writeInt(fp, tiltNumber); // 53-56
+  BinaryIO::writeInt(fp, tiltNumber); // 53-56
 
-  const float elevAngleDegs = radialset->getElevationDegs();
+  const float elevAngleDegs = radialset.getElevationDegs();
 
-  IOHmrg::writeScaledInt(fp, elevAngleDegs, headerScale); // 57-60
+  BinaryIO::writeScaledInt(fp, elevAngleDegs, headerScale); // 57-60
 
   // Get data
-  auto data = radialset->getFloat2DRef();
+  auto& data = radialset.getFloat2DRef();
 
-  IOHmrg::writeInt(fp, num_radials); // 61-64
-  IOHmrg::writeInt(fp, num_gates);   // 65-68
+  BinaryIO::writeInt(fp, num_radials); // 61-64
+  BinaryIO::writeInt(fp, num_gates);   // 65-68
 
-  IOHmrg::writeScaledInt(fp, firstAzimuthDegs, headerScale); // 69-72
-  IOHmrg::writeScaledInt(fp, azimuthResDegs, headerScale);   // 73-76
-  const float distanceToFirstGateMeters = radialset->getDistanceToFirstGateM();
+  BinaryIO::writeScaledInt(fp, firstAzimuthDegs, headerScale); // 69-72
+  BinaryIO::writeScaledInt(fp, azimuthResDegs, headerScale);   // 73-76
+  const float distanceToFirstGateMeters = radialset.getDistanceToFirstGateM();
 
-  IOHmrg::writeScaledInt(fp, distanceToFirstGateMeters, headerScale); // 77-80
+  BinaryIO::writeScaledInt(fp, distanceToFirstGateMeters, headerScale); // 77-80
 
   // const float gateSpacingMeters =  10.0;
-  IOHmrg::writeScaledInt(fp, gateSpacingMeters, headerScale); // 81-84
+  BinaryIO::writeScaledInt(fp, gateSpacingMeters, headerScale); // 81-84
 
   std::string name = typeName;
 
   IOHmrg::W2ToHmrgName(name, name);
   LogInfo("Convert: " << typeName << " to " << name << "\n");
 
-  IOHmrg::writeChar(fp, name, 20); // 85-104
+  BinaryIO::writeChar(fp, name, 20); // 85-104
 
-  name = radialset->getUnits();
-  IOHmrg::writeChar(fp, name, 6); // 105-110
+  name = radialset.getUnits();
+  BinaryIO::writeChar(fp, name, 6); // 105-110
 
   int dataScale = 10;
 
-  IOHmrg::writeInt(fp, dataScale);
+  BinaryIO::writeInt(fp, dataScale);
 
   const int dataMissing = -99;
 
-  IOHmrg::writeInt(fp, dataMissing);
+  BinaryIO::writeInt(fp, dataMissing);
 
   // The placeholder.. 8 ints
   int fill = 0;
@@ -345,13 +346,12 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset)
   rawBuffer.resize(count);
 
   // const int dataMissing     = dataMissingValue * dataScale;
-  const int dataUnavailable = -9990;             // FIXME: table lookup * dataScale;
-  const bool needSwap       = OS::isBigEndian(); // data is little
+  const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
   size_t at = 0;
 
   for (size_t i = 0; i < num_radials; ++i) {
     for (size_t j = 0; j < num_gates; ++j) {
-      rawBuffer[at++] = IOHmrg::toHmrgValue(data[i][j], needSwap, dataUnavailable, dataMissing, dataScale);
+      rawBuffer[at++] = IOHmrg::toHmrgValue(data[i][j], dataUnavailable, dataMissing, dataScale);
     }
   }
   ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order

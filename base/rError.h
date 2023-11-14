@@ -15,9 +15,49 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/filesystem.hpp>
 
+#include <string.h> // errno strs
+
 typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
 
 namespace rapio {
+/* Exception wrapper for any C function calls we make that return standard 0 or error code.
+ * Call using the ERRNO(function) ability */
+class ErrnoException : public Utility, public std::exception
+{
+public:
+  ErrnoException(int err, const std::string& c) : std::exception(), retval(err),
+    command(c)
+  { }
+
+  virtual ~ErrnoException() throw() { }
+
+  int
+  getErrnoVal() const
+  {
+    return (retval);
+  }
+
+  std::string
+  getErrnoCommand() const
+  {
+    return (command);
+  }
+
+  std::string
+  getErrnoStr() const
+  {
+    return (std::string(strerror(retval)) + " on '" + command + "'");
+  }
+
+private:
+
+  /** The Errno value from the command (copied from errno) */
+  int retval;
+
+  /** The Errno command we wrapped */
+  std::string command;
+};
+
 /** Enum class for log pattern tokens */
 enum class LogToken {
   filler, time, timems, timec, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off,
@@ -276,3 +316,5 @@ operator << (rapio::LogCall1& l, const T& x)
   { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, \
         BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
     _aTempLog.dump(); }
+#define ERRNO(e) \
+  { { e; } if ((errno != 0)) { throw ErrnoException(errno, # e); } }

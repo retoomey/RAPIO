@@ -72,157 +72,6 @@ IOHmrg::isMRMSValidYear(int year)
   return (!((year < 1900) || (year > 2500)));
 }
 
-// FIXME: Ok we should put these in IOBinary which has
-// general binary read/write stuff
-float
-IOHmrg::readScaledInt(gzFile fp, float scale)
-{
-  int temp;
-
-  ERRNO(gzread(fp, &temp, sizeof(int)));
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-  return float(temp) / scale;
-}
-
-void
-IOHmrg::writeScaledInt(gzFile fp, float w, float scale)
-{
-  int temp = w * scale;
-
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-
-  ERRNO(gzwrite(fp, &temp, sizeof(int)));
-}
-
-int
-IOHmrg::readInt(gzFile fp)
-{
-  int temp;
-
-  ERRNO(gzread(fp, &temp, sizeof(int)));
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-  return temp;
-}
-
-void
-IOHmrg::writeInt(gzFile fp, int w)
-{
-  int temp = w;
-
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-
-  ERRNO(gzwrite(fp, &temp, sizeof(int)));
-}
-
-int
-IOHmrg::readFloat(gzFile fp)
-{
-  float temp;
-
-  ERRNO(gzread(fp, &temp, sizeof(float)));
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-  return temp;
-}
-
-void
-IOHmrg::writeFloat(gzFile fp, float w)
-{
-  float temp = w;
-
-  if (OS::isBigEndian()) {
-    OS::byteswap(temp); // Data always written little endian
-  }
-
-  ERRNO(gzwrite(fp, &temp, sizeof(float)));
-}
-
-std::string
-IOHmrg::readChar(gzFile fp, size_t length)
-{
-  std::vector<unsigned char> v;
-
-  v.resize(length);
-  const size_t bytes = length * sizeof(unsigned char);
-
-  ERRNO(gzread(fp, &v[0], bytes));
-  std::string name;
-
-  // Use zero to finish std::string
-  for (size_t i = 0; i < bytes; i++) {
-    if (v[i] == 0) { break; }
-    name += v[i];
-  }
-
-  return name;
-}
-
-void
-IOHmrg::writeChar(gzFile fp, std::string c, size_t length)
-{
-  if (length < 1) { return; }
-  std::vector<unsigned char> v;
-
-  v.resize(length);
-
-  const size_t max = std::min(c.length(), length);
-
-  // Write up to std::string chars
-  for (size_t i = 0; i < max; i++) {
-    v[i] = c[i];
-  }
-  // Fill with zeros
-  for (size_t i = max; i < length; i++) {
-    v[i] = 0;
-  }
-
-  const size_t bytes = length * sizeof(unsigned char);
-
-  ERRNO(gzwrite(fp, &v[0], bytes));
-}
-
-Time
-IOHmrg::readTime(gzFile fp, int year)
-{
-  // Time
-  // We preread year in some cases during the guessing
-  // of datatype since mrms binary doesn't have a type field
-  // So we sometimes already have read the year
-  if (year == -99) {
-    year = IOHmrg::readInt(fp);
-  }
-  const int month = IOHmrg::readInt(fp);
-  const int day   = IOHmrg::readInt(fp);
-  const int hour  = IOHmrg::readInt(fp);
-  const int min   = IOHmrg::readInt(fp);
-  const int sec   = IOHmrg::readInt(fp);
-
-  Time dataTime(year, month, day, hour, min, sec, 0.0);
-
-  return dataTime;
-}
-
-void
-IOHmrg::writeTime(gzFile fp, const Time& t)
-{
-  // Time
-  IOHmrg::writeInt(fp, t.getYear());
-  IOHmrg::writeInt(fp, t.getMonth());
-  IOHmrg::writeInt(fp, t.getDay());
-  IOHmrg::writeInt(fp, t.getHour());
-  IOHmrg::writeInt(fp, t.getMinute());
-  IOHmrg::writeInt(fp, t.getSecond());
-}
-
 std::shared_ptr<DataType>
 IOHmrg::createDataType(const std::string& params)
 {
@@ -264,7 +113,9 @@ IOHmrg::createDataType(const std::string& params)
       break;
     }
     unsigned int firstYear = (v[0] | (v[1] << 8) | (v[2] << 16) | (v[3] << 24)); // little endian
-    if (OS::isBigEndian()) { OS::byteswap(firstYear); }
+    #if IS_BIG_ENDIAN
+    OS::byteswap(firstYear);
+    #endif
     const bool validYear = isMRMSValidYear(firstYear);
 
     // --------------------------------------------------------------------------
@@ -358,7 +209,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string compress = keys["compression"];
 
   if (!compress.empty()) {
-    LogInfo("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
+    LogDebug("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
     keys["compression"] = ""; // global for this run unless alg setting it
   }
 

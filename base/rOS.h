@@ -8,6 +8,21 @@
 
 #include <dlfcn.h>
 
+// Endian check can be compile time (saves a little speed)
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+# define ON_BIG_ENDIAN(...)
+# define IS_BIG_ENDIAN 0
+#else
+# define ON_BIG_ENDIAN(func) func
+# define IS_BIG_ENDIAN 1
+#endif
+
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+# define ON_LITTLE_ENDIAN(...)
+#else
+# define ON_LITTLE_ENDIAN(func) func
+#endif
+
 namespace rapio {
 /**
  * A utility for common system calls.
@@ -181,25 +196,6 @@ public:
       char_data[i]         = char_data[N - i - 1];
       char_data[N - i - 1] = temp;
     }
-  }
-
-  /** Check endianness  */
-  static bool
-  isBigEndian()
-  {
-    // Humm even better, set a global variable on start up I think...
-    static bool firstTime = true;
-    static bool big       = false;
-
-    if (!firstTime) {
-      union {
-        uint32_t i;
-        char     c[4];
-      } bint = { 0x01020304 };
-      big       = (bint.c[0] == 1);
-      firstTime = false;
-    }
-    return big;
   }
 
   /**
