@@ -11,6 +11,8 @@
 #include "rGribDatabase.h"
 #include "rGribAction.h"
 
+#include <fstream>
+
 using namespace rapio;
 
 // Library dynamic link to create this factory

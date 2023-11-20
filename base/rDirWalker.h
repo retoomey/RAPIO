@@ -3,8 +3,21 @@
 #include <rUtility.h>
 
 // Use c calls in linux current (could swap out with c++17 filesystem at some point)
+extern "C" {
 #include <ftw.h>
 #include <sys/stat.h>
+}
+
+// Alpine or libc vs glib linux versions
+#ifdef __USE_GNU
+#else
+enum {
+  FTW_CONTINUE      = 0,
+  FTW_STOP          = 1,
+  FTW_SKIP_SIBLINGS = 2,
+  FTW_SKIP_SUBTREE  = 8
+};
+#endif
 
 namespace rapio {
 /** A class that allows walking of files/directories.

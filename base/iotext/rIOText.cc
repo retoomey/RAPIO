@@ -5,6 +5,8 @@
 #include "rTextDataGrid.h"
 #include "rTextBinaryTable.h"
 
+#include <fstream>
+
 using namespace rapio;
 
 std::ostream * IOText::theFile = nullptr;

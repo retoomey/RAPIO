@@ -42,6 +42,9 @@ if(${USE_NCEPLIBS_GRIB2})
                                          # required to hard link it
                # Ok, g2c is a c library, not c++..but if it were to become one:
                #-DCMAKE_CXX_FLAGS=-fPIC
+               -DUSE_PNG=ON              # Use png (default on)
+               -DUSE_OpenJPEG=${USE_OPENJPEG_NCEPLIBS}  # Use OpenJpeg
+               -DUSE_Jasper=${USE_JASPER_NCEPLIBS}  # Use Jasper 
   )
 
   set(GRIB2_RAPIO_INCLUDES "${ROOT_DIRECTORY}/include")

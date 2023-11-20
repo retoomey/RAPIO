@@ -6,6 +6,8 @@
 #include <boost/bimap/set_of.hpp>
 #include <boost/bimap/multiset_of.hpp>
 
+#include <map>
+
 namespace rapio {
 /* (AI) Bimap allows two direction key to value pair lookup
  *      in various ways.

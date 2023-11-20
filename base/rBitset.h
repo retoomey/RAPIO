@@ -8,6 +8,7 @@
 #include <cmath>
 
 #include <rError.h>
+#include <fstream>
 
 namespace rapio {
 /** A class allowing different ways to store a std::vector of things choosing memory vs speed.
