@@ -16,12 +16,14 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
+// #include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace boost::interprocess;
 using namespace rapio;
 
 // Cleaner, but will test with all our compiler versions
 namespace fs = boost::filesystem;
+// namespace pt = boost::posix_time;
 
 const std::string&
 OS::getHostName()
@@ -170,8 +172,9 @@ OS::getUniqueTemporaryFile(const std::string& base_in)
 std::string
 OS::getRootFileExtension(const std::string& path, std::string& root)
 {
-  std::string p = path;                // test.xMl.Gz  or test.xMl
-  std::string e = fs::extension(path); // .Gz or .xMl
+  std::string p = path; // test.xMl.Gz  or test.xMl
+  boost::filesystem::path bpath(path);
+  std::string e = bpath.extension().string(); // .Gz or .xMl
 
   Strings::removeSuffix(p, e); // root = test.xMl or test
 
@@ -184,7 +187,8 @@ OS::getRootFileExtension(const std::string& path, std::string& root)
   if (f != nullptr) { // found gz or another we auto handle
     // p=test.xMl and e = gz
     // Second extension, for example .xml.gz --> 'xml' case
-    e = fs::extension(p);          // test.xMl --> .xMl
+    boost::filesystem::path bp(p);
+    e = bp.extension().string();   // test.xMl --> .xMl
     Strings::removeSuffix(p, e);   // root = test
     Strings::toLower(e);           // .xml
     Strings::removePrefix(e, "."); // xml
@@ -467,11 +471,31 @@ OS::getFileSize(const std::string& filepath)
   size_t aSize = 0;
 
   try {
-    aSize = fs::file_size(filepath);
+    fs::path path(filepath);
+    if (fs::exists(path)) {
+      aSize = fs::file_size(path);
+    }
   }
   catch (const fs::filesystem_error &e)
   { }
   return aSize;
+}
+
+bool
+OS::getFileModificationTime(const std::string& filepath, Time& aTime)
+{
+  try {
+    fs::path path(filepath);
+    if (fs::exists(path)) {
+      time_t lastWriteTime = fs::last_write_time(path);
+      aTime = Time::SecondsSinceEpoch(lastWriteTime, 0);
+      return true;
+    }
+  }
+  catch (const fs::filesystem_error &e)
+  { }
+
+  return false;
 }
 
 std::string

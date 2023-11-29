@@ -90,6 +90,10 @@ public:
   /** Create tile algorithm */
   RAPIOFusionRosterAlg(){ };
 
+  /** Declare extra command line plugins */
+  virtual void
+  declarePlugins();
+
   /** Declare all algorithm options */
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;

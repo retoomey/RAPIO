@@ -7,6 +7,15 @@
 using namespace rapio;
 
 void
+RAPIOFusionRosterAlg::declarePlugins()
+{
+  // We don't want the "-i" standard input at least for now, so we'll disable it
+  // Could use it for the roster files, but we use --roster for that in stage 1,
+  // so we'll stay consistent since we don't need notification
+  removePlugin("i");
+}
+
+void
 RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription(
@@ -95,6 +104,25 @@ RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
 {
+  // Get the time of the coverage file.  If it's older than -h then we assume that source
+  // is down or not reporting and we remove it from this masking pass.
+  Time fileTime;
+
+  if (OS::getFileModificationTime(fullpath, fileTime)) {
+    // FIXME: Need a time age method I think
+    const Time current    = Time::CurrentTime();
+    const Time cutoffTime = current - myMaximumHistory;
+    const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
+    if (fileTime.getSecondsSinceEpoch() < cutoff) {
+      // File is too old so we ignore it...
+      LogInfo("Ignored '" << sourcename << "' since it is too old. " << fileTime << "\n");
+      return;
+    }
+  } else {
+    // Say something here?
+    return; // Strange to happen since we're walking..maybe the file got deleted?
+  }
+
   ProcessTimer merge("Reading range/merging 1 took:\n");
 
   size_t startX, startY, numX, numY; // subgrid coordinates
@@ -424,10 +452,6 @@ RAPIOFusionRosterAlg::performRoster()
   writeMasks(); // Write bit array, for example "KTLX.mask" for stage1
 
   LogInfo("Finished one pass...\n");
-  ;
-
-  // For now exit since still running by hand
-  exit(1);
 } // RAPIOFusionRosterAlg::processNewData
 
 void

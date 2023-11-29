@@ -563,10 +563,21 @@ ProjLibProject::ProjLibProject(const std::string& src, const std::string& dst)
   : mySrc(src), myDst(dst), myP(nullptr)
 { }
 
+ProjLibProject::~ProjLibProject()
+{
+  #if HAVE_PROJLIB
+  if (myP != nullptr) {
+    proj_destroy(myP);
+  }
+  #endif
+}
+
 bool
 ProjLibProject::initialize()
 {
   bool success = true;
+
+  #if HAVE_PROJLIB
 
   /* NOTE: the use of PROJ strings to describe CRS is strongly discouraged
    * in PROJ 6, as PROJ strings are a poor way of describing a CRS, and
@@ -601,6 +612,10 @@ ProjLibProject::initialize()
       myP = P_for_GIS;
     }
   }
+  #else // if HAVE_PROJLIB
+  success = false;
+  LogSevere("Attempted to initialize Proj library, but we weren't compiled with Proj!\n");
+  #endif // if HAVE_PROJLIB
 
   return success;
 } // ProjLibProject::initialize
@@ -617,6 +632,7 @@ ProjLibProject::getXYCenter(double& centerXKm, double& centerYKm)
 bool
 ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
 {
+  #if HAVE_PROJLIB
   /* For reliable geographic <--> geocentric conversions, z shall not */
   /* be some random value. Also t shall be initialized to HUGE_VAL to */
   /* allow for proper selection of time-dependent operations if one of */
@@ -633,11 +649,17 @@ ProjLibProject::xyToLatLon(double& x, double&y, double &lat, double&lon)
   lon = c_out.lpzt.lam; // * 180.0 / M_PI;  It's giving me degrees not radians currently
   lat = c_out.lpzt.phi; // * 180.0 / M_PI;
   return (!proj_errno(myP));
+
+  #else // if HAVE_PROJLIB
+  return false;
+
+  #endif // if HAVE_PROJLIB
 }
 
 bool
 ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
 {
+  #if HAVE_PROJLIB
   PJ_COORD c{ lon, lat, 0.0, HUGE_VAL }; // as PJ_LPZT
   // c.lpzt.lam = lon; //  * M_PI/180.0;
   // c.lpzt.phi = lat; // * M_PI/180.0;
@@ -648,12 +670,18 @@ ProjLibProject::LatLonToXY(double& lat, double&lon, double &x, double&y)
   x = c_out.xy.x;
   y = c_out.xy.y;
   return (!proj_errno(myP));
+
+  #else // if HAVE_PROJLIB
+  return false;
+
+  #endif // if HAVE_PROJLIB
 }
 
 void
 ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   std::shared_ptr<LatLonGrid>                                  out)
 {
+  #if HAVE_PROJLIB
   auto data2DFA = out->getFloat2D(Constants::PrimaryDataName); // size could be nice right?
   auto& data2DF = data2DFA->ref();
   // data2DFA->fill(Constants::DataUnavailable); // fill anything not touched
@@ -789,5 +817,8 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
     atLat -= lat_spacing;
   }
 
-  LogSevere("FINAL STATS: " << lowestX << " " << highestX << " " << lowestY << " " << highestY << "\n");
+  LogInfo("FINAL STATS: " << lowestX << " " << highestX << " " << lowestY << " " << highestY << "\n");
+  #else // if HAVE_PROJLIB
+  LogSevere("Attempted to call grid projection, but we weren't compiled with Proj!\n");
+  #endif // if HAVE_PROJLIB
 } // ProjLibProject::toLatLonGrid

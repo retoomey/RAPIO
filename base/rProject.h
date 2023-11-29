@@ -7,7 +7,9 @@
 #include <string>
 #include <memory>
 
-#include <proj.h>
+#if HAVE_PROJLIB
+# include <proj.h>
+#endif
 
 namespace rapio {
 class LatLonGrid;
@@ -214,12 +216,8 @@ public:
   /** Send needed information to the class for initialization */
   ProjLibProject(const std::string& src, const std::string& dst = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 
-  ~ProjLibProject()
-  {
-    if (myP != nullptr) {
-      proj_destroy(myP);
-    }
-  }
+  /** Destroy a project lib */
+  ~ProjLibProject();
 
   /** Initialize the projection system */
   virtual bool
@@ -250,6 +248,10 @@ private:
   std::string myDst;
 
   /** Proj6 object */
+  #if HAVE_PROJLIB
   PJ * myP;
+  #else
+  void * myP;
+  #endif
 };
 }

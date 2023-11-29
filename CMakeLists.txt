@@ -167,11 +167,13 @@ endfunction()
 
 ###########################################################################
 # Used by tile generator and even algorithms like fusion.  Projection
-# ability.  Don't think we can do without this, at least right now.
-find_package(Proj REQUIRED)
+# ability.
+find_package(Proj)
 if (Proj_FOUND)
+  add_definitions(-DHAVE_PROJLIB)
   append_RAPIO("${Proj_INCLUDE_DIR}" "${Proj_LIBRARIES}")
 else()
+  message(STATUS "NOTE:\n\n   Couldn't find Proj. Only matters for grib2 projection currently.\n")
 endif(Proj_FOUND)
 
 # Used by web pulling abilities like webindex reading or remote URL pulling

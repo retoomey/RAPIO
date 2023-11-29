@@ -179,6 +179,10 @@ public:
   static size_t
   getFileSize(const std::string& file);
 
+  /** Get the file modification time */
+  static bool
+  getFileModificationTime(const std::string& file, Time& time);
+
   /** Swap bytes for a given type for endian change */
   template <class T>
   static void

@@ -70,6 +70,19 @@ public:
     myPlugins.push_back(p);
   }
 
+  /** Remove a plugin (called by RAPIOPlugin to deregister) */
+  void
+  removePlugin(const std::string& name)
+  {
+    for (size_t i = 0; i < myPlugins.size(); ++i) {
+      if (myPlugins[i]->getName() == name) {
+        RAPIOPlugin * removedItem = myPlugins[i];
+        myPlugins.erase(myPlugins.begin() + i);
+        delete removedItem;
+      }
+    }
+  }
+
   /** Get back a plugin type for use */
   template <typename T>
   T *
