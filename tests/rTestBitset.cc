@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(BITSET_CREATION)
   // Should be smallest bits to store 512 or 10 bits  (1000000000)
   BOOST_CHECK_EQUAL(b.smallestBitsToStore(512), 10);
 
-  BOOST_CHECK_EQUAL(b.getNumBits(), numBits);
+  BOOST_CHECK_EQUAL(b.getNumBitsPerValue(), numBits);
 
   // Set all values in bitset
   for (size_t i = 0; i < numValues; i++) {

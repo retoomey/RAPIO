@@ -92,7 +92,7 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
   // Dump current memory usage
   double vm_usage, resident_set;
 
-  OS::getProcessSize(vm_usage, resident_set);
+  OS::getProcessSizeKB(vm_usage, resident_set);
 
   std::cout << "Virtual Memory: " << vm_usage << " KB Resident: " << resident_set << " KB\n";
 

@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
-
+#include <cstdint> // Fedore38/arm wants it
 
 namespace rapio {
 /**
