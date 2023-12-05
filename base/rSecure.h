@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <cstdio>
+#include <cstdint>
 #include <iostream>
 #include <unistd.h>
 #include <iostream>
