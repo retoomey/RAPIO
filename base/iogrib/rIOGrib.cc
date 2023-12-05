@@ -15,6 +15,17 @@
 
 using namespace rapio;
 
+// NCEPLIBS changed it from GC_VERSION to G2C_VERSION around version 1.8
+#ifdef G2C_VERSION
+# define GRIB2_VERSION_STRING G2C_VERSION
+#else
+# ifdef GC_VERSION
+#  define GRIB2_VERSION_STRING GC_VERSION
+# else
+#  define GRIB2_VERSION_STRING "Unknown"
+# endif
+#endif
+
 // Library dynamic link to create this factory
 extern "C"
 {
@@ -412,7 +423,7 @@ IOGrib::getHelpString(const std::string& key)
 void
 IOGrib::initialize()
 {
-  LogInfo("GRIB module using grib library version: " << G2_VERSION << "\n");
+  LogInfo("GRIB module using grib library version: " << GRIB2_VERSION_STRING << "\n");
 }
 
 std::shared_ptr<DataType>

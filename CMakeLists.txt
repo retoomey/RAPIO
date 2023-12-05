@@ -239,26 +239,38 @@ if (BUILD_GRIB2_MODULE)
   # Go ahead and die now...otherwise it will die when pulling external project
   find_package(PNG REQUIRED)
 
-  # For now, disable if jasper not found. 
-  # FIXME:  Needs work on jasper/openjpeg2 stuff which is transitioning looks like
-  # Some os have one vs the other or both.
+  # Ok, so we should use jasper or openjpeg but not both.
+  # And jasper is deprecated is seems. Depending on OS you might have issues
+  # and have to play with turning on one vs the other.
 
+  set(JPEG_COMPRESSION_FOUND NO)
   find_package(OpenJPEG QUIET)
   if (OpenJPEG_FOUND)
     set(USE_OPENJPEG_NCEPLIBS YES)
-    message(STATUS "Found openjpeg so turning on for NCEPGRIB2.")
+    set(JPEG_COMPRESSION_FOUND YES)
+    message(STATUS "Found OpenJPEG2 for NCEPGRIB2.")
   else()
     set(USE_OPENJPEG_NCEPLIBS NO)
+
+    # Ok try to fall back to jasper
+    find_package(Jasper QUIET)
+    if (Jasper_FOUND)
+      set(USE_JASPER_NCEPLIBS YES)
+      set(JPEG_COMPRESSION_FOUND YES)
+      message(STATUS "Found Jasper for NCEPGRIB2 (if build fails you can install OpenJpeg2).")
+    else()
+      set(USE_JASPER_NCEPLIBS NO)
+    endif()
+  endif()
+
+  # Manual override if needed, only use one:
+  #set(USE_OPENJPEG_NCEPLIBS YES)
+  #set(USE_JASPER_NCEPLIBS NO)
+
+  if (NOT JPEG_COMPRESSION_FOUND)
+    message(STATUS "NOTE:\n\n   OpenJPEG2 or Jasper not found.  A lot of grib2 has JPEG compression so those files may fail to read.\n")
   endif()
   
-  find_package(Jasper QUIET)
-  if (Jasper_FOUND)
-    set(USE_JASPER_NCEPLIBS YES)
-    message(STATUS "Found jasper so turning on for NCEPGRIB2.")
-  else()
-    set(USE_JASPER_NCEPLIBS NO)
-    message(STATUS "NOTE:\n\n   Jasper not found.  A lot of grib2 has jpeg compression so those files may fail to read.\n")
-  endif()
   add_subdirectory(base/iogrib)
 endif (BUILD_GRIB2_MODULE)
 

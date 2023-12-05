@@ -30,9 +30,10 @@ if(${USE_NCEPLIBS_GRIB2})
   ExternalProject_Add(
     NCEPLIBS-g2c
     GIT_REPOSITORY https://github.com/NOAA-EMC/NCEPLIBS-g2c.git
-    #GIT_TAG 2aadbcf  # Tag for the version 1.7.0 release Aug 18, 2022 Redhat 8 fails jasper/openjpeg too old
-    GIT_TAG 999be93  # Tag for the version 1.6.0 release Aug 20, 2021
-                     # This version is happy.  There are missing bug fixes though
+    GIT_TAG cc3e5b6  # Tag for the version 1.8.0 release Oct 27, 2023
+    #GIT_TAG 2aadbcf  # Tag for the version 1.7.0 release Aug 18, 2022 
+    # Redhat 8 fails jasper/openjpeg too old?
+    #GIT_TAG 999be93  # Tag for the version 1.6.0 release Aug 20, 2021
     GIT_SHALLOW 1  # Only latest and limited history to save clone speed
     GIT_PROGRESS 1  # Show progress display during cloning
     PREFIX ${ROOT_DIRECTORY}

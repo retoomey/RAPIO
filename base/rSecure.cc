@@ -44,7 +44,6 @@ Secure::sign(const std::string& key, const std::string& message)
   # endif // ifdef EVP_MAX_MD_SIZE
   #else // if HAVE_OPENSSL
   LogSevere("Compiled without openssl support.\n");
-  asdfasfas
   #endif // if HAVE_OPENSSL
   return out;
 }
