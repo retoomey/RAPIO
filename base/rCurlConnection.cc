@@ -3,31 +3,16 @@
 #include "rError.h"
 #include "rStrings.h"
 
+extern "C" {
 #include <curl/curl.h>
+}
+
+#include <boost/asio.hpp>
 
 using namespace rapio;
 
-bool CurlConnection::TRY_CURL  = true;
-bool CurlConnection::GOOD_CURL = false;
-std::shared_ptr<CurlConnection> CurlConnection::myCurlConnection;
-
-CurlConnection::CurlConnection()
-{
-  myCurl       = 0;
-  myCurlInited = false;
-  myCurlCode   = curl_global_init(CURL_GLOBAL_ALL);
-
-  bool success = (myCurlCode != 0);
-
-  if (success) {
-    LogSevere("Unable to initialize libcurl properly \n");
-  } else {
-    myCurl = curl_easy_init();
-  }
-}
-
 namespace {
-// Write to a std::vector<char>
+/** Callback for CURL, write to a std::vector<char> */
 size_t
 processData(void * ptr, size_t sz, size_t n, void * obj)
 {
@@ -48,93 +33,56 @@ processData(void * ptr, size_t sz, size_t n, void * obj)
  */
 }
 
+CurlConnection::CurlConnection()
+{
+  if (!init()) {
+    throw std::runtime_error("CURL couldn't initialize!");
+  }
+}
+
+bool
+CurlConnection::init()
+{
+  // Global init of curl and a curl connection
+  myCurlCode = curl_global_init(CURL_GLOBAL_ALL);
+  myCurl     = 0;
+
+  bool ok = (myCurlCode == 0);
+
+  if (!ok) {
+    LogSevere("Unable to initialize libcurl properly \n");
+  } else {
+    // Now our instance for requesting
+    myCurl = curl_easy_init();
+
+    ok = (myCurl != 0);
+    if (ok) {
+      // Settings used
+      // ok = ok && curl_easy_setopt(curl, CURLOPT_VERBOSE, 10) == 0;
+      ok = ok && curl_easy_setopt(myCurl, CURLOPT_WRITEFUNCTION, processData) == 0;
+      ok = ok && curl_easy_setopt(myCurl, CURLOPT_NOSIGNAL, 1) == 0;
+      ok = ok && curl_easy_setopt(myCurl, CURLOPT_TIMEOUT, 30) == 0; // 30 seconds
+      ok = ok && curl_easy_setopt(myCurl, CURLOPT_CONNECTTIMEOUT, 30) == 0;
+    }
+  }
+  return ok;
+}
+
 CurlConnection::~CurlConnection()
 {
   if (myCurl != 0) {
     curl_easy_cleanup(myCurl);
   }
 
-  if (isValid()) {
+  if (myCurlCode == 0) {
     curl_global_cleanup();
   }
-}
-
-bool
-CurlConnection::isValid()
-{
-  return (myCurlCode == 0);
-}
-
-bool
-CurlConnection::isInit()
-{
-  return (myCurlInited);
-}
-
-CURL *
-CurlConnection::connection()
-{
-  return (myCurl);
-}
-
-bool
-CurlConnection::lazyInit()
-{
-  bool ok = (myCurlCode == 0);
-
-  if (!ok) {
-    LogSevere("Unable to initialize libcurl properly \n");
-    return (false);
-  }
-
-  // ok = ok && curl_easy_setopt(curl, CURLOPT_VERBOSE, 10) == 0;
-  ok = ok &&
-    curl_easy_setopt(connection(), CURLOPT_WRITEFUNCTION, processData) == 0;
-  ok = ok && curl_easy_setopt(connection(), CURLOPT_NOSIGNAL, 1) == 0;
-  ok = ok && curl_easy_setopt(connection(), CURLOPT_TIMEOUT, 30) == 0; // 30
-                                                                       // seconds
-  ok = ok && curl_easy_setopt(connection(), CURLOPT_CONNECTTIMEOUT, 30) == 0;
-
-  if (!ok) {
-    LogSevere("Unable to initialize libcurl library.\n");
-    curl_easy_cleanup(connection());
-    return (false);
-  }
-
-  myCurlInited = true;
-  return (true);
 }
 
 int
 CurlConnection::read(const std::string& url, std::vector<char>& buf)
 {
-  // Lazy init of global curl
-
-  if (!GOOD_CURL) { // 99.999% skip
-    // Try to set up curl if we haven't tried
-    if (TRY_CURL) {
-      if (myCurlConnection == nullptr) {
-        myCurlConnection = std::make_shared<CurlConnection>();
-      }
-      if (!(myCurlConnection->isValid() && myCurlConnection->isInit())) {
-        LogInfo("Initializing curl for remote request ability...\n");
-
-        if (myCurlConnection->lazyInit()) {
-          LogInfo("...curl initialized.\n");
-          GOOD_CURL = true;
-        }
-      } else {
-        LogInfo("...curl failed to initialize.\n");
-        return (-1); // Curl failed :(
-      }
-      TRY_CURL = false; // Don't try again
-    } else {
-      LogSevere("Can't read remote URL without curl\n");
-      return (-1);
-    }
-  }
-
-  URL urlb      = url;
+  URL urlb      = url; // recreation from URL.  FIXME:
   std::string p = urlb.getPath();
 
   Strings::replace(p, "//", "/");
@@ -142,105 +90,61 @@ CurlConnection::read(const std::string& url, std::vector<char>& buf)
 
   std::string urls = urlb.toString();
   CURLcode ret     = curl_easy_setopt(
-    CurlConnection::myCurlConnection->connection(), CURLOPT_URL, urls.c_str());
+    myCurl, CURLOPT_URL, urls.c_str());
 
   if (ret != 0) {
     LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
     return (-1);
   }
-  curl_easy_setopt(CurlConnection::myCurlConnection->connection(), CURLOPT_WRITEDATA, &(buf));
-  ret = curl_easy_perform(CurlConnection::myCurlConnection->connection());
+  curl_easy_setopt(myCurl, CURLOPT_WRITEDATA, &(buf));
+  ret = curl_easy_perform(myCurl);
 
   if (ret != 0) {
-    LogSevere("Reading " << url << " failed with err=" << ret << "\n");
+    LogSevere("Reading " << urls << " failed with err=" << ret << "\n");
     return (-1);
   }
   return (buf.size());
-} // CurlConnection::read
+}
 
 int
-CurlConnection::read1(const std::string& url, std::vector<char>& buf)
-{
-  // Initialize curl...
-  curl_global_init(CURL_GLOBAL_ALL);
-  CURL * curlHandle = curl_easy_init();
-
-  // Option set up
-  // ok = ok && curl_easy_setopt(curl, CURLOPT_VERBOSE, 10) == 0;
-  // ok = ok &&
-  //  curl_easy_setopt(connection(), CURLOPT_WRITEFUNCTION, processData) == 0;
-  // ok = ok && curl_easy_setopt(connection(), CURLOPT_NOSIGNAL, 1) == 0;
-  // ok = ok && curl_easy_setopt(connection(), CURLOPT_TIMEOUT, 30) == 0; // 30
-  //                                                                     // seconds
-  // ok = ok && curl_easy_setopt(connection(), CURLOPT_CONNECTTIMEOUT, 30) == 0;
-  CURLcode ret = curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
-
-  if (ret != 0) {
-    LogSevere("Opening " << url << " failed with err=" << ret << "\n");
-    return (-1);
-  }
-
-  // Read
-  curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, &(buf));
-  ret = curl_easy_perform(curlHandle);
-  if (ret != 0) {
-    LogSevere("Reading " << url << " failed with err=" << ret << "\n");
-    return (-1);
-  }
-
-  // Cleanup
-  curl_easy_cleanup(curlHandle);
-  curl_global_cleanup();
-
-  return (buf.size());
-} // CurlConnection::read1
-
-int
-CurlConnection::get1(const std::string& url, const std::vector<std::string>& headers,
+CurlConnection::readH(const std::string& url, const std::vector<std::string>& headers,
   std::vector<char>& buf)
 {
-  // Initialize curl...
-  curl_global_init(CURL_GLOBAL_ALL);
-  CURL * curlHandle = curl_easy_init();
+  if (myCurl) {
+    // Initialize headers
+    curl_slist * httpHeaders = NULL;
 
-  // Initialize headers
-  curl_slist * httpHeaders = NULL;
-
-  for (auto h:headers) {
-    httpHeaders = curl_slist_append(httpHeaders, h.c_str());
-    if (httpHeaders == NULL) {
-      // error, return...
+    for (auto h:headers) {
+      httpHeaders = curl_slist_append(httpHeaders, h.c_str());
     }
-  }
 
-  // Execute
-  // std::string output = "";
-  if (curlHandle) {
-    // Can reuse handle and settings I think, but how to do cleanly for different purposes
-    curl_easy_setopt(curlHandle, CURLOPT_FOLLOWLOCATION, 1);                   // Set automaticallly redirection
-    curl_easy_setopt(curlHandle, CURLOPT_MAXREDIRS, 1);                        // Set max redirection times
-    curl_easy_setopt(curlHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1); // Set http version 1.1fer
-    curl_easy_setopt(curlHandle, CURLOPT_HEADER, true);                        // Set header true
-    curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, httpHeaders);             // Set headers
+    // Set header options
+    if (httpHeaders != NULL) {
+      curl_easy_setopt(myCurl, CURLOPT_HEADER, true);            // Set header true
+      curl_easy_setopt(myCurl, CURLOPT_HTTPHEADER, httpHeaders); // Set headers
+    }
 
-    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str()); // Set URL
+    curl_easy_setopt(myCurl, CURLOPT_FOLLOWLOCATION, 1);                   // Set automatic redirection
+    curl_easy_setopt(myCurl, CURLOPT_MAXREDIRS, 1);                        // Set max redirection times
+    curl_easy_setopt(myCurl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1); // Set http version 1.1fer
+    curl_easy_setopt(myCurl, CURLOPT_URL, url.c_str());                    // Set URL
 
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, processData);
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, &buf);
+    curl_easy_setopt(myCurl, CURLOPT_WRITEFUNCTION, processData);
+    curl_easy_setopt(myCurl, CURLOPT_WRITEDATA, &buf);
 
-    curl_easy_perform(curlHandle); // Perform
+    // Run CURL request
+    curl_easy_perform(myCurl); // Perform
 
     if (httpHeaders != NULL) {
       curl_slist_free_all(httpHeaders);
     }
-    curl_easy_cleanup(curlHandle);
-    curl_global_cleanup();
     return (buf.size());
   }
-
   return -1;
-} // CurlConnection::get1
+} // CurlConnection::read1
 
+#if 0
+NOTE: Might work on this again sometime, so holding onto it
 int
 CurlConnection::put1(const std::string& url, const std::vector<std::string>& headers,
   const std::vector<std::string>& body)
@@ -292,4 +196,116 @@ CurlConnection::put1(const std::string& url, const std::vector<std::string>& hea
    *  }
    */
   return -1;
+}
+
+#endif // if 0
+
+int
+BoostConnection::read(const std::string& url, std::vector<char>& buf)
+{
+  // ALPHA ---
+  // This code is not working correctly in all cases...
+
+  // Convert back which is kinda silly. IOURL should send the URL I think...
+  // or we create two methods
+  URL aURL(url);
+
+  // Should these be done 'once' I think so?
+  boost::asio::io_context myIOContext;
+  boost::asio::ip::tcp::resolver myResolver(myIOContext);
+  // How is the socket reused?  Is this ok?
+  boost::asio::ip::tcp::socket mySocket(myIOContext);
+  boost::asio::streambuf myRequest;
+
+  // Resolve query to endpoints
+  std::cout << "URL: " << aURL.getHost() << "\n";
+
+  boost::asio::ip::tcp::resolver::query query(aURL.getHost(), "80");
+  boost::system::error_code err;
+  auto endpoints = myResolver.resolve(query, err);
+  boost::asio::ip::tcp::resolver::iterator end; // lists of ip:ports
+
+  #if 0
+  // NOTE: iterating moves this so connect fails
+  while (endpoints != end) {
+    boost::asio::ip::tcp::endpoint endpoint = *endpoints++;
+    std::cout << "ENDPOINT: " << endpoint << "\n";
+  }
+  #endif
+
+  if (err) {
+    std::cout << "ERROR resolving host: " << err.message() << "\n";
+    return -1;
+  }
+
+  // Connect to the remote data server(s)
+  // boost::asio::connect(mySocket, endpoints);
+  boost::asio::connect(mySocket, endpoints, err);
+
+  // Our URL getPath can return empty, but get requires at least a /
+  // FIXME: Should our URL getPath always returns at least a "/"?
+  // So currently we have a double // which seems to work
+  // std::string request = "GET /"+aURL.getPath()+" HTTP/1.1\r\n"
+  std::string request = "GET /" + aURL.toGetString() + " HTTP/1.1\r\n"
+    + "Host: " + aURL.getHost() + "\r\n"
+    + "Connection: close" + "\r\n"
+    + "\r\n";
+
+  std::cout << "REQUEST IS:'" << request << "'\n";
+
+  boost::asio::write(mySocket, boost::asio::buffer(request), err);
+
+  // Read headers to determine content size
+  boost::asio::read_until(mySocket, myRequest, "\r\n\r\n", err);
+
+  // Extract the response headers
+  std::istream response_stream(&myRequest);
+
+  // We use the content length in the header to size our buffer,
+  // avoiding having to copy the boost one
+  std::string header;
+  bool firstHeader = true;
+  // Read each line this consumes from the buffer (myRequest.size() drops)
+  while (std::getline(response_stream, header) && header != "\r") {
+    // std::cout << "HEADERBACK:"<<header<<" Leftover is" << myRequest.size() << "\n";
+
+    // FIXME: If we get a Content-Encoding things will break upstream probably...
+
+    // Check for the Content-Length header
+    if (header.compare(0, 16, "Content-Length: ") == 0) {
+      // Resize the buffer to the expected size
+      size_t contentLength = std::stoull(header.substr(16));
+      buf.resize(contentLength);
+      // Tempted to skip out, the problem is we read more than the header, so we
+      // need to consume all the header items to avoid copying anything into our
+      // body.
+      // break;
+    }
+  }
+
+  // Full copy.  Can be bad for large stuff.  Leaving here for debugging later if needed
+  // Note, since using same myRequest as headers, the leftover is auto handled
+  // boost::asio::read(mySocket, myRequest, err);
+  // buf.resize(boost::asio::buffer_size(myRequest.data()));
+  // std::copy(boost::asio::buffers_begin(myRequest.data()), boost::asio::buffers_end(myRequest.data()), buf.begin());
+  // return buf.size();
+
+  // Copy the extra bytes-transferred of the boost buffer stream into our vector (like 128) or so
+  // it's typically a small block
+  size_t leftOver = myRequest.size();
+  std::copy(boost::asio::buffers_begin(myRequest.data()), boost::asio::buffers_end(myRequest.data()), buf.begin());
+
+  // Just a wrapper to our vector that doesn't copy, offset by bytes left to read
+  boost::asio::mutable_buffer start = boost::asio::mutable_buffer(&buf[leftOver], buf.size() - leftOver);
+  // Now read the rest, placing further into the vector
+  boost::asio::read(mySocket, start, err);
+  return buf.size();
+} // BoostConnection::read
+
+int
+BoostConnection::readH(const std::string& url, const std::vector<std::string>& headers,
+  std::vector<char>& buf)
+{
+  LogSevere("Not implemented boost HTTP headers.\n");
+  return read(url, buf); // ignore extra headers for moment
 }

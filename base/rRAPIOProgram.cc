@@ -6,6 +6,7 @@
 #include "rConfig.h"
 
 // Default always loaded datatype creation factories
+#include "rNetwork.h"
 #include "rIOXML.h"
 #include "rIOJSON.h"
 #include "rIOFile.h"
@@ -80,6 +81,12 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
   // Since this is called by a main function
   // wrap to catch any uncaught exception.
   try  {
+    // Default engine for URL pulling, etc.
+    // FIXME: I'm trying to eventually get rid of CURL
+    // here for one less dependency.
+    Network::setNetworkEngine("CURL");
+    // Network::setNetworkEngine("BOOST");
+
     // ------------------------------------------------------------
     // Initial logging ability (default configured)
     Log::instance();

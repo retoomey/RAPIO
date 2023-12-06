@@ -5,7 +5,6 @@
 #include "rError.h"
 #include "rStrings.h"
 
-#include <curl/curl.h>
 #include <fstream>
 
 using namespace rapio;
@@ -45,8 +44,8 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
 {
   // Web ingest ------------------------------------------------------------
   if (url.isLocal() == false) {
-    // Use curl to pull it.
-    CurlConnection::read(url.toString(), buf);
+    // Use network to pull it.
+    Network::read(url.toString(), buf);
   } else {
     // Local file ingest
     // ------------------------------------------------------------

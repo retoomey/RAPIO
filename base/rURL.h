@@ -79,6 +79,12 @@ public:
   operator += (const std::string& add);
 
   /**
+   * Returns a GET string form of the URL.
+   */
+  std::string
+  toGetString() const;
+
+  /**
    * Returns a string form of the URL, much as you'd see in the URL entry field
    * of a web browser.
    */

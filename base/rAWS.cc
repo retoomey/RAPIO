@@ -3,7 +3,7 @@
 
 #include "rError.h"
 #include "rTime.h"
-#include "rCurlConnection.h"
+#include "rNetwork.h"
 
 #include <iostream>
 #include <iomanip>
@@ -142,7 +142,7 @@ AWS::test_REST_API_Get(
   std::string request_url = endpoint + '?' + canonical_querystring;
 
   std::vector<char> buf;
-  int ret = rapio::CurlConnection::get1(request_url, headers, buf);
+  int ret = Network::readH(request_url, headers, buf);
 
   if (ret < 0) {
     LogInfo("Failed looks like\n");

@@ -19,6 +19,7 @@ add_executable(testrapio
   rTestMain.cc
   rTestSparseVector.cc
   rTestTime.cc
+  rTestNetwork.cc
   rTestURL.cc
   rTestValueCompressor.cc
   rTestStage2Data.cc

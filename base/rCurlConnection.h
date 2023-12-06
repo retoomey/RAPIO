@@ -1,20 +1,18 @@
 #pragma once
 
-#include <rIO.h>
+#include <rNetwork.h>
 
-#include <string>
-#include <vector>
-#include <memory>
-
+extern "C" {
 #include <curl/curl.h>
+}
 
 namespace rapio {
-/**
- * Handle the CURL library setup and shutdown
+/** CURL based network reader
+ * Sometimes the simple old C libraries just work.
  *
  * @author Robert Toomey
  */
-class CurlConnection : public IO {
+class CurlConnection : public NetworkConnection {
 public:
 
   /** Create a curl connection */
@@ -23,61 +21,50 @@ public:
   /** Destroy curl connection */
   ~CurlConnection();
 
-  /** Is this curl connection valid and ready to use? */
-  bool
-  isValid();
+  /** Read a url */
+  virtual int
+  read(const std::string& url, std::vector<char>& buf) override;
 
-  /** Is this curl connection been initialized? */
-  bool
-  isInit();
-
-  /** Get the curl connection for use */
-  CURL *
-  connection();
-
-  /** Lazy initialize curl on first use */
-  bool
-  lazyInit();
-
-  /** Static read using a global static shared curl connection */
-  static int
-  read(const std::string& url, std::vector<char>& buf);
-
-  /** Static read once if able, return -1 on fail or size of buffer */
-  static int
-  read1(const std::string& url, std::vector<char>& buf);
-
-  /** Static get once if able, return -1 on fail or size of buffer */
-  static int
-  get1(const std::string& url, const std::vector<std::string>& headers,
+  /** Read a url and pass extra HTTP headers */
+  virtual int
+  readH(const std::string& url, const std::vector<std::string>& headers,
     std::vector<char>& buf);
 
-  /** Static put once if able, return -1 on fail or size of buffer */
-  static int
-  put1(const std::string& url, const std::vector<std::string>& headers,
-    const std::vector<std::string>& body);
-
+  /** Put a url and pass extra HTTP headers */
+  // virtual int
+  // put1(const std::string& url, const std::vector<std::string>& headers,
+  //   const std::vector<std::string>& body);
 
 private:
 
-  /** Global curl initialize code */
+  /** Initialize CURL */
+  bool
+  init();
+
+  /** Global CURL initialize code */
   CURLcode myCurlCode;
 
-  /** Used to access a curll connection */
+  /** Used to access a CURL connection */
   CURL * myCurl;
+};
 
-  /** Are we initialized? */
-  bool myCurlInited;
+/** BOOST::asio network reader
+ * FIXME: Currently alpha, has issues but have to start somewhere
+ * The advantage to getting this to work will be not having a 100%
+ * CURL requirement which isn't on every distro.
+ *
+ * @author Robert Toomey
+ */
+class BoostConnection : public NetworkConnection {
+public:
 
-  // Global curl setup
+  /** Read a url */
+  virtual int
+  read(const std::string& url, std::vector<char>& buf) override;
 
-  /** Try to initialize curl on first call to a remote data file */
-  static bool TRY_CURL;
-
-  /** Set to true when curl initialization is successfull */
-  static bool GOOD_CURL;
-
-  /** A global shareable curl connection */
-  static std::shared_ptr<CurlConnection> myCurlConnection;
+  /** Read a url and pass extra HTTP headers */
+  virtual int
+  readH(const std::string& url, const std::vector<std::string>& headers,
+    std::vector<char>& buf);
 };
 }

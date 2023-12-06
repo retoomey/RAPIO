@@ -130,6 +130,47 @@ URL::operator = (const std::string& s)
 } // =
 
 std::string
+URL::toGetString() const
+{
+  std::string s;
+
+  if (!empty()) {
+    if (!scheme.empty()) {
+      if (!user.empty() || !pass.empty()) {
+        s += URL::encodeURL(user);
+        s += ':';
+        s += URL::encodeURL(pass);
+        s += '@';
+      }
+      s += URL::encodeURL(host);
+
+      if (path.empty() || (path[0] != '/')) { s += '/'; }
+    }
+    s += path;
+
+    if (!query.empty()) {
+      s += '?';
+      auto it(query.begin());
+      auto end(query.end());
+
+      do {
+        s += URL::encodeURL(it->first);
+        s += '=';
+        s += URL::encodeURL(it->second);
+
+        if (++it != end) { s += '&'; }
+      } while (it != end);
+    }
+
+    if (!fragment.empty()) {
+      s += '#';
+      s += URL::encodeURL(fragment);
+    }
+  }
+  return (s);
+} // URL::toGetString
+
+std::string
 URL::toString() const
 {
   std::string s;
