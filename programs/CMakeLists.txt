@@ -86,6 +86,17 @@ install(TARGETS rMakeFakeRadarData
 )
 
 ##################################################################
+# Grib2Reader 
+add_executable(rGrib2Reader
+	rGrib2Reader.cc
+)
+target_link_libraries(rGrib2Reader rapio)
+install(TARGETS rGrib2Reader
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+
+##################################################################
 # RESTServer for tile generation 
 add_executable(rtile
   RESTserver/rTile.cc
