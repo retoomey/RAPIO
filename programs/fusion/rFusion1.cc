@@ -336,9 +336,15 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 
   // Create working LLG cache CAPPI storage per height level
   createLLGCache(myWriteStage2Name, myWriteOutputUnits, outg);
+} // RAPIOFusionOneAlg::firstDataSetup
 
-  // FIXME: These have to be done repeatedly if we use it as a heartbeat to
-  // an active fusion roster. Right now we're just statically running roster
+void
+RAPIOFusionOneAlg::updateRangeFile()
+{
+  // We either have to write/rewrite the range file, or at least touch it.
+  // For moment we're rewriting it.  Multi moment they may step on each other,
+  // so we'll either pull it out to another program or check time stamps or
+  // something.  Have to think about it and run operationally to determine best design.
 
   // Write a roster file
   std::string directory;
@@ -346,11 +352,11 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   std::string fullpath = directory + filename;
 
   LogInfo("Writing roster file: " << fullpath << "\n");
-  LogInfo("Sizes: " << myRadarGrid.getNumX() << ", " << myRadarGrid.getNumY() << "\n");
+  // LogInfo("Sizes: " << myRadarGrid.getNumX() << ", " << myRadarGrid.getNumY() << "\n");
   OS::ensureDirectory(directory);
   FusionCache::writeRangeFile(fullpath, myRadarGrid,
     myLLProjections, myRangeKMs);
-} // RAPIOFusionOneAlg::firstDataSetup
+}
 
 void
 RAPIOFusionOneAlg::readCoverageMask()
@@ -423,6 +429,10 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
         "'\n");
     return;
   }
+
+  // Update the range/coverage file for us so Roster knows we're active radar
+  // and includes us into the mask calculations
+  updateRangeFile();
 
   // Smoothing calculation.  Interesting that w2merger for 250 meter and 1000 meter conus
   // is calcuating 3 gates not 4 like in paper.  Suspecting a bug.
