@@ -1,7 +1,7 @@
 <!-- Model fields can be 2D or 3D.
 Intial assumpion is that we are reading pressure level files for the 3D
 -->
-<modelfield>
+<modelfields>
 	<field id="TMP" type="2D" name="SurfaceTemp" unit="K">
 		<layer="surface"/>
 	</field>
@@ -45,4 +45,4 @@ Intial assumpion is that we are reading pressure level files for the 3D
 		<layer="1000 mb"/>
 	</field>
 
-</modelfield>
+</modelfields>
