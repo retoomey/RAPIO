@@ -37,6 +37,10 @@ RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
   o.optional("nearest", "3", "How many sources contribute? Note: The largest this is the more RAM to run roster.");
   #endif
 
+  o.boolean("static", "Coverage files don't expire keeping a static nearest N.");
+  o.addAdvancedHelp("static",
+    "This has to do with radars/sources going up and down.  Coverage files from stage1 by default expire. This gives us a dynamic nearest N radars, where a further source can join in if one of the first N is down. However, with static turned on, all sources that exist are counted, even if offline.");
+
   // Default sync heartbeat to 1 mins
   // Note that roster probably takes longer than this, but that's fine
   // we'll just get another trigger immediately
@@ -66,6 +70,13 @@ RAPIOFusionRosterAlg::processOptions(RAPIOOptions& o)
   }
   #endif // ifdef USE_STATIC_NEAREST
   LogInfo(">>>>>>Using a nearest neighbor value of " << myNearestCount << "\n");
+
+  myStatic = o.getBoolean("static");
+  if (myStatic) {
+    LogInfo("Static mode on, we will use expired coverage files.\n");
+  } else {
+    LogInfo("Dynamic mode on, coverage files will expire.\n");
+  }
 } // RAPIOFusionRosterAlg::processOptions
 
 void
@@ -101,26 +112,39 @@ RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
   // performRoster();
 }
 
-void
-RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
+bool
+RAPIOFusionRosterAlg::expiredCoverage(const std::string& sourcename, const std::string& fullpath)
 {
   // Get the time of the coverage file.  If it's older than -h then we assume that source
   // is down or not reporting and we remove it from this masking pass.
-  Time fileTime;
+  // 'Unless' static mode is on
+  if (!myStatic) { // So dynamic mode the default...
+    Time fileTime;
 
-  if (OS::getFileModificationTime(fullpath, fileTime)) {
-    // FIXME: Need a time age method I think
-    const Time current    = Time::CurrentTime();
-    const Time cutoffTime = current - myMaximumHistory;
-    const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
-    if (fileTime.getSecondsSinceEpoch() < cutoff) {
-      // File is too old so we ignore it...
-      LogInfo("Ignored '" << sourcename << "' since it is too old. " << fileTime << "\n");
-      return;
+    if (OS::getFileModificationTime(fullpath, fileTime)) {
+      // FIXME: Need a time age method I think
+      const Time current    = Time::CurrentTime();
+      const Time cutoffTime = current - myMaximumHistory;
+      const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
+      if (fileTime.getSecondsSinceEpoch() < cutoff) {
+        // File is too old so we ignore it...
+        LogInfo("Ignored '" << sourcename << "' since it is too old. " << fileTime << "\n");
+        return true;
+      }
+    } else {
+      // Say something here?
+      return false; // Strange to happen since we're walking..maybe the file got deleted?
     }
-  } else {
-    // Say something here?
-    return; // Strange to happen since we're walking..maybe the file got deleted?
+  }
+  return false;
+}
+
+void
+RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
+{
+  // Don't handle expired files (not included in mask calculations)
+  if (expiredCoverage(sourcename, fullpath)) {
+    return; // ignore it
   }
 
   ProcessTimer merge("Reading range/merging 1 took:\n");
