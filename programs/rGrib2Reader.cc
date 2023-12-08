@@ -11,10 +11,14 @@ using namespace rapio;
  *
  * @author Robert Toomey; Travis Smith
  **/
+
+const std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
+bool myReadSettings = false;
+
 void
 Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
 {
-  o.setDescription("Grib2Reader readers");
+  o.setDescription("Grib2Reader read in GRIB2 files and writes out netcdf");
   o.setAuthors("Robert Toomey;Travis Smith");
 }
 
@@ -23,8 +27,51 @@ Grib2ReaderAlg::processOptions(RAPIOOptions& o)
 { }
 
 void
+Grib2ReaderAlg::whichFieldsToProcess()
+{ 
+  std::cout << "LOADING fields to process:\n";
+  auto doc = Config::huntXML(ConfigModelInfoXML);
+  try
+  {
+    /* code */
+    myReadSettings = true;
+    size_t count = 0;
+    if (doc != nullptr) {
+      auto tree       = doc->getTree();
+      auto modelfields = tree->getChildOptional("modelfields");
+      std::cout << "not nullptr!\n";
+      std::cout << tree << "\n\n\n------------\n";
+
+    
+      if (modelfields != nullptr) {
+        std::cout << "Also not nullptr!\n";
+        auto fields = modelfields->getChildren("field");
+        for (auto& m: fields) {
+          // wget attributes
+          const auto id = m.getAttr("id", std::string(""));
+          const auto type = m.getAttr("type", std::string(""));
+          const auto name = m.getAttr("name", std::string(""));
+          const auto units = m.getAttr("unit", std::string(""));
+          std::cout << id << " " << type << " " << name << " " << units << "\n";
+
+        }
+      }
+    } else {
+      std::cout << "ZZZZZZZZZZZZZZZ no model info to process file found\n";
+    }
+  }
+  catch(const std::exception& e)
+  {
+    LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
+  }
+  
+}
+
+void
 Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 {
+  // test loading field data
+  whichFieldsToProcess();
   // Look for Grib2 data only
   auto grib2 = d.datatype<rapio::GribDataType>();
 

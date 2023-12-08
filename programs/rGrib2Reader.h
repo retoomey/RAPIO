@@ -19,6 +19,13 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
+  /** Path for our configuration file */
+  std::string ConfigModelInfoXML;
+
+  /** read in which fields we want to process for this model */
+  virtual void
+  whichFieldsToProcess();
+
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
   processNewData(rapio::RAPIOData& d) override;
