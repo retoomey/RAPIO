@@ -106,6 +106,10 @@ public:
   virtual void
   processNewData(rapio::RAPIOData& d) override;
 
+  /** Is this coverage file expired or not? */
+  bool
+  expiredCoverage(const std::string& sourcename, const std::string& fullpath);
+
   /** Ingest single cache file */
   void
   ingest(const std::string& sourcename, const std::string& fullpath);
@@ -178,5 +182,8 @@ protected:
 
   /** My nearest count (how many contribute) */
   size_t myNearestCount;
+
+  /** My static field (ignore expiration times) */
+  bool myStatic;
 };
 }
