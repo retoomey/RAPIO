@@ -140,6 +140,19 @@ RAPIOFusionRosterAlg::expiredCoverage(const std::string& sourcename, const std::
 }
 
 void
+RAPIOFusionRosterAlg::walkerCallback(const std::string& what, const std::string& sourcename,
+  const std::string& fullpath)
+{
+  if (what == "INGEST") {
+    // Reading in .cache files
+    ingest(sourcename, fullpath);
+  } else if (what == "DELETE") {
+    // Deleting masks for old stuff we didn't have a cache file for
+    deleteMask(sourcename, fullpath);
+  }
+}
+
+void
 RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
 {
   // Don't handle expired files (not included in mask calculations)
@@ -152,7 +165,11 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   size_t startX, startY, numX, numY; // subgrid coordinates
 
   // We're reading to get the data and grid..which we need to generate the mask
-  auto out = FusionCache::readRangeFile(fullpath, startX, startY, numX, numY);
+  std::vector<FusionRangeCache> out;
+
+  if (!FusionCache::readRangeFile(fullpath, startX, startY, numX, numY, out)) {
+    return;
+  }
 
   // Make sure we have correct size..or skip
   const size_t numZ     = myFullGrid.getNumZ();
@@ -164,24 +181,24 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   }
   // FIXME: check read errors?
 
-  static bool firstTime = true;
+  // We're going to redo this everytime, because of chicken/egg issues.
 
-  if (firstTime) {
+  if (mySourceInfos.size() == 0) {
     // zero is reserved as missing...so plug in one
     mySourceInfos.push_back(SourceInfo());
-    firstTime = false;
   }
 
   // Find the info and id for this source...technically if we're reading once only then
   // we'll always be adding new IDs
+  // FIXME: since we add each time now...clean this up (the find shouldn't be necessary)
   SourceInfo * info = nullptr;
   auto infoitr      = myNameToInfo.find(sourcename);
 
   std::string newname = sourcename;
 
   if (infoitr != myNameToInfo.end()) {
-    info = &mySourceInfos[infoitr->second]; // existing
-    LogInfo("Found '" << info->name << "' in source database.\n");
+    info = &mySourceInfos[infoitr->second];                        // existing
+    LogInfo("Found '" << info->name << "' in source database.\n"); // This shouldn't happen anymore
   } else {
     mySourceInfos.push_back(SourceInfo()); // FIXME: constructor
     info = &mySourceInfos[mySourceInfos.size() - 1];
@@ -212,65 +229,47 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
 } // RAPIOFusionRosterAlg::ingest
 
 void
+RAPIOFusionRosterAlg::deleteMask(const std::string& sourcename, const std::string& fullpath)
+{
+  LogInfo("Deleting mask for '" << sourcename << "', since we didn't get a good cache file for it\n");
+
+  // See if this mask is in our known cache list
+  bool found = false;
+
+  for (auto& s:myNameToInfo) {
+    SourceInfo& source = mySourceInfos[s.second];
+    if (source.name == sourcename) { // FIXME: check uppercase always
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    if (!OS::deleteFile(fullpath)) {
+      LogSevere("Unable to delete old mask file for '" << sourcename << "'\n");
+    }
+  }
+}
+
+void
 RAPIOFusionRosterAlg::generateNearest()
 {
-  // Link cache files to our ingest method...
-  class myDirWalker : public DirWalker
-  {
-public:
-    /** Create dir walker helper */
-    myDirWalker(RAPIOFusionRosterAlg * owner) : myOwner(owner)
-    { }
-
-    /** Process a regular file */
-    virtual Action
-    processRegularFile(const std::string& filePath, const struct stat * info) override
-    {
-      // FIXME: Let base class filter filenames?
-      if (Strings::endsWith(filePath, ".cache")) {
-        // FIXME: time filter only latest
-
-        // For the moment, the source name is part of file name..we 'could' embed it
-        std::string f = filePath;
-        Strings::removeSuffix(f, ".cache");
-        size_t lastSlash = f.find_last_of('/');
-        if (lastSlash != std::string::npos) {
-          f = f.substr(lastSlash + 1);
-        }
-        // LogInfo("Found '" << f << "' source range cache...\n");
-        // printPath("Source: ", filePath, info);
-        myOwner->ingest(f, filePath); // ingest current radar file
-      }
-      return Action::CONTINUE;
-    }
-
-    /** Process a directory */
-    virtual Action
-    processDirectory(const std::string& dirPath, const struct stat * info) override
-    {
-      // Ok manually force single directory.  FIXME: Could let base have this ability
-      // So we don't recursivity walk
-      if (dirPath + "/" == getCurrentRoot()) { // FIXME: messy
-        return Action::CONTINUE;               // Process the root
-      } else {
-        return Action::SKIP_SUBTREE; // We're not recursing directories
-      }
-    }
-
-protected:
-
-    RAPIOFusionRosterAlg * myOwner;
-  };
-
   myWalkTimer = new ProcessTimerSum();
   myWalkCount = 0;
   LogInfo("Grid is " << myFullGrid << "\n");
   //  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
   firstTimeSetup();
+
+  // Clear out our stored radars
+  mySourceInfos.clear();
+  myNameToInfo.clear();
+
+  // Walk the cache directory looking for current/good files
   std::string directory = FusionCache::getRangeDirectory(myFullGrid);
-  myDirWalker walk(this);
+  myDirWalker walk("INGEST", this, ".cache");
 
   walk.traverse(directory);
+
   LogInfo("Total walk/merge time " << *myWalkTimer << " (" << myWalkCount << ") sources active.\n");
   delete myWalkTimer;
 } // RAPIOFusionRosterAlg::generateNearest
@@ -463,8 +462,14 @@ RAPIOFusionRosterAlg::writeMasks()
 
   percent = 100.0 - (percent * 100.0);
   LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
+
+  // Now we need to delete masks for things we didn't have a cache file for.
+  myDirWalker walk("DELETE", this, ".mask");
+
+  walk.traverse(directory);
+
   LogInfo(maskTimer);
-}
+} // RAPIOFusionRosterAlg::writeMasks
 
 void
 RAPIOFusionRosterAlg::performRoster()

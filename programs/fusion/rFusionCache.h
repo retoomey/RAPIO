@@ -315,10 +315,11 @@ public:
    * Range files are read by roster in order to do the nearest
    * active neighbor calculation.
    */
-  static std::vector<FusionRangeCache>
+  static bool
   readRangeFile(const std::string& filename,
     size_t& startX, size_t& startY,
-    size_t& numX, size_t& numY);
+    size_t& numX, size_t& numY,
+    std::vector<FusionRangeCache>& output);
 
   /** Write mask to a binary file.
    * Masks are 1 and 0 small files, written by roster after the

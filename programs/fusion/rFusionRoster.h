@@ -110,9 +110,17 @@ public:
   bool
   expiredCoverage(const std::string& sourcename, const std::string& fullpath);
 
+  /** Dispatch a directory walk call */
+  void
+  walkerCallback(const std::string& what, const std::string& sourcename, const std::string& fullpath);
+
   /** Ingest single cache file */
   void
   ingest(const std::string& sourcename, const std::string& fullpath);
+
+  /** Delete an old mask file */
+  void
+  deleteMask(const std::string& sourcename, const std::string& fullpath);
 
   /** Do nearest neighbor algorithm ingest for a single source.
   * This modifies the current nearest list with the new one. */
@@ -185,5 +193,58 @@ protected:
 
   /** My static field (ignore expiration times) */
   bool myStatic;
+};
+
+class myDirWalker : public DirWalker
+{
+public:
+  /** Create dir walker helper */
+  myDirWalker(const std::string& what, RAPIOFusionRosterAlg * owner, const std::string& suffix) : myWhat(what), myOwner(
+      owner), mySuffix(suffix)
+  { }
+
+  /** Process a regular file */
+  virtual Action
+  processRegularFile(const std::string& filePath, const struct stat * info) override
+  {
+    // FIXME: Let base class filter filenames?
+    if (Strings::endsWith(filePath, mySuffix)) {
+      // FIXME: time filter only latest
+
+      // For the moment, the source name is part of file name..we 'could' embed it
+      std::string f = filePath;
+      Strings::removeSuffix(f, mySuffix);
+      size_t lastSlash = f.find_last_of('/');
+      if (lastSlash != std::string::npos) {
+        f = f.substr(lastSlash + 1);
+      }
+      myOwner->walkerCallback(myWhat, f, filePath);
+    }
+    return Action::CONTINUE;
+  }
+
+  /** Process a directory */
+  virtual Action
+  processDirectory(const std::string& dirPath, const struct stat * info) override
+  {
+    // Ok manually force single directory.  FIXME: Could let base have this ability
+    // So we don't recursivity walk
+    if (dirPath + "/" == getCurrentRoot()) { // FIXME: messy
+      return Action::CONTINUE;               // Process the root
+    } else {
+      return Action::SKIP_SUBTREE; // We're not recursing directories
+    }
+  }
+
+protected:
+
+  /** The action we take on a file */
+  std::string myWhat;
+
+  /** The roster that wants us */
+  RAPIOFusionRosterAlg * myOwner;
+
+  /** The suffix we are hunting such as ".cache" or ".mask" */
+  std::string mySuffix;
 };
 }
