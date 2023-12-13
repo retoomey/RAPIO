@@ -20,8 +20,6 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   // ok....we'll see in practice.
   std::string filename = OS::getUniqueTemporaryFile("fusion");
 
-  std::ifstream fileExists(filename);
-
   std::ofstream outFile(filename, std::ios::binary);
 
   if (!outFile.is_open()) {
@@ -57,9 +55,7 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
 
   for (size_t layer = 0; layer < heightsKM.size(); layer++) {
     auto& llp = *myLLProjections[layer];
-    //    auto& ssc = *(mySinCosCache);
     llp.reset();
-    //    ssc.reset();
 
     AngleDegs atLat = startLat;
     for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
@@ -74,16 +70,7 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
         // FusionRangeCache storedMeters = std::round(aLengthKMs * 1000.0);
         FusionRangeCache storedMeters = aLengthKMs;
 
-        // static size_t counter = 0;
-        //        outFile.write(reinterpret_cast<char *>(&storedMeters), sizeof(FusionRangeCache));
         buffer.push_back(storedMeters);
-        // if (counter++ == 1000) {
-        //  LogSevere("VALUE at location 1000 is " << storedMeters << " and " << aLengthKMs << "\n");
-        // }
-        // outFile.write(reinterpret_cast<char *>(&aLengthKMs), sizeof(LengthKMs));
-        // myRanges[myAt];
-
-        //        ssc.get(vv.sinGcdIR, vv.cosGcdIR);
       }
     }
   }
@@ -93,8 +80,16 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   outFile.write(reinterpret_cast<char *>(&count), sizeof(count));
   outFile.write(reinterpret_cast<char *>(buffer.data()), count * sizeof(FusionRangeCache));
 
+  // Extra check file wrote successfully
+  if (!outFile) {
+    LogSevere("Couldn't write to tmp cache file " << filename << " for " << filefinal << "\n");
+    outFile.close();
+    return false;
+  }
+
   outFile.close();
 
+  // Finally move the tmp file to final location
   if (OS::moveFile(filename, filefinal)) {
     LogInfo("Wrote cache file to " << filefinal << " with " << count << " points.\n");
   } else {
@@ -104,35 +99,19 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   return success;
 } // AzRanElevCache::writeRangeFile
 
-std::vector<FusionRangeCache>
+bool
 FusionCache::readRangeFile(const std::string& filename,
   size_t& sx, size_t& sy,
-  size_t& x, size_t& y)
+  size_t& x, size_t& y,
+  std::vector<FusionRangeCache>& output)
 {
   std::ifstream infile(filename, std::ios::binary);
 
   if (!infile) {
     LogInfo("No Cache file " << filename << " exists.\n");
-    return std::vector<FusionRangeCache>();
+    return false;
   }
 
-  // Determine the file size
-  //  FIXME: optimize by possibly having header and file length
-  //  infile.seekg(0, std::ios::end);
-  //  std::streampos fileSize = infile.tellg();
-
-  //  infile.seekg(0, std::ios::beg);
-
-  // Calculate the number of FusionRangeCache in the file
-  // std::size_t numShorts = fileSize / sizeof(FusionRangeCache);
-
-  // Create a vector to store the data
-  // std::vector<FusionRangeCache> data(numShorts);
-
-  // size_t x;
-  // size_t y;
-  // size_t sx;
-  // size_t sy;
   size_t count;
 
   infile.read(reinterpret_cast<char *>(&x), sizeof(x));
@@ -143,34 +122,19 @@ FusionCache::readRangeFile(const std::string& filename,
   infile.read(reinterpret_cast<char *>(&count), sizeof(count));
 
   // Read the data from the file into the vector
-  // FIXME: I think we should use the gzip methods like mrms binary does
-  // Stage 1 'should' have the time to compress the file
   std::vector<FusionRangeCache> data(count);
 
   infile.read(reinterpret_cast<char *>(data.data()), count * sizeof(FusionRangeCache));
 
   if (!infile) {
     // handle error reading file
-    LogSevere("Couldn't read cache file " << filename << "\n");
+    LogSevere("Couldn't read existing cache file " << filename << "\n");
+    infile.close();
+    return false;
   }
   infile.close();
 
-  // LogSevere("Read in value of " << data[1000] << "\n");
-  // LogSevere("Number of points: " << count << "\n");
-
-  #if 0
-  LLCoverageArea(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
-    AngleDegs eastSpacing,
-    size_t aNumX, size_t aNumY) : nwLat(north), nwLon(west), seLat(south), seLon(east),
-    latSpacing(southDelta), lonSpacing(eastSpacing), startX(0), startY(0), numX(aNumX), numY(aNumY){ }
-
-  /** Set values, called by readers */
-  void
-    set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
-    AngleDegs eastSpacing, size_t aNumX, size_t aNumY);
-  #endif
-
-  return data;
+  return true;
 } // FusionCache::readRangeFile
 
 bool
