@@ -20,7 +20,7 @@ public:
   processOptions(rapio::RAPIOOptions& o) override;
 
   /** Path for our configuration file */
-  std::string ConfigModelInfoXML;
+  //std::string ConfigModelInfoXML;
 
   /** read in which fields we want to process for this model */
   virtual void
