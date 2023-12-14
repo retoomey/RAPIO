@@ -177,6 +177,7 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
 
   if (out.size() != expected) {
     LogSevere("Expected " << expected << " points but got " << out.size() << " for " << fullpath << "\n");
+    LogSevere("EXTRA: " << numX << ", " << numY << ", " << numZ << "\n");
     return;
   }
   // FIXME: check read errors?
@@ -208,12 +209,19 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
     info->startY = startY; // start NORTH (lat)
     info->numX   = numX;
     info->numY   = numY;
+    info->name   = newname;
+    myNameToInfo[newname] = info->id;
 
     // A mask of bits
-    info->mask = Bitset({ numX, numY, numZ }, 1);
-    info->mask.clearAllBits();
-    info->name = newname;
-    myNameToInfo[newname] = info->id;
+    try{
+      info->mask = Bitset({ numX, numY, numZ }, 1);
+      info->mask.clearAllBits();
+    }catch (std::bad_alloc& e) {
+      LogSevere("We ran out of memory allocating mask. This will crash.\n");
+      LogSevere("ATTEMPTED: '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
+        numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
+      exit(1);
+    }
 
     LogInfo("Added '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
       numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
@@ -231,8 +239,6 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
 void
 RAPIOFusionRosterAlg::deleteMask(const std::string& sourcename, const std::string& fullpath)
 {
-  LogInfo("Deleting mask for '" << sourcename << "', since we didn't get a good cache file for it\n");
-
   // See if this mask is in our known cache list
   bool found = false;
 
@@ -245,6 +251,8 @@ RAPIOFusionRosterAlg::deleteMask(const std::string& sourcename, const std::strin
   }
 
   if (!found) {
+    LogInfo("Deleting mask for '" << sourcename << "', since we didn't get a good cache file for it.\n");
+
     if (!OS::deleteFile(fullpath)) {
       LogSevere("Unable to delete old mask file for '" << sourcename << "'\n");
     }

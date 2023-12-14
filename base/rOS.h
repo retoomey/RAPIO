@@ -164,7 +164,13 @@ public:
   getProcessSizeKB(double& vm, double& rss);
 
   /**
-   * Rename a file path, even between different file systems
+   * Copy a file path, atomic even between different file systems
+   */
+  static bool
+  copyFile(const std::string& from, const std::string& to);
+
+  /**
+   * Rename a file path, atomic even between different file systems
    */
   static bool
   moveFile(const std::string& from, const std::string& to);

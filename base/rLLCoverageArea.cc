@@ -46,28 +46,44 @@ LLCoverageArea::insetRadarRange(
   #endif
   // Inset each side independently
   if (nwLat > north) { // Inset the top
-    size_t deltaY = floor((out.nwLat - north) / latSpacing);
+    const size_t deltaY = floor((out.nwLat - north) / latSpacing);
     out.startY = out.startY + deltaY; // Shift Y
-    out.numY   = out.numY - deltaY;   // Reduce num y by the shift
-    out.nwLat  = out.nwLat - (out.startY * out.latSpacing);
+    if (out.numY >= deltaY) {
+      out.numY = out.numY - deltaY; // Reduce num y by the shift
+    } else {
+      out.numY = 0; // Too far away
+    }
+    out.nwLat = out.nwLat - (out.startY * out.latSpacing);
   }
 
   if (west > nwLon) { // Inset the left
-    size_t deltaX = floor((west - out.nwLon) / lonSpacing);
+    const size_t deltaX = floor((west - out.nwLon) / lonSpacing);
     out.startX = out.startX + deltaX; // Shift X
-    out.numX   = out.numX - deltaX;   // Reduce num x by the shift
-    out.nwLon  = out.nwLon + (out.startX * out.lonSpacing);
+    if (out.numX >= deltaX) {
+      out.numX = out.numX - deltaX; // Reduce num x by the shift
+    } else {
+      out.numX = 0; // Too far away
+    }
+    out.nwLon = out.nwLon + (out.startX * out.lonSpacing);
   }
 
-  if (south > seLat) {                                       // Inset the bottom
-    size_t deltaY = floor((south - out.seLat) / latSpacing); //  - 1;
-    out.numY  = out.numY - deltaY;                           // Reduce num y by the shift up
+  if (south > seLat) {                                             // Inset the bottom
+    const size_t deltaY = floor((south - out.seLat) / latSpacing); //  - 1;
+    if (out.numY >= deltaY) {
+      out.numY = out.numY - deltaY; // Reduce num y by the shift up
+    } else {
+      out.numY = 0; // Too far away
+    }
     out.seLat = out.nwLat - (out.numY * out.latSpacing);
   }
 
-  if (seLon > east) {                                       // Inset the right
-    size_t deltaX = floor((out.seLon - east) / lonSpacing); //  - 1;
-    out.numX  = out.numX - deltaX;                          // Reduce num y by the shift
+  if (seLon > east) {                                             // Inset the right
+    const size_t deltaX = floor((out.seLon - east) / lonSpacing); //  - 1;
+    if (out.numX >= deltaX) {
+      out.numX = out.numX - deltaX; // Reduce num y by the shift
+    } else {
+      out.numX = 0; // Too far away
+    }
     out.seLon = out.nwLon + (out.numX * out.lonSpacing);
   }
 
