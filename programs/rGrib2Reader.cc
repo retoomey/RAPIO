@@ -4,7 +4,7 @@
 
 using namespace rapio;
 
-/** A Grib2 reading example
+/** A Grib2 reader
  *
  * Using rrfs data:
  * rgrib2reader -i file=rrfs.t23z.prslev.f000.conus_3km.grib2 -o=test
@@ -14,6 +14,18 @@ using namespace rapio;
 
 const std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
 bool myReadSettings = false;
+
+struct ModelFields
+{
+  /* data */
+  std::string id;
+  std::string type;
+  std::string name;
+  std::string units;
+  std::string layer;
+
+};
+std::vector<ModelFields> mFields;
 
 void
 Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
@@ -31,6 +43,7 @@ Grib2ReaderAlg::whichFieldsToProcess()
 { 
   std::cout << "LOADING fields to process:\n";
   auto doc = Config::huntXML(ConfigModelInfoXML);
+
   try
   {
     /* code */
@@ -52,14 +65,28 @@ Grib2ReaderAlg::whichFieldsToProcess()
           const auto type = m.getAttr("type", std::string(""));
           const auto name = m.getAttr("name", std::string(""));
           const auto units = m.getAttr("unit", std::string(""));
-          std::cout << id << " " << type << " " << name << " " << units << "\n";
+          const auto layer = m.getAttr("layer", std::string(""));
+          std::cout << id << " " << type << " " << name << " " << units
+             << " " << layer << "\n";
+          ModelFields mf;
+          mf.id = id;
+          mf.type = type;
+          mf.name = name;
+          mf.units = units;
+          mf.layer = layer;
+          mFields.push_back(mf); 
+          count++;  
+          std::cout << "Count = " << count << "\n";
+
 
         }
       }
+      
     } else {
       std::cout << "ZZZZZZZZZZZZZZZ no model info to process file found\n";
     }
   }
+  
   catch(const std::exception& e)
   {
     LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
@@ -86,6 +113,18 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
       LogInfo("Finished in " << grib << "\n");
     }
 
+    // test if we can pull the individual fields that are being asked for in 
+    // the config file.
+
+    for (size_t i=0;i<mFields.size();i++) {
+
+      auto array2Da = grib2->getFloat2D(mFields[i].id, mFields[i].layer);
+      if (array2Da != nullptr) {
+        LogInfo("Found '" << mFields[i].id << "'\n");
+        LogInfo("Dimensions: " << array2Da->getX() << ", " << array2Da->getY() << "\n");
+      }
+
+    }
     // ------------------------------------------------------------------------
     // 3D test
     //
@@ -109,6 +148,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
     // ------------------------------------------------------------------------
     // 2D test
     //
+    /**/
     const std::string name2D = "TMP";
     const std::string layer  = "surface";
 

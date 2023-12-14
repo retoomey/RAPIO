@@ -2,47 +2,43 @@
 Intial assumpion is that we are reading pressure level files for the 3D
 -->
 <modelfields>
-	<field id="TMP" type="2D" name="SurfaceTemp" unit="K">
-		<layer="surface"/>
-	</field>
-	<field id="TMP" type="3D" name="Temp" unit="K">
-		<layer name="100 mb"/>
-		<layer name="125 mb"/>
-		<layer name="150 mb"/>
-		<layer name="175 mb"/>
-		<layer name="200 mb"/>
-		<layer name="225 mb"/>
-		<layer name="250 mb"/>
-		<layer name="275 mb"/>
-		<layer name="300 mb"/>
-		<layer name="325 mb"/>
-		<layer name="350 mb"/>
-		<layer name="375 mb"/>
-		<layer name="400 mb"/>
-		<layer name="425 mb"/>
-		<layer name="450 mb"/>
-		<layer name="475 mb"/>
-		<layer name="500 mb"/>
-		<layer name="525 mb"/>
-		<layer name="550 mb"/>
-		<layer name="575 mb"/>
-		<layer name="600 mb"/>
-		<layer name="625 mb"/>
-		<layer name="650 mb"/>
-		<layer name="675 mb"/>
-		<layer name="700 mb"/>
-		<layer name="725 mb"/>
-		<layer name="750 mb"/>
-		<layer name="775 mb"/>
-		<layer name="800 mb"/>
-		<layer name="825 mb"/>
-		<layer name="850 mb"/>
-		<layer name="875 mb"/>
-		<layer name="900 mb"/>
-		<layer name="925 mb"/>
-		<layer name="950 mb"/>
-		<layer name="975 mb"/>
-		<layer name="1000 mb"/>
-	</field>
+	<field id="TMP" type="2D" name="SurfaceTemp" unit="K" layer="surface"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="100 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="125 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="150 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="175 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="200 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="225 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="250 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="275 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="300 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="325 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="350 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="375 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="400 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="425 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="450 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="475 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="500 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="525 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="550 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="575 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="600 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="625 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="650 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="675 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="700 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="725 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="750 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="775 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="800 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="825 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="850 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="875 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="900 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="925 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="950 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="975 mb"/>
+	<field id="TMP" type="3D" name="Temp" unit="K" layer="1000 mb"/>
 
 </modelfields>
