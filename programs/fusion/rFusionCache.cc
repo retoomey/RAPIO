@@ -77,6 +77,9 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
 
   // Write the array
   count = buffer.size();
+  if (count != x * y * heightsKM.size()) {
+    LogSevere("Size mismatch? " << x << ", " << y << ", " << heightsKM.size() << " != " << count << "\n");
+  }
   outFile.write(reinterpret_cast<char *>(&count), sizeof(count));
   outFile.write(reinterpret_cast<char *>(buffer.data()), count * sizeof(FusionRangeCache));
 
@@ -96,6 +99,27 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
     LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
     success = false;
   }
+
+  #if 0
+  // FIXME: Could write a unit test, but so much is required to reflect real time
+  // operations, so I have a test here.
+  // Read every file after writing test.
+  LogInfo("Reading back cache file to check...\n");
+  std::vector<FusionRangeCache> data2;
+  size_t sx2, sy2, x2, y2;
+
+  readRangeFile(filefinal, sx2, sy2, x2, y2, data2);
+  bool bad = ((sx != sx2) || (sy != sy2) || (x != x2) || (y != y2) || (buffer.size() != data2.size()));
+
+  if (bad) {
+    LogSevere(
+      "Uh oh ...read back not correct: (" << sx << "," << sx2 << ")(" << sy << "," << sy2 << ")(" << x << "," << x2 << ")(" << y << "," << y2 << ")(" << buffer.size() << "," << data2.size() <<
+        "\n");
+  } else {
+    LogInfo("...Seems ok?\n");
+  }
+  #endif // if 0
+
   return success;
 } // AzRanElevCache::writeRangeFile
 
@@ -103,7 +127,7 @@ bool
 FusionCache::readRangeFile(const std::string& filename,
   size_t& sx, size_t& sy,
   size_t& x, size_t& y,
-  std::vector<FusionRangeCache>& output)
+  std::vector<FusionRangeCache>& data)
 {
   std::ifstream infile(filename, std::ios::binary);
 
@@ -119,17 +143,28 @@ FusionCache::readRangeFile(const std::string& filename,
   infile.read(reinterpret_cast<char *>(&sx), sizeof(sx));
   infile.read(reinterpret_cast<char *>(&sy), sizeof(sy));
 
+  // Why is count needed?  Isn't it a multiple of x,y,z or something?
   infile.read(reinterpret_cast<char *>(&count), sizeof(count));
 
-  // Read the data from the file into the vector
-  std::vector<FusionRangeCache> data(count);
-
-  infile.read(reinterpret_cast<char *>(data.data()), count * sizeof(FusionRangeCache));
+  // We don't want to use a count that wasn't read correctly...
+  if (infile) {
+    try{
+      // Read the data from the file into the vector
+      data.resize(count);
+      infile.read(reinterpret_cast<char *>(data.data()), count * sizeof(FusionRangeCache));
+    }catch (std::bad_alloc& e) {
+      // Memory check as well.
+      LogSevere("Failed to allocation space for " << count << "\n");
+    }
+  }
 
   if (!infile) {
     // handle error reading file
     LogSevere("Couldn't read existing cache file " << filename << "\n");
     infile.close();
+    // Copy file to someplace...
+    static size_t count = 0;
+    OS::moveFile(filename, "/home/mrms/BADCACHE/badcache_" + std::to_string(count++) + ".cache");
     return false;
   }
   infile.close();
@@ -171,6 +206,21 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filefinal
       success = false;
     }
   }
+
+  #if 0
+  // FIXME: Could write a unit test, but so much is required to reflect real time
+  // operations, so I have a test here.
+  // Read every file after writing test.
+  Bitset newmask;
+
+  LogInfo("Reading back mask to check...\n");
+  readMaskFile(filefinal, newmask);
+  if (newmask.size() != mask.size()) {
+    LogSevere("Uh oh ...read back not correct " << newmask.size() << " != " << mask.size() << "\n");
+  } else {
+    LogInfo("...Seems ok?\n");
+  }
+  #endif // if 0
 
   return success;
 } // FusionCache::writeMaskFile

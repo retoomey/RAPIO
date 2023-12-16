@@ -243,7 +243,11 @@ if (BUILD_GRIB2_MODULE)
   # And jasper is deprecated is seems. Depending on OS you might have issues
   # and have to play with turning on one vs the other.
 
+  # Make sure off until found explicitly below
+  set(USE_JASPER_NCEPLIBS NO)
+  set(USE_OPENJPEG_NCEPLIBS NO)
   set(JPEG_COMPRESSION_FOUND NO)
+
   find_package(OpenJPEG QUIET)
   if (OpenJPEG_FOUND)
     set(USE_OPENJPEG_NCEPLIBS YES)

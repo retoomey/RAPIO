@@ -18,6 +18,8 @@
 #include <boost/process.hpp>
 // #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <sys/statvfs.h>
+
 using namespace boost::interprocess;
 using namespace rapio;
 
@@ -426,22 +428,74 @@ OS::getProcessSizeKB(double& vm_usage, double& resident_set)
 }
 
 bool
-OS::moveFile(const std::string& from, const std::string& to)
+OS::copyFile(const std::string& from, const std::string& to)
 {
-  // On same file system, rename is fine, on two different you need to copy instead.
-  // Would it be quicker to check if from/to is same filesystem?
   bool ok = false;
 
   try {
-    fs::rename(from, to);
+    const fs::path fromPath(from);
+    const fs::path toPath(to);
+
+    // If from doesn't exist, give error and return
+    const fs::path parentFrom = fromPath.parent_path();
+    if (!fs::exists(fromPath)) {
+      LogSevere(from << " does not exist to move.\n");
+      return false;
+    }
+
+    // Make sure path exists at destination
+    const fs::path parentTo = toPath.parent_path();
+    if (!OS::ensureDirectory(parentTo.native())) {
+      return false;
+    }
+
+    // Always copy to a TMP and then rename (atomic for readers)
+    std::string to2 = to + "_TMP";
+    fs::path to2Path(to2);
+    fs::copy_file(fromPath, to2Path, fs::copy_option::overwrite_if_exists);
+    fs::rename(to2Path, toPath);
     ok = true;
-  }
-  catch (const fs::filesystem_error &e)
+  }catch (const fs::filesystem_error &e)
   {
-    // Error might be cross file system reason, try a copy now
+    LogSevere("Failed to copy " << from << " to " << to << ": " << e.what() << "\n");
+  }
+  return ok;
+} // OS::copyFile
+
+bool
+OS::moveFile(const std::string& from, const std::string& to)
+{
+  bool ok = false;
+
+  const fs::path fromPath(from);
+  const fs::path toPath(to);
+
+  // If from doesn't exist, give error and return
+  if (!fs::exists(fromPath)) {
+    LogSevere(from << " does not exist to move.\n");
+    return false;
+  }
+
+  // Make sure path exists at destination
+  const fs::path parentTo = toPath.parent_path();
+
+  if (!OS::ensureDirectory(parentTo.native())) {
+    return false;
+  }
+
+  try {
+    // Rename will fail between devices. Tempted to stat compare devices..
+    // since 'maybe' it would be faster.
+    fs::rename(fromPath, toPath);
+    ok = true;
+  }catch (const fs::filesystem_error &e)
+  {
     try {
-      fs::copy_file(from, to, fs::copy_option::overwrite_if_exists);
-      fs::remove(from);
+      const std::string to2 = to + "_TMP";
+      const fs::path to2Path(to2);
+      fs::copy_file(fromPath, to2Path, fs::copy_option::overwrite_if_exists);
+      fs::rename(to2Path, toPath);
+      fs::remove(fromPath); // remove original file
       ok = true;
     }catch (const fs::filesystem_error &e)
     {
@@ -449,7 +503,7 @@ OS::moveFile(const std::string& from, const std::string& to)
     }
   }
   return ok;
-}
+} // OS::moveFile
 
 bool
 OS::deleteFile(const std::string& file)
