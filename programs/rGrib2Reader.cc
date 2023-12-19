@@ -232,6 +232,17 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
           }
         }
       } else {
+	      // test for temperature
+        size_t numX = array2D->getX();
+        size_t numY = array2D->getY();
+        LogSevere("OUTPUT NUMX NUMY " << numX << ", " << numY << "\n");
+        for (size_t x = 0; x < numX; ++x) {
+          for (size_t y = 0; y < numY; ++y) {
+            ref[x][y] = ref[x][y]-273.15;
+          }
+        }
+
+
         // ------------------------------------------------
         // ALPHA: Create projection lookup mapping
         // FIXME: Ok projection needs a LOT more work we need info
@@ -243,7 +254,8 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
         // But basically we'll 'declare' our projection somehow
         Project * project = new ProjLibProject(
           // axis: Tell project that our data is east and south heading
-          "+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
+          //"+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
+          "+proj=lcc +axis=esu +lon_0=-97.5 +lat_0=38.5 +lat_1=38.5 +lat_2=38.5 +x_0=0 +y_0=0 +units=km +resolution=3"
         );
         bool success = project->initialize();
         LogInfo("Created projection:  " << success << "\n");
