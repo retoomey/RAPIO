@@ -1,0 +1,20 @@
+<!-- Model projection information.
+This can be found by running gdalinfo on a grib2 file.
+-->
+<modelprojections>
+	<!-- Robert's example:
+		"+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
+	-->
+	<!-- these work -->
+	<field model="RRFS" x="1799" y="1059" proj="+proj=lcc +axis=esu +lon_0=-97.5 +lat_0=38.5 +lat_1=38.5 +lat_2=38.5 +x_0=0 +y_0=0 +units=km +resolution=3"/>
+	<!-- these need to be tested -->
+	<field model="HRRR" x="1799" y="1059" proj="+proj=lcc +axis=esu +lon_0=-97.5 +lat_0=38.5 +lat_1=38.5 +lat_2=38.5 +x_0=0 +y_0=0 +units=km +resolution=3" />
+	<field model="RAP13" x="451" y="337" proj="lcc +axis=esu +lon_0=-95 +lat_0=25 +lat_1=25 +lat_2=25 +x_0=0 +y_0=0 +units=km +resolution=13.545" />
+	<field model="RAP20" x="301" y="225" proj="lcc +axis=esu +lon_0=-95 +lat_0=25 +lat_1=25 +lat_2=25 +x_0=0 +y_0=0 +units=km +resolution=20.318" />
+	<field model="RUC20" x="301" y="225" proj="lcc +axis=esu +lon_0=-95 +lat_0=25 +lat_1=25 +lat_2=25 +x_0=0 +y_0=0 +units=km +resolution=20.318" />
+
+	<!-- these probably have an incorrect string -->
+	<field model="HRRR_Alaska" x="1299" y="919" proj="+proj=stere +lon_0=225  +lat_0=60 +x_0=0 +y_0=0 ellps=6371.229 +units=km +resolution=3" />
+	<!-- GFS is just an elipsoid, this one is every 0.25 degrees -->
+	<field model="GFS0.25degree" x="1440" y="721" proj="?" />
+</modelfields>
