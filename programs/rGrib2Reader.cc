@@ -13,6 +13,8 @@ using namespace rapio;
  **/
 
 const std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
+const std::string modelProjectionsXML = "misc/modelProjections.xml";
+
 bool myReadSettings = false;
 
 struct ModelFields
@@ -37,6 +39,98 @@ Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
 void
 Grib2ReaderAlg::processOptions(RAPIOOptions& o)
 { }
+
+void
+Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
+{ 
+  std::cout << "Reading model projection info for " << modeltype
+    << "\n";
+  auto doc = Config::huntXML(modelProjectionsXML);
+  try {
+    if (doc != nullptr) {
+      auto tree       = doc->getTree();
+      auto modelprojections = tree->getChildOptional("modelprojections");
+      std::cout << "not nullptr!\n";
+      std::cout << tree << "\n\n\n------------\n";
+
+      if (modelprojections != nullptr) {
+        std::cout << "Also not nullptr!\n";
+        auto projections = modelprojections->getChildren("field");
+        std::cout << "Looking for" << modeltype << "\n";
+        for (auto& m: projections) {
+          // wget attributes
+          const auto model = m.getAttr("model", std::string(""));
+          if (model == modeltype) {
+            std::cout << "--------------Found " << modeltype << "!\n";
+            inputx = m.getAttr("x", std::size_t());
+            inputy = m.getAttr("y", std::size_t());
+            outputlons = m.getAttr("outputlons", std::size_t());
+            outputlats = m.getAttr("outputlats", std::size_t());
+            nwlon = m.getAttr("nwlon", float(1.0));
+            nwlat = m.getAttr("nwlat", float(1.0));
+            selon = m.getAttr("selon", float(1.0));
+            selat = m.getAttr("selat", float(1.0));
+            // FIXME: possible divide by zero
+            latspacing = (nwlat - selat) / (float) outputlats;
+            lonspacing = (nwlon - selon) / (float) outputlons;
+            proj = m.getAttr("proj", std::string(""));
+            std::cout << 
+              "X = " << inputx << "\n" <<
+              "Y = " << inputy << "\n" <<
+              "# lons = " << outputlons << "\n" <<
+              "# lats = " << outputlats << "\n" <<
+              "NW lon = " << nwlon << "\n" <<
+              "NW lat = " << nwlat << "\n" <<
+              "SE lon = " << selon << "\n" <<
+              "SE lat = " << selat << "\n" <<
+              "Lonspacing = " << lonspacing << " deg -- " << lonspacing*111. << "km\n" <<
+              "Latspacing = " << latspacing << " deg -- " << latspacing*111. << "km\n" <<
+              "proj string =" << proj << "\n" <<
+              "\n";
+            /*
+  size_t input_y; // # of input model rows
+  size_t output_lons; // # of output columns
+  size_t output_lats; // # of output rows
+  float nwlon;  // NW corner of output
+  float nwlat;  // NW corner of output
+  float selon;  // SE corner of output
+  float selat;  // SE corner of output
+  std::string proj; 
+  */
+          }
+          /*
+          const auto type = m.getAttr("type", std::string(""));
+          const auto name = m.getAttr("name", std::string(""));
+          const auto units = m.getAttr("unit", std::string(""));
+          const auto layer = m.getAttr("layer", std::string(""));
+          std::cout << id << " " << type << " " << name << " " << units
+             << " " << layer << "\n";
+          ModelFields mf;
+          mf.id = id;
+          mf.type = type;
+          mf.name = name;
+          mf.units = units;
+          mf.layer = layer;
+          mFields.push_back(mf); 
+          count++;  
+          std::cout << "Count = " << count << "\n";
+          */
+
+
+        }
+      }
+    } else {
+      std::cout << "could not reach model projections file\n";
+    }
+    
+    
+  } 
+  catch(const std::exception& e)
+  {
+    LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
+  }
+  
+}
 
 void
 Grib2ReaderAlg::whichFieldsToProcess()
@@ -83,7 +177,7 @@ Grib2ReaderAlg::whichFieldsToProcess()
       }
       
     } else {
-      std::cout << "ZZZZZZZZZZZZZZZ no model info to process file found\n";
+      std::cout << "no model info to process file found\n";
     }
   }
   
@@ -98,6 +192,8 @@ void
 Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 {
   // test loading field data
+  std::string whichModel = "RRFS";
+  getModelProjectionInfo(whichModel);
   whichFieldsToProcess();
   // Look for Grib2 data only
   auto grib2 = d.datatype<rapio::GribDataType>();
