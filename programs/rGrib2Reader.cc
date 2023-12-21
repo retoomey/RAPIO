@@ -70,6 +70,7 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
             nwlat = m.getAttr("nwlat", float(1.0));
             selon = m.getAttr("selon", float(1.0));
             selat = m.getAttr("selat", float(1.0));
+            zspacing = m.getAttr("zspacingkm", float(1.0));
             // FIXME: possible divide by zero
             latspacing = (nwlat - selat) / (float) outputlats;
             lonspacing = (nwlon - selon) / (float) outputlons;
@@ -85,37 +86,11 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
               "SE lat = " << selat << "\n" <<
               "Lonspacing = " << lonspacing << " deg -- " << lonspacing*111. << "km\n" <<
               "Latspacing = " << latspacing << " deg -- " << latspacing*111. << "km\n" <<
+              "Vert spacing = " << zspacing << " km\n" <<
               "proj string =" << proj << "\n" <<
               "\n";
-            /*
-  size_t input_y; // # of input model rows
-  size_t output_lons; // # of output columns
-  size_t output_lats; // # of output rows
-  float nwlon;  // NW corner of output
-  float nwlat;  // NW corner of output
-  float selon;  // SE corner of output
-  float selat;  // SE corner of output
-  std::string proj; 
-  */
+            break;
           }
-          /*
-          const auto type = m.getAttr("type", std::string(""));
-          const auto name = m.getAttr("name", std::string(""));
-          const auto units = m.getAttr("unit", std::string(""));
-          const auto layer = m.getAttr("layer", std::string(""));
-          std::cout << id << " " << type << " " << name << " " << units
-             << " " << layer << "\n";
-          ModelFields mf;
-          mf.id = id;
-          mf.type = type;
-          mf.name = name;
-          mf.units = units;
-          mf.layer = layer;
-          mFields.push_back(mf); 
-          count++;  
-          std::cout << "Count = " << count << "\n";
-          */
-
 
         }
       }

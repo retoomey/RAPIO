@@ -47,6 +47,7 @@ private:
   float selat;  // SE corner of output
   float latspacing = 0;
   float lonspacing = 0;
+  float zspacing = 0;
   std::string proj; 
 
 };
