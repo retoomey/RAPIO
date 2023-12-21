@@ -72,8 +72,8 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
             selat = m.getAttr("selat", float(1.0));
             zspacing = m.getAttr("zspacingkm", float(1.0));
             // FIXME: possible divide by zero
-            latspacing = (nwlat - selat) / (float) outputlats;
-            lonspacing = (nwlon - selon) / (float) outputlons;
+            latspacing = abs((nwlat - selat) / (float) outputlats);
+            lonspacing = abs((nwlon - selon) / (float) outputlons);
             proj = m.getAttr("proj", std::string(""));
             std::cout << 
               "X = " << inputx << "\n" <<
@@ -193,7 +193,56 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
       if (array2Da != nullptr) {
         LogInfo("Found '" << mFields[i].id << "'\n");
         LogInfo("Dimensions: " << array2Da->getX() << ", " << array2Da->getY() << "\n");
+        LogInfo("Trying to read " << mFields[i].id << " as grib message.\n");
+        auto message = grib2->getMessage(mFields[i].id, mFields[i].layer);
+        auto& m = *message;
+        LogInfo("    Time of the message is " << m.getDateString() << "\n");
+        LogInfo("    Message in file is number " << m.getMessageNumber() << "\n");
+        LogInfo("    Message file byte offset: " << m.getFileOffset() << "\n");
+        LogInfo("    Message byte length: " << m.getMessageLength() << "\n");
+        // Time theTime = message->getTime();
+        LogInfo("    Center ID is " << m.getCenterID() << "\n");
+        LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
+
+        // Messages have (n) fields each
+        auto field = message->getField(1);
+        if (field != nullptr) {
+          auto& f = *field;
+          LogInfo("For field 1 of the message:\n");
+          LogInfo("    GRIB Version: " << f.getGRIBEditionNumber() << "\n");
+          LogInfo("    GRIB Discipline #: " << f.getDisciplineNumber() << "\n");
+          LogInfo("    Time of the field is " << f.getDateString() << "\n");
+          LogInfo("    Grid def template number is: " << f.getGridDefTemplateNumber() << "\n");
+        }
+        auto llgridsp = LatLonGrid::Create(
+          mFields[i].name,           // MRMS name and also colormap
+          mFields[i].units,               // Units
+          LLH(nwlat, nwlon, .500), // CONUS origin
+          message->getTime(),
+          latspacing,
+          lonspacing,
+          outputlats,
+          outputlons
+          /* data */
+        );
+        llgridsp->setSubType(mFields[i].layer);
+        Project * project = new ProjLibProject(
+          // axis: Tell project that our data is east and south heading
+          //"+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
+          proj
+        );
+        bool success = project->initialize();
+        LogInfo("Created projection:  " << success << "\n");
+        // Project from source project to output
+        if (success) {
+          project->toLatLonGrid(array2Da, llgridsp);
+          writeOutputProduct(llgridsp->getTypeName(), llgridsp);
+        } else {
+          LogSevere("Failed to create projection\n");
+          return;
+        }
       }
+      
 
     }
     // ------------------------------------------------------------------------
@@ -203,6 +252,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
     // certain types of data.  Also if you plan to work only with the data numbers
     // and don't care about transforming/projection say to mrms output grids.
     // Note that the dimensions have to match for all layers given
+    /*
     const std::string name3D = "TMP";
     const std::vector<std::string> layers = { "2 mb", "5 mb", "7 mb" };
 
@@ -215,11 +265,12 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
     } else {
       LogSevere("Couldn't get 3D '" << name3D << "' out of grib data\n");
     }
-
+    */
     // ------------------------------------------------------------------------
     // 2D test
     //
-    /**/
+    /*
+    
     const std::string name2D = "TMP";
     const std::string layer  = "surface";
 
@@ -343,6 +394,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
     } else {
       LogSevere("Couldn't read 2D data '" << name2D << "' from grib2.\n");
     }
+    */
   }
 } // Grib2ReaderAlg::processNewData
 
