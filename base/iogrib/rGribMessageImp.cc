@@ -1,7 +1,12 @@
 #include "rGribMessageImp.h"
+#include "rGribFieldImp.h"
 #include "rIOGrib.h"
 
 #include <rError.h>
+
+extern "C" {
+#include <grib2.h>
+}
 
 using namespace rapio;
 
@@ -37,39 +42,15 @@ GribMessageImp::readG2Info(size_t messageNum, size_t at)
   return true;
 }
 
-gribfield *
-GribMessageImp::readFieldInfo(size_t fieldNumber)
+std::shared_ptr<GribField>
+GribMessageImp::getField(size_t fieldNumber)
 {
   if (fieldNumber <= myNumberFields) { // fields at 1 based
-    // We want the field but without data expanded unpacked 'yet'
-    gribfield * gfld   = 0; // output
-    const g2int unpack = 0; // 0 do not unpack
-    const g2int expand = 0; // 1 expand the data?
-    int ierr = g2_getfld(myBufferPtr, fieldNumber, unpack, expand, &gfld);
-    if (ierr > 0) {
-      LogSevere(IOGrib::getGrib2Error(ierr));
-    } else {
-      return gfld;
-    }
-  }
-  return nullptr;
-}
-
-gribfield *
-GribMessageImp::readField(size_t fieldNumber)
-{
-  if (fieldNumber <= myNumberFields) { // fields at 1 based
-    // We want the field but without data expanded unpacked 'yet'
-    gribfield * gfld   = 0; // output
-    const g2int unpack = 1; // 1 unpack
-    const g2int expand = 1; // 1 expand the data?
-    int ierr = g2_getfld(myBufferPtr, fieldNumber, unpack, expand, &gfld);
-    if (ierr > 0) {
-      LogSevere(IOGrib::getGrib2Error(ierr));
-      LogSevere("Grib2 field unpack/expand unsuccessful\n");
-    } else {
-      return gfld;
-    }
+    auto newField = std::make_shared<GribFieldImp>(myBufferPtr, myMessageNumber, fieldNumber);
+    return newField;
+  } else {
+    LogSevere("Requesting Grib field " << fieldNumber
+                                       << ", but we only have " << myNumberFields << " fields.\n");
   }
   return nullptr;
 }

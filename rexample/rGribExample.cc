@@ -6,6 +6,10 @@ using namespace rapio;
 
 /** A Grib2 reading example
  *
+ * Using hrrr data (has the fields used in example):
+ * https://www.nco.ncep.noaa.gov/pmb/products/hrrr/
+ * rgribexample -i file=hrrr.t00z.wrfnatf29.grib2 -o=test
+ *
  * Using rrfs data:
  * rgribexample -i file=rrfs.t23z.prslev.f000.conus_3km.grib2 -o=test
  *
@@ -47,7 +51,7 @@ GribExampleAlg::processNewData(rapio::RAPIOData& d)
     // and don't care about transforming/projection say to mrms output grids.
     // Note that the dimensions have to match for all layers given
     const std::string name3D = "TMP";
-    const std::vector<std::string> layers = { "2 mb", "5 mb", "7 mb" };
+    const std::vector<std::string> layers = { "16 hybrid level", "17 hybrid level", "18 hybrid level" };
 
     LogInfo("Trying to read '" << name3D << "' as direct 3D from data...\n");
     auto array3D = grib2->getFloat3D(name3D, layers);
@@ -101,6 +105,17 @@ GribExampleAlg::processNewData(rapio::RAPIOData& d)
         // Time theTime = message->getTime();
         LogInfo("    Center ID is " << m.getCenterID() << "\n");
         LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
+
+        // Messages have (n) fields each
+        auto field = message->getField(1);
+        if (field != nullptr) {
+          auto& f = *field;
+          LogInfo("For field 1 of the message:\n");
+          LogInfo("    GRIB Version: " << f.getGRIBEditionNumber() << "\n");
+          LogInfo("    GRIB Discipline #: " << f.getDisciplineNumber() << "\n");
+          LogInfo("    Time of the field is " << f.getDateString() << "\n");
+          LogInfo("    Grid def template number is: " << f.getGridDefTemplateNumber() << "\n");
+        }
       }
 
 

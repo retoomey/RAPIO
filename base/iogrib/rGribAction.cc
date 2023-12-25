@@ -1,5 +1,4 @@
 #include "rGribAction.h"
-#include "rGribDatabase.h"
 #include "rError.h"
 
 #include <iostream>
@@ -8,23 +7,18 @@
 using namespace rapio;
 
 bool
-GribCatalog::action(std::shared_ptr<GribMessageImp>& mp, size_t fieldNumber)
+GribCatalog::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
   // For now at least return a true grib2 file pointer
   // I could see wrapping this later, also action might handle N fields instead
   auto& m = *mp;
-  gribfield * gfld = m.readFieldInfo(fieldNumber);
+  auto f  = m.getField(fieldNumber);
 
-  if (gfld != nullptr) {
-    // Look up in database.  This could be internal to GribMessage I think
-    // when we implement .idx ability
-    std::string productName;
-    std::string levelName;
-    GribDatabase::toCatalog(gfld, productName, levelName);
-
+  if (f != nullptr) {
+    std::string productName = f->getProductName();
+    std::string levelName   = f->getLevelName();
     std::cout << m.getMessageNumber() << ":" << m.getFileOffset() << ":"
               << "d=" << m.getDateString() << ":" << productName << ":" << levelName << "\n";
-    g2_free(gfld);
   }
   return true; // Keep going, do all messages
 }
@@ -37,8 +31,9 @@ GribMessageMatcher::GribMessageMatcher(g2int d, g2int c, g2int p) : myDiscipline
 }
 
 bool
-GribMessageMatcher::action(std::shared_ptr<GribMessageImp>& mp, size_t fieldNumber)
+GribMessageMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
+  // OLD WAY, if you want this have to rewrite things/add methods to GribField
   auto& m = *mp;
   gribfield * gfld = m.readFieldInfo(fieldNumber);
 
@@ -77,21 +72,19 @@ GribMatcher::GribMatcher(const std::string& key,
 { }
 
 bool
-GribMatcher::action(std::shared_ptr<GribMessageImp>& mp, size_t fieldNumber)
+GribMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
   auto& m = *mp;
-  gribfield * gfld = m.readFieldInfo(fieldNumber);
+  auto f  = m.getField(fieldNumber);
 
-  if (gfld == nullptr) { return true; } // stop on failure
-
-  bool match = GribDatabase::match(gfld, myKey, myLevelStr);
+  if (f == nullptr) { return true; } // stop on failure
+  bool match = f->matches(myKey, myLevelStr);
 
   if (match) {
     LogInfo("Found '" << myKey << "' and '" << myLevelStr << "' single match for 2D.\n");
     myMatchedMessage     = mp; // Hold onto this message
     myMatchedFieldNumber = fieldNumber;
   }
-  g2_free(gfld);
   return !match; // Continue searching if no match
 }
 
@@ -104,16 +97,16 @@ GribNMatcher::GribNMatcher(const std::string& key,
 }
 
 bool
-GribNMatcher::action(std::shared_ptr<GribMessageImp>& mp, size_t fieldNumber)
+GribNMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
   auto& m = *mp;
-  gribfield * gfld = m.readFieldInfo(fieldNumber);
+  auto f  = m.getField(fieldNumber);
 
-  if (gfld == nullptr) { return true; } // stop on failure
+  if (f == nullptr) { return true; } // stop on failure
 
   // Search a match for each level we have...
   for (size_t i = 0; i < myLevels.size(); i++) {
-    bool match = GribDatabase::match(gfld, myKey, myLevels[i]);
+    const bool match = f->matches(myKey, myLevels[i]);
     if (match) {
       LogInfo("Found '" << myKey << "' and '" << myLevels[i] << "'\n");
       if (myMatchedMessages[i] == nullptr) {
@@ -125,7 +118,6 @@ GribNMatcher::action(std::shared_ptr<GribMessageImp>& mp, size_t fieldNumber)
       }
     }
   }
-  g2_free(gfld);
 
   const bool keepgoing = (myMatchedCount != myLevels.size());
 
@@ -149,7 +141,7 @@ GribNMatcher::checkAllLevels()
 
 bool
 GribScanFirstMessage::
-action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber)
+action(std::shared_ptr<GribMessage>& m, size_t fieldNumber)
 {
   myCaller->setTime(m->getTime());
   return false; // No fields we don't care

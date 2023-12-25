@@ -1,11 +1,9 @@
 #pragma once
 
 #include "rIO.h"
-#include "rDataType.h"
+#include "rGribDataType.h"
 
-#include "rGribMessageImp.h"
-
-#include <vector>
+// #include <vector>
 #include <string>
 
 extern "C" {
@@ -13,21 +11,8 @@ extern "C" {
 }
 
 namespace rapio {
-/** Root class of an action taken on each message of a Grib2 file.
- * Basically a scan is done where a GribAction gets to handle
- * each GribMessage of a file. You can use readFieldInfo or
- * readField to process data.
- *
- * @author Robert Toomey */
-class GribAction : public IO
-{
-public:
-  virtual bool
-  action(std::shared_ptr<GribMessageImp>&, size_t fieldNumber)
-  {
-    return false; // Keep going?
-  }
-};
+// FIXME: Might move all this in to core since these now only
+// rely on the general interface.
 
 /** An action that simply prints the wgrib2 or idx format out
  * for each message in the grib2 data */
@@ -35,7 +20,7 @@ class GribCatalog : public GribAction
 {
 public:
   virtual bool
-  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 };
 
 #if 0
@@ -56,7 +41,7 @@ public:
   GribMessageMatcher(g2int d, g2int c, g2int p);
 
   virtual bool
-  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 };
 #endif // if 0
 
@@ -69,7 +54,7 @@ class GribMatcher : public GribAction
   std::string myLevelStr;
 
   /** Matched message, or nullptr */
-  std::shared_ptr<GribMessageImp> myMatchedMessage;
+  std::shared_ptr<GribMessage> myMatchedMessage;
 
   /** Match field number iff matched message */
   size_t myMatchedFieldNumber;
@@ -81,10 +66,10 @@ public:
 
   /** Matched message */
   virtual bool
-  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 
   /** The messsage we matched if any, and other info. */
-  std::shared_ptr<GribMessageImp> getMatchedMessage(){ return myMatchedMessage; }
+  std::shared_ptr<GribMessage> getMatchedMessage(){ return myMatchedMessage; }
 
   /** The field number we matched if any */
   size_t getMatchedFieldNumber(){ return myMatchedFieldNumber; }
@@ -100,7 +85,7 @@ class GribNMatcher : public GribAction
   std::vector<std::string> myLevels;
 
   /** Matched message, or nullptr */
-  std::vector<std::shared_ptr<GribMessageImp> > myMatchedMessages;
+  std::vector<std::shared_ptr<GribMessage> > myMatchedMessages;
 
   /** Matched field numbers */
   std::vector<size_t> myMatchedFieldNumbers;
@@ -114,14 +99,14 @@ public:
 
   /** Action to take on a GribMessage */
   virtual bool
-  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 
   /** Return true if we found all levels and tell what are missing */
   bool
   checkAllLevels();
 
   /** The messages we matched if any. */
-  std::vector<std::shared_ptr<GribMessageImp> >& getMatchedMessages(){ return myMatchedMessages; }
+  std::vector<std::shared_ptr<GribMessage> >& getMatchedMessages(){ return myMatchedMessages; }
 
   /** The field numbers we matched if any. */
   std::vector<size_t>& getMatchedFieldNumbers(){ return myMatchedFieldNumbers; }
@@ -143,6 +128,6 @@ public:
   GribScanFirstMessage(DataType * caller) : myCaller(caller){ };
 
   virtual bool
-  action(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber) override;
+  action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 };
 }

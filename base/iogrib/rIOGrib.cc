@@ -39,10 +39,6 @@ createRAPIOIO(void)
 }
 };
 
-extern "C" {
-#include <grib2.h>
-}
-
 std::string
 IOGrib::getGrib2Error(g2int ierr)
 {
@@ -71,105 +67,35 @@ IOGrib::getGrib2Error(g2int ierr)
 }
 
 std::shared_ptr<Array<float, 2> >
-IOGrib::get2DData(std::shared_ptr<GribMessageImp>& m, size_t fieldNumber)
+IOGrib::get2DData(std::shared_ptr<GribMessage>& m, size_t fieldNumber)
 {
-  // Fully read expand/unpack field fieldNumber from the GribMessage
-  gribfield * gfld = m->readField(fieldNumber);
+  auto gfld = m->getField(fieldNumber);
 
   if (gfld == nullptr) {
     return nullptr;
   }
-
-  LogInfo("Grib2 field unpack successful\n");
-  LogInfo("-------> Grid Definition Template Number: " << gfld->igdtnum << "\n");
-
-  // Dimensions
-  // FIXME: We need to generally handle the Grid Definition Template Number (table 3.1),
-  // which I suspect we will be doing soon for projection information.
-  const g2int * gds = gfld->igdtmpl;
-
-  const size_t numLon = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis (W-E)
-  const size_t numLat = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along the y-axis (N-S)
-
-  // Keep the dimensions
-  LogInfo("Grib2 2D field size: " << numLat << " (lat) * " << numLon << " (lon).\n");
-
-  // Create 2D array class
-  auto newOne = Arrays::CreateFloat2D(numLat, numLon); // MRMS ordering
-  auto& data  = newOne->ref();
-
-  // Fill array with 2D data
-  g2float * g2grid = gfld->fld;
-
-  for (size_t lat = 0; lat < numLat; ++lat) {
-    for (size_t lon = 0; lon < numLon; ++lon) {
-      const size_t flipLat = numLat - (lat + 1);
-      data[lat][lon] = (float) (g2grid[(flipLat * numLon) + lon]);
-    }
-  }
-
-  // Finally free the grib2 field
-  g2_free(gfld);
-
-  return newOne;
+  return gfld->getFloat2D();
 } // IOGrib::get2DData
 
 std::shared_ptr<Array<float, 3> >
-IOGrib::get3DData(std::vector<std::shared_ptr<GribMessageImp> >& mv, const std::vector<size_t>& fieldN,
+IOGrib::get3DData(std::vector<std::shared_ptr<GribMessage> >& mv, const std::vector<size_t>& fieldN,
   const std::vector<std::string>& levels)
 {
+  std::shared_ptr<Array<float, 3> > newOne = nullptr;
   const size_t numZ = mv.size();
 
-  bool arrayCreated = false;
-  std::shared_ptr<Array<float, 3> > newOne;
-
-  // For each level ...
-  size_t x, y, z;
-
-  for (size_t i = 0; i < mv.size(); i++) {
-    // Fully read expand/unpack field fieldNumber from the GribMessage
-    gribfield * gfld = mv[i]->readField(fieldN[i]);
-    if (gfld == nullptr) {
+  // Iterate through found fields, if they are all grids of same size,
+  // return a 3D array of them.
+  for (size_t i = 0; i < numZ; i++) {
+    auto field = mv[i]->getField(fieldN[i]);
+    if (field == nullptr) {
       LogSevere("Couldn't unpack level " << i << " of request 3D field.\n");
-      return nullptr;
+      return nullptr; // Humm..could just have empty layer?
     } else {
       LogInfo("Unpack Level '" << levels[i] << "' (" << i << ") successfully.\n");
+      // Fill this level...
+      newOne = field->getFloat3D(newOne, i, numZ);
     }
-
-    // Get dimensions of the new 2D grid
-    const g2int * gds   = gfld->igdtmpl;
-    const size_t numLon = (gds[7] < 0) ? 0 : (size_t) (gds[7]); // 31-34 Nx -- Number of points along the x-axis (W-E)
-    const size_t numLat = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along the y-axis (N-S)
-
-    // Create array storage if needed
-    if (!arrayCreated) {
-      LogInfo("Grib2 3D field size: " << numLat << " (lat) * " << numLon << " (lon) * " << numZ << " levels.\n");
-      x            = numLat;
-      y            = numLon;
-      z            = numZ;
-      newOne       = Arrays::CreateFloat3D(numLat, numLon, numZ);
-      arrayCreated = true;
-    }
-
-    if ((x != numLat) || (y != numLon) || (z != numZ)) {
-      LogSevere("Mismatch on secondary layer dimensions, can't create 3D: '" << levels[i] << "' "
-                                                                             << numLat << " != " << x << " or "
-                                                                             << numLon << " != " << y << " or "
-                                                                             << numZ << " != " << z << "\n");
-      return nullptr;
-    }
-
-    // Fill layer with 2D data
-    g2float * g2grid = gfld->fld;
-    auto& data       = newOne->ref();
-    for (size_t lat = 0; lat < numLat; ++lat) {
-      for (size_t lon = 0; lon < numLon; ++lon) {
-        const size_t flipLat = numLat - (lat + 1);
-        data[lat][lon][z] = (float) (g2grid[(flipLat * numLon) + lon]);
-      }
-    }
-
-    g2_free(gfld);
   }
   return newOne;
 } // IOGrib::get3DData
@@ -239,7 +165,7 @@ haveGrib2Footer(unsigned char * b)
 
 /** Process a single grib2 message */
 inline bool
-processGribMessage(GribAction& a, size_t fileOffset, size_t messageCount, std::shared_ptr<GribMessageImp> mp)
+processGribMessage(GribAction& a, size_t fileOffset, size_t messageCount, std::shared_ptr<GribMessage> mp)
 {
   // If we can read a GRIB2 message...
   auto& m = *mp;

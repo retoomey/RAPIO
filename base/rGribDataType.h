@@ -1,9 +1,87 @@
 #pragma once
 
+#include <rIO.h>
 #include <rDataType.h>
 #include <rDataGrid.h>
 
 namespace rapio {
+/** A field of a grib2 message.
+ * Note:  Noticed that here we use virtual interface and store actual values in the gribfield*
+ * in the class, vs the message where we copy the section numbers.  Not sure if it matters really,
+ * but might refactor at some point. */
+class GribField : public Data {
+public:
+
+  /** Create uninitialized field */
+  GribField(size_t messageNumber, size_t fieldNumber) : myMessageNumber(messageNumber), myFieldNumber(fieldNumber){ };
+
+  // Array methods (assuming grid data)
+
+  /** Get a float 2D array in data projection, assuming we're grid data */
+  virtual std::shared_ptr<Array<float, 2> >
+  getFloat2D() = 0;
+
+  /** Append/create a float 3D at a given level.  Used for 3D array ability */
+  virtual std::shared_ptr<Array<float, 3> >
+  getFloat3D(std::shared_ptr<Array<float, 3> > in, size_t at, size_t max) = 0;
+
+  /** GRIB Edition Number (currently 2) 'gfld->version' */
+  virtual long
+  getGRIBEditionNumber() = 0;
+
+  /** Discipline-GRIB Master Table Number (see Code Table 0.0) 'gfld->discipline' */
+  virtual long
+  getDisciplineNumber() = 0;
+
+  /** Get the time stored in this field. (usually just matches message time) 'glfd->idsect[5-10]' */
+  virtual Time
+  getTime() = 0;
+
+  /** Return the Grid Definition Template Number (Code Table 3.1) */
+  virtual size_t
+  getGridDefTemplateNumber() = 0;
+
+  /** Get a date string similar to wgrib2 d=time dump */
+  std::string
+  getDateString(const std::string& pattern = "%Y%m%d%H")
+  {
+    return (getTime().getString(pattern));
+  }
+
+  /** Get message number we belong to */
+  size_t getMessageNumber(){ return myMessageNumber; }
+
+  /** Get field number */
+  size_t getFieldNumber(){ return myFieldNumber; }
+
+  // Database lookup names
+
+  /** Get product name from database */
+  virtual std::string
+  getProductName() = 0;
+
+  /** Get level name from database */
+  virtual std::string
+  getLevelName() = 0;
+
+  /** Matches given product/level */
+  bool
+  matches(const std::string& product, const std::string& level)
+  {
+    return ( (getProductName() == product) && (getLevelName() == level));
+  }
+
+  /** Print catalog string */
+  virtual void
+  printCatalog() = 0;
+
+protected:
+
+  size_t myMessageNumber; ///< Message we're part of (along with other possible fields)
+
+  size_t myFieldNumber; ///< Field number of the message that we are
+};
+
 /** GribMessage interface, holding 1 or more fields.
  * It seems in practice the number of fields is 'usually' 1
  * Holder for grib2 field information and buffer storage information
@@ -72,6 +150,20 @@ public:
   /** Get Type of processed data (Code Table 1.3) */
   long getType(){ return mySection1[12]; }
 
+  /** Get a new field from us.  This doesn't load anything */
+  virtual std::shared_ptr<GribField> getField(size_t fieldNumber){ return nullptr; }
+
+  // ------------------------------------------------------
+  // Low level access
+
+  /** Attempt to read g2 information at a file location.  Used at low level scanning.
+   * to initialize all of our class variables. */
+  virtual bool
+  readG2Info(size_t messageNum, size_t fileOffsetat)
+  {
+    return false;
+  };
+
 protected:
   /** Current message number in Grib2 data */
   size_t myMessageNumber;
@@ -90,6 +182,22 @@ protected:
 
   /** Current number of local use sections in message. */
   size_t myNumberLocalUse;
+};
+
+/** Root class of an action taken on each message of a Grib2 file.
+ * Basically a scan is done where a GribAction gets to handle
+ * each GribMessage of a file. No unpacking/expanding of data
+ * is done until requested, which makes the scan fairly quick.
+ *
+ * @author Robert Toomey */
+class GribAction : public IO
+{
+public:
+  virtual bool
+  action(std::shared_ptr<GribMessage>&, size_t fieldNumber)
+  {
+    return false; // Keep going?
+  }
 };
 
 /** DataType for holding Grib data

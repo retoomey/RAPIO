@@ -68,12 +68,20 @@ if (Grib2C_FOUND)
     rGribDatabase.cc
     rGribDataTypeImp.cc
     rGribMessageImp.cc
+    rGribFieldImp.cc
     rIOGrib.cc
   )
 
   # Add dependency has to be after add_library
   if (NCEPLIBS_ADD)
     add_dependencies(rapiogrib NCEPLIBS-g2c)
+    # Explicitly force linking openjpeg or jasper libraries to the dynamic library
+    if (USE_OPENJPEG_NCEPLIBS)
+      target_link_libraries(rapiogrib PRIVATE openjp2)
+    endif()
+    if (USE_JASPER_NCEPLIBS)
+      target_link_libraries(rapiogrib PRIVATE jasper)
+    endif()
   endif()
 
   # Include libraries

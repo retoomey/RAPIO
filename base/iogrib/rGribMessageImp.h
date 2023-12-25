@@ -5,10 +5,6 @@
 
 #include <vector>
 
-extern "C" {
-#include <grib2.h>
-}
-
 namespace rapio {
 class GribMessageImp : public GribMessage {
 public:
@@ -34,25 +30,16 @@ public:
   /** Return our storage pointer */
   unsigned char * getBufferPtr(){ return myBufferPtr; }
 
-  /** Attempt to read g2 information from the current buffer, return false on failure */
-  bool
-  readG2Info(size_t messageNum, size_t at);
+  /** Get a new field from us.  This doesn't load anything */
+  virtual std::shared_ptr<GribField>
+  getField(size_t fieldNumber) override;
 
   // ------------------------------------------------------
   // Low level access
-  // FIXME: These might get wrapped later.  Caller currently
-  // should call g2_free after use.  Could have a single method
-  // with expand/unpack but two seems clearer on intention
 
-  /** Raw read a GRIB2 field number as info only, no unpacking/expanding data.
-   * Return a fresh pointer on success. */
-  gribfield *
-  readFieldInfo(size_t fieldNumber);
-
-  /** Raw read a GRIB2 field number fully.  This unpacks/expands data.
-   * Returns a fresh pointer on success */
-  gribfield *
-  readField(size_t fieldNumber);
+  /** Attempt to read g2 information from the current buffer, return false on failure */
+  virtual bool
+  readG2Info(size_t messageNum, size_t at) override;
 
 protected:
 
