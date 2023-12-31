@@ -32,5 +32,5 @@ if (GDAL_FOUND)
    DESTINATION ${RAPIO_INSTALL_LIB}
   )
 else()
-  message(WARNING "Couldn't find GDAL library, You won't be able to write GDAL formats like GeoTiff.")
+  addRAPIONote("No GDAL library. You won't be able to write GDAL formats like GeoTiff.")
 endif(GDAL_FOUND)

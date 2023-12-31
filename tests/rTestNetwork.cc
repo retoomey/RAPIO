@@ -18,8 +18,15 @@ BOOST_AUTO_TEST_CASE(NETWORK_READ)
 
   std::vector<char> buffer;
 
-  Network::read("http://example.com:80/index.html", buffer);
-  BOOST_CHECK_GT(buffer.size(), 0);
+  const std::string testPath = "http://example.com:80/index.html";
+
+  // More complicated test and in boost it's still not working properly
+  // const std::string testPath = "https://codeload.github.com/retoomey/RAPIO/zip/refs/heads/master"; // zip of RAPIO
+
+  Network::read(testPath, buffer);
+  const size_t curlBuf = buffer.size();
+
+  BOOST_CHECK_GT(curlBuf, 0);
   #if 0
   std::cout << "Buffer back is " << buffer.size() << "\n";
   std::cout << "CURL test\n";
@@ -33,8 +40,11 @@ BOOST_AUTO_TEST_CASE(NETWORK_READ)
   Network::setNetworkEngine("BOOST");
 
   std::vector<char> buffer2;
-  Network::read("http://example.com:80/index.html", buffer2);
+  Network::read(testPath, buffer2);
+  const size_t boostBuf = buffer2.size();
   BOOST_CHECK_GT(buffer2.size(), 0);
+
+  BOOST_CHECK_EQUAL(curlBuf, boostBuf);
   #if 0
   std::cout << "BOOST test\n";
   std::cout << "Buffer2 back is " << buffer2.size() << "\n";

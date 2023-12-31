@@ -144,7 +144,9 @@ fi
 
 echo "$CMAKEBINARY install prefix is $BUILDPREFIX."
 
-docommand="$CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX -S$SOURCEDIR -B$OUTFOLDER"
+# Older cmake doesn't have -S and -B, so we'll just do the cd/mkdir ourselves
+#docommand="$CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX -S$SOURCEDIR -B$OUTFOLDER"
+docommand="$CMAKEBINARY -DCMAKE_INSTALL_PREFIX=$BUILDPREFIX .."
 if [ "$DRYRUN" = "false" ]; then
   # This is just to do a fully 'fresh' build without the cache iff you call autogen.sh
   if test -f "$OUTFOLDER/CMakeCache.txt"; then
@@ -152,6 +154,15 @@ if [ "$DRYRUN" = "false" ]; then
     rm "$OUTFOLDER/CMakeCache.txt"
   fi
    # -DCMAKE_BUILD_TYPE="Debug"
+
+   # ----------------------------------------
+   # Older cmake we'll cd into the scriptdir, make sure the outfolder exists
+   # then cd into it to run the cmake command.  Which is the same as -S. -B$OUTFOLDER
+   cd "$SCRIPT_DIR" || { echo "Failed to change directory to $SCRIPT_DIR"; exit 1; }
+   mkdir -p $OUTFOLDER || { echo "Unable to create output build $OUTFOLDER"; exit 1; }
+   cd "$OUTFOLDER" || { echo "Unable to cd into $OUTFOLDER"; exit 1; }
+   # ----------------------------------------
+
    $docommand
 else
   echo "TEST RUN"

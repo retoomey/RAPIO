@@ -34,6 +34,7 @@ if (Netcdf_FOUND)
   install(TARGETS rapionetcdf
     LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
   )
+  addRAPIONote("NETCDF library. Needed for a ton of NSSL netcdf data files.")
 else()
-  message(WARNING "Couldn't find Netcdf library, You probably want this to read NSSL data files, if not ignore.")
+  addRAPIONote("No NETCDF library. You probably _want_ this to read NSSL netcdf data files!")
 endif(Netcdf_FOUND)

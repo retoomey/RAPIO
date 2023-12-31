@@ -136,13 +136,14 @@ URL::toGetString() const
 
   if (!empty()) {
     if (!scheme.empty()) {
-      if (!user.empty() || !pass.empty()) {
-        s += URL::encodeURL(user);
-        s += ':';
-        s += URL::encodeURL(pass);
-        s += '@';
-      }
-      s += URL::encodeURL(host);
+      /*    if (!user.empty() || !pass.empty()) {
+       *    s += URL::encodeURL(user);
+       *    s += ':';
+       *    s += URL::encodeURL(pass);
+       *    s += '@';
+       *  }
+       *  s += URL::encodeURL(host);
+       */
 
       if (path.empty() || (path[0] != '/')) { s += '/'; }
     }

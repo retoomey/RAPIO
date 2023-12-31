@@ -2,8 +2,17 @@
 
 #include <rNetwork.h>
 
+// --------------------------------------------------------------
+// Optional class for networking if CURL installed.
+//
+// With oracle/redhat distros currently, libcurl-netcdf goes
+// alone with netcdf-devel so it's not an issue, but some distros
+// don't have libcurl by default.  Plus since we require boost
+// might as well have boost networking as an option.
+#ifdef HAVE_CURL
+
 extern "C" {
-#include <curl/curl.h>
+# include <curl/curl.h>
 }
 
 namespace rapio {
@@ -47,24 +56,5 @@ private:
   /** Used to access a CURL connection */
   CURL * myCurl;
 };
-
-/** BOOST::asio network reader
- * FIXME: Currently alpha, has issues but have to start somewhere
- * The advantage to getting this to work will be not having a 100%
- * CURL requirement which isn't on every distro.
- *
- * @author Robert Toomey
- */
-class BoostConnection : public NetworkConnection {
-public:
-
-  /** Read a url */
-  virtual int
-  read(const std::string& url, std::vector<char>& buf) override;
-
-  /** Read a url and pass extra HTTP headers */
-  virtual int
-  readH(const std::string& url, const std::vector<std::string>& headers,
-    std::vector<char>& buf);
-};
 }
+#endif // ifdef HAVE_CURL

@@ -6,7 +6,7 @@ add_definitions(-DHAVE_GRIB2C)
 
 # Toggle for using nceplibs vs trying system 
 if(${USE_NCEPLIBS_GRIB2})
-  message(STATUS "Attempting to use NCEPLIBS-g2c github version of grib2 library")
+  addRAPIONote("NCEPLIBS-g2c github grib2 library (You want this for grib2 files.)")
 
   # Building our own so assume found
   set(Grib2C_FOUND TRUE)
@@ -53,7 +53,7 @@ if(${USE_NCEPLIBS_GRIB2})
   ####################################################################
 
 else()
-  message(STATUS "Attempting to use system g2clib.")
+  addRAPIONote("G2CLIB library (deprecated and not recommended)")
   find_package(Grib2C)  # Note sets Grib2C_FOUND
   set(NCEPLIBS_ADD FALSE)
   set(GRIB2_RAPIO_INCLUDES "${Grib2C_INCLUDE_DIR}")

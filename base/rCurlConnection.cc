@@ -3,11 +3,14 @@
 #include "rError.h"
 #include "rStrings.h"
 
-extern "C" {
-#include <curl/curl.h>
-}
+// --------------------------------------------------------------
+// Optional class for networking if CURL installed.
+//
+#ifdef HAVE_CURL
 
-#include <boost/asio.hpp>
+extern "C" {
+# include <curl/curl.h>
+}
 
 using namespace rapio;
 
@@ -143,7 +146,7 @@ CurlConnection::readH(const std::string& url, const std::vector<std::string>& he
   return -1;
 } // CurlConnection::read1
 
-#if 0
+# if 0
 NOTE: Might work on this again sometime, so holding onto it
 int
 CurlConnection::put1(const std::string& url, const std::vector<std::string>& headers,
@@ -198,114 +201,5 @@ CurlConnection::put1(const std::string& url, const std::vector<std::string>& hea
   return -1;
 }
 
-#endif // if 0
-
-int
-BoostConnection::read(const std::string& url, std::vector<char>& buf)
-{
-  // ALPHA ---
-  // This code is not working correctly in all cases...
-
-  // Convert back which is kinda silly. IOURL should send the URL I think...
-  // or we create two methods
-  URL aURL(url);
-
-  // Should these be done 'once' I think so?
-  boost::asio::io_context myIOContext;
-  boost::asio::ip::tcp::resolver myResolver(myIOContext);
-  // How is the socket reused?  Is this ok?
-  boost::asio::ip::tcp::socket mySocket(myIOContext);
-  boost::asio::streambuf myRequest;
-
-  // Resolve query to endpoints
-  std::cout << "URL: " << aURL.getHost() << "\n";
-
-  boost::asio::ip::tcp::resolver::query query(aURL.getHost(), "80");
-  boost::system::error_code err;
-  auto endpoints = myResolver.resolve(query, err);
-  boost::asio::ip::tcp::resolver::iterator end; // lists of ip:ports
-
-  #if 0
-  // NOTE: iterating moves this so connect fails
-  while (endpoints != end) {
-    boost::asio::ip::tcp::endpoint endpoint = *endpoints++;
-    std::cout << "ENDPOINT: " << endpoint << "\n";
-  }
-  #endif
-
-  if (err) {
-    std::cout << "ERROR resolving host: " << err.message() << "\n";
-    return -1;
-  }
-
-  // Connect to the remote data server(s)
-  // boost::asio::connect(mySocket, endpoints);
-  boost::asio::connect(mySocket, endpoints, err);
-
-  // Our URL getPath can return empty, but get requires at least a /
-  // FIXME: Should our URL getPath always returns at least a "/"?
-  // So currently we have a double // which seems to work
-  // std::string request = "GET /"+aURL.getPath()+" HTTP/1.1\r\n"
-  std::string request = "GET /" + aURL.toGetString() + " HTTP/1.1\r\n"
-    + "Host: " + aURL.getHost() + "\r\n"
-    + "Connection: close" + "\r\n"
-    + "\r\n";
-
-  std::cout << "REQUEST IS:'" << request << "'\n";
-
-  boost::asio::write(mySocket, boost::asio::buffer(request), err);
-
-  // Read headers to determine content size
-  boost::asio::read_until(mySocket, myRequest, "\r\n\r\n", err);
-
-  // Extract the response headers
-  std::istream response_stream(&myRequest);
-
-  // We use the content length in the header to size our buffer,
-  // avoiding having to copy the boost one
-  std::string header;
-  bool firstHeader = true;
-  // Read each line this consumes from the buffer (myRequest.size() drops)
-  while (std::getline(response_stream, header) && header != "\r") {
-    // std::cout << "HEADERBACK:"<<header<<" Leftover is" << myRequest.size() << "\n";
-
-    // FIXME: If we get a Content-Encoding things will break upstream probably...
-
-    // Check for the Content-Length header
-    if (header.compare(0, 16, "Content-Length: ") == 0) {
-      // Resize the buffer to the expected size
-      size_t contentLength = std::stoull(header.substr(16));
-      buf.resize(contentLength);
-      // Tempted to skip out, the problem is we read more than the header, so we
-      // need to consume all the header items to avoid copying anything into our
-      // body.
-      // break;
-    }
-  }
-
-  // Full copy.  Can be bad for large stuff.  Leaving here for debugging later if needed
-  // Note, since using same myRequest as headers, the leftover is auto handled
-  // boost::asio::read(mySocket, myRequest, err);
-  // buf.resize(boost::asio::buffer_size(myRequest.data()));
-  // std::copy(boost::asio::buffers_begin(myRequest.data()), boost::asio::buffers_end(myRequest.data()), buf.begin());
-  // return buf.size();
-
-  // Copy the extra bytes-transferred of the boost buffer stream into our vector (like 128) or so
-  // it's typically a small block
-  size_t leftOver = myRequest.size();
-  std::copy(boost::asio::buffers_begin(myRequest.data()), boost::asio::buffers_end(myRequest.data()), buf.begin());
-
-  // Just a wrapper to our vector that doesn't copy, offset by bytes left to read
-  boost::asio::mutable_buffer start = boost::asio::mutable_buffer(&buf[leftOver], buf.size() - leftOver);
-  // Now read the rest, placing further into the vector
-  boost::asio::read(mySocket, start, err);
-  return buf.size();
-} // BoostConnection::read
-
-int
-BoostConnection::readH(const std::string& url, const std::vector<std::string>& headers,
-  std::vector<char>& buf)
-{
-  LogSevere("Not implemented boost HTTP headers.\n");
-  return read(url, buf); // ignore extra headers for moment
-}
+# endif // if 0
+#endif  // ifdef HAVE_CURL

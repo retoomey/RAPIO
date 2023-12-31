@@ -26,6 +26,18 @@ project (RAPIO
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+###########################################################################
+# Convenient add to a RAPIO note list
+# I find a big list at the end more useful than lots of messages scrolling by
+#
+function(addRAPIONote note)
+  # We could call message instead or extra to 'inline' instead
+  # message(STATUS "${note}")
+  get_property(FINAL_RAPIO_MESSAGE GLOBAL PROPERTY FINAL_RAPIO_MESSAGE)
+  list(APPEND FINAL_RAPIO_MESSAGE "${note}")
+  set_property(GLOBAL PROPERTY FINAL_RAPIO_MESSAGE "${FINAL_RAPIO_MESSAGE}")
+endfunction()
+  
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
@@ -118,10 +130,10 @@ else()
 endif()
 
 if (${Boost_VERSION} VERSION_GREATER_EQUAL ${TEST_BOOST_VERSION})
-  message(STATUS "Building LZMA compression support, BOOST ${Boost_VERSION} >= ${TEST_BOOST_VERSION}")
   add_definitions(-DHAVE_LZMA)
+  addRAPIONote("BOOST ${Boost_VERSION} with LZMA support for .xz and .lzma compressed files.")
 else()
-  message(STATUS "NOTE:\n\n   BOOST ${Boost_VERSION} < ${TEST_BOOST_VERSION} no LZMA support.  Only matters if you want to read .xz or .lzma compressed files.\n")
+  addRAPIONote("BOOST ${Boost_VERSION} < ${TEST_BOOST_VERSION} no LZMA support.  Only matters if you want to read .xz or .lzma compressed files.")
 endif()
 set(RAPIO_DEFINITIONS
   -DBOOST_LOG_DYN_LINK
@@ -172,18 +184,17 @@ find_package(Proj)
 if (Proj_FOUND)
   add_definitions(-DHAVE_PROJLIB)
   append_RAPIO("${Proj_INCLUDE_DIR}" "${Proj_LIBRARIES}")
-else()
-  message(STATUS "NOTE:\n\n   Couldn't find Proj. Only matters for grib2 projection currently.\n")
+else() 
+  addRAPIONote("No PROJ library.  Only matters for grib2 projection currently.")
 endif(Proj_FOUND)
 
 # Used by web pulling abilities like webindex reading or remote URL pulling
-# FIXME: Think we can rewrite with boost::asio here and make optional
-# or even just disable web pulling
-find_package(CURL REQUIRED) 
+find_package(CURL) 
 if (CURL_FOUND)
+  add_definitions(-DHAVE_CURL)
   append_RAPIO("${CURL_INCLUDE_DIR}" "${CURL_LIBRARIES}")
 else()
-  # Someday use asio or add option?
+  addRAPIONote("No CURL library.  Will use BOOST::ASIO network library for network URL (experimental).")
 endif(CURL_FOUND)
 
 # Used by AWS stuff (optional)
@@ -192,7 +203,7 @@ if (OPENSSL_FOUND)
   add_definitions(-DHAVE_OPENSSL)
   append_RAPIO("${OPENSSL_INCLUDE_DIR}" "${OPENSSL_LIBRARIES}")
 else()
-  message(STATUS "NOTE:\n\n   Couldn't find OpenSLL. Only matters for rAWS.cc experimental web AWS stuff.\n")
+  addRAPIONote("No OpenSLL library. Only matters for rAWS.cc and web AWS stuff (experimental).")
 endif(OPENSSL_FOUND)
 
 # Used by the base/rUnits for conversion, but we don't convert right now anyway
@@ -201,7 +212,7 @@ if (UDUnits2_FOUND)
   add_definitions(-DHAVE_UDUNITS2)
   append_RAPIO("${UDUnits2_INCLUDE_DIR}" "${UDUnits2_LIBRARIES}")
 else()
-  message(STATUS "NOTE:\n\n   Couldn't find udunits2 library, unit conversion ability disabled.  Not used right now.\n")
+  addRAPIONote("No UDUNITS2 library. Unit conversion ability disabled.  Not used 'yet'.")
 endif(UDUnits2_FOUND)
 
 ###########################################################################
@@ -272,7 +283,7 @@ if (BUILD_GRIB2_MODULE)
   #set(USE_JASPER_NCEPLIBS NO)
 
   if (NOT JPEG_COMPRESSION_FOUND)
-    message(STATUS "NOTE:\n\n   OpenJPEG2 or Jasper not found.  A lot of grib2 has JPEG compression so those files may fail to read.\n")
+    addRAPIONote("No OpenJPEG2 or Jasper library.  A LOT of grib2 has JPEG compression so these files may fail to read.")
   endif()
   
   add_subdirectory(base/iogrib)
@@ -299,3 +310,14 @@ add_subdirectory(programs)
 # Tests are conditional.  We 'could' make a flag...here we just have to manual
 # go into directory and make.  Not sure what the cmake community does yet
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+
+# Dump final notes
+get_property(FINAL_RAPIO_MESSAGE GLOBAL PROPERTY FINAL_RAPIO_MESSAGE)
+if (FINAL_RAPIO_MESSAGE)
+  message(STATUS "-----------------------------------------------")
+  message(STATUS "Final Notes on your Configuration:")
+  foreach(message_line IN LISTS FINAL_RAPIO_MESSAGE)
+    message(STATUS "    -${message_line}")
+  endforeach()
+  message(STATUS "-----------------------------------------------")
+endif()

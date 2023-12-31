@@ -20,6 +20,7 @@ rBimap.h
 rBinaryIO.h
 rBinaryTable.h
 rBitset.h
+rBoostConnection.h
 rColor.h
 rColorMap.h
 rColorTerm.h
@@ -133,6 +134,7 @@ rBimap.cc
 rBinaryIO.cc
 rBinaryTable.cc
 rBitset.cc
+rBoostConnection.cc
 rColor.cc
 rColorMap.cc
 rColorTerm.cc

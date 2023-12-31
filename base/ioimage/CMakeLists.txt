@@ -42,6 +42,6 @@ if (Magick_FOUND)
    DESTINATION ${RAPIO_INSTALL_LIB}
   )
 else()
-  message(WARNING "Couldn't find GraphicsMagick or ImageMagick, You won't be able to use rtile or make pngs, etc. without this.")
+  addRAPIONote("NO ioimage module: Couldn't find GraphicsMagick or ImageMagick, No rtile or make pngs, etc. without this.")
 endif(Magick_FOUND)
 
