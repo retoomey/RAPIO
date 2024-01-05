@@ -26,8 +26,8 @@ RobertLinear1Resolver::calc(VolumeValue& vv)
 {
   // ------------------------------------------------------------------------------
   // Query information for above and below the location
-  bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
-  bool haveUpper = queryLayer(vv, VolumeValueResolver::upper);
+  bool haveLower = queryLower(vv);
+  bool haveUpper = queryUpper(vv);
 
   // ------------------------------------------------------------------------------
   // In beamwidth calculation

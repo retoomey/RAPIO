@@ -132,8 +132,10 @@ public:
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs);
 
   /** A caching version of LLHtoAttenuationRange which uses cached values of
-   * trigonometric functions for speed.  This uses 4/3 attenuation of atmosphere */
-  static void
+   * trigonometric functions for speed.  This uses 4/3 attenuation of atmosphere.
+   * Inlining this since volume resolver uses this heavily in realtime for
+   * resolving the volume. */
+  inline static void
   Cached_BeamPath_LLHtoAttenuationRange(
 
     const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
@@ -145,7 +147,23 @@ public:
     const double    cosElev, ///< Cached cosine of the elevation angle
 
     LengthKMs       & targetHeightKMs, ///< Output height perpendicular to earth of beam
-    LengthKMs       & rangeKMs);       ///< Output range along the curved elevation beam
+    LengthKMs       & rangeKMs)        ///< Output range along the curved elevation beam
+  {
+    const double EarthRadius = Constants::EarthRadiusM;
+    // const double EarthRadius=6371000.0;
+    const double IR = (4. / 3.) * EarthRadius;
+
+    // -----------------------------------------------------------------------------------
+    // Verified reverse formula from new elev to height here
+    // heightM = (IR/(-sinGcdIR*tan(newElevRad) + cos(great_circle_distance/IR))) - IR;
+    // targetHeightKMs = (heightM/1000.0) + stationHeightKMs;
+    // -----------------------------------------------------------------------------------
+    const double newHeightM = (IR / (-sinGcdIR * tanElev + cosGcdIR)) - IR;
+
+    targetHeightKMs = (newHeightM / 1000.0) + stationHeightKMs;
+
+    rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cosElev) / 1000.0;
+  }
 
   /** Destination point given distance and bearing from start point */
   static void

@@ -4,6 +4,7 @@
 #include <rDataType.h>
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
+#include <rRadialSet.h>
 
 namespace rapio {
 /** Organizer of outputs for a layer, typically upper tilt or lower tilt
@@ -63,33 +64,28 @@ public:
     layer[0] = layer[1] = layer[2] = layer[3] = nullptr;
   }
 
-  // We handle up to two tilts around the sample.  We could
-  // reimplement a N system but it would probably be slow if you
-  // want to resolve using every layer or tilt.  Could be a future
-  // experiment though.  In general, once you get a couple layers/tilts
-  // away your data has very little effect.  We're assuming locality
-  // of data here.
+  // Tilts We handle around the sample location
 
   /** Get the layer/tilt directly below sample, if any */
-  inline DataType *& getLower(){ return layer[0]; } // lower;}
+  inline DataType *& getLower(){ return layer[0]; }
 
   /** Get the layer/tilt query below sample, if any */
-  inline LayerValue& getLowerValue(){ return layerout[0]; } // lower;}
+  inline LayerValue& getLowerValue(){ return layerout[0]; }
 
   /** Get the layer/tilt directly above sample, if any */
-  inline DataType *& getUpper(){ return layer[1]; } // upper; }
+  inline DataType *& getUpper(){ return layer[1]; }
 
-  inline LayerValue& getUpperValue(){ return layerout[1]; } // lower;}
+  inline LayerValue& getUpperValue(){ return layerout[1]; }
 
   /** Get the layer/tilt directly below the lower, if any */
-  inline DataType *& get2ndLower(){ return layer[2]; } // nextLower; }
+  inline DataType *& get2ndLower(){ return layer[2]; }
 
-  inline LayerValue& get2ndLowerValue(){ return layerout[2]; } // lower;}
+  inline LayerValue& get2ndLowerValue(){ return layerout[2]; }
 
   /** Get the layer/tilt directly above the upper, if any */
-  inline DataType *& get2ndUpper(){ return layer[3]; } // nextUpper; }
+  inline DataType *& get2ndUpper(){ return layer[3]; }
 
-  inline LayerValue& get2ndUpperValue(){ return layerout[3]; } // lower;}
+  inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
 
   // Odd value out at moment, probably for calculation speed
   LengthKMs cHeight; ///< Radar location height in Kilometers (constant)
@@ -175,32 +171,106 @@ public:
    * This basically 'fast' calculates from LLH to RadialSet information.
    * FIXME: group the outputs I think into another structure */
 private:
-  bool
-  queryLayer(VolumeValue& vv, DataType * set, LayerValue& l);
+
+  /** Query a single layer.  Inline the code since this is called a silly amount of times.
+   * FIXME: More optimization here probably */
+  inline bool
+  queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
+  {
+    l.clear();
+
+    if (set == nullptr) { return false; }
+    bool have    = false;
+    RadialSet& r = *((RadialSet *) set);
+
+    l.elevation = r.getElevationDegs();
+
+    // Projection of height range using attentuation
+    Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
+      vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
+
+    // Projection of azimuth, range to data gate/radial value
+    if (r.getRadialSetLookupPtr()->getRadialGate(vv.virtualAzDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
+      const auto& data = r.getFloat2DRef();
+      l.value = data[l.radial][l.gate];
+      have    = true;
+
+      // Get the beamwidth for the radial
+      const auto& bw = r.getBeamWidthVector()->ref();
+      l.beamWidth = bw[l.radial];
+
+      // Check for Terrain information arrays
+      auto hitptr = r.getByte2D(Constants::TerrainBeamBottomHit);
+      auto pbbptr = r.getFloat2D(Constants::TerrainPBBPercent);
+      auto cbbptr = r.getFloat2D(Constants::TerrainCBBPercent);
+      if ((hitptr != nullptr) && (pbbptr != nullptr) && (cbbptr != nullptr)) {
+        l.haveTerrain = true;
+        const auto& cbb = cbbptr->ref();
+        const auto& pbb = pbbptr->ref();
+        const auto& hit = hitptr->ref();
+        l.terrainCBBPercent = cbb[l.radial][l.gate];
+        l.terrainPBBPercent = pbb[l.radial][l.gate];
+        l.beamHitBottom     = (hit[l.radial][l.gate] != 0);
+      }
+    } else {
+      // Outside of coverage area we'll remove virtual values
+      l.gate   = -1;
+      l.radial = -1;
+    }
+
+    return have;
+  } // queryLayer
+
 public:
 
-  /** Query a lot of layers a bit more efficiently.  This gets all four effective tilts
-   * for advanced calculation. */
-  void
-  queryLayers(VolumeValue& vv, bool& haveLower, bool& haveUpper, bool& haveLLower,
-    bool& haveUUpper);
+  // Direct routines for querying a layer.  I was abstracting it to enum, but
+  // it's not worth the slow down.  If we add tilts/layers we can just add methods
 
-  /** Fill in data query layer for a tilt/layer above/below.  This isn't done
-   * automatically since it takes time and some resolvers may not need this information.
-   * This is convenient but slow for a lot of layers. */
+  /** Query lower tilt */
   inline bool
-  queryLayer(VolumeValue& vv, const Layer& l)
+  queryLower(VolumeValue& vv)
   {
-    switch (l) { // Just use the index into arrays instead of hard values
-        case Layer::lower: return (queryLayer(vv, vv.getLower(), vv.getLowerValue()));
+    return (queryLayer(vv, vv.getLower(), vv.getLowerValue()));
+  }
 
-        case Layer::upper: return (queryLayer(vv, vv.getUpper(), vv.getUpperValue()));
+  /** Query 2nd lower tilt */
+  inline bool
+  query2ndLower(VolumeValue& vv)
+  {
+    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue()));
+  }
 
-        case Layer::lower2: return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue()));
+  /** Query upper tilt */
+  inline bool
+  queryUpper(VolumeValue& vv)
+  {
+    return (queryLayer(vv, vv.getUpper(), vv.getUpperValue()));
+  }
 
-        case Layer::upper2: return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue()));
-    }
-    return false;
+  /** Query 2nd upper tilt */
+  inline bool
+  query2ndUpper(VolumeValue& vv)
+  {
+    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue()));
+  }
+
+  /** Query multiple layers at once.  Maybe there's a future optimization here. */
+  inline void
+  queryLayers(VolumeValue& vv, bool& haveLower, bool& haveUpper, bool& haveLLower,
+    bool& haveUUpper)
+  {
+    haveLower  = queryLower(vv);
+    haveUpper  = queryUpper(vv);
+    haveLLower = query2ndLower(vv);
+    haveUUpper = query2ndUpper(vv);
+  }
+
+  /** Query multiple layers at once.  Maybe there's a future optimization here. */
+  inline void
+  queryLayers(VolumeValue& vv, bool& haveLower, bool& haveUpper)
+  {
+    haveLower = queryLower(vv);
+    haveUpper = queryUpper(vv);
   }
 };
 

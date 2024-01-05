@@ -64,10 +64,8 @@ public:
   inline static bool
   isGood(double val)
   {
-    // check the most general case first
-    if (val > -99899) { return (true); }
-
-    return (val != MissingData && val != DataUnavailable && val != RangeFolded);
+    // check the most general case first, then specials
+    return (val > -99899) || (val != MissingData && val != DataUnavailable && val != RangeFolded);
   }
 
   /** A quick and dirty version of isGood. This won't work if you

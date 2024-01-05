@@ -27,7 +27,8 @@ RangeVVResolver::calc(VolumeValue& vv)
 void
 TerrainVVResolver::calc(VolumeValue& vv)
 {
-  bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
+  // bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
+  bool haveLower = queryLower(vv);
 
   // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
   // vv.dataValue = vv.lLayer.terrainPBBPercent;
@@ -136,61 +137,3 @@ VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, Angle
   Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
     vv.sinGcdIR, vv.cosGcdIR, elevTan, elevCos, heightKMs, outRangeKMs);
 }
-
-void
-VolumeValueResolver::queryLayers(VolumeValue& vv,
-  bool& haveLower, bool& haveUpper, bool& haveLLower, bool& haveUUpper)
-{
-  // We can avoid the switching in queryLayer here by doing bulk
-  haveLower  = queryLayer(vv, vv.getLower(), vv.getLowerValue());
-  haveUpper  = queryLayer(vv, vv.getUpper(), vv.getUpperValue());
-  haveLLower = queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue());
-  haveUUpper = queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue());
-}
-
-bool
-VolumeValueResolver::queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
-{
-  l.clear();
-
-  if (set == nullptr) { return false; }
-  bool have    = false;
-  RadialSet& r = *((RadialSet *) set);
-
-  l.elevation = r.getElevationDegs();
-
-  // Projection of height range using attentuation
-  Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
-    vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
-
-  // Projection of azimuth, range to data gate/radial value
-  if (r.getRadialSetLookupPtr()->getRadialGate(vv.virtualAzDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
-    const auto& data = r.getFloat2DRef();
-    l.value = data[l.radial][l.gate];
-    have    = true;
-
-    // Get the beamwidth for the radial
-    const auto& bw = r.getBeamWidthVector()->ref();
-    l.beamWidth = bw[l.radial];
-
-    // Check for Terrain information arrays
-    auto hitptr = r.getByte2D(Constants::TerrainBeamBottomHit);
-    auto pbbptr = r.getFloat2D(Constants::TerrainPBBPercent);
-    auto cbbptr = r.getFloat2D(Constants::TerrainCBBPercent);
-    if ((hitptr != nullptr) && (pbbptr != nullptr) && (cbbptr != nullptr)) {
-      l.haveTerrain = true;
-      const auto& cbb = cbbptr->ref();
-      const auto& pbb = pbbptr->ref();
-      const auto& hit = hitptr->ref();
-      l.terrainCBBPercent = cbb[l.radial][l.gate];
-      l.terrainPBBPercent = pbb[l.radial][l.gate];
-      l.beamHitBottom     = (hit[l.radial][l.gate] != 0);
-    }
-  } else {
-    // Outside of coverage area we'll remove virtual values
-    l.gate   = -1;
-    l.radial = -1;
-  }
-
-  return have;
-} // VolumeValueResolver::valueAndHeight

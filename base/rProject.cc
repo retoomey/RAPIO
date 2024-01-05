@@ -363,6 +363,7 @@ Project::stationLatLonToTarget(
   cosGcdIR = cos(great_circle_distance / IR);
 }
 
+#if 0
 void
 Project::Cached_BeamPath_LLHtoAttenuationRange(
 
@@ -392,6 +393,8 @@ Project::Cached_BeamPath_LLHtoAttenuationRange(
 
   rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cosElev) / 1000.0;
 }
+
+#endif // if 0
 
 void
 Project::LLBearingDistance(
