@@ -158,6 +158,8 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
       const LengthKMs layerHeightKMs = heightsKM[i]; //   1000.0;
       // LogDebug("  Layer: " << heightsKM[i] * 1000.0 << " meters.\n");
       myLLProjections[i] = std::make_shared<AzRanElevCache>(g.getNumX(), g.getNumY());
+      // Go ahead and make this cache too
+      myLevelSames[i] = std::make_shared<LevelSameCache>(g.getNumX(), g.getNumY());
       auto& llp = *(myLLProjections[i]);
       auto& ssc = *(mySinCosCache);
       AngleDegs startLat = g.getNWLat() - (g.getLatSpacing() / 2.0); // move south (lat decreasing)
@@ -169,7 +171,8 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 
       for (size_t y = 0; y < g.getNumY(); y++, atLat -= g.getLatSpacing()) { // a north to south
         AngleDegs atLon = startLon;
-        for (size_t x = 0; x < g.getNumX(); x++, atLon += g.getLonSpacing()) { // a east to west row, changing lon per cell
+        // a east to west row, changing lon per cell
+        for (size_t x = 0; x < g.getNumX(); x++, atLon += g.getLonSpacing(), llp.next(), ssc.next()) {
           //
           // The sin/cos attenuation factors from radar center to lat lon
           // This doesn't need height so it can be just a single layer
@@ -178,9 +181,9 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
             // First layer we'll create the sin/cos cache
             Project::stationLatLonToTarget(
               atLat, atLon, cLat, cLon, sinGcdIR, cosGcdIR);
-            ssc.add(sinGcdIR, cosGcdIR); // move forward
+            ssc.setAt(sinGcdIR, cosGcdIR);
           } else {
-            ssc.get(sinGcdIR, cosGcdIR); // move forward
+            ssc.getAt(sinGcdIR, cosGcdIR);
           }
 
           // Calculate and cache a virtual azimuth, elevation and range for each
@@ -188,7 +191,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
           Project::Cached_BeamPath_LLHtoAzRangeElev(atLat, atLon, layerHeightKMs,
             cLat, cLon, cHeight, sinGcdIR, cosGcdIR, virtualElevDegs, virtualAzDegs, virtualRangeKMs);
 
-          llp.add(virtualAzDegs, virtualElevDegs, virtualRangeKMs);
+          llp.setAt(virtualAzDegs, virtualElevDegs, virtualRangeKMs);
         }
       }
     }
@@ -519,7 +522,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // will give us more CPU scaling.
   // FIXME: check reads/writes here thread safe and add any needed locking
 
-  bool useDiffCache = true; // for now
   // ------------------------------------------------------------------------------
   // Do we try to output Stage 2 files for fusion2?
   // For the moment turn off stage2 if the --llg flag is on, since meteorologists
@@ -527,11 +529,13 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // const bool outputStage2 = !myWriteLLG;
   const bool outputStage2 = true;
 
-  // FIXME: Feel like we could have a grid iterator to hide all this repeated stuff
+  // Grid information
   const LLCoverageArea& outg = myRadarGrid;
-  AngleDegs startLat         = outg.getNWLat() - (outg.getLatSpacing() / 2.0); // move south (lat decreasing)
-  AngleDegs startLon         = outg.getNWLon() + (outg.getLonSpacing() / 2.0); // move east (lon increasing)
   const auto heightsKM       = outg.getHeightsKM();
+  // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
+  // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
+  const size_t numY = outg.getNumY();
+  const size_t numX = outg.getNumX();
 
   // Set the value object for resolver
   VolumeValue vv;
@@ -540,96 +544,136 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   vv.layerHeightKMs = heightsKM[layer];
 
   auto& resolver = *myResolver;
-
-  size_t totalLayer   = 0; // Total layer points
-  size_t maskSkipped  = 0; // Skip by mask (roster nearest)
-  size_t rangeSkipped = 0; // Skip by range (outside circle)
-  size_t upperGood    = 0; // Have tilt above
-  size_t lowerGood    = 0; // Have tilt below
-  size_t sameTiltSkip = 0; // Enclosing tilts did not change
-  size_t attemptCount = 0; // Resolver calculation
+  auto& ev       = *myElevationVolume;
 
   // Each 2D layer is independent so threading here should be ok
   auto output    = myLLGCache->get(layer);
   auto& gridtest = output->getFloat2DRef();
 
-  LogInfo("Processing " << vv.layerHeightKMs << " KM layer...\n");
+  auto& ssc       = *(mySinCosCache);
+  auto& llp       = *myLLProjections[layer];
+  auto& levelSame = *myLevelSames[layer];
 
-  auto& llp = *myLLProjections[layer];
-  auto& ssc = *(mySinCosCache);
-
+  ssc.reset();
   llp.reset();
-  ssc.reset(); // FIXME: ssc is 2D thread conflict here, we will need random access (slightly slower)
+  levelSame.reset();
 
-  // Note: The 'range' is 0 to numY always, however the index to global grid is y+out.startY;
-  AngleDegs atLat = startLat;
+  // Stats
+  const size_t totalLayer = 0; // Total layer points
+  size_t maskSkipped      = 0; // Skip by mask (roster nearest)
+  size_t rangeSkipped     = 0; // Skip by range (outside circle)
+  size_t upperGood        = 0; // Have tilt above
+  size_t lowerGood        = 0; // Have tilt below
+  size_t sameTiltSkip     = 0; // Enclosing tilts did not change
+  size_t attemptCount     = 0; // Resolver calculation
 
-  for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
-    AngleDegs atLon = startLon;
-    // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
-    for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
-      totalLayer++;
-
-      // Warning to future me: These values stream so always get them or it will be off on next call
-      // Cache get x, y of lat lon to the _virtual_ azimuth, elev, range of that cell center
-      llp.get(vv.virtualAzDegs, vv.virtualElevDegs, vv.virtualRangeKMs);
-      ssc.get(vv.sinGcdIR, vv.cosGcdIR);
-
-      // Mask check..
-      if (myHaveMask) {
-        size_t mi = myMask.getIndex3D(x, y, layer);
+  // Operations needs to be the fastest, so in this special case we check
+  // all flags outside the loop:
+  // Upside is speed, downside is two copies of code here to keep in sync
+  if (myHaveMask && outputStage2 && !myWriteLLG) {
+    for (size_t y = 0; y < numY; ++y) {
+      for (size_t x = 0; x < numX; ++x, llp.next(), ssc.next(), levelSame.next()) {
+        // Mask check.
+        size_t mi = myMask.getIndex3D(x, y, layer); // FIXME: Maybe we can be linear here
         if (!myMask.get1(mi)) {
-          gridtest[y][x] = 50;
           maskSkipped++;
           continue;
         }
-      }
 
-      // Create lat lon grid of a particular field...
-      // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
-      // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
+        // Range check.
+        llp.getRangeKMsAt(vv.virtualRangeKMs);
+        if (vv.virtualRangeKMs > myRangeKMs) {
+          rangeSkipped++;
+          continue;
+        }
 
-      // Anything over terrain range Kms hard ignore.
-      if (vv.virtualRangeKMs > myRangeKMs) {
-        // Since this is outside range it should never be different from the initialization
-        // gridtest[y][x] = Constants::DataUnavailable;
-        rangeSkipped++;
-        continue;
-      }
+        // Search the virtual volume for elevations above/below our virtual one
+        llp.getElevDegsAt(vv.virtualElevDegs);
+        ev.getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
+          vv.getUpper(), vv.get2ndLower(),
+          vv.get2ndUpper());
+        if (vv.getLower() != nullptr) { lowerGood++; }
+        if (vv.getUpper() != nullptr) { upperGood++; }
 
-
-      // Search the virtual volume for elevations above/below our virtual one
-      // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
-      myElevationVolume->getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
-        vv.getUpper(), vv.get2ndLower(),
-        vv.get2ndUpper());
-      if (vv.getLower() != nullptr) { lowerGood++; }
-      if (vv.getUpper() != nullptr) { upperGood++; }
-
-      // If the upper and lower for this point are the _same_ RadialSets as before, then
-      // the interpolation will end up with the same data value.
-      // This takes advantage that in a volume if a couple tilts change, then
-      // the space time affected is fairly small compared to the entire volume's 3D coverage.
-      if (useDiffCache) {
-        const bool changedEnclosingTilts = llp.set(x, y, vv.getLower(), vv.getUpper(),
+        // If the upper and lower for this point are the _same_ RadialSets as before, then
+        // the interpolation will end up with the same data value.
+        // This takes advantage that in a volume if a couple tilts change, then
+        // the space time affected is fairly small compared to the entire volume's 3D coverage.
+        const bool changedEnclosingTilts = levelSame.setAt(vv.getLower(), vv.getUpper(),
             vv.get2ndLower(), vv.get2ndUpper());
         if (!changedEnclosingTilts) { // The value won't change, so continue
           sameTiltSkip++;
           continue;
         }
-      }
 
-      attemptCount++;
-      resolver.calc(vv);
-
-      // Ok all resolvers pass 1 for the weight by default
-      gridtest[y][x] = vv.dataValue / vv.dataWeight1;
-
-      if (outputStage2) {
+        // Resolve the value/weight at location and add to output
+        attemptCount++;
+        ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
+        llp.getAzDegsAt(vv.virtualAzDegs);
+        resolver.calc(vv);
         stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
-      }
-    }
-  }
+      } // endX
+    }   // endY
+  } else {
+    for (size_t y = 0; y < numY; ++y) {
+      for (size_t x = 0; x < numX; ++x, llp.next(), ssc.next(), levelSame.next()) {
+        // Mask check.
+        if (myHaveMask) {
+          size_t mi = myMask.getIndex3D(x, y, layer);
+          if (!myMask.get1(mi)) {
+            gridtest[y][x] = 50;
+            maskSkipped++;
+            continue;
+          }
+        }
+
+        // Create lat lon grid of a particular field...
+        // gridtest[y][x] = vv.virtualRangeKMs; continue; // Range circles
+        // gridtest[y][x] = vv.virtualAzDegs; continue;   // Azimuth
+
+        // Range check.
+        llp.getRangeKMsAt(vv.virtualRangeKMs);
+        if (vv.virtualRangeKMs > myRangeKMs) {
+          // Since this is outside range it should never be different from the initialization
+          // gridtest[y][x] = Constants::DataUnavailable;
+          rangeSkipped++;
+          continue;
+        }
+
+        // Search the virtual volume for elevations above/below our virtual one
+        // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
+        llp.getElevDegsAt(vv.virtualElevDegs);
+        ev.getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
+          vv.getUpper(), vv.get2ndLower(),
+          vv.get2ndUpper());
+        if (vv.getLower() != nullptr) { lowerGood++; }
+        if (vv.getUpper() != nullptr) { upperGood++; }
+
+        // If the upper and lower for this point are the _same_ RadialSets as before, then
+        // the interpolation will end up with the same data value.
+        // This takes advantage that in a volume if a couple tilts change, then
+        // the space time affected is fairly small compared to the entire volume's 3D coverage.
+        const bool changedEnclosingTilts = levelSame.setAt(vv.getLower(), vv.getUpper(),
+            vv.get2ndLower(), vv.get2ndUpper());
+        if (!changedEnclosingTilts) { // The value won't change, so continue
+          sameTiltSkip++;
+          continue;
+        }
+
+        attemptCount++;
+        ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
+        llp.getAzDegsAt(vv.virtualAzDegs);
+        resolver.calc(vv);
+
+        // Ok all resolvers pass 1 for the weight by default
+        gridtest[y][x] = vv.dataValue / vv.dataWeight1;
+
+        if (outputStage2) {
+          stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
+        }
+      } // endX
+    }   // endY
+  } // end else
 
   // --------------------------------------------------------
   // Write debugging 2D LatLonGrid for layer (post entire layer processing)
@@ -646,16 +690,13 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // --------------------------------------------------------
   // Log info on the layer calculations
   //
-  // FIXME: If we log this is a 'group' so we want to lock for multiple log
-  // messages (otherwise these lines will interweave since we only lock at line level currently)
-  // or we just print a single line (probably easier)
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
 
-  LogInfo("    Mask, Range, Same enclosing tilts skipped: " << maskSkipped << ", " << rangeSkipped << ", " <<
-    sameTiltSkip << "\n");
-  LogInfo("    Resolved: " << attemptCount << " (" << percentAttempt << "%).\n");
-  LogInfo("    Total points: " << totalLayer << "\n");
-  LogInfo("----------------------------------------\n");
+  LogDebug("KM: " << vv.layerHeightKMs
+                  << " Mask: " << maskSkipped
+                  << " Range: " << rangeSkipped
+                  << " Same: " << sameTiltSkip
+                  << " Resolved: " << attemptCount << " (" << percentAttempt << "%) of " << totalLayer << ".\n");
 
   return attemptCount;
 } // RAPIOFusionOneAlg::processHeightLayer

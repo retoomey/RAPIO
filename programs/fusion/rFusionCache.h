@@ -2,7 +2,7 @@
 
 /** RAPIO API */
 #include <RAPIO.h>
-#include "rTerrainBlockage.h"
+// #include "rTerrainBlockage.h"
 #include "rLLCoverageArea.h"
 #include "rVolumeValueResolver.h"
 #include "rLLHGridN2D.h"
@@ -28,13 +28,6 @@ public:
     myNumX(numX), myNumY(numY), mySinGcdIR(numX * numY), myCosGcdIR(numX * numY), myAt(0)
   { }
 
-  /** Return index into 2D lookup */
-  inline size_t
-  getIndex(size_t x, size_t y)
-  {
-    return (y * myNumX) + x;
-  }
-
   /** Reset iterator functions */
   inline void
   reset()
@@ -42,22 +35,27 @@ public:
     myAt = 0;
   }
 
-  /** Add at current position (a bit faster).  FIXME: could make an iterator */
+  /** Go to next location */
   inline void
-  add(const double sinGcdIR, const double cosGcdIR)
+  next()
   {
-    mySinGcdIR[myAt] = sinGcdIR;
-    myCosGcdIR[myAt] = cosGcdIR;
     myAt++;
   }
 
-  /** Get at current position (a bit faster) */
+  /** Set at current position */
   inline void
-  get(double& sinGcdIR, double& cosGcdIR)
+  setAt(const double sinGcdIR, const double cosGcdIR)
+  {
+    mySinGcdIR[myAt] = sinGcdIR;
+    myCosGcdIR[myAt] = cosGcdIR;
+  }
+
+  /** Get at current position */
+  inline void
+  getAt(double& sinGcdIR, double& cosGcdIR)
   {
     sinGcdIR = mySinGcdIR[myAt];
     cosGcdIR = myCosGcdIR[myAt];
-    myAt++;
   }
 
   /** The X size of our cache */
@@ -98,63 +96,8 @@ public:
   AzRanElevCache(size_t numX, size_t numY) :
     myNumX(numX), myNumY(numY),
     myAzimuths(numX * numY), myVirtualElevations(numX * numY), myRanges(numX * numY),
-    myTerrainAzimuthSpacing(1), myUpperElev(numX * numY), myLowerElev(numX * numY),
-    myNextUpperElev(numX * numY), myNextLowerElev(numX * numY),
     myAt(0)
   { }
-
-  /** Return index into 2D lookup */
-  inline size_t
-  getIndex(size_t x, size_t y)
-  {
-    return (y * myNumX) + x;
-  }
-
-  /** Store cache lookup given x and y */
-  inline void
-  set(size_t x, size_t y, const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges)
-  {
-    const size_t index = getIndex(x, y);
-
-    myAzimuths[index] = inAzDegs;
-    myVirtualElevations[index] = inElevDegs;
-    myRanges[index] = inRanges;
-  }
-
-  /** Store upper/lower markers. Return true if it changes.  When these change, we recalculate data values */
-  inline bool
-  set(size_t x, size_t y, DataType * lower, DataType * upper, DataType * nextLower, DataType * nextUpper)
-  {
-    const size_t index = getIndex(x, y);
-
-    bool changed = false;
-
-    const FusionKey lowerKey = (lower == nullptr) ? 0 : lower->getID();
-
-    if (myLowerElev[index] != lowerKey) {
-      myLowerElev[index] = lowerKey;
-      changed = true;
-    }
-    const FusionKey upperKey = (upper == nullptr) ? 0 : upper->getID();
-
-    if (myUpperElev[index] != upperKey) {
-      myUpperElev[index] = upperKey;
-      changed = true;
-    }
-    const FusionKey nextLowerKey = (nextLower == nullptr) ? 0 : nextLower->getID();
-
-    if (myNextLowerElev[index] != nextLowerKey) {
-      myNextLowerElev[index] = nextLowerKey;
-      changed = true;
-    }
-    const FusionKey nextUpperKey = (nextUpper == nullptr) ? 0 : nextUpper->getID();
-
-    if (myNextUpperElev[index] != nextUpperKey) {
-      myNextUpperElev[index] = nextUpperKey;
-      changed = true;
-    }
-    return changed;
-  }
 
   /** Reset iterator functions */
   inline void
@@ -163,35 +106,41 @@ public:
     myAt = 0;
   }
 
-  /** Add at current position (a bit faster).  FIXME: could make an iterator */
+  /** Go to next location */
   inline void
-  add(const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges)
+  next()
+  {
+    myAt++;
+  }
+
+  /** Store cache lookup at current position */
+  inline void
+  setAt(const AngleDegs inAzDegs, const AngleDegs inElevDegs, const LengthKMs inRanges)
   {
     myAzimuths[myAt] = inAzDegs;
     myVirtualElevations[myAt] = inElevDegs;
     myRanges[myAt] = inRanges;
-    myAt++;
   }
 
-  /** Get at current position (a bit faster) */
+  /** Get Az degrees at current position */
   inline void
-  get(AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
+  getAzDegsAt(AngleDegs& outAzDegs)
   {
-    outAzDegs   = myAzimuths[myAt];
+    outAzDegs = myAzimuths[myAt];
+  }
+
+  /** Get Elev degrees at current position */
+  inline void
+  getElevDegsAt(AngleDegs& outElevDegs)
+  {
     outElevDegs = myVirtualElevations[myAt];
-    outRanges   = myRanges[myAt];
-    myAt++;
   }
 
-  /** Cache lookup given x and y */
+  /** Get Range KMs at current position */
   inline void
-  get(size_t x, size_t y, AngleDegs& outAzDegs, AngleDegs& outElevDegs, LengthKMs& outRanges)
+  getRangeKMsAt(LengthKMs& outRanges)
   {
-    const size_t index = getIndex(x, y);
-
-    outAzDegs   = myAzimuths[index];
-    outElevDegs = myVirtualElevations[index];
-    outRanges   = myRanges[index];
+    outRanges = myRanges[myAt];
   }
 
 public:
@@ -212,8 +161,73 @@ public:
   /** Cached range kilometers for each cell */
   std::vector<LengthKMs> myRanges;
 
-  /** Store the terrain azimuth spacing for our cached terrain */
-  AngleDegs myTerrainAzimuthSpacing;
+  /** Current location for raw iteration */
+  size_t myAt;
+};
+
+/** A cache for keeping track of what levels/tilts were around a given grid point.
+ * This allows us to skip calling the resolver, since if the surrounding levels do
+ * not change, then the value/weight shouldn't.  This won't 'always' be 100% true. */
+class LevelSameCache : public Utility
+{
+public:
+
+  /** Create lookup of given size */
+  LevelSameCache(size_t numX, size_t numY) :
+    myNumX(numX), myNumY(numY),
+    myUpperElev(numX * numY), myLowerElev(numX * numY),
+    myNextUpperElev(numX * numY), myNextLowerElev(numX * numY),
+    myAt(0)
+  { }
+
+  /** Reset iterator functions */
+  inline void
+  reset()
+  {
+    myAt = 0;
+  }
+
+  /** Go to next location */
+  inline void
+  next()
+  {
+    myAt++;
+  }
+
+  /** Store upper/lower markers. Return true if it changes.  When these change, we recalculate data values */
+  inline bool
+  setAt(DataType * lower, DataType * upper, DataType * nextLower, DataType * nextUpper)
+  {
+    const FusionKey lowerKey = (lower == nullptr) ? 0 : lower->getID();
+    bool changed = (myLowerElev[myAt] != lowerKey);
+
+    myLowerElev[myAt] = lowerKey;
+
+    const FusionKey upperKey = (upper == nullptr) ? 0 : upper->getID();
+
+    changed = changed || (myUpperElev[myAt] != upperKey);
+    myUpperElev[myAt] = upperKey;
+
+    const FusionKey nextLowerKey = (nextLower == nullptr) ? 0 : nextLower->getID();
+
+    changed = changed || (myNextLowerElev[myAt] != nextLowerKey);
+    myNextLowerElev[myAt] = nextLowerKey;
+
+    const FusionKey nextUpperKey = (nextUpper == nullptr) ? 0 : nextUpper->getID();
+
+    changed = changed || (myNextUpperElev[myAt] != nextUpperKey);
+    myNextUpperElev[myAt] = nextUpperKey;
+
+    return changed;
+  }
+
+public:
+
+  /** The X size of our cache */
+  size_t myNumX;
+
+  /** The Y size of our cache */
+  size_t myNumY;
 
   /** Cached last upper elevation for this x, y.  This is only important as a number */
   std::vector<FusionKey> myUpperElev;

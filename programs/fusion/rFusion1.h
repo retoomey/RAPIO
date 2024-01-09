@@ -121,6 +121,9 @@ protected:
   /** Cached lookup for radar to conus grid projection */
   std::vector<std::shared_ptr<AzRanElevCache> > myLLProjections;
 
+  /** Cached lookup for level same */
+  std::vector<std::shared_ptr<LevelSameCache> > myLevelSames;
+
   /** Cached sin/cos lookup.  Needs to be one 2D over radar coverage area */
   std::shared_ptr<SinCosLatLonCache> mySinCosCache;
 

@@ -61,11 +61,11 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
     for (size_t y = 0; y < outg.getNumY(); y++, atLat -= outg.getLatSpacing()) { // a north to south
       AngleDegs atLon = startLon;
       // Note: The 'range' is 0 to numX always, however the index to global grid is x+out.startX;
-      for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing()) { // a east to west row, changing lon per cell
-        AngleDegs AzDegs, ElevDegs, aLengthKMs;
+      for (size_t x = 0; x < outg.getNumX(); x++, atLon += outg.getLonSpacing(), llp.next()) { // a east to west row, changing lon per cell
+        LengthKMs aLengthKMs;
 
         // Store as 2 bytes meters for space.  8 bytes is about 128 mb per file currently
-        llp.get(AzDegs, ElevDegs, aLengthKMs); // FIXME: Don't need everything
+        llp.getRangeKMsAt(aLengthKMs);
 
         // FusionRangeCache storedMeters = std::round(aLengthKMs * 1000.0);
         FusionRangeCache storedMeters = aLengthKMs;
