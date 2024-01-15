@@ -243,68 +243,15 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
   return optionSuccess;
 } // DataProjection::getLLCoverage
 
-RadialSetProjection::RadialSetProjection(const std::string& layer, RadialSet * owner)
-{
-  auto& r = *owner;
-
-  my2DLayer = r.getFloat2D(layer.c_str());
-
-  // We can cache for getting data values I 'think'
-  if (r.myLookup == nullptr) {
-    r.myLookup = std::make_shared<RadialSetLookup>(r); // Bin azimuths.
-  }
-  myLookup        = r.myLookup;
-  myCenterLatDegs = r.myLocation.getLatitudeDeg();
-  myCenterLonDegs = r.myLocation.getLongitudeDeg();
-}
-
-double
-RadialSetProjection::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
-{
-  // Translate from Lat Lon to az/range
-  float azDegs, rangeMeters;
-  int radial, gate;
-
-  Project::LatLonToAzRange(myCenterLatDegs, myCenterLonDegs, latDegs, lonDegs, azDegs, rangeMeters);
-  if (myLookup->getRadialGate(azDegs, rangeMeters, &radial, &gate)) {
-    const auto& data = my2DLayer->ref();
-    return data[radial][gate];
-  } else {
-    return Constants::MissingData;
-  }
-}
-
-bool
-RadialSetProjection::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
-  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
-{
-  Project::createLatLonGrid(myCenterLatDegs, myCenterLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs,
-    deltaLatDegs, deltaLonDegs);
-  return true;
-}
-
-bool
-RadialSetProjection::LLCoverageFull(size_t& numRows, size_t& numCols,
-  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
-{
-  // There isn't really a 'full' for radialset...so use some defaults
-  numRows = 1000;
-  numCols = 1000;
-  double degreeOut = 10;
-
-  // Our center location is the standard location
-  Project::createLatLonGrid(myCenterLatDegs, myCenterLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs,
-    deltaLatDegs, deltaLonDegs);
-  return true;
-}
-
-LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid * owner)
+LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid * owner) : DataProjection(layer)
 {
   // Grab everything we need from the LatLonGrid
   // Note changing LatLonGrid, etc. will invalidate the projection
   auto& l = *owner;
 
-  my2DLayer    = l.getFloat2D(layer.c_str());
+  // Weak pointer to layer to use.  We only exist as long as RadialSet is valid
+  my2DLayer = l.getFloat2D(layer)->ptr();
+  // my2DLayer    = l.getFloat2D(layer.c_str());
   myLatNWDegs  = l.myLocation.getLatitudeDeg();
   myLonNWDegs  = l.myLocation.getLongitudeDeg();
   myLatSpacing = l.myLatSpacing;
@@ -313,13 +260,15 @@ LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid 
   myNumLons    = l.getNumLons();
 }
 
-LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer, LatLonHeightGrid * owner)
+LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer,
+  LatLonHeightGrid *                                                    owner) : DataProjection(layer)
 {
   // Grab everything we need from the LatLonGrid
   // Note changing LatLonGrid, etc. will invalidate the projection
   auto& l = *owner;
 
-  my3DLayer    = l.getFloat3D(layer.c_str());
+  my3DLayer = l.getFloat3D(layer)->ptr();
+  // my3DLayer    = l.getFloat3D(layer.c_str());
   myLatNWDegs  = l.myLocation.getLatitudeDeg();
   myLonNWDegs  = l.myLocation.getLongitudeDeg();
   myLatSpacing = l.myLatSpacing;
@@ -329,44 +278,38 @@ LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer,
 }
 
 double
-LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
+LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
   // Try to do this quick and efficient, called a LOT
   const double x = (myLatNWDegs - latDegs) / myLatSpacing;
 
   if ((x < 0) || (x > myNumLats)) {
-    return Constants::MissingData;
+    return Constants::DataUnavailable;
   }
   const double y = (lonDegs - myLonNWDegs) / myLonSpacing;
 
   if ((y < 0) || (y > myNumLons)) {
-    return Constants::MissingData;
+    return Constants::DataUnavailable;
   }
-  const auto& data = my2DLayer->ref();
-
-  return data[int(x)][int(y)];
+  return (*my2DLayer)[size_t(x)][size_t(y)];
 }
 
 double
-LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs, const std::string& layer)
+LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
   // Try to do this quick and efficient, called a LOT
   const double x = (myLatNWDegs - latDegs) / myLatSpacing;
 
   if ((x < 0) || (x > myNumLats)) {
-    return Constants::MissingData;
+    return Constants::DataUnavailable;
   }
   const double y = (lonDegs - myLonNWDegs) / myLonSpacing;
 
   if ((y < 0) || (y > myNumLons)) {
-    return Constants::MissingData;
+    return Constants::DataUnavailable;
   }
 
-  // FIXME: see this actually returns data and I think we could just do coordinates instead..
-  // this would allow HeightGrid and Grid to be merged easily
-  const auto& data = my3DLayer->ref();
-
-  return data[int(x)][int(y)][0]; // hardcoded Z layer at moment for POC
+  return (*my3DLayer)[size_t(x)][size_t(y)][0];
 }
 
 bool

@@ -5,6 +5,7 @@
 #include "rFactory.h"
 #include "rLatLonGrid.h"
 #include "rRAPIOOptions.h"
+#include "rRadialSet.h"
 
 namespace rapio
 {
@@ -17,7 +18,7 @@ public:
 
   /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
   virtual double
-  getValueAtLL(double latDegs, double lonDegs, const std::string& layer = Constants::PrimaryDataName) override
+  getValueAtLL(double latDegs, double lonDegs) override
   {
     return 0;
   }

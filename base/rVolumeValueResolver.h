@@ -5,6 +5,7 @@
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
 #include <rRadialSet.h>
+#include <rRadialSetLookup.h>
 
 namespace rapio {
 /** Organizer of outputs for a layer, typically upper tilt or lower tilt
@@ -53,15 +54,17 @@ class VolumeValue : public Utility
 {
 protected:
 
-  DataType * layer[4];    ///< Currently four layers, 2 above, 2 below, getSpread fills
-  LayerValue layerout[4]; ///< Output for layers, queryLayer fills
+  DataType * layer[4];         ///< Currently four layers, 2 above, 2 below, getSpread fills
+  DataProjection * project[4]; ///< One projection per layer
+  LayerValue layerout[4];      ///< Output for layers, queryLayer fills
 
 public:
 
   /** Ensure cleared out on construction..it should be */
   VolumeValue() : dataValue(0.0), dataWeight1(1.0) // Default to 1.0 since final = v/w
   {
-    layer[0] = layer[1] = layer[2] = layer[3] = nullptr;
+    layer[0]   = layer[1] = layer[2] = layer[3] = nullptr;
+    project[0] = project[1] = project[2] = project[3] = nullptr;
   }
 
   // Tilts We handle around the sample location
@@ -69,21 +72,33 @@ public:
   /** Get the layer/tilt directly below sample, if any */
   inline DataType *& getLower(){ return layer[0]; }
 
+  /** Get below projection */
+  inline DataProjection *& getLowerP(){ return project[0]; }
+
   /** Get the layer/tilt query below sample, if any */
   inline LayerValue& getLowerValue(){ return layerout[0]; }
 
-  /** Get the layer/tilt directly above sample, if any */
+  /** Get upper projection */
   inline DataType *& getUpper(){ return layer[1]; }
+
+  /** Get the layer/tilt directly above sample, if any */
+  inline DataProjection *& getUpperP(){ return project[1]; }
 
   inline LayerValue& getUpperValue(){ return layerout[1]; }
 
   /** Get the layer/tilt directly below the lower, if any */
   inline DataType *& get2ndLower(){ return layer[2]; }
 
+  /** Get lower lower projection */
+  inline DataProjection *& get2ndLowerP(){ return project[2]; }
+
   inline LayerValue& get2ndLowerValue(){ return layerout[2]; }
 
   /** Get the layer/tilt directly above the upper, if any */
   inline DataType *& get2ndUpper(){ return layer[3]; }
+
+  /** Get upper upper projection */
+  inline DataProjection *& get2ndUpperP(){ return project[3]; }
 
   inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
 
@@ -167,55 +182,44 @@ public:
   void
   heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs);
 
-  /** Query info on a RadialSet from cached location information given by a VolumeValue.
-   * This basically 'fast' calculates from LLH to RadialSet information.
-   * FIXME: group the outputs I think into another structure */
 private:
 
-  /** Query a single layer.  Inline the code since this is called a silly amount of times.
-   * FIXME: More optimization here probably */
+  /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
-  queryLayer(VolumeValue& vv, DataType * set, LayerValue& l)
+  queryLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l)
   {
     l.clear();
 
     if (set == nullptr) { return false; }
-    bool have    = false;
+
+    // Casts for moment since we currently only work with radialsets.  if eventually we
+    // add in lat lon grids we'll need more work.  I'm trying to avoid virtual for speed.
     RadialSet& r = *((RadialSet *) set);
+    RadialSetProjection& p = *((RadialSetProjection *) project);
 
     l.elevation = r.getElevationDegs();
 
     // Projection of height range using attentuation
+    // Notice we cached sin and cos GCD for the grid
     Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
       vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
 
-    // Projection of azimuth, range to data gate/radial value
-    if (r.getRadialSetLookupPtr()->getRadialGate(vv.virtualAzDegs, l.rangeKMs * 1000.0, &l.radial, &l.gate)) {
-      const auto& data = r.getFloat2DRef();
-      l.value = data[l.radial][l.gate];
-      have    = true;
+    const bool have = p.getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate);
 
-      // Get the beamwidth for the radial
-      const auto& bw = r.getBeamWidthVector()->ref();
-      l.beamWidth = bw[l.radial];
+    // If good, query more stuff
+    if (have) {
+      // Data value at gate (getValueAtAzRange sets this)
+      // l.value = r.getFloat2DRef()[l.radial][l.gate];
 
-      // Check for Terrain information arrays
-      auto hitptr = r.getByte2D(Constants::TerrainBeamBottomHit);
-      auto pbbptr = r.getFloat2D(Constants::TerrainPBBPercent);
-      auto cbbptr = r.getFloat2D(Constants::TerrainCBBPercent);
-      if ((hitptr != nullptr) && (pbbptr != nullptr) && (cbbptr != nullptr)) {
-        l.haveTerrain = true;
-        const auto& cbb = cbbptr->ref();
-        const auto& pbb = pbbptr->ref();
-        const auto& hit = hitptr->ref();
-        l.terrainCBBPercent = cbb[l.radial][l.gate];
-        l.terrainPBBPercent = pbb[l.radial][l.gate];
-        l.beamHitBottom     = (hit[l.radial][l.gate] != 0);
-      }
-    } else {
-      // Outside of coverage area we'll remove virtual values
-      l.gate   = -1;
-      l.radial = -1;
+      // Beamwidth info
+      l.beamWidth = r.getBeamWidthRef()[l.radial];
+
+      // Terrain info
+      const bool t = r.haveTerrain();
+      l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
+      l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
+      l.terrainPBBPercent = t ? r.getTerrainPBBPercentRef()[l.radial][l.gate] : 0.0;
+      l.beamHitBottom     = t ? (r.getTerrainBeamBottomHitRef()[l.radial][l.gate] != 0) : 0.0;
     }
 
     return have;
@@ -230,28 +234,28 @@ public:
   inline bool
   queryLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getLower(), vv.getLowerValue()));
+    return (queryLayer(vv, vv.getLower(), vv.getLowerP(), vv.getLowerValue()));
   }
 
   /** Query 2nd lower tilt */
   inline bool
   query2ndLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerValue()));
+    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerP(), vv.get2ndLowerValue()));
   }
 
   /** Query upper tilt */
   inline bool
   queryUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getUpper(), vv.getUpperValue()));
+    return (queryLayer(vv, vv.getUpper(), vv.getUpperP(), vv.getUpperValue()));
   }
 
   /** Query 2nd upper tilt */
   inline bool
   query2ndUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperValue()));
+    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperP(), vv.get2ndUpperValue()));
   }
 
   /** Query multiple layers at once.  Maybe there's a future optimization here. */

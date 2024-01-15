@@ -201,13 +201,10 @@ TerrainBlockage::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
   const LengthKMs stationHeightKMs = rs.getLocation().getHeightKM();
 
   // Create output arrays on the RadialSet.
-  // FIXME: API wrap in the RadialSet?  Currently this is accessed by value resolvers
-  auto tbcc = rs.addFloat2D(Constants::TerrainCBBPercent, "Dimensionless", { 0, 1 });
-  auto& terrainCBBPercent = tbcc->ref();
-  auto tpbb = rs.addFloat2D(Constants::TerrainPBBPercent, "Dimensionless", { 0, 1 });
-  auto& terrainPBBPercent = tpbb->ref();
-  auto tbh = rs.addByte2D(Constants::TerrainBeamBottomHit, "Dimensionless", { 0, 1 });
-  auto& terrainBottomHit = tbh->ref();
+  rs.initTerrain();
+  auto& terrainCBBPercent = rs.getTerrainCBBPercentRef();
+  auto& terrainPBBPercent = rs.getTerrainPBBPercentRef();
+  auto& terrainBottomHit  = rs.getTerrainBeamBottomHitRef();
 
   // First gate distance
   LengthKMs startKMs = rs.getDistanceToFirstGateM() / 1000.0;

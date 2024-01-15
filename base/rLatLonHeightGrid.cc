@@ -72,5 +72,8 @@ LatLonHeightGrid::init(
 std::shared_ptr<DataProjection>
 LatLonHeightGrid::getProjection(const std::string& layer)
 {
-  return std::make_shared<LatLonHeightGridProjection>(layer, this);
+  if (myDataProjection == nullptr) {
+    myDataProjection = std::make_shared<LatLonHeightGridProjection>(layer, this);
+  }
+  return myDataProjection;
 }

@@ -118,7 +118,13 @@ LatLonGrid::updateGlobalAttributes(const std::string& encoded_type)
 std::shared_ptr<DataProjection>
 LatLonGrid::getProjection(const std::string& layer)
 {
-  return std::make_shared<LatLonGridProjection>(layer, this);
+  // FIXME: Caching now so first layer wins.  We'll need something like
+  // setLayer on the projection I think 'eventually'.  We're only using
+  // primary layer at moment
+  if (myDataProjection == nullptr) {
+    myDataProjection = std::make_shared<LatLonGridProjection>(layer, this);
+  }
+  return myDataProjection;
 }
 
 LLH

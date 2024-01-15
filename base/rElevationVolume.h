@@ -103,19 +103,17 @@ public:
    * the shared ptrs and this object stay in scope and unchanged.  Used for speed in loops
    * calling the getSpread search below */
   void
-  getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers);
-
-  /** Binary search (large N) Spread above and below from number vector.  Pointers for speed,
-   * It's slow for small N not sure I'm gonna keep this function.  I'll keep it for now.
-   * @deprecated */
-  // void
-  // getSpread(float at, const std::vector<double>& lookup, DataType *& lower, DataType *& upper, bool print = false);
+  getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
+    std::vector<DataProjection *>& projectors);
 
   /** Linear search (faster for smaller N) Spread above and below from number vector.  Pointers for speed.
    * This is called during fusion/merger grid a billion times so we want to optimize here. */
   inline void
-  getSpreadL(float at, const std::vector<double>& numbers, const std::vector<DataType *>& pointers, DataType *& lower,
-    DataType *& upper, DataType *& nextLower, DataType *& nextUpper)
+  getSpreadL(float at, const std::vector<double>& numbers,
+    const std::vector<DataType *>& pointers,
+    const std::vector<DataProjection *>& pointersP,
+    DataType *& lower, DataType *& upper, DataType *& nextLower, DataType *& nextUpper,
+    DataProjection *& lowerP, DataProjection *& upperP, DataProjection *& nextLowerP, DataProjection *& nextUpperP)
   {
     // 10 20 30 40 50 60
     // 5 --> nullptr, 10
@@ -137,6 +135,12 @@ public:
         lower     = pointers[i + 1];
         upper     = pointers[i + 2];
         nextUpper = pointers[i + 3];
+
+        // Also keep quick references to data projection object
+        nextLowerP = pointersP[i];
+        lowerP     = pointersP[i + 1];
+        upperP     = pointersP[i + 2];
+        nextUpperP = pointersP[i + 3];
         return;
       }
     }

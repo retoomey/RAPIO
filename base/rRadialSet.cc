@@ -1,10 +1,10 @@
 #include "rRadialSet.h"
+#include "rRadialSetLookup.h"
 
 #include "rError.h"
 #include "rUnit.h"
 #include "rLLH.h"
 
-// #include <cassert>
 
 using namespace rapio;
 using namespace std;
@@ -15,7 +15,8 @@ RadialSet::getGeneratedSubtype() const
   return (formatString(getElevationDegs(), 5, 2)); // RadialSet
 }
 
-RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirstGateDistanceM(0), myLookup(nullptr)
+RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirstGateDistanceM(0),
+  myHaveTerrain(false)
 {
   setDataType("RadialSet");
 }
@@ -124,5 +125,25 @@ RadialSet::updateGlobalAttributes(const std::string& encoded_type)
 std::shared_ptr<DataProjection>
 RadialSet::getProjection(const std::string& layer)
 {
-  return std::make_shared<RadialSetProjection>(layer, this);
+  if (myDataProjection == nullptr) {
+    myDataProjection = std::make_shared<RadialSetProjection>(layer, this);
+  }
+  return myDataProjection;
+}
+
+void
+RadialSet::initTerrain()
+{
+  if (!myHaveTerrain) {
+    if (!getFloat2D(Constants::TerrainCBBPercent)) { // Maybe disk loaded
+      addFloat2D(Constants::TerrainCBBPercent, "Dimensionless", { 0, 1 });
+    }
+    if (!getFloat2D(Constants::TerrainPBBPercent)) {
+      addFloat2D(Constants::TerrainPBBPercent, "Dimensionless", { 0, 1 });
+    }
+    if (!getByte2D(Constants::TerrainBeamBottomHit)) {
+      addByte2D(Constants::TerrainBeamBottomHit, "Dimensionless", { 0, 1 });
+    }
+  }
+  myHaveTerrain = true;
 }

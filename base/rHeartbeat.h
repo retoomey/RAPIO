@@ -7,7 +7,9 @@
 
 // Apache 2.0 license
 // Think this is ok here, including license for it
+extern "C" {
 #include "ccronexpr.h"
+}
 
 namespace rapio {
 class RAPIOProgram;

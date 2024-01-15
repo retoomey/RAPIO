@@ -77,11 +77,12 @@ public:
 
   /** Process a single height layer */
   size_t
-  processHeightLayer(size_t       layer,
-    const std::vector<double>     levels,
-    const std::vector<DataType *> pointers,
-    const Time                    & rTime,
-    Stage2Data                    & stage2
+  processHeightLayer(size_t             layer,
+    const std::vector<double>           levels,
+    const std::vector<DataType *>       pointers,
+    const std::vector<DataProjection *> projectors,
+    const Time                          & rTime,
+    Stage2Data                          & stage2
   );
 
   /** Process a volume generating stage 2 output */

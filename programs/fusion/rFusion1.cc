@@ -91,6 +91,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   o.getLegacyGrid(myFullGrid);
 
   myLLProjections.resize(myFullGrid.getNumZ());
+  myLevelSames.resize(myFullGrid.getNumZ());
   if (myLLProjections.size() < 1) {
     LogSevere("No height layers to process, exiting\n");
     exit(1);
@@ -514,6 +515,7 @@ size_t
 RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   const std::vector<double>                  levels, // subtypes/elevation angles
   const std::vector<DataType *>              pointers,
+  const std::vector<DataProjection *>        projectors,
   const Time                                 & rTime,  // Time for writing a 2D debug layer
   Stage2Data                                 & stage2) // FIXME: adding to stage2 point cloud will have to be made thread safe
 {
@@ -559,13 +561,13 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   levelSame.reset();
 
   // Stats
-  const size_t totalLayer = 0; // Total layer points
-  size_t maskSkipped      = 0; // Skip by mask (roster nearest)
-  size_t rangeSkipped     = 0; // Skip by range (outside circle)
-  size_t upperGood        = 0; // Have tilt above
-  size_t lowerGood        = 0; // Have tilt below
-  size_t sameTiltSkip     = 0; // Enclosing tilts did not change
-  size_t attemptCount     = 0; // Resolver calculation
+  const size_t totalLayer = numX * numY; // Total layer points
+  size_t maskSkipped      = 0;           // Skip by mask (roster nearest)
+  size_t rangeSkipped     = 0;           // Skip by range (outside circle)
+  size_t upperGood        = 0;           // Have tilt above
+  size_t lowerGood        = 0;           // Have tilt below
+  size_t sameTiltSkip     = 0;           // Enclosing tilts did not change
+  size_t attemptCount     = 0;           // Resolver calculation
 
   // Operations needs to be the fastest, so in this special case we check
   // all flags outside the loop:
@@ -589,11 +591,13 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
 
         // Search the virtual volume for elevations above/below our virtual one
         llp.getElevDegsAt(vv.virtualElevDegs);
-        ev.getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
-          vv.getUpper(), vv.get2ndLower(),
-          vv.get2ndUpper());
-        if (vv.getLower() != nullptr) { lowerGood++; }
-        if (vv.getUpper() != nullptr) { upperGood++; }
+        ev.getSpreadL(vv.virtualElevDegs, levels,
+          pointers, projectors,
+          vv.getLower(), vv.getUpper(), vv.get2ndLower(), vv.get2ndUpper(),
+          vv.getLowerP(), vv.getUpperP(), vv.get2ndLowerP(), vv.get2ndUpperP()
+        );
+        lowerGood += (vv.getLower() != nullptr);
+        upperGood += (vv.getUpper() != nullptr);
 
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.
@@ -643,11 +647,14 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         // Search the virtual volume for elevations above/below our virtual one
         // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
         llp.getElevDegsAt(vv.virtualElevDegs);
-        ev.getSpreadL(vv.virtualElevDegs, levels, pointers, vv.getLower(),
-          vv.getUpper(), vv.get2ndLower(),
-          vv.get2ndUpper());
-        if (vv.getLower() != nullptr) { lowerGood++; }
-        if (vv.getUpper() != nullptr) { upperGood++; }
+        ev.getSpreadL(vv.virtualElevDegs, levels,
+          pointers, projectors,
+          vv.getLower(), vv.getUpper(), vv.get2ndLower(), vv.get2ndUpper(),
+          vv.getLowerP(), vv.getUpperP(), vv.get2ndLowerP(), vv.get2ndUpperP()
+        );
+
+        lowerGood += (vv.getLower() != nullptr);
+        upperGood += (vv.getUpper() != nullptr);
 
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.
@@ -715,8 +722,10 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   // Get the elevation volume pointers and levels for speed
   std::vector<double> levels;
   std::vector<DataType *> pointers;
+  std::vector<DataProjection *> projectors;
 
-  myElevationVolume->getTempPointerVector(levels, pointers);
+  // This is a pointer cache for speed in the loop.
+  myElevationVolume->getTempPointerVector(levels, pointers, projectors);
   LogInfo(*myElevationVolume << "\n");
 
   // Keep stage 2 output code separate, cheap to make this if we don't use it
@@ -732,7 +741,7 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
 
   // Handle all layers
   for (size_t layer = 0; layer < heightsKM.size(); layer++) {
-    attemptCount += processHeightLayer(layer, levels, pointers, rTime, stage2);
+    attemptCount += processHeightLayer(layer, levels, pointers, projectors, rTime, stage2);
   }
 
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;

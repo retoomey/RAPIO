@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rIODataType.h"
+#include "rRadialSet.h"
 #include "rIOHmrg.h"
 
 #include <zlib.h>

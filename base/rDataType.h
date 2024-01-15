@@ -336,5 +336,8 @@ protected:
 
   /** The primary units of the data contained.  */
   std::string myUnits;
+
+  /** Cached projection object for GIS */
+  std::shared_ptr<DataProjection> myDataProjection;
 };
 }

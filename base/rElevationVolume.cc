@@ -173,15 +173,20 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
 } // Volume::addDataType
 
 void
-Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers)
+Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
+  std::vector<DataProjection *>& projectors)
 {
   // Padding for search loop so range end checking not needed, which speeds things up.  See the
   // getSpreadL loop in ElevationVolume.
   // FIXME: Need to cleanup/revisit the normal spread functions since not used
   pointers.push_back(nullptr);
   pointers.push_back(nullptr);
+  projectors.push_back(nullptr);
+  projectors.push_back(nullptr);
   for (auto v:myVolume) {
+    // Cached pointers for speed.
     pointers.push_back(v.get());
+    projectors.push_back(v.get()->getProjection().get());
     const auto os = v->getSubType();
     double d      = std::stod(os); // FIXME catch?
     levels.push_back(d);
@@ -190,79 +195,9 @@ Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *
   // End padding
   pointers.push_back(nullptr);
   pointers.push_back(nullptr);
+  projectors.push_back(nullptr);
+  projectors.push_back(nullptr);
 }
-
-#if 0
-// Deprecated, or at a min needs to be cleaner implemented
-void
-Volume::getSpread(float at, const std::vector<double>& numbers, DataType *& lower, DataType *& upper, bool print)
-{
-  /* std::cout << "Incoming ranges looking for " << at << "\n";
-   * for (auto v:numbers){
-   *  std::cout << v << ", ";
-   * }
-   * std::cout << "\n";
-   */
-
-  // Binary search
-  lower = upper = nullptr;
-  int left  = 0;
-  int right = numbers.size() - 1;
-  int found = -100;
-
-  while (left <= right) {
-    const int midv = left + (right - left) / 2;
-    const auto v   = numbers[midv];
-    if (v == at) {
-      found = midv;
-      break;
-    } else if (v < at) {
-      left = midv + 1;
-    } else {
-      right = midv - 1;
-    }
-  }
-
-  // Direct hit, use mid index
-  if (found > -100) {
-    lower = myVolume[found].get();
-    if (found + 1 < numbers.size() - 1) {
-      upper = myVolume[found + 1].get();
-    }
-  } else {
-    // So left is now <= right. Pin to the bins
-    if (left > numbers.size() - 1) { left = numbers.size() - 1; }
-    if (right < 0) { right = 0; }
-
-    const float l = numbers[right]; // switch em back
-    const float r = numbers[left];
-
-    // Same left/right special cases
-    if (left == right) { // left size or right size
-      if (at >= r) {     // past range, use top
-        lower = myVolume[left].get();
-        upper = nullptr;
-        if (print) { std::cout << " lower upper to " << left << " and NULL\n"; }
-      } else if (at <= l) { // before range, use bottom
-        upper = myVolume[right].get();
-        lower = nullptr;
-        if (print) { std::cout << " lower upper to " << right << " and NULL\n"; }
-      }
-    } else {                           // left and right are different
-      if ((l <= at) && ( at <= r)) {   // between ranges
-        lower = myVolume[right].get(); // left/right swapped
-        upper = myVolume[left].get();
-        if (print) {
-          std::cout << " lower upper to " << right << " and " << left << " pointers " << (void *) (lower) << " and " <<
-            (void *) (upper) << "\n";
-        }
-      }
-    }
-  }
-  // std::cout << "Hit, left and right... " << found << " " << left << " and " << right << "\n";
-} // Volume::getSpread
-
-#endif // if 0
 
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)

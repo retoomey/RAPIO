@@ -3,7 +3,6 @@
 #include <rDataGrid.h>
 #include <rLLH.h>
 #include <rTime.h>
-#include <rRadialSetLookup.h>
 
 namespace rapio {
 /** A Radial set is a collection of radials containing gates.  This makes
@@ -14,7 +13,7 @@ namespace rapio {
  */
 class RadialSet : public DataGrid {
 public:
-  friend RadialSetProjection;
+  // friend RadialSetProjection;
 
   /** Construct uninitialized RadialSet, usually for
    * factories.  You probably want the Create method */
@@ -148,6 +147,13 @@ public:
   std::shared_ptr<Array<float, 1> >
   getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
 
+  /** Return quick ref to beam width, assuming it exists. */
+  ArrayFloat1DRef
+  getBeamWidthRef()
+  {
+    return (getFloat1D("BeamWidth"))->ref();
+  }
+
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
   getGateWidthVector(){ return getFloat1D("GateWidth"); }
@@ -202,13 +208,46 @@ public:
     const size_t     num_radials,
     const size_t     num_gates);
 
-  /** Return pointer to the lookup for immediate access, only valid
-   * while RadialSet is */
-  RadialSetLookup *
-  getRadialSetLookupPtr() const
+  // ------------------------------------------------
+  // Terrain information methods
+  // Optional arrays if a polar terrain has been run on this RadialSet
+
+  /** Add or prepare the terrain arrays, pointers, and access methods.
+   * Call this before calling haveTerrain or the array fetch routines.
+   * If you're crashing calling the terrain ref functions, you probably
+   * didn't do this. */
+  void
+  initTerrain();
+
+  /** Do we have valid terrain arrays? */
+  inline bool
+  haveTerrain()
   {
-    return myLookup.get();
+    return myHaveTerrain;
   }
+
+  /** Return quick ref to terrain CBB, valid if have terrain is true */
+  ArrayFloat2DRef
+  getTerrainCBBPercentRef()
+  {
+    return (getFloat2D(Constants::TerrainCBBPercent))->ref();
+  }
+
+  /** Return quick ref to terrain PBB, valid if have terrain is true */
+  ArrayFloat2DRef
+  getTerrainPBBPercentRef()
+  {
+    return (getFloat2D(Constants::TerrainPBBPercent))->ref();
+  }
+
+  /** Return quick ref to terrain bottom hit, valid if have terrain is true */
+  ArrayByte2DRef
+  getTerrainBeamBottomHitRef()
+  {
+    return (getByte2D(Constants::TerrainBeamBottomHit))->ref();
+  }
+
+  // ------------------------------------------------
 
 protected:
   /** The elevation angle of radial set in degrees */
@@ -223,7 +262,7 @@ protected:
   /** Distance to the first gate */
   double myFirstGateDistanceM;
 
-  /** Cache lookup (FIXME: unique_ptr c++14 among other locations in code) */
-  std::shared_ptr<RadialSetLookup> myLookup;
+  /** Do we have the terrain arrays? */
+  bool myHaveTerrain;
 };
 }

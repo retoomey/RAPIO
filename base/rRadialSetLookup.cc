@@ -5,19 +5,8 @@
 
 using namespace rapio;
 
-RadialSetLookup ::
-RadialSetLookup(RadialSet& rs, int acc)
-  :
-  myAccuracy(acc),
-  myAzToRadialNum(367 * myAccuracy + 1, -1)
-{
-  // Initialize to given RadialSet, however
-  // accuracy and storage is now fixed.
-  initToRadialSet(rs, false);
-}
-
 void
-RadialSetLookup ::
+RadialSetProjection ::
 initToRadialSet(RadialSet& rs, bool blank)
 {
   // Clear out old data when reusing memory
@@ -95,4 +84,63 @@ initToRadialSet(RadialSet& rs, bool blank)
       myAzToRadialNum[i - fullCircle] = myAzToRadialNum[i];
     }
   }
-} // RadialSetLookup::initToRadialSet
+} // RadialSetProjection::initToRadialSet
+
+RadialSetProjection::RadialSetProjection(const std::string& layer, RadialSet * owner, int acc)
+  : DataProjection(layer),
+  myAccuracy(acc),
+  myAzToRadialNum(367 * acc + 1, -1)
+{
+  auto& r = *owner;
+
+  // Initialize to given RadialSet, however
+  // accuracy and storage is now fixed.
+  initToRadialSet(r, false);
+
+  // Weak pointer to layer to use.  We only exist as long as RadialSet is valid
+  my2DLayer = r.getFloat2D(layer.c_str())->ptr();
+
+  // Cache stuff from RadialSet for speed
+  // FIXME: Do we need to do this?  We'll gonna have to have the RadialSet values anyway
+  const auto l = r.getLocation();
+
+  myCenterLatDegs = l.getLatitudeDeg();
+  myCenterLonDegs = l.getLongitudeDeg();
+}
+
+double
+RadialSetProjection::getValueAtLL(double latDegs, double lonDegs)
+{
+  // Translate from Lat Lon to az/range
+  float azDegs, rangeMeters;
+  double value;
+  int radial, gate;
+
+  Project::LatLonToAzRange(myCenterLatDegs, myCenterLonDegs, latDegs, lonDegs, azDegs, rangeMeters);
+  getValueAtAzRange(azDegs, rangeMeters / 1000.0, value, radial, gate);
+  return value;
+}
+
+bool
+RadialSetProjection::LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  Project::createLatLonGrid(myCenterLatDegs, myCenterLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs,
+    deltaLatDegs, deltaLonDegs);
+  return true;
+}
+
+bool
+RadialSetProjection::LLCoverageFull(size_t& numRows, size_t& numCols,
+  float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
+{
+  // There isn't really a 'full' for radialset...so use some defaults
+  numRows = 1000;
+  numCols = 1000;
+  double degreeOut = 10;
+
+  // Our center location is the standard location
+  Project::createLatLonGrid(myCenterLatDegs, myCenterLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs,
+    deltaLatDegs, deltaLonDegs);
+  return true;
+}

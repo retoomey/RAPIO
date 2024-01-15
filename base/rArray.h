@@ -10,6 +10,24 @@
 #include <boost/multi_array.hpp>
 
 namespace rapio {
+// Define the ArrayFloat1DRef, ArrayFloat1DPtr, etc. that are types hiding the boost:multi_array
+// in case we ever swap it with another array system, this will prevent algorithms
+// from having to change code if that happens.
+#define DeclareArrayRefForD(TYPESTRING, TYPE, DIMENSION) \
+  using Array ## TYPESTRING ## DIMENSION ## DRef = boost::multi_array<TYPE, DIMENSION>&; \
+  using Array ## TYPESTRING ## DIMENSION ## DPtr = boost::multi_array<TYPE, DIMENSION> *;
+
+#define DeclareArrayRefs(TYPESTRING, TYPE) \
+  DeclareArrayRefForD(TYPESTRING, TYPE, 1) \
+  DeclareArrayRefForD(TYPESTRING, TYPE, 2) \
+  DeclareArrayRefForD(TYPESTRING, TYPE, 3)
+
+DeclareArrayRefs(Byte, int8_t)
+DeclareArrayRefs(Short, short)
+DeclareArrayRefs(Int, int)
+DeclareArrayRefs(Float, float)
+DeclareArrayRefs(Double, double)
+
 /* Base no-template typeless interface class
  * This allows some generic typeless access and convenient
  * generic vector pointer storage say in DataGrid
@@ -223,6 +241,13 @@ public:
   ref()
   {
     return myStorage;
+  }
+
+  /** Get a pointer to raw array*/
+  boost::multi_array<C, N> *
+  ptr()
+  {
+    return &myStorage;
   }
 
   /** Get a reference to raw array as a forced 1D array.
