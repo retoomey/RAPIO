@@ -122,5 +122,7 @@ Intial assumpion is that we are reading pressure level files for the 3D
 	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="950 mb"/>
 	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="975 mb"/>
 	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="1000 mb"/>
+	<!-- Pressure -->
+	<field id="PRES" type="2D" name="Surface" unit="mb" layer="surface"/>
 	
 </modelfields>
