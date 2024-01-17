@@ -2,7 +2,9 @@
 Intial assumpion is that we are reading pressure level files for the 3D
 -->
 <modelfields>
-	<field id="TMP" type="2D" name="SurfaceTemp" unit="K" layer="surface"/>
+	<!-- Temperatures -->
+	<field id="TMP" type="2D" name="Temp" unit="K" layer="surface"/>
+	<field id="TMP" type="2D" name="Temp" unit="K" layer="cloud top"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="100 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="125 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="150 mb"/>
@@ -40,5 +42,85 @@ Intial assumpion is that we are reading pressure level files for the 3D
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="950 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="975 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="1000 mb"/>
-
+	<!-- Heights -->
+	<field id="HGT" type="2D" name="Height" unit="m" layer="surface"/>
+	<field id="HGT" type="2D" name="Height" unit="m" layer="0C isotherm"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="100 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="125 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="150 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="175 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="200 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="225 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="250 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="275 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="300 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="325 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="350 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="375 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="400 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="425 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="450 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="475 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="500 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="525 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="550 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="575 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="600 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="625 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="650 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="675 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="700 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="725 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="750 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="775 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="800 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="825 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="850 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="875 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="900 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="925 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="950 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="975 mb"/>
+	<field id="HGT" type="3D" name="Height" unit="m" layer="1000 mb"/>
+	<!-- Dew Point -->
+	<field id="DPT" type="2D" name="DewPoint" unit="K" layer="surface"/>
+	<field id="DPT" type="2D" name="DewPoint" unit="K" layer="cloud top"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="100 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="125 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="150 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="175 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="200 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="225 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="250 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="275 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="300 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="325 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="350 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="375 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="400 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="425 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="450 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="475 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="500 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="525 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="550 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="575 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="600 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="625 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="650 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="675 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="700 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="725 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="750 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="775 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="800 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="825 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="850 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="875 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="900 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="925 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="950 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="975 mb"/>
+	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="1000 mb"/>
+	
 </modelfields>
