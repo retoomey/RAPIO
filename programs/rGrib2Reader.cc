@@ -12,7 +12,7 @@ using namespace rapio;
  * @author Robert Toomey; Travis Smith
  **/
 
-const std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
+std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
 const std::string modelProjectionsXML = "misc/modelProjections.xml";
 
 bool myReadSettings = false;
@@ -34,11 +34,15 @@ Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription("Grib2Reader read in GRIB2 files and writes out netcdf");
   o.setAuthors("Robert Toomey;Travis Smith");
+  o.optional("modelConfigFile", "RRFS", "which model? (RRFS, HRRR, RAP13, RAC20, RUC20, RUC40, RUC60)");
 }
 
 void
 Grib2ReaderAlg::processOptions(RAPIOOptions& o)
-{ }
+{ 
+  ConfigModelInfoXML = "misc/model" + o.getString("modelConfigFile") + ".xml";
+  std::cout << "1 = " << ConfigModelInfoXML << "\n";
+}
 
 void
 Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
