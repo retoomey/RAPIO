@@ -21,7 +21,7 @@ void
 RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription(
-    "RAPIO Fusion Stage Two Algorithm.  Gathers data from multiple radars for mergin values");
+    "RAPIO Fusion Stage Two Algorithm.  Gathers data from multiple radars for mergin values.  Output options are 2D, 3D and Points.");
   o.setAuthors("Robert Toomey");
 
   // legacy use the t, b and s to define a grid
@@ -29,7 +29,9 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 
   // Default sync heartbeat to 2 mins
   // Format is seconds then mins
-  o.setRequiredValue("sync", "0 */2 * * * *");
+  o.setDefaultValue("sync", "0 */2 * * * *");
+  // Output 2D by default
+  o.setDefaultValue("O", "2D");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -267,20 +269,51 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // Write out
   myDatabase->mergeTo(myLLGCache, cutoff);
 
-  auto heightsKM = myFullGrid.getHeightsKM();
-  // Time aTime = Time::CurrentTime();
-  Time aTime = p;
+  Time outputTime = p;
 
-  for (size_t layer = 0; layer < heightsKM.size(); layer++) {
-    auto output = myLLGCache->get(layer);
-    output->setTime(aTime); // For moment use current real time
-    const std::string myWriteCAPPIName = "Fused2" + myTypeName;
-    // LogInfo("Writing layer " << layer << " hitCount: " << hitCount[layer] << "\n");
-    LogInfo("Writing fused layer " << layer << "\n");
-    std::map<std::string, std::string> extraParams;
-    extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
-    extraParams["compression"]  = "gz";
-    writeOutputProduct(myWriteCAPPIName, output, extraParams);
+  // Extra params (might be better in config)
+  std::map<std::string, std::string> extraParams;
+
+  extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
+  extraParams["compression"]  = "gz";
+
+  // ---------------------------------------
+  // Output 2D
+  std::string name;
+
+  if (isProductWanted("2D", name)) { // -O="2D", -O="2D=NameWanted
+    auto heightsKM = myFullGrid.getHeightsKM();
+    for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+      LogInfo("Writing fused layer " << layer << "\n");
+
+      // Use current time for layer
+      auto output = myLLGCache->get(layer);
+      output->setTime(outputTime);
+
+      // Use name, when we have -O="2D=name"
+      const std::string writeName = (name == "2D") ? "Fused2" + myTypeName : name;
+      writeOutputProduct(writeName, output, extraParams);
+    }
+  }
+
+  // ---------------------------------------
+  // Output 3D cube
+  if (isProductWanted("3D", name)) { // -O="3D", -O="3D=NameWanted
+    myLLGCache->setTime(outputTime);
+    // Use name, when we have -O="3D=name"
+    const std::string writeName = (name == "3D") ? "Fused2" + myTypeName + "3D" : name;
+    writeOutputProduct(writeName, myLLGCache, extraParams);
+  }
+
+  // ---------------------------------------
+  // Output stage2 again with group
+  // -O="Points=GROUP1" I'm thinking here..
+  if (isProductWanted("Points", name)) { // -O="Points"
+    if (name == "Points") {
+      LogInfo("Need to provide group name as param to Points such as -O='Points=Group1'\n");
+    } else {
+      LogInfo("Can't write stage2 data yet...but we will soon...");
+    }
   }
 } // RAPIOFusionTwoAlg::processHeartbeat
 

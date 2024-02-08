@@ -102,19 +102,21 @@ LakResolver1::calc(VolumeValue& vv)
   // Query information for above and below the location
   // and reference the values above and below us (note post smoothing filters)
   // This isn't done automatically because not every resolver will need all of it.
-  // bool haveLower  = queryLower(vv);
-  // bool haveUpper  = queryUpper(vv);
-  // bool haveLLower = query2ndLower(vv);
-  // bool haveUUpper = query2ndUpper(vv);
+  bool haveLower = queryLower(vv);
+  bool haveUpper = queryUpper(vv);
+  bool haveLLower = query2ndLower(vv);
+  bool haveUUpper = query2ndUpper(vv);
+  //haveLLower = false; Rings
+  //haveUUpper = false;
 
   // Get all four layers in their glorious CPU intensitivity.  These is
   // gathering info like terrain hit, range, height, etc. into the vv
   // database structure.
   // FIXME: Probably want to query closest two and conditionally query
   // the further ones at some point, which will be faster
-  bool haveLower, haveUpper, haveLLower, haveUUpper;
+  //  bool haveLower, haveUpper, haveLLower, haveUUpper;
 
-  queryLayers(vv, haveLower, haveUpper, haveLLower, haveUUpper);
+  //  queryLayers(vv, haveLower, haveUpper, haveLLower, haveUUpper);
 
   // ------------------------------------------------------------------------------
   // Analyze and Application stage
@@ -211,8 +213,15 @@ LakResolver1::calc(VolumeValue& vv)
     // In other words, you lose weight normalization ability by dividing in advance
     // Ugggh hard to explain..or did I?  We'll have to draw up the formulas in
     // presentation for this to be understood by most.
-    vv.dataValue   = rw * totalsum; // num
-    vv.dataWeight1 = rw * totalWt;  // dem
+
+    // It looks like the math is the same if we pass the range downstream or
+    // resolve it now. Possibly we can compact the range in files better similar
+    // to what merger does.  So we'll make the weight just range in stage 2
+    //   vv.dataValue   = rw * totalsum; // num
+    //   vv.dataWeight1 = rw * totalWt;  // dem
+    const double aV = totalsum / totalWt;
+    vv.dataValue   = rw * aV; // Stage2 just makes v = dataValue/dataWeight1
+    vv.dataWeight1 = rw;
   } else {
     // Background.
     vv.dataValue   = missingMask ? Constants::MissingData : Constants::DataUnavailable;

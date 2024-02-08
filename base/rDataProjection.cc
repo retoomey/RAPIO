@@ -1,7 +1,6 @@
 #include "rDataProjection.h"
 
 #include "rRadialSet.h"
-#include "rRadialSetLookup.h"
 #include "rLatLonGrid.h"
 #include "rLatLonHeightGrid.h"
 #include "rStrings.h"

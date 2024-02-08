@@ -69,10 +69,7 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
   // These are the standard generic 'output' parameters we support
   o.require("o", "/data", "The output writers/directory for generated products or data");
   o.addGroup("o", "I/O");
-  o.optional("O",
-    "*",
-    "The output types patterns, controlling product names and writing");
-  o.addGroup("O", "I/O");
+
   o.optional("postwrite",
     "",
     "Simple executable to call post file writing using %filename%.");
@@ -97,8 +94,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   // Static advanced on demand (lazy add)
   o.addAdvancedHelp("h",
     "For indexes, this will be the global time in minutes for all indexes provided.");
-  o.addAdvancedHelp("O",
-    "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
   o.addAdvancedHelp("postwrite",
     "Allows you to run a command on a file output file. The 'ldm' command maps to 'pqinsert -v -f EXP %filename%', but any command in path can be ran using available macros.  Example: 'file %filename%' or 'ldm' or 'aws cp %filename'.");
 
@@ -113,10 +108,10 @@ void
 RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 {
   // Add output products wanted and name translation filters
-  const std::string param = o.getString("O");
-  ConfigParamGroupO paramO;
+  // const std::string param = o.getString("O");
+  // ConfigParamGroupO paramO;
 
-  paramO.readString(param);
+  // paramO.readString(param);
 
   // Gather output -o settings
   const std::string write = o.getString("o");
@@ -225,10 +220,10 @@ RAPIOAlgorithm::initializePlugins()
   PluginHeartbeat::declare(this, "sync"); // Heartbeat ability/options
   PluginWebserver::declare(this, "web");  // Webserver ability/options
   // I/O plugins
-  PluginNotifier::declare(this, "n");     // Notification ability (fam, etc.)
-  PluginRecordFilter::declare(this, "I"); // Record filter ability (ingest)
-  PluginIngestor::declare(this, "i");     // Ingestor index ability and record queue
-  // PluginProductFilter::declare(this, "O");  // Product filter ability (output)
+  PluginNotifier::declare(this, "n");            // Notification ability (fam, etc.)
+  PluginRecordFilter::declare(this, "I");        // Record filter ability (ingest)
+  PluginIngestor::declare(this, "i");            // Ingestor index ability and record queue
+  PluginProductOutputFilter::declare(this, "O"); // Product filter ability (output)
 
   return RAPIOProgram::initializePlugins();
 }
@@ -345,34 +340,15 @@ bool
 RAPIOAlgorithm::isProductWanted(const std::string& key,
   std::string                                    & productName)
 {
-  // FIXME: This will go with the "O" plugin
+  // Use the plugin if we have it
+  auto p = getPlugin<PluginProductOutputFilter>("O");
 
-  bool found = false;
-
-  std::string newProductName = "";
-
-  const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
-
-  for (auto& I:outputs) {
-    std::string p  = I.product;
-    std::string p2 = I.toProduct;
-    std::string star;
-
-    if (Strings::matchPattern(p, key, star)) {
-      found = true;
-
-      if (p2 == "") { // No translation key, match only, use original key
-        newProductName = key;
-      } else {
-        Strings::replace(p2, "*", star);
-        newProductName = p2;
-      }
-      break;
-    }
+  if (p) {
+    return p->isProductWanted(key, productName);
   }
-
-  productName = newProductName;
-  return (found);
+  // Otherwise it's wanted and name is key because we can't do anything with it
+  productName = key;
+  return true;
 }
 
 bool

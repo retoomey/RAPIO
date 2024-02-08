@@ -80,7 +80,7 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 
   // Default sync heartbeat to 30 seconds
   // Format is seconds then mins
-  o.setRequiredValue("sync", "*/30 * * * * *");
+  o.setDefaultValue("sync", "*/30 * * * * *");
 } // RAPIOFusionOneAlg::declareOptions
 
 /** RAPIOAlgorithms process options on start up */

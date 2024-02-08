@@ -184,7 +184,7 @@ RAPIOOptions::declareLegacyGrid()
   // Standard grid language default
   grid2D("grid", "nw(37, -100) se(30.5, -93) h(0.5,20,NMQWD) s(0.01, 0.01)", "Grid language (also -t,-b,-s legacy)");
   addAdvancedHelp("grid",
-    "Grid language: nw(lat,lon) se(lat,lon) s(deltalat,deltalon) h(lowestKMS,highestKMS, key).  The height key can be a pattern such as NMQWD, WISH, ARPS...or it can be a number.");
+    "Grid language: nw(lat,lon) se(lat,lon) s(deltalat,deltalon) h(lowestKMS,highestKMS, key).  The height key can be a pattern such as NMQWD, WISH, ARPS, or an increment number in KMs.  So, for example, h(0.5, 3, .5) will generate 500, 1000, 1500, 2000, 2500, 3000 meter layers.");
 }
 
 bool

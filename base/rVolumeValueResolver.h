@@ -67,39 +67,42 @@ public:
     project[0] = project[1] = project[2] = project[3] = nullptr;
   }
 
-  // Tilts We handle around the sample location
+  // Layers/tilts we handle around the sample location
 
-  /** Get the layer/tilt directly below sample, if any */
+  /** Get the input layer/tilt directly below sample */
   inline DataType *& getLower(){ return layer[0]; }
 
-  /** Get below projection */
+  /** Get the input projection for layer/tilt below sample */
   inline DataProjection *& getLowerP(){ return project[0]; }
 
-  /** Get the layer/tilt query below sample, if any */
+  /** Get the query results below sample */
   inline LayerValue& getLowerValue(){ return layerout[0]; }
 
-  /** Get upper projection */
+  /** Get the input layer/tilt directly above sample */
   inline DataType *& getUpper(){ return layer[1]; }
 
-  /** Get the layer/tilt directly above sample, if any */
+  /** Get the input projection for layer/tilt above sample */
   inline DataProjection *& getUpperP(){ return project[1]; }
 
+  /** Get the query results above sample */
   inline LayerValue& getUpperValue(){ return layerout[1]; }
 
-  /** Get the layer/tilt directly below the lower, if any */
+  /** Get the layer/tilt two levels below the sample */
   inline DataType *& get2ndLower(){ return layer[2]; }
 
-  /** Get lower lower projection */
+  /** Get the input projection for two layers below sample */
   inline DataProjection *& get2ndLowerP(){ return project[2]; }
 
+  /** Get the query results two levels below sample */
   inline LayerValue& get2ndLowerValue(){ return layerout[2]; }
 
-  /** Get the layer/tilt directly above the upper, if any */
+  /** Get the layer/tilt two levels above the sample */
   inline DataType *& get2ndUpper(){ return layer[3]; }
 
-  /** Get upper upper projection */
+  /** Get the input projection for two layers above sample */
   inline DataProjection *& get2ndUpperP(){ return project[3]; }
 
+  /** Get the query results two levels above sample */
   inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
 
   // Odd value out at moment, probably for calculation speed

@@ -144,8 +144,10 @@ public:
         return;
       }
     }
-    lower = upper = nextLower = nextUpper = nullptr; // needed for s = 0
-  };
+    // needed for s = 0;
+    lower  = upper = nextLower = nextUpper = nullptr;
+    lowerP = upperP = nextLowerP = nextUpperP = nullptr;
+  }; // getSpreadL
 
   /** Get DataType matching a given subtype */
   std::shared_ptr<DataType>

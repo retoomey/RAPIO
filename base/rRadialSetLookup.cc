@@ -7,34 +7,27 @@ using namespace rapio;
 
 void
 RadialSetProjection ::
-initToRadialSet(RadialSet& rs, bool blank)
+initToRadialSet(RadialSet& rs)
 {
-  // Clear out old data when reusing memory
-  if (blank) {
-    for (auto& i:myAzToRadialNum) {
-      i = -1;
-    }
-  }
-  myDistToFirstGateM = rs.getDistanceToFirstGateM();
+  // Get the number of gates
   const size_t num_radials = rs.getNumRadials();
 
-  // Get the number of gates
-  if (num_radials > 0) {
-    myNumGates = rs.getNumGates();
+  myNumGates = (num_radials > 0) ? rs.getNumGates() : 0;
 
-    // This should be per radial shouldn't it? In other words,
-    // we should find the azimuth index and then use the gatewidth
-    // cooresponding to it
-    const auto& gatewidths = rs.getFloat1D("GateWidth")->ref();
-    myGateWidthM = gatewidths[0];
-  } else {
-    myNumGates = 0;
-  }
+  // This should be per radial shouldn't it? In other words,
+  // we should find the azimuth index and then use the gatewidth
+  // cooresponding to it.  The assumption is that gatewidths are constant
+  // for the RadialSet.
+  myGateWidthM       = rs.getGateWidthKMs() * 1000.0;
+  myDistToFirstGateM = rs.getDistanceToFirstGateM();
+  myDistToLastGateM  = myDistToFirstGateM + (myNumGates * myGateWidthM);
 
   const auto& azimuths   = rs.getFloat1D("Azimuth")->ref();
   const auto& azimuthsSP = rs.getFloat1D("BeamWidth")->ref();
   const int maxSize      = int(myAzToRadialNum.size());
   const int fullCircle   = 360 * myAccuracy;
+
+  myAccuracy360 = fullCircle;
 
   // For each radial in the source RadialSet...
   for (size_t i = 0; i < num_radials; ++i) {
@@ -95,13 +88,12 @@ RadialSetProjection::RadialSetProjection(const std::string& layer, RadialSet * o
 
   // Initialize to given RadialSet, however
   // accuracy and storage is now fixed.
-  initToRadialSet(r, false);
+  initToRadialSet(r);
 
   // Weak pointer to layer to use.  We only exist as long as RadialSet is valid
   my2DLayer = r.getFloat2D(layer.c_str())->ptr();
 
   // Cache stuff from RadialSet for speed
-  // FIXME: Do we need to do this?  We'll gonna have to have the RadialSet values anyway
   const auto l = r.getLocation();
 
   myCenterLatDegs = l.getLatitudeDeg();

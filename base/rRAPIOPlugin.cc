@@ -5,6 +5,7 @@
 #include <rError.h>
 #include <rEventLoop.h>
 #include <rRAPIOOptions.h>
+#include <rStrings.h>
 
 // FIXME: Eventually break up the plugins into files?
 #include <rHeartbeat.h>
@@ -316,6 +317,67 @@ PluginRecordFilter::execute(RAPIOProgram * caller)
   // std::shared_ptr<AlgRecordFilter> f = std::make_shared<AlgRecordFilter>();
   // Record::theRecordFilter = f;
   myActive = true;
+}
+
+bool
+PluginProductOutputFilter::declare(RAPIOProgram * owner, const std::string& name)
+{
+  owner->addPlugin(new PluginProductOutputFilter(name));
+  return true;
+}
+
+void
+PluginProductOutputFilter::declareOptions(RAPIOOptions& o)
+{
+  o.optional(myName, "*", "The output types patterns, controlling product names and writing");
+  o.addGroup(myName, "I/O");
+}
+
+void
+PluginProductOutputFilter::addPostLoadedHelp(RAPIOOptions& o)
+{
+  o.addAdvancedHelp(myName,
+    "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
+}
+
+void
+PluginProductOutputFilter::processOptions(RAPIOOptions& o)
+{
+  ConfigParamGroupO paramO;
+
+  paramO.readString(o.getString(myName));
+}
+
+bool
+PluginProductOutputFilter::isProductWanted(const std::string& key,
+  std::string                                               & productName)
+{
+  bool found = false;
+
+  std::string newProductName = "";
+
+  const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
+
+  for (auto& I:outputs) {
+    std::string p  = I.product;
+    std::string p2 = I.toProduct;
+    std::string star;
+
+    if (Strings::matchPattern(p, key, star)) {
+      found = true;
+
+      if (p2 == "") { // No translation key, match only, use original key
+        newProductName = key;
+      } else {
+        Strings::replace(p2, "*", star);
+        newProductName = p2;
+      }
+      break;
+    }
+  }
+
+  productName = newProductName;
+  return (found);
 }
 
 bool

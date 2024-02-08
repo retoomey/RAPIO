@@ -10,7 +10,7 @@ Watch::declareOptions(RAPIOOptions& o)
 {
   o.setDescription("Watch is used to just monitor incoming RAPIO data.");
   // Make output option a /tmp optional, we don't need to force for monitoring
-  o.setRequiredValue("o", "/tmp");
+  o.setDefaultValue("o", "/tmp");
 }
 
 /** RAPIOAlgorithms process options on start up */

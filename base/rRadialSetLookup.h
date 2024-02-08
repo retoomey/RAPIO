@@ -43,7 +43,7 @@ public:
    *
    * */
   inline bool
-  getValueAtAzRange(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
+  getValueAtAzRangeL(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
   {
     gateNo   = -1;
     radialNo = -1;
@@ -65,20 +65,82 @@ public:
     if (( azNo < 0) || ( azNo >= int(myAzToRadialNum.size())) ) {
       return false;
     }
+    radialNo = myAzToRadialNum[ azNo ];
+    const bool validRadial = (radialNo >= 0);
 
     // Calculate range and gate numbers finally
     // rnMeters must be < myDistToLastGateM here
-    gateNo = static_cast<int>( (rnMeters - myDistToFirstGateM) / myGateWidthM);
-    // if ( *gateNo >= myNumGates ) { Shouldn't be possible if LastGate is correct.
-    //  return false;
-    // }
-
-    radialNo = myAzToRadialNum[ azNo ];
-    const bool validRadial = (radialNo >= 0);
+    if (myGateWidthM > 0) { // which 'should' always be true so what's up here.
+      gateNo = static_cast<int>( (rnMeters - myDistToFirstGateM) / myGateWidthM);
+    } else {
+      return false;
+    }
+    if ((gateNo < 0) || (gateNo >= myNumGates) ) {
+      return false;
+    }
 
     out = validRadial ? (*my2DLayer)[radialNo][gateNo] : Constants::DataUnavailable;
     return validRadial;
   } // getRadialGate
+
+  /** Experimental linear gate value fetcher */
+  inline bool
+  getValueAtAzRange(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
+  {
+    gateNo   = -1;
+    radialNo = -1;
+    const double rnMeters = rangeKMs * 1000.0;
+
+    // ---------------------------------------
+    // Range check. The point would be in the cone of silence or outside scan
+    if ((rnMeters < myDistToFirstGateM) || (rnMeters >= myDistToLastGateM)) {
+      return false;
+    }
+
+    // ---------------------------------------
+    // Azimuth check
+    const int azNo = static_cast<int>(azDegs * myAccuracy) % myAccuracy360;
+
+    if (( azNo < 0) || ( azNo >= int(myAzToRadialNum.size())) ) {
+      return false;
+    }
+    radialNo = myAzToRadialNum[ azNo ];
+    if (radialNo < 0) {
+      radialNo = -1;
+      return false;
+    }
+
+    // ---------------------------------------
+    // Percentage of gate coverage and gate number
+    const double r = (rnMeters - myDistToFirstGateM) / myGateWidthM;
+
+    gateNo = static_cast<int>(r); // Rounded floor example 15.4 --> 15
+
+    // ---------------------------------------
+    // Three gate linear interpolation idea.  May be too slow
+    out = (*my2DLayer)[radialNo][gateNo];
+    if (!Constants::isGood(out)) { // Can't linear with others if not a 'true' value
+      return true;
+    }
+
+    const double p = r - gateNo; // Left over example 15.4-15 = .4
+
+    // Lower/upper values if any...
+    const double L = (gateNo > 0) ? (*my2DLayer)[radialNo][gateNo - 1] : Constants::DataUnavailable;
+    const double U = (gateNo < myNumGates) ? (*my2DLayer)[radialNo][gateNo + 1] : Constants::DataUnavailable;
+
+    // Original out is center in formula, for linear gate interpolation
+    // ---------------------
+    // |  L  |  out  |  U  |
+    // ---------------------
+    // p =   0  .5   1
+    // ==> L +(p+.5)(out-L)   ; // out-L is distance
+    // ==> out + (p-.5)(U-out); // U-out is distance
+    (p <= .50) ? (Constants::isGood(L) ? out = L + (p + .5) * (out - L) : out) :
+    (Constants::isGood(U) ? out = out + (p - .5) * (U - out) : out);
+
+    return true;
+  } // getValueAtAzRangeL
 
   /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
   virtual double
@@ -89,6 +151,7 @@ public:
   LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs) override;
 
+  /** Calculate a 'full' coverage based on the data type */
   virtual bool
   LLCoverageFull(size_t& numRows, size_t& numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs) override;
@@ -97,7 +160,7 @@ protected:
 
   /*** Initialize to a RadialSet */
   void
-  initToRadialSet(RadialSet&, bool blank = true);
+  initToRadialSet(RadialSet&);
 
   /** Cache current set 2D layer */
   ArrayFloat2DPtr my2DLayer;

@@ -233,6 +233,35 @@ public:
   execute(RAPIOProgram * caller) override;
 };
 
+/** Subclass of plugin adding output filter ability (-O) */
+class PluginProductOutputFilter : public RAPIOPlugin
+{
+public:
+
+  /** Create a record filter plugin */
+  PluginProductOutputFilter(const std::string& name) : RAPIOPlugin(name){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "O");
+
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override;
+
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override;
+
+  /** Is product wanted, and filter name as well */
+  virtual bool
+  isProductWanted(const std::string& key, std::string  & productName);
+};
+
 /** Wrap the VolumeValueResolver in the newer generic plugin model.
  * Possibly we could cleanup/refactor a bit...for now we wrap the
  * global VolumeValueResolver class. */

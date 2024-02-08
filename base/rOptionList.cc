@@ -120,8 +120,8 @@ OptionList::optional(const std::string& opt,
 }
 
 void
-OptionList::setRequiredValue(const std::string& opt,
-  const std::string                           & defaultValue)
+OptionList::setDefaultValue(const std::string& opt,
+  const std::string                          & defaultValue)
 {
   Option * op = getOption(opt);
 

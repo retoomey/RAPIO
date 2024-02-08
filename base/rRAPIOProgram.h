@@ -83,7 +83,7 @@ public:
     }
   }
 
-  /** Get back a plugin type for use */
+  /** Get back a plugin type for use or nullptr if plugin doesn't exist. */
   template <typename T>
   T *
   getPlugin(const std::string& name)
@@ -91,14 +91,9 @@ public:
     for (RAPIOPlugin * p:myPlugins) {
       if (p->getName() == name) {
         T * derived = dynamic_cast<T *>(p);
-        if (derived == nullptr) {
-          LogSevere("Plugin '" << name << "' doesn't not match requested type!\n");
-          exit(1);
-        }
         return derived;
       }
     }
-    LogSevere("Plugin '" << name << "' not found or declared!\n");
     return nullptr;
   }
 

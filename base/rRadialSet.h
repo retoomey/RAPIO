@@ -13,7 +13,6 @@ namespace rapio {
  */
 class RadialSet : public DataGrid {
 public:
-  // friend RadialSetProjection;
 
   /** Construct uninitialized RadialSet, usually for
    * factories.  You probably want the Create method */

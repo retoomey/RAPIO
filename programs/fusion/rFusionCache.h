@@ -58,6 +58,8 @@ public:
     cosGcdIR = myCosGcdIR[myAt];
   }
 
+protected:
+
   /** The X size of our cache */
   size_t myNumX;
 
@@ -143,7 +145,7 @@ public:
     outRanges = myRanges[myAt];
   }
 
-public:
+protected:
 
   /** The X size of our cache */
   size_t myNumX;
@@ -221,7 +223,7 @@ public:
     return changed;
   }
 
-public:
+protected:
 
   /** The X size of our cache */
   size_t myNumX;

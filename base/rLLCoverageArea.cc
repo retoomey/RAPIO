@@ -306,7 +306,7 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
       // If lookup fails, try as a number
       try{
         float up = std::stof(str); // FIXME: check failure
-        incr = { (int) (up) * 1000 };
+        incr = { (int) (up * 1000.0) };
         upto = { 99999 };
       }catch (const std::exception& e) {
         LogSevere("Failed to find a key in heights or convert to number '" << str << "'\n");

@@ -45,7 +45,7 @@ RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
   // Note that roster probably takes longer than this, but that's fine
   // we'll just get another trigger immediately
   // Format is seconds then mins
-  o.setRequiredValue("sync", "0 */1 * * * *");
+  o.setDefaultValue("sync", "0 */1 * * * *");
 }
 
 /** RAPIOAlgorithms process options on start up */
