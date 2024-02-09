@@ -102,12 +102,12 @@ LakResolver1::calc(VolumeValue& vv)
   // Query information for above and below the location
   // and reference the values above and below us (note post smoothing filters)
   // This isn't done automatically because not every resolver will need all of it.
-  bool haveLower = queryLower(vv);
-  bool haveUpper = queryUpper(vv);
+  bool haveLower  = queryLower(vv);
+  bool haveUpper  = queryUpper(vv);
   bool haveLLower = query2ndLower(vv);
   bool haveUUpper = query2ndUpper(vv);
-  //haveLLower = false; Rings
-  //haveUUpper = false;
+  // haveLLower = false; Rings
+  // haveUUpper = false;
 
   // Get all four layers in their glorious CPU intensitivity.  These is
   // gathering info like terrain hit, range, height, etc. into the vv

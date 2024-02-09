@@ -66,10 +66,6 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
 void
 RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
 {
-  // These are the standard generic 'output' parameters we support
-  o.require("o", "/data", "The output writers/directory for generated products or data");
-  o.addGroup("o", "I/O");
-
   o.optional("postwrite",
     "",
     "Simple executable to call post file writing using %filename%.");
@@ -85,12 +81,6 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
 void
 RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
 {
-  // Datatype will try to load all dynamic modules, so we want to avoid that
-  // unless help is requested
-  if (o.wantAdvancedHelp("o")) {
-    o.addAdvancedHelp("o", IODataType::introduceHelp());
-  }
-
   // Static advanced on demand (lazy add)
   o.addAdvancedHelp("h",
     "For indexes, this will be the global time in minutes for all indexes provided.");
@@ -107,18 +97,6 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
 void
 RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
 {
-  // Add output products wanted and name translation filters
-  // const std::string param = o.getString("O");
-  // ConfigParamGroupO paramO;
-
-  // paramO.readString(param);
-
-  // Gather output -o settings
-  const std::string write = o.getString("o");
-  ConfigParamGroupo paramo;
-
-  paramo.readString(write);
-
   // Gather postwrite option
   myPostWrite = o.getString("postwrite");
   myPostFML   = o.getString("postfml");
@@ -224,6 +202,7 @@ RAPIOAlgorithm::initializePlugins()
   PluginRecordFilter::declare(this, "I");        // Record filter ability (ingest)
   PluginIngestor::declare(this, "i");            // Ingestor index ability and record queue
   PluginProductOutputFilter::declare(this, "O"); // Product filter ability (output)
+  PluginProductOutput::declare(this, "o");       // Output plugin ability
 
   return RAPIOProgram::initializePlugins();
 }
@@ -337,18 +316,27 @@ RAPIOAlgorithm::handleEndDatasetEvent()
 }
 
 bool
-RAPIOAlgorithm::isProductWanted(const std::string& key,
-  std::string                                    & productName)
+RAPIOAlgorithm::isProductWanted(const std::string& key)
 {
   // Use the plugin if we have it
   auto p = getPlugin<PluginProductOutputFilter>("O");
 
   if (p) {
-    return p->isProductWanted(key, productName);
+    return p->isProductWanted(key);
   }
-  // Otherwise it's wanted and name is key because we can't do anything with it
-  productName = key;
-  return true;
+  return true; // allow if no plugin support
+}
+
+std::string
+RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& defaultName)
+{
+  // Use the plugin if we have it
+  auto p = getPlugin<PluginProductOutputFilter>("O");
+
+  if (p) {
+    return p->resolveProductName(key, defaultName);
+  }
+  return defaultName;
 }
 
 bool
@@ -375,20 +363,19 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   outputParams["postwrite"]    = myPostWrite;
   outputParams["postfml"]      = myPostFML;
 
-  std::string newProductName = "";
-
-  if (isProductWanted(key, newProductName)) {
+  if (isProductWanted(key)) {
     // Original typeName, which may match key or not
     const std::string typeName = outputData->getTypeName();
 
-    // Write DataType as given key, or as filtered to new product name by -O
+    // Resolve using the "-O key=resolved, if exists"
+    const std::string newProductName = resolveProductName(key, typeName);
+
+    // Write DataType with given typename, or optionally filtered to new typename by -O
     const bool changeProductName = (key != newProductName);
     if (changeProductName) {
-      LogInfo("Writing '" << key << "' as product name '" << newProductName
+      LogInfo("Writing '" << typeName << "' as product name '" << newProductName
                           << "'\n");
       outputData->setTypeName(newProductName);
-    } else {
-      outputData->setTypeName(key);
     }
 
     // Can call write multiple times for each output wanted.
@@ -414,6 +401,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     // Restore original typename, does matter since DataType might be reused.
     outputData->setTypeName(typeName);
   } else {
-    LogInfo("DID NOT FIND a match for product key " << key << "\n");
+    LogInfo("Skipping write for -O unwanted product '" << key << "'\n");
   }
 } // RAPIOAlgorithm::writeOutputProduct

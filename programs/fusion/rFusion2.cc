@@ -281,7 +281,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // Output 2D
   std::string name;
 
-  if (isProductWanted("2D", name)) { // -O="2D", -O="2D=NameWanted
+  if (isProductWanted("2D")) { // -O="2D", -O="2D=NameWanted
     auto heightsKM = myFullGrid.getHeightsKM();
     for (size_t layer = 0; layer < heightsKM.size(); layer++) {
       LogInfo("Writing fused layer " << layer << "\n");
@@ -289,31 +289,25 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
       // Use current time for layer
       auto output = myLLGCache->get(layer);
       output->setTime(outputTime);
+      output->setTypeName("Fused2" + myTypeName);
 
-      // Use name, when we have -O="2D=name"
-      const std::string writeName = (name == "2D") ? "Fused2" + myTypeName : name;
-      writeOutputProduct(writeName, output, extraParams);
+      writeOutputProduct("2D", output, extraParams);
     }
   }
 
   // ---------------------------------------
   // Output 3D cube
-  if (isProductWanted("3D", name)) { // -O="3D", -O="3D=NameWanted
+  if (isProductWanted("3D")) { // -O="3D", -O="3D=NameWanted
     myLLGCache->setTime(outputTime);
-    // Use name, when we have -O="3D=name"
-    const std::string writeName = (name == "3D") ? "Fused2" + myTypeName + "3D" : name;
-    writeOutputProduct(writeName, myLLGCache, extraParams);
+    myLLGCache->setTypeName("Fused2" + myTypeName);
+    writeOutputProduct("3D", myLLGCache, extraParams);
   }
 
   // ---------------------------------------
   // Output stage2 again with group
   // -O="Points=GROUP1" I'm thinking here..
-  if (isProductWanted("Points", name)) { // -O="Points"
-    if (name == "Points") {
-      LogInfo("Need to provide group name as param to Points such as -O='Points=Group1'\n");
-    } else {
-      LogInfo("Can't write stage2 data yet...but we will soon...");
-    }
+  if (isProductWanted("Points")) { // -O="Points"
+    LogInfo("Can't write stage2 data yet...but we will soon...");
   }
 } // RAPIOFusionTwoAlg::processHeartbeat
 

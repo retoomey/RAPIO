@@ -4,7 +4,6 @@
 #include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
-// #include <rIndexType.h>
 
 #include <string>
 #include <vector>
@@ -61,14 +60,21 @@ public:
   initializeBaseline() override;
 
   /** Should write given product key?
-   * Algorithms can write products such as 'Reflectivity' but
-   * multiple instances may require changing the name using the -O
-   * ability.  This will return the changed productName to write out,
-   * So if -O="Reflectivity=myReflectivity", myReflectivity is returned.
-   */
+   * This is true if -O is "*", or "key*", or say -O="key=value" */
   virtual bool
-  isProductWanted(const std::string& key,
-    std::string                    & productName);
+  isProductWanted(const std::string& key);
+
+  /** Resolve product name given a key and default name. -O allows
+   * key=value pairs for filtering output names.  This is for multiple
+   * instances of a same algorithm with different paramters, etc.
+   * For example, you set a key such as "Ref1" for a reflectivity product,
+   * and send a default of "Reflectivity", however you run a 2nd algorithm
+   * and want it to be ReflectivityTest on the 2nd algorithm.  Then you can
+   * use -O="Reflectivity=ReflectivityTest" to change the output of the 2nd
+   * algorithm.
+   **/
+  virtual std::string
+  resolveProductName(const std::string& key, const std::string& defaultName);
 
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
@@ -132,9 +138,6 @@ public:
   isWebServer();
 
 protected:
-
-  /** Hold the "n" list of notifiers */
-  std::string myNotifierList;
 
   /** Hold the postwrite command, if any */
   std::string myPostWrite;

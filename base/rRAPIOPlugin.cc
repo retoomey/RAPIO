@@ -6,6 +6,7 @@
 #include <rEventLoop.h>
 #include <rRAPIOOptions.h>
 #include <rStrings.h>
+#include <rIODataType.h>
 
 // FIXME: Eventually break up the plugins into files?
 #include <rHeartbeat.h>
@@ -320,6 +321,39 @@ PluginRecordFilter::execute(RAPIOProgram * caller)
 }
 
 bool
+PluginProductOutput::declare(RAPIOProgram * owner, const std::string& name)
+{
+  owner->addPlugin(new PluginProductOutput(name));
+  return true;
+}
+
+void
+PluginProductOutput::declareOptions(RAPIOOptions& o)
+{
+  // These are the standard generic 'output' parameters we support
+  o.require("o", "/data", "The output writers/directory for generated products or data");
+  o.addGroup("o", "I/O");
+}
+
+void
+PluginProductOutput::addPostLoadedHelp(RAPIOOptions& o)
+{
+  // Datatype will try to load all dynamic modules, so we want to avoid that
+  // unless help is requested
+  if (o.wantAdvancedHelp("o")) {
+    o.addAdvancedHelp("o", IODataType::introduceHelp());
+  }
+}
+
+void
+PluginProductOutput::processOptions(RAPIOOptions& o)
+{
+  ConfigParamGroupo paramO;
+
+  paramO.readString(o.getString(myName));
+}
+
+bool
 PluginProductOutputFilter::declare(RAPIOProgram * owner, const std::string& name)
 {
   owner->addPlugin(new PluginProductOutputFilter(name));
@@ -337,7 +371,7 @@ void
 PluginProductOutputFilter::addPostLoadedHelp(RAPIOOptions& o)
 {
   o.addAdvancedHelp(myName,
-    "With this, you specify products (datatypes) to output. For example, \"MyOutput1 MyOutput2\" means output only those two products.  \"MyOutput*\" means write anything starting with MyOutput.  Translating names is done by Key=Value.  For example \"MyOutput*=NeedThis*\" means change any product written out called MyOutput_min_qc to NeedThis_min_qc. The default is \"*\" which means any call to write(key) done by algorithm is matched and written to output.");
+    "Allows on/off and name change of output datatypes. For example, \"*\" means all products. Translating names is done by Key=Value. Keys are used to reference a particular product being written, while values can be name translations for multiple instances of an algorithm to avoid product write clashing.  For example, \"Reflectivity=Ref1QC Velocity=Vel1QC\"");
 }
 
 void
@@ -349,26 +383,37 @@ PluginProductOutputFilter::processOptions(RAPIOOptions& o)
 }
 
 bool
-PluginProductOutputFilter::isProductWanted(const std::string& key,
-  std::string                                               & productName)
+PluginProductOutputFilter::isProductWanted(const std::string& key)
 {
-  bool found = false;
+  const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
 
-  std::string newProductName = "";
+  for (auto& I:outputs) {
+    std::string p = I.product;
+    std::string star;
+
+    if (Strings::matchPattern(p, key, star)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::string
+PluginProductOutputFilter::resolveProductName(const std::string& key,
+  const std::string                                            & productName)
+{
+  std::string newProductName = productName;
 
   const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
 
   for (auto& I:outputs) {
-    std::string p  = I.product;
-    std::string p2 = I.toProduct;
+    // If key is found...
     std::string star;
-
-    if (Strings::matchPattern(p, key, star)) {
-      found = true;
-
-      if (p2 == "") { // No translation key, match only, use original key
-        newProductName = key;
-      } else {
+    if (Strings::matchPattern(I.product, key, star)) {
+      // ..translate the productName if there's a "Key=translation"
+      std::string p2 = I.toProduct;
+      if (p2 != "") {
         Strings::replace(p2, "*", star);
         newProductName = p2;
       }
@@ -376,8 +421,7 @@ PluginProductOutputFilter::isProductWanted(const std::string& key,
     }
   }
 
-  productName = newProductName;
-  return (found);
+  return newProductName;
 }
 
 bool
