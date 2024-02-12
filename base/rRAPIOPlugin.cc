@@ -7,6 +7,7 @@
 #include <rRAPIOOptions.h>
 #include <rStrings.h>
 #include <rIODataType.h>
+#include <rColorTerm.h>
 
 // FIXME: Eventually break up the plugins into files?
 #include <rHeartbeat.h>
@@ -363,15 +364,24 @@ PluginProductOutputFilter::declare(RAPIOProgram * owner, const std::string& name
 void
 PluginProductOutputFilter::declareOptions(RAPIOOptions& o)
 {
-  o.optional(myName, "*", "The output types patterns, controlling product names and writing");
+  o.optional(myName, "*", "The output products, controlling on/off and name remapping");
   o.addGroup(myName, "I/O");
 }
 
 void
 PluginProductOutputFilter::addPostLoadedHelp(RAPIOOptions& o)
 {
-  o.addAdvancedHelp(myName,
-    "Allows on/off and name change of output datatypes. For example, \"*\" means all products. Translating names is done by Key=Value. Keys are used to reference a particular product being written, while values can be name translations for multiple instances of an algorithm to avoid product write clashing.  For example, \"Reflectivity=Ref1QC Velocity=Vel1QC\"");
+  std::string help =
+    "Allows on/off and name change of output datatypes. For example, \"*\" means all products. Translating names is done by Key=Value. Keys are used to reference a particular product being written, while values can be name translations for multiple instances of an algorithm to avoid product write clashing.  For example, \"Reflectivity=Ref2QC Velocity=Vel1QC\"\n";
+
+  // Add list of registered static products
+  if (myKeys.size() > 0) {
+    help += ColorTerm::fBlue + "Registered product output keys:" + ColorTerm::fNormal + "\n";
+    for (size_t i = 0; i < myKeys.size(); ++i) {
+      help += " " + ColorTerm::fRed + myKeys[i] + ColorTerm::fNormal + " : " + myKeyHelp[i] + "\n";
+    }
+  }
+  o.addAdvancedHelp(myName, help);
 }
 
 void

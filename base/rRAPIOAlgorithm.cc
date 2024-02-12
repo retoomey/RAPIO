@@ -14,8 +14,6 @@
 #include "rRecordQueue.h"
 #include "rFactory.h"
 #include "rDataTypeHistory.h"
-#include "rRecordFilter.h"
-#include "rRecordNotifier.h"
 #include "rConfigParamGroup.h"
 
 // Baseline initialize
@@ -312,6 +310,17 @@ RAPIOAlgorithm::handleEndDatasetEvent()
     EventLoop::exit(0);
   } else {
     // Realtime queue is empty, hey we're caught up...
+  }
+}
+
+void
+RAPIOAlgorithm::declareProduct(const std::string& key, const std::string& help)
+{
+  // Use the plugin if we have it
+  auto p = getPlugin<PluginProductOutputFilter>("O");
+
+  if (p) {
+    return p->declareProduct(key, help);
   }
 }
 

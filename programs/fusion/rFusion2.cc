@@ -30,8 +30,12 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
   // Default sync heartbeat to 2 mins
   // Format is seconds then mins
   o.setDefaultValue("sync", "0 */2 * * * *");
-  // Output 2D by default
+
+  // Output 2D by default and declare static product keys for what we write.
   o.setDefaultValue("O", "2D");
+  declareProduct("2D", "Write N 2D layers");
+  declareProduct("3D", "Write a 3D layer");
+  declareProduct("S2", "Write Stage2 raw data files");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -305,8 +309,8 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 
   // ---------------------------------------
   // Output stage2 again with group
-  // -O="Points=GROUP1" I'm thinking here..
-  if (isProductWanted("Points")) { // -O="Points"
+  // -O="S2=GROUP1" I'm thinking here..
+  if (isProductWanted("S2")) { // -O="S2"
     LogInfo("Can't write stage2 data yet...but we will soon...");
   }
 } // RAPIOFusionTwoAlg::processHeartbeat

@@ -140,9 +140,6 @@ protected:
   /** The units we use for all output products */
   std::string myWriteOutputUnits;
 
-  /** Write lat lon grids to output */
-  bool myWriteLLG;
-
   /** Write lat lon subgrid vs full grid (typically radar box vs CONUS) */
   bool myWriteSubgrid;
 

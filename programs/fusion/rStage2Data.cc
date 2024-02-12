@@ -84,15 +84,12 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
     // Would be better if we don't have to
     LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
   } else {
-    bool writeNetcdf = false;
-    bool writeRaw    = true;
-
     // Writing netcdf.  This is more generic readable so I like it for that reason, however
     // our I/O is so critical we tend to use a custom binary for read/write speed at the cost
     // of external readability.
 
     // FIXME: probably should have a toDataGrid method or something in BinaryTable.
-    if (writeNetcdf) {
+    if (alg->isProductWanted("S2Netcdf")) {
       auto stage2 =
         DataGrid::Create(asName, "dimensionless", aLocation, aTime, { finalSize, finalSize2 }, { "I", "MI" });
 
@@ -148,10 +145,11 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
       std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
       extraParams["showfilesize"] = "yes";
       extraParams["compression"]  = "gz";
-      alg->writeOutputProduct(asName, stage2, extraParams);
+      stage2->setTypeName(asName);
+      alg->writeOutputProduct("S2Netcdf", stage2, extraParams);
     }
 
-    if (writeRaw) {
+    if (alg->isProductWanted("S2")) {
       // Faster but less generally readable.  Though rdump 'should' be able to read it if iotext if up2date.
       myTable->setSubType("S2");
       myTable->setTime(aTime);
@@ -159,7 +157,8 @@ Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
       // Write the raw file out with notification, etc.
       std::map<std::string, std::string> extraParams;
       extraParams["showfilesize"] = "yes";
-      alg->writeOutputProduct(asName, myTable, extraParams);
+      myTable->setTypeName(asName);
+      alg->writeOutputProduct("S2", myTable, extraParams);
     }
   }
   // -------------------------------------------------------

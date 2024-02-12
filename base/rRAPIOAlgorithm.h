@@ -59,6 +59,14 @@ public:
   virtual void
   initializeBaseline() override;
 
+  /** Add a static key for the -O help.  Note that keys can be static, such as
+   * '2D' to refer to a class of product, or currently you can also use the
+   * DataType typename as a dynamic key. This allows turning on/off products
+   * of your algorithm as well as name remapping in cases of multi algorithm
+   * instances with different options.*/
+  virtual void
+  declareProduct(const std::string& key, const std::string& help);
+
   /** Should write given product key?
    * This is true if -O is "*", or "key*", or say -O="key=value" */
   virtual bool

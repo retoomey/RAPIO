@@ -81,6 +81,12 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // Default sync heartbeat to 30 seconds
   // Format is seconds then mins
   o.setDefaultValue("sync", "*/30 * * * * *");
+
+  // Output S2 by default and declare static product keys for what we write.
+  o.setDefaultValue("O", "S2");
+  declareProduct("S2", "Write Stage2 raw data files. (Normal operations)");
+  declareProduct("2D", "Write 2D layers directly (debugging)");
+  declareProduct("S2Netcdf", "Write Stage2 as netcdf (need netcdf output folder in -o) (debugging)");
 } // RAPIOFusionOneAlg::declareOptions
 
 /** RAPIOAlgorithms process options on start up */
@@ -100,7 +106,6 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   myWriteStage2Name  = "None";          // will get from first radialset typename
   myWriteCAPPIName   = "None";          // will get from first radialset typename
   myWriteOutputUnits = "Dimensionless"; // will get from first radialset units
-  myWriteLLG         = o.getBoolean("llg");
   myWriteSubgrid     = o.getBoolean("subgrid");
   myUseLakSmoothing  = o.getBoolean("presmooth");
   myThrottleCount    = o.getInteger("throttle");
@@ -250,10 +255,12 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
       }
     }
     // Full grid file (CONUS for regular merger)
-    writeOutputProduct(myWriteCAPPIName, myFullLLG, extraParams);
+    myFullLLG->setTypeName(myWriteCAPPIName);
+    writeOutputProduct("2D", myFullLLG, extraParams);
   } else {
     // Just write the subgrid directly (typically smaller than the full grid)
-    writeOutputProduct(myWriteCAPPIName, output, extraParams);
+    output->setTypeName(myWriteCAPPIName);
+    writeOutputProduct("2D", output, extraParams);
   }
 } // RAPIOFusionOneAlg::writeOutputCAPPI
 
@@ -526,10 +533,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
 
   // ------------------------------------------------------------------------------
   // Do we try to output Stage 2 files for fusion2?
-  // For the moment turn off stage2 if the --llg flag is on, since meteorologists
-  // might be working on the first stage resolver.
-  // const bool outputStage2 = !myWriteLLG;
-  const bool outputStage2 = true;
+  const bool outputStage2 = (isProductWanted("S2") || isProductWanted("S2Netcdf"));
 
   // Grid information
   const LLCoverageArea& outg = myRadarGrid;
@@ -572,7 +576,9 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // Operations needs to be the fastest, so in this special case we check
   // all flags outside the loop:
   // Upside is speed, downside is two copies of code here to keep in sync
-  if (myHaveMask && outputStage2 && !myWriteLLG) {
+  const bool writeLLG = isProductWanted("2D");
+
+  if (myHaveMask && outputStage2 && !writeLLG) {
     for (size_t y = 0; y < numY; ++y) {
       for (size_t x = 0; x < numX; ++x, llp.next(), ssc.next(), levelSame.next()) {
         // Mask check.
@@ -685,7 +691,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // --------------------------------------------------------
   // Write debugging 2D LatLonGrid for layer (post entire layer processing)
   //
-  if (myWriteLLG) {
+  if (writeLLG) {
     static int writeCount = 0;
     if (++writeCount >= myThrottleCount) {
       output->setTime(rTime);
@@ -749,9 +755,7 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   LogInfo("Total all layer grid points: " << totalLayer << " (" << percentAttempt << "%).\n");
 
   // Send stage2 data (note this is a full conus volume)
-  bool outputStage2 = true;
-
-  if (outputStage2) {
+  if (isProductWanted("S2") || isProductWanted("S2Netcdf")) {
     LLH aLocation;
     // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
     Time aTime = rTime; // The time of the data matches the incoming data

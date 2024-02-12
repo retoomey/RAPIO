@@ -45,7 +45,8 @@ IOIndex::introduceHelp()
   help += "Default no protocol ending in .xml is an xml index.\n";
   help += "Default no protocol ending in .fam is an ifam index.\n";
   help += "Default url with 'source' or web macro is a web index.\n";
-  help += "Indexes ingest data into the system.  The following types are registered:\n";
+  help += "Indexes ingest data into the system.\n";
+  help += ColorTerm::fBlue + "The following types are registered:" + ColorTerm::fNormal + "\n";
   auto e = Factory<IndexType>::getAll();
 
   for (auto i: e) {

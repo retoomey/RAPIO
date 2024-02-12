@@ -282,6 +282,16 @@ public:
   virtual void
   processOptions(RAPIOOptions& o) override;
 
+  /** Add a static key for the -O help.  Note that keys can be static, such as
+   * '2D' to refer to a class of product, or currently you can also use the
+   * DataType typename as a dynamic key. */
+  virtual void
+  declareProduct(const std::string& key, const std::string& help)
+  {
+    myKeys.push_back(key);
+    myKeyHelp.push_back(help);
+  }
+
   /** Is product with this key wanted? */
   virtual bool
   isProductWanted(const std::string& key);
@@ -289,6 +299,14 @@ public:
   /** Resolve product name from the -O Key=Resolved pairs.*/
   virtual std::string
   resolveProductName(const std::string& key, const std::string& defaultName);
+
+protected:
+
+  /** List of keys for -O help */
+  std::vector<std::string> myKeys;
+
+  /** List of help for -O help */
+  std::vector<std::string> myKeyHelp;
 };
 
 /** Wrap the VolumeValueResolver in the newer generic plugin model.
