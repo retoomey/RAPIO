@@ -66,12 +66,11 @@ LLHGridN2D::init(
   size_t num_layers
 )
 {
-  // FIXME: go ahead and make a 2D in case we want to store each lat lon grid as a 2D array in
-  // output later. Note we're not adding any arrays but in theory each layer could be just
-  // an additional 2D array here instead of a full LatLonGrid, but eh.
-  DataGrid::init(TypeName, Units, location, datatime, { num_lats, num_lons }, { "Lat", "Lon" });
+  // We act like 3D...we won't store a 3D array though...
+  DataGrid::init(TypeName, Units, location, datatime, { num_layers, num_lats, num_lons }, { "Ht", "Lat", "Lon" });
 
-  setDataType("LLHGridN2D");
+  // setDataType("LLHGridN2D");
+  setDataType("LatLonHeightGrid"); // We're actually an implementation/view of LatLonHeightGrid
 
   setSpacing(lat_spacing, lon_spacing);
 
@@ -80,6 +79,7 @@ LLHGridN2D::init(
   myGrids = std::vector<std::shared_ptr<LatLonGrid> >(num_layers, nullptr);
 
   // Note layers random...you need to fill them all during data reading
+  // FIXME: Couldn't we use a regular array here
   myLayerNumbers.resize(num_layers);
   return true;
 }
@@ -98,8 +98,11 @@ LLHGridN2D::get(size_t i)
     Time t = myTime;                           // Default time to our time, caller can change it later
     LLH l  = myLocation;                       // Default location and height is our layer number
     l.setHeightKM(myLayerNumbers[i] / 1000.0); // We stored meter level resolution
+
+    // FIXME: getNumLats get Z here, because Lak changed dimension ordering.  Need work
     myGrids[i] = LatLonGrid::Create(myTypeName, myUnits, l, t, myLatSpacing, myLonSpacing,
-        getNumLats(), getNumLons());
+ // getNumLats(), getNumLons());
+        myDims[1].size(), myDims[2].size());
     // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
   }
 
@@ -161,8 +164,8 @@ LLHGridN2D::makeSparse()
     auto g = myGrids[i];
     if (g == nullptr) { g = get(i); }
     auto& array = g->getFloat2DRef();
-    for (size_t x = 0; x < sizes[0]; x++) {
-      for (size_t y = 0; y < sizes[1]; y++) {
+    for (size_t x = 0; x < sizes[1]; x++) {
+      for (size_t y = 0; y < sizes[2]; y++) {
         float& v = array[x][y];
         if ((v != backgroundValue) && (v != lastValue) ) {
           ++neededPixels;
@@ -172,19 +175,29 @@ LLHGridN2D::makeSparse()
     }
   }
 
+  LogInfo(">>>>NEEDED PIXELS " << neededPixels << "\n");
   // ----------------------------------------------------------------------------
   // Modify ourselves to be parse.  But we need to keep our actual data (probably)
   // Add a 'pixel' dimension...we can add (ONCE) without messing with current arrays
   // since it's the last dimension. FIXME: more api probably
   myDims.push_back(DataGridDimension("pixel", neededPixels));
 
+  // Ok we don't have a primary at least right now...so get units from the first
+  // LatLonGrid we have...
+  std::string dataunits = "dimensionless";
+
+  if (myGrids.size() > 0) {
+    auto g = myGrids[0];
+    if (g == nullptr) { g = get(0); }
+    dataunits = g->getUnits();
+  }
+
   // Move the primary out of the way and mark it hidden to writers...
   // we don't want to delete because the caller may be using the array and has no clue
   // about the sparse stuff
-  std::string dataunits = getUnits(); // Get units first since it comes from primary
-
-  changeName(Constants::PrimaryDataName, "DisabledPrimary");
-  setVisible("DisabledPrimary", false); // turn off writing
+  // We don't currently have a primary array...we store N LatLonGrids...
+  // changeName(Constants::PrimaryDataName, "DisabledPrimary");
+  // setVisible("DisabledPrimary", false); // turn off writing
 
   // New primary array is a sparse one.
   auto& pixels = addFloat1DRef(Constants::PrimaryDataName, dataunits, { 3 });
@@ -198,13 +211,18 @@ LLHGridN2D::makeSparse()
   lastValue = backgroundValue;
   size_t at = 0;
 
+  size_t total  = 0;
+  size_t total2 = 0;
+
+  LogInfo("Sizes: " << size << "(" << sizes[0] << ") and " << sizes[1] << ", " << sizes[2] << "\n");
   for (size_t i = 0; i < size; i++) { // ALPHA: is z matching order?
     auto g = myGrids[i];
     if (g == nullptr) { g = get(i); }
     auto& data = g->getFloat2DRef();
 
-    for (size_t x = 0; x < sizes[0]; x++) {
-      for (size_t y = 0; y < sizes[1]; y++) {
+    for (size_t x = 0; x < sizes[1]; x++) {
+      for (size_t y = 0; y < sizes[2]; y++) {
+        total2++;
         float& v = data[x][y];
         // Ok we have a value not background...
         if (v != backgroundValue) {
@@ -212,6 +230,7 @@ LLHGridN2D::makeSparse()
           if (v == lastValue) {
             // Add to the previous count...
             ++counts[at - 1];
+            total++;
           } else {
             // ...otherwise start a new run
             pixel_z[at] = i; // flipped or not?
@@ -227,6 +246,7 @@ LLHGridN2D::makeSparse()
     }
   }
 
+  LogInfo("Indirect total: " << total << " and " << total2 << "\n");
   LogInfo("Need sparse: " << neededPixels << "  final sparse: " << at << "\n");
 } // LLHGridN2D::makeSparse
 
@@ -234,4 +254,22 @@ void
 LLHGridN2D::makeNonSparse()
 {
   LogInfo("------>Calling non sparse to restore LLHGridN2D\n");
+  if (myDims.size() != 4) {
+    return;
+  }
+  // These depend on the source array anyway..so have to be regenerated
+  // on next write
+  deleteName(Constants::PrimaryDataName); // Deleting the sparse array
+  deleteName("pixel_z");
+  deleteName("pixel_y");
+  deleteName("pixel_x");
+  deleteName("pixel_count");
+
+  // Remove the dimension we added in makeSparse
+  myDims.pop_back();
+
+  // Put back our saved primary array from the makeSparse above...
+  // We don't currently have a primary array
+  //  changeName("DisabledPrimary", Constants::PrimaryDataName);
+  //  setVisible(Constants::PrimaryDataName, true);
 }

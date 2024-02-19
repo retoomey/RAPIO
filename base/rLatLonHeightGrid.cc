@@ -55,7 +55,10 @@ LatLonHeightGrid::init(
   size_t num_layers
 )
 {
-  DataGrid::init(TypeName, Units, location, datatime, { num_lats, num_lons, num_layers }, { "Lat", "Lon", "Ht" });
+  LogInfo("****** INIT CALLED ON LATLONHEIGHTGRID\n");
+  // Lak changed dimension ordering..so we have to start with Ht first here.
+  // Not sure if this will break reading in the netcdf reader.
+  DataGrid::init(TypeName, Units, location, datatime, { num_layers, num_lats, num_lons }, { "Ht", "Lat", "Lon" });
 
   setDataType("LatLonHeightGrid");
 
@@ -65,6 +68,7 @@ LatLonHeightGrid::init(
   addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
 
   // Note layers random...you need to fill them all during data reading
+  // FIXME: Could use an array, right?  Gotta write it anyway
   myLayerNumbers.resize(num_layers);
   return true;
 }
@@ -107,10 +111,17 @@ LatLonHeightGrid::makeSparse()
   size_t neededPixels   = 0;
   float lastValue       = backgroundValue;
 
+  LogInfo("Sizes are " << sizes[0] << ", " << sizes[1] << " " << sizes[2] << "\n");
+  auto dataptr = getFloat3D(Constants::PrimaryDataName);
+
+  if (dataptr) {
+    LogInfo("--->pointer seems good?\n");
+  }
+
   for (size_t z = 0; z < sizes[0]; z++) {
     for (size_t x = 0; x < sizes[1]; x++) {
       for (size_t y = 0; y < sizes[2]; y++) {
-        float& v = data[x][y][z];
+        float& v = data[z][x][y];
         if ((v != backgroundValue) && (v != lastValue) ) {
           ++neededPixels;
         }
@@ -148,7 +159,7 @@ LatLonHeightGrid::makeSparse()
   for (size_t z = 0; z < sizes[0]; z++) {
     for (size_t x = 0; x < sizes[1]; x++) {
       for (size_t y = 0; y < sizes[2]; y++) {
-        float& v = data[x][y][z];
+        float& v = data[z][x][y];
         // Ok we have a value not background...
         if (v != backgroundValue) {
           // If it's part of the current RLE
