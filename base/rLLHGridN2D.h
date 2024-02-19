@@ -70,5 +70,15 @@ protected:
 
   /** The set of LatLonGrids */
   std::vector<std::shared_ptr<LatLonGrid> > myGrids;
+
+  /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
+   * any DataGrid writers like netcdf generic not knowing about our
+   * special sparse formats. */
+  virtual void
+  makeSparse() override;
+
+  /** Make ourselves MRMS non-sparse iff we're sparse */
+  virtual void
+  makeNonSparse() override;
 };
 }

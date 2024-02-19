@@ -57,8 +57,6 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // Flags for outputting for testing/temp that I plan to change at some point.
   // FIXME: Final algorithm this will probably need some rework since we'll
   // be outputting differently for the stage 2 multiradar merging
-  o.boolean("llg", "Turn on/off writing output LatLonGrids per level");
-  o.addGroup("llg", "debug");
   o.boolean("subgrid",
     "When on, subgrid any llg output such as netcdf/mrms.  Basically make files using the box around radar vs the full grid.");
   o.addGroup("subgrid", "debug");

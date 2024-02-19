@@ -234,12 +234,6 @@ public:
     unsigned long long * value,
     const int            varid = NC_GLOBAL);
 
-  /** Get background attribute for sparse data sets */
-  static bool
-  readSparseBackground(int ncid,
-    int                    data_var,
-    float                  & backgroundValue);
-
   /** Convenience for reading the initial typename and dimensional information
    * for 2 or 3 defined dimensions */
   static void
@@ -257,8 +251,38 @@ public:
     int *               dim3     = 0,
     size_t *            dim3size = 0);
 
-  /** Read sparse 2D.  Template for the 'set_val(x,y)' and 'fill' methods for
-   * DataType classes */
+  // Sparse routines ----------------------------------------------------
+  // FIXME: A conversion/wrapper class like SparseGrid2D/SparseGrid3D
+  // might be cleaner.
+
+  /** Check if our dimension information contains MRMS sparse netcdf */
+  static bool
+  isMRMSSparse(
+    std::vector<int>        & dimids,
+    std::vector<std::string>& dimnames,
+    std::vector<size_t>     & dimsizes);
+
+  /** Is this variable name a MRMS sparse field? */
+  static bool
+  isMRMSSparseField(const std::string& name);
+
+  /** Get background attribute for sparse data sets */
+  static bool
+  readSparseBackground(int ncid,
+    int                    data_var,
+    float                  & backgroundValue);
+
+  /** Read a sparse MRMS data field. (possibly should be a NetcdfDataGrid method) */
+  static bool
+  readSparse(int ncid, int varid, const std::string& arrayName,
+    const std::string& units, std::vector<size_t>& dimsizes,
+    DataGrid& dataGrid);
+
+private:
+
+  // FIXME: Could work on/combine these I think, so we'll keep them private.
+
+  /** Read sparse 2D. */
   static bool
   readSparse2D(int  ncid,
     int             data_var,
@@ -268,15 +292,18 @@ public:
     float           fileRangeFolded,
     Array<float, 2> & dt);
 
-  // static bool readSparse3D(int   ncid,
-  //                                           int   data_var,
-  //                                           int   num_x,
-  //                                           int   num_y,
-  //                                           int   num_z,
-  //                                           float fileMissing,
-  //                                           float fileRangeFolded,
-  //                                           DataType   & dt);
+  /** Read sparse 3D. */
+  static bool
+  readSparse3D(int  ncid,
+    int             data_var,
+    int             num_x,
+    int             num_y,
+    int             num_z,
+    float           fileMissing,
+    float           fileRangeFolded,
+    Array<float, 3> & dt);
 
+public:
   /** Debug functions */
   static bool
   dumpVars(int ncid);

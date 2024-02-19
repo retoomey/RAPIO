@@ -18,6 +18,7 @@ if (Netcdf_FOUND)
     rNetcdfBinaryTable.cc
     rNetcdfRadialSet.cc
     rNetcdfLatLonGrid.cc
+    rNetcdfLatLonHeightGrid.cc
     rNetcdfDataTypeImp.cc
   )
 

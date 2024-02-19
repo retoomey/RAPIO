@@ -12,6 +12,7 @@
 #include "rNetcdfDataType.h"
 #include "rNetcdfRadialSet.h"
 #include "rNetcdfLatLonGrid.h"
+#include "rNetcdfLatLonHeightGrid.h"
 #include "rNetcdfBinaryTable.h"
 
 #include <netcdf_mem.h>
@@ -54,6 +55,7 @@ IONetcdf::initialize()
   // Add the default classes we handle...
   NetcdfRadialSet::introduceSelf(this);
   NetcdfLatLonGrid::introduceSelf(this);
+  NetcdfLatLonHeightGrid::introduceSelf(this);
   NetcdfBinaryTable::introduceSelf(this);
   // Generic netcdf reader class
   NetcdfDataGrid::introduceSelf(this);
@@ -641,6 +643,72 @@ IONetcdf::readDimensionInfo(int ncid,
 }
 
 bool
+IONetcdf::isMRMSSparse(
+  std::vector<int>        & dimids,
+  std::vector<std::string>& dimnames,
+  std::vector<size_t>     & dimsizes)
+{
+  // Look for pixel dimension and assume this is a WDSS2 sparse netcdf
+  bool sparse = false;
+  auto s      = dimids.size();
+
+  for (size_t i = 0; i < s; i++) {
+    if (dimnames[i] == "pixel") {
+      sparse = true;
+      // Remove "pixel" dimension from result, since we'll expand it
+      // into a new data array
+      dimids.erase(dimids.begin() + i);
+      dimnames.erase(dimnames.begin() + i);
+      dimsizes.erase(dimsizes.begin() + i);
+      break;
+    }
+  }
+  return sparse;
+}
+
+bool
+IONetcdf::isMRMSSparseField(const std::string& name)
+{
+  return ((name == "pixel_x") || (name == "pixel_y") || (name == "pixel_z") ||
+         (name == "pixel_count"));
+}
+
+bool
+IONetcdf::readSparse(int ncid,
+  int                    varid,
+  const std::string      & arrayName,
+  const std::string      & units,
+  std::vector<size_t>    & dimsizes,
+  DataGrid               & dataGrid)
+{
+  // Look for short pixel_z(pixel)
+  int pixel_z_var = -1;
+
+  nc_inq_varid(ncid, "pixel_z", &pixel_z_var);
+  const bool is3D = (pixel_z_var > -1);
+
+  // FIXME: We can probably combine the 2D and 3D methods in a refactor,
+  // but I know the 2D works right now and don't know the 3D does perfectly yet
+  // so dispatch to two separate methods for now
+  if (is3D) {
+    auto data3DF = dataGrid.addFloat3D(arrayName, units, { 1, 2, 0 });
+    if (!IONetcdf::readSparse3D(ncid, varid, dimsizes[1], dimsizes[2], dimsizes[0],
+      Constants::MissingData, Constants::RangeFolded, *data3DF))
+    {
+      return false;
+    }
+  } else {
+    auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
+    if (!IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
+      Constants::MissingData, Constants::RangeFolded, *data2DF))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool
 IONetcdf::readSparse2D(int ncid,
   int                      data_var,
   int                      num_x,
@@ -649,22 +717,13 @@ IONetcdf::readSparse2D(int ncid,
   float                    fileRangeFolded,
   Array<float, 2>          & array)
 {
-  // Background fill for value....
-  // since sparse not all points touched..have to prefill.
-  float backgroundValue;
-
   auto& data = array.ref();
 
+  // Prefill background, since sparse not all points touched
+  float backgroundValue;
+
   readSparseBackground(ncid, data_var, backgroundValue);
-  // data.fill(backgroundValue); // fill should be in datatype or something
-  // FIXME: maybe static in DataGrid?
-
-  // Just view as 1D to fill it...
-  // FIXME: FILL method in array
   array.fill(backgroundValue);
-
-  //  boost::multi_array_ref<float, 1> a_ref(data.data(), boost::extents[data.num_elements()]);
-  //  std::fill(a_ref.begin(), a_ref.end(), backgroundValue);
 
   // We should have a pixel dimension for sparse data...
   int pixel_dim;
@@ -673,12 +732,7 @@ IONetcdf::readSparse2D(int ncid,
   NETCDF(nc_inq_dimid(ncid, "pixel", &pixel_dim));
   NETCDF(nc_inq_dimlen(ncid, pixel_dim, &num_pixels));
 
-  // We 'can' do this, but it might be better not to bring it all into ram.
-  // We have three ways: read the vector all at once, read 1 at a time, read n
-  // at a time...
-  // The old way read all at once..but since we have to step over azimuth,
-  // etc...think it's
-  // better not to do the double memory copy and step over it. (time vs memory)
+  // 2D
   if (num_pixels > 0) {
     // Get short pixel_x(pixel) array
     int pixel_x_var;
@@ -692,41 +746,26 @@ IONetcdf::readSparse2D(int ncid,
     int pixel_count_var = -1;
     nc_inq_varid(ncid, "pixel_count", &pixel_count_var);
 
-    // Get short pixel_z(pixel) array (3d only)
-    // int pixel_z_var;
-    // NETCDF(nc_inq_varid(ncid, "pixel_z", &pixel_z_var));
-
-    // Do we do Lak's max size check?  By now it really should be a valid netcdf
-    // Check max size of full image. Originally, this was (1000*1000) but was
-    // increased
-    // to MAX_INT because some people were having issues.
-    // x_max, y_max.  The max uncompressed 2d dimensions
+    // Max size check
     const short x_max(num_x); // azimuth for radialset
     const short y_max(num_y); // gates for radialset
     const int max_size = x_max * y_max;
 
     if (max_size > std::numeric_limits<int>::max()) {
-      LogSevere(
-        "Corrupt?: Max dimension is " << max_size
-                                      << " which seems too large..\n");
-      return (false);
+      LogSevere("Corrupt?: Max dimension is " << max_size << " which seems too large..\n");
+      return false;
     }
 
     // At most would expect num_pixel max_size, each with a runlength of 1
     if (num_pixels > size_t(max_size)) {
-      LogSevere(
-        "Corrupt?: Number of unique start pixels more than grid size, which seems strange\n");
-      LogSevere(
-        "Corrupt?: num_pixels is " << num_pixels << " while max_size is " << max_size
-                                   << " \n");
-      return (false);
+      LogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange\n");
+      LogSevere("Corrupt?: num_pixels is " << num_pixels << " while max_size is " << max_size << " \n");
+      return false;
     }
 
     // Memory: Read it all in at once.
-    // This way is much much faster than the var1 netcdf calls.  It eats up more
-    // ram though
-    // Saw a sparse radial set read at 0.003 vs .33 seconds by using single
-    // netcdf var calls
+    // This way is much much faster than the var1 netcdf calls.  It eats up more ram though
+    // Saw a sparse radial set read at 0.003 vs .33 seconds by using single netcdf var calls
     std::vector<float> data_val(num_pixels);
     NETCDF(nc_get_var_float(ncid, data_var, &data_val[0]));
 
@@ -736,10 +775,7 @@ IONetcdf::readSparse2D(int ncid,
     std::vector<short> pixel_y(num_pixels);
     NETCDF(nc_get_var_short(ncid, pixel_y_var, &pixel_y[0]));
 
-    // std::vector<short> pixel_z;
-    // NETCDF(nc_get_var_short(ncid, pixel_z_var, &pixel_z));
     std::vector<int> pixel_count(num_pixels, 1); // default to 1
-
     if (pixel_count_var > -1) {
       nc_get_var_int(ncid, pixel_count_var, &pixel_count[0]);
     }
@@ -752,7 +788,6 @@ IONetcdf::readSparse2D(int ncid,
       // Non memory way:
       // NETCDF(nc_get_var1_short(ncid, pixel_x_var, &i, &x));
       // NETCDF(nc_get_var1_short(ncid, pixel_y_var, &i, &y));
-      // todo: NETCDF(nc_get_var1_short(ncid, pixel_z_var, &i, &z));
       short& x = pixel_x[i];
       short& y = pixel_y[i];
 
@@ -816,198 +851,209 @@ IONetcdf::readSparse2D(int ncid,
     } // numpixels
 
     if (pixelSkipped > 0) {
-      LogSevere("Corrupt?: Skipped a total of " << pixelSkipped << " pixels\n");
+      LogSevere("Corrupt sparse?: Skipped a total of " << pixelSkipped << " pixels\n");
     }
 
     if (pixelOverflow > 0) {
-      LogSevere(
-        "Corrupt?: Trimmed a total of " << pixelOverflow << " runlengths\n");
+      LogSevere("Corrupt sparse?: Trimmed a total of " << pixelOverflow << " runlengths\n");
     }
+  } else {
+    // LogSevere("Corrupt sparse? Zero pixels.\n");
   }
-  return (true);
+  return true;
 } // IONetcdf::readSparse2D
 
-/*
- * bool IONetcdf::readSparse3D(int ncid, int data_var,
- *   int num_x, int num_y, int num_z, float fileMissing, float fileRangeFolded,
- *      T& data)
- * {
- * // Background fill for value....
- * // since sparse not all points touched..have to prefill.
- * float backgroundValue;
- * IONetcdf::readSparseBackground(ncid, data_var, backgroundValue);
- * data.fill(backgroundValue);  // fill should be in datatype or something
- *
- * // We should have a pixel dimension for sparse data...
- * int retval;
- * int pixel_dim;
- * size_t num_pixels;
- * NETCDF(nc_inq_dimid(ncid, "pixel", &pixel_dim));
- * NETCDF(nc_inq_dimlen(ncid, pixel_dim, &num_pixels));
- *
- * // We 'can' do this, but it might be better not to bring it all into ram.
- * // We have three ways: read the vector all at once, read 1 at a time, read n
- *    at a time...
- * // The old way read all at once..but since we have to step over azimuth,
- *    etc...think it's
- * // better not to do the double memory copy and step over it. (time vs memory)
- * if (num_pixels > 0)
- * {
- *
- *  // Get short pixel_x(pixel) array
- *  int pixel_x_var;
- *  NETCDF(nc_inq_varid(ncid, "pixel_x", &pixel_x_var));
- *
- *  // Get short pixel_y(pixel) array
- *  int pixel_y_var;
- *  NETCDF(nc_inq_varid(ncid, "pixel_y", &pixel_y_var));
- *
- *  // Get short pixel_z(pixel) array
- *  int pixel_z_var;
- *  NETCDF(nc_inq_varid(ncid, "pixel_z", &pixel_z_var));
- *
- *  // Get int pixel_count(pixel) array (optional)
- *  int pixel_count_var = -1;
- *  retval = nc_inq_varid(ncid, "pixel_count", &pixel_count_var);
- *
- *  // Get short pixel_z(pixel) array (3d only)
- *  //int pixel_z_var;
- *  //NETCDF(nc_inq_varid(ncid, "pixel_z", &pixel_z_var));
- *
- *  // Do we do Lak's max size check?  By now it really should be a valid netcdf
- *  // Check max size of full image. Originally, this was (1000*1000) but was
- *     increased
- *  // to MAX_INT because some people were having issues.
- *  // x_max, y_max.  The max uncompressed 2d dimensions
- *  const short x_max (num_x); // azimuth for radialset
- *  const short y_max (num_y); // gates for radialset
- *  const short z_max (num_z); // gates for radialset
- *  const int max_size = x_max*y_max*z_max;
- *  if (max_size > std::numeric_limits<int>::max()){
- *    LogSevere("Corrupt?: Max dimension is " << max_size << " which seems too
- *       large..\n");
- *    return false;
- *  }
- *
- *  // At most would expect num_pixel max_size, each with a runlength of 1
- *  if (num_pixels > size_t(max_size)){
- *    LogSevere(
- *     "Corrupt?: Number of unique start pixels more than grid size, which seems
- *        strange\n");
- *    LogSevere(
- *     "Corrupt?: num_pixels is " << num_pixels << " while max_size is " <<
- *        max_size << " \n");
- *    return false;
- *  }
- *
- *  // Memory: Read it all in at once.
- *  // This way is much much faster than the var1 netcdf calls.  It eats up more
- *     ram though
- *  // Saw a sparse radial set read at 0.003 vs .33 seconds by using single
- *     netcdf var calls
- *  std::vector<float> data_val (num_pixels);
- *  NETCDF(nc_get_var_float(ncid, data_var, &data_val[0]));
- *
- *  std::vector<short> pixel_x (num_pixels);
- *  NETCDF(nc_get_var_short(ncid, pixel_x_var, &pixel_x[0]));
- *
- *  std::vector<short> pixel_y (num_pixels);
- *  NETCDF(nc_get_var_short(ncid, pixel_y_var, &pixel_y[0]));
- *
- *  std::vector<short> pixel_z (num_pixels);
- *  NETCDF(nc_get_var_short(ncid, pixel_z_var, &pixel_z[0]));
- *
- *  std::vector<int> pixel_count (num_pixels, 1); // default to 1
- *  if (pixel_count_var > -1){
- *    nc_get_var_int(ncid, pixel_count_var, &pixel_count[0]);
- *  }
- *
- *  //short x, y, z;
- *  //int c;
- *  //float v;
- *  int pixelOverflow = 0;
- *  int pixelSkipped = 0;
- *  // For each runlength value...
- *  for(size_t i=0; i< num_pixels; ++i){
- *
- *    //NETCDF(nc_get_var1_short(ncid, pixel_x_var, &i, &x));
- *    //NETCDF(nc_get_var1_short(ncid, pixel_y_var, &i, &y));
- *    //NETCDF(nc_get_var1_short(ncid, pixel_z_var, &i, &z));
- *    short& x = pixel_x[i];
- *    short& y = pixel_y[i];
- *    short& z = pixel_z[i];
- *
- *    // Set the first pixel iff it's in the box
- *    // If it's NOT, then ALL the future pixels
- *    // in the runlength are pretty much out of bounds too
- *    if (0<=x && x<x_max && 0<=y && y<y_max && 0<=z && z<z_max){
- *      //NETCDF(nc_get_var1_float(ncid, data_var, &i, &v));
- *      float& v = data_val[i];
- *
- *      // Replace any missing/range using the file version to our internal.
- *      // This is so much faster here than looping with 'replace' functions
- *         later on.
- *      if (v == fileMissing){ v = Constants::MissingData; }
- *      else if (v == fileRangeFolded){ v = Constants::RangeFolded; }
- *
- *      data.set_val (z, x, y, v);
- *
- *      // Runlength of the current pixel length
- *      //if (pixel_count_var > -1){
- *      //  NETCDF(nc_get_var1_int(ncid, pixel_count_var, &i, &c));
- *      //}else{
- *      //  c = 1; // Missing pixel count, assume it's 1 per value
- *      //}
- *      int& c = pixel_count[i];
- *
- *      // A <1 pixel count is strange
- *      if (c <0){
- *        LogSevere("Corrupt?: Have a nonpositive pixel count of " << c <<
- *           "\n");
- *      }else{
- *
- *        // pixelCount can't be larger than the reamining pixels in the
- *        // grid..we could recover from this by triming pixelcount..so let's do
- *           that
- *        // x_max-x is num of full 'y' length pieces..
- * //          const int l = ((x_max-x)*y_max)-y; // -1 for original cell..
- * //          if (c > l){
- * //             pixelOverflow++;
- * //             c = l;
- * //          }
- *
- *        for (int j=1; j < c; ++j){
- *
- *          // 'Roll'columns and rows
- ++y;
- *          if ( y == y_max ){
- *             y = 0;
- ++x;
- *          }
- *          if ( x == x_max ){
- *            x = 0;
- ++z;
- *          }
- *          if (0<=x && x<x_max && 0<=y && y<y_max && 0<=z && z<z_max){
- *            data.set_val (z, x, y, v);
- *          }
- *        }
- *      }
- *    }else{
- *      pixelSkipped++;
- *    }
- *  } // numpixels
- *  if (pixelSkipped > 0){
- *    LogSevere("Corrupt?: Skipped a total of "<<pixelSkipped << " pixels\n");
- *  }
- *  if (pixelOverflow > 0){
- *    LogSevere("Corrupt?: Trimmed a total of "<<pixelOverflow << "
- *       runlengths\n");
- *  }
- * }
- * return true;
- * }
- */
+bool
+IONetcdf::readSparse3D(int ncid, int data_var,
+  int num_x, int num_y, int num_z, float fileMissing, float fileRangeFolded,
+  Array<float, 3>& array)
+{
+  auto& data = array.ref();
+
+  // Prefill background, since sparse not all points touched
+  float backgroundValue;
+
+  readSparseBackground(ncid, data_var, backgroundValue);
+  array.fill(backgroundValue);
+
+  // We should have a pixel dimension for sparse data...
+  int pixel_dim;
+  size_t num_pixels;
+
+  NETCDF(nc_inq_dimid(ncid, "pixel", &pixel_dim));
+  NETCDF(nc_inq_dimlen(ncid, pixel_dim, &num_pixels));
+
+  // 3D
+  if (num_pixels > 0) {
+    // Get short pixel_x(pixel) array
+    int pixel_x_var;
+    NETCDF(nc_inq_varid(ncid, "pixel_x", &pixel_x_var));
+
+    // Get short pixel_y(pixel) array
+    int pixel_y_var;
+    NETCDF(nc_inq_varid(ncid, "pixel_y", &pixel_y_var));
+
+    // -------------------------------------------------------------
+    // Get short pixel_z(pixel) array (DIFF)
+    int pixel_z_var;
+    NETCDF(nc_inq_varid(ncid, "pixel_z", &pixel_z_var));
+    // -------------------------------------------------------------
+
+    // Get int pixel_count(pixel) array (optional)
+    int pixel_count_var = -1;
+    nc_inq_varid(ncid, "pixel_count", &pixel_count_var);
+
+    // Max size check
+    const short x_max(num_x);
+    const short y_max(num_y);
+    const short z_max(num_z); // -------------------------------
+    const int max_size = x_max * y_max * z_max;
+    if (max_size > std::numeric_limits<int>::max()) {
+      LogSevere("Corrupt?: Max dimension is " << max_size << " which seems too large..\n");
+      return false;
+    }
+
+    // At most would expect num_pixel max_size, each with a runlength of 1
+    if (num_pixels > size_t(max_size)) {
+      LogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange\n");
+      LogSevere("Corrupt?: num_pixels is " << num_pixels << " while max_size is " << max_size << " \n");
+      return false;
+    }
+    LogInfo("3D Dimensions: " << num_x << " * " << num_y << " * " << num_z << "\n");
+
+    // Memory: Read it all in at once.
+    // This way is much much faster than the var1 netcdf calls.  It eats up more ram though
+    // Saw a sparse radial set read at 0.003 vs .33 seconds by using single netcdf var calls
+    std::vector<float> data_val(num_pixels);
+    NETCDF(nc_get_var_float(ncid, data_var, &data_val[0]));
+
+    std::vector<short> pixel_x(num_pixels);
+    NETCDF(nc_get_var_short(ncid, pixel_x_var, &pixel_x[0]));
+
+    std::vector<short> pixel_y(num_pixels);
+    NETCDF(nc_get_var_short(ncid, pixel_y_var, &pixel_y[0]));
+
+    std::vector<short> pixel_z(num_pixels); // (DIFF)
+    NETCDF(nc_get_var_short(ncid, pixel_z_var, &pixel_z[0]));
+
+    std::vector<int> pixel_count(num_pixels, 1); // default to 1
+    if (pixel_count_var > -1) {
+      nc_get_var_int(ncid, pixel_count_var, &pixel_count[0]);
+    }
+
+    int pixelOverflow = 0;
+    int pixelSkipped  = 0;
+
+    // short x, y, z;
+    // int c;
+    // float v;
+    // For each runlength value...
+    size_t overx, overy, overz;
+    for (size_t i = 0; i < num_pixels; ++i) {
+      // NETCDF(nc_get_var1_short(ncid, pixel_x_var, &i, &x));
+      // NETCDF(nc_get_var1_short(ncid, pixel_y_var, &i, &y));
+      // NETCDF(nc_get_var1_short(ncid, pixel_z_var, &i, &z));
+      short& x = pixel_x[i];
+      short& y = pixel_y[i];
+      short& z = pixel_z[i];
+
+      // Set the first pixel iff it's in the box
+      // If it's NOT, then ALL the future pixels
+      // in the runlength are pretty much out of bounds too
+      if ((0 <= x) && (x < x_max) && (0 <= y) && (y < y_max) && (0 <= z) && (z < z_max) ) {
+        // NETCDF(nc_get_var1_float(ncid, data_var, &i, &v));
+        float& v = data_val[i];
+
+        // Replace any missing/range using the file version to our internal.
+        // This is so much faster here than looping with 'replace' functions
+        // later on.
+        if (v == fileMissing) {
+          v = Constants::MissingData;
+        } else if (v == fileRangeFolded) {
+          v = Constants::RangeFolded;
+        }
+
+        data[x][y][z] = v;
+
+        // Runlength of the current pixel length
+        // if (pixel_count_var > -1){
+        //  NETCDF(nc_get_var1_int(ncid, pixel_count_var, &i, &c));
+        // }else{
+        //  c = 1; // Missing pixel count, assume it's 1 per value
+        // }
+        int& c = pixel_count[i];
+
+        // A <1 pixel count is strange
+        if (c < 0) {
+          LogSevere("Corrupt sparse?: Have a nonpositive pixel count of " << c << "\n");
+        } else {
+          // pixelCount can't be larger than the reamining pixels in the
+          // grid..we could recover from this by triming pixelcount..so let's do
+          // that
+          // x_max-x is num of full 'y' length pieces..
+          //          const int l = ((x_max-x)*y_max)-y; // -1 for original cell..
+          //          if (c > l){
+          //             pixelOverflow++;
+          //             c = l;
+          //          }
+
+          for (int j = 1; j < c; ++j) {
+            // 'Roll'columns and rows
+            ++y;
+            if (y == y_max) {
+              y = 0;
+              ++x;
+            }
+            if (x == x_max) {
+              x = 0;
+              ++z;
+            }
+            if ((0 <= x) && (x < x_max) && (0 <= y) && (y < y_max) && (0 <= z) && (z < z_max) ) {
+              data[x][y][z] = v;
+            }
+          }
+        }
+      } else {
+        // Check integrity of the data.  We'll be adding a writer in a bit
+        if (!((0 <= x) && (x < x_max))) { overx++; }
+        if (!((0 <= y) && (y < y_max))) { overy++; }
+        if (!((0 <= z) && (z < z_max))) { overz++; }
+        pixelSkipped++;
+      }
+    }
+    if (pixelSkipped > 0) {
+      LogSevere("Corrupt sparse?: Skipped a total of " << pixelSkipped << " pixels\n");
+      LogSevere("Overflow: " << overx << ", " << overy << ", " << overz << "\n");
+    }
+
+    if (pixelOverflow > 0) {
+      LogSevere("Corrupt sparse?: Trimmed a total of " << pixelOverflow << " runlengths\n");
+    }
+  } else {
+    // LogSevere("Corrupt sparse? Zero pixels.\n");
+  }
+
+  // Back verify the num_pixels required...
+  size_t neededPixels = 0;
+  float lastValue     = backgroundValue;
+
+  for (size_t z = 0; z < num_z; z++) {
+    for (size_t x = 0; x < num_x; x++) {
+      for (size_t y = 0; y < num_y; y++) {
+        float& v = data[x][y][z];
+        if ((v != backgroundValue) && (v != lastValue) ) {
+          ++neededPixels;
+        }
+        lastValue = v;
+      }
+    }
+  }
+  if (neededPixels != num_pixels) {
+    LogSevere("Sparse CALCULATED " << neededPixels << " vs " << num_pixels << "\n");
+  }
+
+  return true;
+} // IONetcdf::readSparse3D
 
 bool
 IONetcdf::dataArrayTypeToNetcdf(const DataArrayType& theType, nc_type& xtype)
@@ -1068,6 +1114,10 @@ IONetcdf::declareGridVars(
   std::vector<int> datavars;
 
   for (auto l:list) {
+    // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
+    auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
+    if (hidden) { continue; }
+
     auto theName = l->getName();
     // auto theUnits = l->getUnits();
     auto theUnitAttr = l->getAttribute<std::string>("Units");

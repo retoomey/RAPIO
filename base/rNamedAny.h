@@ -166,6 +166,18 @@ public:
     }
   }
 
+  /** Remove somthing with given key */
+  void
+  remove(const std::string& name)
+  {
+    int i = index(name);
+
+    if (i != -1) {
+      std::swap(myAttributes[i], myAttributes.back());
+      myAttributes.pop_back();
+    }
+  }
+
   /** Get data we store as an optional pointer.
    * If not boost::none, can use * to get to the
    * field. FIXME: Might change name and make a

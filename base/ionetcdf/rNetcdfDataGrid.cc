@@ -43,6 +43,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     DataGrid& dataGrid = *dataGridSP;
     const int ncid     = std::stoi(keys["NETCDF_NCID"]);
     const URL loc      = URL(keys["NETCDF_URL"]);
+    const bool uncompressMRMSSparse = true; // Possibly a param later
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -65,23 +66,9 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     std::vector<size_t> dimsizes;
     auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
 
-    // ------------------------------------------------------------
-    // Look for pixel dimension and assume this is a WDSS2 sparse netcdf
-    // FIXME: It 'might' be better to read generically and then
-    // 'unsparse' the data afterwards with the DataGrid
-    bool sparse = false;
-    for (size_t i = 0; i < s; i++) {
-      if (dimnames[i] == "pixel") {
-        sparse = true;
-        // Remove pixel dimension
-        dimids.erase(dimids.begin() + i);
-        dimnames.erase(dimnames.begin() + i);
-        dimsizes.erase(dimsizes.begin() + i);
-        // dimnames.erase(&dimnames[i]);
-        // dimsizes.erase(&dimsizes[i]);
-        break;
-      }
-    }
+    // Remove sparse dimension, if MRMS netcdf sparse and wanted
+    bool sparse = uncompressMRMSSparse ?
+      IONetcdf::isMRMSSparse(dimids, dimnames, dimsizes) : false;
 
     // Declare dimensions in data structure
     dataGridSP->declareDims(dimsizes, dimnames);
@@ -91,9 +78,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     // ------------------------------------------------------------
     // VARIABLES (DataArrays)
     //
-    // Sparse WDSS2:
-    // pixel dimension exists
-    // pixel_x, pixel_y, pixel_count variables
     int varcount = -1;
     NETCDF(nc_inq_nvars(ncid, &varcount));
     const size_t vsize = varcount > 0 ? varcount : 0;
@@ -104,17 +88,10 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       NETCDF(nc_inq_varname(ncid, i, &name_in[0]));
       name = std::string(name_in);
 
-      // If marked sparse
-      if (sparse) {
-        if (name == "pixel_x") {
-          continue;
-        }
-        if (name == "pixel_y") {
-          continue;
-        }
-        if (name == "pixel_count") {
-          continue;
-        }
+      // If MRMS sparse field and we're doing sparse, skip normal
+      // processing of those since they will be uncompressed
+      if (sparse && IONetcdf::isMRMSSparseField(name)) {
+        continue;
       }
 
       // Now for this variable with given name
@@ -164,14 +141,12 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
       // Handle the special sparse data MRMS format first...
       bool handled = false;
-      if ((ndimsp2 == 1) && (xtypep == NC_FLOAT)) {
-        if ((sparse) and (name == aTypeName)) {
-          // SPARSE DATA READ
-          // Expand it to 2D float array from sparse...
-          // We're assuming it's using first two dimensions on 2D sparse...
-          auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
-          IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
-            Constants::MissingData, Constants::RangeFolded, *data2DF);
+      if (sparse) {
+        // Sparse array is 1D, float and matches our typename...
+        if ((ndimsp2 == 1) && (xtypep == NC_FLOAT) && (name == aTypeName)) {
+          if (!IONetcdf::readSparse(ncid, varid, arrayName, units, dimsizes, dataGrid)) {
+            return false;
+          }
           handled = true;
         }
       }
@@ -187,33 +162,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
           LogSevere("Skipping netcdf array '" << arrayName << "' since type not yet handled.\n");
         }
       }
-      #if 0
-      // Read all the arrays we support at the moment
-      if (ndimsp2 == 1) { // 1D float
-        if (xtypep == NC_FLOAT) {
-          if ((sparse) and (name == aTypeName)) {
-            // SPARSE DATA READ
-            // Expand it to 2D float array from sparse...
-            // We're assuming it's using first two dimensions on 2D sparse...
-            auto data2DF = dataGrid.addFloat2D(arrayName, units, { 0, 1 });
-            IONetcdf::readSparse2D(ncid, varid, dimsizes[0], dimsizes[1],
-              Constants::MissingData, Constants::RangeFolded, *data2DF);
-          } else {
-            // Non-sparse regular data
-            auto data1DF = dataGrid.addFloat1D(arrayName, units, dimindexes);
-            data = data1DF->getRawDataPointer();
-          }
-        } else if (xtypep == NC_INT) {
-          auto data1DI = dataGrid.addInt1D(arrayName, units, dimindexes);
-          data = data1DI->getRawDataPointer();
-        }
-      } else if (ndimsp2 == 2) { // 2D stuff
-        if (xtypep == NC_FLOAT) {
-          auto data2DF = dataGrid.addFloat2D(arrayName, units, dimindexes);
-          data = data2DF->getRawDataPointer();
-        }
-      }
-      #endif // if 0
       if (handled) {
         // Read generally into array
         if (data != nullptr) {
@@ -283,6 +231,9 @@ NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
     // For netcdf3 we have to declare attributes of the arrays BEFORE enddef
     size_t count = 0;
     for (auto l:list) {
+      // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
+      auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
+      if (hidden) { continue; }
       // Put attributes for this var...
       const int varid = datavars[count];
       IONetcdf::setAttributes(ncid, varid, l->getAttributes());
@@ -296,6 +247,9 @@ NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
     // Now write data into each array in the data grid
     count = 0;
     for (auto l:list) {
+      // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
+      auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
+      if (hidden) { continue; }
       void * data = l->getRawDataPointer();
       if (data != nullptr) {
         // Woh...mind blown generically write everything

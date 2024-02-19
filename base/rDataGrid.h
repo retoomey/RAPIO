@@ -140,6 +140,13 @@ public:
     myAttributes->put<T>(name, value);
   }
 
+  /** Remove attribute */
+  void
+  removeAttribute(const std::string& name)
+  {
+    myAttributes->remove(name);
+  }
+
   /** Get the array as typeless for generic usage */
   std::shared_ptr<ArrayBase>
   getNewArray(){ return myArray; }
@@ -338,22 +345,62 @@ public:
     return ptr;
   }
 
+  /** Change name of a stored array.  Used for sparse/non-sparse array swapping */
+  bool
+  changeName(const std::string& name, const std::string& newname)
+  {
+    for (auto i:myNodes) {
+      if (i->getName() == newname) {
+        LogSevere(
+          "Cannot change array from " << name << " to " << newname << " since " << newname << " already exists!\n")
+        return false;
+      }
+    }
+    for (auto i:myNodes) {
+      if (i->getName() == name) {
+        i->setName(newname);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Mark hidden  Used for sparse/non-sparse array swapping */
+  void
+  setVisible(const std::string& name, bool flag)
+  {
+    for (auto i:myNodes) {
+      if (i->getName() == name) {
+        flag ? i->removeAttribute("RAPIO_HIDDEN") : i->putAttribute<std::string>("RAPIO_HIDDEN", "yes");
+      }
+    }
+  }
+
+  /** Delete a stored array.  Used for sparse/non-sparse array swapping */
+  bool
+  deleteName(const std::string& name)
+  {
+    for (auto i = 0; i < myNodes.size(); ++i) {
+      if (myNodes[i]->getName() == name) {
+        myNodes[i] = myNodes.back(); // swap/pop delete
+        myNodes.pop_back();
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Get node for this key */
   template <typename T>
   std::shared_ptr<T>
   get(const std::string& name)
   {
-    size_t count = 0;
-
     for (auto i:myNodes) {
       if (i->getName() == name) {
         // Ok we have to cast the general interface to the specific template class
-        //
         std::shared_ptr<T> derived = std::dynamic_pointer_cast<T>(i->getNewArray());
         return derived;
-        // return i->getSP<T>();
       }
-      count++;
     }
     return nullptr;
   }
