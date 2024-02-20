@@ -67,6 +67,9 @@ LatLonHeightGrid::init(
   // Our current LatLonHeight grid is implemented using a 3D array
   addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
 
+  // A Height array
+  addFloat1D("Height", "Meters", { 0 });
+
   // Note layers random...you need to fill them all during data reading
   // FIXME: Could use an array, right?  Gotta write it anyway
   myLayerNumbers.resize(num_layers);
@@ -100,6 +103,13 @@ LatLonHeightGrid::makeSparse()
   if (pixelptr != nullptr) {
     LogInfo("Not making sparse since pixels already exists...\n");
     return;
+  }
+
+  // Copy height array
+  auto& heights = getFloat1DRef("Height");
+
+  for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
+    heights[i] = myLayerNumbers[i];
   }
 
   // ----------------------------------------------------------------------------
