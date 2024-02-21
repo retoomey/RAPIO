@@ -295,7 +295,10 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
       output->setTime(outputTime);
       output->setTypeName("Fused2" + myTypeName);
 
+      // You must have a hmrg=/folder in your -o when forcing a writer
+      extraParams["onewriter"] = "hmrg";
       writeOutputProduct("2D", output, extraParams);
+      extraParams["onewriter"] = "";
     }
   }
 
@@ -304,7 +307,10 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   if (isProductWanted("3D")) { // -O="3D", -O="3D=NameWanted
     myLLGCache->setTime(outputTime);
     myLLGCache->setTypeName("Fused2" + myTypeName);
+    // You must have a netcdf=/folder in your -o when forcing a writer
+    extraParams["onewriter"] = "netcdf";
     writeOutputProduct("3D", myLLGCache, extraParams);
+    extraParams["onewriter"] = "";
   }
 
   // ---------------------------------------

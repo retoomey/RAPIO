@@ -262,7 +262,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
       for (size_t j = 0; j < num_y; ++j) {
         const size_t jflip = num_y - j - 1;
         for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-          data[jflip][i][z] = IOHmrg::fromHmrgValue(rawBuffer[at++], dataUnavailable,
+          data[z][jflip][i] = IOHmrg::fromHmrgValue(rawBuffer[at++], dataUnavailable,
               dataMissing,
               dataScale);
         }
@@ -444,7 +444,7 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llgp)
       // Same code as 2D though the data array type is different.  Could use a template method or macro
       for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
         for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-          rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i][z], dataUnavailable, dataMissing, dataScale);
+          rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
           if (++at >= count) {
             ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
             at = 0;

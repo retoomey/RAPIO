@@ -66,14 +66,31 @@ public:
     size_t           num_lons,
     size_t           num_levels);
 
+  // MRMS switches the dimension order of 2D (x,y) to 3D (z,x,y) which
+  // means we have the change how we get these.
+
+  /** Get the number of latitude cells */
+  virtual size_t
+  getNumLats() override
+  {
+    return myDims.size() > 1 ? myDims[1].size() : 0;
+  }
+
+  /** Get the number of longitude cells */
+  virtual size_t
+  getNumLons() override
+  {
+    return myDims.size() > 2 ? myDims[2].size() : 0;
+  }
+
   /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
    * any DataGrid writers like netcdf generic not knowing about our
    * special sparse formats. */
   virtual void
-  makeSparse();
+  preWrite(bool sparse) override;
 
   /** Make ourselves MRMS non-sparse iff we're sparse */
   virtual void
-  makeNonSparse();
+  postWrite(bool sparse) override;
 };
 }

@@ -75,10 +75,10 @@ protected:
    * any DataGrid writers like netcdf generic not knowing about our
    * special sparse formats. */
   virtual void
-  makeSparse() override;
+  preWrite(bool sparse) override;
 
   /** Make ourselves MRMS non-sparse iff we're sparse */
   virtual void
-  makeNonSparse() override;
+  postWrite(bool sparse) override;
 };
 }

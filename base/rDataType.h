@@ -189,6 +189,12 @@ public:
   virtual void setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
   { myUnits = units; }
 
+  /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
+  virtual void preWrite(bool sparse = false){ }
+
+  /** Post DataType after writing.  This can destroy temp arrays, etc. that were made just for writing. */
+  virtual void postWrite(bool sparse = false){ }
+
   /** Get a string from global attributes */
   inline bool
   getString(const std::string& name, std::string& out) const

@@ -390,6 +390,14 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     // Can call write multiple times for each output wanted.
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
     for (auto& w:writers) {
+      // Hardset writer to one only...this requires a writer=/path in -o to work
+      // For example 2D fusion forces hmrg binary by -o hmrg=/path and setting onewriter to hmrg
+      if (!outputParams["onewriter"].empty()) {
+        if (w.factory != outputParams["onewriter"]) {
+          continue;
+        }
+      }
+
       std::vector<Record> records;
       const bool success = IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
 

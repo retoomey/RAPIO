@@ -51,21 +51,21 @@ public:
   }
 
   /** Get the number of latitude cells */
-  size_t
+  virtual size_t
   getNumLats()
   {
     return myDims.size() > 0 ? myDims[0].size() : 0;
   }
 
   /** Get the number of longitude cells */
-  size_t
+  virtual size_t
   getNumLons()
   {
     return myDims.size() > 1 ? myDims[1].size() : 0;
   }
 
   /** Get the number of layers */
-  size_t
+  virtual size_t
   getNumLayers()
   {
     return myLayerNumbers.size();

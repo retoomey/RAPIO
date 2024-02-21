@@ -45,10 +45,13 @@ NetcdfLatLonHeightGrid::write(std::shared_ptr<DataType> dt,
   // and sparse 'outside'. So it's messy at this moment.
   LatLonHeightGrid * LLHG = (LatLonHeightGrid *) (dt.get());
 
-  LLHG->makeSparse(); // 3D to pixels, hiding 3D original from writer
+  // We want at this level so we can use flags
+  bool makeSparse = true;
+
+  LLHG->preWrite(makeSparse); // 3D to pixels, hiding 3D original from writer
   bool success = NetcdfDataGrid::write(dt, keys);
 
-  LLHG->makeNonSparse(); // Get back the 3D normal array for the caller.
+  LLHG->postWrite(makeSparse); // Get back the 3D normal array for the caller.
 
   return success;
 } // NetcdfLatLonHeightGrid::write

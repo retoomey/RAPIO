@@ -131,30 +131,25 @@ LLHGridN2D::fillPrimary(float value)
 }
 
 void
-LLHGridN2D::makeSparse()
+LLHGridN2D::preWrite(bool sparse)
 {
-  // Alpha code as I transition sparse ability out of the netcdf reader/writer..
-  // though at this point reading is still in the netcdf reader module.
-  // I think having sparse in the class not the netcdf writer makes more sense to keep the code
-  // clean.  However, to do this we need to implement non-writable arrays (a hidden ability)
-  // For alpha gonna hold onto the array ourselves...we should match makeSparse with
-  // makeNonSparse calls
-  LogInfo("--->Alpha Make sparse called on LLHGridN2D.\n");
-
-  // Humm do we want the ability to redo the sparse array?  Probably, since the data
-  // will change.
-  auto pixelptr = getFloat1D("pixel_x");
-
-  if (pixelptr != nullptr) {
-    LogInfo("Not making sparse since pixels already exists...\n");
-    return;
-  }
-
   // Copy height array
   auto& heights = getFloat1DRef("Height");
 
   for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
     heights[i] = myLayerNumbers[i];
+  }
+
+  if (!sparse) {
+    return;
+  }
+
+  // Check if sparse already...
+  auto pixelptr = getFloat1D("pixel_x");
+
+  if (pixelptr != nullptr) {
+    LogInfo("Not making sparse since pixels already exists...\n");
+    return;
   }
 
   // ----------------------------------------------------------------------------
@@ -186,7 +181,6 @@ LLHGridN2D::makeSparse()
     }
   }
 
-  LogInfo(">>>>NEEDED PIXELS " << neededPixels << "\n");
   // ----------------------------------------------------------------------------
   // Modify ourselves to be parse.  But we need to keep our actual data (probably)
   // Add a 'pixel' dimension...we can add (ONCE) without messing with current arrays
@@ -203,13 +197,6 @@ LLHGridN2D::makeSparse()
     dataunits = g->getUnits();
   }
 
-  // Move the primary out of the way and mark it hidden to writers...
-  // we don't want to delete because the caller may be using the array and has no clue
-  // about the sparse stuff
-  // We don't currently have a primary array...we store N LatLonGrids...
-  // changeName(Constants::PrimaryDataName, "DisabledPrimary");
-  // setVisible("DisabledPrimary", false); // turn off writing
-
   // New primary array is a sparse one.
   auto& pixels = addFloat1DRef(Constants::PrimaryDataName, dataunits, { 3 });
   const std::string Units = "dimensionless";
@@ -225,7 +212,6 @@ LLHGridN2D::makeSparse()
   size_t total  = 0;
   size_t total2 = 0;
 
-  LogInfo("Sizes: " << size << "(" << sizes[0] << ") and " << sizes[1] << ", " << sizes[2] << "\n");
   for (size_t i = 0; i < size; i++) { // ALPHA: is z matching order?
     auto g = myGrids[i];
     if (g == nullptr) { g = get(i); }
@@ -256,15 +242,16 @@ LLHGridN2D::makeSparse()
       }
     }
   }
-
-  LogInfo("Indirect total: " << total << " and " << total2 << "\n");
-  LogInfo("Need sparse: " << neededPixels << "  final sparse: " << at << "\n");
 } // LLHGridN2D::makeSparse
 
 void
-LLHGridN2D::makeNonSparse()
+LLHGridN2D::postWrite(bool sparse)
 {
-  LogInfo("------>Calling non sparse to restore LLHGridN2D\n");
+  // Nothing to undo here
+  if (!sparse) {
+    return;
+  }
+
   if (myDims.size() != 4) {
     return;
   }
@@ -278,9 +265,4 @@ LLHGridN2D::makeNonSparse()
 
   // Remove the dimension we added in makeSparse
   myDims.pop_back();
-
-  // Put back our saved primary array from the makeSparse above...
-  // We don't currently have a primary array
-  //  changeName("DisabledPrimary", Constants::PrimaryDataName);
-  //  setVisible(Constants::PrimaryDataName, true);
 }

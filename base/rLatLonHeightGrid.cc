@@ -7,7 +7,7 @@ using namespace std;
 std::string
 LatLonHeightGrid::getGeneratedSubtype() const
 {
-  return (formatString(myLocation.getHeightKM(), 5, 2));
+  return "full3D";
 }
 
 LatLonHeightGrid::LatLonHeightGrid()
@@ -86,30 +86,25 @@ LatLonHeightGrid::getProjection(const std::string& layer)
 }
 
 void
-LatLonHeightGrid::makeSparse()
+LatLonHeightGrid::preWrite(bool sparse)
 {
-  // Alpha code as I transition sparse ability out of the netcdf reader/writer..
-  // though at this point reading is still in the netcdf reader module.
-  // I think having sparse in the class not the netcdf writer makes more sense to keep the code
-  // clean.  However, to do this we need to implement non-writable arrays (a hidden ability)
-  // For alpha gonna hold onto the array ourselves...we should match makeSparse with
-  // makeNonSparse calls
-  LogInfo("--->Alpha Make sparse called on LLHGrid.\n");
+  // Copy height array always for writing
+  auto& heights = getFloat1DRef("Height");
 
-  // Humm do we want the ability to redo the sparse array?  Probably, since the data
-  // will change.
+  for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
+    heights[i] = myLayerNumbers[i];
+  }
+
+  if (!sparse) {
+    return;
+  }
+
+  // Check if sparse already...
   auto pixelptr = getFloat1D("pixel_x");
 
   if (pixelptr != nullptr) {
     LogInfo("Not making sparse since pixels already exists...\n");
     return;
-  }
-
-  // Copy height array
-  auto& heights = getFloat1DRef("Height");
-
-  for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
-    heights[i] = myLayerNumbers[i];
   }
 
   // ----------------------------------------------------------------------------
@@ -121,12 +116,7 @@ LatLonHeightGrid::makeSparse()
   size_t neededPixels   = 0;
   float lastValue       = backgroundValue;
 
-  LogInfo("Sizes are " << sizes[0] << ", " << sizes[1] << " " << sizes[2] << "\n");
   auto dataptr = getFloat3D(Constants::PrimaryDataName);
-
-  if (dataptr) {
-    LogInfo("--->pointer seems good?\n");
-  }
 
   for (size_t z = 0; z < sizes[0]; z++) {
     for (size_t x = 0; x < sizes[1]; x++) {
@@ -190,17 +180,20 @@ LatLonHeightGrid::makeSparse()
       }
     }
   }
-
-  LogInfo("Need sparse: " << neededPixels << "  final sparse: " << at << "\n");
-} // LatLonHeightGrid::makeSparse
+} // LatLonHeightGrid::preWrite
 
 void
-LatLonHeightGrid::makeNonSparse()
+LatLonHeightGrid::postWrite(bool sparse)
 {
-  LogInfo("------>Calling non sparse to restore LLHGrid RAM array.\n");
+  // Nothing to undo here
+  if (!sparse) {
+    return;
+  }
+
   if (myDims.size() != 4) {
     return;
   }
+
   // These depend on the source array anyway..so have to be regenerated
   // on next write
   deleteName(Constants::PrimaryDataName); // Deleting the sparse array
