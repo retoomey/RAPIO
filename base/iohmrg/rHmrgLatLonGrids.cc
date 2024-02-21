@@ -3,6 +3,7 @@
 #include "rOS.h"
 #include "rLatLonGrid.h"
 #include "rLatLonHeightGrid.h"
+#include "rLLHGridN2D.h"
 #include "rBinaryIO.h"
 
 using namespace rapio;
@@ -436,22 +437,46 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llgp)
     }
     success = true;
   } else {
-    LogInfo("HMRG writer: --Multi layer LatLonGrid--\n");
-    auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
+    if (auto llnptr = std::dynamic_pointer_cast<LLHGridN2D>(llgp)) {
+      LogInfo("HMRG writer: --Multi layer LatLonGrid (LLHGridN2D)--\n");
+      auto& lln = *llnptr;
 
-    for (size_t z = 0; z < num_z; ++z) {
-      // NOTE: flipped order from RadialSet array if you try to merge the code
-      // Same code as 2D though the data array type is different.  Could use a template method or macro
-      for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-          rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
-          if (++at >= count) {
-            ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
-            at = 0;
+      for (size_t z = 0; z < num_z; ++z) {
+        // Each 3D is a 2N layer here
+        auto g     = lln.get(z);
+        auto& data = g->getFloat2DRef();
+
+        for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
+          for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+            rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
+            if (++at >= count) {
+              ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+              at = 0;
+            }
+          }
+        }
+      }
+    } else {
+      LogInfo("HMRG writer: --Multi layer LatLonGrid--\n");
+
+      // Only for the 3D implementation
+      auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
+
+      for (size_t z = 0; z < num_z; ++z) {
+        // NOTE: flipped order from RadialSet array if you try to merge the code
+        // Same code as 2D though the data array type is different.  Could use a template method or macro
+        for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
+          for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+            rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
+            if (++at >= count) {
+              ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+              at = 0;
+            }
           }
         }
       }
     }
+
     if (at != 0) { // final left over
       ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
     }
