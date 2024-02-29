@@ -76,6 +76,16 @@ install(TARGETS rFusionRoster
 )
 
 ##################################################################
+# PointCloud
+add_executable(rPointCloud1
+  fusion/rPointCloud.cc
+)
+
+target_link_libraries(rPointCloud1 PRIVATE fusionshared PUBLIC rapio)
+install(TARGETS rPointCloud1
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+##################################################################
 # MakeFakeRadarData 
 add_executable(rMakeFakeRadarData
   fusion/rMakeFakeRadarData.cc

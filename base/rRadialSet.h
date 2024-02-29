@@ -130,6 +130,13 @@ public:
   std::shared_ptr<Array<float, 1> >
   getAzimuthVector(){ return getFloat1D("Azimuth"); }
 
+  /** Return quick ref to azimuths */
+  ArrayFloat1DRef
+  getAzimuthRef()
+  {
+    return (getFloat1D("Azimuth"))->ref();
+  }
+
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
   getAzimuthSpacingVector()
