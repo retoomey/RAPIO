@@ -71,7 +71,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       IONetcdf::isMRMSSparse(dimids, dimnames, dimsizes) : false;
 
     // Declare dimensions in data structure
-    dataGridSP->declareDims(dimsizes, dimnames);
+    dataGridSP->setDims(dimsizes, dimnames);
 
     auto dims = dataGridSP->getDims();
 

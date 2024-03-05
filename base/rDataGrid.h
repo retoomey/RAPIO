@@ -244,10 +244,19 @@ public:
     const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);
 
-  /** Declare the dimensions of array objects */
+  /** Declare the dimensions of array objects. */
   void
-  declareDims(const std::vector<size_t>& dimsizes,
-    const std::vector<std::string>     & dimnames);
+  setDims(const std::vector<size_t>& dimsizes,
+    const std::vector<std::string> & dimnames);
+
+  /** Add a new named dimension of given size to the datagrid.
+   * This shouldn't need to change current arrays since it's adding
+   */
+  void
+  addDim(const std::string& dimname, size_t dimsize)
+  {
+    myDims.push_back(DataGridDimension(dimname, dimsize));
+  };
 
   /** Get back node so can call methods on it */
   std::shared_ptr<DataArray>
@@ -321,7 +330,15 @@ public:
     // Map indexes to actual dimension sizes (generically)
     std::vector<size_t> sizes;
 
+    const size_t s = myDims.size();
+
     for (auto x: dimindexes) {
+      if (x >= s) { // 0, 1, 2  (dim = 3)
+        const std::string range = s > 0 ? "[0-" + std::to_string(s - 1) + "]" : "";
+        LogSevere("Attempting to add array using dimension index " << x <<
+          " but we have " << myDims.size() << " dimensions " << range << ".\n");
+        return nullptr;
+      }
       sizes.push_back(myDims[x].size()); // FIXME: Could check sizes
     }
 
@@ -343,7 +360,7 @@ public:
     }
 
     return ptr;
-  }
+  } // add
 
   /** Change name of a stored array.  Used for sparse/non-sparse array swapping */
   bool

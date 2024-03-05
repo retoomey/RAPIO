@@ -11,6 +11,10 @@ RAPIOPointCloudAlg::declarePlugins()
   // of the available plugin names
 
   // -------------------------------------------------------------
+  // Elevation Volume registration
+  PluginVolume::declare(this, "volume");
+
+  // -------------------------------------------------------------
   // TerrainBlockage plugin registration and creation
   PluginTerrainBlockage::declare(this, "terrain");
   // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
@@ -97,6 +101,14 @@ RAPIOPointCloudAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::stri
     myTerrainBlockage = tp->getNewTerrainBlockage(r->getLocation(), myRangeKMs, radarName);
   }
 
+  // -------------------------------------------------------------
+  // Elevation volume creation
+  auto volp = getPlugin<PluginVolume>("volume");
+
+  if (volp) {
+    myElevationVolume = volp->getNewVolume(myRadarName + "_" + myTypeName);
+  }
+
   // Generate output name and units.
   myWriteStage2Name  = "Point" + r->getTypeName();
   myWriteOutputUnits = r->getUnits();
@@ -138,6 +150,9 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
     return;
   }
 
+  // Always add to elevation volume
+  myElevationVolume->addDataType(r);
+
   // Every RadialSet will require terrain per gate for filters.
   // Run a polar terrain algorithm where the results are added to the RadialSet as
   // another array.
@@ -166,8 +181,21 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 
   const bool haveTerrain = rad.haveTerrain();
 
+  // A temp column buffer since final arrays will be static sized to RadialSet...
+  myValues.clear();
+  myLatDegs.clear();
+  myLonDegs.clear();
+  myHeightsKMs.clear();
+  myXs.clear();
+  myYs.clear();
+  myZs.clear();
+
+  size_t counter = 0;
+
   // FIXME: RadialSetIterator class might make cleaner code
   // This would be good for our data types to avoid having to track everything ourselves
+  size_t at = 0;
+
   for (size_t r = 0; r < radials; ++r) {
     LengthKMs distanceKMs = firstGateKMs;
     for (size_t g = 0; g < gates; ++g) {
@@ -178,7 +206,9 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       // Any non-good values, we skip...
       //
       auto& v = data[r][g];
-      if (!Constants::isGood(v)) { continue; }
+      if (!Constants::isGood(v)) {
+        continue;
+      }
 
       // --------------------------------------------
       // Any gates where beam bottom hits terrain, we skip
@@ -208,14 +238,15 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       const float x       = fabs(oLonRad - rLonRad) * earthR; // Arc length in meters
       const float y       = fabs(oLatRad - rLatRad) * earthR; // Arc length in meters
       const float z       = fabs(oHtKMs - rHtKMs) * 1000.0;   // Meters
-      const float r       = sqrtf(x * x + y * y + z * z);     // Distance formula
-      const float ux      = x / r;                            // units 'should' cancel so technically we're dimensionless
-      const float uy      = y / r;
-      const float uz      = z / r;
+      const float range   = sqrtf(x * x + y * y + z * z);     // Distance formula
+      const float ux      = x / range;                        // units 'should' cancel so technically we're dimensionless
+      const float uy      = y / range;
+      const float uz      = z / range;
 
       // The columns...I actually think they will want time as well to be honest.
       // FIXME: more fields probably for stage2 to use
-      static size_t counter = 0;
+      // FIXME: Make a container class for buffering all columns
+
       if (++counter < 10) {
         myValues.push_back(v);
         myLatDegs.push_back(oLatDeg);
@@ -231,8 +262,56 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   }
   LogInfo(gateProjection);
 
+  // Keep the projections for this RadialSet in the RadialSet as we buffer
+  // the volume within our output timeframe
+  // We could use gate/radial indexes but then would be a lot bigger
+  // FIXME: is zero allowed with netcdf or does it choke?
+  const size_t size = myValues.size();
+
+  rad.addDim("Points", size);
+
+  // I'm just storing in RadialSet to group it all for a debugging output if needed,
+  // and arrays are arrays so eh.
+  auto& vs = rad.addFloat1DRef("Values", myWriteOutputUnits, { 2 });
+
+  std::copy(myValues.begin(), myValues.end(), vs.data());
+  myValues.clear();
+
+  auto& lats = rad.addFloat1DRef("Latitude", "Degrees", { 2 });
+
+  std::copy(myLatDegs.begin(), myLatDegs.end(), lats.data());
+  myLatDegs.clear();
+
+  auto& lons = rad.addFloat1DRef("Longitude", "Degrees", { 2 });
+
+  std::copy(myLonDegs.begin(), myLonDegs.end(), lons.data());
+  myLonDegs.clear();
+
+  auto& hts = rad.addFloat1DRef("Heights", "Km", { 2 });
+
+  std::copy(myHeightsKMs.begin(), myHeightsKMs.end(), hts.data());
+  myHeightsKMs.clear();
+
+  auto& xs = rad.addFloat1DRef("UX", "Dimensionless", { 2 });
+
+  std::copy(myXs.begin(), myXs.end(), xs.data());
+  myXs.clear();
+
+  auto& ys = rad.addFloat1DRef("UY", "Dimensionless", { 2 });
+
+  std::copy(myYs.begin(), myYs.end(), ys.data());
+  myYs.clear();
+
+  auto& zs = rad.addFloat1DRef("UZ", "Dimensionless", { 2 });
+
+  std::copy(myZs.begin(), myZs.end(), zs.data());
+  myZs.clear();
+
   // For debugging..write radial set back out..this will include the terrain arrays now
-  // writeOutputProduct(r->getDataType(), r);
+  // The data for this RadialSet is now cached with it in the volume, and available
+  // as long as that RadialSet doesn't time out or get overwritten with new
+  // data.
+  ///writeOutputProduct(r->getDataType(), r);
 
   // If archive mode, write immediately.  Eh do we need a grouping counter?
   // FIXME: We could have a group counter, so say output every 10 tilts..which would
@@ -262,8 +341,29 @@ RAPIOPointCloudAlg::processNewData(rapio::RAPIOData& d)
     myDirty++;
 
     processRadialSet(r);
+
+    #if 0
+    // Create another as a test...
+    //
+    auto another = RadialSet::Create(
+      r->getTypeName(),
+      r->getUnits(),
+      r->getCenterLocation(),
+      r->getTime(),
+      1.5,
+      r->getDistanceToFirstGateM(),
+      r->getNumRadials(),
+      r->getNumGates());
+
+    another->setRadarName(r->getRadarName());
+    auto& v = another->getFloat2DRef(Constants::PrimaryDataName);
+    v[0][0] = 123;
+
+    myDirty++;
+    processRadialSet(another);
+    #endif // if 0
   }
-}
+} // RAPIOPointCloudAlg::processNewData
 
 void
 RAPIOPointCloudAlg::processHeartbeat(const Time& n, const Time& p)
@@ -284,6 +384,75 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
   if (myDirty < 1) { return; }
   myDirty = 0;
 
+  // ----------------------------------------------------------------------------
+  // Gather all current RadialSets in volume to output
+  // FIXME:We 'could' possible just process here and not save in the RadialSet.
+  // I like saving in the RadialSet for now for debugging options
+  //
+
+  // We need to process all tilts we currently have in the volume
+  // in this time period.  Each RadialSet already has all the information,
+  // just need to copy/group into a single output file.
+
+  // FIXME: needs to work with archive properly...for moment we wrap it
+  if (isDaemon()) {
+    purgeTimeWindow();
+  }
+
+  auto volume = myElevationVolume->getVolume();
+
+  // A temp column buffer since final arrays will be static size
+  myValues.clear();
+  myLatDegs.clear();
+  myLonDegs.clear();
+  myHeightsKMs.clear();
+  myXs.clear();
+  myYs.clear();
+  myZs.clear();
+
+  for (size_t i = 0; i < volume.size(); ++i) {
+    if (auto radialSetPtr = std::dynamic_pointer_cast<RadialSet>(volume[i])) {
+      auto& rad = *radialSetPtr;
+      LogInfo("----------->Gathering RadialSet at " << rad.getSubType() << " " << rad.getTime().getString() << "\n");
+
+      auto& vs   = rad.getFloat1DRef("Values");
+      auto& lats = rad.getFloat1DRef("Latitude");
+      auto& lons = rad.getFloat1DRef("Longitude");
+      auto& hts  = rad.getFloat1DRef("Heights");
+      auto& xs   = rad.getFloat1DRef("UX");
+      auto& ys   = rad.getFloat1DRef("UY");
+      auto& zs   = rad.getFloat1DRef("UZ");
+
+      // Append each to final output
+      myValues.resize(myValues.size() + vs.size());
+      std::copy(vs.begin(), vs.end(), myValues.end() - vs.size()); // append
+
+      myLatDegs.resize(myLatDegs.size() + lats.size());
+      std::copy(lats.begin(), lats.end(), myLatDegs.end() - lats.size());
+
+      myLonDegs.resize(myLonDegs.size() + lons.size());
+      std::copy(lons.begin(), lons.end(), myLonDegs.end() - lons.size());
+
+      myHeightsKMs.resize(myHeightsKMs.size() + hts.size());
+      std::copy(hts.begin(), hts.end(), myHeightsKMs.end() - hts.size());
+
+      myXs.resize(myXs.size() + xs.size());
+      std::copy(xs.begin(), xs.end(), myXs.end() - xs.size());
+
+      myYs.resize(myYs.size() + ys.size());
+      std::copy(ys.begin(), ys.end(), myYs.end() - ys.size());
+
+      myZs.resize(myZs.size() + zs.size());
+      std::copy(zs.begin(), zs.end(), myZs.end() - zs.size());
+    }
+  }
+
+  // Clear the volume for next time....
+  myElevationVolume->clearVolume();
+
+  // ----------------------------------------------------------------------------
+  // Now output the final storage to a single output file.
+  //
   const size_t size = myValues.size();
 
   // This stuff 'could' be emcapsulated into a class probably.
@@ -337,16 +506,6 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
 
   extraParams["showfilesize"] = "yes";
   writeOutputProduct(myWriteStage2Name, myCollectedData, extraParams);
-
-  // Clear all the vectors to handle next incoming RadialSet...
-  // FIXME: class so we avoid missing a field later
-  myValues.clear();
-  myLatDegs.clear();
-  myLonDegs.clear();
-  myHeightsKMs.clear();
-  myXs.clear();
-  myYs.clear();
-  myZs.clear();
 } // RAPIOPointCloudAlg::writeCurrentData
 
 int

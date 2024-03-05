@@ -11,6 +11,14 @@
 #include "rIOJSON.h"
 #include "rIOFile.h"
 
+// Baseline initialize
+// A lot of these link to plugins...so do we lazy init
+// into the plugin model
+#include "rDataFilter.h"
+#include "rIOWatcher.h"
+#include "rIOIndex.h"
+#include "rUnit.h"
+
 #include <memory>
 
 using namespace rapio;
@@ -44,6 +52,29 @@ RAPIOProgram::initializeBaseParsers()
 }
 
 void
+RAPIOProgram::initializeBaseline()
+{
+  // Many of these modules/abilities register with config to load
+  // settings
+
+  // -------------------------------------------------------------------
+  // Data filter support (compression endings)
+  DataFilter::introduceSelf();
+
+  // -------------------------------------------------------------------
+  // IO watch support
+  IOWatcher::introduceSelf();
+
+  // -------------------------------------------------------------------
+  // Index support
+  IOIndex::introduceSelf();
+
+  // -------------------------------------------------------------------
+  // Unit conversion support
+  Unit::initialize();
+}
+
+void
 RAPIOProgram::initializePlugins()
 {
   // Any ability base to program called here
@@ -73,6 +104,29 @@ RAPIOProgram::finalizeOptions(RAPIOOptions& o)
     p->processOptions(o);
   }
   processOptions(o);
+}
+
+bool
+RAPIOProgram::isWebServer(const std::string& key)
+{
+  for (auto p: myPlugins) {
+    if (p->getName() == key) {
+      return p->isActive();
+    }
+  }
+  return false;
+}
+
+bool
+RAPIOProgram::writeDirectOutput(const URL& path,
+  std::shared_ptr<DataType>              outputData,
+  std::map<std::string, std::string>     & outputParams)
+{
+  std::vector<Record> blackHole;
+
+  outputParams["filepathmode"] = "direct";
+
+  return IODataType::write(outputData, path.toString(), blackHole, "", outputParams);
 }
 
 void

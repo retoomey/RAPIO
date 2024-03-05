@@ -4,23 +4,15 @@
 #include "rRAPIOPlugin.h"
 #include "rError.h"
 #include "rEventLoop.h"
-#include "rEventTimer.h"
 #include "rTime.h"
 #include "rStrings.h"
 #include "rDataType.h"
 #include "rIODataType.h"
-#include "rIndexType.h"
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
 #include "rFactory.h"
 #include "rDataTypeHistory.h"
 #include "rConfigParamGroup.h"
-
-// Baseline initialize
-#include "rDataFilter.h"
-#include "rIOWatcher.h"
-#include "rIOIndex.h"
-#include "rUnit.h"
 
 #include <iostream>
 #include <string>
@@ -29,10 +21,11 @@ using namespace rapio;
 using namespace std;
 
 TimeDuration RAPIOAlgorithm::myMaximumHistory;
-Time RAPIOAlgorithm::myLastDataTime; // Defaults to epoch here
+Time RAPIOAlgorithm::myLastHistoryTime; // Defaults to epoch here
+std::string RAPIOAlgorithm::myReadMode; // Defaults to "" here
 
 void
-RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
+RAPIOAlgorithm::initializeOptions(RAPIOOptions& o)
 {
   // The realtime option for reading archive, realtime, etc.
   const std::string r = "r";
@@ -50,20 +43,6 @@ RAPIOAlgorithm::declareInputParams(RAPIOOptions& o)
   o.optional("h", "900", "History in seconds kept for inputs source(s).");
   o.addGroup("h", "TIME");
 
-  // Feature to add all 'GRID' options for cutting lat lon grid data...
-  // FIXME: Design Grid API that handles 2d and 3d and multiple grid options.
-  // Design APi to autovalid grid option integrity
-  // Toos many algs do this...
-  // o.optional("grid", "", "Mega super grid option");
-  // o.optional("t", "37 -100 20", "The top corner of grid");
-  //  o.optional("b", "30.5 -93 1", "The bottom corner of grid");
-  //  o.optional("s", "0.05 0.05 1", "The grid spacing");
-  // --grid="37 -100 20,30.5 -93 1, 0.05 0.05 1"
-} // RAPIOAlgorithm::declareInputParams
-
-void
-RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
-{
   o.optional("postwrite",
     "",
     "Simple executable to call post file writing using %filename%.");
@@ -74,6 +53,8 @@ RAPIOAlgorithm::declareOutputParams(RAPIOOptions& o)
     "Simple executable to call post FML file writing using %filename%.");
   o.addGroup("postfml", "I/O");
   o.setHidden("postfml");
+
+  return RAPIOProgram::initializeOptions(o);
 }
 
 void
@@ -92,48 +73,30 @@ RAPIOAlgorithm::addPostLoadedHelp(RAPIOOptions& o)
   declareAdvancedHelp(o);
 }
 
-void
-RAPIOAlgorithm::processOutputParams(RAPIOOptions& o)
-{
-  // Gather postwrite option
-  myPostWrite = o.getString("postwrite");
-  myPostFML   = o.getString("postfml");
-} // RAPIOAlgorithm::processOutputParams
-
-void
-RAPIOAlgorithm::processInputParams(RAPIOOptions& o)
-{
-  // Add the inputs we want to handle, using history setting...
-  float history = o.getFloat("h");
-
-  // We create the history flag for others, but we're not
-  // currently using it ourselves
-  if (history < 0.001) {
-    history = 900;
-    LogSevere(
-      "History -h value set too small, changing to " << history << "seconds.\n");
-  }
-  myMaximumHistory = TimeDuration::Seconds(history);
-
-  myReadMode = o.getString("r");
-} // RAPIOAlgorithm::processInputParams
-
 TimeDuration
 RAPIOAlgorithm::getMaximumHistory()
 {
   return (myMaximumHistory);
 }
 
+void
+RAPIOAlgorithm::purgeTimeWindow()
+{
+  if (isDaemon()) { // update to clock if real time algorithm
+    myLastHistoryTime = Time::CurrentTime();
+  }
+  DataTypeHistory::purgeTimeWindow(myLastHistoryTime);
+}
+
 bool
 RAPIOAlgorithm::inTimeWindow(const Time& aTime)
 {
-  // For realtime use the now time?
-  // Problem is we have all mode AND archive which won't match 'now' always
-  // We'll try using the time of the latest received
-  // product (which probably jitters a little).  I'm thinking this should be ok for most products)
-  const TimeDuration window = myLastDataTime - aTime;
+  if (isDaemon()) { // update to clock if real time algorithm
+    myLastHistoryTime = Time::CurrentTime();
+  }
+  const TimeDuration window = myLastHistoryTime - aTime;
 
-  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << myLastDataTime << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
+  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << myLastHistoryTime << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
   return (window <= myMaximumHistory);
 }
 
@@ -150,40 +113,6 @@ RAPIOAlgorithm::isArchive()
   // If we are missing -r, -r=old or -r=all we read archive
   return (myReadMode == "old") || (myReadMode == "all");
 }
-
-bool
-RAPIOAlgorithm::isWebServer()
-{
-  for (auto p: myPlugins) {
-    if (p->getName() == "web") {
-      return p->isActive();
-    }
-  }
-  return false;
-}
-
-void
-RAPIOAlgorithm::initializeBaseline()
-{
-  // Many of these modules/abilities register with config to load
-  // settings
-
-  // -------------------------------------------------------------------
-  // Data filter support (compression endings)
-  DataFilter::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // IO watch support
-  IOWatcher::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // Index support
-  IOIndex::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // Unit conversion support
-  Unit::initialize();
-} // RAPIOAlgorithm::initializeBaseline
 
 void
 RAPIOAlgorithm::initializePlugins()
@@ -206,20 +135,25 @@ RAPIOAlgorithm::initializePlugins()
 }
 
 void
-RAPIOAlgorithm::initializeOptions(RAPIOOptions& o)
-{
-  declareInputParams(o);  // Declare the input parameters used, default of
-                          // i, I, l...
-  declareOutputParams(o); // Declare the output parameters, default of o,
-
-  return RAPIOProgram::initializeOptions(o);
-}
-
-void
 RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
 {
-  processInputParams(o);  // Process stock input params declared above
-  processOutputParams(o); // Process stock output params declared above
+  // Add the inputs we want to handle, using history setting...
+  float history = o.getFloat("h");
+
+  // We create the history flag for others, but we're not
+  // currently using it ourselves
+  if (history < 0.001) {
+    history = 900;
+    LogSevere(
+      "History -h value set too small, changing to " << history << "seconds.\n");
+  }
+  myMaximumHistory = TimeDuration::Seconds(history);
+
+  myReadMode = o.getString("r");
+
+  // Gather postwrite option
+  myPostWrite = o.getString("postwrite");
+  myPostFML   = o.getString("postfml");
 
   return RAPIOProgram::finalizeOptions(o);
 }
@@ -255,15 +189,14 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
     // I think realtime we purge off the clock, but 'archive' mode we purge
     // based on the 'latest' record in archive.  This requires archives to be
     // time sorted to work correctly, We'll try doing a 'max' as latest.
-    if (isDaemon()) {
-      myLastDataTime = Time::CurrentTime();
-    } else {
+    if (!isDaemon()) {
       Time newTime = rec.getTime();
-      if (newTime > myLastDataTime) {
-        myLastDataTime = newTime;
+      if (newTime > myLastHistoryTime) {
+        myLastHistoryTime = newTime;
       }
     }
-    DataTypeHistory::purgeTimeWindow(myLastDataTime);
+    purgeTimeWindow();
+
     RAPIOData d(rec);
     processNewData(d);
   }
@@ -346,21 +279,6 @@ RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& de
     return p->resolveProductName(key, defaultName);
   }
   return defaultName;
-}
-
-bool
-RAPIOAlgorithm::writeDirectOutput(const URL& path,
-  std::shared_ptr<DataType>                outputData,
-  std::map<std::string, std::string>       & outputParams)
-{
-  // return (IODataType::write(outputData, path.toString()));
-  std::vector<Record> blackHole;
-
-  outputParams["filepathmode"] = "direct";
-  outputParams["postwrite"]    = myPostWrite;
-  outputParams["postfml"]      = myPostFML;
-
-  return IODataType::write(outputData, path.toString(), blackHole, "", outputParams); // Default write single file
 }
 
 void

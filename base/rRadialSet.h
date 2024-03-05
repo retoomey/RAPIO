@@ -107,6 +107,8 @@ public:
     myElevAngleDegs = targetElev;
     myElevCos       = cos(targetElev * DEG_TO_RAD);
     myElevTan       = tan(targetElev * DEG_TO_RAD);
+    // We also use elevation as our subtype, so update that
+    setSubType(getGeneratedSubtype());
   };
 
   /** Set the radar name for this radial set */

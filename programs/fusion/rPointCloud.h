@@ -63,6 +63,9 @@ protected:
   /** Store collected data in a generic DataGrid */
   std::shared_ptr<DataGrid> myCollectedData;
 
+  /** Store elevation volume handler */
+  std::shared_ptr<Volume> myElevationVolume;
+
   /** Store terrain blockage algorithm used */
   std::shared_ptr<TerrainBlockage> myTerrainBlockage;
 

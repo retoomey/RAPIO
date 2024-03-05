@@ -6,7 +6,6 @@
 #include <rRAPIOPlugin.h>
 
 namespace rapio {
-// class RAPIOPlugin;
 class WebMessage;
 
 /**
@@ -48,7 +47,7 @@ public:
 
   /** Initialize any base modules requiring configuration */
   virtual void
-  initializeBaseline(){ };
+  initializeBaseline();
 
   /** After adding wanted inputs and indexes, execute the algorithm */
   virtual void
@@ -137,6 +136,21 @@ protected:
   /** Was the macro applied on leftovers? */
   bool
   isMacroApplied(){ return myMacroApplied; }
+
+  /** Are we running a web server? */
+  bool
+  isWebServer(const std::string& key = "web");
+
+  /** Write data based on suffix directly to a given file key,
+   * without notification.  You normally want to call writeOutputProduct
+   * which will autogenerate file names, multi-output and notify, etc.
+   * I'm using this for tiles at moment..I may refactor these two write
+   * functions at some point
+   */
+  virtual bool
+  writeDirectOutput(const URL         & path,
+    std::shared_ptr<DataType>         outputData,
+    std::map<std::string, std::string>& outputParams);
 
   /** Clean up plugins */
   // ~RAPIOProgram(){

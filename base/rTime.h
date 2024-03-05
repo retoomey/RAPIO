@@ -162,7 +162,7 @@ public:
 
   /** Gets string output from time passing in a pattern string */
   std::string
-  getString(const std::string&) const;
+  getString(const std::string& key = "%Y%m%d-%H%M%S.%/ms") const;
 
   /** Try to set our values from a string output and pattern string */
   bool

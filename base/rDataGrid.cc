@@ -41,7 +41,7 @@ DataGrid::init(const std::string & aTypeName,
   setDataAttributeValue("Unit", "dimensionless", Units);
   myLocation = center;
   myTime     = datatime;
-  declareDims(dimsizes, dimnames);
+  setDims(dimsizes, dimnames);
   return true;
 }
 
@@ -141,8 +141,8 @@ DataGrid::getNodeIndex(const std::string& name)
 }
 
 void
-DataGrid::declareDims(const std::vector<size_t>& dimsizes,
-  const std::vector<std::string>               & dimnames)
+DataGrid::setDims(const std::vector<size_t>& dimsizes,
+  const std::vector<std::string>           & dimnames)
 {
   // Store updated dimension info
   myDims.clear();
@@ -171,7 +171,7 @@ DataGrid::declareDims(const std::vector<size_t>& dimsizes,
     auto array = l->getNewArray();
     array->resize(sizes);
   }
-} // DataGrid::declareDims
+} // DataGrid::setDims
 
 namespace {
 void

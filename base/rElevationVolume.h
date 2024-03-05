@@ -82,6 +82,13 @@ public:
     return nullptr;
   }
 
+  /** Clear the entire volume */
+  void
+  clearVolume()
+  {
+    myVolume.clear();
+  }
+
   /** Purge data base using given time as current.
    * FIXME: out of time order data will jitter here */
   void

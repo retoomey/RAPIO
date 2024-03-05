@@ -39,26 +39,6 @@ public:
   virtual void
   addPostLoadedHelp(RAPIOOptions& o) override;
 
-  /** Declare input parameter options (Called before option parse) */
-  virtual void
-  declareInputParams(RAPIOOptions& o);
-
-  /** Declare output parameter options (Called before option parse) */
-  virtual void
-  declareOutputParams(RAPIOOptions& o);
-
-  /** Process output parameter options (Called after option parse) */
-  virtual void
-  processOutputParams(RAPIOOptions& o);
-
-  /** Process input parameter options (Called after option parse) */
-  virtual void
-  processInputParams(RAPIOOptions& o);
-
-  /** Initialize system wide setup */
-  virtual void
-  initializeBaseline() override;
-
   /** Add a static key for the -O help.  Note that keys can be static, such as
    * '2D' to refer to a class of product, or currently you can also use the
    * DataType typename as a dynamic key. This allows turning on/off products
@@ -102,10 +82,10 @@ public:
    * I'm using this for tiles at moment..I may refactor these two write
    * functions at some point
    */
-  virtual bool
-  writeDirectOutput(const URL         & path,
-    std::shared_ptr<DataType>         outputData,
-    std::map<std::string, std::string>& outputParams);
+  // virtual bool
+  // writeDirectOutput(const URL         & path,
+  //   std::shared_ptr<DataType>         outputData,
+  //   std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
@@ -129,21 +109,21 @@ public:
   static TimeDuration
   getMaximumHistory();
 
+  /** Do a purge of time based histories */
+  static void
+  purgeTimeWindow();
+
   /** Is given time in the time window from -h */
   static bool
   inTimeWindow(const Time& aTime);
 
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
-  bool
+  static bool
   isDaemon();
 
   /** Are we reading old records? */
-  bool
+  static bool
   isArchive();
-
-  /** Are we running a web server? */
-  bool
-  isWebServer();
 
 protected:
 
@@ -156,11 +136,12 @@ protected:
   /** History time for index storage */
   static TimeDuration myMaximumHistory;
 
-  /** The time of last record received */
-  static Time myLastDataTime;
+  /** The end time of history window.  Which typically in archive is
+   * the time of latest record received, or slightly behind current time */
+  static Time myLastHistoryTime;
 
   /** The record read mode */
-  std::string myReadMode;
+  static std::string myReadMode;
 
 protected:
 
