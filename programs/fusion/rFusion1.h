@@ -82,7 +82,7 @@ public:
     const std::vector<DataType *>       pointers,
     const std::vector<DataProjection *> projectors,
     const Time                          & rTime,
-    Stage2Data                          & stage2
+    std::shared_ptr<VolumeValueIO>      stage2p
   );
 
   /** Process a volume generating stage 2 output */

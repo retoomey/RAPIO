@@ -5,20 +5,23 @@
 using namespace rapio;
 
 void
-Stage2Data::add(float n, float d, short x, short y, short z)
+// Stage2Data::add(float n, float d, short x, short y, short z)
+Stage2Data::add(VolumeValue * vvp, short x, short y, short z)
 {
   const bool compressMissing = true;
+  // Our particular resolver VolumeValue
+  auto& vv = *(VolumeValueWeightAverage *) (vvp);
 
-  if (compressMissing && (n == Constants::MissingData)) {
+  if (compressMissing && (vv.topSum == Constants::MissingData)) {
     // Only store x,y,z for a missing
     // Since missing tends to be grouped in space, we'll do a simple RLE to compress x,y,z locations
     // Storing a bit per x,y,z. marking MissingData
     size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
     myMissingSet.set(i, 1);
     myAddMissingCounter++;
-  } else if (n == Constants::DataUnavailable) { // We shouldn't send this right?
+  } else if (vv.topSum == Constants::DataUnavailable) { // We shouldn't send this right?
   } else {
-    myTable->add(n, d, x, y, z);
+    myTable->add(vv.topSum, vv.bottomSum, x, y, z);
   }
 }
 
@@ -66,7 +69,7 @@ Stage2Data::RLE()
 } // Stage2Data::RLE
 
 void
-Stage2Data::send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName)
+Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
 {
   // Run length encode the missing bit array.  Since missing groups up this saves quite
   // a bit of space.

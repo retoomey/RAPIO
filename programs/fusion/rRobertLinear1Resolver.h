@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rVolumeValueResolver.h"
+#include "rStage2Data.h"
 
 namespace rapio {
 /* RobertLinear1Resolver
@@ -32,7 +33,31 @@ public:
   virtual std::shared_ptr<VolumeValueResolver>
   create(const std::string & params) override;
 
+  /** Calculate using VolumeValue inputs, our set of outputs in VolumeValue.*/
   virtual void
-  calc(VolumeValue& vv) override;
+  calc(VolumeValue * vvp) override;
+
+  /** We're going to use the weighted average */
+  virtual std::shared_ptr<VolumeValue>
+  getVolumeValue()
+  {
+    return std::make_shared<VolumeValueWeightAverage>();
+  }
+
+  /** Initialize a volume value IO for sending data.  Typically called by stage1 to
+   * prepare to send the grid resolved values */
+  virtual std::shared_ptr<VolumeValueIO>
+  initForSend(
+    const std::string   & radarName,
+    const std::string   & typeName,
+    const std::string   & units,
+    const LLH           & center,
+    size_t              xBase,
+    size_t              yBase,
+    std::vector<size_t> dims
+  )
+  {
+    return std::make_shared<Stage2Data>(radarName, typeName, units, center, xBase, yBase, dims);
+  }
 };
 }

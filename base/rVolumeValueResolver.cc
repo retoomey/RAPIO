@@ -9,25 +9,28 @@
 using namespace rapio;
 
 void
-AzimuthVVResolver::calc(VolumeValue& vv)
+AzimuthVVResolver::calc(VolumeValue * vvp)
 {
   // Output value is the virtual azimuth
-  vv.dataValue   = vv.virtualAzDegs;
-  vv.dataWeight1 = 1.0;
+  auto& vv = *vvp;
+
+  vv.dataValue = vv.virtualAzDegs;
 }
 
 void
-RangeVVResolver::calc(VolumeValue& vv)
+RangeVVResolver::calc(VolumeValue * vvp)
 {
   // Output value is the virtual range
-  vv.dataValue   = vv.virtualRangeKMs;
-  vv.dataWeight1 = 1.0;
+  auto& vv = *vvp;
+
+  vv.dataValue = vv.virtualRangeKMs;
 }
 
 void
-TerrainVVResolver::calc(VolumeValue& vv)
+TerrainVVResolver::calc(VolumeValue * vvp)
 {
   // bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
+  auto& vv       = *vvp;
   bool haveLower = queryLower(vv);
 
   // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
@@ -47,7 +50,6 @@ TerrainVVResolver::calc(VolumeValue& vv)
       vv.dataValue  = vv.dataValue * vv.dataValue;
     }
   }
-  vv.dataWeight1 = 1.0;
 }
 
 void

@@ -22,10 +22,11 @@ RobertLinear1Resolver::create(const std::string & params)
 }
 
 void
-RobertLinear1Resolver::calc(VolumeValue& vv)
+RobertLinear1Resolver::calc(VolumeValue * vvp)
 {
   // ------------------------------------------------------------------------------
   // Query information for above and below the location
+  auto& vv       = *(VolumeValueWeightAverage *) (vvp);
   bool haveLower = queryLower(vv);
   bool haveUpper = queryUpper(vv);
 
@@ -129,6 +130,8 @@ RobertLinear1Resolver::calc(VolumeValue& vv)
     }
   }
 
-  vv.dataValue   = v;
-  vv.dataWeight1 = vv.virtualRangeKMs;
+  // FIXME: haven't tested this since we use Lak's design almost exclusively now
+  vv.dataValue = v;
+  vv.topSum    = v * vv.virtualRangeKMs;
+  vv.bottomSum = vv.virtualRangeKMs;
 } // calc

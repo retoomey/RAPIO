@@ -91,9 +91,10 @@ countValue(const bool good, const double wt, const double value, bool& missingMa
 }
 
 void
-LakResolver1::calc(VolumeValue& vv)
+LakResolver1::calc(VolumeValue * vvp)
 {
   // Count each value if it contributes, if masks are covered than make missing
+  auto& vv        = *(VolumeValueWeightAverage *) (vvp);
   double totalWt  = 0.0;
   double totalsum = 0.0;
   size_t count    = 0;
@@ -217,14 +218,18 @@ LakResolver1::calc(VolumeValue& vv)
     // It looks like the math is the same if we pass the range downstream or
     // resolve it now. Possibly we can compact the range in files better similar
     // to what merger does.  So we'll make the weight just range in stage 2
-    //   vv.dataValue   = rw * totalsum; // num
-    //   vv.dataWeight1 = rw * totalWt;  // dem
+    //   vv.topSum   = rw * totalsum; // num
+    //   vv.bottomSum = rw * totalWt;  // dem
     const double aV = totalsum / totalWt;
-    vv.dataValue   = rw * aV; // Stage2 just makes v = dataValue/dataWeight1
-    vv.dataWeight1 = rw;
+    vv.dataValue = aV;
+    vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
+    vv.bottomSum = rw;
   } else {
     // Background.
-    vv.dataValue   = missingMask ? Constants::MissingData : Constants::DataUnavailable;
-    vv.dataWeight1 = 1.0;
+    // FIXME: Considering a background flag in VolumeValue
+    // Note: dataValue is direct 2D output, top/bottom for stage2 here
+    vv.dataValue = missingMask ? Constants::MissingData : Constants::DataUnavailable;
+    vv.topSum    = vv.dataValue; // Humm our stage2 actually checks this for missing value
+    vv.bottomSum = 1.0;          // ignored for missing
   }
 } // calc

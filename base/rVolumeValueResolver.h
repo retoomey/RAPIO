@@ -8,6 +8,8 @@
 #include <rRadialSetLookup.h>
 
 namespace rapio {
+class RAPIOAlgorithm;
+
 /** Organizer of outputs for a layer, typically upper tilt or lower tilt
  * around the location of interest.
  */
@@ -44,7 +46,9 @@ public:
   }
 };
 
-/** Organizer for in/out of a VolumeValueResolver.
+/** Organizer for in/out of a VolumeValueResolver for resolving the output of
+ * a single grid cell.
+ *
  * These are available data values for a volume resolver to use to interpolate
  * or extrapolate data values involving tilts and volumes.
  *
@@ -61,7 +65,7 @@ protected:
 public:
 
   /** Ensure cleared out on construction..it should be */
-  VolumeValue() : dataValue(0.0), dataWeight1(1.0) // Default to 1.0 since final = v/w
+  VolumeValue() : dataValue(0.0) // Default to 1.0 since final = v/w
   {
     layer[0]   = layer[1] = layer[2] = layer[3] = nullptr;
     project[0] = project[1] = project[2] = project[3] = nullptr;
@@ -117,11 +121,63 @@ public:
   double sinGcdIR;           ///< Cached sin GCD IR ratio
   double cosGcdIR;           ///< Cached cos GCD IR ratio
 
+  // We have a single output, which is used for direct grid output for stage1. This is typically
+  // not what is passed to stage2, which can be more complicated due to merging or appending.
+  // That usually requires more fields, which are added by subclasses of VolumeValue.
+
   // OUTPUTS ---------------------
-  double dataValue;   ///< Final output calculated data value by resolver
-  double dataWeight1; ///< Final output weight1 by resolver (1 by default for averaging)
+  double dataValue; ///< Final output calculated data value by resolve
+  // Subclasses can add addition output fields
+  // double dataWeight1; ///< Final output weight1 by resolver (1 by default for averaging)
 };
 
+/** A Volume value resolver used for the standard merger using weighted averaging
+ * of values */
+class VolumeValueWeightAverage : public VolumeValue
+{
+public:
+  float topSum;    ///< Top sum of values passed to stage2
+  float bottomSum; ///< Bottom sum of weights passed to stage2
+};
+
+/** Class responsible for inputting/outputting the results of an entire grid of VolumeValue
+ * calculations.  For averaging merger, this writes raw files which are read by stage2.
+ * For velocity appending this might write a different raw or netcdf file. */
+class VolumeValueIO : public Utility
+{
+public:
+  /** Create IO class */
+  VolumeValueIO(){ };
+
+  /** Initialize a volume value IO for sending data.  Typically called by stage1 to
+   * prepare to send the grid resolved values */
+  virtual std::shared_ptr<VolumeValueIO>
+  initForSend(
+    const std::string   & radarName,
+    const std::string   & typeName,
+    const std::string   & units,
+    const LLH           & center,
+    size_t              xBase,
+    size_t              yBase,
+    std::vector<size_t> dims
+  )
+  {
+    // Return a dummy class (us) that does nothing
+    return std::make_shared<VolumeValueIO>();
+  }
+
+  /** Add data to a grid cell for sending to stage2, used by stage one.
+   * This is called for every grid cell. */
+  virtual void
+  add(VolumeValue * vvp, short x, short y, short z){ };
+
+  /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
+  virtual void
+  send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
+  {
+    LogInfo("This resolver doesn't currently send stage2 data.\n");
+  }
+};
 
 /** Volume value resolver */
 class VolumeValueResolver : public Utility
@@ -179,11 +235,28 @@ public:
   }
 
   /** Calculate/interpret values between layers */
-  virtual void calc(VolumeValue& vv){ vv.dataValue = Constants::DataUnavailable; }
+  virtual void calc(VolumeValue * vv){ vv->dataValue = Constants::DataUnavailable; }
 
   /** Calculate vertical height due to a degree shift (for inside beamwidth checking) */
   void
   heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs);
+
+  /** Return the VolumeValue class used for this resolver.  This allows resolvers to
+   * create/store as much output as they want.  It is used to pass in our database of inputs
+   * to the resolver and then generate the various outputs */
+  virtual std::shared_ptr<VolumeValue>
+  getVolumeValue()
+  {
+    return std::make_shared<VolumeValue>();
+  }
+
+  /** Return the VolumeValueOutputter class used for this resolver.  This allows resolvers to
+   * write/read final output as they want. */
+  virtual std::shared_ptr<VolumeValueIO>
+  getVolumeValueIO()
+  {
+    return std::make_shared<VolumeValueIO>();
+  }
 
 private:
 
@@ -302,7 +375,7 @@ public:
   }
 
   virtual void
-  calc(VolumeValue& vv) override;
+  calc(VolumeValue * vv) override;
 
   /** Help function, subclasses return help information. */
   virtual std::string
@@ -330,7 +403,7 @@ public:
   }
 
   virtual void
-  calc(VolumeValue& vv) override;
+  calc(VolumeValue * vv) override;
 
   /** Help function, subclasses return help information. */
   virtual std::string
@@ -358,7 +431,7 @@ public:
   }
 
   virtual void
-  calc(VolumeValue& vv) override;
+  calc(VolumeValue * vv) override;
 
   /** Help function, subclasses return help information. */
   virtual std::string

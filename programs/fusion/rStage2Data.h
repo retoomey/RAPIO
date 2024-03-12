@@ -7,6 +7,7 @@
 #include <rRAPIOData.h>
 #include <rDataGrid.h>
 #include <rBinaryTable.h>
+#include <rVolumeValueResolver.h>
 
 #include <vector>
 
@@ -23,7 +24,7 @@ class RAPIOFusionOneAlg;
  *
  * @author Robert Toomey
  */
-class Stage2Data : public Data {
+class Stage2Data : public VolumeValueIO {
 public:
   /** Create a stage two data */
   Stage2Data(const std::string& radarName,
@@ -62,12 +63,12 @@ public:
   // Stage one adding and sending or 'finalizing' values...
 
   /** Add data to us for sending to stage2, only used by stage one */
-  void
-  add(float n, float d, short x, short y, short z);
+  virtual void
+  add(VolumeValue * vvp, short x, short y, short z) override;
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
-  void
-  send(RAPIOFusionOneAlg * alg, Time aTime, const std::string& asName);
+  virtual void
+  send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName) override;
 
   // -----------------------------------------------------------
   // Stage two receiving and getting values...

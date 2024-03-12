@@ -521,8 +521,8 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   const std::vector<double>                  levels, // subtypes/elevation angles
   const std::vector<DataType *>              pointers,
   const std::vector<DataProjection *>        projectors,
-  const Time                                 & rTime,  // Time for writing a 2D debug layer
-  Stage2Data                                 & stage2) // FIXME: adding to stage2 point cloud will have to be made thread safe
+  const Time                                 & rTime, // Time for writing a 2D debug layer
+  std::shared_ptr<VolumeValueIO>             stage2p)
 {
   // Prepping for threading layers here.  Since each layer is independent
   // in memory we 'should' be able to thread them with minimum locking.  This
@@ -542,13 +542,15 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   const size_t numX = outg.getNumX();
 
   // Set the value object for resolver
-  VolumeValue vv;
+  auto& resolver = *myResolver;
+  std::shared_ptr<VolumeValue> vvsp = resolver.getVolumeValue();
+  auto& vv   = *vvsp;
+  auto * vvp = vvsp.get();
 
   vv.cHeight        = myRadarCenter.getHeightKM(); // FIXME: Why not all location info?
   vv.layerHeightKMs = heightsKM[layer];
 
-  auto& resolver = *myResolver;
-  auto& ev       = *myElevationVolume;
+  auto& ev = *myElevationVolume;
 
   // Each 2D layer is independent so threading here should be ok
   auto output    = myLLGCache->get(layer);
@@ -618,8 +620,10 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         attemptCount++;
         ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
         llp.getAzDegsAt(vv.virtualAzDegs);
-        resolver.calc(vv);
-        stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
+        resolver.calc(vvp);
+        if (stage2p) {
+          stage2p->add(vvp, x, y, layer);
+        }
       } // endX
     }   // endY
   } else {
@@ -674,13 +678,12 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         attemptCount++;
         ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
         llp.getAzDegsAt(vv.virtualAzDegs);
-        resolver.calc(vv);
+        resolver.calc(vvp);
 
-        // Ok all resolvers pass 1 for the weight by default
-        gridtest[y][x] = vv.dataValue / vv.dataWeight1;
+        gridtest[y][x] = vv.dataValue;
 
-        if (outputStage2) {
-          stage2.add(vv.dataValue, vv.dataWeight1, x, y, layer);
+        if (outputStage2 && stage2p) {
+          stage2p->add(vvp, x, y, layer);
         }
       } // endX
     }   // endY
@@ -737,15 +740,20 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   auto heightsKM               = outg.getHeightsKM();
   std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
   size_t totalLayer            = outg.getNumX() * outg.getNumY() * outg.getNumZ();
-  Stage2Data stage2(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
-    outg.getStartY(),
-    bitsizes);
+
+  // Resolver should tell us how to write
+  auto stage2IO = myResolver->getVolumeValueIO();
+
+  if (stage2IO) {
+    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
+      outg.getStartY(), bitsizes);
+  }
 
   size_t attemptCount = 0;
 
   // Handle all layers
   for (size_t layer = 0; layer < heightsKM.size(); layer++) {
-    attemptCount += processHeightLayer(layer, levels, pointers, projectors, rTime, stage2);
+    attemptCount += processHeightLayer(layer, levels, pointers, projectors, rTime, stage2IO);
   }
 
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
@@ -757,8 +765,10 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
     LLH aLocation;
     // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
     Time aTime = rTime; // The time of the data matches the incoming data
-    LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
-    stage2.send(this, aTime, myWriteStage2Name);
+    if (stage2IO) {
+      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
+      stage2IO->send(this, aTime, myWriteStage2Name);
+    }
   }
 } // RAPIOFusionOneAlg::processNewData
 
