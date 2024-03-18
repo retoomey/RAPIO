@@ -15,6 +15,7 @@ rAlgConfigFile.h
 rAlgorithm.h
 rArith.h
 rArray.h
+rAttributeDataType.h
 rAWS.h
 rBimap.h
 rBinaryIO.h
@@ -129,6 +130,7 @@ set(SOURCE_FILES
 ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
+rAttributeDataType.cc
 rAWS.cc
 rBimap.cc
 rBinaryIO.cc

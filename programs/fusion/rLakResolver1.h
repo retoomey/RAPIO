@@ -18,6 +18,10 @@ class LakResolver1 : public VolumeValueResolver
 {
 public:
 
+  // ---------------------------------------------------
+  // Functions for declaring available to command line
+  //
+
   /** Introduce into VolumeValueResolver factory */
   static void
   introduceSelf();
@@ -30,31 +34,28 @@ public:
   virtual std::shared_ptr<VolumeValueResolver>
   create(const std::string & params) override;
 
-  /** Calculate using VolumeValue inputs, our set of outputs in VolumeValue.*/
-  virtual void
-  calc(VolumeValue * vvp) override;
+  // ---------------------------------------------------
+  // Functions for declaring how to create/process data
+  // for a stage2
+  //
 
   /** We're going to use the weighted average */
   virtual std::shared_ptr<VolumeValue>
-  getVolumeValue()
+  getVolumeValue() override
   {
     return std::make_shared<VolumeValueWeightAverage>();
   }
 
-  /** Initialize a volume value IO for sending data.  Typically called by stage1 to
-   * prepare to send the grid resolved values */
+  /** Return the VolumeValueOutputter class used for this resolver.  This allows resolvers to
+   * write/read final output as they want. */
   virtual std::shared_ptr<VolumeValueIO>
-  initForSend(
-    const std::string   & radarName,
-    const std::string   & typeName,
-    const std::string   & units,
-    const LLH           & center,
-    size_t              xBase,
-    size_t              yBase,
-    std::vector<size_t> dims
-  )
+  getVolumeValueIO() override
   {
-    return std::make_shared<Stage2Data>(radarName, typeName, units, center, xBase, yBase, dims);
+    return std::make_shared<Stage2Data>();
   }
+
+  /** Calculate using VolumeValue inputs, our set of outputs in VolumeValue.*/
+  virtual void
+  calc(VolumeValue * vvp) override;
 };
 }

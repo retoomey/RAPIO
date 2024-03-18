@@ -17,7 +17,7 @@ std::string DataType::DATATYPE_PREFIX = "{source}/{datatype}{/subtype}/{time}";
 // Example: dirName/TIMESTRING_Reflectivity_00.50 plus writer suffix (the subdirs flat flag from WDSS2)
 std::string DataType::DATATYPE_PREFIX_FLAT = "{time}_{source}_{datatype}{_subtype}";
 
-DataType::DataType() : myAttributes(std::make_shared<DataAttributeList>()), myTime(Time::CurrentTime()), myReadFactory(
+DataType::DataType() : myTime(Time::CurrentTime()), myReadFactory(
     "default"), myTypeName("not set")
 { }
 
@@ -69,26 +69,6 @@ DataType::setSubType(const std::string& s)
   } else {
     setDataAttributeValue("SubType", s);
   }
-}
-
-void
-DataType::setDataAttributeValue(
-  const std::string& key,
-  const std::string& value,
-  const std::string& unit
-)
-{
-  // Don't allow empty keys or values
-  if (value.empty() || key.empty()) {
-    return;
-  }
-
-  // Stick as a pair into attributes.
-  auto one = key + "-unit";
-  auto two = key + "-value";
-
-  setString(one, unit);
-  setString(two, value);
 }
 
 bool

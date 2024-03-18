@@ -151,7 +151,7 @@ public:
 
   /** Initialize a volume value IO for sending data.  Typically called by stage1 to
    * prepare to send the grid resolved values */
-  virtual std::shared_ptr<VolumeValueIO>
+  virtual bool
   initForSend(
     const std::string   & radarName,
     const std::string   & typeName,
@@ -162,8 +162,7 @@ public:
     std::vector<size_t> dims
   )
   {
-    // Return a dummy class (us) that does nothing
-    return std::make_shared<VolumeValueIO>();
+    return false;
   }
 
   /** Add data to a grid cell for sending to stage2, used by stage one.

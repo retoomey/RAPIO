@@ -26,7 +26,11 @@ class RAPIOFusionOneAlg;
  */
 class Stage2Data : public VolumeValueIO {
 public:
-  /** Create a stage two data */
+
+  /** Empty creation for stl */
+  Stage2Data(){ }
+
+  /** Create a stage two data (for receive at moment) */
   Stage2Data(const std::string& radarName,
     const std::string         & typeName,
     const std::string         & units,
@@ -61,6 +65,36 @@ public:
 
   // -----------------------------------------------------------
   // Stage one adding and sending or 'finalizing' values...
+
+  /** Initialize a volume value IO for sending data.  Typically called by stage1 to
+   * prepare to send the grid resolved values */
+  virtual bool
+  initForSend(
+    const std::string   & radarName,
+    const std::string   & typeName,
+    const std::string   & units,
+    const LLH           & center,
+    size_t              xBase,
+    size_t              yBase,
+    std::vector<size_t> dims
+  ) override
+  {
+    // Offload to a binary table, even though we might write netcdf
+    // FIXME: The netcdf requires a copy vs raw which doesn't.  We could make two
+    // subclasses to optimize for each usage case at some point
+    myMissingSet        = Bitset(dims, 1);
+    myAddMissingCounter = 0;
+    myDimensions        = dims;
+    myTable = std::make_shared<FusionBinaryTable>();
+    myTable->setString("Sourcename", radarName);
+    myTable->setString("Radarname", radarName);
+    myTable->setString("Typename", typeName);
+    myTable->setUnits(units);
+    myTable->setLocation(center);
+    myTable->setLong("xBase", xBase);
+    myTable->setLong("yBase", yBase);
+    return true;
+  }
 
   /** Add data to us for sending to stage2, only used by stage one */
   virtual void

@@ -186,7 +186,13 @@ public:
     // Lookup for read/write factories
     myDataType     = "FusionBinaryTable";
     myDataPosition = 0;
+    myFile         = 0;
   }
+
+  /** Destroy a FusionBinaryTable, ensuring any open files are closed.
+   * This is important especially for the streaming mode that doesn't
+   * necessarily finish reading. */
+  ~FusionBinaryTable();
 
   /** Read as a stream using get() vs reading into storage.  This
    * is for reading massive datasets.  The default is false  */

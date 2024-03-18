@@ -432,6 +432,15 @@ RObsBinaryTable::dumpToText(std::ostream& o)
   return true;
 } // RObsBinaryTable::dumpToText
 
+FusionBinaryTable::~FusionBinaryTable()
+{
+  // Ensure any open stream file is closed
+  if (myFile != 0) {
+    fclose(myFile);
+    myFile = 0;
+  }
+}
+
 void
 FusionBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 {
