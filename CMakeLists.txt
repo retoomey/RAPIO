@@ -38,6 +38,24 @@ function(addRAPIONote note)
   set_property(GLOBAL PROPERTY FINAL_RAPIO_MESSAGE "${FINAL_RAPIO_MESSAGE}")
 endfunction()
   
+###########################################################################
+# A python script install function that strips the .py and installs in bin
+#
+function(install_python SCRIPT SOURCE_DIR)
+    # Remove the file extension
+    string(REGEX REPLACE "\\.py$" "" SCRIPT_NAME ${SCRIPT})
+
+    # Copy the script from the source directory to the destination directory
+    configure_file(${SOURCE_DIR}/${SCRIPT} ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT_NAME} COPYONLY)
+
+    # Set permissions and install the script
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT_NAME}
+            PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                        GROUP_EXECUTE GROUP_READ
+                        WORLD_EXECUTE WORLD_READ
+			DESTINATION bin)
+endfunction()
+
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)

@@ -1,0 +1,43 @@
+##################################################################
+# Build utilities
+#
+link_directories(${RAPIO_INSTALL_LIB})
+include_directories(. ${RAPIO_INCLUDE_DIRS})
+
+add_executable(rdump
+  rDump.cc
+)
+target_link_libraries(rdump rapio)
+install(TARGETS rdump
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+add_executable(rcopy
+  rCopy.cc
+)
+target_link_libraries(rcopy rapio)
+install(TARGETS rcopy
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+add_executable(rwatch
+  rWatch.cc
+)
+target_link_libraries(rwatch rapio)
+install(TARGETS rwatch
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
+# MakeFakeRadarData 
+# FIXME: Not sure if we're keeping this. I'm experimenting with
+# a fakeIndex generator API which may be better
+add_executable(rMakeFakeRadarData
+  rMakeFakeRadarData.cc
+)
+target_link_libraries(rMakeFakeRadarData rapio)
+install(TARGETS rMakeFakeRadarData
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+# Install the makeindex script
+install_python("makeindex.py" ${CMAKE_CURRENT_SOURCE_DIR})
+

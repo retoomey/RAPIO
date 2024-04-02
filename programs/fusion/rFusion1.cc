@@ -8,6 +8,7 @@
 // Value Resolvers
 #include "rRobertLinear1Resolver.h"
 #include "rLakResolver1.h"
+#include "rVelResolver.h"
 
 // Current moving average smoother, prefilter on RadialSets
 #include "rLakRadialSmoother.h"
@@ -35,6 +36,7 @@ RAPIOFusionOneAlg::declarePlugins()
   PluginVolumeValueResolver::declare(this, "resolver");
   RobertLinear1Resolver::introduceSelf();
   LakResolver1::introduceSelf();
+  VelResolver::introduceSelf();
   // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
 
   // -------------------------------------------------------------
