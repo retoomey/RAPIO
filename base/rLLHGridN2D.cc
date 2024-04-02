@@ -131,17 +131,13 @@ LLHGridN2D::fillPrimary(float value)
 }
 
 void
-LLHGridN2D::preWrite(bool sparse)
+LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
 {
   // Copy height array
   auto& heights = getFloat1DRef("Height");
 
   for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
     heights[i] = myLayerNumbers[i];
-  }
-
-  if (!sparse) {
-    return;
   }
 
   // Check if sparse already...
@@ -245,23 +241,18 @@ LLHGridN2D::preWrite(bool sparse)
 } // LLHGridN2D::makeSparse
 
 void
-LLHGridN2D::postWrite(bool sparse)
+LLHGridN2D::postWrite(std::map<std::string, std::string>& keys)
 {
-  // Nothing to undo here
-  if (!sparse) {
-    return;
-  }
-
   if (myDims.size() != 4) {
     return;
   }
   // These depend on the source array anyway..so have to be regenerated
   // on next write
-  deleteName(Constants::PrimaryDataName); // Deleting the sparse array
-  deleteName("pixel_z");
-  deleteName("pixel_y");
-  deleteName("pixel_x");
-  deleteName("pixel_count");
+  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
+  deleteArrayName("pixel_z");
+  deleteArrayName("pixel_y");
+  deleteArrayName("pixel_x");
+  deleteArrayName("pixel_count");
 
   // Remove the dimension we added in makeSparse
   myDims.pop_back();

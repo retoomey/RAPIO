@@ -75,10 +75,10 @@ protected:
    * any DataGrid writers like netcdf generic not knowing about our
    * special sparse formats. */
   virtual void
-  preWrite(bool sparse) override;
+  preWrite(std::map<std::string, std::string>& keys) override;
 
   /** Make ourselves MRMS non-sparse iff we're sparse */
   virtual void
-  postWrite(bool sparse) override;
+  postWrite(std::map<std::string, std::string>& keys) override;
 };
 }

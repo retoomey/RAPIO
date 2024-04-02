@@ -14,6 +14,7 @@
 namespace rapio {
 class TimeDuration;
 class ColorMap;
+class Record;
 
 /** The abstract base class for all of the GIS MRMS/HMET data objects.
  * Every DataType stores a location in space and time.
@@ -33,6 +34,51 @@ public:
     size_t           tot,
     size_t           prec);
 
+  // -----------------------------------------------------------------
+  // Read/write API for MRMS
+  //
+
+  /** The default prefix pattern (or local path) for writing datatype files,
+   * this is a tree using datatable, subtype and timestamp name.
+   *
+   * {base} Calculated base prefix, usually based on parameters.
+   * {datatype} Datatype string.
+   * {/subtype} If subtype not empty adds a '/' and subtype.
+   * {_subtype} If subtype not empty, add a '_' and subtype.
+   * {subtype}  Adds a subtype always.
+   * {time}     Shortcut for a stock time string pattern.
+   */
+  static std::string DATATYPE_PREFIX;
+
+  /** The default prefix pattern for the subdirs flat path from WDSS2, this
+   * puts more files into a single directory */
+  static std::string DATATYPE_PREFIX_FLAT;
+
+  /** Generate the path for writing based upon fields within us and a token string. */
+  virtual URL
+  generateFileName(
+    const std::string & rootFolder,
+    const std::string & pattern);
+
+  /** Generate a record, if any, for notification after successful write. This
+   * pretty much is the FML record we write out. */
+  virtual void
+  generateRecord(
+    const URL           & pathin,
+    const std::string   & factory,
+    std::vector<Record> & records);
+
+  /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
+  virtual void preWrite(std::map<std::string, std::string>& keys){ }
+
+  /** Post DataType after writing.  This can destroy temp arrays, etc. that were made just for writing. */
+  virtual void postWrite(std::map<std::string, std::string>& keys){ }
+
+  // Don't see a need for a preRead ability, maybe later
+
+  /** Post DataType after reading. This can unsparse a DataType fields if needed/wanted */
+  virtual void postRead(std::map<std::string, std::string>& keys){ }
+
   /** Get the factory used to read this in originally, if ever.
    * This can assist writers in outputting */
   std::string
@@ -47,6 +93,9 @@ public:
   {
     myReadFactory = d;
   }
+
+  // End Read/write API
+  // -----------------------------------------------------------------
 
   /** Get the data type we store */
   std::string
@@ -137,6 +186,16 @@ public:
   void
   setTime(const Time& t){ myTime = t; }
 
+  /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual std::string getUnits(const std::string& name = Constants::PrimaryDataName)
+  { return myUnits; }
+
+  /** Set the primary units.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual void setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
+  { myUnits = units; }
+
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */
   virtual bool
@@ -150,41 +209,9 @@ public:
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer = "primary"){ return nullptr; }
 
-  /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
-   * subarrays that have multiple unit types */
-  virtual std::string getUnits(const std::string& name = Constants::PrimaryDataName)
-  { return myUnits; }
-
-  /** Set the primary units.  Some DataTypes have subfields,
-   * subarrays that have multiple unit types */
-  virtual void setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
-  { myUnits = units; }
-
-  /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
-  virtual void preWrite(bool sparse = false){ }
-
-  /** Post DataType after writing.  This can destroy temp arrays, etc. that were made just for writing. */
-  virtual void postWrite(bool sparse = false){ }
-
   /** Get the ColorMap for converting values to colors */
   virtual std::shared_ptr<ColorMap>
   getColorMap();
-
-  /** The default prefix pattern (or local path) for writing datatype files,
-   * this is a tree using datatable, subtype and timestamp name.
-   *
-   * {base} Calculated base prefix, usually based on parameters.
-   * {datatype} Datatype string.
-   * {/subtype} If subtype not empty adds a '/' and subtype.
-   * {_subtype} If subtype not empty, add a '_' and subtype.
-   * {subtype}  Adds a subtype always.
-   * {time}     Shortcut for a stock time string pattern.
-   */
-  static std::string DATATYPE_PREFIX;
-
-  /** The default prefix pattern for the subdirs flat path from WDSS2, this
-   * puts more files into a single directory */
-  static std::string DATATYPE_PREFIX_FLAT;
 
   /** Move this datatype contexts to another.
    * Shared pointers are just referenced, raw types are copied.

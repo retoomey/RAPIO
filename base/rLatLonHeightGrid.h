@@ -18,7 +18,7 @@ namespace rapio {
  *
  *  @author Robert Toomey
  */
-class LatLonHeightGrid : public LatLonGrid {
+class LatLonHeightGrid : public LatLonArea {
 public:
   // Humm how are we gonna do projection with this thing?
   // We could basically pick a 2D layer at moment for testing
@@ -83,14 +83,18 @@ public:
     return myDims.size() > 2 ? myDims[2].size() : 0;
   }
 
+  /** Handle post read by sparse uncompression if wanted */
+  virtual void
+  postRead(std::map<std::string, std::string>& keys) override;
+
   /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
    * any DataGrid writers like netcdf generic not knowing about our
    * special sparse formats. */
   virtual void
-  preWrite(bool sparse) override;
+  preWrite(std::map<std::string, std::string>& keys) override;
 
   /** Make ourselves MRMS non-sparse iff we're sparse */
   virtual void
-  postWrite(bool sparse) override;
+  postWrite(std::map<std::string, std::string>& keys) override;
 };
 }

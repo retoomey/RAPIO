@@ -100,7 +100,7 @@ public:
 
   /** Get the name of this named any */
   const std::string&
-  getName(){ return myName; }
+  getName() const { return myName; }
 
   /** Set the name of this named any */
   void
@@ -198,9 +198,120 @@ public:
 
   /** Get the size of the attributes */
   size_t
-  size()
+  size() const
   {
     return myAttributes.size();
+  }
+
+  // ----------------------------------------------
+  // Convenience routines for common types
+  // Debated is vs have with DataArray and
+  // AttributeDataType classes.
+
+  /** Get a string */
+  inline bool
+  getString(const std::string& name, std::string& out) const
+  {
+    auto s = get<std::string>(name);
+
+    if (s) {  out = *s; return true; }
+    return false;
+  }
+
+  /** Set a string */
+  inline void
+  setString(const std::string& name, const std::string& in)
+  {
+    put<std::string>(name, in);
+  }
+
+  /** Get a double, flexible on casting */
+  inline bool
+  getDouble(const std::string& name, double& out) const
+  {
+    const auto at = index(name);
+
+    if (at != -1) {
+      const NamedAny& value = myAttributes[at];
+      auto d = value.get<double>();
+      if (d) { out = *d; return true; }
+
+      // Multipleconversion attempts
+      // since boost::any stores actual type.  We should have
+      // all the types created by netcdf at least here
+      auto f = value.get<float>();
+      if (f) { out = *f; return true; }
+      auto i = value.get<int>();
+      if (i) { out = *i; return true; }
+      auto l = value.get<long>();
+      if (l) { out = *l; return true; }
+    }
+    return false;
+  }
+
+  /** Set a double */
+  inline void
+  setDouble(const std::string& name, double in)
+  {
+    put<double>(name, in);
+  }
+
+  /** Get a float, flexible on casting */
+  inline bool
+  getFloat(const std::string& name, float& out) const
+  {
+    const auto at = index(name);
+
+    if (at != -1) {
+      const NamedAny& value = myAttributes[at];
+      auto f = value.get<float>();
+      if (f) { out = *f; return true; }
+
+      // Multipleconversion attempts
+      // since boost::any stores actual type.  We should have
+      // all the types created by netcdf at least here
+      auto d = value.get<double>();
+      if (d) { out = *d; return true; }
+      auto i = value.get<int>();
+      if (i) { out = *i; return true; }
+      auto l = value.get<long>();
+      if (l) { out = *l; return true; }
+    }
+    return false;
+  }
+
+  /** Set a float */
+  inline void
+  setFloat(const std::string& name, float in)
+  {
+    put<float>(name, in);
+  }
+
+  /** Get a long, flexible on casting */
+  inline bool
+  getLong(const std::string& name, long& out) const
+  {
+    const auto at = index(name);
+
+    if (at != -1) {
+      const NamedAny& value = myAttributes[at];
+      auto l = value.get<long>();
+      if (l) { out = *l; return true; }
+
+      // Multipleconversion attempts
+      // since boost::any stores actual type.  We should have
+      // all the types created by netcdf at least here
+      auto i = value.get<int>();
+      if (i) { out = *i; return true; }
+    }
+    return false;
+  }
+
+  /** Set a long in global attributes */
+  inline void
+  setLong(const std::string& name, long in)
+  {
+    put<long>(name, in);
   }
 
 protected:

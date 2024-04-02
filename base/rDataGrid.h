@@ -1,16 +1,38 @@
 #pragma once
 
+#include <rUtility.h>
 #include <rDataType.h>
 #include <rDataStore2D.h>
 #include <rArray.h>
 #include <rPTreeData.h>
 
 #include <vector>
+#include <stdexcept>
 
 #include <boost/multi_array.hpp>
 #include <boost/variant.hpp>
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
+
+namespace rapio {
+/* Exception for calling any Ref function that is assuming an array exists */
+class ArrayRefException : public Utility, public std::exception
+{
+public:
+  ArrayRefException(const std::string& typeString, int dimension, const std::string& name)
+    : myMessage("Array does not exist to reference: TYPE=" + typeString
+      + ", DIMENSION=" + std::to_string(dimension)
+      + ", NAME=" + name){ }
+
+  virtual const char *
+  what() const noexcept override
+  {
+    return myMessage.c_str();
+  }
+
+protected:
+  std::string myMessage;
+};
 
 /* Macro for declaring all the convenience methods to help avoid mistyping
  * This creates getByte1D, getByte1DRef and addByte1D, addByte1DRef methods, etc.
@@ -24,7 +46,13 @@
   inline boost::multi_array<TYPE, DIMENSION>& \
   get ## TYPESTRING ## DIMENSION ## DRef(const std::string& name = Constants::PrimaryDataName) \
   { \
-    return get<Array<TYPE, DIMENSION> >(name)->ref(); \
+    auto temp = get<Array<TYPE, DIMENSION> >(name); \
+    if (!temp) { \
+      throw ArrayRefException(#TYPESTRING, DIMENSION, name); \
+    } \
+    else { \
+      return temp->ref(); \
+    } \
   } \
   std::shared_ptr<Array<TYPE, DIMENSION> > \
   add ## TYPESTRING ## DIMENSION ## D(const std::string& name, const std::string& units, \
@@ -46,7 +74,6 @@
   DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 2) \
   DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 3)
 
-namespace rapio {
 /** Type marker of data to help out reader/writers.  This is modeled mostly on netcdf since we use it
  * the most of all file formats. */
 enum DataArrayType {
@@ -83,7 +110,7 @@ public:
     : NamedAny(name), myAttributes(std::make_shared<DataAttributeList>()), myUnits(units), myStorageType(type),
     myDimIndexes(dimindexes), myRawArrayPointer(nullptr)
   {
-    myAttributes->put<std::string>("Units", units);
+    setString("Units", units);
   }
 
   // The boost any is nice for general attributes, but since we store only ONE multi array
@@ -124,6 +151,72 @@ public:
   std::shared_ptr<DataAttributeList>
   getAttributes();
 
+  // ----------------------------------------------
+  // Convenience routines for common types
+  // Debating is vs have here, though these are
+  // double inlined so the cost should be nothing here.
+  // These coorespond to the netcdf global attributes,
+  // for the local attributes on an array, @see DataArray
+
+  /** Get a string */
+  inline bool
+  getString(const std::string& name, std::string& out) const
+  {
+    return myAttributes->getString(name, out);
+  }
+
+  /** Set a string */
+  inline void
+  setString(const std::string& name, const std::string& in)
+  {
+    return myAttributes->setString(name, in);
+  }
+
+  /** Get a double, flexible on casting */
+  inline bool
+  getDouble(const std::string& name, double& out) const
+  {
+    return myAttributes->getDouble(name, out);
+  }
+
+  /** Set a double */
+  inline void
+  setDouble(const std::string& name, double in)
+  {
+    return myAttributes->setDouble(name, in);
+  }
+
+  /** Get a float, flexible on casting */
+  inline bool
+  getFloat(const std::string& name, float& out) const
+  {
+    return myAttributes->getFloat(name, out);
+  }
+
+  /** Set a float */
+  inline void
+  setFloat(const std::string& name, float in)
+  {
+    return myAttributes->setFloat(name, in);
+  }
+
+  /** Get a long, flexible on casting */
+  inline bool
+  getLong(const std::string& name, long& out) const
+  {
+    return myAttributes->getLong(name, out);
+  }
+
+  /** Set a long in global attributes */
+  inline void
+  setLong(const std::string& name, long in)
+  {
+    return myAttributes->setLong(name, in);
+  }
+
+  // ----------------------------------------------
+  // Lower level access.  Typically not needed
+
   /** Get attribute */
   template <typename T>
   boost::optional<T>
@@ -145,6 +238,13 @@ public:
   removeAttribute(const std::string& name)
   {
     myAttributes->remove(name);
+  }
+
+  /** Count attributes */
+  size_t
+  getAttributesCount()
+  {
+    return myAttributes->size();
   }
 
   /** Get the array as typeless for generic usage */
@@ -364,7 +464,7 @@ public:
 
   /** Change name of a stored array.  Used for sparse/non-sparse array swapping */
   bool
-  changeName(const std::string& name, const std::string& newname)
+  changeArrayName(const std::string& name, const std::string& newname)
   {
     for (auto i:myNodes) {
       if (i->getName() == newname) {
@@ -395,7 +495,7 @@ public:
 
   /** Delete a stored array.  Used for sparse/non-sparse array swapping */
   bool
-  deleteName(const std::string& name)
+  deleteArrayName(const std::string& name)
   {
     for (auto i = 0; i < myNodes.size(); ++i) {
       if (myNodes[i]->getName() == name) {
@@ -438,6 +538,37 @@ public:
   /** Create metadata Ptree for sending to python */
   std::shared_ptr<PTreeData>
   createMetadata();
+
+  /** Default header for RAPIO */
+  static double SparseThreshold;
+
+  /** Unsparse a collection of 2D array information */
+  void
+  unsparse2D(size_t                   num_x,
+    size_t                            num_y,
+    std::map<std::string, std::string>& keys,
+    const std::string                 & pixelX     = "pixel_x",
+    const std::string                 & pixelY     = "pixel_y",
+    const std::string                 & pixelCount = "pixel_count");
+
+  /** Unsparse a collection of 3D array information */
+  void
+  unsparse3D(size_t                   num_x,
+    size_t                            num_y,
+    size_t                            num_z,
+    std::map<std::string, std::string>& keys,
+    const std::string                 & pixelX     = "pixel_x",
+    const std::string                 & pixelY     = "pixel_y",
+    const std::string                 & pixelZ     = "pixel_z",
+    const std::string                 & pixelCount = "pixel_count");
+
+  /** Sparse a collection of 3D array information */
+  bool
+  sparse3D();
+
+  /** Sparse a collection of 2D array information */
+  bool
+  sparse2D();
 
 protected:
 

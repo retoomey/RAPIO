@@ -43,7 +43,8 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     DataGrid& dataGrid = *dataGridSP;
     const int ncid     = std::stoi(keys["NETCDF_NCID"]);
     const URL loc      = URL(keys["NETCDF_URL"]);
-    const bool uncompressMRMSSparse = true; // Possibly a param later
+    // const bool uncompressMRMSSparse = true; // Possibly a param later
+    const bool uncompressMRMSSparse = false; // We're migrating to the DataType
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES

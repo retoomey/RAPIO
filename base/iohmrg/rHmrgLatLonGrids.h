@@ -2,6 +2,7 @@
 
 #include "rIODataType.h"
 #include "rIOHmrg.h"
+#include "rLatLonGrid.h"
 
 #include <zlib.h>
 
@@ -33,7 +34,7 @@ public:
 
   /** Do the heavy work of writing a LatLonGrid or LatLonHeightGrid */
   static bool
-  writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> latlongrid);
+  writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> latlongrid);
 
   /** Initial introduction of HmrgLatLonGrids specializer to IOHMRG */
   static void

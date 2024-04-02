@@ -52,9 +52,9 @@ HmrgLatLonGrids::write(
   gzFile fp    = IOHmrg::keyToGZFile(keys);
 
   if (fp != nullptr) {
-    auto latlongrid = std::dynamic_pointer_cast<LatLonGrid>(dt);
-    if (latlongrid != nullptr) {
-      success = writeLatLonGrids(fp, latlongrid);
+    auto latlonarea = std::dynamic_pointer_cast<LatLonArea>(dt);
+    if (latlonarea != nullptr) {
+      success = writeLatLonGrids(fp, latlonarea);
     }
   } else {
     LogSevere("Invalid gzfile pointer, cannot write\n");
@@ -278,7 +278,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 } // IOHmrg::readLatLonGrid
 
 bool
-HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llgp)
+HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
 {
   bool success = false;
 
@@ -418,8 +418,11 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llgp)
 
   size_t at = 0;
 
-  if (num_z == 1) {
-    LogInfo("HMRG writer: --Single layer LatLonGrid--\n");
+  // Various classes we support writing. FIXME: Should probably use specializer API and
+  // break up this code that way instead.
+
+  if (auto llgptr = std::dynamic_pointer_cast<LatLonGrid>(llgp)) {
+    LogInfo("HMRG writer: --LatLonGrid--\n");
     auto& data = llg.getFloat2DRef(Constants::PrimaryDataName);
 
     // NOTE: flipped order from RadialSet array if you try to merge the code
@@ -436,51 +439,55 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonGrid> llgp)
       ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
     }
     success = true;
-  } else {
-    if (auto llnptr = std::dynamic_pointer_cast<LLHGridN2D>(llgp)) {
-      LogInfo("HMRG writer: --Multi layer LatLonGrid (LLHGridN2D)--\n");
-      auto& lln = *llnptr;
+  } else if (auto llnptr = std::dynamic_pointer_cast<LLHGridN2D>(llgp)) {
+    LogInfo("HMRG writer: --Multi layer N 2D layers (LLHGridN2D)--\n");
+    auto& lln = *llnptr;
 
-      for (size_t z = 0; z < num_z; ++z) {
-        // Each 3D is a 2N layer here
-        auto g     = lln.get(z);
-        auto& data = g->getFloat2DRef();
+    for (size_t z = 0; z < num_z; ++z) {
+      // Each 3D is a 2N layer here
+      auto g     = lln.get(z);
+      auto& data = g->getFloat2DRef();
 
-        for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-          for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-            rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
-            if (++at >= count) {
-              ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
-              at = 0;
-            }
-          }
-        }
-      }
-    } else {
-      LogInfo("HMRG writer: --Multi layer LatLonGrid--\n");
-
-      // Only for the 3D implementation
-      auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
-
-      for (size_t z = 0; z < num_z; ++z) {
-        // NOTE: flipped order from RadialSet array if you try to merge the code
-        // Same code as 2D though the data array type is different.  Could use a template method or macro
-        for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-          for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
-            rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
-            if (++at >= count) {
-              ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
-              at = 0;
-            }
+      for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
+        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+          rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
+          if (++at >= count) {
+            ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+            at = 0;
           }
         }
       }
     }
-
     if (at != 0) { // final left over
       ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
     }
     success = true;
+  } else if (auto llhgptr = std::dynamic_pointer_cast<LatLonHeightGrid>(llgp)) {
+    LogInfo("HMRG writer: --Multi layer LatLonArea--\n");
+
+    // Only for the 3D implementation
+    auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
+
+    for (size_t z = 0; z < num_z; ++z) {
+      // NOTE: flipped order from RadialSet array if you try to merge the code
+      // Same code as 2D though the data array type is different.  Could use a template method or macro
+      for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
+        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+          rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
+          if (++at >= count) {
+            ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+            at = 0;
+          }
+        }
+      }
+    }
+    if (at != 0) { // final left over
+      ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
+    }
+    success = true;
+  } else {
+    LogSevere("HMRG: LatLonArea unsupported type, can't write this\n");
   }
+
   return success;
 } // HmrgLatLonGrids::writeLatLonGrids

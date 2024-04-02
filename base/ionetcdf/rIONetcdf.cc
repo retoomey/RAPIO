@@ -6,6 +6,7 @@
 #include "rStrings.h"
 #include "rDataFilter.h"
 #include "rArith.h"
+#include "config.h"
 
 // Default built in DataType support
 #include "rNetcdfDataGrid.h"
@@ -112,6 +113,7 @@ IONetcdf::createDataType(const std::string& params)
         keys["NETCDF_NCID"] = to_string(ncid);
         keys["NETCDF_URL"]  = url.toString();
         datatype = fmt->read(keys, nullptr);
+        datatype->postRead(keys);
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
@@ -199,7 +201,10 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   // Write netcdf to a disk file here
   try {
     keys["NETCDF_NCID"] = to_string(ncid);
+    keys["MakeSparse"]  = "on";
+    dt->preWrite(keys);
     successful = fmt->write(dt, keys);
+    dt->postWrite(keys);
   } catch (...) {
     successful = false;
     LogSevere("Failed to write netcdf file for DataType\n");
@@ -1289,6 +1294,11 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
 void
 IONetcdf::setAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list)
 {
+  // Meta info for our writer
+  if (varid == NC_GLOBAL) {
+    NETCDF(IONetcdf::addAtt(ncid, "MRMSWriterInfo", "RAPIO (Build: " + std::string(BUILD_DATE) + ")", varid));
+  }
+
   // For each type, write out attr...
   // Netcdf has c functions each type so we check types...
   // FIXME: Anyway to reduce the code in a smart way?

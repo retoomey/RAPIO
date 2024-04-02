@@ -139,19 +139,6 @@ protected:
 
 public:
 
-  /** Generate a file name URL from datatype attributes */
-  static URL
-  generateFileName(std::shared_ptr<DataType> dt,
-    const std::string                        & outputinfo,
-    const std::string                        & basepattern);
-
-  /** Generate a record based on URL */
-  static void
-  generateRecord(std::shared_ptr<DataType> dt,
-    const URL                              & pathin,
-    const std::string                      & factory,
-    std::vector<Record>                    & records);
-
   /**
    *  Chooses the correct data encoder for the particular data type,
    *  writes out the product, and appends the records to the given

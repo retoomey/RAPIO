@@ -216,6 +216,20 @@ public:
     const size_t     num_radials,
     const size_t     num_gates);
 
+  /** Handle post read by sparse uncompression if wanted */
+  virtual void
+  postRead(std::map<std::string, std::string>& keys) override;
+
+  /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
+   * any DataGrid writers like netcdf generic not knowing about our
+   * special sparse formats. */
+  virtual void
+  preWrite(std::map<std::string, std::string>& keys) override;
+
+  /** Make ourselves MRMS non-sparse iff we're sparse */
+  virtual void
+  postWrite(std::map<std::string, std::string>& keys) override;
+
   // ------------------------------------------------
   // Terrain information methods
   // Optional arrays if a polar terrain has been run on this RadialSet

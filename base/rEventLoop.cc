@@ -85,7 +85,7 @@ EventLoop::doEventLoop()
       }
     }
   }catch (const std::exception& e) {
-    LogSevere("Main loop uncaught exception " << e.what() << ", exiting\n");
+    LogSevere("Main loop uncaught exception: \"" << e.what() << "\", exiting\n");
   }
 
   // Delete all child threads

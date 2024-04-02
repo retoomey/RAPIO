@@ -27,6 +27,7 @@ NetcdfLatLonHeightGrid::read(
   std::shared_ptr<LatLonHeightGrid> LatLonHeightGridSP = std::make_shared<LatLonHeightGrid>();
 
   if (readDataGrid(LatLonHeightGridSP, keys)) {
+    //    LatLonHeightGridSP->postRead(keys);
     return LatLonHeightGridSP;
   } else {
     return nullptr;
@@ -37,23 +38,7 @@ bool
 NetcdfLatLonHeightGrid::write(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>                    & keys)
 {
-  LogInfo("**** ALPHA: Calling netcdf LatLonHeightGrid writer ******\n");
-
-  // Convert current 3D array to pixel sparse format.
-  // Also this technique will get sparse out of the netcdf writer if it works.
-  // So at moment I've got two competing techniques.  Sparse here in netcdf,
-  // and sparse 'outside'. So it's messy at this moment.
-  LatLonHeightGrid * LLHG = (LatLonHeightGrid *) (dt.get());
-
-  // We want at this level so we can use flags
-  bool makeSparse = true;
-
-  LLHG->preWrite(makeSparse); // 3D to pixels, hiding 3D original from writer
-  bool success = NetcdfDataGrid::write(dt, keys);
-
-  LLHG->postWrite(makeSparse); // Get back the 3D normal array for the caller.
-
-  return success;
+  return (NetcdfDataGrid::write(dt, keys));
 } // NetcdfLatLonHeightGrid::write
 
 std::shared_ptr<DataType>

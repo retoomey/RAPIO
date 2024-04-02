@@ -1,6 +1,8 @@
 #include "rLatLonGrid.h"
 #include "rProject.h"
 
+#include "rProcessTimer.h"
+
 using namespace rapio;
 using namespace std;
 
@@ -10,7 +12,7 @@ LatLonGrid::getGeneratedSubtype() const
   return (formatString(myLocation.getHeightKM(), 5, 2));
 }
 
-LatLonGrid::LatLonGrid() : myLatSpacing(0), myLonSpacing(0)
+LatLonGrid::LatLonGrid()
 {
   setDataType("LatLonGrid");
 }
@@ -63,7 +65,7 @@ LatLonGrid::Create(
 }
 
 void
-LatLonGrid::setSpacing(float lat_spacing, float lon_spacing)
+LatLonArea::setSpacing(float lat_spacing, float lon_spacing)
 {
   myLatSpacing = lat_spacing;
   myLonSpacing = lon_spacing;
@@ -128,7 +130,7 @@ LatLonGrid::getProjection(const std::string& layer)
 }
 
 LLH
-LatLonGrid::getCenterLocation()
+LatLonArea::getCenterLocation()
 {
   // This simple one liner doesn't work, because the middle can be on a cell wall and
   // not in the center of the cell.  Imagine 2 cells..the true middle is the line
@@ -145,7 +147,7 @@ LatLonGrid::getCenterLocation()
 }
 
 LLH
-LatLonGrid::getTopLeftLocationAt(size_t i, size_t j)
+LatLonArea::getTopLeftLocationAt(size_t i, size_t j)
 {
   if (i == j == 0) { return myLocation; }
   const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
@@ -155,10 +157,18 @@ LatLonGrid::getTopLeftLocationAt(size_t i, size_t j)
 }
 
 LLH
-LatLonGrid::getCenterLocationAt(size_t i, size_t j)
+LatLonArea::getCenterLocationAt(size_t i, size_t j)
 {
   const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * (i + 0.5));
   const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * (j + 0.5));
 
   return LLH(latDegs, lonDegs, myLocation.getHeightKM());
 }
+
+void
+LatLonGrid::postRead(std::map<std::string, std::string>& keys)
+{
+  // For now, we always unsparse to full.  Though say in rcopy we
+  // would want to keep it sparse.  FIXME: have a key control this
+  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
+} // LatLonGrid::postRead

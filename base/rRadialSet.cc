@@ -5,6 +5,7 @@
 #include "rUnit.h"
 #include "rLLH.h"
 
+#include "rProcessTimer.h"
 
 using namespace rapio;
 using namespace std;
@@ -146,4 +147,43 @@ RadialSet::initTerrain()
     }
   }
   myHaveTerrain = true;
+}
+
+void
+RadialSet::postRead(std::map<std::string, std::string>& keys)
+{
+  // FIXME: Make it stay compressed for things like rcopy, probably
+  // using a key
+  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
+} // RadialSet::postRead
+
+void
+RadialSet::preWrite(std::map<std::string, std::string>& keys)
+{
+  if (sparse2D()) {
+    setDataType("SparseRadialSet");
+  }
+}
+
+void
+RadialSet::postWrite(std::map<std::string, std::string>& keys)
+{
+  // These depend on the source array anyway..so have to be regenerated
+  // on next write
+  if (myDims.size() != 3) {
+    return;
+  }
+  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
+  deleteArrayName("pixel_y");
+  deleteArrayName("pixel_x");
+  deleteArrayName("pixel_count");
+
+  // Remove the dimension we added in makeSparse
+  myDims.pop_back();
+
+  // Put back our saved primary array from the makeSparse above...
+  changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
+  setVisible(Constants::PrimaryDataName, true);
+
+  setDataType("RadialSet");
 }

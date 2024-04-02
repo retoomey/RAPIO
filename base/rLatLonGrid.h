@@ -5,64 +5,80 @@
 #include <rTime.h>
 
 namespace rapio {
-/** Store an area of data on a uniform 2-D grid of latitude and
- *  longitude at a constant height above the surface of the earth.
+/** Store an area of data in Lat Lon Height space of some sort
+ *  We have a rLLCoverageArea dealing with parameter grid.
+ *  We have a rLLCoverage dealing with projection stuff.
+ *  And this deals with a DataType doing coverage.
+ *  I think this could extend to support RHI or vertical
+ *  slicing DataTypes as well...vs the LatLonGrid 'CAPPI'
+ *
+ *  FIXME: Would be nice to combine everything somehow.
  *
  *  @author Robert Toomey
  */
-class LatLonGrid : public DataGrid {
+class LatLonArea : public DataGrid {
 public:
-  friend LatLonGridProjection;
 
-  /** Construct uninitialized LatLonGrid, usually for
-   * factories.  You probably want the Create method */
-  LatLonGrid();
+  /** Construct empty LatLonArea */
+  LatLonArea() : myLatSpacing(0), myLonSpacing(0){ }
 
-  /** Public API for users to create a single band LatLonGrid quickly,
-   * Note that data is uninitialized/random memory since most algorithms
-   * you'll fill it in and it wastes time to double fill it. */
-  static std::shared_ptr<LatLonGrid>
-  Create(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & northwest,
-    const Time       & gridtime,
-    float            lat_spacing,
-    float            lon_spacing,
-    size_t           num_lats,
-    size_t           num_lons);
+  // Cell information ability -------------------------------------------
 
-  /** Set the latitude/longitude spacing used */
-  void
-  setSpacing(float lat_spacing, float lon_spacing);
-
-  /** Get the latitude spacing in degrees between cells */
+  /** Get the latitude spacing in degrees between cells, if any. */
   float
   getLatSpacing() const
   {
     return (myLatSpacing);
   }
 
-  /** Get the longitude spacing in degrees between cells */
+  /** Get the longitude spacing in degrees between cells, if any. */
   float
   getLonSpacing() const
   {
     return (myLonSpacing);
   }
 
+  // Typically stored in dimension info, so we'll make these abstract
+
   /** Get the number of latitude cells */
   virtual size_t
-  getNumLats()
-  {
-    return myDims.size() > 0 ? myDims[0].size() : 0;
-  }
+  getNumLats() = 0;
 
   /** Get the number of longitude cells */
   virtual size_t
-  getNumLons()
-  {
-    return myDims.size() > 1 ? myDims[1].size() : 0;
-  }
+  getNumLons() = 0;
+
+  /** Set the latitude/longitude spacing used */
+  void
+  setSpacing(float lat_spacing, float lon_spacing);
+
+  /** Get the top left location of a cell
+   *  This is the point on the left top of cell (see X).
+   *  X------
+   *  |     |
+   *  |     |
+   *  |     |
+   *  -------
+   */
+  LLH
+  getTopLeftLocationAt(size_t i, size_t j);
+
+  /** Get the center location of a cell
+   *  This is the center point of the cell (see O).
+   *  -------
+   *  |     |
+   *  |  O  |
+   *  |     |
+   *  -------
+   */
+  LLH
+  getCenterLocationAt(size_t i, size_t j);
+
+  /** Return the location considered the 'center' location of the datatype */
+  virtual LLH
+  getCenterLocation() override;
+
+  // Layer information ability -------------------------------------------
 
   /** Get the number of layers */
   virtual size_t
@@ -92,31 +108,58 @@ public:
     return myLayerNumbers[l];
   }
 
-  /** Return the location considered the 'center' location of the datatype */
-  virtual LLH
-  getCenterLocation() override;
+protected:
 
-  /** Get the top left location of a cell in the LatLonGrid
-   *  This is the point on the left top of grid (see X).
-   *  X------
-   *  |     |
-   *  |     |
-   *  |     |
-   *  -------
-   */
-  LLH
-  getTopLeftLocationAt(size_t i, size_t j);
+  /** Latitude spacing of cells in degrees */
+  float myLatSpacing;
 
-  /** Get the center location of a cell in the LatLonGrid
-   *  This is the center point of the grid (see O).
-   *  -------
-   *  |     |
-   *  |  O  |
-   *  |     |
-   *  -------
-   */
-  LLH
-  getCenterLocationAt(size_t i, size_t j);
+  /** Longitude spacing of cells in degrees */
+  float myLonSpacing;
+
+  /** Vector of layer numbers.  Most likely heights. */
+  std::vector<int> myLayerNumbers;
+};
+
+/** Store an area of data on a uniform 2-D grid of latitude and
+ *  longitude at a constant height above the surface of the earth.
+ *
+ *  @author Robert Toomey
+ */
+class LatLonGrid : public LatLonArea {
+public:
+  friend LatLonGridProjection;
+
+  /** Construct uninitialized LatLonGrid, usually for
+   * factories.  You probably want the Create method */
+  LatLonGrid();
+
+  /** Public API for users to create a single band LatLonGrid quickly,
+   * Note that data is uninitialized/random memory since most algorithms
+   * you'll fill it in and it wastes time to double fill it. */
+  static std::shared_ptr<LatLonGrid>
+  Create(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & northwest,
+    const Time       & gridtime,
+    float            lat_spacing,
+    float            lon_spacing,
+    size_t           num_lats,
+    size_t           num_lons);
+
+  /** Get the number of latitude cells */
+  virtual size_t
+  getNumLats() override
+  {
+    return myDims.size() > 0 ? myDims[0].size() : 0;
+  }
+
+  /** Get the number of longitude cells */
+  virtual size_t
+  getNumLons() override
+  {
+    return myDims.size() > 1 ? myDims[1].size() : 0;
+  }
 
   /** Generated default string for subtype from the data */
   virtual std::string
@@ -135,6 +178,10 @@ public:
   virtual bool
   initFromGlobalAttributes() override;
 
+  /** Handle post read by sparse uncompression if wanted */
+  virtual void
+  postRead(std::map<std::string, std::string>& keys) override;
+
   /** Initialize a LatLonGrid post create */
   bool
   init(
@@ -147,16 +194,5 @@ public:
     size_t            num_lats,
     size_t            num_lons
   );
-
-protected:
-
-  /** Latitude spacing of cells in degrees */
-  float myLatSpacing;
-
-  /** Longitude spacing of cells in degrees */
-  float myLonSpacing;
-
-  /** Vector of layer numbers.  Most likely heights. */
-  std::vector<int> myLayerNumbers;
 };
 }

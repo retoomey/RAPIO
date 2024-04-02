@@ -157,106 +157,6 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
   return nullptr;
 }
 
-URL
-IODataType::generateFileName(std::shared_ptr<DataType> dt,
-  const std::string                                    & outputinfo,
-  const std::string                                    & basepattern)
-{
-  const rapio::Time rsTime   = dt->getTime();
-  const std::string dataType = dt->getTypeName();
-  const std::string subType  = dt->getSubType();
-
-  // Get absolute path in input, make sure it's in directory format
-  // This might break for non-existent paths need to check
-  URL forFull = URL(outputinfo + "/up");
-
-  std::string dirbase = forFull.getDirName();
-
-  // Allow a source in the datatype attributes to prevent data overwrite
-  // stomping from multiple sources
-  std::string sourcename = "";
-
-  dt->getString("Sourcename", sourcename);
-  if (sourcename.empty()) {
-    dt->getString("radarName-value", sourcename); // Some have this
-  }
-
-  // Example: dirName/Reflectivity/00.50/TIMESTRING.netcdf
-
-  // Should be able to keep constant
-  const std::vector<std::string> tokens =
-  { "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}", "{source}", "{/source}" };
-  const std::string sub1       = subType.empty() ? ("") : ('/' + subType);
-  const std::string sub2       = subType.empty() ? ("") : ('_' + subType);
-  const std::string time       = rsTime.getString(Record::RECORD_TIMESTAMP);
-  const std::string source2    = sourcename.empty() ? ("") : ('/' + sourcename);
-  std::vector<std::string> tos =
-  { dataType, sub1, sub2, subType, time, sourcename, source2 };
-  std::string p = Strings::replaceGroup(basepattern, tokens, tos);
-  // dirbase is always at front of course
-  URL path = URL(dirbase + "/" + p);
-
-  return path;
-} // IODataType::generateFileName
-
-void
-IODataType::generateRecord(std::shared_ptr<DataType> dt,
-  const URL                                          & pathin,
-  const std::string                                  & factory,
-  std::vector<Record>                                & records
-)
-{
-  std::string dirpath   = pathin.getDirName();
-  std::string filepath  = pathin.toString();
-  std::string sfilepath = pathin.getBaseName();
-
-  const rapio::Time rsTime      = dt->getTime();
-  const std::string time_string = rsTime.getString(Record::RECORD_TIMESTAMP);
-  const std::string dataType    = dt->getTypeName();
-  const std::string spec        = dt->getSubType();
-
-  // Create record params
-  std::vector<std::string> params;
-
-  // Always add the builder/factory
-  params.push_back(factory);
-
-  // MRMS breaks it up with '/' but I don't think we actually need to do that
-  // I think I'll modify MRMS to handle our records as one line if needed,
-  // this simplifies the design and records for future non-file destinations.
-  // FIXME: We need absolute path here, or the indexlocation thing.
-  params.push_back(filepath);
-
-  /*
-   * params.push_back(dirpath);
-   * std::vector<std::string> fileparams;
-   * Strings::splitWithoutEnds(sfilepath, '/', &fileparams);
-   * for (auto f:fileparams) {
-   * params.push_back(f);
-   * }
-   */
-
-  // Create record selections
-  std::vector<std::string> selections;
-
-  selections.push_back(time_string);
-  selections.push_back(dataType);
-  if (!spec.empty()) {
-    selections.push_back(spec);
-  }
-  Record rec(params, selections, rsTime);
-
-  std::string source;
-
-  if (dt->getString("Sourcename", source)) {
-    rec.setSourceName(source);
-  } else if (dt->getString("radarName-value", source)) {
-    rec.setSourceName(source);
-  }
-
-  records.push_back(rec);
-} // IODataType::generateRecord
-
 // -----------------------------------------------------------------------------------------
 // Writer stuff
 //
@@ -333,9 +233,7 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
 
   if (filePathMode == "datatype") { // default datatype tree pathing
     std::string prefix = outputParams["fileprefix"];
-    if (prefix.empty()) { prefix = DataType::DATATYPE_PREFIX; }
-    // Generate a path/base filename using timestamps of datatype in a subtype tree
-    aURL       = generateFileName(dt, folder, prefix);
+    aURL       = dt->generateFileName(folder, prefix);
     ensureDir  = true;
     directFile = false;
   } else if (filePathMode == "direct") {
@@ -372,7 +270,8 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
     const std::string finalFile = outputParams["filename"];
     if (!finalFile.empty()) {
       // FIXME: ok so we could not create record in first place if not wanted, right?
-      IODataType::generateRecord(dt, finalFile, knownfactory, records);
+      // IODataType::generateRecord(dt, finalFile, knownfactory, records);
+      dt->generateRecord(finalFile, knownfactory, records);
     }
   }
 
