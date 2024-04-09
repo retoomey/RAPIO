@@ -43,7 +43,7 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
 
   if (haveLower) { // Do we hit the valid gates of the lower tilt?
     heightForDegreeShift(vv, vv.getLower(), vv.getLowerValue().beamWidth / 2.0, lowerHeightKMs);
-    inLowerBeamwidth = (vv.layerHeightKMs <= lowerHeightKMs);
+    inLowerBeamwidth = (vv.getAtHeightKMs() <= lowerHeightKMs);
   }
 
   // Get height of half beamwidth lower
@@ -52,7 +52,7 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
 
   if (haveUpper) { // Do we hit the valid gates of the upper tilt?
     heightForDegreeShift(vv, vv.getUpper(), -(vv.getUpperValue().beamWidth / 2.0), upperHeightKMs);
-    inUpperBeamwidth = (vv.layerHeightKMs >= upperHeightKMs);
+    inUpperBeamwidth = (vv.getAtHeightKMs() >= upperHeightKMs);
   }
 
   // ------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
   if (Constants::isGood(lValue) && Constants::isGood(uValue)) {
     // Linear interpolate using heights.  With two values we can do interpolation
     // between the values always, either linear or exponential
-    double wt = (vv.layerHeightKMs - vv.getLowerValue().heightKMs) / (upperHeightKMs - vv.getUpperValue().heightKMs);
+    double wt = (vv.getAtHeightKMs() - vv.getLowerValue().heightKMs) / (upperHeightKMs - vv.getUpperValue().heightKMs);
     if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
     const double nwt = (1.0 - wt);
 

@@ -8,8 +8,12 @@ namespace rapio {
 class VolumeValueVelGatherer : public VolumeValue
 {
 public:
-  // FIXME: Add the appended velocity values
-  int test;
+  float ux;
+  float uy;
+  float uz;
+  float latDegs;
+  float lonDegs;
+  float heightKMs;
 };
 
 /**

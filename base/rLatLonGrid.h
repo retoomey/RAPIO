@@ -108,6 +108,15 @@ public:
     return myLayerNumbers[l];
   }
 
+  /** Update global attribute list */
+  virtual void
+  updateGlobalAttributes(const std::string& encoded_type) override;
+
+  /** Sync any internal stuff to data from current attribute list,
+   * return false on fail. */
+  virtual bool
+  initFromGlobalAttributes() override;
+
 protected:
 
   /** Latitude spacing of cells in degrees */
@@ -168,15 +177,6 @@ public:
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer) override;
-
-  /** Update global attribute list */
-  virtual void
-  updateGlobalAttributes(const std::string& encoded_type) override;
-
-  /** Sync any internal stuff to data from current attribute list,
-   * return false on fail. */
-  virtual bool
-  initFromGlobalAttributes() override;
 
   /** Handle post read by sparse uncompression if wanted */
   virtual void

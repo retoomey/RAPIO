@@ -116,6 +116,7 @@ rUnit.h
 rURL.h
 rUtility.h
 rValueCompressor.h
+rVolumeValue.h
 rVolumeValueResolver.h
 rWebIndex.h
 rWebIndexWatcher.h

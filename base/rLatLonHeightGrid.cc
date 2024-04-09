@@ -96,9 +96,9 @@ LatLonHeightGrid::postRead(std::map<std::string, std::string>& keys)
 void
 LatLonHeightGrid::preWrite(std::map<std::string, std::string>& keys)
 {
-  if (sparse3D()) {
-    setDataType("SparseLatLonHeightGrid");
-  }
+  // if (sparse3D()) { Force for moment, what's up here?
+  setDataType("SparseLatLonHeightGrid");
+  // }
 } // LatLonHeightGrid::preWrite
 
 void

@@ -136,6 +136,6 @@ VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, Angle
   const double elevTan = tan(radElev);                                // maybe we can cache these per point?
   const double elevCos = cos(radElev);
 
-  Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
+  Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
     vv.sinGcdIR, vv.cosGcdIR, elevTan, elevCos, heightKMs, outRangeKMs);
 }

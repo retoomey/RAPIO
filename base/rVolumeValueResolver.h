@@ -6,139 +6,10 @@
 #include <rRAPIOOptions.h>
 #include <rRadialSet.h>
 #include <rRadialSetLookup.h>
+#include <rVolumeValue.h>
 
 namespace rapio {
 class RAPIOAlgorithm;
-
-/** Organizer of outputs for a layer, typically upper tilt or lower tilt
- * around the location of interest.
- */
-class LayerValue : public Utility
-{
-public:
-  double value;            ///< Value of data at layer
-  bool haveTerrain;        ///< Do we have terrain information?
-  float terrainCBBPercent; ///< Terrain cumulative beam blockage, if available otherwise 0
-  float terrainPBBPercent; ///< Terrain partial beam blockage, if available otherwise 0
-  bool beamHitBottom;      ///< Terrain blockage, did beam bottom hit terrain?
-  LengthKMs heightKMs;     ///< Height in kilometers at the point of interest
-  LengthKMs rangeKMs;      ///< Range in kilometers along the beampath
-  int gate;                ///< Gate number at the point of interest, or -1
-  int radial;              ///< Radial number at the point of interest, or -1
-  AngleDegs elevation;     ///< 'True' elevation angle used for this layer value
-  AngleDegs beamWidth;     ///< Beamwidth at the point of interest
-
-  /** Clear all the values to default unset state */
-  void
-  clear()
-  {
-    value             = Constants::DataUnavailable;
-    haveTerrain       = false;
-    terrainCBBPercent = 0;
-    terrainPBBPercent = 0;
-    beamHitBottom     = false;
-    heightKMs         = 0;
-    rangeKMs          = 0;
-    gate      = -1;
-    radial    = -1;
-    elevation = Constants::MissingData;
-    beamWidth = 1;
-  }
-};
-
-/** Organizer for in/out of a VolumeValueResolver for resolving the output of
- * a single grid cell.
- *
- * These are available data values for a volume resolver to use to interpolate
- * or extrapolate data values involving tilts and volumes.
- *
- * @author Robert Toomey
- */
-class VolumeValue : public Utility
-{
-protected:
-
-  DataType * layer[4];         ///< Currently four layers, 2 above, 2 below, getSpread fills
-  DataProjection * project[4]; ///< One projection per layer
-  LayerValue layerout[4];      ///< Output for layers, queryLayer fills
-
-public:
-
-  /** Ensure cleared out on construction..it should be */
-  VolumeValue() : dataValue(0.0) // Default to 1.0 since final = v/w
-  {
-    layer[0]   = layer[1] = layer[2] = layer[3] = nullptr;
-    project[0] = project[1] = project[2] = project[3] = nullptr;
-  }
-
-  // Layers/tilts we handle around the sample location
-
-  /** Get the input layer/tilt directly below sample */
-  inline DataType *& getLower(){ return layer[0]; }
-
-  /** Get the input projection for layer/tilt below sample */
-  inline DataProjection *& getLowerP(){ return project[0]; }
-
-  /** Get the query results below sample */
-  inline LayerValue& getLowerValue(){ return layerout[0]; }
-
-  /** Get the input layer/tilt directly above sample */
-  inline DataType *& getUpper(){ return layer[1]; }
-
-  /** Get the input projection for layer/tilt above sample */
-  inline DataProjection *& getUpperP(){ return project[1]; }
-
-  /** Get the query results above sample */
-  inline LayerValue& getUpperValue(){ return layerout[1]; }
-
-  /** Get the layer/tilt two levels below the sample */
-  inline DataType *& get2ndLower(){ return layer[2]; }
-
-  /** Get the input projection for two layers below sample */
-  inline DataProjection *& get2ndLowerP(){ return project[2]; }
-
-  /** Get the query results two levels below sample */
-  inline LayerValue& get2ndLowerValue(){ return layerout[2]; }
-
-  /** Get the layer/tilt two levels above the sample */
-  inline DataType *& get2ndUpper(){ return layer[3]; }
-
-  /** Get the input projection for two layers above sample */
-  inline DataProjection *& get2ndUpperP(){ return project[3]; }
-
-  /** Get the query results two levels above sample */
-  inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
-
-  // Odd value out at moment, probably for calculation speed
-  LengthKMs cHeight; ///< Radar location height in Kilometers (constant)
-
-  // INPUTS for this value location
-  // This is the location of interest between layers
-  LengthKMs layerHeightKMs;  ///< Height of the virtual layer we're calculating, the merger layer
-  AngleDegs virtualAzDegs;   ///< Virtual Azimuth degrees at this location
-  AngleDegs virtualElevDegs; ///< Virtual elevation degrees at this location
-  LengthKMs virtualRangeKMs; ///< Virtual range in kilometers at this location
-  double sinGcdIR;           ///< Cached sin GCD IR ratio
-  double cosGcdIR;           ///< Cached cos GCD IR ratio
-
-  // We have a single output, which is used for direct grid output for stage1. This is typically
-  // not what is passed to stage2, which can be more complicated due to merging or appending.
-  // That usually requires more fields, which are added by subclasses of VolumeValue.
-
-  // OUTPUTS ---------------------
-  double dataValue; ///< Final output calculated data value by resolve
-  // Subclasses can add addition output fields
-  // double dataWeight1; ///< Final output weight1 by resolver (1 by default for averaging)
-};
-
-/** A Volume value resolver used for the standard merger using weighted averaging
- * of values */
-class VolumeValueWeightAverage : public VolumeValue
-{
-public:
-  float topSum;    ///< Top sum of values passed to stage2
-  float bottomSum; ///< Bottom sum of weights passed to stage2
-};
 
 /** Class responsible for inputting/outputting the results of an entire grid of VolumeValue
  * calculations.  For averaging merger, this writes raw files which are read by stage2.
@@ -276,7 +147,8 @@ private:
 
     // Projection of height range using attentuation
     // Notice we cached sin and cos GCD for the grid
-    Project::Cached_BeamPath_LLHtoAttenuationRange(vv.cHeight,
+
+    Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
       vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
 
     const bool have = p.getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate);

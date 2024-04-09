@@ -372,7 +372,7 @@ void
 PluginProductOutputFilter::addPostLoadedHelp(RAPIOOptions& o)
 {
   std::string help =
-    "Allows on/off and name change of output datatypes. For example, \"*\" means all products. Translating names is done by Key=Value. Keys are used to reference a particular product being written, while values can be name translations for multiple instances of an algorithm to avoid product write clashing.  For example, \"Reflectivity=Ref2QC Velocity=Vel1QC\"\n";
+    "Allows on/off and name change of output datatypes. For example, \"*\" means all products. Translating names is done by Key=Value. Keys are used to reference a particular product being written, while values can be name translations for multiple instances of an algorithm to avoid product write clashing.  For example, \"MyKey1=Ref2QC MyKey2=Vel1QC.  An algorithm can declare a key of any name, and then generate a default product name for that unless you use the = and override it.\"\n";
 
   // Add list of registered static products
   if (myKeys.size() > 0) {

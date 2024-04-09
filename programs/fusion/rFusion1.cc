@@ -549,8 +549,8 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   auto& vv   = *vvsp;
   auto * vvp = vvsp.get();
 
-  vv.cHeight        = myRadarCenter.getHeightKM(); // FIXME: Why not all location info?
-  vv.layerHeightKMs = heightsKM[layer];
+  vv.setRadarLocation(myRadarCenter);
+  vv.setAtLocationHeightKMs(heightsKM[layer]);
 
   auto& ev = *myElevationVolume;
 
@@ -580,9 +580,14 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   // Upside is speed, downside is two copies of code here to keep in sync
   const bool writeLLG = isProductWanted("2D");
 
+  AngleDegs startLat = outg.getNWLat() - (outg.getLatSpacing() / 2.0); // move south (lat decreasing)
+  AngleDegs startLon = outg.getNWLon() + (outg.getLonSpacing() / 2.0); // move east (lon increasing)
+  AngleDegs atLat    = startLat;
+
   if (myHaveMask && outputStage2 && !writeLLG) {
-    for (size_t y = 0; y < numY; ++y) {
-      for (size_t x = 0; x < numX; ++x, llp.next(), ssc.next(), levelSame.next()) {
+    for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
+      AngleDegs atLon = startLon;
+      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
         // Mask check.
         size_t mi = myMask.getIndex3D(x, y, layer); // FIXME: Maybe we can be linear here
         if (!myMask.get1(mi)) {
@@ -622,6 +627,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         attemptCount++;
         ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
         llp.getAzDegsAt(vv.virtualAzDegs);
+        vv.setAtLocationLatLonDegs(atLat, atLon);
         resolver.calc(vvp);
         if (stage2p) {
           stage2p->add(vvp, x, y, layer);
@@ -629,8 +635,9 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
       } // endX
     }   // endY
   } else {
-    for (size_t y = 0; y < numY; ++y) {
-      for (size_t x = 0; x < numX; ++x, llp.next(), ssc.next(), levelSame.next()) {
+    for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
+      AngleDegs atLon = startLon;
+      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
         // Mask check.
         if (myHaveMask) {
           size_t mi = myMask.getIndex3D(x, y, layer);
@@ -680,6 +687,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         attemptCount++;
         ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
         llp.getAzDegsAt(vv.virtualAzDegs);
+        vv.setAtLocationLatLonDegs(atLat, atLon);
         resolver.calc(vvp);
 
         gridtest[y][x] = vv.dataValue;
@@ -708,7 +716,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   //
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
 
-  LogDebug("KM: " << vv.layerHeightKMs
+  LogDebug("KM: " << vv.getAtLocationHeightKMs()
                   << " Mask: " << maskSkipped
                   << " Range: " << rangeSkipped
                   << " Same: " << sameTiltSkip

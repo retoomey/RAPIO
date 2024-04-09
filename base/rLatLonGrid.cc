@@ -79,7 +79,7 @@ LatLonArea::setSpacing(float lat_spacing, float lon_spacing)
 }
 
 bool
-LatLonGrid::initFromGlobalAttributes()
+LatLonArea::initFromGlobalAttributes()
 {
   bool success = true;
 
@@ -103,10 +103,10 @@ LatLonGrid::initFromGlobalAttributes()
   }
 
   return success;
-} // LatLonGrid::initFromGlobalAttributes
+} // LatLonArea::initFromGlobalAttributes
 
 void
-LatLonGrid::updateGlobalAttributes(const std::string& encoded_type)
+LatLonArea::updateGlobalAttributes(const std::string& encoded_type)
 {
   // Note: Datatype updates the attributes -unit -value specials,
   // so don't add any after this
