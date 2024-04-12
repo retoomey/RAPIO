@@ -75,38 +75,6 @@ DataGrid::getDataArray(const std::string& name)
   return getNode(name);
 }
 
-std::string
-DataGrid::getUnits(const std::string& name)
-{
-  std::string units;
-
-  if (name == Constants::PrimaryDataName) {
-    units = myUnits;
-  }
-  auto n = getNode(name);
-
-  if (n != nullptr) {
-    auto someunit = n->getAttribute<std::string>("Units");
-    if (someunit) {
-      units = *someunit;
-    }
-  }
-  return units;
-}
-
-void
-DataGrid::setUnits(const std::string& units, const std::string& name)
-{
-  if (name == Constants::PrimaryDataName) {
-    myUnits = units;
-  }
-  auto n = getNode(name);
-
-  if (n != nullptr) {
-    n->putAttribute<std::string>("Units", units);
-  }
-}
-
 std::vector<size_t>
 DataGrid::getSizes()
 {
@@ -791,3 +759,30 @@ DataGrid::sparse2D()
 
   return true;
 } // DataGrid::sparse2D
+
+std::string
+DataGrid::getUnits(const std::string& name)
+{
+  std::string units = DataType::getUnits(name);
+
+  // Update node if any
+  auto n = getNode(name);
+
+  if (n != nullptr) {
+    n->getString("Units", units);
+  }
+  return units;
+}
+
+void
+DataGrid::setUnits(const std::string& units, const std::string& name)
+{
+  DataType::setUnits(units, name);
+
+  // Get from node if any
+  auto n = getNode(name);
+
+  if (n != nullptr) {
+    n->setString("Units", units);
+  }
+}

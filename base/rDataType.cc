@@ -261,3 +261,22 @@ DataType::getColorMap()
   }
   return ColorMap::getColorMap(colormap);
 }
+
+std::string
+DataType::getUnits(const std::string& name)
+{
+  std::string units;
+
+  if (name == Constants::PrimaryDataName) {
+    units = myUnits;
+  }
+  return units;
+}
+
+void
+DataType::setUnits(const std::string& units, const std::string& name)
+{
+  if (name == Constants::PrimaryDataName) {
+    myUnits = units;
+  }
+}

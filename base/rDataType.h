@@ -188,13 +188,13 @@ public:
 
   /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
-  virtual std::string getUnits(const std::string& name = Constants::PrimaryDataName)
-  { return myUnits; }
+  virtual std::string
+  getUnits(const std::string& name = Constants::PrimaryDataName);
 
   /** Set the primary units.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
-  virtual void setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName)
-  { myUnits = units; }
+  virtual void
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName);
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */

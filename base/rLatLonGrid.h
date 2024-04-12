@@ -182,6 +182,16 @@ public:
   virtual void
   postRead(std::map<std::string, std::string>& keys) override;
 
+  /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
+   * any DataGrid writers like netcdf generic not knowing about our
+   * special sparse formats. */
+  virtual void
+  preWrite(std::map<std::string, std::string>& keys) override;
+
+  /** Make ourselves MRMS non-sparse iff we're sparse */
+  virtual void
+  postWrite(std::map<std::string, std::string>& keys) override;
+
   /** Initialize a LatLonGrid post create */
   bool
   init(

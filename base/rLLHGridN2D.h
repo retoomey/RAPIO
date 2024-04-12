@@ -44,6 +44,10 @@ public:
     const Time           & gridtime,
     const LLCoverageArea & grid);
 
+  /** Convenience to set the units of a given array name */
+  virtual void
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
+
   /** Return grid number i, lazy creation */
   std::shared_ptr<LatLonGrid>
   get(size_t i);

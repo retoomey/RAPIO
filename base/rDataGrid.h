@@ -362,17 +362,19 @@ public:
   std::shared_ptr<DataArray>
   getDataArray(const std::string& name = Constants::PrimaryDataName);
 
-  /** Convenience to get the units of a given array name */
-  virtual std::string
-  getUnits(const std::string& name = Constants::PrimaryDataName) override;
-
-  /** Convenience to set the units of a given array name */
-  virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
-
   /** Update global attribute list for RadialSet */
   virtual void
   updateGlobalAttributes(const std::string& encoded_type) override;
+
+  /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual std::string
+  getUnits(const std::string& name = Constants::PrimaryDataName) override;
+
+  /** Set the primary units.  Some DataTypes have subfields,
+   * subarrays that have multiple unit types */
+  virtual void
+  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */

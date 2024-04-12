@@ -88,6 +88,19 @@ LLHGridN2D::init(
   return true;
 }
 
+void
+LLHGridN2D::setUnits(const std::string& units, const std::string& name)
+{
+  DataGrid::setUnits(units, name);
+
+  // Echo primary to our N layers...
+  if (name == Constants::PrimaryDataName) {
+    for (auto& g:myGrids) {
+      g->setUnits(units, name);
+    }
+  }
+}
+
 std::shared_ptr<LatLonGrid>
 LLHGridN2D::get(size_t i)
 {
@@ -238,6 +251,7 @@ LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
       }
     }
   }
+  setDataType("SparseLatLonHeightGrid");
 } // LLHGridN2D::makeSparse
 
 void
@@ -256,4 +270,5 @@ LLHGridN2D::postWrite(std::map<std::string, std::string>& keys)
 
   // Remove the dimension we added in makeSparse
   myDims.pop_back();
+  setDataType("LatLonHeightGrid");
 }
