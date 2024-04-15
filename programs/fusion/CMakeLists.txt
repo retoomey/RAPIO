@@ -15,6 +15,7 @@ add_library(fusionshared STATIC
 # Fusion1
 add_executable(rFusion1
   rRobertLinear1Resolver.cc
+  rLak2DResolver.cc
   rLakResolver1.cc
   rVelResolver.cc
   rLakRadialSmoother.cc

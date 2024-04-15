@@ -195,7 +195,10 @@ RAPIOOptions::getGrid(
 {
   std::string gridstr = getString(name);
 
-  return (grid.parse(gridstr, "", "", ""));
+  if (!grid.parse(gridstr, "", "", "")) {
+    exit(1);
+  }
+  return true;
 } // RAPIOOptions::getGrid
 
 bool
@@ -208,7 +211,10 @@ RAPIOOptions::getLegacyGrid(
   std::string spacing   = getString("s");
   std::string gridstr   = getString("grid");
 
-  return (grid.parse(gridstr, topcorner, botcorner, spacing));
+  if (!grid.parse(gridstr, topcorner, botcorner, spacing)) {
+    exit(1);
+  }
+  return true;
 } // RAPIOOptions::getLegacyGrid
 
 /** Count a list of arguments with a given filter */

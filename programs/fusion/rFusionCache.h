@@ -259,18 +259,7 @@ public:
     std::stringstream ss;
 
     ss << theRosterDir;
-
-    ss << "GRID" << "_";
-    ss << grid.getNWLat() << "_";
-    ss << grid.getNWLon() << "_";
-    ss << grid.getSELat() << "_";
-    ss << grid.getSELon() << "_";
-    ss << grid.getLatSpacing() << "_";
-    ss << grid.getLonSpacing() << "_";
-    ss << grid.getStartX() << "_";
-    ss << grid.getStartY() << "_";
-    ss << grid.getNumX() << "_";
-    ss << grid.getNumY() << "/" << subfolder << "/";
+    ss << "GRID" << "_" << grid.getParseUniqueString() << "/" << subfolder << "/";
     return ss.str();
   }
 

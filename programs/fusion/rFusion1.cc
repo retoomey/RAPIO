@@ -7,6 +7,7 @@
 
 // Value Resolvers
 #include "rRobertLinear1Resolver.h"
+#include "rLak2DResolver.h"
 #include "rLakResolver1.h"
 #include "rVelResolver.h"
 
@@ -37,6 +38,7 @@ RAPIOFusionOneAlg::declarePlugins()
   RobertLinear1Resolver::introduceSelf();
   LakResolver1::introduceSelf();
   VelResolver::introduceSelf();
+  Lak2DResolver::introduceSelf();
   // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
 
   // -------------------------------------------------------------

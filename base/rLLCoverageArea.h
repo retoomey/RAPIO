@@ -105,6 +105,10 @@ public:
   std::vector<double>
   getHeightsKM() const { return heightsKM; }
 
+  /** Get unique parse string using a _ format that can be used as part of a unique folder name */
+  std::string
+  getParseUniqueString() const;
+
   /** Allow operator << to access our internal fields */
   friend std::ostream&
   operator << (std::ostream&, const LLCoverageArea&);
@@ -132,6 +136,10 @@ protected:
 
   /** An optional collection of heights in meters */
   std::vector<double> heightsKM;
+
+  /** If created by parsing heights, this holds the unique string
+   * that was used before parsing */
+  std::string myHeightParse;
 };
 
 std::ostream&

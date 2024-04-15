@@ -211,15 +211,21 @@ LLCoverageArea::parseDegrees(const std::string& label, const std::string& p, Ang
 
 namespace {
 /** Generate height list in meters from a low/high and incr/upto vector array set*/
-std::vector<double>
-generateHeightList(double low, double high, std::vector<int>& incr, std::vector<int>& upto)
+bool
+generateHeightList(double low, double high, std::vector<int>& incr, std::vector<int>& upto,
+  std::vector<double>& heights)
 {
   // Construct height list using a W2 incr/upto structure
-  std::vector<double> heights;
+  const size_t MAX_HEIGHTS_ALLOWED = 100;
   double atHeight = low;
   bool done       = false;
+  size_t count    = 0; // integrity check
 
   while (!done) {
+    if (++count >= MAX_HEIGHTS_ALLOWED) { //
+      LogSevere("Generated more than " << count << " heights from grid spec, aborting.\n");
+      return false;
+    }
     heights.push_back(atHeight);
     for (size_t i = 0; i < incr.size(); i++) {
       if (atHeight < upto[i]) { // This one valid (could have dups though)
@@ -231,7 +237,7 @@ generateHeightList(double low, double high, std::vector<int>& incr, std::vector<
       }
     }
   }
-  return heights;
+  return true;
 }
 }
 
@@ -297,37 +303,53 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
       high = temp;
     }
 
+    // Create a string from the original arguments
+    // This needs to be fairly unique.  The only way to do that 100% is to list all the
+    // heights.
+    const char D = '_';
+    std::stringstream hs;
+    hs << low << D << high << D;
+
     // ---------------------------------------
     // Get the incr/upto list from the height description
     std::vector<int> incr;
     std::vector<int> upto;
     std::string str = pieces[2];
+
     if (!lookupIncrUpto(str, incr, upto)) {
       // If lookup fails, try as a number
       try{
-        float up = std::stof(str); // FIXME: check failure
-        incr = { (int) (up * 1000.0) };
+        float up    = std::stof(str);
+        int incrInt = (int) (up * 1000.0);
+        incr = { incrInt };
         upto = { 99999 };
+        hs << incrInt << D << 99999;
       }catch (const std::exception& e) {
         LogSevere("Failed to find a key in heights or convert to number '" << str << "'\n");
         failed = true;
         return failed;
       }
+    } else {
+      // Assume the key is stable from config xml
+      hs << str;
     }
+
+    myHeightParse = hs.str();
 
     // ---------------------------------------
     // Finally generate full list of heights
-    heightsMs = generateHeightList(low, high, incr, upto);
-
-    std::stringstream ss;
-    for (size_t i = 0; i < heightsMs.size(); i++) {
-      ss << heightsMs[i] / 1000.0;
-      heightsMs[i] = heightsMs[i] / 1000.0; // Make final in KMs
-      if (i != heightsMs.size() - 1) {
-        ss << " ";
+    failed |= !generateHeightList(low, high, incr, upto, heightsMs);
+    if (!failed) {
+      std::stringstream ss;
+      for (size_t i = 0; i < heightsMs.size(); i++) {
+        ss << heightsMs[i] / 1000.0;
+        heightsMs[i] = heightsMs[i] / 1000.0; // Make final in KMs
+        if (i != heightsMs.size() - 1) {
+          ss << " ";
+        }
       }
+      LogInfo("Generated heights (KMs): " << ss.str() << "\n");
     }
-    LogInfo("Generated heights (KMs): " << ss.str() << "\n");
   }
   if (failed) {
     LogSevere("Failed to parse '" << label << "' height parameters: '" << list << "'\n");
@@ -403,21 +425,52 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
   AngleDegs latSpacing = 0.01;
   AngleDegs lonSpacing = 0.01;
   bool failed = false;
+  bool haveNW = false;
+  bool haveSE = false;
+  bool haveS  = false;
+  bool haveH  = false;
+
   std::vector<double> theHeightsKM;
+
+  if (functions.size() < 1) {
+    LogSevere("Unrecognized grid language: '" << finalGrid << "'\n");
+    failed = true;
+  }
 
   for (auto entry: functions) {
     std::string f = entry.first;
     std::string p = entry.second;
     if (f == "nw") {
-      failed |= parseDegrees(f, p, nwLatDegs, nwLonDegs);
+      haveNW = !parseDegrees(f, p, nwLatDegs, nwLonDegs);
     } else if (f == "se") {
-      failed |= parseDegrees(f, p, seLatDegs, seLonDegs);
+      haveSE = !parseDegrees(f, p, seLatDegs, seLonDegs);
     } else if (f == "s") {
-      failed |= parseDegrees(f, p, latSpacing, lonSpacing);
+      haveS = !parseDegrees(f, p, latSpacing, lonSpacing);
     } else if (f == "h") {
-      failed |= parseHeights(f, p, theHeightsKM);
+      haveH = !parseHeights(f, p, theHeightsKM);
+    } else {
+      LogSevere("Unrecognized grid language: '" << f << "' unrecognized.\n");
+      failed = true;
     }
   }
+
+  // Have to have these to be valid. Heights are optional
+  if (!haveNW) {
+    LogSevere("Missing nw() grid corner.\n");
+    failed = true;
+  }
+  if (!haveSE) {
+    LogSevere("Missing se() grid corner.\n");
+    failed = true;
+  }
+  if (!haveS) {
+    LogSevere("Missing s() grid spacing.\n");
+    failed = true;
+  }
+  if (!haveH) { // 2D
+    theHeightsKM = std::vector<double>{ 0.0 };
+  }
+
   // Check nw and se corner ordering...we could fix/flip them probably or stop
   if (!failed) {
     if (nwLatDegs <= seLatDegs) {
@@ -451,3 +504,24 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
 
   return true;
 } // LLCoverageArea::parse
+
+std::string
+LLCoverageArea::getParseUniqueString() const
+{
+  const char D = '_';
+  std::stringstream ss;
+
+  ss << getNWLat() << D;
+  ss << getNWLon() << D;
+  ss << getSELat() << D;
+  ss << getSELon() << D;
+  ss << getLatSpacing() << D;
+  ss << getLonSpacing() << D;
+  ss << getStartX() << D;
+  ss << getStartY() << D;
+  ss << getNumX() << D;
+  ss << getNumY() << D;
+  ss << getNumZ() << D;
+  ss << myHeightParse;
+  return ss.str();
+}
