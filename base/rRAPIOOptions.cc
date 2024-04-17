@@ -676,13 +676,16 @@ RAPIOOptions::expandArgs(const std::vector<std::string>& args, std::string& left
   // "leftover" --> "" "leftover"
   leftovers = "";
   std::vector<std::string> expanded;
+  bool foundHelpRequest = false;
 
   for (size_t i = 0; i < args.size(); ++i) {
     auto& at = args[i];
     auto l   = at.length();
     auto n   = (i == args.size() - 1) ? "" : args[i + 1];
+    const bool helpString = ((at == "help") || (at == "--help"));
 
-    if (isArgument(at)) {
+    // Handle normal arguments other than recognized help strings
+    if (isArgument(at) && !helpString) {
       // -z=zvalue
       std::vector<std::string> twoargs;
       Strings::splitOnFirst(at, '=', &twoargs);
@@ -701,11 +704,14 @@ RAPIOOptions::expandArgs(const std::vector<std::string>& args, std::string& left
       }
     } else {
       // Unmatched text string
-      if (!at.empty()) {    // skip completely empty pairs
-        if (at == "help") { // make 'help' same as --help
-          expanded.push_back("help");
+      if (!at.empty()) { // skip completely empty pairs
+        if (helpString && !foundHelpRequest) {
+          // make first 'help' or "--help" into special.
+          // This lets us do "program --help help" or "program help help" or "program help i o" for example
+          expanded.push_back("helpRequestedPlease");
           expanded.push_back("");
-        } else { // otherwise no argument text
+          foundHelpRequest = true; // Let next 'help' be param for help lol.  "help help"
+        } else {                   // otherwise no argument text
           expanded.push_back("");
           expanded.push_back(at);
           if (leftovers.empty()) {
@@ -791,7 +797,7 @@ RAPIOOptions::processArgs(const int& argc, char **& argv)
     auto& c = expanded[i];     // -argument
     auto& v = expanded[i + 1]; // value
 
-    if (c == "help") { haveHelp = true; }
+    if (c == "helpRequestedPlease") { haveHelp = true; }
   }
 
   // Expand macro using leftovers if available

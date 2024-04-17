@@ -65,10 +65,10 @@ LatLonGrid::Create(
 }
 
 void
-LatLonArea::setSpacing(float lat_spacing, float lon_spacing)
+LatLonArea::setSpacing(AngleDegs lat_spacing, AngleDegs lon_spacing)
 {
-  myLatSpacing = lat_spacing;
-  myLonSpacing = lon_spacing;
+  myLatSpacing = round(lat_spacing * 10000) / 10000;
+  myLonSpacing = round(lon_spacing * 10000) / 10000;
   bool okLat = (myLatSpacing > 0);
   bool okLon = (myLonSpacing > 0);
 
@@ -93,13 +93,18 @@ LatLonArea::initFromGlobalAttributes()
 
   // -------------------------------------------------------
   // Latitude and Longitude grid spacing
-  if (!getFloat("LatGridSpacing", myLatSpacing)) {
+  double holderLat, holderLon;
+
+  if (!getDouble("LatGridSpacing", holderLat)) {
     LogSevere("Missing LatGridSpacing attribute\n");
     success = false;
   }
-  if (!getFloat("LonGridSpacing", myLonSpacing)) {
+  if (!getDouble("LonGridSpacing", holderLon)) {
     LogSevere("Missing LonGridSpacing attribute\n");
     success = false;
+  }
+  if (success) {
+    setSpacing(holderLat, holderLon);
   }
 
   return success;
@@ -113,8 +118,16 @@ LatLonArea::updateGlobalAttributes(const std::string& encoded_type)
   DataType::updateGlobalAttributes(encoded_type);
 
   // LatLonGrid only global attributes
-  setDouble("LatGridSpacing", myLatSpacing);
-  setDouble("LonGridSpacing", myLonSpacing);
+  // Make sure no matter the AngleDeg type, we make sure the double
+  // stored precision is good
+  double lat_spacing = myLatSpacing;
+
+  lat_spacing = round(lat_spacing * 10000.0) / 10000.0;
+  double lon_spacing = myLonSpacing;
+
+  lon_spacing = round(lon_spacing * 10000.0) / 10000.0;
+  setDouble("LatGridSpacing", lat_spacing);
+  setDouble("LonGridSpacing", lon_spacing);
 }
 
 std::shared_ptr<DataProjection>
@@ -170,36 +183,17 @@ LatLonGrid::postRead(std::map<std::string, std::string>& keys)
 {
   // For now, we always unsparse to full.  Though say in rcopy we
   // would want to keep it sparse.  FIXME: have a key control this
-  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
+  unsparse2D(getNumLats(), getNumLons(), keys);
 } // LatLonGrid::postRead
 
 void
 LatLonGrid::preWrite(std::map<std::string, std::string>& keys)
 {
-  if (sparse2D()) {
-    setDataType("SparseLatLonGrid");
-  }
+  sparse2D(); // Standard sparse of primary data (add dimension)
 }
 
 void
 LatLonGrid::postWrite(std::map<std::string, std::string>& keys)
 {
-  // These depend on the source array anyway..so have to be regenerated
-  // on next write
-  if (myDims.size() != 3) {
-    return;
-  }
-  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
-  deleteArrayName("pixel_y");
-  deleteArrayName("pixel_x");
-  deleteArrayName("pixel_count");
-
-  // Remove the dimension we added in makeSparse
-  myDims.pop_back();
-
-  // Put back our saved primary array from the makeSparse above...
-  changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
-  setVisible(Constants::PrimaryDataName, true);
-
-  setDataType("LatLonGrid");
+  unsparseRestore();
 }

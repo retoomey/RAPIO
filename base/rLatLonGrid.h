@@ -25,14 +25,14 @@ public:
   // Cell information ability -------------------------------------------
 
   /** Get the latitude spacing in degrees between cells, if any. */
-  float
+  AngleDegs
   getLatSpacing() const
   {
     return (myLatSpacing);
   }
 
   /** Get the longitude spacing in degrees between cells, if any. */
-  float
+  AngleDegs
   getLonSpacing() const
   {
     return (myLonSpacing);
@@ -50,7 +50,7 @@ public:
 
   /** Set the latitude/longitude spacing used */
   void
-  setSpacing(float lat_spacing, float lon_spacing);
+  setSpacing(AngleDegs lat_spacing, AngleDegs lon_spacing);
 
   /** Get the top left location of a cell
    *  This is the point on the left top of cell (see X).
@@ -120,10 +120,10 @@ public:
 protected:
 
   /** Latitude spacing of cells in degrees */
-  float myLatSpacing;
+  AngleDegs myLatSpacing;
 
   /** Longitude spacing of cells in degrees */
-  float myLonSpacing;
+  AngleDegs myLonSpacing;
 
   /** Vector of layer numbers.  Most likely heights. */
   std::vector<int> myLayerNumbers;

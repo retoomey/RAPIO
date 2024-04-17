@@ -104,7 +104,8 @@ double
 RadialSetProjection::getValueAtLL(double latDegs, double lonDegs)
 {
   // Translate from Lat Lon to az/range
-  float azDegs, rangeMeters;
+  AngleDegs azDegs;
+  float rangeMeters;
   double value;
   int radial, gate;
 

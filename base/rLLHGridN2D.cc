@@ -36,10 +36,12 @@ LLHGridN2D::Create(
 {
   auto newonesp = std::make_shared<LLHGridN2D>();
 
-  newonesp->init(TypeName, Units, LLH(g.getNWLat(), g.getNWLon(), 0),
+  auto h = g.getHeightsKM();
+  const LengthKMs bottomKMs = (h.size() < 1) ? 0 : h[0];
+
+  newonesp->init(TypeName, Units, LLH(g.getNWLat(), g.getNWLon(), bottomKMs),
     time, g.getLatSpacing(), g.getLonSpacing(), g.getNumY(), g.getNumX(), g.getNumZ());
   // Copy CoverageArea heights into our layer numbers since we passed a coverage area
-  auto h = g.getHeightsKM();
 
   // Copy into the layer values.  However, these are int, so since the heights
   // are partial KMs, we need to upscale to fit it.
@@ -69,7 +71,6 @@ LLHGridN2D::init(
   // We act like 3D...we won't store a 3D array though...
   DataGrid::init(TypeName, Units, location, datatime, { num_layers, num_lats, num_lons }, { "Ht", "Lat", "Lon" });
 
-  // setDataType("LLHGridN2D");
   setDataType("LatLonHeightGrid"); // We're actually an implementation/view of LatLonHeightGrid
 
   setSpacing(lat_spacing, lon_spacing);
@@ -115,11 +116,8 @@ LLHGridN2D::get(size_t i)
     Time t = myTime;                           // Default time to our time, caller can change it later
     LLH l  = myLocation;                       // Default location and height is our layer number
     l.setHeightKM(myLayerNumbers[i] / 1000.0); // We stored meter level resolution
-
-    // FIXME: getNumLats get Z here, because Lak changed dimension ordering.  Need work
-    myGrids[i] = LatLonGrid::Create(myTypeName, myUnits, l, t, myLatSpacing, myLonSpacing,
- // getNumLats(), getNumLons());
-        myDims[1].size(), myDims[2].size());
+    myGrids[i] = LatLonGrid::Create(myTypeName, myUnits, l, t, getLatSpacing(), getLonSpacing(),
+        getNumLats(), getNumLons());
     // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
   }
 
@@ -257,18 +255,5 @@ LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
 void
 LLHGridN2D::postWrite(std::map<std::string, std::string>& keys)
 {
-  if (myDims.size() != 4) {
-    return;
-  }
-  // These depend on the source array anyway..so have to be regenerated
-  // on next write
-  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
-  deleteArrayName("pixel_z");
-  deleteArrayName("pixel_y");
-  deleteArrayName("pixel_x");
-  deleteArrayName("pixel_count");
-
-  // Remove the dimension we added in makeSparse
-  myDims.pop_back();
-  setDataType("LatLonHeightGrid");
+  unsparseRestore();
 }

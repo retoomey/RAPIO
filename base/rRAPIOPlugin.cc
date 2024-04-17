@@ -42,7 +42,7 @@ void
 PluginHeartbeat::addPostLoadedHelp(RAPIOOptions& o)
 {
   o.addAdvancedHelp(myName,
-    "Sends heartbeat to program.  Note if your program lags you may miss heartbeat.  For example, you have a 1 min heartbeat but take 2 mins to calculate/write.  You will get the next heartbeat window.  The format is a 6 star second supported cronlist, such as '*/10 * * * * *' for every 10 seconds.");
+    "Sends heartbeat to program.  Note if your program lags due to calculation/write times, you may miss a heartbeat. The format is a 6 star second supported cronlist.\nCommon use cases:\n    '*/10 * * * * *' -- Run every 10 seconds.  Note max seconds is 59 here.\n    '0  */2 * * * *' -- Run every 2 minutes at the 0th second.");
 }
 
 void

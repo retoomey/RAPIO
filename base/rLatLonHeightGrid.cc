@@ -96,31 +96,11 @@ LatLonHeightGrid::postRead(std::map<std::string, std::string>& keys)
 void
 LatLonHeightGrid::preWrite(std::map<std::string, std::string>& keys)
 {
-  if (sparse3D()) {
-    setDataType("SparseLatLonHeightGrid");
-  }
+  sparse3D(); // Standard sparse of primary data (add dimension)
 } // LatLonHeightGrid::preWrite
 
 void
 LatLonHeightGrid::postWrite(std::map<std::string, std::string>& keys)
 {
-  // These depend on the source array anyway..so have to be regenerated
-  // on next write
-  if (myDims.size() != 4) {
-    return;
-  }
-  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
-  deleteArrayName("pixel_z");
-  deleteArrayName("pixel_y");
-  deleteArrayName("pixel_x");
-  deleteArrayName("pixel_count");
-
-  // Remove the dimension we added in makeSparse
-  myDims.pop_back();
-
-  // Put back our saved primary array from the makeSparse above...
-  changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
-  setVisible(Constants::PrimaryDataName, true);
-
-  setDataType("LatLonHeightGrid");
+  unsparseRestore();
 }

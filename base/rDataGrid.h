@@ -359,8 +359,11 @@ public:
   };
 
   /** Get back node so can call methods on it */
-  std::shared_ptr<DataArray>
-  getDataArray(const std::string& name = Constants::PrimaryDataName);
+  inline std::shared_ptr<DataArray>
+  getDataArray(const std::string& name = Constants::PrimaryDataName)
+  {
+    return getNode(name);
+  }
 
   /** Update global attribute list for RadialSet */
   virtual void
@@ -464,6 +467,18 @@ public:
     return ptr;
   } // add
 
+  /** Do we have an array of given name? */
+  bool
+  haveArrayName(const std::string& name)
+  {
+    for (auto i:myNodes) {
+      if (i->getName() == name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Change name of a stored array.  Used for sparse/non-sparse array swapping */
   bool
   changeArrayName(const std::string& name, const std::string& newname)
@@ -564,13 +579,23 @@ public:
     const std::string                 & pixelZ     = "pixel_z",
     const std::string                 & pixelCount = "pixel_count");
 
-  /** Sparse a collection of 3D array information */
+  // We 'could' implement sparse by making a new copy of the object, which may be
+  // cleaner.  Right now we hide the original data and change to look sparse for
+  // any writers.  Currently these are meant to be called by writers that then
+  // immediately undo the sparse so that the object can continued to be used for
+  // RAM operations (the algorithm may be reusing the DataType).
+
+  /** Sparse a collection of 3D array information, backing up the original data. */
   bool
   sparse3D();
 
-  /** Sparse a collection of 2D array information */
+  /** Sparse a collection of 2D array information, backing up the original data. */
   bool
   sparse2D();
+
+  /** Restore back up of original data from sparsing, make as non-sparse again */
+  void
+  unsparseRestore();
 
 protected:
 

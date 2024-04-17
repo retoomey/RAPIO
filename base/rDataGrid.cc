@@ -69,12 +69,6 @@ DataGrid::getAttributes(
   return nullptr;
 }
 
-inline std::shared_ptr<DataArray>
-DataGrid::getDataArray(const std::string& name)
-{
-  return getNode(name);
-}
-
 std::vector<size_t>
 DataGrid::getSizes()
 {
@@ -654,6 +648,11 @@ DataGrid::sparse3D()
     pixelsDataArray->setLong("NumValidRuns", pixels.size());
   }
 
+  // Change DataType to have "Sparse" in front of it...
+  std::string datatype = getDataType();
+
+  setDataType("Sparse" + datatype);
+
   return true;
 } // DataGrid::sparse3D
 
@@ -757,8 +756,40 @@ DataGrid::sparse2D()
     pixelsDataArray->setLong("NumValidRuns", pixels.size());
   }
 
+  // Change DataType to have "Sparse" in front of it...
+  std::string datatype = getDataType();
+
+  setDataType("Sparse" + datatype);
+
   return true;
 } // DataGrid::sparse2D
+
+void
+DataGrid::unsparseRestore()
+{
+  std::string datatype = getDataType();
+
+  if (!Strings::beginsWith(datatype, "Sparse")) { return; }
+
+  // LatLonGrid...RadialSet
+  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
+  deleteArrayName("pixel_z");                  // Might be there for 3D..this is ok if it's not
+  deleteArrayName("pixel_y");
+  deleteArrayName("pixel_x");
+  deleteArrayName("pixel_count");
+
+  // Remove the dimension we added in sparse2D/sparse3D
+  myDims.pop_back();
+
+  // Put back our saved primary array from the sparse2D/sparse3D above...
+  if (haveArrayName("DisabledPrimary")) {
+    changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
+    setVisible(Constants::PrimaryDataName, true);
+  }
+
+  Strings::removePrefix(datatype, "Sparse");
+  setDataType(datatype);
+}
 
 std::string
 DataGrid::getUnits(const std::string& name)

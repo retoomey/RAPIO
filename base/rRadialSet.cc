@@ -160,30 +160,11 @@ RadialSet::postRead(std::map<std::string, std::string>& keys)
 void
 RadialSet::preWrite(std::map<std::string, std::string>& keys)
 {
-  if (sparse2D()) {
-    setDataType("SparseRadialSet");
-  }
+  sparse2D(); // Standard sparse of primary data (add dimension)
 }
 
 void
 RadialSet::postWrite(std::map<std::string, std::string>& keys)
 {
-  // These depend on the source array anyway..so have to be regenerated
-  // on next write
-  if (myDims.size() != 3) {
-    return;
-  }
-  deleteArrayName(Constants::PrimaryDataName); // Deleting the sparse array
-  deleteArrayName("pixel_y");
-  deleteArrayName("pixel_x");
-  deleteArrayName("pixel_count");
-
-  // Remove the dimension we added in makeSparse
-  myDims.pop_back();
-
-  // Put back our saved primary array from the makeSparse above...
-  changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
-  setVisible(Constants::PrimaryDataName, true);
-
-  setDataType("RadialSet");
+  unsparseRestore();
 }
