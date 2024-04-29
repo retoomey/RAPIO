@@ -8,7 +8,6 @@
 #include "rLLHGridN2D.h"
 
 #include "rFusionCache.h"
-#include "rStage2Data.h"
 
 namespace rapio {
 /** Stage 1 algorithm.  This handles projection and resolving values

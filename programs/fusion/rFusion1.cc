@@ -1,7 +1,6 @@
 #include "rFusion1.h"
 #include "rBinaryTable.h"
 #include "rConfigRadarInfo.h"
-#include "rStage2Data.h"
 
 #include "rRAPIOPlugin.h"
 
