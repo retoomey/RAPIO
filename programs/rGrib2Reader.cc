@@ -240,6 +240,38 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
         // Project from source project to output
         if (success) {
           project->toLatLonGrid(array2Da, llgridsp);
+	  // call wind rotation code which should have logic like this:
+	  /*
+	   *       !
+      ! Compute normal wind component and store in fg % u
+      !
+
+      truelat1 = field % truelat1
+      truelat2 = field % truelat2
+      xlonc = field % xlonc
+
+      if( field % is_wind_grid_rel ) then
+         call mpas_log_write(" is_wind_grid_rel is true ")
+         call mpas_log_write(" truelat1, truelat2, xlonc are $r $r $r ",realArgs=(/truelat1, truelat2, xlonc/))
+
+         IF (ABS(truelat1-truelat2) .GT. 0.1) THEN
+            cone = ALOG10(COS(truelat1*rad_per_deg)) - &
+                   ALOG10(COS(truelat2*rad_per_deg))
+            cone = cone /(ALOG10(TAN((45.0 - ABS(truelat1)/2.0) * rad_per_deg)) - &
+                   ALOG10(TAN((45.0 - ABS(truelat2)/2.0) * rad_per_deg)))        
+         ELSE
+            cone = SIN(ABS(truelat1)*rad_per_deg )  
+         ENDIF
+
+         call mpas_log_write(" cone value is $r ",realArgs=(/cone/))
+         xlonc = rad_per_deg * xlonc
+         call mpas_log_write(" rotating velocities ")
+         call rotate_velocities(u_fg, v_fg, lonEdge, cone, xlonc, nfglevels_actual, nEdges)
+
+      else 
+         call mpas_log_write(" is_wind_grid_rel is false ")
+      end if
+      */
           writeOutputProduct(llgridsp->getTypeName(), llgridsp);
         } else {
           LogSevere("Failed to create projection\n");
