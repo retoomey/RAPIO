@@ -48,9 +48,15 @@ if(${USE_NCEPLIBS_GRIB2})
                -DUSE_Jasper=${USE_JASPER_NCEPLIBS}  # Use Jasper 
   )
 
-  set(GRIB2_RAPIO_INCLUDES "${ROOT_DIRECTORY}/include")
-  set(GRIB2_RAPIO_LIBRARIES "${ROOT_DIRECTORY}/lib64/libg2c.a")
+
   ####################################################################
+  # The NCEP library installs to 'lib' or 'lib64' depending on
+  # GNUInstallDirs
+  include(GNUInstallDirs)
+  set(GRIB2_RAPIO_INCLUDES "${ROOT_DIRECTORY}/${CMAKE_INSTALL_INCLUDEDIR}")
+  set(GRIB2_RAPIO_LIBRARIES "${ROOT_DIRECTORY}/${CMAKE_INSTALL_LIBDIR}/libg2c.a")
+  ####################################################################
+
 
 else()
   addRAPIONote("G2CLIB library (deprecated and not recommended)")

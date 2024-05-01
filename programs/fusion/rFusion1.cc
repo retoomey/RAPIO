@@ -773,12 +773,9 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
 
   // Send stage2 data (note this is a full conus volume)
   if (isProductWanted("S2") || isProductWanted("S2Netcdf")) {
-    LLH aLocation;
-    // Time aTime  = Time::CurrentTime(); // Time depends on archive/realtime or incoming enough?
-    Time aTime = rTime; // The time of the data matches the incoming data
     if (stage2IO) {
-      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << aTime << "\n");
-      stage2IO->send(this, aTime, myWriteStage2Name);
+      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << rTime << "\n");
+      stage2IO->send(this, rTime, myWriteStage2Name);
     }
   }
 } // RAPIOFusionOneAlg::processNewData

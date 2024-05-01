@@ -518,6 +518,12 @@ RAPIOTileAlg::handlePathDefault(WebMessage& w)
   // oops need the port from settings
   std::string hostname = OS::getHostName();
 
+  if (OS::isWSL()) {
+    // Hack so I can run browser on host.
+    // Really what we need is the ip of the calling web page
+    hostname = "localhost";
+  }
+
   // Just in case we pass back a png or something, don't try to macro it
   if (Strings::endsWith(path, ".html")) {
     const std::string portStr = std::to_string(WebServer::port);
@@ -530,7 +536,7 @@ RAPIOTileAlg::handlePathDefault(WebMessage& w)
   const URL loc = Config::getConfigFile(path);
 
   w.setFile(loc.toString()); // Web server handles the cases
-}
+} // RAPIOTileAlg::handlePathDefault
 
 void
 RAPIOTileAlg::logWebMessage(const WebMessage& w)

@@ -224,6 +224,10 @@ public:
   static bool
   isContainer();
 
+  /** Determine if we're running in WSL window's subsystem for linux  or not */
+  static bool
+  isWSL();
+
   /** Run a command on a file supporting file macros */
   static bool
   runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut = true);

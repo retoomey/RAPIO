@@ -84,13 +84,16 @@ public:
   send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName) override
   {
     // At moment just send a netcdf file always
-    if (alg->isProductWanted("S2Netcdf") || (alg->isProductWanted("S2"))) {
-      LLH aLocation;
-      Time aTime;
+    if (alg->isProductWanted("S2Netcdf")) {
       const size_t finalSize = myValues.size();
 
       auto stage2 =
         DataGrid::Create(asName, myUnits, myLocation, aTime, { finalSize }, { "Values" });
+
+      // This is general settings for pathing...
+      stage2->setString("Sourcename", mySourceName);
+      stage2->setDataType("PointTable"); // DataType attribute in the file not filename
+      stage2->setSubType("S2");
 
       // Values to netcdf arrays
       auto& values = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
@@ -115,6 +118,10 @@ public:
       extraParams["compression"]  = "gz";
       stage2->setTypeName(asName); // should already be set
       alg->writeOutputProduct("S2Netcdf", stage2, extraParams);
+    }
+
+    if (alg->isProductWanted("S2")) {
+      LogSevere("Can't write raw S2.  Use S2Netcdf option to write netcdf.\n");
     }
   } // send
 
