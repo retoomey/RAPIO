@@ -17,6 +17,9 @@ const std::string modelProjectionsXML = "misc/modelProjections.xml";
 
 bool myReadSettings = false;
 
+//
+// Model fields from xml config file
+//
 struct ModelFields
 {
   /* data */
@@ -25,9 +28,15 @@ struct ModelFields
   std::string name;
   std::string units;
   std::string layer;
+  std::string rotateWinds;
 
 };
 std::vector<ModelFields> mFields;
+
+//
+// have wind field conversion structures been initialized?
+//
+bool initWindConversion = false;
 
 void
 Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
@@ -139,14 +148,16 @@ Grib2ReaderAlg::whichFieldsToProcess()
           const auto name = m.getAttr("name", std::string(""));
           const auto units = m.getAttr("unit", std::string(""));
           const auto layer = m.getAttr("layer", std::string(""));
+          const auto rotateWinds = m.getAttr("rotateWinds", std::string(""));
           std::cout << id << " " << type << " " << name << " " << units
-             << " " << layer << "\n";
+             << " " << layer << "windrot: " << rotateWinds << "\n";
           ModelFields mf;
           mf.id = id;
           mf.type = type;
           mf.name = name;
           mf.units = units;
           mf.layer = layer;
+          mf.rotateWinds = rotateWinds;
           mFields.push_back(mf); 
           count++;  
           std::cout << "Count = " << count << "\n";
@@ -167,6 +178,13 @@ Grib2ReaderAlg::whichFieldsToProcess()
   
 }
 
+/*
+ * void
+Grib2ReaderAlg::rotateWindGrids()
+
+{
+}
+*/
 void
 Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 {
@@ -230,6 +248,8 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
           /* data */
         );
         llgridsp->setSubType(mFields[i].layer);
+	// call proj to convert to LatLonGrid from native projection
+	// This bit sets up the projection (input from the modelProjections.xml)
         Project * project = new ProjLibProject(
           // axis: Tell project that our data is east and south heading
           //"+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
@@ -237,9 +257,70 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
         );
         bool success = project->initialize();
         LogInfo("Created projection:  " << success << "\n");
-        // Project from source project to output
+	//
+        // Project from source project to LatLonGrid and write it out
+	//
         if (success) {
           project->toLatLonGrid(array2Da, llgridsp);
+          writeOutputProduct(llgridsp->getTypeName(), llgridsp);
+
+	  //
+	  // if this is a grid-relative wind field that needs to be
+	  // converted to earth-relative, then stuff it in a holding structure
+	  //
+
+	  if (mFields[i].rotateWinds == "") {
+          	  LogInfo("No winds to rotate\n");
+	  } else {
+		  std::vector<std::string> windinfo;
+		  Strings::split(mFields[i].rotateWinds, ':', &windinfo);
+        	  LogInfo("windinfo:  ");
+		  for (size_t i=0;i<windinfo.size();i++) {
+        	  	LogInfo(i << ":\"" << windinfo[i] << "\"\n");
+		  }
+        	  LogInfo("\n");
+		  if (windinfo.size() > 0) {
+			  if (windinfo[0] == "LCC") {
+				  LogInfo("Doing Lambert Conformal\n");
+				  if (!initWindConversion) {
+					  //first time this has been called,
+					  // so set up the arrays
+	                                   auto uwind = LatLonGrid::Create(
+                                           windinfo[3],
+					   mFields[i].units,
+					   LLH(nwlat, nwlon, .500), // origin
+                                           message->getTime(),
+					   latspacing,
+					   lonspacing, 
+					   outputlats,
+					   outputlons
+					   );
+	                                   auto vwind = LatLonGrid::Create(
+                                           windinfo[4],
+					   mFields[i].units,
+					   LLH(nwlat, nwlon, .500), // origin
+                                           message->getTime(),
+					   latspacing,
+					   lonspacing, 
+					   outputlats,
+					   outputlons
+					   );
+				  } else {
+				  }
+
+			  } else if (windinfo[0] == "PS") {
+				  LogInfo("Doing Polar Sterographic\n");
+			  } else {
+			          LogInfo("Projection not found\n");
+			  }
+		  } else {
+			  LogInfo("Projection not found\n");
+		  }
+
+
+	  }
+
+
 	  // call wind rotation code which should have logic like this:
 	  /*
 	   *
@@ -334,165 +415,12 @@ C
          call mpas_log_write(" is_wind_grid_rel is false ")
       end if
       */
-          writeOutputProduct(llgridsp->getTypeName(), llgridsp);
         } else {
           LogSevere("Failed to create projection\n");
           return;
         }
       }
-      
-
     }
-    // ------------------------------------------------------------------------
-    // 3D test
-    //
-    // This gets back layers into a 3D grid, which can be convenient for
-    // certain types of data.  Also if you plan to work only with the data numbers
-    // and don't care about transforming/projection say to mrms output grids.
-    // Note that the dimensions have to match for all layers given
-    /*
-    const std::string name3D = "TMP";
-    const std::vector<std::string> layers = { "2 mb", "5 mb", "7 mb" };
-
-    LogInfo("Trying to read '" << name3D << "' as direct 3D from data...\n");
-    auto array3D = grib2->getFloat3D(name3D, layers);
-
-    if (array3D != nullptr) {
-      LogInfo("Found '" << name3D << "'\n");
-      LogInfo("Dimensions: " << array3D->getX() << ", " << array3D->getY() << ", " << array3D->getZ() << "\n");
-    } else {
-      LogSevere("Couldn't get 3D '" << name3D << "' out of grib data\n");
-    }
-    */
-    // ------------------------------------------------------------------------
-    // 2D test
-    //
-    /*
-    
-    const std::string name2D = "TMP";
-    const std::string layer  = "surface";
-
-    LogInfo("Trying to read " << name2D << " as direct 2D from data...\n");
-    auto array2D = grib2->getFloat2D(name2D, layer);
-
-    if (array2D != nullptr) {
-      LogInfo("Found '" << name2D << "'\n");
-      LogInfo("Dimensions: " << array2D->getX() << ", " << array2D->getY() << "\n");
-
-      auto& ref = array2D->ref(); // or (*ref)[x][y]
-      LogInfo("First 10x10 values:\n");
-      LogInfo("----------------------------------------------------\n");
-      for (size_t x = 0; x < 10; ++x) {
-        for (size_t y = 0; y < 10; ++y) {
-          std::cout << ref[x][y] << ",  ";
-        }
-        std::cout << "\n";
-      }
-      LogInfo("----------------------------------------------------\n");
-
-      LogInfo("Trying to read " << name2D << " as grib message.\n");
-      auto message = grib2->getMessage(name2D, layer);
-      if (message != nullptr) {
-        LogInfo("Success with higher interface..read message '" << name2D << "'\n");
-        // FIXME: add methods for various things related to messages
-        // and possibly fields.  We should be able to query a field
-        // off a message at some point.
-        // FIXME: Enums if this stuff is needed/useful..right now most just
-        // return numbers which would make code kinda unreadable I think.
-        // message->getFloat2D(optional fieldnumber == 1)
-        auto& m = *message;
-        LogInfo("    Time of the message is " << m.getDateString() << "\n");
-        LogInfo("    Message in file is number " << m.getMessageNumber() << "\n");
-        LogInfo("    Message file byte offset: " << m.getFileOffset() << "\n");
-        LogInfo("    Message byte length: " << m.getMessageLength() << "\n");
-        // Time theTime = message->getTime();
-        LogInfo("    Center ID is " << m.getCenterID() << "\n");
-        LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
-      }
-
-
-      // Create a brand new LatLonGrid
-      size_t num_lats, num_lons;
-
-      // Raw copy for orientation test.  Good for checking data orientation correct
-      const bool rawCopy = false;
-      if (rawCopy) {
-        num_lats = array2D->getX();
-        num_lons = array2D->getY();
-      } else {
-        num_lats = 1750;
-        num_lons = 3500;
-      }
-
-      // Reverse spacing from the cells and range
-      // FIXME: We could have another create method using degrees I think
-      float lat_spacing = (55.0 - 10.0) / (float) (num_lats); // degree spread/cell count
-      float lon_spacing = (130.0 - 60.0) / (float) num_lons;
-
-      auto llgridsp = LatLonGrid::Create(
-        "SurfaceTemp",           // MRMS name and also colormap
-        "degreeK",               // Units
-        LLH(55.0, -130.0, .500), // CONUS origin
-        message->getTime(),
-        lat_spacing,
-        lon_spacing,
-        num_lats, // X
-        num_lons  // Y
-      );
-
-      // Just copy to check lat/lon orientation
-      if (rawCopy) {
-        auto& out   = llgridsp->getFloat2DRef();
-        size_t numX = array2D->getX();
-        size_t numY = array2D->getY();
-        LogSevere("OUTPUT NUMX NUMY " << numX << ", " << numY << "\n");
-        for (size_t x = 0; x < numX; ++x) {
-          for (size_t y = 0; y < numY; ++y) {
-            out[x][y] = ref[x][y];
-          }
-        }
-      } else {
-	      // test for temperature
-        size_t numX = array2D->getX();
-        size_t numY = array2D->getY();
-        LogSevere("OUTPUT NUMX NUMY " << numX << ", " << numY << "\n");
-        for (size_t x = 0; x < numX; ++x) {
-          for (size_t y = 0; y < numY; ++y) {
-            ref[x][y] = ref[x][y]-273.15;
-          }
-        }
-
-
-        // ------------------------------------------------
-        // ALPHA: Create projection lookup mapping
-        // FIXME: Ok projection needs a LOT more work we need info
-        // from the grib message on source projection, etc.
-        // ALPHA: For moment just make one without caching or anything.
-        // This is slow on first call, but we'd be able to cache in a
-        // real time situation.
-        // Also PROJ6 and up uses different strings
-        // But basically we'll 'declare' our projection somehow
-        Project * project = new ProjLibProject(
-          // axis: Tell project that our data is east and south heading
-          //"+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
-          "+proj=lcc +axis=esu +lon_0=-97.5 +lat_0=38.5 +lat_1=38.5 +lat_2=38.5 +x_0=0 +y_0=0 +units=km +resolution=3"
-        );
-        bool success = project->initialize();
-        LogInfo("Created projection:  " << success << "\n");
-        // Project from source project to output
-        if (success) {
-          project->toLatLonGrid(array2D, llgridsp);
-        } else {
-          LogSevere("Failed to create projection\n");
-          return;
-        }
-      }
-      // Typename will be replaced by -O filters
-      writeOutputProduct(llgridsp->getTypeName(), llgridsp);
-    } else {
-      LogSevere("Couldn't read 2D data '" << name2D << "' from grib2.\n");
-    }
-    */
   }
 } // Grib2ReaderAlg::processNewData
 
