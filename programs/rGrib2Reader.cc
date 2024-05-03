@@ -37,6 +37,8 @@ std::vector<ModelFields> mFields;
 // have wind field conversion structures been initialized?
 //
 bool initWindConversion = false;
+bool uWindGridPresent = false;
+bool vWindGridPresent = false;
 
 void
 Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
@@ -280,34 +282,69 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 		  }
         	  LogInfo("\n");
 		  if (windinfo.size() > 0) {
+			  if (!initWindConversion) {
+				  //first time this has been called,
+				  // so set up the arrays
+        	                   LogInfo("Initializing Wind Rotation arrays\n");
+	                           static auto ugrid = LatLonGrid::Create(
+                                   	windinfo[3],
+				   	mFields[i].units,
+				   	LLH(nwlat, nwlon, .500), // origin
+                                   	message->getTime(),
+				   	latspacing,
+				   	lonspacing, 
+				   	outputlats,
+				   	outputlons
+				   );
+	                           static auto vgrid = LatLonGrid::Create(
+                                   	windinfo[4],
+				   	mFields[i].units,
+				   	LLH(nwlat, nwlon, .500), // origin
+                                   	message->getTime(),
+				   	latspacing,
+				   	lonspacing, 
+				   	outputlats,
+				   	outputlons
+				   );
+				   auto uwind = LatLonGrid::Create(
+                                   	windinfo[3],
+				   	mFields[i].units,
+				   	LLH(nwlat, nwlon, .500), // origin
+                                   	message->getTime(),
+				   	latspacing,
+				   	lonspacing, 
+				   	outputlats,
+				   	outputlons
+				   );
+	                           auto vwind = LatLonGrid::Create(
+                                   	windinfo[4],
+				   	mFields[i].units,
+				   	LLH(nwlat, nwlon, .500), // origin
+                                   	message->getTime(),
+				   	latspacing,
+				   	lonspacing, 
+				   	outputlats,
+				   	outputlons
+				   );
+	
+			  } 
 			  if (windinfo[0] == "LCC") {
 				  LogInfo("Doing Lambert Conformal\n");
-				  if (!initWindConversion) {
-					  //first time this has been called,
-					  // so set up the arrays
-	                                   auto uwind = LatLonGrid::Create(
-                                           windinfo[3],
-					   mFields[i].units,
-					   LLH(nwlat, nwlon, .500), // origin
-                                           message->getTime(),
-					   latspacing,
-					   lonspacing, 
-					   outputlats,
-					   outputlons
-					   );
-	                                   auto vwind = LatLonGrid::Create(
-                                           windinfo[4],
-					   mFields[i].units,
-					   LLH(nwlat, nwlon, .500), // origin
-                                           message->getTime(),
-					   latspacing,
-					   lonspacing, 
-					   outputlats,
-					   outputlons
-					   );
-				  } else {
+                                  //"LCC:38.5:-97.5:UWind:VWind"
+				  float lat = atof(windinfo[1].c_str());
+				  float lon = atof(windinfo[2].c_str());
+				  if (mFields[i].name.substr(0,1) == "U") {
+					  std::cout << "it's U\n";
+                                          uWindGridPresent = true;
+				  } else if (mFields[i].name.substr(0,1) == "V") {
+					  std::cout << "it's V\n";
+                                          vWindGridPresent = true;
 				  }
-
+				  if (uWindGridPresent && vWindGridPresent) {
+					  //convert call here
+                                          uWindGridPresent = true;
+                                          vWindGridPresent = true;
+				  }
 			  } else if (windinfo[0] == "PS") {
 				  LogInfo("Doing Polar Sterographic\n");
 			  } else {
