@@ -7,7 +7,12 @@ class Grib2ReaderAlg : public rapio::RAPIOAlgorithm {
 public:
 
   /** Create an example simple algorithm */
-  Grib2ReaderAlg(){ };
+  Grib2ReaderAlg(){ 
+  };
+	std::shared_ptr<rapio::LatLonGrid> ugrid;
+  	std::shared_ptr<rapio::LatLonGrid> vgrid;
+	std::shared_ptr<rapio::LatLonGrid> uwind;
+  	std::shared_ptr<rapio::LatLonGrid> vwind;
 
   // The basic API messages from the system
 
@@ -34,6 +39,13 @@ public:
   virtual void
   processNewData(rapio::RAPIOData& d) override;
 
+  /** convert winds from grid-relatite to earth-relative */
+  virtual void 
+  convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid, 
+		  std::shared_ptr<rapio::LatLonGrid> vgrid,
+		  std::shared_ptr<rapio::LatLonGrid> uwind, 
+		  std::shared_ptr<rapio::LatLonGrid> vwind, 
+		  float lat, float lon);
 protected:
 
 private:

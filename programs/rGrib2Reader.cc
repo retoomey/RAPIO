@@ -286,7 +286,8 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				  //first time this has been called,
 				  // so set up the arrays
         	                   LogInfo("Initializing Wind Rotation arrays\n");
-	                           static auto ugrid = LatLonGrid::Create(
+				   initWindConversion = true;
+	                           ugrid = LatLonGrid::Create(
                                    	windinfo[3],
 				   	mFields[i].units,
 				   	LLH(nwlat, nwlon, .500), // origin
@@ -296,7 +297,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				   	outputlats,
 				   	outputlons
 				   );
-	                           static auto vgrid = LatLonGrid::Create(
+	                           vgrid = LatLonGrid::Create(
                                    	windinfo[4],
 				   	mFields[i].units,
 				   	LLH(nwlat, nwlon, .500), // origin
@@ -306,7 +307,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				   	outputlats,
 				   	outputlons
 				   );
-				   auto uwind = LatLonGrid::Create(
+				   uwind = LatLonGrid::Create(
                                    	windinfo[3],
 				   	mFields[i].units,
 				   	LLH(nwlat, nwlon, .500), // origin
@@ -316,7 +317,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				   	outputlats,
 				   	outputlons
 				   );
-	                           auto vwind = LatLonGrid::Create(
+	                           vwind = LatLonGrid::Create(
                                    	windinfo[4],
 				   	mFields[i].units,
 				   	LLH(nwlat, nwlon, .500), // origin
@@ -342,8 +343,10 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				  }
 				  if (uWindGridPresent && vWindGridPresent) {
 					  //convert call here
-                                          uWindGridPresent = true;
-                                          vWindGridPresent = true;
+					  convertWinds(ugrid, vgrid, uwind, vwind, lat, lon);
+                                          uWindGridPresent = false;
+                                          vWindGridPresent = false;
+					  // write winds
 				  }
 			  } else if (windinfo[0] == "PS") {
 				  LogInfo("Doing Polar Sterographic\n");
@@ -356,102 +359,6 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 
 
 	  }
-
-
-	  // call wind rotation code which should have logic like this:
-	  /*
-	   *
-	   *
-           SUBROUTINE W3FC03(SLON,FGU,FGV,CENLON,XLAT1,DIR,SPD)
-C$$$   SUBPROGRAM  DOCUMENTATION  BLOCK
-C
-C SUBPROGRAM: W3FC03         GRID U,V WIND COMPS. TO DIR. AND SPEED
-C   AUTHOR: ROGERS/BRILL     ORG: WD22       DATE: 00-03-27
-C
-C ABSTRACT: GIVEN THE GRID-ORIENTED WIND COMPONENTS ON A 
-C   LAMBERT CONFORMAL GRID POINT, COMPUTE THE DIRECTION
-C   AND SPEED OF THE WIND AT THAT POINT.  INPUT WINDS AT THE NORTH
-C   POLE POINT ARE ASSUMED TO HAVE THEIR COMPONENTS FOLLOW THE WMO
-C   STANDARDS FOR REPORTING WINDS AT THE NORTH POLE.
-C   (SEE OFFICE NOTE 241 FOR WMO DEFINITION). OUTPUT DIRECTION
-C   WILL FOLLOW WMO CONVENTION.
-C
-C PROGRAM HISTORY LOG:
-C   00-03-27  BRILL/ROGERS 
-C
-C USAGE:  CALL W3FC03 (SLON,FGU,FGV,CENLON,XLAT1,DIR,SPD)
-C
-C   INPUT VARIABLES:
-C     NAMES  INTERFACE DESCRIPTION OF VARIABLES AND TYPES
-C     ------ --------- -----------------------------------------------
-C     SLON   ARG LIST  REAL*4    STATION LONGITUDE (-DEG W)
-C     FGU    ARG LIST  REAL*4    GRID-ORIENTED U-COMPONENT
-C     FGV    ARG LIST  REAL*4    GRID-ORIENTED V-COMPONENT
-C     CENLON ARG LIST  REAL*4    CENTRAL LONGITUDE
-C     XLAT1  ARG LIST  REAL*4    TRUE LATITUDE #1
-C
-C   OUTPUT VARIABLES:
-C     NAMES  INTERFACE DESCRIPTION OF VARIABLES AND TYPES
-C     ------ --------- -----------------------------------------------
-C     DIR    ARG LIST  REAL*4     WIND DIRECTION, DEGREES
-C     SPD    ARG LIST  REAL*4     WIND SPEED
-C
-C   SUBPROGRAMS CALLED:
-C     NAMES                                                   LIBRARY
-C     ------------------------------------------------------- --------
-C     ABS  ACOS   ATAN2   SQRT                                SYSTEM
-C
-C WARNING: THIS JOB WILL NOT VECTORIZE ON A CRAY
-C
-C ATTRIBUTES:
-C   LANGUAGE: FORTRAN 90
-C   MACHINE:  IBM SP
-C
-C$$$
-      PARAMETER (DTR=3.1415926/180.0)
-C
-C  COMPUTE CONSTANT OF CONE
-C
-      COCON = SIN(XLAT1*DTR)
-      ANGLE = COCON * (SLON-CENLON) * DTR
-      A = COS(ANGLE)
-      B = SIN(ANGLE)
-      UNEW = A*FGU + B*FGV
-      VNEW = -B*FGU + A*FGV
-C
-      CALL W3FC05(UNEW,VNEW,DIR,SPD)
-      RETURN
-      END
-	   *       !
-      ! Compute normal wind component and store in fg % u
-      !
-
-      truelat1 = field % truelat1
-      truelat2 = field % truelat2
-      xlonc = field % xlonc
-
-      if( field % is_wind_grid_rel ) then
-         call mpas_log_write(" is_wind_grid_rel is true ")
-         call mpas_log_write(" truelat1, truelat2, xlonc are $r $r $r ",realArgs=(/truelat1, truelat2, xlonc/))
-
-         IF (ABS(truelat1-truelat2) .GT. 0.1) THEN
-            cone = ALOG10(COS(truelat1*rad_per_deg)) - &
-                   ALOG10(COS(truelat2*rad_per_deg))
-            cone = cone /(ALOG10(TAN((45.0 - ABS(truelat1)/2.0) * rad_per_deg)) - &
-                   ALOG10(TAN((45.0 - ABS(truelat2)/2.0) * rad_per_deg)))        
-         ELSE
-            cone = SIN(ABS(truelat1)*rad_per_deg )  
-         ENDIF
-
-         call mpas_log_write(" cone value is $r ",realArgs=(/cone/))
-         xlonc = rad_per_deg * xlonc
-         call mpas_log_write(" rotating velocities ")
-         call rotate_velocities(u_fg, v_fg, lonEdge, cone, xlonc, nfglevels_actual, nEdges)
-
-      else 
-         call mpas_log_write(" is_wind_grid_rel is false ")
-      end if
-      */
         } else {
           LogSevere("Failed to create projection\n");
           return;
@@ -460,6 +367,53 @@ C
     }
   }
 } // Grib2ReaderAlg::processNewData
+
+void
+Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
+                  std::shared_ptr<rapio::LatLonGrid> vgrid,
+                  std::shared_ptr<rapio::LatLonGrid> uwind,
+                  std::shared_ptr<rapio::LatLonGrid> vwind,
+                  float xlat1, float clon) {
+
+	uwind = ugrid->Clone();
+	vwind = vgrid->Clone();
+
+	float DTR=3.1415926/180.0;
+	float cocon = sin(xlat1*DTR);
+	auto dims = ugrid->getDims();
+	auto x = dims[1].size();
+	auto y = dims[0].size();
+	std::cout << "num lats = " << y << " or " << ugrid->getNumLats() << "\n";
+	for (size_t i = 0; i < x; i++) { //lon
+		for (size_t j = 0; j < y; j++) { //lat
+/*
+			slon = ugrid->
+			float angle = cocon * (;
+
+*/
+		}
+	}
+	/*
+C USAGE:  CALL W3FC03 (SLON,FGU,FGV,CENLON,XLAT1,DIR,SPD)
+C     SLON   ARG LIST  REAL*4    STATION LONGITUDE (-DEG W)
+C     FGU    ARG LIST  REAL*4    GRID-ORIENTED U-COMPONENT
+C     FGV    ARG LIST  REAL*4    GRID-ORIENTED V-COMPONENT
+C     CENLON ARG LIST  REAL*4    CENTRAL LONGITUDE
+C     XLAT1  ARG LIST  REAL*4    TRUE LATITUDE #1
+C     ------ --------- -----------------------------------------------
+C     DIR    ARG LIST  REAL*4     WIND DIRECTION, DEGREES
+C     SPD    ARG LIST  REAL*4     WIND SPEED
+      PARAMETER (DTR=3.1415926/180.0)
+      COCON = SIN(XLAT1*DTR)
+      ANGLE = COCON * (SLON-CENLON) * DTR
+      A = COS(ANGLE)
+      B = SIN(ANGLE)
+      UNEW = A*FGU + B*FGV
+      VNEW = -B*FGU + A*FGV
+      */
+  
+}
+
 
 int
 main(int argc, char * argv[])
