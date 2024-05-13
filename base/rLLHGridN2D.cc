@@ -51,6 +51,26 @@ LLHGridN2D::Create(
   return newonesp;
 }
 
+std::shared_ptr<LLHGridN2D>
+LLHGridN2D::Clone()
+{
+  auto nsp = std::make_shared<LLHGridN2D>();
+
+  LLHGridN2D::deep_copy(nsp);
+  return nsp;
+}
+
+void
+LLHGridN2D::deep_copy(std::shared_ptr<LLHGridN2D> nsp)
+{
+  LatLonHeightGrid::deep_copy(nsp);
+
+  // Clone our grids...
+  for (auto g:myGrids) {
+    nsp->myGrids.push_back(g->Clone());
+  }
+}
+
 bool
 LLHGridN2D::init(
   const std::string& TypeName,

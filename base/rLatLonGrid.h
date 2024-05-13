@@ -119,6 +119,10 @@ public:
 
 protected:
 
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<LatLonArea> n);
+
   /** Latitude spacing of cells in degrees */
   AngleDegs myLatSpacing;
 
@@ -156,6 +160,10 @@ public:
     size_t           num_lats,
     size_t           num_lons);
 
+  /** Public API for users to clone a LatLonGrid */
+  std::shared_ptr<LatLonGrid>
+  Clone();
+
   /** Get the number of latitude cells */
   virtual size_t
   getNumLats() override
@@ -192,6 +200,7 @@ public:
   virtual void
   postWrite(std::map<std::string, std::string>& keys) override;
 
+protected:
   /** Initialize a LatLonGrid post create */
   bool
   init(
@@ -204,5 +213,9 @@ public:
     size_t            num_lats,
     size_t            num_lons
   );
+
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<LatLonGrid> n);
 };
 }

@@ -31,9 +31,10 @@ public:
   // Store as a wrapped smart ptr
 
   /** Get data we store */
+  #if 0
   template <typename T>
   std::shared_ptr<T>
-  getSP()
+  getSP() const
   {
     // the cheese of wrapping vector around shared_ptr
     try{
@@ -47,10 +48,12 @@ public:
   /** Is this data this type? */
   template <typename T>
   bool
-  isSP()
+  isSP() const
   {
     return (myData.type() == typeid(std::shared_ptr<T> ));
   }
+
+  #endif // if 0
 
   // -----------------------------------------
   // Store as an something, but return wrapped optional
@@ -70,7 +73,7 @@ public:
   /** Is this data this type? */
   template <typename T>
   bool
-  is()
+  is() const
   {
     return (myData.type() == typeid(T));
   }
@@ -82,6 +85,10 @@ public:
     myData = std::move(in);
   }
 
+  /** Clone the data (for raw types) */
+  boost::any
+  getData() const { return myData; }
+
 protected:
 
   /** We can store ANYTHING!!!!! */
@@ -89,6 +96,7 @@ protected:
 };
 
 /** Store a name to std::shared_ptr OR direct of anything pair.
+ *
  * @author Robert Toomey
  */
 class NamedAny : public Any
@@ -112,10 +120,19 @@ protected:
   std::string myName;
 };
 
-/** A mapping class for NamedAny objects*/
+/** A mapping class for NamedAny objects.
+ *
+ * @author Robert Toomey
+ */
 class NamedAnyList : public Data
 {
 public:
+
+  /** Deep clone the NamedAnyList.  Note this works for basic types
+   * like string, float, etc. and the Array shared_ptr storage.
+   */
+  std::shared_ptr<NamedAnyList>
+  Clone();
 
   /** Allow begin to iterate through our elements */
   NamedAny *
@@ -133,18 +150,7 @@ public:
 
   /** Return index into the storage for this name */
   int
-  index(const std::string& name) const
-  {
-    size_t count = 0;
-
-    for (auto i:myAttributes) {
-      if (i.getName() == name) {
-        return count; // always +
-      }
-      count++;
-    }
-    return -1;
-  }
+  index(const std::string& name) const;
 
   /** Add something with given key */
   template <typename T>
@@ -166,7 +172,7 @@ public:
     }
   }
 
-  /** Remove somthing with given key */
+  /** Remove something with given key */
   void
   remove(const std::string& name)
   {
@@ -180,9 +186,9 @@ public:
 
   /** Get data we store as an optional pointer.
    * If not boost::none, can use * to get to the
-   * field. FIXME: Might change name and make a
-   * different get function..this is a pointer and
-   * not the actual typename which can be confusing
+   * field.
+   * Note: This is a pointer and not the actual
+   * typename.
    */
   template <typename T>
   boost::optional<T>
@@ -319,4 +325,6 @@ protected:
   /** Stored attributes */
   std::vector<NamedAny> myAttributes;
 };
+
+typedef NamedAnyList DataAttributeList;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rData.h"
-#include "rNamedAny.h"
 #include "rConstants.h"
 
 #include <memory>
@@ -54,6 +53,10 @@ public:
     // Subclasses should call in constructor to call theirs
     // syncToDims();
   }
+
+  /** Clone this array at a high level where we don't care about its specialization. */
+  virtual std::shared_ptr<ArrayBase>
+  CloneBase() = 0;
 
   /** Stolen from the template */
   size_t
@@ -153,6 +156,9 @@ protected:
 template <typename C, size_t N> class Array : public ArrayBase
 {
 public:
+
+  /** Create a blank array (uninitialized) */
+  Array(){ }
 
   /** Create array using an initializer list for dimension sizes */
   Array(std::initializer_list<size_t> dims) : ArrayBase(dims)
@@ -267,6 +273,26 @@ public:
   getRawDataPointer() override
   {
     return myStorage.data();
+  }
+
+  /** Clone this array at a high level where we don't care about its specialization.
+   * This is useful in generic lists of different array types */
+  virtual std::shared_ptr<ArrayBase>
+  CloneBase() override
+  {
+    return Clone();
+  }
+
+  /** Clone off specialized copy.  We must know the type of Array we have */
+  std::shared_ptr<Array<C, N> >
+  Clone()
+  {
+    // Copy the contents of the original multi_array to the clone
+    auto clone = std::make_shared<Array<C, N> >(myDims);
+
+    std::copy(myStorage.data(), myStorage.data() + myStorage.num_elements(), clone->myStorage.data());
+
+    return clone;
   }
 
 protected:

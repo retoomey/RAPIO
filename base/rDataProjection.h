@@ -6,6 +6,7 @@
 #include <rProject.h>
 
 #include <string>
+#include <map>
 
 namespace rapio
 {

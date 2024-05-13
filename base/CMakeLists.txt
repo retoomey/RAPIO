@@ -33,6 +33,7 @@ rConfigParamGroup.h
 rConfigRadarInfo.h
 rConstants.h
 rCurlConnection.h
+rDataArray.h
 rDataFilter.h
 rDataGrid.h
 rData.h
@@ -110,6 +111,7 @@ rStrings.h
 rTerrainBlockage2me.h
 rTerrainBlockage.h
 rTerrainBlockageLak.h
+rThreadGroup.h
 rTimeDuration.h
 rTime.h
 rUnit.h
@@ -149,6 +151,7 @@ rConfigParamGroup.cc
 rConfigRadarInfo.cc
 rConstants.cc
 rCurlConnection.cc
+rDataArray.cc
 rDataFilter.cc
 rDataGrid.cc
 rDataProjection.cc
@@ -188,6 +191,7 @@ rLL.cc
 rLLCoverageArea.cc
 rLLH.cc
 rLLHGridN2D.cc
+rNamedAny.cc
 rNetcdfDataType.cc
 rNetwork.cc
 rOption.cc
@@ -216,6 +220,7 @@ rTerrainBlockage2me.cc
 rTerrainBlockage.cc
 rTerrainBlockageLak.cc
 rTime.cc
+rThreadGroup.cc
 rTimeDuration.cc
 rUnit.cc
 rURL.cc

@@ -5,6 +5,7 @@
 #include <rDataStore2D.h>
 #include <rArray.h>
 #include <rPTreeData.h>
+#include <rDataArray.h>
 
 #include <vector>
 #include <stdexcept>
@@ -74,218 +75,6 @@ protected:
   DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 2) \
   DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, 3)
 
-/** Type marker of data to help out reader/writers.  This is modeled mostly on netcdf since we use it
- * the most of all file formats. */
-enum DataArrayType {
-  BYTE, ///< 1 byte int.  Use for char, byte, unsigned byte
-  // UBYTE, -- issue here is netcdf3 doesn't handle, so we'll keep the netcdf3 basic types for backward compatibility
-  // CHAR, -- Allowed, but can just use byte
-  SHORT, ///< 2 byte integer
-  INT,   ///< 4 bytes on 32 and 64 bit systems
-  FLOAT, ///< 4 byte floating point
-  DOUBLE ///< 8 byte floating point if needed.  All our default classes use float for now
-  // STRING FIXME: to do, could be useful.  Though will take special logic I think
-};
-
-/* Wraps a named array of data with metadata
- * So we have a collection of attributes as well
- * as one of the Array<T> classes
- *
- * This big thing here is that I'm trying to hide the
- * array template type stuff, since DataGrid can hold
- * a generic list of different templated arrays.
- * Treating it generic helps with reader/writer code.
- *
- * Is there a better design?
- *
- * @author Robert Toomey
- */
-class DataArray : public NamedAny
-{
-public:
-
-  /** Construct a DataArray with needed storage parameters */
-  DataArray(const std::string& name, const std::string& units,
-    const DataArrayType& type, const std::vector<size_t>& dimindexes)
-    : NamedAny(name), myAttributes(std::make_shared<DataAttributeList>()), myUnits(units), myStorageType(type),
-    myDimIndexes(dimindexes), myRawArrayPointer(nullptr)
-  {
-    setString("Units", units);
-  }
-
-  // The boost any is nice for general attributes, but since we store only ONE multi array
-  // we'll just keep a simple shared_ptr to the non-templated interface.
-  template <typename T>
-  void
-  setArray(std::shared_ptr<ArrayBase> keep, std::shared_ptr<T> derived)
-  {
-    myArray = keep;
-    myRawArrayPointer = derived->getRawDataPointer();
-  }
-
-  /** Get a raw void pointer to array data. Used by reader/writers.
-   * You probably don't want this, see the example algorithm.*/
-  void *
-  getRawDataPointer()
-  {
-    return myRawArrayPointer;
-  }
-
-  /** Get the DataArrayType of this data array */
-  const DataArrayType&
-  getStorageType(){ return myStorageType; }
-
-  /** Set the DataArrayType of this data array */
-  void
-  setStorageType(const DataArrayType& s){ myStorageType = s; }
-
-  /** Get the dimension reference */
-  std::vector<size_t>
-  getDimIndexes(){ return myDimIndexes; }
-
-  /** Set the dimension reference */
-  void
-  setDimIndexes(const std::vector<size_t>& vin){ myDimIndexes = vin; }
-
-  /** Get attributes list.  Used by reader/writers. */
-  std::shared_ptr<DataAttributeList>
-  getAttributes();
-
-  // ----------------------------------------------
-  // Convenience routines for common types
-  // Debating is vs have here, though these are
-  // double inlined so the cost should be nothing here.
-  // These coorespond to the netcdf global attributes,
-  // for the local attributes on an array, @see DataArray
-
-  /** Get a string */
-  inline bool
-  getString(const std::string& name, std::string& out) const
-  {
-    return myAttributes->getString(name, out);
-  }
-
-  /** Set a string */
-  inline void
-  setString(const std::string& name, const std::string& in)
-  {
-    return myAttributes->setString(name, in);
-  }
-
-  /** Get a double, flexible on casting */
-  inline bool
-  getDouble(const std::string& name, double& out) const
-  {
-    return myAttributes->getDouble(name, out);
-  }
-
-  /** Set a double */
-  inline void
-  setDouble(const std::string& name, double in)
-  {
-    return myAttributes->setDouble(name, in);
-  }
-
-  /** Get a float, flexible on casting */
-  inline bool
-  getFloat(const std::string& name, float& out) const
-  {
-    return myAttributes->getFloat(name, out);
-  }
-
-  /** Set a float */
-  inline void
-  setFloat(const std::string& name, float in)
-  {
-    return myAttributes->setFloat(name, in);
-  }
-
-  /** Get a long, flexible on casting */
-  inline bool
-  getLong(const std::string& name, long& out) const
-  {
-    return myAttributes->getLong(name, out);
-  }
-
-  /** Set a long in global attributes */
-  inline void
-  setLong(const std::string& name, long in)
-  {
-    return myAttributes->setLong(name, in);
-  }
-
-  // ----------------------------------------------
-  // Lower level access.  Typically not needed
-
-  /** Get attribute */
-  template <typename T>
-  boost::optional<T>
-  getAttribute(const std::string& name)
-  {
-    return myAttributes->get<T>(name);
-  }
-
-  /** Put attribute */
-  template <typename T>
-  void
-  putAttribute(const std::string& name, const T& value)
-  {
-    myAttributes->put<T>(name, value);
-  }
-
-  /** Remove attribute */
-  void
-  removeAttribute(const std::string& name)
-  {
-    myAttributes->remove(name);
-  }
-
-  /** Count attributes */
-  size_t
-  getAttributesCount()
-  {
-    return myAttributes->size();
-  }
-
-  /** Get the array as typeless for generic usage */
-  std::shared_ptr<ArrayBase>
-  getNewArray(){ return myArray; }
-
-  /** Convenience print of DataArray items.
-   * FIXME: Has to be done in array to get correct template type. Might
-   * be able to use a visitor class to have more control over printing. */
-  void
-  printArray(std::ostream& out = std::cout, const std::string& indent = "    ", const std::string& divider = ", ",
-    size_t wrap = 9)
-  {
-    myArray->printArray(out, indent, divider, wrap);
-  }
-
-protected:
-
-  /** The data attribute list for this data */
-  std::shared_ptr<DataAttributeList> myAttributes;
-
-  /** The units of the data */
-  std::string myUnits;
-
-  /** The type of the data for reader/writers */
-  DataArrayType myStorageType;
-
-  /** The index number of dimensions of the data */
-  std::vector<size_t> myDimIndexes;
-
-  // General internal access methods where we remove type
-
-  /** The Array we store (type hidden here) */
-  std::shared_ptr<ArrayBase> myArray;
-
-  /** A raw pointer to our last set array. Valid only
-   * when we are. Safest would be a weak-ref might do that
-   * later on.  You should be using getNArray functions with auto */
-  void * myRawArrayPointer;
-};
-
 /** Stores a dimension of the grid space,
  * curiously like a netcdf dimension. */
 class DataGridDimension : public Data {
@@ -335,14 +124,12 @@ public:
     const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);
 
-  /** Extra initialization of a DataGrid */
-  bool
-  init(const std::string           & aTypeName,
-    const std::string              & Units,
-    const LLH                      & center,
-    const Time                     & datatime,
-    const std::vector<size_t>      & dimsizes,
-    const std::vector<std::string> & dimnames);
+  /** Public API for users to clone a DataGrid */
+  std::shared_ptr<DataGrid>
+  Clone();
+
+  /** Destroy a DataGrid */
+  virtual ~DataGrid(){ }
 
   /** Declare the dimensions of array objects. */
   void
@@ -447,13 +234,8 @@ public:
       sizes.push_back(myDims[x].size()); // FIXME: Could check sizes
     }
 
-    // Create array using the sizes of each dimenion (which holds raw array of the type)
-    std::shared_ptr<Array<T, S> > ptr = std::make_shared<Array<T, S> >(sizes);
-
-    // Make a node to store/remember this arrays attributes (name, units, dimension indexes, etc.)
-    auto newNode = std::make_shared<DataArray>(name, units, type, dimindexes);
-
-    newNode->setArray(ptr, ptr);
+    auto newNode = std::make_shared<DataArray>();
+    auto ptr     = newNode->init<T, S>(name, units, type, sizes, dimindexes);
 
     // Add or replace the named node
     int at = getNodeIndex(name);
@@ -532,7 +314,7 @@ public:
     for (auto i:myNodes) {
       if (i->getName() == name) {
         // Ok we have to cast the general interface to the specific template class
-        std::shared_ptr<T> derived = std::dynamic_pointer_cast<T>(i->getNewArray());
+        std::shared_ptr<T> derived = std::dynamic_pointer_cast<T>(i->getArray());
         return derived;
       }
     }
@@ -598,6 +380,19 @@ public:
   unsparseRestore();
 
 protected:
+
+  /** Deep copy our fields to a new DataGrid or subclass */
+  void
+  deep_copy(std::shared_ptr<DataGrid> n);
+
+  /** Extra initialization of a DataGrid */
+  bool
+  init(const std::string           & aTypeName,
+    const std::string              & Units,
+    const LLH                      & center,
+    const Time                     & datatime,
+    const std::vector<size_t>      & dimsizes,
+    const std::vector<std::string> & dimnames);
 
   /** Keep the dimensions */
   std::vector<DataGridDimension> myDims;

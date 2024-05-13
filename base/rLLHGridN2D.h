@@ -44,6 +44,12 @@ public:
     const Time           & gridtime,
     const LLCoverageArea & grid);
 
+  /** Public API for users to clone a LLHGridN2D.
+   * FIXME: Tempted to make virtual here and hide as LatLonHeightGrid with
+   * multiple implementations. */
+  std::shared_ptr<LLHGridN2D>
+  Clone();
+
   /** Convenience to set the units of a given array name */
   virtual void
   setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
@@ -56,6 +62,18 @@ public:
    * other arrays you'll have to loop yourself. */
   void
   fillPrimary(float value = Constants::DataUnavailable);
+
+  /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
+   * any DataGrid writers like netcdf generic not knowing about our
+   * special sparse formats. */
+  virtual void
+  preWrite(std::map<std::string, std::string>& keys) override;
+
+  /** Make ourselves MRMS non-sparse iff we're sparse */
+  virtual void
+  postWrite(std::map<std::string, std::string>& keys) override;
+
+protected:
 
   /** Initialize a LLHGridN2D */
   bool
@@ -70,19 +88,11 @@ public:
     size_t           num_lons,
     size_t           num_levels);
 
-protected:
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<LLHGridN2D> n);
 
   /** The set of LatLonGrids */
   std::vector<std::shared_ptr<LatLonGrid> > myGrids;
-
-  /** Make ourselves MRMS sparse iff we're non-sparse.  This keeps
-   * any DataGrid writers like netcdf generic not knowing about our
-   * special sparse formats. */
-  virtual void
-  preWrite(std::map<std::string, std::string>& keys) override;
-
-  /** Make ourselves MRMS non-sparse iff we're sparse */
-  virtual void
-  postWrite(std::map<std::string, std::string>& keys) override;
 };
 }

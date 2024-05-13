@@ -34,6 +34,10 @@ public:
     const size_t     num_radials,
     const size_t     num_gates);
 
+  /** Public API for users to clone a RadialSet */
+  std::shared_ptr<RadialSet>
+  Clone();
+
   /** Return the location of the radar. */
   const LLH&
   getRadarLocation() const
@@ -272,6 +276,11 @@ public:
   // ------------------------------------------------
 
 protected:
+
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<RadialSet> n);
+
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;
 

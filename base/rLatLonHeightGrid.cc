@@ -38,6 +38,23 @@ LatLonHeightGrid::Create(
   return newonesp;
 }
 
+std::shared_ptr<LatLonHeightGrid>
+LatLonHeightGrid::Clone()
+{
+  auto nsp = std::make_shared<LatLonHeightGrid>();
+
+  LatLonHeightGrid::deep_copy(nsp);
+  return nsp;
+}
+
+void
+LatLonHeightGrid::deep_copy(std::shared_ptr<LatLonHeightGrid> nsp)
+{
+  LatLonArea::deep_copy(nsp);
+
+  // We don't have extra fields
+}
+
 bool
 LatLonHeightGrid::init(
   const std::string& TypeName,

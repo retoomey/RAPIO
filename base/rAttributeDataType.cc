@@ -5,6 +5,24 @@ using namespace rapio;
 AttributeDataType::AttributeDataType() : myAttributes(std::make_shared<DataAttributeList>())
 { }
 
+std::shared_ptr<AttributeDataType>
+AttributeDataType::Clone()
+{
+  auto nsp = std::make_shared<AttributeDataType>();
+
+  AttributeDataType::deep_copy(nsp);
+  return nsp;
+}
+
+void
+AttributeDataType::deep_copy(std::shared_ptr<AttributeDataType> nsp)
+{
+  // Copy attributes
+  auto & n = *nsp;
+
+  n.myAttributes = myAttributes->Clone();
+}
+
 void
 AttributeDataType::setDataAttributeValue(
   const std::string& key,

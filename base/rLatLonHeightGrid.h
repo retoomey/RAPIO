@@ -7,14 +7,7 @@ namespace rapio {
  *  longitude at a constant height above the surface of the earth,
  *  where there are N levels of height.
  *
- *  First implementation using 3D array.
- *
- *  FIXME: I might enhance get DataType to allow parameters or tweaking as
- *  to the method of storage, this would allow faster iteration in
- *  certain situations
- *
- *  We 'could' add layer 'n' ability to the LatLonGrid, but to match WDSS2
- *  which has distinct classes, we add the 3D onto our 2D class here.
+ *  Implementation using 3D array.
  *
  *  @author Robert Toomey
  */
@@ -45,6 +38,10 @@ public:
     size_t           num_lons,
     size_t           num_levels);
 
+  /** Public API for users to clone a LatLonHeightGrid */
+  std::shared_ptr<LatLonHeightGrid>
+  Clone();
+
   /** Generated default string for subtype from the data */
   virtual std::string
   getGeneratedSubtype() const override;
@@ -52,19 +49,6 @@ public:
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer) override;
-
-  /** Initialize a LatLonHeightGrid */
-  bool
-  init(
-    const std::string& TypeName,
-    const std::string& Units,
-    const LLH        & northwest,
-    const Time       & gridtime,
-    float            lat_spacing,
-    float            lon_spacing,
-    size_t           num_lats,
-    size_t           num_lons,
-    size_t           num_levels);
 
   // MRMS switches the dimension order of 2D (x,y) to 3D (z,x,y) which
   // means we have the change how we get these.
@@ -96,5 +80,24 @@ public:
   /** Make ourselves MRMS non-sparse iff we're sparse */
   virtual void
   postWrite(std::map<std::string, std::string>& keys) override;
+
+protected:
+
+  /** Initialize a LatLonHeightGrid */
+  bool
+  init(
+    const std::string& TypeName,
+    const std::string& Units,
+    const LLH        & northwest,
+    const Time       & gridtime,
+    float            lat_spacing,
+    float            lon_spacing,
+    size_t           num_lats,
+    size_t           num_lons,
+    size_t           num_levels);
+
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<LatLonHeightGrid> n);
 };
 }

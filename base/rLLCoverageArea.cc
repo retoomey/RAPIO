@@ -2,6 +2,7 @@
 #include "rProject.h"
 #include "rStrings.h"
 #include "rLL.h"
+#include "rError.h"
 
 #include <iostream>
 

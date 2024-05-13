@@ -5,7 +5,6 @@
 #include <rLLH.h>
 #include <rConstants.h>
 #include <rError.h>
-#include <rNamedAny.h>
 #include <rDataProjection.h>
 
 #include <string>
@@ -24,6 +23,9 @@ public:
 
   /** Create empty DataType */
   DataType();
+
+  // Skipping Clone/Create for DataType at moment,
+  // since we always specialize
 
   /** Destroy a DataType */
   virtual ~DataType(){ }
@@ -231,6 +233,10 @@ public:
   }
 
 protected:
+
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<DataType> n);
 
   /** Time stamp of this datatype, used for writing */
   Time myTime;

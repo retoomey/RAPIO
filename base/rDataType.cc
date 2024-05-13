@@ -22,6 +22,24 @@ DataType::DataType() : myTime(Time::CurrentTime()), myReadFactory(
     "default"), myTypeName("not set")
 { }
 
+void
+DataType::deep_copy(std::shared_ptr<DataType> nsp)
+{
+  AttributeDataType::deep_copy(nsp);
+
+  // Push in our fields
+  auto & n = *nsp;
+
+  n.myTime        = myTime;
+  n.myLocation    = myLocation;
+  n.myReadFactory = myReadFactory;
+  n.myDataType    = myDataType;
+  n.myID             = myID;
+  n.myTypeName       = myTypeName;
+  n.myUnits          = myUnits;
+  n.myDataProjection = nullptr; // Force regeneration?
+}
+
 URL
 DataType::generateFileName(
   const std::string & rootFolder,

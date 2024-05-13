@@ -31,8 +31,34 @@ DataGrid::Create(const std::string& aTypeName,
 {
   auto newonesp = std::make_shared<DataGrid>();
 
+  newonesp->setDataType("DataGrid");
+  newonesp->setReadFactory("netcdf");
+
   newonesp->init(aTypeName, Units, center, datatime, dimsizes, dimnames);
   return newonesp;
+}
+
+void
+DataGrid::deep_copy(std::shared_ptr<DataGrid> nsp)
+{
+  DataType::deep_copy(nsp);
+
+  // Copy our stuff
+  auto & n = *nsp;
+
+  n.myDims = myDims;
+  for (auto sp: myNodes) {
+    n.myNodes.push_back(sp->Clone()); // Deep copy each array
+  }
+}
+
+std::shared_ptr<DataGrid>
+DataGrid::Clone()
+{
+  auto nsp = std::make_shared<DataGrid>();
+
+  DataGrid::deep_copy(nsp);
+  return nsp;
 }
 
 bool
@@ -43,6 +69,10 @@ DataGrid::init(const std::string & aTypeName,
   const std::vector<size_t>      & dimsizes,
   const std::vector<std::string> & dimnames)
 {
+  //  setDataType("DataGrid");
+  // Current the default write for all grids is netcdf which makes sense
+  //  setReadFactory("netcdf");
+
   setTypeName(aTypeName);
   setDataAttributeValue("Unit", "dimensionless", Units);
   myLocation = center;
@@ -136,7 +166,7 @@ DataGrid::setDims(const std::vector<size_t>& dimsizes,
     for (size_t d = 0; d < size; ++d) {
       sizes[d] = dimsizes[i[d]];
     }
-    auto array = l->getNewArray();
+    auto array = l->getArray();
     array->resize(sizes);
   }
 } // DataGrid::setDims

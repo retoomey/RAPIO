@@ -40,6 +40,30 @@ RadialSet::Create(
   return newonesp;
 }
 
+std::shared_ptr<RadialSet>
+RadialSet::Clone()
+{
+  auto nsp = std::make_shared<RadialSet>();
+
+  RadialSet::deep_copy(nsp);
+  return nsp;
+}
+
+void
+RadialSet::deep_copy(std::shared_ptr<RadialSet> nsp)
+{
+  DataGrid::deep_copy(nsp);
+
+  // Copy our stuff
+  auto & n = *nsp;
+
+  n.myElevAngleDegs      = myElevAngleDegs; // in attributes also
+  n.myElevCos            = myElevCos;
+  n.myElevTan            = myElevTan;
+  n.myFirstGateDistanceM = myFirstGateDistanceM; // in attributes also
+  n.myHaveTerrain        = myHaveTerrain;
+}
+
 bool
 RadialSet::init(
   const std::string& TypeName,

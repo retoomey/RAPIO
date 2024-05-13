@@ -74,13 +74,16 @@ endforeach()
 #string(REPLACE ";" " " PUBLIC_HEADERS_STR "%{PUBLIC_HEADERS}")
 configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
+# Define CMAKE_INSTALL_LIBDIR, INCLUDEDIR, etc.
+include(GNUInstallDirs)
+
 # Our package modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # My hack for a container system build.  I specify /usr in order
 # to install using system libraries and path.
 if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
-  set(RAPIO_INSTALL_LIB "/usr/lib64") # FIXME whatever is cmake default system lib
+  set(RAPIO_INSTALL_LIB "/usr/${CMAKE_INSTALL_LIBDIR}")
 else()
   # I want some absolute library paths if I'm building with a custom prefix/third party so
   # that I don't grab the system libraries by accident

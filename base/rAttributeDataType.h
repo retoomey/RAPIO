@@ -7,8 +7,6 @@
 #include <memory>
 
 namespace rapio {
-typedef NamedAnyList DataAttributeList;
-
 /** AttributeDataType stores a generic collection of attributes.
  * These could coorespond to a global attribute list in netcdf. */
 class AttributeDataType : public Data {
@@ -17,8 +15,21 @@ public:
   /** Create empty AttributeDataType */
   AttributeDataType();
 
-  /** Destroy a AttributeDataType */
+  /** Public API for users to create an AttributeDataType */
+  static std::shared_ptr<AttributeDataType>
+  Create()
+  {
+    auto nsp = std::make_shared<AttributeDataType>();
+
+    return nsp;
+  }
+
+  /** Destroy an AttributeDataType */
   virtual ~AttributeDataType(){ }
+
+  /** Public API for users to clone an AttributeDataType */
+  std::shared_ptr<AttributeDataType>
+  Clone();
 
   /** Set a single-valued attribute.
    *
@@ -100,6 +111,10 @@ public:
   }
 
 protected:
+
+  /** Deep copy our fields to a new subclass */
+  void
+  deep_copy(std::shared_ptr<AttributeDataType> n);
 
   /** Global attributes for data type */
   std::shared_ptr<DataAttributeList> myAttributes;

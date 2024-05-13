@@ -64,6 +64,36 @@ LatLonGrid::Create(
   return newonesp;
 }
 
+std::shared_ptr<LatLonGrid>
+LatLonGrid::Clone()
+{
+  auto nsp = std::make_shared<LatLonGrid>();
+
+  LatLonGrid::deep_copy(nsp);
+  return nsp;
+}
+
+void
+LatLonGrid::deep_copy(std::shared_ptr<LatLonGrid> nsp)
+{
+  LatLonArea::deep_copy(nsp);
+
+  // We don't have extra fields
+}
+
+void
+LatLonArea::deep_copy(std::shared_ptr<LatLonArea> nsp)
+{
+  DataGrid::deep_copy(nsp);
+
+  // Copy our stuff
+  auto & n = *nsp;
+
+  n.myLatSpacing   = myLatSpacing;
+  n.myLonSpacing   = myLonSpacing;
+  n.myLayerNumbers = myLayerNumbers;
+}
+
 void
 LatLonArea::setSpacing(AngleDegs lat_spacing, AngleDegs lon_spacing)
 {
