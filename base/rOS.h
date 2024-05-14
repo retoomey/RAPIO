@@ -173,7 +173,7 @@ public:
    * Rename a file path, atomic even between different file systems
    */
   static bool
-  moveFile(const std::string& from, const std::string& to);
+  moveFile(const std::string& from, const std::string& to, bool quiet = false);
 
   /**
    * Delete a file

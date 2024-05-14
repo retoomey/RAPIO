@@ -358,6 +358,18 @@ RAPIOFusionOneAlg::updateRangeFile()
   // so we'll either pull it out to another program or check time stamps or
   // something.  Have to think about it and run operationally to determine best design.
 
+  // Wait a few tilts so we don't just write a blank coverage file
+  static size_t startupcounter = 0;
+  static bool writeRange       = false;
+
+  if (!writeRange) {
+    if (++startupcounter > 2) { // wait until 3rd tilt
+      writeRange = true;
+    } else {
+      return;
+    }
+  }
+
   // Write a roster file
   std::string directory;
   std::string filename = FusionCache::getRangeFilename(myRadarName, myFullGrid, directory);

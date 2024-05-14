@@ -476,7 +476,7 @@ OS::copyFile(const std::string& from, const std::string& to)
 } // OS::copyFile
 
 bool
-OS::moveFile(const std::string& from, const std::string& to)
+OS::moveFile(const std::string& from, const std::string& to, bool quiet)
 {
   bool ok = false;
 
@@ -485,7 +485,9 @@ OS::moveFile(const std::string& from, const std::string& to)
 
   // If from doesn't exist, give error and return
   if (!fs::exists(fromPath)) {
-    LogSevere(from << " does not exist to move.\n");
+    if (!quiet) {
+      LogSevere(from << " does not exist to move.\n");
+    }
     return false;
   }
 
@@ -512,7 +514,9 @@ OS::moveFile(const std::string& from, const std::string& to)
       ok = true;
     }catch (const fs::filesystem_error &e)
     {
-      LogSevere("Failed to move/copy " << from << " to " << to << ": " << e.what() << "\n");
+      if (!quiet) {
+        LogSevere("Failed to move/copy " << from << " to " << to << ": " << e.what() << "\n");
+      }
     }
   }
   return ok;
