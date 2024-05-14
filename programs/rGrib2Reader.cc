@@ -337,13 +337,25 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				  if (mFields[i].name.substr(0,1) == "U") {
 					  std::cout << "it's U\n";
                                           uWindGridPresent = true;
+					  ugrid = llgridsp->Clone();
 				  } else if (mFields[i].name.substr(0,1) == "V") {
 					  std::cout << "it's V\n";
                                           vWindGridPresent = true;
+					  vgrid = llgridsp->Clone();
 				  }
 				  if (uWindGridPresent && vWindGridPresent) {
 					  //convert call here
 					  convertWinds(ugrid, vgrid, uwind, vwind, lat, lon);
+          				  writeOutputProduct(uwind->getTypeName(), uwind);
+          				  writeOutputProduct(vwind->getTypeName(), vwind);
+					  for (size_t j=0; j < 100; j++) {
+						  size_t i = 500;
+//		  std::cout << "U = " << ugrid->getFloat2DRef()[j][i] << "/" 
+//			  << uwind->getFloat2DRef()[j][i]
+//			  << " V = " << vgrid->getFloat2DRef()[j][i] 
+//			  << "/" << vwind->getFloat2DRef()[j][i] 
+//			  << "\n";	
+					  }
                                           uWindGridPresent = false;
                                           vWindGridPresent = false;
 					  // write winds
@@ -373,7 +385,7 @@ Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
                   std::shared_ptr<rapio::LatLonGrid> vgrid,
                   std::shared_ptr<rapio::LatLonGrid> uwind,
                   std::shared_ptr<rapio::LatLonGrid> vwind,
-                  float xlat1, float clon) {
+                  float xlat1, float cenlon) {
 
 	uwind = ugrid->Clone();
 	vwind = vgrid->Clone();
@@ -384,13 +396,41 @@ Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
 	auto x = dims[1].size();
 	auto y = dims[0].size();
 	std::cout << "num lats = " << y << " or " << ugrid->getNumLats() << "\n";
-	for (size_t i = 0; i < x; i++) { //lon
-		for (size_t j = 0; j < y; j++) { //lat
-/*
-			slon = ugrid->
-			float angle = cocon * (;
-
-*/
+	auto& ugrid_ = ugrid->getFloat2DRef();
+	auto& vgrid_ = vgrid->getFloat2DRef();
+	auto& uwind_ = uwind->getFloat2DRef();
+	auto& vwind_ = vwind->getFloat2DRef();
+	// order here is vwind[lat][lon]
+	LLH nwcorner = ugrid->getLocation();
+	for (size_t j = 0; j < ugrid->getNumLats(); j++) { //lat
+		for (size_t i = 0; i < ugrid->getNumLons(); i++) { //lon
+			// this needs to be its own function
+			// based on EMC code (FORTRAN subroutine W3FC03)
+			// https://www.emc.ncep.noaa.gov/mmb/rreanl/w3fc03.f
+			// also see this, as the code may not be relevant in the
+			// S. hemisphere and at the poles (needs to be checked)
+			// https://www.lib.ncep.noaa.gov/ncepofficenotes/files/014082A4.pdf
+			LLH llhs = ugrid->getCenterLocationAt(j,i);
+			float slon = llhs.getLongitudeDeg();	
+			float angle = cocon * (slon-cenlon) * DTR;
+			float a = cos(angle);
+			float b = sin(angle);
+			if (ugrid_[j][i] == Constants::MissingData ||
+					ugrid_[j][i] == Constants::MissingData ||
+					vgrid_[j][i] == Constants::DataUnavailable ||
+					vgrid_[j][i] == Constants::DataUnavailable)
+			{
+				uwind_[j][i] == ugrid_[j][i];
+				vwind_[j][i] == vgrid_[j][i];
+			} else {
+				uwind_[j][i] = a*ugrid_[j][i] + b*vgrid_[j][i];
+				vwind_[j][i] = -b*ugrid_[j][i] + a*vgrid_[j][i];
+		  std::cout << "U = " << ugrid_[j][i] << "/" << uwind_[j][i]
+			  << " V = " << vgrid_[j][i] << "/" << vwind_[j][i] 
+			  << " Loc = " << slon  << "/" << llhs.getLatitudeDeg() 
+			  << " U2 = " << uwind->getFloat2DRef()[j][i]
+			  << "\n";
+			}
 		}
 	}
 	/*
