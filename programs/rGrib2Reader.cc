@@ -346,19 +346,22 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 				  if (uWindGridPresent && vWindGridPresent) {
 					  //convert call here
 					  convertWinds(ugrid, vgrid, uwind, vwind, lat, lon);
-          				  writeOutputProduct(uwind->getTypeName(), uwind);
-          				  writeOutputProduct(vwind->getTypeName(), vwind);
-					  for (size_t j=0; j < 100; j++) {
-						  size_t i = 500;
-//		  std::cout << "U = " << ugrid->getFloat2DRef()[j][i] << "/" 
-//			  << uwind->getFloat2DRef()[j][i]
-//			  << " V = " << vgrid->getFloat2DRef()[j][i] 
-//			  << "/" << vwind->getFloat2DRef()[j][i] 
-//			  << "\n";	
+					  for (size_t j=600; j < 610; j++) {
+						  size_t i = 1000;
+		  std::cout << "U = " << ugrid->getFloat2DRef()[j][i] << "/" 
+			  << uwind->getFloat2DRef()[j][i]
+			  << " V = " << vgrid->getFloat2DRef()[j][i] 
+			  << "/" << vwind->getFloat2DRef()[j][i] 
+			  << "\n";	
 					  }
                                           uWindGridPresent = false;
                                           vWindGridPresent = false;
+					  // make sure we have the correct TypeName 
+					  uwind->setTypeName(windinfo[3]);
+					  vwind->setTypeName(windinfo[4]);
 					  // write winds
+          				  writeOutputProduct(uwind->getTypeName(), uwind);
+          				  writeOutputProduct(vwind->getTypeName(), vwind);
 				  }
 			  } else if (windinfo[0] == "PS") {
 				  LogInfo("Doing Polar Sterographic\n");
@@ -383,8 +386,8 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 void
 Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
                   std::shared_ptr<rapio::LatLonGrid> vgrid,
-                  std::shared_ptr<rapio::LatLonGrid> uwind,
-                  std::shared_ptr<rapio::LatLonGrid> vwind,
+                  std::shared_ptr<rapio::LatLonGrid> &uwind,
+                  std::shared_ptr<rapio::LatLonGrid> &vwind,
                   float xlat1, float cenlon) {
 
 	uwind = ugrid->Clone();
@@ -425,34 +428,15 @@ Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
 			} else {
 				uwind_[j][i] = a*ugrid_[j][i] + b*vgrid_[j][i];
 				vwind_[j][i] = -b*ugrid_[j][i] + a*vgrid_[j][i];
-		  std::cout << "U = " << ugrid_[j][i] << "/" << uwind_[j][i]
-			  << " V = " << vgrid_[j][i] << "/" << vwind_[j][i] 
-			  << " Loc = " << slon  << "/" << llhs.getLatitudeDeg() 
-			  << " U2 = " << uwind->getFloat2DRef()[j][i]
-			  << "\n";
+//		  std::cout << "U = " << ugrid_[j][i] << "/" << uwind_[j][i]
+//			  << " V = " << vgrid_[j][i] << "/" << vwind_[j][i] 
+//			  << " Loc = " << slon  << "/" << llhs.getLatitudeDeg() 
+//			  << " U2 = " << uwind->getFloat2DRef()[j][i]
+//			  << "\n";
 			}
 		}
 	}
-	/*
-C USAGE:  CALL W3FC03 (SLON,FGU,FGV,CENLON,XLAT1,DIR,SPD)
-C     SLON   ARG LIST  REAL*4    STATION LONGITUDE (-DEG W)
-C     FGU    ARG LIST  REAL*4    GRID-ORIENTED U-COMPONENT
-C     FGV    ARG LIST  REAL*4    GRID-ORIENTED V-COMPONENT
-C     CENLON ARG LIST  REAL*4    CENTRAL LONGITUDE
-C     XLAT1  ARG LIST  REAL*4    TRUE LATITUDE #1
-C     ------ --------- -----------------------------------------------
-C     DIR    ARG LIST  REAL*4     WIND DIRECTION, DEGREES
-C     SPD    ARG LIST  REAL*4     WIND SPEED
-      PARAMETER (DTR=3.1415926/180.0)
-      COCON = SIN(XLAT1*DTR)
-      ANGLE = COCON * (SLON-CENLON) * DTR
-      A = COS(ANGLE)
-      B = SIN(ANGLE)
-      UNEW = A*FGU + B*FGV
-      VNEW = -B*FGU + A*FGV
-      */
-  
-}
+} // Grib2ReaderAlg::convertWinds
 
 
 int

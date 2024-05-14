@@ -43,8 +43,8 @@ public:
   virtual void 
   convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid, 
 		  std::shared_ptr<rapio::LatLonGrid> vgrid,
-		  std::shared_ptr<rapio::LatLonGrid> uwind, 
-		  std::shared_ptr<rapio::LatLonGrid> vwind, 
+		  std::shared_ptr<rapio::LatLonGrid> &uwind, 
+		  std::shared_ptr<rapio::LatLonGrid> &vwind, 
 		  float lat, float lon);
 protected:
 
