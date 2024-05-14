@@ -93,11 +93,27 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   outFile.close();
 
   // Finally move the tmp file to final location
-  if (OS::moveFile(filename, filefinal)) {
-    LogInfo("Wrote cache file to " << filefinal << " with " << count << " points.\n");
-  } else {
-    LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
-    success = false;
+  // Current multi-moment can clash on the move since both will write the same file,
+  // so we'll try a couple times, then delete our tmp file to avoid filing the disk
+  size_t attemptNumber      = 1;
+  const size_t MAX_ATTEMPTS = 2;
+
+  while (true) {
+    if (OS::moveFile(filename, filefinal, true)) {
+      LogInfo("Wrote cache file to " << filefinal << " with " << count << " points.\n");
+      break;
+    } else {
+      if (attemptNumber > MAX_ATTEMPTS) {
+        LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
+        OS::deleteFile(filename);
+        success = false;
+        break;
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
+
+    attemptNumber++;
   }
 
   #if 0
@@ -162,9 +178,9 @@ FusionCache::readRangeFile(const std::string& filename,
     // handle error reading file
     LogSevere("Couldn't read existing cache file " << filename << "\n");
     infile.close();
-    // Copy file to someplace...
-    static size_t count = 0;
-    OS::moveFile(filename, "/home/mrms/BADCACHE/badcache_" + std::to_string(count++) + ".cache");
+    // Copy file to someplace (Debugging)
+    // static size_t count = 0;
+    // OS::moveFile(filename, "/home/mrms/BADCACHE/badcache_" + std::to_string(count++) + ".cache");
     return false;
   }
   infile.close();
