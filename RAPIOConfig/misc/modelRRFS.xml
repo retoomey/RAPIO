@@ -131,11 +131,11 @@ Intial assumpion is that we are reading pressure level files for the 3D
 	<!-- Pressure -->
 	<field id="PRES" type="2D" name="Surface" unit="mb" layer="surface"/>
 	<!-- UGrid/VGrid combination -->
-	<field id="UGRD" type="2D" name="UGrid700mb" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="VGRD" type="2D" name="VGrid700mb" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="UGRD" type="2D" name="UGrid500mb" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="VGRD" type="2D" name="VGrid500mb" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="UGRD" type="2D" name="UGrid100mb" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="VGRD" type="2D" name="VGrid100mb" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
 
 </modelfields>
