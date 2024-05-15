@@ -46,6 +46,7 @@ if(${USE_NCEPLIBS_GRIB2})
                -DUSE_PNG=ON              # Use png (default on)
                -DUSE_OpenJPEG=${USE_OPENJPEG_NCEPLIBS}  # Use OpenJpeg
                -DUSE_Jasper=${USE_JASPER_NCEPLIBS}  # Use Jasper 
+	       -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
   )
 
 

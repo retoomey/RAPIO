@@ -227,7 +227,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
 
           // We'll probably need a unit as well...
           // Which one?  string, text, uchar?  lol..
-          NETCDF(nc_put_att_text(ncid, varid, Constants::Units.c_str(),
+          NETCDF(nc_put_att_text(ncid, varid, Constants::Units,
             unit.size(), &unit[0]));
         }
       }

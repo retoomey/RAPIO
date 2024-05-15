@@ -1,5 +1,10 @@
 #pragma once
 
+// 'This' fun boost thing...global namespace for _1.
+// It seems ptree still wants it.  We define it here
+// to force it before any boost header is included.
+// #define BOOST_BIND_NO_PLACEHOLDERS
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <iosfwd>
 
 namespace rapio {

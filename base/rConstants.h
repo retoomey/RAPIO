@@ -36,15 +36,68 @@ class Constants : public Utility
 {
 public:
   /** Default header for RAPIO */
-  static const std::string RAPIOHeader;
+  static constexpr const char * RAPIOHeader = "Realtime Algorithm Parameter and IO (RAPIO) ";
 
   // GIS constants
 
+  // FIXME: Need to debate check/this.  MRMS was using multiple values everywhere,
+  // which is the 'best'?  Earth varies from 6357 at poles to 6378 equator km
+  // It's better to define a number instead of an object.  This is mostly used
+  // in very intensive math projection.  A define might even be better here
+  // double EarthRadius         = 6370949.0; Didn't match with us anyway..wow
+  // double EarthRadius         = 6371000.0; Used by all the old storm motion stuff
+
   /** The mean equatorial radius of the earth in meters. */
-  static const double EarthRadiusM;
+  static constexpr double EarthRadiusM = 6378000.0;
 
   /** The mean equatorial radius of the earth in kilometers. */
-  static const double EarthRadiusKM;
+  static constexpr double EarthRadiusKM = 6378.0;
+
+  /** Radians per degree. */
+  static constexpr double RadiansPerDegree = M_PI / 180.0;
+
+  /** Degrees per radian. */
+  static constexpr double DegreesPerRadian = 180.0 / M_PI;
+
+  /** The number of seconds in one day. */
+  static constexpr time_t SecondsPerDay = 86400;
+
+  // Datatype constants
+  static constexpr const char * ColorMap         = "ColorMap";
+  static constexpr const char * IsTableData      = "IsTableData";
+  static constexpr const char * ExpiryInterval   = "ExpiryInterval";
+  static constexpr const char * FilenameDateTime = "FilenameDateTime";
+
+  // Terrain constants
+  static constexpr const char * TerrainBeamBottomHit = "TerrainBeamBottomHit";
+  static constexpr const char * TerrainPBBPercent    = "TerrainPBBPercent";
+  static constexpr const char * TerrainCBBPercent    = "TerrainCBBPercent";
+
+  // Constants for reading/writing attributes
+
+  /** Used to read first/primary layer of DataTypes */
+  static constexpr const char * PrimaryDataName = "primary";
+  /** What is the TypeName is present in this file? */
+  static constexpr const char * TypeName = "TypeName";
+
+  /** What is the DataType present in this file, i.e. the name of the
+   *  descendant of DataType? e.g. RadialSet, PointSetData, etc. */
+  static constexpr const char * sDataType = "DataType";
+
+  // Note: W2 was changed to write 'units' instead of 'Units'.  So we have
+  // archive cases with 'Units' but all new stuff is 'units'.
+  static constexpr const char * Units          = "units";
+  static constexpr const char * Latitude       = "Latitude";
+  static constexpr const char * Longitude      = "Longitude";
+  static constexpr const char * Height         = "Height";
+  static constexpr const char * Time           = "Time";
+  static constexpr const char * FractionalTime = "FractionalTime";
+
+  /** Parameter to replace in fam files, etc for relative index location */
+  static constexpr const char * IndexPathReplace = "{indexlocation}";
+
+  /** Used to separate xml parameters for fam, etc. */
+  static constexpr const char * RecordXMLSeparator = " ";
 
   /** The value that is assigned to data that is missing. */
   static const SentinelDouble MissingData;
@@ -75,51 +128,6 @@ public:
   {
     return (val > -99899);
   }
-
-  /** Radians per degree. */
-  static const double RadiansPerDegree;
-
-  /** Degrees per radian. */
-  static const double DegreesPerRadian;
-
-  /** The number of seconds in one day. */
-  static const time_t SecondsPerDay;
-
-  // DataType constants
-  static const std::string ColorMap;
-  static const std::string IsTableData;
-  static const std::string ExpiryInterval;
-  static const std::string FilenameDateTime; // Formatted as filename expected
-
-  // Terrain constants
-  static const std::string TerrainBeamBottomHit;
-  static const std::string TerrainPBBPercent;
-  static const std::string TerrainCBBPercent;
-
-  // Constants for reading/writing attributes
-
-  /** Used to read first/primary layer of DataTypes */
-  static const std::string PrimaryDataName;
-
-  /** What is the TypeName is present in this file? */
-  static const std::string TypeName;
-
-  /** What is the DataType present in this file, i.e. the name of the
-   *  descendant of DataType? e.g. RadialSet, PointSetData, etc. */
-  static const std::string sDataType;
-
-  static const std::string Units;
-  static const std::string Latitude;
-  static const std::string Longitude;
-  static const std::string Height;
-  static const std::string Time;
-  static const std::string FractionalTime;
-
-  /** Parameter to replace in fam files, etc for relative index location */
-  static const std::string IndexPathReplace;
-
-  /** Used to separate xml parameters for fam, etc. */
-  static const std::string RecordXMLSeparator;
 };
 
 //  end struct Constants

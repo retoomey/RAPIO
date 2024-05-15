@@ -8,6 +8,19 @@ namespace rapio {
 class VolumeValueVelGatherer : public VolumeValue
 {
 public:
+  /* Set inline function to make sure all fields are set */
+  inline void
+  set(float v, float ux_, float uy_, float uz_, float latDegs_, float lonDegs_, float heightKMs_)
+  {
+    dataValue = v;
+    ux        = ux_;
+    uy        = uy_;
+    uz        = uz_;
+    latDegs   = latDegs_;
+    lonDegs   = lonDegs_;
+    heightKMs = heightKMs_;
+  }
+
   float ux;
   float uy;
   float uz;
@@ -70,13 +83,17 @@ public:
     // Copy grid cell output init final vectors for output...
     auto& vv = *(VolumeValueVelGatherer *) (vvp);
 
-    myValues.push_back(vv.dataValue);
-    myUXs.push_back(vv.ux);
-    myUYs.push_back(vv.uy);
-    myUZs.push_back(vv.uz);
-    myLatDegs.push_back(vv.latDegs);
-    myLonDegs.push_back(vv.lonDegs);
-    myHeightKMs.push_back(vv.heightKMs);
+    // Ok, ignore missing or unavailable values for the table,
+    // those are just for the 2D grid to visualize stuff...
+    if (Constants::isGood(vv.dataValue)) {
+      myValues.push_back(vv.dataValue);
+      myUXs.push_back(vv.ux);
+      myUYs.push_back(vv.uy);
+      myUZs.push_back(vv.uz);
+      myLatDegs.push_back(vv.latDegs);
+      myLonDegs.push_back(vv.lonDegs);
+      myHeightKMs.push_back(vv.heightKMs);
+    }
   }
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */

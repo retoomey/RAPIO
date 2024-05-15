@@ -149,9 +149,7 @@ public:
     LengthKMs       & targetHeightKMs, ///< Output height perpendicular to earth of beam
     LengthKMs       & rangeKMs)        ///< Output range along the curved elevation beam
   {
-    const double EarthRadius = Constants::EarthRadiusM;
-    // const double EarthRadius=6371000.0;
-    const double IR = (4. / 3.) * EarthRadius;
+    constexpr double IR = (4. / 3.) * Constants::EarthRadiusM;
 
     // -----------------------------------------------------------------------------------
     // Verified reverse formula from new elev to height here

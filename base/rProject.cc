@@ -22,11 +22,9 @@ Project::attenuationHeightKMs(
 {
   // Radar formula approimation. p 232, Radar Equations for Modern Radar
   // this is good to 0.4% error at 1000 km.
+  constexpr double IR2 = (4. / 3.) * Constants::EarthRadiusKM; // In KMs
 
-  const double EarthRadius = Constants::EarthRadiusM / 1000.0;
-  // const double EarthRadius=6371000.0;
-  const double IR2 = (4. / 3.) * EarthRadius * 2;
-  double elevRad   = elevDegs * DEG_TO_RAD;
+  const double elevRad = elevDegs * DEG_TO_RAD;
 
   const double top    = rangeKMs * cos(elevRad);
   LengthKMs heightKMs = rangeKMs * sin(elevRad) + (top * top / IR2) + stationHeightKMs;
@@ -44,7 +42,7 @@ Project::LatLonToAzRange(
   float           &rangeMeters) // FIXME: do more work to make units consistent
 
 {
-  const auto meterDeg = Constants::EarthRadiusM * DEG_TO_RAD; // 2nr/360 amazingly
+  constexpr auto meterDeg = Constants::EarthRadiusM * DEG_TO_RAD; // 2nr/360 amazingly
 
   // Below equator we flip lat I think
   auto Y = (tLat > 0) ? (tLat - cLat) * meterDeg : (cLat - tLat) * meterDeg;
@@ -90,12 +88,12 @@ Project::BeamPath_AzRangeToLatLon(
   AngleDegs       &latDegs,
   AngleDegs       &lonDegs)
 {
-  const auto elevAngleRad      = elevAngleDegs * DEG_TO_RAD;
-  const auto stationLatRad     = (90. - stationLatDegs) * DEG_TO_RAD;
-  const auto azimuthRad        = azimuthDegs * DEG_TO_RAD;
-  const auto rangeM            = rangeKMs * 1000;
-  const double EarthRadius     = Constants::EarthRadiusM;
-  const double earthRefraction = (4. / 3.) * EarthRadius;
+  const auto elevAngleRad  = elevAngleDegs * DEG_TO_RAD;
+  const auto stationLatRad = (90. - stationLatDegs) * DEG_TO_RAD;
+  const auto azimuthRad    = azimuthDegs * DEG_TO_RAD;
+  const auto rangeM        = rangeKMs * 1000;
+
+  constexpr double earthRefraction = (4. / 3.) * Constants::EarthRadiusM;
 
   // Note: The height is relative to station height, since it is not
   // passed in.
@@ -106,7 +104,7 @@ Project::BeamPath_AzRangeToLatLon(
   const double great_circle_distance = earthRefraction
     * asin_bugworkaround( ( rangeM * cos(elevAngleRad) )
       / ( (earthRefraction) + heightM) );
-  const auto gcdEarth = great_circle_distance / EarthRadius;
+  const auto gcdEarth = great_circle_distance / Constants::EarthRadiusM;
   const auto SIN      = sin(gcdEarth); // Make sure this sin only called once
 
   // Output
@@ -145,12 +143,10 @@ Project::BeamPath_LLHtoAzRangeElev(
 
   const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
 
-  const double EarthRadius = Constants::EarthRadiusM;
-  // const double EarthRadius=6371000.0;
-  const double IR = (4. / 3.) * EarthRadius;
+  constexpr double IR = (4. / 3.) * Constants::EarthRadiusM;
 
   const double great_circle_distance =
-    EarthRadius * acos(cos(stationLatRad)
+    Constants::EarthRadiusM * acos(cos(stationLatRad)
       * cos(targetLatRad)
       + sin(stationLatRad)
       * sin(targetLatRad) * cos(deltaLonRad));
@@ -227,9 +223,7 @@ Project::Cached_BeamPath_LLHtoAzRangeElev(
   AngleDegs       & azimuthDegs,
   LengthKMs       & rangeKMs)
 {
-  const double EarthRadius = Constants::EarthRadiusM;
-  // const double EarthRadius=6371000.0;
-  const double IR = (4. / 3.) * EarthRadius;
+  constexpr double IR = (4. / 3.) * Constants::EarthRadiusM;
 
   LLH target(targetLatDegs, targetLonDegs, targetHeightKMs);
   LLH station(stationLatDegs, stationLonDegs, stationHeightKMs);
@@ -292,12 +286,10 @@ Project::BeamPath_LLHtoAttenuationRange(
 
   const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
 
-  const double EarthRadius = Constants::EarthRadiusM;
-  // const double EarthRadius=6371000.0;
-  const double IR = (4. / 3.) * EarthRadius;
+  constexpr double IR = (4. / 3.) * Constants::EarthRadiusM;
 
   const double great_circle_distance =
-    EarthRadius * acos(cos(stationLatRad)
+    Constants::EarthRadiusM * acos(cos(stationLatRad)
       * cos(targetLatRad)
       + sin(stationLatRad)
       * sin(targetLatRad) * cos(deltaLonRad));
@@ -348,13 +340,10 @@ Project::stationLatLonToTarget(
 
   const auto deltaLonRad = deltaLonDegs * DEG_TO_RAD;
 
-  // FIXME: Move to a single constant
-  const double EarthRadius = Constants::EarthRadiusM;
-  // const double EarthRadius=6371000.0;
-  const double IR = (4. / 3.) * EarthRadius;
+  constexpr double IR = (4. / 3.) * Constants::EarthRadiusM;
 
   const double great_circle_distance =
-    EarthRadius * acos(cos(stationLatRad)
+    Constants::EarthRadiusM * acos(cos(stationLatRad)
       * cos(targetLatRad)
       + sin(stationLatRad)
       * sin(targetLatRad) * cos(deltaLonRad));
@@ -362,39 +351,6 @@ Project::stationLatLonToTarget(
   sinGcdIR = sin(great_circle_distance / IR);
   cosGcdIR = cos(great_circle_distance / IR);
 }
-
-#if 0
-void
-Project::Cached_BeamPath_LLHtoAttenuationRange(
-
-  const LengthKMs & stationHeightKMs, // need to shift up/down based on station height
-
-  const double    sinGcdIR, // Cached sin/cos from regular version, this speeds stuff up
-  const double    cosGcdIR,
-
-  const double    tanElev, // Cached tangent of the elevation angle
-  const double    cosElev, // Cached cosine of the elevation angle
-
-  LengthKMs       & targetHeightKMs,
-  LengthKMs       & rangeKMs)
-{
-  const double EarthRadius = Constants::EarthRadiusM;
-  // const double EarthRadius=6371000.0;
-  const double IR = (4. / 3.) * EarthRadius;
-
-  // -----------------------------------------------------------------------------------
-  // Verified reverse formula from new elev to height here
-  // heightM = (IR/(-sinGcdIR*tan(newElevRad) + cos(great_circle_distance/IR))) - IR;
-  // targetHeightKMs = (heightM/1000.0) + stationHeightKMs;
-  // -----------------------------------------------------------------------------------
-  const double newHeightM = (IR / (-sinGcdIR * tanElev + cosGcdIR)) - IR;
-
-  targetHeightKMs = (newHeightM / 1000.0) + stationHeightKMs;
-
-  rangeKMs = (( sinGcdIR ) * (IR + newHeightM) / cosElev) / 1000.0;
-}
-
-#endif // if 0
 
 void
 Project::LLBearingDistance(
@@ -409,7 +365,7 @@ Project::LLBearingDistance(
   const double sinLat = sin(startLatDegs * DEG_TO_RAD);
   const double cosLat = cos(startLatDegs * DEG_TO_RAD);
 
-  const double angDR      = distance / (Constants::EarthRadiusM / 1000.0);
+  const double angDR      = distance / (Constants::EarthRadiusKM);
   const double cosDR      = cos(angDR);
   const double sinDR      = sin(angDR);
   const double bearingRad = bearingDegs * DEG_TO_RAD;

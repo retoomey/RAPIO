@@ -22,8 +22,7 @@ VelResolver::create(const std::string & params)
 }
 
 namespace {
-/** Analyze a tilt layer for contribution to final.  We do this for each of the tilts
- * around the point so we just put the common code here */
+/** Handle the closest tilt for velocity gathering */
 static void inline
 analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
   // OUTPUTS:
@@ -49,21 +48,54 @@ analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
   value  = layer.value;
   isGood = Constants::isGood(value);
 
-
   // ------------------------------------------------------------
   // A simple grid value of the velocity at that gate/range
   // just to see CAPPIs and that we're on the right track...
   if (!terrainBlocked && inBeam && isGood) {
-    // For the CAPPI debug output of stage1.
-    // A simple grid value of the velocity at that gate/range
-    vv.dataValue = value;
+    // We want to sample around the gate/radial.  Lou is suggesting
+    // an average to start, so we'll try that.
+    // FIXME: Need to modify enhance queryLayer/RadialSetLookup
+    // to allow matrix sampling of data.  Fun stuff coming
+
     // ------------------------------------------------------------
     // Now do the math for stuff for the location
-    // We're going to try doing a cressmen in the 2D of the radial sets.
-    // Fun fun fun.
     // FIXME: Should be using Constants probably.  This is alpha POC
+    // Also we could probably just add methods for Radians
     const float RAD     = 0.01745329251f;
     const double earthR = 6370949.0;
+
+    const float rLatRad    = RAD * vv.getRadarLatitudeDegs();
+    const float rLonRad    = RAD * vv.getRadarLongitudeDegs();
+    const LengthKMs rHtKMs = vv.getRadarHeightKMs();
+
+    const float oLatRad    = RAD * vv.getAtLatitudeDegs();
+    const float oLonRad    = RAD * vv.getAtLongitudeDegs();
+    const LengthKMs oHtKMs = vv.getAtHeightKMs();
+
+    const float x     = fabs(oLonRad - rLonRad) * earthR; // Arc length in meters
+    const float y     = fabs(oLatRad - rLatRad) * earthR; // Arc length in meters
+    const float z     = fabs(oHtKMs - rHtKMs) * 1000.0;   // Meters
+    const float range = sqrtf(x * x + y * y + z * z);     // Distance formula
+    const float ux    = x / range;                        // units 'should' cancel so technically we're dimensionless
+    const float uy    = y / range;
+    const float uz    = z / range;
+
+    // For the CAPPI debug output of stage1.
+    // A simple grid value of the velocity at that gate/range
+    // FIXME: Cressmen 2D of the RadialSet most likely.
+    const float latDegs   = vv.getAtLatitudeDegs();
+    const float lonDegs   = vv.getAtLongitudeDegs();
+    const float heightKMs = vv.getAtHeightKMs();
+    vv.set(value, ux, uy, uz, latDegs, lonDegs, heightKMs);
+  } else {
+    // My guess for a reasonable missing for this first start
+    // Note missing only needed for 2D/3D CAPPI debugging output, we'll be making
+    // tables for our stage2.
+    if (inBeam) {
+      vv.dataValue = Constants::MissingData;
+    } else {
+      vv.dataValue = Constants::DataUnavailable;
+    }
   }
 } // analyzeTilt
 }
@@ -118,51 +150,8 @@ VelResolver::calc(VolumeValue * vvp)
   } else if (haveUpper) {
     analyzeTilt(vv, vv.getUpperValue(), vv.virtualElevDegs,
       value, isGood, inBeam, terrainBlocked);
-  }
-
-  // ------------------------------------------------------------
-  // A simple grid value of the velocity at that gate/range
-  // just to see CAPPIs and that we're on the right track...
-  if (!terrainBlocked && inBeam && isGood) {
-    // For the CAPPI debug output of stage1.
-    // A simple grid value of the velocity at that gate/range
-    // FIXME: Cressmen 2D of the RadialSet most likely.
-    vv.dataValue = value;
-
-    // ------------------------------------------------------------
-    // Now do the math for stuff for the location
-    // We're going to try doing a cressmen in the 2D of the radial sets.
-    // Fun fun fun.
-    // FIXME: Should be using Constants probably.  This is alpha POC
-    // Also we could probably just add methods for Radians
-    // FIXME: Just doing calculations for moment.  We'll need work on
-    // our stage2 VolumeValueIO object of course to actually output
-    const float RAD     = 0.01745329251f;
-    const double earthR = 6370949.0;
-
-    const float rLatRad    = RAD * vv.getRadarLatitudeDegs();
-    const float rLonRad    = RAD * vv.getRadarLongitudeDegs();
-    const LengthKMs rHtKMs = vv.getRadarHeightKMs();
-
-    const float oLatRad    = RAD * vv.getAtLatitudeDegs();
-    const float oLonRad    = RAD * vv.getAtLongitudeDegs();
-    const LengthKMs oHtKMs = vv.getAtHeightKMs();
-
-    const float x     = fabs(oLonRad - rLonRad) * earthR; // Arc length in meters
-    const float y     = fabs(oLatRad - rLatRad) * earthR; // Arc length in meters
-    const float z     = fabs(oHtKMs - rHtKMs) * 1000.0;   // Meters
-    const float range = sqrtf(x * x + y * y + z * z);     // Distance formula
-    const float ux    = x / range;                        // units 'should' cancel so technically we're dimensionless
-    const float uy    = y / range;
-    const float uz    = z / range;
   } else {
-    // My guess for a reasonable missing for this first start
-    // Note missing only needed for 2D/3D CAPPI debugging output, we'll be making
-    // tables for our stage2.
-    if (inBeam) {
-      vv.dataValue = Constants::MissingData;
-    } else {
-      vv.dataValue = Constants::DataUnavailable;
-    }
+    // No tilts at all...so unavailable
+    vv.dataValue = Constants::DataUnavailable;
   }
 } // calc
