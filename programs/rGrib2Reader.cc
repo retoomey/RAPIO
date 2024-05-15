@@ -7,12 +7,12 @@ using namespace rapio;
 /** A Grib2 reader
  *
  * Using rrfs data:
- * rgrib2reader -i file=rrfs.t23z.prslev.f000.conus_3km.grib2 -o=test
+ * rgrib2reader -i file=rrfs.t23z.prslev.f000.conus_3km.grib2 -model=RRFS -o=test
  *
  * @author Robert Toomey; Travis Smith
  **/
 
-std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //FIXME configurable
+std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //default
 const std::string modelProjectionsXML = "misc/modelProjections.xml";
 
 bool myReadSettings = false;
@@ -43,40 +43,34 @@ bool vWindGridPresent = false;
 void
 Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
 {
-  o.setDescription("Grib2Reader read in GRIB2 files and writes out netcdf");
+  o.setDescription("Grib2Reader reads in GRIB2 files and writes out netcdf");
   o.setAuthors("Robert Toomey;Travis Smith");
-  o.optional("modelConfigFile", "RRFS", "which model? (RRFS, HRRR, RAP13, RAC20, RUC20, RUC40, RUC60)");
+  o.optional("model", "RRFS", "which model? Valid models include:\n - RRFS\n - HRRR\n");
+ // - RAP13\n - RAP20\n - RUC20\n - RUC40\n - RUC60\n - GFS\n
 }
 
 void
 Grib2ReaderAlg::processOptions(RAPIOOptions& o)
 { 
-  ConfigModelInfoXML = "misc/model" + o.getString("modelConfigFile") + ".xml";
-  std::cout << "1 = " << ConfigModelInfoXML << "\n";
+  ConfigModelInfoXML = "misc/model" + o.getString("model") + ".xml";
 }
 
 void
 Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
 { 
-  std::cout << "Reading model projection info for " << modeltype
-    << "\n";
   auto doc = Config::huntXML(modelProjectionsXML);
   try {
     if (doc != nullptr) {
       auto tree       = doc->getTree();
       auto modelprojections = tree->getChildOptional("modelprojections");
-      std::cout << "not nullptr!\n";
-      std::cout << tree << "\n\n\n------------\n";
 
       if (modelprojections != nullptr) {
-        std::cout << "Also not nullptr!\n";
         auto projections = modelprojections->getChildren("field");
-        std::cout << "Looking for" << modeltype << "\n";
         for (auto& m: projections) {
           // wget attributes
           const auto model = m.getAttr("model", std::string(""));
           if (model == modeltype) {
-            std::cout << "--------------Found " << modeltype << "!\n";
+            //std::cout << "--------------Found " << modeltype << "!\n";
             inputx = m.getAttr("x", std::size_t());
             inputy = m.getAttr("y", std::size_t());
             outputlons = m.getAttr("outputlons", std::size_t());
@@ -90,6 +84,7 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
             latspacing = abs((nwlat - selat) / (float) outputlats);
             lonspacing = abs((nwlon - selon) / (float) outputlons);
             proj = m.getAttr("proj", std::string(""));
+/*
             std::cout << 
               "X = " << inputx << "\n" <<
               "Y = " << inputy << "\n" <<
@@ -104,6 +99,7 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
               "Vert spacing = " << zspacing << " km\n" <<
               "proj string =" << proj << "\n" <<
               "\n";
+	      */
             break;
           }
 
@@ -125,7 +121,6 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
 void
 Grib2ReaderAlg::whichFieldsToProcess()
 { 
-  std::cout << "LOADING fields to process:\n";
   auto doc = Config::huntXML(ConfigModelInfoXML);
 
   try
@@ -136,12 +131,9 @@ Grib2ReaderAlg::whichFieldsToProcess()
     if (doc != nullptr) {
       auto tree       = doc->getTree();
       auto modelfields = tree->getChildOptional("modelfields");
-      std::cout << "not nullptr!\n";
-      std::cout << tree << "\n\n\n------------\n";
 
     
       if (modelfields != nullptr) {
-        std::cout << "Also not nullptr!\n";
         auto fields = modelfields->getChildren("field");
         for (auto& m: fields) {
           // wget attributes
@@ -151,8 +143,8 @@ Grib2ReaderAlg::whichFieldsToProcess()
           const auto units = m.getAttr("unit", std::string(""));
           const auto layer = m.getAttr("layer", std::string(""));
           const auto rotateWinds = m.getAttr("rotateWinds", std::string(""));
-          std::cout << id << " " << type << " " << name << " " << units
-             << " " << layer << "windrot: " << rotateWinds << "\n";
+          //std::cout << id << " " << type << " " << name << " " << units
+          //   << " " << layer << "windrot: " << rotateWinds << "\n";
           ModelFields mf;
           mf.id = id;
           mf.type = type;
@@ -162,7 +154,7 @@ Grib2ReaderAlg::whichFieldsToProcess()
           mf.rotateWinds = rotateWinds;
           mFields.push_back(mf); 
           count++;  
-          std::cout << "Count = " << count << "\n";
+          //std::cout << "Count = " << count << "\n";
 
 
         }
@@ -334,26 +326,18 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
                                   //"LCC:38.5:-97.5:UWind:VWind"
 				  float lat = atof(windinfo[1].c_str());
 				  float lon = atof(windinfo[2].c_str());
+				  //FIXME?: this requires that the first letter
+				  //of the data field be "U" or "V"
 				  if (mFields[i].name.substr(0,1) == "U") {
-					  std::cout << "it's U\n";
                                           uWindGridPresent = true;
 					  ugrid = llgridsp->Clone();
 				  } else if (mFields[i].name.substr(0,1) == "V") {
-					  std::cout << "it's V\n";
                                           vWindGridPresent = true;
 					  vgrid = llgridsp->Clone();
 				  }
 				  if (uWindGridPresent && vWindGridPresent) {
 					  //convert call here
 					  convertWinds(ugrid, vgrid, uwind, vwind, lat, lon);
-					  for (size_t j=600; j < 610; j++) {
-						  size_t i = 1000;
-		  std::cout << "U = " << ugrid->getFloat2DRef()[j][i] << "/" 
-			  << uwind->getFloat2DRef()[j][i]
-			  << " V = " << vgrid->getFloat2DRef()[j][i] 
-			  << "/" << vwind->getFloat2DRef()[j][i] 
-			  << "\n";	
-					  }
                                           uWindGridPresent = false;
                                           vWindGridPresent = false;
 					  // make sure we have the correct TypeName 
@@ -395,10 +379,6 @@ Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
 
 	float DTR=3.1415926/180.0;
 	float cocon = sin(xlat1*DTR);
-	auto dims = ugrid->getDims();
-	auto x = dims[1].size();
-	auto y = dims[0].size();
-	std::cout << "num lats = " << y << " or " << ugrid->getNumLats() << "\n";
 	auto& ugrid_ = ugrid->getFloat2DRef();
 	auto& vgrid_ = vgrid->getFloat2DRef();
 	auto& uwind_ = uwind->getFloat2DRef();
