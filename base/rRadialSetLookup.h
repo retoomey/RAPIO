@@ -53,6 +53,17 @@ public:
     if (( azNo < 0) || ( azNo >= int(myAzToRadialNum.size())) ) {
       return false;
     }
+    radialNo = myAzToRadialNum[ azNo ];
+    if (radialNo < 0) {
+      return false;
+    }
+
+    const double r = (rnMeters - myDistToFirstGateM) / myGateWidthM;
+
+    gateNo = static_cast<int>(r);
+    if ((gateNo < 0) || (gateNo >= myNumGates) ) {
+      return false;
+    }
 
     return true;
   }

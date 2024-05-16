@@ -522,6 +522,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // processVolume(rTime);
     myDirty++;
   }
+  if (!isDaemon()) {
+    processVolume(r->getTime());
+  }
 }
 
 void

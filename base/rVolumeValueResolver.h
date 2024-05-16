@@ -185,7 +185,7 @@ protected:
       for (size_t rad = 0; rad < TOTALRADIALS; ++rad) {
         // Loop over clipped gate range
         for (size_t gate = startgate; gate <= endgate; ++gate) {
-          auto& v = d[rad][gate];
+          auto& v = d[atradial][gate];
           if (Constants::isGood(v)) {
             totalValue += v;
             totalCount++;
