@@ -110,29 +110,38 @@ VelResolver::calc(VolumeValue * vvp)
 
   // ------------------------------------------------------------
   // Query for tilts directly above/below us
-  bool haveLower = queryLower(vv);
-  bool haveUpper = queryUpper(vv);
+  // FIXME: I want to work on this API to make it cleaner, maybe
+  // function pointers or something.
+  bool haveLower = queryMatrixLayer(vv, vv.getLower(), vv.getLowerP(), vv.getLowerValue());
+  bool haveUpper = queryMatrixLayer(vv, vv.getUpper(), vv.getUpperP(), vv.getUpperValue());
+
+  // ------------------------------------------------------------
+  // Get distances and toss out anything over range
+  //
+  float dLowerKMs;
+  float dUpperKMs;
+
+  if (haveLower) {
+    dLowerKMs = vv.getAtHeightKMs() - vv.getLowerValue().heightKMs;
+    if (dLowerKMs > HEIGHT_THRESH_KMS) {
+      haveLower = false;
+    }
+  }
+  if (haveUpper) {
+    dUpperKMs = vv.getUpperValue().heightKMs - vv.getAtHeightKMs();
+    if (dUpperKMs > HEIGHT_THRESH_KMS) {
+      haveUpper = false;
+    }
+  }
 
   // ------------------------------------------------------------
   // Choose the closest tilt.
   //
   if (haveLower && haveUpper) {
-    // We'll do closest by straight up/down kilometers.
-    // FIXME: util API for this
-    const float dLowerKMs = vv.getAtHeightKMs() - vv.getLowerValue().heightKMs;
-    const float dUpperKMs = vv.getUpperValue().heightKMs - vv.getAtHeightKMs();
-    float dKMs;
     if (dLowerKMs < dUpperKMs) {
       haveUpper = false;
-      dKMs      = dLowerKMs;
     } else {
       haveLower = false;
-      dKMs      = dUpperKMs;
-    }
-
-    // FIXME: Some max distance toss out the other as well, right?
-    if (dKMs > HEIGHT_THRESH_KMS) {
-      haveUpper = haveLower = false;
     }
   }
 

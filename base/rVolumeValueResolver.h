@@ -128,13 +128,103 @@ public:
     return std::make_shared<VolumeValueIO>();
   }
 
-private:
+protected:
+
+  // FIXME: Thinking we could do function pointers or something for different methods
+  // of querying the data.
+
+  /** Query a single layer.  Inline the code since this is called a silly amount of times. */
+  inline bool
+  queryMatrixLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l)
+  {
+    // l.clear(); We're supposed to check the flag for valid
+    if (set == nullptr) { return false; }
+
+    // Casts for moment since we currently only work with radialsets.  if eventually we
+    // add in lat lon grids we'll need more work.  I'm trying to avoid virtual for speed.
+    RadialSet& r = *((RadialSet *) set);
+    RadialSetProjection& p = *((RadialSetProjection *) project);
+
+    // Projection of height range using attentuation
+    // Notice we cached sin and cos GCD for the grid
+
+    Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
+      vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
+
+    // If good, query more stuff
+    if (p.AzRangeToRadialGate(vv.virtualAzDegs, l.rangeKMs, l.radial, l.gate)) {
+      // Data value at gate (getValueAtAzRange sets this)
+      auto& d = r.getFloat2DRef();
+
+      //
+      // Complete alpha code...
+      //
+      // Matrix average/cressmen around the radial/gate.
+      // Start with averaging good values.  Uggh.  Also assuming a
+      // full RadialSet.
+      const int mgate   = p.getNumGates();
+      const int mradial = p.getNumRadials();
+      constexpr const size_t TOTALRADIALS  = 8;                // 8 spread left/right azimuth
+      constexpr const size_t TOTALRADIALS2 = TOTALRADIALS / 2; // 4 half spread
+      constexpr const size_t TOTALGATES    = 12;               // 12
+      constexpr const size_t TOTALGATES2   = TOTALGATES / 2;   // 4 half spread
+
+      double totalValue = 0;
+      size_t totalCount = 0;
+
+      // Init of a start radial
+      int atradial = l.radial - TOTALRADIALS2;
+      if (atradial < 0) { atradial += mradial; } // roll azimuth
+
+      int startgate = l.gate - TOTALGATES2;
+      if (startgate < 0) { startgate = 0; } // clip gates
+      int endgate = l.gate + TOTALGATES2;
+      if (endgate >= mgate) { endgate = mgate - 1; }
+
+      // Loop over radial range with wrap around
+      for (size_t rad = 0; rad < TOTALRADIALS; ++rad) {
+        // Loop over clipped gate range
+        for (size_t gate = startgate; gate <= endgate; ++gate) {
+          auto& v = d[rad][gate];
+          if (Constants::isGood(v)) {
+            totalValue += v;
+            totalCount++;
+          }
+        }
+
+        if (++atradial >= mradial) { atradial = 0; } // roll
+      }
+
+      // Final average of good values...
+      if (totalCount > 0) {
+        l.value = totalValue / totalCount;
+      } else {
+        l.value = Constants::MissingData;
+      }
+
+      // Meta data of the 'point' is from the hit gate.
+
+      // Beamwidth/elevation info
+      l.beamWidth = r.getBeamWidthRef()[l.radial];
+      l.elevation = r.getElevationDegs();
+
+      // Terrain info
+      const bool t = r.haveTerrain();
+      l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
+      l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
+      l.terrainPBBPercent = t ? r.getTerrainPBBPercentRef()[l.radial][l.gate] : 0.0;
+      l.beamHitBottom     = t ? (r.getTerrainBeamBottomHitRef()[l.radial][l.gate] != 0) : 0.0;
+      return true;
+    }
+
+    return false;
+  } // queryLayer
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
   queryLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l)
   {
-    l.clear();
+    // l.clear();
 
     if (set == nullptr) { return false; }
 
@@ -151,10 +241,8 @@ private:
     Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
       vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
 
-    const bool have = p.getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate);
-
     // If good, query more stuff
-    if (have) {
+    if (p.getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate)) {
       // Data value at gate (getValueAtAzRange sets this)
       // l.value = r.getFloat2DRef()[l.radial][l.gate];
 
@@ -167,9 +255,10 @@ private:
       l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
       l.terrainPBBPercent = t ? r.getTerrainPBBPercentRef()[l.radial][l.gate] : 0.0;
       l.beamHitBottom     = t ? (r.getTerrainBeamBottomHitRef()[l.radial][l.gate] != 0) : 0.0;
+      return true;
     }
 
-    return have;
+    return false;
   } // queryLayer
 
 public:

@@ -153,6 +153,19 @@ OS::canonical(const std::string& path)
   }
 }
 
+std::string
+OS::validatePathCharacters(const std::string& path)
+{
+  // Get rid of spaces
+  // FIXME: Filter anything else that can break a path.
+  std::string pstart = path;
+
+  Strings::replace(pstart, " ", "_");
+  Strings::replace(pstart, "//", "/");
+
+  return pstart;
+}
+
 bool
 OS::mkdirp(const std::string& path)
 {

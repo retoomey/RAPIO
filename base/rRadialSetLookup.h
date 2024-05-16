@@ -34,6 +34,29 @@ public:
    */
   RadialSetProjection(const std::string& layer, RadialSet * owner, int acc = 1000);
 
+  /** Attempt to quickly project from azimuth/range to radial/gate */
+  inline bool
+  AzRangeToRadialGate(const double& azDegs, const double& rangeKMs, int& radialNo, int& gateNo)
+  {
+    const double rnMeters = rangeKMs * 1000.0; // FIXME: if we stored a KM variable could save math
+
+    // ---------------------------------------
+    // Range check. The point would be in the cone of silence or outside scan
+    if ((rnMeters < myDistToFirstGateM) || (rnMeters >= myDistToLastGateM)) {
+      return false;
+    }
+
+    // ---------------------------------------
+    // Azimuth check
+    const int azNo = static_cast<int>(azDegs * myAccuracy) % myAccuracy360;
+
+    if (( azNo < 0) || ( azNo >= int(myAzToRadialNum.size())) ) {
+      return false;
+    }
+
+    return true;
+  }
+
   /** Fills in the radial number and gatenumber that correspond
    *  to the azimuth and range passed in.
    *
@@ -156,6 +179,12 @@ public:
   LLCoverageFull(size_t& numRows, size_t& numCols,
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs) override;
 
+  /** Can be quicker to get gates from the projection */
+  inline int getNumGates(){ return myNumGates; }
+
+  /** Can be quicker to get radial from the projection */
+  inline int getNumRadials(){ return myNumRadials; }
+
 protected:
 
   /*** Initialize to a RadialSet */
@@ -191,6 +220,9 @@ protected:
 
   /** The number of gates assumed for calculating range */
   int myNumGates;
+
+  /** The number of radials */
+  int myNumRadials;
 
   // -----------------------------------------------------
   // Caching of radial set values for speed

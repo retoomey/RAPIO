@@ -68,9 +68,13 @@ public:
   static bool
   isRegularFile(const std::string& path);
 
-  /** Canonicalize a path (remove ../, etc. ) */
+  /** Canonicalize a path (remove ../, etc. ) This requires path to exist on disk. */
   static std::string
   canonical(const std::string& path);
+
+  /** Validate a file name path characters (remove double // or space, etc.) */
+  static std::string
+  validatePathCharacters(const std::string& path);
 
   /**
    * Returns the current working directory.

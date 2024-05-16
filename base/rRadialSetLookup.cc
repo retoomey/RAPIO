@@ -12,6 +12,8 @@ initToRadialSet(RadialSet& rs)
   // Get the number of gates
   const size_t num_radials = rs.getNumRadials();
 
+  myNumRadials = num_radials;
+
   myNumGates = (num_radials > 0) ? rs.getNumGates() : 0;
 
   // This should be per radial shouldn't it? In other words,

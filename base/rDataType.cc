@@ -9,6 +9,7 @@
 #include "rColorMap.h"
 #include "rDataProjection.h"
 #include "rRecord.h"
+#include "rOS.h"
 
 using namespace rapio;
 
@@ -77,8 +78,10 @@ DataType::generateFileName(
   std::vector<std::string> tos =
   { dataType, sub1, sub2, subType, time, sourcename, source2 };
   std::string p = Strings::replaceGroup(basepattern, tokens, tos);
+
   // dirbase is always at front of course
-  URL path = URL(dirbase + "/" + p);
+  std::string finalPath = OS::validatePathCharacters(dirbase + "/" + p);
+  URL path = URL(finalPath);
 
   return path;
 } // DataType::generateFileName
