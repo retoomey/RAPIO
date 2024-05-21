@@ -114,12 +114,12 @@ public:
 
       // Values to netcdf arrays
       auto& values = stage2->addFloat1DRef(Constants::PrimaryDataName, myUnits, { 0 });
-      auto& ux     = stage2->addShort1DRef("ux", "dimensionless", { 0 });
-      auto& uy     = stage2->addShort1DRef("uy", "dimensionless", { 0 });
-      auto& uz     = stage2->addShort1DRef("uz", "dimensionless", { 0 });
-      auto& lat    = stage2->addShort1DRef("latitude", "Degrees", { 0 });
-      auto& lon    = stage2->addShort1DRef("longitude", "Degrees", { 0 });
-      auto& ht     = stage2->addShort1DRef("height", "KM", { 0 });
+      auto& ux     = stage2->addFloat1DRef("ux", "dimensionless", { 0 });
+      auto& uy     = stage2->addFloat1DRef("uy", "dimensionless", { 0 });
+      auto& uz     = stage2->addFloat1DRef("uz", "dimensionless", { 0 });
+      auto& lat    = stage2->addFloat1DRef("latitude", "Degrees", { 0 });
+      auto& lon    = stage2->addFloat1DRef("longitude", "Degrees", { 0 });
+      auto& ht     = stage2->addFloat1DRef("height", "KM", { 0 });
 
       // Copy into netcdf output
       std::copy(myValues.begin(), myValues.end(), values.data());

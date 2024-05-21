@@ -12,8 +12,10 @@ using namespace std;
 ostream&
 rapio::operator << (ostream& output, const LLCoverageArea& g)
 {
-  output << "(" << g.nwLat << "," << g.nwLon << "," << g.seLat << "," << g.seLon << "[" << g.latSpacing << "," <<
-    g.lonSpacing << "]," << g.startX << "," << g.startY << "," << g.numX << "," << g.numY << ")";
+  output << "nw(" << g.nwLat << ", " << g.nwLon << ") se(" << g.seLat << ", " << g.seLon << ") "
+         << "s(" << g.latSpacing << ", " << g.lonSpacing << ") "
+         << "numheights(" << g.heightsKM.size() << ") "
+         << "cells(" << g.startX << "," << g.startY << "," << g.numX << "," << g.numY << ")";
 
   return (output);
 }
@@ -111,6 +113,71 @@ LLCoverageArea::insetRadarRange(
 
   return out;
 } // LLCoverageArea::insetRadarRange
+
+void
+LLCoverageArea::tile(
+  const size_t x, const size_t y, std::vector<LLCoverageArea>& tiles
+) const
+{
+  if ((x < 1) || (y < 1)) {
+    LogSevere("Refusing to sub tile since X=" << x << " Y=" << y << "\n");
+    return;
+  }
+
+  // Divide to get the num of cells in each tile (round down)
+  const size_t xBaseSize = numX / x;
+  const size_t yBaseSize = numY / y;
+
+  if ((xBaseSize < 1) || (yBaseSize < 1)) {
+    LogSevere("Refusing to sub tile since x or y is larger than x/y of origin grid: "
+      << numX << ", " << numY << " " << x << ", " << y << "\n");
+    return;
+  }
+
+  // 'Extra' if x/y doesn't evenly divide into the rows/cols.
+  // For example: 700 width into 3 --> 700/3 = 233.33
+  // we would get 1 extra cell.  We add this to the first tile of each row/col
+  const size_t extraX = numX % x;
+  const size_t extraY = numY % y;
+
+  size_t cellY = 0;
+
+  for (size_t atY = 0; atY < y; ++atY) { // delta lat here north to south
+    // The cell size in the Y (lat) for this tile, add extra to the first if needed (round off)
+    const size_t cellYSize = yBaseSize + ((atY == 0) ? extraY : 0);
+    // Move latitude degs
+    const AngleDegs newNWLatDegs = nwLat - cellY * latSpacing; // moving down lat degrees per cell
+    const AngleDegs newSELatDegs = newNWLatDegs - cellYSize * latSpacing;
+
+    size_t cellX = 0;
+    for (size_t atX = 0; atX < x; ++atX) { // delta lon east to west
+      // The cell size in the X (lon) for this tile, add extra to the first if needed (round off)
+      const size_t cellXSize       = xBaseSize + ((atX == 0) ? extraX : 0);
+      const AngleDegs newNWLonDegs = nwLon + cellX * lonSpacing;
+      const AngleDegs newSELonDegs = newNWLonDegs + cellXSize * lonSpacing;
+
+      // Start with us (copy heights, etc.)
+      LLCoverageArea newOne = *this;
+
+      // We'll use absolute startX, startY
+      newOne.startX = cellX;
+      newOne.startY = cellY;
+      newOne.numX   = cellXSize;
+      newOne.numY   = cellYSize;
+
+      // Move the corners...
+      newOne.nwLat = newNWLatDegs;
+      newOne.seLat = newSELatDegs;
+      newOne.nwLon = newNWLonDegs;
+      newOne.seLon = newSELonDegs;
+
+      tiles.push_back(newOne);
+
+      cellX += cellXSize;
+    }
+    cellY += cellYSize;
+  }
+} // LLCoverageArea::tile
 
 void
 LLCoverageArea::sync()

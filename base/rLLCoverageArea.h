@@ -62,6 +62,16 @@ public:
     AngleDegs cLat, AngleDegs cLon, LengthKMs rangeKMs
   ) const;
 
+  /** Partition our grid into X by Y subgrids.  X is east-west, Y is north-south.
+   * Tiles will be numbered from left to right 0 at the northwest corner in row major.
+   * For example, for a 3, 2 tiling, there will be 6 total tiles, in the following
+   * order (base 1):
+   * 1 2 3
+   * 4 5 6
+   */
+  void
+  tile(const size_t x, const size_t y, std::vector<LLCoverageArea>& tiles) const;
+
   inline AngleDegs
   getNWLat() const { return nwLat; } ///<Get north side of box
 

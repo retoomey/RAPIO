@@ -432,5 +432,85 @@ protected:
   /** The value of the command line argument */
   std::string myVolumeAlg;
 };
-;
+
+/** Partition option for partitioning a grid */
+class PluginPartition : public RAPIOPlugin {
+public:
+
+  /** Create a Partition plugin */
+  PluginPartition(const std::string& name) : RAPIOPlugin(name), myPartitionNumber(0), myValid(false){ }
+
+  /** Declare plugin. */
+  static bool
+  declare(RAPIOProgram * owner, const std::string& name = "partition");
+
+  /** Declare options for the plugin */
+  virtual void
+  declareOptions(RAPIOOptions& o) override;
+
+  /** Declare advanced help for the plugin */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** Process our options */
+  virtual void
+  processOptions(RAPIOOptions& o) override;
+
+  /** Execute/run the plugin */
+  virtual void
+  execute(RAPIOProgram * caller) override;
+
+  /** The value of the command line argument */
+  std::string
+  getParamValue()
+  {
+    return myPartitionAlg;
+  }
+
+  /** Get the partition type */
+  std::string
+  getPartitionType()
+  {
+    return myPartitionType;
+  }
+
+  /** Get the partition number we use (numbered from 1) */
+  size_t
+  getPartitionNumber()
+  {
+    return myPartitionNumber;
+  }
+
+  /** Get the dimensions of the partition type */
+  std::vector<size_t>
+  getDimensions()
+  {
+    return myDims;
+  }
+
+  /** Get if we parsed correctly.  Checked by algorithm */
+  bool
+  isValid()
+  {
+    return myValid;
+  }
+
+protected:
+
+  /** The value of the command line argument */
+  std::string myPartitionAlg;
+
+  /** The type of partitioning, if any (lowercase). */
+  std::string myPartitionType;
+
+  /** The dimensions of partitioning, if any */
+  std::vector<size_t> myDims;
+
+  /** The partition number.  Zero means none.  Tiles are numbered
+   * left to right, top to bottom, starting with 1 */
+  size_t myPartitionNumber;
+
+  /** Did we parse correctly? */
+  bool myValid;
+};
 }

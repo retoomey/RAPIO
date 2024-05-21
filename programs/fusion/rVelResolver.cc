@@ -83,9 +83,10 @@ analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
     // For the CAPPI debug output of stage1.
     // A simple grid value of the velocity at that gate/range
     // FIXME: Cressmen 2D of the RadialSet most likely.
-    const float latDegs   = vv.getAtLatitudeDegs();
-    const float lonDegs   = vv.getAtLongitudeDegs();
-    const float heightKMs = vv.getAtHeightKMs();
+    const float latDegs = vv.getAtLatitudeDegs();
+    const float lonDegs = vv.getAtLongitudeDegs();
+    // const float heightKMs = vv.getAtHeightKMs(); // grid height
+    const float heightKMs = layer.heightKMs;
     vv.set(value, ux, uy, uz, latDegs, lonDegs, heightKMs);
   } else {
     // My guess for a reasonable missing for this first start

@@ -44,6 +44,9 @@ RAPIOFusionOneAlg::declarePlugins()
   // TerrainBlockage plugin registration and creation
   PluginTerrainBlockage::declare(this, "terrain");
   // TerrainBlockage::introduce("yourterrain", myTerrainClass); To add your own
+
+  // Partitioner
+  PluginPartition::declare(this, "partition");
 }
 
 void
@@ -94,8 +97,47 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
 void
 RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 {
-  // Get grid
-  o.getLegacyGrid(myFullGrid);
+  // ----------------------------------------
+  // Check partition information
+  // FIXME: More of this will move into the plugin
+  // since stage2 will also need to do a lot of this
+  auto part = getPlugin<PluginPartition>("partition");
+
+  if (part) {
+    if (part->isValid()) {
+      // Only read grid/error on valid partitioning
+      o.getLegacyGrid(myFullGrid);
+
+      std::string partType = part->getPartitionType();
+
+      if (!(partType == "none")) {
+        LogInfo("Partitioning method: '" << part->getParamValue() << "'.\n");
+        auto dims = part->getDimensions();
+
+        // Should this be in the plugin?  Probably.
+        // Get grid and print out partition info
+
+        std::vector<LLCoverageArea> tiles;
+        myFullGrid.tile(dims[0], dims[1], tiles);
+
+        size_t use = part->getPartitionNumber();
+        size_t at  = 0;
+        for (size_t dy = 0; dy < dims[1]; ++dy) {
+          for (size_t dx = 0; dx < dims[0]; ++dx) {
+            const char marker = (at + 1 == use) ? '*' : ' ';
+            LogInfo("   " << marker << at + 1 << " " << tiles[at] << "\n");
+            at++;
+          }
+        }
+      } // end part type check
+    } else {
+      LogSevere("Partition info incorrect, exiting.\n");
+      exit(1);
+    }
+  } else {
+    LogSevere("Unable to get partition plugin!\n");
+  }
+  // ----------------------------------------
 
   myLLProjections.resize(myFullGrid.getNumZ());
   myLevelSames.resize(myFullGrid.getNumZ());
