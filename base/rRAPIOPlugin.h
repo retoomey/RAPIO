@@ -4,6 +4,7 @@
 #include <rVolumeValueResolver.h>
 #include <rTerrainBlockage.h>
 #include <rElevationVolume.h>
+#include <rLLCoverageArea.h>
 
 namespace rapio {
 class RAPIOProgram;
@@ -433,6 +434,23 @@ protected:
   std::string myVolumeAlg;
 };
 
+enum class PartitionType { none, tile, tree };
+
+/** Store partition information for breaking up a grid
+ * into subpieces */
+class PartitionInfo : public Data {
+public:
+  PartitionType myParamType;                ///< Type of partition such as none, tile, tree
+  std::string myParamValue;                 ///< Param such as 'tile:2x2:1'
+  std::vector<size_t> myDims;               ///< Dimensions of the partitioning
+  std::vector<LLCoverageArea> myPartitions; ///< Partitions of the global grid
+  size_t myPartitionNumber;                 ///< Selected partition
+
+  /** Log the partition information */
+  void
+  printTable();
+};
+
 /** Partition option for partitioning a grid */
 class PluginPartition : public RAPIOPlugin {
 public:
@@ -494,6 +512,10 @@ public:
   {
     return myValid;
   }
+
+  /** Get the partition info, if able for this partition */
+  bool
+  getPartitionInfo(const LLCoverageArea& grid, PartitionInfo& info);
 
 protected:
 

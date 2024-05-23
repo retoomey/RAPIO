@@ -179,5 +179,8 @@ protected:
 
   /** How many data files have come in since a process volume? */
   size_t myDirty;
+
+  /** The partition info we're using */
+  PartitionInfo myPartitionInfo;
 };
 }

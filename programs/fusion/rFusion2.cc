@@ -18,6 +18,13 @@ using namespace rapio;
  */
 
 void
+RAPIOFusionTwoAlg::declarePlugins()
+{
+  // Partitioner
+  PluginPartition::declare(this, "partition");
+}
+
+void
 RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription(
@@ -42,7 +49,19 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 void
 RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 {
-  o.getLegacyGrid(myFullGrid);
+  // ----------------------------------------
+  // Check partition information
+  bool success = false;
+  auto part    = getPlugin<PluginPartition>("partition");
+
+  if (part) {
+    o.getLegacyGrid(myFullGrid);
+    success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
+  }
+  if (!success) {
+    LogSevere("Failed to load and/or parse partition information!\n");
+    exit(1);
+  }
 } // RAPIOFusionTwoAlg::processOptions
 
 void

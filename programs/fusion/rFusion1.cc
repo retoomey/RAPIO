@@ -99,45 +99,17 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 {
   // ----------------------------------------
   // Check partition information
-  // FIXME: More of this will move into the plugin
-  // since stage2 will also need to do a lot of this
-  auto part = getPlugin<PluginPartition>("partition");
+  bool success = false;
+  auto part    = getPlugin<PluginPartition>("partition");
 
   if (part) {
-    if (part->isValid()) {
-      // Only read grid/error on valid partitioning
-      o.getLegacyGrid(myFullGrid);
-
-      std::string partType = part->getPartitionType();
-
-      if (!(partType == "none")) {
-        LogInfo("Partitioning method: '" << part->getParamValue() << "'.\n");
-        auto dims = part->getDimensions();
-
-        // Should this be in the plugin?  Probably.
-        // Get grid and print out partition info
-
-        std::vector<LLCoverageArea> tiles;
-        myFullGrid.tile(dims[0], dims[1], tiles);
-
-        size_t use = part->getPartitionNumber();
-        size_t at  = 0;
-        for (size_t dy = 0; dy < dims[1]; ++dy) {
-          for (size_t dx = 0; dx < dims[0]; ++dx) {
-            const char marker = (at + 1 == use) ? '*' : ' ';
-            LogInfo("   " << marker << at + 1 << " " << tiles[at] << "\n");
-            at++;
-          }
-        }
-      } // end part type check
-    } else {
-      LogSevere("Partition info incorrect, exiting.\n");
-      exit(1);
-    }
-  } else {
-    LogSevere("Unable to get partition plugin!\n");
+    o.getLegacyGrid(myFullGrid);
+    success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
   }
-  // ----------------------------------------
+  if (!success) {
+    LogSevere("Failed to load and/or parse partition information!\n");
+    exit(1);
+  }
 
   myLLProjections.resize(myFullGrid.getNumZ());
   myLevelSames.resize(myFullGrid.getNumZ());
@@ -804,17 +776,17 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   LogInfo(*myElevationVolume << "\n");
 
   // Keep stage 2 output code separate, cheap to make this if we don't use it
-  LLCoverageArea& outg         = myRadarGrid;
-  auto heightsKM               = outg.getHeightsKM();
-  std::vector<size_t> bitsizes = { outg.getNumX(), outg.getNumY(), outg.getNumZ() };
-  size_t totalLayer            = outg.getNumX() * outg.getNumY() * outg.getNumZ();
+  LLCoverageArea& outg = myRadarGrid;
+  auto heightsKM       = outg.getHeightsKM();
+  size_t totalLayer    = outg.getNumX() * outg.getNumY() * outg.getNumZ();
 
   // Resolver should tell us how to write
   auto stage2IO = myResolver->getVolumeValueIO();
 
+  PartitionInfo theInfo;
+
   if (stage2IO) {
-    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg.getStartX(),
-      outg.getStartY(), bitsizes);
+    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg);
   }
 
   size_t attemptCount = 0;

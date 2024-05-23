@@ -709,8 +709,60 @@ PluginPartition::processOptions(RAPIOOptions& o)
   myValid = true;
 } // PluginPartition::processOptions
 
+bool
+PluginPartition::getPartitionInfo(
+  const LLCoverageArea & grid,
+  PartitionInfo        & info)
+{
+  if (isValid()) {
+    std::string partType = getPartitionType();
+    if (partType == "tile") {
+      info.myParamType = PartitionType::tile;
+    } else if (partType == "tree") {
+      info.myParamType = PartitionType::tree;
+    } else {
+      info.myParamType = PartitionType::none;
+    }
+
+    if (!(info.myParamType == PartitionType::none)) {
+      info.myParamValue      = getParamValue();
+      info.myDims            = getDimensions();
+      info.myPartitionNumber = getPartitionNumber();
+
+      // Break up the grid partitions, assuming 2 dimensions
+      grid.tile(info.myDims[0], info.myDims[1], info.myPartitions);
+    }
+    info.printTable();
+  } else {
+    LogSevere("Partition info incorrect.\n");
+    return false;
+  }
+  return true;
+} // PluginPartition::getPartitionInfo
+
 void
 PluginPartition::execute(RAPIOProgram * caller)
 {
   // Nothing, partition information is pulled by algorithm
+}
+
+void
+PartitionInfo::printTable()
+{
+  LogInfo("Partitioning method: '" << myParamValue << "'.\n");
+  if (!(myParamType == PartitionType::none)) {
+    // Print out the partition information and mark the active one, if any
+    // FIXME: This assumes 2 dimensions, if we ever do heights we'll have
+    // to modify this code.
+    auto& dims = myDims;
+    size_t use = myPartitionNumber;
+    size_t at  = 0;
+    for (size_t dy = 0; dy < dims[1]; ++dy) {
+      for (size_t dx = 0; dx < dims[0]; ++dx) {
+        const char marker = (at + 1 == use) ? '*' : ' ';
+        LogInfo("   " << marker << at + 1 << " " << myPartitions[at] << "\n");
+        at++;
+      }
+    }
+  }
 }

@@ -34,6 +34,10 @@ public:
   /** Create tile algorithm */
   RAPIOFusionTwoAlg() : myDirty(0){ };
 
+  /** Declare all algorithm command line plugins */
+  virtual void
+  declarePlugins() override;
+
   /** Declare all algorithm options */
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;
@@ -89,5 +93,8 @@ protected:
 
   /** How many data files have come in since a process volume? */
   size_t myDirty;
+
+  // Could group this all as a 'partition info class'
+  PartitionInfo myPartitionInfo;
 };
 }

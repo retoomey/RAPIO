@@ -5,28 +5,19 @@
 using namespace rapio;
 
 void
-// Stage2Data::add(float n, float d, short x, short y, short z)
 Stage2Data::add(VolumeValue * vvp, short x, short y, short z)
 {
-  const bool compressMissing = true;
-  // Our particular resolver VolumeValue
-  auto& vv = *(VolumeValueWeightAverage *) (vvp);
+  // FIXME: inline this I think.
+  // We're gonna have to determine the tile in tile mode.
+  // I think we're gonna have make add use global tile coordinates and then
+  // convert to the local of the tile we write to.
+  size_t tile = 0;
 
-  if (compressMissing && (vv.topSum == Constants::MissingData)) {
-    // Only store x,y,z for a missing
-    // Since missing tends to be grouped in space, we'll do a simple RLE to compress x,y,z locations
-    // Storing a bit per x,y,z. marking MissingData
-    size_t i = myMissingSet.getIndex({ (size_t) (x), (size_t) (y), (size_t) (z) });
-    myMissingSet.set(i, 1);
-    myAddMissingCounter++;
-  } else if (vv.topSum == Constants::DataUnavailable) { // We shouldn't send this right?
-  } else {
-    myTable->add(vv.topSum, vv.bottomSum, x, y, z);
-  }
+  myStorage[tile]->add(vvp, x, y, z);
 }
 
 void
-Stage2Data::RLE()
+Stage2Storage::RLE()
 {
   // RLE in 2D space left to right.  Missing typically groups up in blocks, this is similar I think
   // to the marked lines stuff in w2merger
@@ -37,8 +28,7 @@ Stage2Data::RLE()
   for (size_t z = 0; z < myDimensions[2]; z++) {
     for (size_t y = 0; y < myDimensions[1]; y++) {   // row
       for (size_t x = 0; x < myDimensions[0]; x++) { // col
-        size_t index = myMissingSet.getIndex({ (size_t) x, (size_t) y, (size_t) z });
-        auto flag    = myMissingSet.get(index);
+        auto flag = myMissingSet.get13D(x, y, z);
         if (flag) {
           counter++;
           size_t startx = x;
@@ -47,8 +37,7 @@ Stage2Data::RLE()
           size_t length = 1;
           // Extend the run horizontally
           while (x + 1 < myDimensions[0]) {
-            size_t index = myMissingSet.getIndex({ (size_t) x + 1, (size_t) y, (size_t) z });
-            auto value   = myMissingSet.get(index);
+            auto value = myMissingSet.get13D(x, y, z);
             if (value) {
               ++x;
               ++length;
@@ -66,10 +55,19 @@ Stage2Data::RLE()
     }
   }
   // LogInfo("RLE found " << counter << " start locations.  Dim size: " << myDimensions[0] << " , " << myDimensions[1] << ", " << myDimensions[2] <<  "\n");
-} // Stage2Data::RLE
+} // Stage2Storage::RLE
 
 void
 Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
+{
+  // Now we send each of the tiles or areas we have
+  for (auto& s:myStorage) {
+    s->send(alg, aTime, asName);
+  }
+}
+
+void
+Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
 {
   // Run length encode the missing bit array.  Since missing groups up this saves quite
   // a bit of space.

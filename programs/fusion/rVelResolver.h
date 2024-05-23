@@ -46,13 +46,12 @@ public:
    * prepare to send the grid resolved values */
   virtual bool
   initForSend(
-    const std::string   & radarName,
-    const std::string   & typeName,
-    const std::string   & units,
-    const LLH           & center,
-    size_t              xBase,
-    size_t              yBase,
-    std::vector<size_t> dims
+    const std::string    & radarName,
+    const std::string    & typeName,
+    const std::string    & units,
+    const LLH            & center,
+
+    const LLCoverageArea & radarGrid
   ) override
   {
     mySourceName = radarName;
