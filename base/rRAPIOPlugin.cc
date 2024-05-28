@@ -646,6 +646,7 @@ void
 PluginPartition::processOptions(RAPIOOptions& o)
 {
   myPartitionAlg = o.getString(myName);
+  myPartitionInfo.myParamValue = myPartitionAlg;
   size_t totalPartitions = 0;
 
   // ----------------------------------------------------
@@ -654,53 +655,56 @@ PluginPartition::processOptions(RAPIOOptions& o)
 
   Strings::splitWithoutEnds(myPartitionAlg, ':', &pieces);
   if (pieces.size() > 0) {
-    myPartitionType = Strings::makeLower(pieces[0]);
-
-    // ----------------------------------------------------
-    // Do we check tile/tree or empty here?  Could let alg do it.
-    // We'll add it here for moment.
-    if (!((myPartitionType == "tree") || (myPartitionType == "tile") || (myPartitionType == "none"))) {
-      LogSevere("Unrecognized partition type: '" << myPartitionType << "'\n");
+    // Set partition type first
+    if (!myPartitionInfo.setPartitionType(pieces[0])) {
       return;
     }
 
-    // ----------------------------------------------------
-    // Handle the 3x3 format
-    if (pieces.size() > 1) {
-      std::vector<std::string> dims;
-      Strings::splitWithoutEnds(pieces[1], 'x', &dims);
-      // Only allow 2 dimensions for now...
-      if (dims.size() == 2) {
-        try{
-          size_t d1 = std::stoi(dims[0]);
-          size_t d2 = std::stoi(dims[1]);
-          myDims.push_back(d1);
-          myDims.push_back(d2);
-          totalPartitions = d1 * d2;
-        }catch (const std::exception& e) {
-          LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
-        }
-      } else {
-        LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
-        return;
-      }
-    }
+    // If none, use the global grid passed in as a single partition...
+    if (myPartitionInfo.myParamType == PartitionType::none) {
+      myPartitionInfo.set2DDimensions(1, 1);
+      myPartitionInfo.myPartitionNumber = 1;
+      myValid = true;
 
-    // ----------------------------------------------------
-    // Handle the tile number format (optional or -1)
-    if (pieces.size() > 2) {
-      try{
-        int partNumber = std::stoi(pieces[2]);
-        if (partNumber > totalPartitions) {
-          LogSevere(
-            "Partition number for '" << myPartitionAlg << "' given '" << partNumber << "' is larger than total partitions '" << totalPartitions <<
-              "'\n");
+      // ...otherwise we parse extra params.
+    } else {
+      // ----------------------------------------------------
+      // Handle the 3x3 format
+      if (pieces.size() > 1) {
+        std::vector<std::string> dims;
+        Strings::splitWithoutEnds(pieces[1], 'x', &dims);
+        // Only allow 2 dimensions for now...
+        if (dims.size() == 2) {
+          try{
+            size_t d1 = std::stoi(dims[0]);
+            size_t d2 = std::stoi(dims[1]);
+            myPartitionInfo.set2DDimensions(d1, d2);
+            totalPartitions = d1 * d2;
+          }catch (const std::exception& e) {
+            LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
+          }
+        } else {
+          LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
           return;
         }
-        myPartitionNumber = partNumber;
-      }catch (const std::exception& e) {
-        LogSevere("Couldn't parse " << myName << " partition number: " << pieces[2] << "\n");
-        return;
+      }
+
+      // ----------------------------------------------------
+      // Handle the tile number format (optional or -1)
+      if (pieces.size() > 2) {
+        try{
+          int partNumber = std::stoi(pieces[2]);
+          if (partNumber > totalPartitions) {
+            LogSevere(
+              "Partition number for '" << myPartitionAlg << "' given '" << partNumber << "' is larger than total partitions '" << totalPartitions <<
+                "'\n");
+            return;
+          }
+          myPartitionInfo.myPartitionNumber = partNumber;
+        }catch (const std::exception& e) {
+          LogSevere("Couldn't parse " << myName << " partition number: " << pieces[2] << "\n");
+          return;
+        }
       }
     }
   } else {
@@ -715,23 +719,44 @@ PluginPartition::getPartitionInfo(
   PartitionInfo        & info)
 {
   if (isValid()) {
-    std::string partType = getPartitionType();
-    if (partType == "tile") {
-      info.myParamType = PartitionType::tile;
-    } else if (partType == "tree") {
-      info.myParamType = PartitionType::tree;
-    } else {
-      info.myParamType = PartitionType::none;
-    }
+    info = myPartitionInfo; // copy
 
+    info.partition(grid);
+    #if 0
+
+    /** Our partition has all the information, except for the
+     * global grid generated info, which we will fill in now */
     if (!(info.myParamType == PartitionType::none)) {
-      info.myParamValue      = getParamValue();
-      info.myDims            = getDimensions();
-      info.myPartitionNumber = getPartitionNumber();
-
       // Break up the grid partitions, assuming 2 dimensions
       grid.tile(info.myDims[0], info.myDims[1], info.myPartitions);
+
+      // March row order, creating boundary markers in global grid
+      // space for each partition.
+      // Might be easier to do this in the 'tile' method
+      size_t at        = 0;
+      size_t xBoundary = 0;
+      size_t yBoundary = 0;
+      for (size_t y = 0; y < info.myDims[1]; ++y) {
+        auto& g = info.myPartitions[at];
+        for (size_t x = 0; x < info.myDims[0]; ++x) {
+          // Add global boundaries in the X direction
+          if (x == 0) {
+            xBoundary += g.getNumX();
+            info.myPartBoundaryX.push_back(xBoundary);
+          }
+        }
+        // Add global boundaries in the Y direction
+        yBoundary += g.getNumY();
+        info.myPartBoundaryY.push_back(yBoundary);
+        at++;
+      }
+    } else {
+      // Push back dummy boundaries really large
+      info.myPartBoundaryX.push_back(1000000);
+      info.myPartBoundaryY.push_back(1000000);
     }
+    #endif // if 0
+
     info.printTable();
   } else {
     LogSevere("Partition info incorrect.\n");
@@ -744,25 +769,4 @@ void
 PluginPartition::execute(RAPIOProgram * caller)
 {
   // Nothing, partition information is pulled by algorithm
-}
-
-void
-PartitionInfo::printTable()
-{
-  LogInfo("Partitioning method: '" << myParamValue << "'.\n");
-  if (!(myParamType == PartitionType::none)) {
-    // Print out the partition information and mark the active one, if any
-    // FIXME: This assumes 2 dimensions, if we ever do heights we'll have
-    // to modify this code.
-    auto& dims = myDims;
-    size_t use = myPartitionNumber;
-    size_t at  = 0;
-    for (size_t dy = 0; dy < dims[1]; ++dy) {
-      for (size_t dx = 0; dx < dims[0]; ++dx) {
-        const char marker = (at + 1 == use) ? '*' : ' ';
-        LogInfo("   " << marker << at + 1 << " " << myPartitions[at] << "\n");
-        at++;
-      }
-    }
-  }
 }

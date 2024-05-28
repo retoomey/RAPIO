@@ -50,7 +50,7 @@ public:
     const std::string    & typeName,
     const std::string    & units,
     const LLH            & center,
-
+    const PartitionInfo  & partition,
     const LLCoverageArea & radarGrid
   ) override
   {
@@ -77,7 +77,7 @@ public:
    * having it logically separated is cleaner vs having the resolver
    * directly store the values.*/
   virtual void
-  add(VolumeValue * vvp, short x, short y, short z) override
+  add(VolumeValue * vvp, short x, short y, short z, size_t partIndex) override
   {
     // Copy grid cell output init final vectors for output...
     auto& vv = *(VolumeValueVelGatherer *) (vvp);

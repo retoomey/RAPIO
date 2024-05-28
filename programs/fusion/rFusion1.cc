@@ -413,7 +413,7 @@ RAPIOFusionOneAlg::readCoverageMask()
     // getting it to work
     myMask.clearAllBits(); // Missing mask AND using roster then no output basically...
     myHaveMask = false;
-    LogInfo("No mask found at: " << fullpath << ", no output will be generated\n");
+    LogInfo("No mask found at: " << fullpath << ", so I'll output everything until told not to.\n");
   } else {
     LogInfo("Found and read nearest coverage mask: " << fullpath << "\n");
     myHaveMask = true;
@@ -600,8 +600,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   const size_t totalLayer = numX * numY; // Total layer points
   size_t maskSkipped      = 0;           // Skip by mask (roster nearest)
   size_t rangeSkipped     = 0;           // Skip by range (outside circle)
-  size_t upperGood        = 0;           // Have tilt above
-  size_t lowerGood        = 0;           // Have tilt below
   size_t sameTiltSkip     = 0;           // Enclosing tilts did not change
   size_t attemptCount     = 0;           // Resolver calculation
 
@@ -614,10 +612,32 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   AngleDegs startLon = outg.getNWLon() + (outg.getLonSpacing() / 2.0); // move east (lon increasing)
   AngleDegs atLat    = startLat;
 
-  if (myHaveMask && outputStage2 && !writeLLG) {
+  // Partitioning vectors...tracking which partition we are in
+  // Get our starting base partition indexes in X,Y
+  const size_t sX = outg.getStartX();
+  const size_t sY = outg.getStartY();
+  const size_t startPartXDim = myPartitionInfo.getXDimFor(sX);
+  const size_t startPartYDim = myPartitionInfo.getYDimFor(sY);
+
+  // --------------------------------------------
+  // Operations special case.
+  // We remove a lot of ifs from inside the loop
+  // to give a slight speed boost.
+  // Bad side is duplication between our operations loop and the general loop below
+  // FIXME: template or constexpr maybe we can logically unify this code.
+  // FIXME: another option is stage1 gets 'fast enough' and we just take the flag check hit
+  //
+  if (stage2p && myHaveMask && outputStage2 && !writeLLG) {
+    auto& stage2 = *stage2p;
+
+    size_t yPartDim = startPartYDim;
     for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
+      myPartitionInfo.nextY(sY + y, yPartDim); // increment dimension Y if needed
       AngleDegs atLon = startLon;
+      size_t xPartDim = startPartXDim;
       for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
+        myPartitionInfo.nextX(sX + x, xPartDim); // increment dimension X if needed
+
         // Mask check.
         size_t mi = myMask.getIndex3D(x, y, layer); // FIXME: Maybe we can be linear here
         if (!myMask.get1(mi)) {
@@ -639,8 +659,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
           vv.getLower(), vv.getUpper(), vv.get2ndLower(), vv.get2ndUpper(),
           vv.getLowerP(), vv.getUpperP(), vv.get2ndLowerP(), vv.get2ndUpperP()
         );
-        lowerGood += (vv.getLower() != nullptr);
-        upperGood += (vv.getUpper() != nullptr);
 
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.
@@ -659,15 +677,30 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         llp.getAzDegsAt(vv.virtualAzDegs);
         vv.setAtLocationLatLonDegs(atLat, atLon);
         resolver.calc(vvp);
-        if (stage2p) {
-          stage2p->add(vvp, x, y, layer);
-        }
+
+        // Probably 'slow' here...calculate index from partition indexes
+        // FIXME: Could probably pull out the multiply/add here
+        // size_t width = myDims[0]; -> Number of X (const)
+        // return y * width + x;  -> So y +width each y, ++ for each X
+        size_t partIndex = myPartitionInfo.index(xPartDim, yPartDim);
+        stage2.add(vvp, x, y, layer, partIndex);
       } // endX
-    }   // endY
+
+      // If the part Y index goes over boundary, move to next Y partition index...
+    } // endY
   } else {
+    // --------------------------------------------
+    // General case.
+    // More checks for different cases, which will be slightly slower
+    //
+    size_t yPartDim = startPartYDim;
     for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
+      myPartitionInfo.nextY(sY + y, yPartDim); // increment dimension Y if needed
       AngleDegs atLon = startLon;
+      size_t xPartDim = startPartXDim;
       for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
+        myPartitionInfo.nextX(sX + x, xPartDim); // increment dimension X if needed
+
         // Mask check.
         if (myHaveMask) {
           size_t mi = myMask.getIndex3D(x, y, layer);
@@ -700,9 +733,6 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
           vv.getLowerP(), vv.getUpperP(), vv.get2ndLowerP(), vv.get2ndUpperP()
         );
 
-        lowerGood += (vv.getLower() != nullptr);
-        upperGood += (vv.getUpper() != nullptr);
-
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.
         // This takes advantage that in a volume if a couple tilts change, then
@@ -723,7 +753,12 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         gridtest[y][x] = vv.dataValue;
 
         if (outputStage2 && stage2p) {
-          stage2p->add(vvp, x, y, layer);
+          // Probably 'slow' here...calculate index from partition indexes
+          // FIXME: Could probably pull out the multiply/add here
+          // size_t width = myDims[0]; -> Number of X (const)
+          // return y * width + x;  -> So y +width each y, ++ for each X
+          size_t partIndex = myPartitionInfo.index(xPartDim, yPartDim);
+          stage2p->add(vvp, x, y, layer, partIndex);
         }
       } // endX
     }   // endY
@@ -783,10 +818,8 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   // Resolver should tell us how to write
   auto stage2IO = myResolver->getVolumeValueIO();
 
-  PartitionInfo theInfo;
-
   if (stage2IO) {
-    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, outg);
+    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, myPartitionInfo, outg);
   }
 
   size_t attemptCount = 0;

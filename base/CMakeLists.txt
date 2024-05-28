@@ -86,6 +86,7 @@ rNetwork.h
 rOption.h
 rOptionList.h
 rOS.h
+rPartitionInfo.h
 rProcessTimer.h
 rProject.h
 rPTreeData.h
@@ -197,6 +198,7 @@ rNetwork.cc
 rOption.cc
 rOptionList.cc
 rOS.cc
+rPartitionInfo.cc
 rProcessTimer.cc
 rProject.cc
 rPTreeData.cc

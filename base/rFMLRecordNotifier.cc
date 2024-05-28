@@ -84,6 +84,13 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   // on the notifier param line:
   std::string outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
 
+  // Now add any require subfolder to our output dir.
+  const std::string subfolder = outputParams["outputsubfolder"];
+
+  if (!subfolder.empty()) {
+    outputDir = outputDir + "/" + subfolder;
+  }
+
   outputDir += "/";
 
   // Find the macro indexLocation from cache or create it

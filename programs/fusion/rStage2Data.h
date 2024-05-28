@@ -8,6 +8,7 @@
 #include <rDataGrid.h>
 #include <rBinaryTable.h>
 #include <rVolumeValueResolver.h>
+#include <rPartitionInfo.h>
 
 #include <vector>
 
@@ -18,11 +19,14 @@ class RAPIOFusionOneAlg;
 class Stage2Storage : public Data {
 protected:
   Bitset1 myMissingSet;                       ///< Bitfield of missing values gathered during creation
-  size_t myAddMissingCounter;                 ///< Number of missing values in bitfield
   std::vector<size_t> myDimensions;           ///< Sizes of the grid in x,y,z (only used for RLE calculation write)
   std::shared_ptr<FusionBinaryTable> myTable; ///< Table used for storage of actual values
-
+  std::string mySubFolder;                    ///< If not empty, subfolder of -o such as 'partition1'
 public:
+  size_t mySentValueSize;     ///< After a send, the count of sent values
+  size_t mySentMissingSize;   ///< After a send, the count of sent missing (RLE compressed)
+  size_t myAddMissingCounter; ///< Number of missing values in bitfield
+
   /** Create a storage for this */
   Stage2Storage(
     const std::string   & radarName,
@@ -46,6 +50,13 @@ public:
     myTable->setLocation(center);
     myTable->setLong("xBase", xBase);
     myTable->setLong("yBase", yBase);
+  }
+
+  /** Set the subfolder to write to */
+  void
+  setSubFolder(const std::string& folder)
+  {
+    mySubFolder = folder;
   }
 
   /** Add a value to our storage */
@@ -229,22 +240,47 @@ public:
     const std::string & units,
     const LLH         & center,
 
+    // Partitioning info
+    const PartitionInfo & partition,
     // Grid based stuff.  For tiling we'll need all the info
     const LLCoverageArea& radarGrid
   ) override
   {
-    // Just one for the moment.  We'll need N of them for multiple tile mode
-    std::shared_ptr<Stage2Storage> newOne =
-      std::make_shared<Stage2Storage>(radarName, typeName, units, center, radarGrid);
+    // For 'one' partition, it should be == to the global CONUS grid.
+    // This is for 'none' --> 1 global partition
+    // This is for 'tile' --> N smaller partitions
+    // FIXME: for 'tree' I think just the output folder will change, we won't
+    // need N tables for that...
+    for (size_t i = 0; i < partition.size(); ++i) {
+      // It's interesting that we pass the local radar grid to the storage, since the missing bit
+      // array there uses the radar grid (x,y,z) not the partition coordinates.
+      // std::make_shared<Stage2Storage>(radarName, typeName, units, center, partition.myPartitions[i]);
+      std::shared_ptr<Stage2Storage> newOne =
+        std::make_shared<Stage2Storage>(radarName, typeName, units, center, radarGrid);
 
-    myStorage.push_back(newOne);
+      // Set the partition subfolder.
+      if ((partition.myParamType == PartitionType::tile)) {
+        std::stringstream s;
+        s << "partition" << (i + 1);
+        newOne->setSubFolder(s.str());
+      }
+
+      myStorage.push_back(newOne);
+    }
 
     return true;
   } // initForSend
 
   /** Add data to us for sending to stage2, only used by stage one */
   virtual void
-  add(VolumeValue * vvp, short x, short y, short z) override;
+  add(VolumeValue * vvp, short x, short y, short z, size_t partIndex) override
+  {
+    if (partIndex >= myStorage.size()) {
+      LogSevere("Index is " << partIndex << " and storage is " << myStorage.size() << "\n");
+      exit(1);
+    }
+    myStorage[partIndex]->add(vvp, x, y, z);
+  }
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
   virtual void

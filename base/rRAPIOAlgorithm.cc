@@ -298,7 +298,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     const std::string newProductName = resolveProductName(key, typeName);
 
     // Write DataType with given typename, or optionally filtered to new typename by -O
-    const bool changeProductName = (key != newProductName);
+    const bool changeProductName = (newProductName != newProductName);
     if (changeProductName) {
       LogInfo("Writing '" << typeName << "' as product name '" << newProductName
                           << "'\n");

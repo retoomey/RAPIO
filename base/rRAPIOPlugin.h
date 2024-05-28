@@ -5,6 +5,7 @@
 #include <rTerrainBlockage.h>
 #include <rElevationVolume.h>
 #include <rLLCoverageArea.h>
+#include <rPartitionInfo.h>
 
 namespace rapio {
 class RAPIOProgram;
@@ -434,29 +435,94 @@ protected:
   std::string myVolumeAlg;
 };
 
+#if 0
 enum class PartitionType { none, tile, tree };
 
 /** Store partition information for breaking up a grid
- * into subpieces */
+ * into subpieces.
+ * FIXME: This might belong in LLCoverageArea */
 class PartitionInfo : public Data {
 public:
   PartitionType myParamType;                ///< Type of partition such as none, tile, tree
   std::string myParamValue;                 ///< Param such as 'tile:2x2:1'
-  std::vector<size_t> myDims;               ///< Dimensions of the partitioning
+  std::vector<size_t> myDims;               ///< Dimensions of the partitioning (2 currently)
   std::vector<LLCoverageArea> myPartitions; ///< Partitions of the global grid
   size_t myPartitionNumber;                 ///< Selected partition
+
+  std::vector<size_t> myPartBoundaryX; ///< Partition global boundary in X direction
+  std::vector<size_t> myPartBoundaryY; ///< Partition global boundary in Y direction
+
+  /** Get index into partition list from 2D index partition dimensions */
+  size_t
+  index(size_t x, size_t y)
+  {
+    size_t width = myDims[0];
+
+    return y * width + x;
+  }
+
+  /** Increment dimension X if needed for a given global X */
+  inline void
+  nextX(size_t globalX, size_t& atDimX)
+  {
+    if (globalX >= myPartBoundaryX[atDimX]) {
+      atDimX++;
+    }
+  }
+
+  /** Increment dimension Y if needed for a given global Y */
+  inline void
+  nextY(size_t globalY, size_t& atDimY)
+  {
+    if (globalY >= myPartBoundaryY[atDimY]) {
+      atDimY++;
+    }
+  }
+
+  /** Get the index partition dimension in X we are in for a global grid X.
+   * Note if no partitions than we return 0 (we intend this) */
+  size_t
+  getXDimFor(size_t globalX)
+  {
+    size_t partX = 0;
+
+    for (auto& x:myPartBoundaryX) {
+      if (globalX < x) {
+        return partX;
+      }
+      partX++;
+    }
+    return partX;
+  }
+
+  /** Get the index partition dimension in Y we are in for a global grid Y.
+   * Note if no partitions than we return 0 (we intend this) */
+  size_t
+  getYDimFor(size_t globalY)
+  {
+    size_t partY = 0;
+
+    for (auto& y:myPartBoundaryY) {
+      if (globalY < y) {
+        return partY;
+      }
+      partY++;
+    }
+    return partY;
+  }
 
   /** Log the partition information */
   void
   printTable();
 };
+#endif // if 0
 
 /** Partition option for partitioning a grid */
 class PluginPartition : public RAPIOPlugin {
 public:
 
   /** Create a Partition plugin */
-  PluginPartition(const std::string& name) : RAPIOPlugin(name), myPartitionNumber(0), myValid(false){ }
+  PluginPartition(const std::string& name) : RAPIOPlugin(name), myValid(false){ }
 
   /** Declare plugin. */
   static bool
@@ -485,27 +551,6 @@ public:
     return myPartitionAlg;
   }
 
-  /** Get the partition type */
-  std::string
-  getPartitionType()
-  {
-    return myPartitionType;
-  }
-
-  /** Get the partition number we use (numbered from 1) */
-  size_t
-  getPartitionNumber()
-  {
-    return myPartitionNumber;
-  }
-
-  /** Get the dimensions of the partition type */
-  std::vector<size_t>
-  getDimensions()
-  {
-    return myDims;
-  }
-
   /** Get if we parsed correctly.  Checked by algorithm */
   bool
   isValid()
@@ -522,15 +567,8 @@ protected:
   /** The value of the command line argument */
   std::string myPartitionAlg;
 
-  /** The type of partitioning, if any (lowercase). */
-  std::string myPartitionType;
-
-  /** The dimensions of partitioning, if any */
-  std::vector<size_t> myDims;
-
-  /** The partition number.  Zero means none.  Tiles are numbered
-   * left to right, top to bottom, starting with 1 */
-  size_t myPartitionNumber;
+  /** The partition info we hold (without subgrid calculations)*/
+  PartitionInfo myPartitionInfo;
 
   /** Did we parse correctly? */
   bool myValid;

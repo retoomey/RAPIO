@@ -222,7 +222,12 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   // NETCDF=folder
   // Note: This means currently output folder/factory is always forced by command line
   handleCommandParam(outputinfo, outputParams);
-  const std::string folder = outputParams["outputfolder"];
+  std::string folder = outputParams["outputfolder"];
+  const std::string subfolder = outputParams["outputsubfolder"];
+
+  if (!subfolder.empty()) {
+    folder = folder + "/" + subfolder;
+  }
 
   // New idea, file path mode for generalizing.  I want to expand for 'other' paths like S3
   // The code for ensuring directory need to not use with S3 obviously

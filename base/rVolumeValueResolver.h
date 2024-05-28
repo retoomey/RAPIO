@@ -8,6 +8,7 @@
 #include <rRadialSetLookup.h>
 #include <rVolumeValue.h>
 #include <rLLCoverageArea.h>
+#include <rPartitionInfo.h>
 
 namespace rapio {
 class RAPIOAlgorithm;
@@ -29,6 +30,7 @@ public:
     const std::string    & typeName,
     const std::string    & units,
     const LLH            & center,
+    const PartitionInfo  & partition,
     const LLCoverageArea &radarGrid
   )
   {
@@ -38,7 +40,7 @@ public:
   /** Add data to a grid cell for sending to stage2, used by stage one.
    * This is called for every grid cell. */
   virtual void
-  add(VolumeValue * vvp, short x, short y, short z){ };
+  add(VolumeValue * vvp, short x, short y, short z, size_t partIndex){ };
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
   virtual void

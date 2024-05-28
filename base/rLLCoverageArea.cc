@@ -15,7 +15,7 @@ rapio::operator << (ostream& output, const LLCoverageArea& g)
   output << "nw(" << g.nwLat << ", " << g.nwLon << ") se(" << g.seLat << ", " << g.seLon << ") "
          << "s(" << g.latSpacing << ", " << g.lonSpacing << ") "
          << "numheights(" << g.heightsKM.size() << ") "
-         << "cells(" << g.startX << "," << g.startY << "," << g.numX << "," << g.numY << ")";
+         << "cells(start: " << g.startX << ", " << g.startY << ", size: " << g.numX << ", " << g.numY << ")";
 
   return (output);
 }

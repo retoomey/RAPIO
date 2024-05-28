@@ -5,18 +5,6 @@
 using namespace rapio;
 
 void
-Stage2Data::add(VolumeValue * vvp, short x, short y, short z)
-{
-  // FIXME: inline this I think.
-  // We're gonna have to determine the tile in tile mode.
-  // I think we're gonna have make add use global tile coordinates and then
-  // convert to the local of the tile we write to.
-  size_t tile = 0;
-
-  myStorage[tile]->add(vvp, x, y, z);
-}
-
-void
 Stage2Storage::RLE()
 {
   // RLE in 2D space left to right.  Missing typically groups up in blocks, this is similar I think
@@ -61,9 +49,21 @@ void
 Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
 {
   // Now we send each of the tiles or areas we have
+  size_t finalValueSize      = 0;
+  size_t finalMissingRLESize = 0;
+  size_t finalMissingSize    = 0;
+  size_t count = 0;
+
   for (auto& s:myStorage) {
     s->send(alg, aTime, asName);
+    finalValueSize      += s->mySentValueSize;
+    finalMissingRLESize += s->mySentMissingSize;
+    finalMissingSize    += s->myAddMissingCounter;
+    count++;
   }
+  LogInfo(
+    "Sent " << count << " total tiles, Values: " << finalValueSize << ", Missings: " << finalMissingSize << ", (RLE: " << finalMissingRLESize <<
+      ")\n");
 }
 
 void
@@ -78,6 +78,9 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   const size_t finalSize  = myTable->getValueSize();
   const size_t finalSize2 = myTable->getMissingSize();
 
+  mySentValueSize   = finalSize;
+  mySentMissingSize = finalSize2;
+
   LogInfo(
     "Sizes are " << finalSize << " values, with " << myAddMissingCounter << " missing " << finalSize2 << " (RLE).\n");
   if ((finalSize < 1) && (finalSize2 < 1)) {
@@ -85,6 +88,10 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
     // Would be better if we don't have to
     LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
   } else {
+    std::map<std::string, std::string> extraParams;
+    extraParams["showfilesize"]    = "yes";
+    extraParams["outputsubfolder"] = mySubFolder;
+
     // Writing netcdf.  This is more generic readable so I like it for that reason, however
     // our I/O is so critical we tend to use a custom binary for read/write speed at the cost
     // of external readability.
@@ -143,9 +150,7 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
 
       // We 'could' return the stage2 object let the algorithm write it...but we can hide
       // it here I think for moment just in case we end up doing something different
-      std::map<std::string, std::string> extraParams; // FIXME: yeah I know, need to constant/API cleanup this stuff
-      extraParams["showfilesize"] = "yes";
-      extraParams["compression"]  = "gz";
+      extraParams["compression"] = "gz";
       stage2->setTypeName(asName);
       alg->writeOutputProduct("S2Netcdf", stage2, extraParams);
     }
@@ -156,8 +161,6 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
       myTable->setTime(aTime);
 
       // Write the raw file out with notification, etc.
-      std::map<std::string, std::string> extraParams;
-      extraParams["showfilesize"] = "yes";
       myTable->setTypeName(asName);
       alg->writeOutputProduct("S2", myTable, extraParams);
     }
