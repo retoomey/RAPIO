@@ -341,7 +341,7 @@ public:
 
   /** First silly simple weighted merger */
   void
-  mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff);
+  mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX = 0, size_t offsetY = 0);
 
   /** Attempt to purge times from database */
   void

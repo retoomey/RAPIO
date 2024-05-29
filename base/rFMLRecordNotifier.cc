@@ -105,11 +105,8 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
     indexLocation = indexPath->second;
   }
 
-  // Append code_index.fam if it's default directory
-  // FIXME: I think it's correct to add after the indexpath lookup...should confirm this
-  if (myOutputDir.empty()) {                   // Not a forced location to write to...
-    outputDir = outputDir + "code_index.fam/"; // ...then put in subfolder of default output
-  }
+  // Append code_index.fam always for fam (We decided this is less confusing in operations)
+  outputDir = outputDir + "code_index.fam/"; // ...then put in subfolder of default output
 
   // Construct fml filename from the selections string
   const std::vector<std::string>& s = rec.getSelections();

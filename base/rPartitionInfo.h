@@ -18,6 +18,9 @@ enum class PartitionType { none, tile, tree };
  */
 class PartitionInfo : public Data {
 public:
+  /** Create a partition info */
+  PartitionInfo() : myPartitionNumber(0){ }
+
   PartitionType myParamType;  ///< Type of partition such as none, tile, tree
   std::string myParamValue;   ///< Param such as 'tile:2x2:1'
   std::vector<size_t> myDims; ///< Dimensions of the partitioning (2 currently)
@@ -27,6 +30,13 @@ public:
   std::vector<LLCoverageArea> myPartitions; ///< Partitions of the global grid
   std::vector<size_t> myPartBoundaryX;      ///< Partition global boundary in X direction
   std::vector<size_t> myPartBoundaryY;      ///< Partition global boundary in Y direction
+
+  /** Get a reference to the selected partition, only good if valid */
+  const LLCoverageArea&
+  getSelectedPartition()
+  {
+    return myPartitions[myPartitionNumber - 1];
+  }
 
   /** Set partition type from a string */
   bool

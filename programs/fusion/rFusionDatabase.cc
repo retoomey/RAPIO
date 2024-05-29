@@ -71,9 +71,15 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
 } // FusionDatabase::ingestNewData
 
 void
-FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
+FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY)
 {
   ProcessTimer test("Merging XYZ tree\n");
+
+  // Use the coordinates of the cache in case it's a subgrid/tile
+  // and not a full grid
+  const size_t gridZ = cache->getNumLayers();
+  const size_t gridY = cache->getNumLats(); // dim 0
+  const size_t gridX = cache->getNumLons(); // dim 1
 
   // -------------------------------------------------------------
   // Accumulation pass...add up all numerators and denominators
@@ -81,7 +87,7 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
   // multiple rFusion1 algorithms.
 
   // We'll still order by z, since we'll probably thread around it
-  for (size_t z = 0; z < myNumZ; z++) {
+  for (size_t z = 0; z < gridZ; z++) {
     std::shared_ptr<LatLonGrid> output = cache->get(z);
 
     // Accumulate 2D weights
@@ -111,21 +117,29 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff)
 
       // Value observations accumulate values and weights
       for (auto& v:r.myAObs[z]) {
-        gridtest[v.y][v.x] += v.v;
-        wa[v.y][v.x]       += v.w;
+        // Since we can be a tile/partition, shifts global to partition coordinates
+        // atX and atY are local coordinates in the partition
+        // So we clip global to the area we cover
+        const int atX = v.x - offsetX;
+        const int atY = v.y - offsetY;
+        if ((atX < 0) || (atY < 0) || (atX >= gridX) || (atY >= gridY)) {
+          continue;
+        }
+        gridtest[atY][atX] += v.v;
+        wa[atY][atX]       += v.w;
       }
     }
   }
 
   // -------------------------------------------------------------
   // Finialization pass, divide all values/weights and handle mask
-  for (size_t z = 0; z < myNumZ; z++) {
+  for (size_t z = 0; z < gridZ; z++) {
     std::shared_ptr<LatLonGrid> output = cache->get(z);
     auto& wa = output->getFloat2DRef("weights");
     // auto& ma       = output->getByte2DRef("masks");
     auto& gridtest = output->getFloat2DRef();
-    for (size_t x = 0; x < myNumX; x++) { // x currently LON for stage2 right..so xy swapped
-      for (size_t y = 0; y < myNumY; y++) {
+    for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
+      for (size_t y = 0; y < gridY; y++) {
         // if no values with enough weight...
         if (wa[y][x] < 0.0000001) {
           // Use the missing flag array....

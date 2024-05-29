@@ -57,6 +57,13 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
   if (part) {
     o.getLegacyGrid(myFullGrid);
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
+    if (success) {
+      // Note: 'none' returns 1 since there is a single global partition basically
+      if (myPartitionInfo.myPartitionNumber < 1) {
+        LogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.\n");
+        exit(1);
+      }
+    }
   }
   if (!success) {
     LogSevere("Failed to load and/or parse partition information!\n");
@@ -117,12 +124,9 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   }
 
   // Create working LLG cache CAPPI storage per height level
-  // Note this will be full LLG in ram.
-  // FIXME: We could try implementing a LLHGridN2D sparsely but then
-  // we'd also have to do writer/reader work
-  // if (myWriteLLG){ // 3 GB for conus oh yay
-  createLLGCache(myWriteCAPPIName, myWriteOutputUnits, myFullGrid);
-  // }
+  // This is clipped to the partition we are using.
+  // createLLGCache(myWriteCAPPIName, myWriteOutputUnits, myFullGrid);
+  createLLGCache(myWriteCAPPIName, myWriteOutputUnits, myPartitionInfo.getSelectedPartition());
 
   // Finally, create the point cloud database with N observations per point
   myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
@@ -290,7 +294,9 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   myLLGCache->fillPrimary(Constants::DataUnavailable);
 
   // Write out
-  myDatabase->mergeTo(myLLGCache, cutoff);
+  auto& part = myPartitionInfo.getSelectedPartition();
+
+  myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
 
   Time outputTime = p;
 
