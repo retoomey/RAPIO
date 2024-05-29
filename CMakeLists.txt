@@ -251,17 +251,17 @@ endif (BUILD_EXAMPLES)
 #
 option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
 if (BUILD_NETCDF_MODULE)
-  add_subdirectory(base/ionetcdf)
+  add_subdirectory(modules/ionetcdf)
 endif (BUILD_NETCDF_MODULE)
 
 option(BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
 if (BUILD_IMAGE_MODULE)
-  add_subdirectory(base/ioimage)
+  add_subdirectory(modules/ioimage)
 endif (BUILD_IMAGE_MODULE)
 
 option(BUILD_GDAL_MODULE "Build GDAL module" YES)
 if (BUILD_GDAL_MODULE)
-  add_subdirectory(base/iogdal)
+  add_subdirectory(modules/iogdal)
 endif (BUILD_GDAL_MODULE)
 
 option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
@@ -307,22 +307,22 @@ if (BUILD_GRIB2_MODULE)
     addRAPIONote("No OpenJPEG2 or Jasper library.  A LOT of grib2 has JPEG compression so these files may fail to read.")
   endif()
   
-  add_subdirectory(base/iogrib)
+  add_subdirectory(modules/iogrib)
 endif (BUILD_GRIB2_MODULE)
 
 option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
 if (BUILD_TEXT_MODULE)
-  add_subdirectory(base/iotext)
+  add_subdirectory(modules/iotext)
 endif (BUILD_TEXT_MODULE)
 
 # These two currently don't require any extra libraries, so we'll just
 # build them.  Though python might at some point
-add_subdirectory(base/iopython)
-add_subdirectory(base/ioraw)
+add_subdirectory(modules/iopython)
+add_subdirectory(modules/ioraw)
 
 option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 if (BUILD_HMRG_MODULE)
-  add_subdirectory(base/iohmrg)
+  add_subdirectory(modules/iohmrg)
 endif (BUILD_HMRG_MODULE)
 
 # Build subprograms.
