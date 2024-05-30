@@ -44,6 +44,8 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
     x += xBase;
     y += yBase;
 
+    // FIXME: What if the table stored max X, Y, Z for the whole table?  Then we
+    // could safely remove this check
     if ((x >= myNumX) ||
       (y >= myNumY) ||
       (z >= myNumZ))
@@ -145,7 +147,11 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
           // Use the missing flag array....
           // if (ma[y][x] > 0) {
           // FIXME: Feel like with some ordering could skip the indexing calculation
-          if (myMissings[myHaves.getIndex3D(x, y, z)] >= cutoff) {
+          // Missing here is global and we're locally scanning the tile.
+          // I'm assuming tile is not bigger than the global CONUS here
+          const size_t globalX = offsetX + x;
+          const size_t globalY = offsetY + y;
+          if (myMissings[myHaves.getIndex3D(globalX, globalY, z)] >= cutoff) {
             gridtest[y][x] = Constants::MissingData;
           } else {
             gridtest[y][x] = Constants::DataUnavailable;

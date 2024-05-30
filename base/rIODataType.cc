@@ -345,6 +345,23 @@ IODataType::resolveFileName(
   return true;
 }
 
+void
+IODataType::showFileInfo(const std::string& prefix, std::map<std::string, std::string>& keys, const std::string& suffix)
+{
+  // FIXME: OS/Strings could do this more generically with booleans
+  // Optionally show the filesize
+  std::string out = prefix;
+
+  if (!keys["showfilesize"].empty()) {
+    out += "(" + Strings::formatBytes(OS::getFileSize(keys["filename"])) + ") ";
+  }
+  // And show the final filename
+  out += keys["filename"];
+  out += suffix;
+
+  LogInfo(out << "\n");
+}
+
 bool
 IODataType::postWriteProcess(
   const std::string                 & outfile,

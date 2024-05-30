@@ -18,14 +18,15 @@ class RAPIOFusionOneAlg;
 /** Store a single tile or area.  Depending on our partitioning mode, we may have one or N of these. */
 class Stage2Storage : public Data {
 protected:
-  Bitset1 myMissingSet;                       ///< Bitfield of missing values gathered during creation
   std::vector<size_t> myDimensions;           ///< Sizes of the grid in x,y,z (only used for RLE calculation write)
+  Bitset1 myMissingSet;                       ///< Bitfield of missing values gathered during creation
   std::shared_ptr<FusionBinaryTable> myTable; ///< Table used for storage of actual values
   std::string mySubFolder;                    ///< If not empty, subfolder of -o such as 'partition1'
+  // Adding/Sending stat collection
+  size_t myMissingRLECounter; ///< After a send, the count of sent missing (RLE compressed)
+  size_t myAddValueCounter;   ///< Number of valid values sent to add
+  size_t myAddMissingCounter; ///< Number of missing values sent to add
 public:
-  size_t mySentValueSize;     ///< After a send, the count of sent values
-  size_t mySentMissingSize;   ///< After a send, the count of sent missing (RLE compressed)
-  size_t myAddMissingCounter; ///< Number of missing values in bitfield
 
   /** Create a storage for this */
   Stage2Storage(
@@ -33,23 +34,40 @@ public:
     const std::string   & typeName,
     const std::string   & units,
     const LLH           & center,
-    const LLCoverageArea& radarGrid)
+    const LLCoverageArea& radarGrid) :
+    myDimensions({ radarGrid.getNumX(), radarGrid.getNumY(), radarGrid.getNumZ() }),
+    myMissingSet(myDimensions),
+    myMissingRLECounter(0), myAddValueCounter(0), myAddMissingCounter(0)
   {
-    const size_t xBase = radarGrid.getStartX();
-    const size_t yBase = radarGrid.getStartY();
-    std::vector<size_t> bitsizes = { radarGrid.getNumX(), radarGrid.getNumY(), radarGrid.getNumZ() };
-
-    myMissingSet        = Bitset1(bitsizes);
-    myAddMissingCounter = 0;
-    myDimensions        = bitsizes; // LOCAL inset dimensions
     myTable = std::make_shared<FusionBinaryTable>();
     myTable->setString("Sourcename", radarName);
     myTable->setString("Radarname", radarName);
     myTable->setString("Typename", typeName);
     myTable->setUnits(units);
     myTable->setLocation(center);
-    myTable->setLong("xBase", xBase);
-    myTable->setLong("yBase", yBase);
+    myTable->setLong("xBase", radarGrid.getStartX());
+    myTable->setLong("yBase", radarGrid.getStartY());
+  }
+
+  /** Get the number of missing added to us (uncompressed) */
+  size_t
+  getAddedMissingCount()
+  {
+    return myAddMissingCounter;
+  }
+
+  /** Get the number of value values added to us (uncompressed) */
+  size_t
+  getAddedValueCount()
+  {
+    return myAddValueCounter;
+  }
+
+  /** After a send, get the number of missing values (compressed) */
+  size_t
+  getSentMissingRLECount()
+  {
+    return myMissingRLECounter;
   }
 
   /** Set the subfolder to write to */
@@ -75,6 +93,7 @@ public:
 
     if (vv.topSum != Constants::DataUnavailable) {
       myTable->add(vv.topSum, vv.bottomSum, x, y, z);
+      myAddValueCounter++;
     }
   }
 
@@ -203,8 +222,7 @@ public:
     size_t                    xBase,
     size_t                    yBase,
     std::vector<size_t>       dims
-  ) : myMissingSet(dims),
-    myAddMissingCounter(0), myDimensions(dims)
+  ) : myMissingSet(dims), myDimensions(dims)
   {
     // Offload to a binary table, even though we might write netcdf
     // FIXME: The netcdf requires a copy vs raw which doesn't.  We could make two
@@ -222,8 +240,7 @@ public:
   /** Create a stage two data from existing table for receive by raw file. */
   Stage2Data(std::shared_ptr<FusionBinaryTable> t,
     std::vector<size_t>                         dims)
-    : myMissingSet({ 1, 1 }),
-    myAddMissingCounter(0), myDimensions({ 1, 1 })
+    : myMissingSet({ 1, 1 }), myDimensions({ 1, 1 })
   {
     myTable = t;
   };
@@ -391,7 +408,6 @@ protected:
   // FIXME: This will probably go away, read can also use a Stage2Storage
   // But for now read only reads one table so we'll keep this separate
   Bitset1 myMissingSet;                       ///< Bitfield of missing values gathered during creation
-  size_t myAddMissingCounter;                 ///< Number of missing values in bitfield
   std::vector<size_t> myDimensions;           ///< Sizes of the grid in x,y,z (only used for RLE calculation write)
   std::shared_ptr<FusionBinaryTable> myTable; ///< Table used for storage
 

@@ -182,11 +182,12 @@ public:
 
   /** Create a fusion binary table */
   FusionBinaryTable()
+    : myValueSize(0), myMissingSize(0), myDataPosition(0), myFile(0),
+    myValueAt(0), myMissingAt(0), myRLECounter(0),
+    myXBlock(0), myYBlock(0), myZBlock(0), myLengthBlock(0)
   {
     // Lookup for read/write factories
-    myDataType     = "FusionBinaryTable";
-    myDataPosition = 0;
-    myFile         = 0;
+    myDataType = "FusionBinaryTable";
   }
 
   /** Destroy a FusionBinaryTable, ensuring any open files are closed.
@@ -207,7 +208,7 @@ public:
     myXs.push_back(x); // X represents LON
     myYs.push_back(y); // Y represents LAT
     myZs.push_back(z); // Z represents HEIGHT.  We're hiding that z is a char
-    myValueSize = myNums.size();
+    myValueSize++;
   }
 
   /** Non-stream add RLE missing ability */
@@ -218,7 +219,7 @@ public:
     myYMissings.push_back(y);
     myZMissings.push_back(z);
     myLMissings.push_back(l);
-    myMissingSize = myXMissings.size();
+    myMissingSize++;
   }
 
   /** Stream read ability */

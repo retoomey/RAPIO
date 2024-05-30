@@ -137,6 +137,11 @@ IORaw::encodeDataType(std::shared_ptr<DataType> dt,
     if (successful) {
       successful = postWriteProcess(filename, keys);
     }
+
+    // Standard output
+    if (successful){
+      showFileInfo("Raw writer: ", keys);
+    }
   }
   return successful;
 } // IORaw::encodeDataType

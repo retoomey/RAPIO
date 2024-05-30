@@ -54,11 +54,12 @@ Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   size_t finalMissingSize    = 0;
   size_t count = 0;
 
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Outputting---" << ColorTerm::fNormal << "\n");
   for (auto& s:myStorage) {
     s->send(alg, aTime, asName);
-    finalValueSize      += s->mySentValueSize;
-    finalMissingRLESize += s->mySentMissingSize;
-    finalMissingSize    += s->myAddMissingCounter;
+    finalValueSize      += s->getAddedValueCount();
+    finalMissingSize    += s->getAddedMissingCount();
+    finalMissingRLESize += s->getSentMissingRLECount();
     count++;
   }
   LogInfo(
@@ -78,16 +79,17 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   const size_t finalSize  = myTable->getValueSize();
   const size_t finalSize2 = myTable->getMissingSize();
 
-  mySentValueSize   = finalSize;
-  mySentMissingSize = finalSize2;
+  myMissingRLECounter = finalSize2;
 
-  LogInfo(
-    "Sizes are " << finalSize << " values, with " << myAddMissingCounter << " missing " << finalSize2 << " (RLE).\n");
+  if (finalSize != myAddValueCounter) {
+    LogSevere("Table size/added are different? " << finalSize << "  " << myAddValueCounter << "\n");
+  }
   if ((finalSize < 1) && (finalSize2 < 1)) {
-    // FIXME: Humm do we still want to send 'something' for push triggering?  Do we need to?
-    // Would be better if we don't have to
-    LogInfo("--->Special case of size zero...ignoring stage2 output currently.\n");
+    LogInfo("Skipping writing " << mySubFolder << " since we have 0 values.\n");
   } else {
+    LogInfo(
+      "Writing " << finalSize << " values, with " << myAddMissingCounter << " missing as " << finalSize2 <<
+        " (RLE).\n");
     std::map<std::string, std::string> extraParams;
     extraParams["showfilesize"]    = "yes";
     extraParams["outputsubfolder"] = mySubFolder;

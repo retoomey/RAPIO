@@ -123,7 +123,10 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
     successful = postWriteProcess(filename, keys);
   }
 
-  LogInfo("Text writer: " << keys["filename"] << "\n");
+  // Standard output
+  if (successful){
+    showFileInfo("Text writer: ", keys);
+  }
 
   return successful;
 } // IOText::encodeDataType

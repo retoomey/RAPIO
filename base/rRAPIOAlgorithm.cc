@@ -320,11 +320,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       const bool success = IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
 
       if (success) { // Only notify iff the file writes successfully
-        if (!outputParams["showfilesize"].empty()) {
-          LogInfo(outputParams["filename"] << " has filesize of " <<
-            Strings::formatBytes(OS::getFileSize(outputParams["filename"])) << "\n");
-        }
-
         // Get back the output folder for notifications
         // and notify each notifier for this writer.
         for (auto& n:PluginNotifier::theNotifiers) { // if any, use

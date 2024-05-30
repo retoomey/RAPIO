@@ -218,9 +218,12 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     successful = postWriteProcess(filename, keys);
   }
 
-  LogInfo(
-    "Netcdf writer: " << keys["filename"] << " (cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL <<
-      ")\n");
+  // Standard output
+  if (successful){
+    std::stringstream s;
+    s << " (cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << ")";
+    showFileInfo("Netcdf writer: ", keys, s.str());
+  }
 
   return successful;
 } // IONetcdf::encodeDataType

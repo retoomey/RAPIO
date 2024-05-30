@@ -187,6 +187,10 @@ public:
     const std::string                               & tempDefault,
     std::string                                     & writeOut);
 
+  /** Helper utility for single written output file optional size display from keys */
+  void
+  showFileInfo(const std::string& prefix, std::map<std::string, std::string>& keys, const std::string& suffix = "");
+
   /** Helper post writer which does any extra compression, ldm, etc. */
   bool
   postWriteProcess(const std::string  & outfile,

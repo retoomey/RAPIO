@@ -252,7 +252,6 @@ FusionCache::readMaskFile(const std::string& filename, Bitset& mask)
   if (inFile.is_open()) {
     mask.readBits(inFile);
   } else {
-    LogInfo("Couldn't read mask " << filename << "\n");
     success = false;
   }
   return success;

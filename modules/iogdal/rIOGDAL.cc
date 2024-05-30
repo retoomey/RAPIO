@@ -379,6 +379,10 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     }
     // IODataType::generateRecord(dt, aURL, "gdal", records);
     // GDALDestroyDriverManager(); leaking?
+    // Standard output
+    if (successful){
+      showFileInfo("GDAL writer: ", keys);
+    }
   }catch (const std::exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");

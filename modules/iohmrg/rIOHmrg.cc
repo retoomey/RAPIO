@@ -217,7 +217,10 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
     successful = postWriteProcess(filename, keys);
   }
 
-  LogInfo("HMRG writer: " << keys["filename"] << "\n");
+  // Standard output
+  if (successful){
+    showFileInfo("HMRG writer: ", keys);
+  }
 
   return successful;
 } // IOHmrg::encodeDataType
