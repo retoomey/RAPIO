@@ -270,4 +270,5 @@ FusionCache::setRosterDir(const std::string& folder)
   if (!Strings::endsWith(theRosterDir, "/")) {
     theRosterDir += "/";
   }
+  LogInfo("Using roster directory: " << theRosterDir << "\n");
 }

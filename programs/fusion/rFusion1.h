@@ -182,5 +182,8 @@ protected:
 
   /** The partition info we're using */
   PartitionInfo myPartitionInfo;
+
+  /** Are we using a roster setup? */
+  bool myUseRoster;
 };
 }

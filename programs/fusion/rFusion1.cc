@@ -76,11 +76,13 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
 
-  // Set roster directory to home by default for the moment.
-  // We might want to turn it off in archive mode or testing at some point
-  const std::string home(OS::getEnvVar("HOME"));
-
-  o.optional("roster", home, "Location of roster/cache folder.");
+  // Roster means we write coverage files and read masks
+  // A missing mask:
+  //      When NOT using a roster means nothing, we write everything.
+  //      When using a roster means we write nothing (multi radar coop).
+  o.optional("roster", "", "Location of roster/cache folder.");
+  o.addAdvancedHelp("roster",
+    "Using a roster folder means we write coverage files and get back masks from a running roster that tells us what to write, because we are part of a N nearest radar cluster.  This means if a mask is missing we don't write anything.  Without a roster, we always write all our data.");
 
   // Default sync heartbeat to 30 seconds
   // Format is seconds then mins
@@ -135,9 +137,14 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   } else if (myRangeKMs > 1000) {
     myRangeKMs = 1000;
   }
-  FusionCache::setRosterDir(o.getString("roster"));
-
   LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
+
+  std::string roster = o.getString("roster");
+
+  myUseRoster = !roster.empty();
+  if (myUseRoster) {
+    FusionCache::setRosterDir(roster);
+  }
 } // RAPIOFusionOneAlg::processOptions
 
 void
@@ -367,6 +374,10 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 void
 RAPIOFusionOneAlg::updateRangeFile()
 {
+  // If not using roster, we don't write a coverage file for it
+  if (!myUseRoster) {
+    return;
+  }
   // We either have to write/rewrite the range file, or at least touch it.
   // For moment we're rewriting it.  Multi moment they may step on each other,
   // so we'll either pull it out to another program or check time stamps or
@@ -394,11 +405,17 @@ RAPIOFusionOneAlg::updateRangeFile()
   OS::ensureDirectory(directory);
   FusionCache::writeRangeFile(fullpath, myRadarGrid,
     myLLProjections, myRangeKMs);
-}
+} // RAPIOFusionOneAlg::updateRangeFile
 
 void
 RAPIOFusionOneAlg::readCoverageMask()
 {
+  // If not using roster, there's no mask, we write everything
+  if (!myUseRoster) {
+    myHaveMask = false;
+    return;
+  }
+
   // Read a mask file
   // if useRoster set..otherwise all points or 1
   std::string directory;
@@ -433,7 +450,6 @@ RAPIOFusionOneAlg::readCoverageMask()
       }
     }
   }
-  // myHaveMask = false;
 } // RAPIOFusionOneAlg::readCoverageMask
 
 void
@@ -795,11 +811,20 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
 {
   // Don't do anything unless we got some new data since last time
   if (myDirty < 1) { return; }
-  LogInfo("Processing full volume, " << myDirty << " file(s) have been received.\n");
-  myDirty = 0;
 
   // Read the coverage mask (in real time it could change due to radars up/down)
   readCoverageMask();
+
+  // Don't do anything if we're using a roster and don't have a mask yet...
+  // The mask tells us our part of the global, we don't want to flood things,
+  // we're cooperating with other radars.
+  if (myUseRoster && !myHaveMask) {
+    LogInfo("Using roster but no mask, skipping output until we get one.\n");
+    return;
+  }
+
+  LogInfo("Processing full volume, " << myDirty << " file(s) have been received.\n");
+  myDirty = 0;
 
   // Get the elevation volume pointers and levels for speed
   std::vector<double> levels;
