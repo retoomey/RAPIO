@@ -5,5 +5,4 @@
  */
 #pragma once
 
-// Include the base headers
 @PUBLIC_HEADERS@

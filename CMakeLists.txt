@@ -56,6 +56,43 @@ function(install_python SCRIPT SOURCE_DIR)
 			DESTINATION bin)
 endfunction()
 
+###########################################################################
+# Convenient add to RAPIO include and third party libraries
+#
+function(append_RAPIO dir libraries)
+  list(FIND RAPIO_INCLUDE_DIRS "${dir}" index)
+  if(index EQUAL -1) # Cut down on dups like /usr/include
+    if(NOT "${dir}" STREQUAL "") # Don't add empty items
+      list(APPEND RAPIO_INCLUDE_DIRS "${dir}")
+      set(RAPIO_INCLUDE_DIRS ${RAPIO_INCLUDE_DIRS} PARENT_SCOPE)
+    endif()
+  endif()
+  if(NOT "${libraries}" STREQUAL "") # Don't add empty items
+    list(APPEND RAPIO_THIRD_LIBRARIES "${libraries}")
+    set(RAPIO_THIRD_LIBRARIES ${RAPIO_THIRD_LIBRARIES} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Function for generating the global RAPIO.h list
+# We flatten the directories into RAPIO.h and add to RAPIO_INCLUDE_DIRS
+function(append_RAPIO_HEADER FOLDER)
+
+  # Add flat contents of directory to the RAPIO.h header
+  set(PUBLIC_HEADER_BASE "${CMAKE_CURRENT_SOURCE_DIR}/${FOLDER}")
+  set(PUBLIC_HEADERS "${PUBLIC_HEADERS}// Headers from ${FOLDER}\n")
+  file(GLOB PUBLIC_HEADERS_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
+  foreach(filename ${PUBLIC_HEADERS_LIST})
+    set(PUBLIC_HEADERS "${PUBLIC_HEADERS}#include \"${filename}\"\n")
+  endforeach()
+  set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
+
+  # Append the new directory to RAPIO_INCLUDE_DIRS
+  # Note: Incorrect way: list(APPEND RAPIO_INCLUDE_DIRS "${PUBLIC_HEADER_BASE}" PARENT_SCOPE)
+  list(APPEND RAPIO_INCLUDE_DIRS "${PUBLIC_HEADER_BASE}")
+  set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
+
+endfunction()
+
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
@@ -63,16 +100,6 @@ string(TIMESTAMP BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP BUILD_TIME "%H:%M:%S" UTC)
 execute_process(COMMAND hostname OUTPUT_VARIABLE MACHINE_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
 configure_file(base/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/config.h @ONLY)
-
-# Generate a RAPIO.h header file containing headers in base
-# Note, not GLOB_RECURSE since we don't want plugin headers here.
-set(PUBLIC_HEADER_BASE ${CMAKE_CURRENT_SOURCE_DIR}/base/)
-file(GLOB PUBLIC_HEADERS_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
-foreach(filename ${PUBLIC_HEADERS_LIST})
-  set (PUBLIC_HEADERS "${PUBLIC_HEADERS}#include \"${filename}\"\n")
-endforeach()
-#string(REPLACE ";" " " PUBLIC_HEADERS_STR "%{PUBLIC_HEADERS}")
-configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
 # Define CMAKE_INSTALL_LIBDIR, INCLUDEDIR, etc.
 include(GNUInstallDirs)
@@ -161,42 +188,25 @@ set(RAPIO_DEFINITIONS
 )
 
 ###########################################################################
-# Start with header/linking the default libraries, we'll add more
+# Creating RAPIO_INCLUDE_DIRS and RAPIO.h
 #
+append_RAPIO_HEADER("base/")
+append_RAPIO_HEADER("base/config/")
 
-# Includes
-set(RAPIO_INCLUDE_DIRS
-  ${CMAKE_CURRENT_SOURCE_DIR}/base
-  ${CMAKE_INSTALL_PREFIX}/include
-  ${ZLIB_INCLUDE_DIRS}
-  ${BZip2_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_BINARY_DIR}/base
-)
+append_RAPIO("${ZLIB_INCLUDE_DIRS}" "${ZLIB_LIBRARIES}")
+append_RAPIO("${BZip2_INCLUDE_DIRS}" "${BZip2_LIBRARIES}")
+append_RAPIO("${Boost_INCLUDE_DIRS}" "${Boost_LIBRARIES}")
 
-# Libraries
-set(RAPIO_THIRD_LIBRARIES
-  ${ZLIB_LIBRARIES}
-  ${BZip2_LIBRARIES}
-  ${Boost_LIBRARIES}
-)
+# Use the generated RAPIO.h file
+append_RAPIO("${CMAKE_CURRENT_BINARY_DIR}/base" "")
+# Only would matter with third party install, but make it last
+append_RAPIO("${CMAKE_INSTALL_PREFIX}/include" "")
 
-###########################################################################
-# Convenient add to RAPIO include and third party libraries
-#
-function(append_RAPIO dir libraries)
-  list(FIND RAPIO_INCLUDE_DIRS "${dir}" index)
-  if(index EQUAL -1) # Cut down on dups like /usr/include
-    if(NOT "${dir}" STREQUAL "") # Don't add empty items
-      list(APPEND RAPIO_INCLUDE_DIRS "${dir}")
-      set(RAPIO_INCLUDE_DIRS ${RAPIO_INCLUDE_DIRS} PARENT_SCOPE)
-    endif()
-  endif()
-  if(NOT "${libraries}" STREQUAL "") # Don't add empty items
-    list(APPEND RAPIO_THIRD_LIBRARIES "${libraries}")
-    set(RAPIO_THIRD_LIBRARIES ${RAPIO_THIRD_LIBRARIES} PARENT_SCOPE)
-  endif()
-endfunction()
+# Debug look at the includes
+#addRAPIONote("INCLUDE:\n ${RAPIO_INCLUDE_DIRS}\n\n")
+
+# Create the RAPIO.h file (after all append_RAPIO_HEADER)
+configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
 ###########################################################################
 # Used by tile generator and even algorithms like fusion.  Projection
