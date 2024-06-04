@@ -22,7 +22,7 @@ At the [National Severe Storms Laboratory](https://www.nssl.noaa.gov) big data i
 * Output of data with filtering abilities.
 
 ## Subprojects
-* core -- Continually refactor/reduce the core to improve API and speed/usefullness.
+* [core](base/README.md) -- Continually refactor/reduce the core to improve API and speed/usefullness.
 * [tests](tests/README.md) -- Unit tests for RAPIO.
 * [modules](modules/README.md) -- Dynamic libraries for adding optional abilities.  Netcdf, GRIB2, etc.
 * containers -- Develop containers for cross-compiling or operations.

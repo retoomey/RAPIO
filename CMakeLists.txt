@@ -192,6 +192,10 @@ set(RAPIO_DEFINITIONS
 #
 append_RAPIO_HEADER("base/")
 append_RAPIO_HEADER("base/config/")
+append_RAPIO_HEADER("base/watcher/")
+append_RAPIO_HEADER("base/index/")
+append_RAPIO_HEADER("base/notifier/")
+append_RAPIO_HEADER("base/datatype/")
 
 append_RAPIO("${ZLIB_INCLUDE_DIRS}" "${ZLIB_LIBRARIES}")
 append_RAPIO("${BZip2_INCLUDE_DIRS}" "${BZip2_LIBRARIES}")
