@@ -22,7 +22,8 @@ Volume::introduce(const std::string & key,
 void
 Volume::introduceSelf()
 {
-  ElevationVolume::introduceSelf();
+  VolumeOfN::introduceSelf();
+  VolumeOf1::introduceSelf();
 }
 
 std::string
@@ -30,7 +31,8 @@ Volume::introduceHelp()
 {
   std::string help;
 
-  help += "Elevation volumes handle what tilts/levels are considered part of the current virtual volume.\n";
+  help += "Volumes handle a collection of received DataTypes usually some sort of virtual volume.\n";
+  help += "Usually these are time purged based on the history window (see help h).\n";
   auto e = Factory<Volume>::getAll();
 
   for (auto i: e) {
@@ -49,12 +51,6 @@ Volume::introduceSuboptions(const std::string& name, RAPIOOptions& o)
   }
   // There's no 'non' volume
   // o.setEnforcedSuboptions(name, false);
-}
-
-std::string
-ElevationVolume::getHelpString(const std::string& fkey)
-{
-  return "Stores all unique elevation angles within the history window (see help h).";
 }
 
 std::shared_ptr<Volume>
@@ -79,17 +75,6 @@ Volume::createVolume(
     }
   }
   return f;
-}
-
-std::shared_ptr<Volume>
-Volume::createFromCommandLineOption(
-  const std::string & option,
-  const std::string & historyKey)
-{
-  std::string key, params;
-
-  Strings::splitKeyParam(option, key, params);
-  return createVolume(key, params, historyKey);
 }
 
 void
@@ -131,7 +116,7 @@ Volume::purgeTimeWindow(const Time& time)
 }
 
 void
-Volume::addDataType(std::shared_ptr<DataType> dt)
+VolumeOfN::addDataType(std::shared_ptr<DataType> dt)
 {
   // Map lookup key for volume name is DataType+TypeName such as "RadialSet-Reflectivity"
   // Each of these volumes is independent from others
@@ -168,17 +153,30 @@ Volume::addDataType(std::shared_ptr<DataType> dt)
     add(dt); // myVolume.push_back(dt);
   }
 
-  // For moment print out volume
-  // printVolume();
+  // LogInfo(*this << "\n");
 } // Volume::addDataType
 
 void
-Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
+VolumeOf1::addDataType(std::shared_ptr<DataType> dt)
+{
+  if (myVolume.size() > 0) {
+    // Replace our single item, iff the time is newer
+    const auto t    = myVolume[0]->getTime();
+    const auto tnew = dt->getTime();
+    if (tnew >= t) {
+      replaceAt(0, dt);
+    }
+  } else {
+    add(dt); // Add what we got
+  }
+  LogInfo(*this << "\n");
+}
+
+void
+VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
   std::vector<DataProjection *>& projectors)
 {
-  // Padding for search loop so range end checking not needed, which speeds things up.  See the
-  // getSpreadL loop in ElevationVolume.
-  // FIXME: Need to cleanup/revisit the normal spread functions since not used
+  // Padding for search loop so range end checking not needed, which speeds things up.
   pointers.push_back(nullptr);
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
@@ -187,16 +185,46 @@ Volume::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *
     // Cached pointers for speed.
     pointers.push_back(v.get());
     projectors.push_back(v.get()->getProjection().get());
+
+    // Push back the subtype used for the getSpreadL search
     const auto os = v->getSubType();
     double d      = std::stod(os); // FIXME catch?
     levels.push_back(d);
   }
-  levels.push_back(std::numeric_limits<double>::max());
   // End padding
+  levels.push_back(std::numeric_limits<double>::max());
   pointers.push_back(nullptr);
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
   projectors.push_back(nullptr);
+}
+
+void
+VolumeOf1::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
+  std::vector<DataProjection *>& projectors)
+{
+  // We're gonna trick the getSpreadL by simply storing a max number first subtype.
+  // This means the resolver will always get a 'upper' tilt hit.
+  // Padding for search loop so range end checking not needed, which speeds things up.
+  pointers.push_back(nullptr);
+  pointers.push_back(nullptr);
+  projectors.push_back(nullptr);
+  projectors.push_back(nullptr);
+  if (myVolume.size() > 0) {
+    // Push back the DataType and its projection as cached pointers for speed
+    pointers.push_back(myVolume[0].get());
+    projectors.push_back(myVolume[0].get()->getProjection().get());
+
+    // Ignore subtype, we want the getSpreadL search to always instantly hit.  So push a max
+    // which will cause a < search auto hit
+    levels.push_back(std::numeric_limits<double>::max());
+  }
+  // End padding
+  levels.push_back(std::numeric_limits<double>::max());
+  pointers.push_back(nullptr);
+  pointers.push_back(nullptr); // Might not need this one
+  projectors.push_back(nullptr);
+  projectors.push_back(nullptr); // Might not need this one
 }
 
 std::shared_ptr<DataType>
@@ -218,24 +246,6 @@ Volume::deleteSubType(const std::string& subtype)
     }
   }
   return false;
-}
-
-void
-ElevationVolume::introduceSelf()
-{
-  std::shared_ptr<ElevationVolume> newOne = std::make_shared<ElevationVolume>();
-  Factory<Volume>::introduce("simple", newOne);
-}
-
-void
-ElevationVolume::addDataType(std::shared_ptr<DataType> dt)
-{
-  // For elevation check it's a RadialSet, do any 'extra' required
-  std::shared_ptr<RadialSet> rs = std::dynamic_pointer_cast<RadialSet>(dt);
-
-  if (rs != nullptr) {
-    Volume::addDataType(dt);
-  }
 }
 
 std::ostream&

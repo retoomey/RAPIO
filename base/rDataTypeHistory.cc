@@ -39,14 +39,7 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
   auto lookup = myVolumes.find(key);
 
   if (lookup == myVolumes.end()) {
-    // Ahh bleh we need to differentiate by type.
-    // FIXME: Probably get the volume subtype from the datatype
-    std::shared_ptr<RadialSet> rs = std::dynamic_pointer_cast<RadialSet>(data);
-    if (rs != nullptr) {
-      v = std::make_shared<ElevationVolume>(key); // RadialSets for now
-    } else {
-      v = std::make_shared<Volume>(key); // LatLonGrids for now
-    }
+    v = std::make_shared<VolumeOfN>(key);
     registerVolume(key, v);
   } else {
     v = lookup->second;

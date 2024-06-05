@@ -78,7 +78,7 @@ public:
   /** Legacy grid using the t, b, and s options.  This is for backward
    * compatibility with older WDSS2 algorithms */
   void
-  declareLegacyGrid();
+  declareLegacyGrid(const std::string& defaultGrid = "nw(37, -100) se(30.5, -93) h(0.5,20,NMQWD) s(0.01, 0.01)");
 
   /** Convenience get a 2D or 3D grid information from a grid option */
   bool

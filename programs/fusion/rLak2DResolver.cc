@@ -108,85 +108,34 @@ void
 Lak2DResolver::calc(VolumeValue * vvp)
 {
   // Count each value if it contributes, if masks are covered than make missing
-  auto& vv        = *(VolumeValueWeightAverage *) (vvp);
-  double totalWt  = 0.0;
-  double totalsum = 0.0;
-  size_t count    = 0;
+  auto& vv = *(VolumeValueWeightAverage *) (vvp);
 
   // ------------------------------------------------------------------------------
-  // Query information for above and below the location
-  //
-  bool haveLower  = queryLower(vv);
-  bool haveUpper  = queryUpper(vv);
-  bool haveLLower = query2ndLower(vv);
-  bool haveUUpper = query2ndUpper(vv);
-
-  const AngleDegs spread = (haveLower && haveUpper) ? std::abs(
-    vv.getUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
-  bool terrainBlockedLower = false;
-  bool terrainBlockedUpper = false;
-  bool missingMask         = false;
-
-  if (haveLower) {
-    // FIXME: Feels like these tilt blocks are begging for a single function now
-    bool isGoodLower = false;
-    bool inBeamLower = false;
-    double lowerWt   = 0.0;
-    double lValue;
-    analyzeTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
-      isGoodLower, inBeamLower, terrainBlockedLower, lValue, lowerWt);
-    countValue(isGoodLower, lowerWt, lValue, missingMask, totalWt, totalsum, count);
-  }
-
-  if (haveUpper) {
-    bool isGoodUpper = false;
-    bool inBeamUpper = false;
-    double upperWt   = 0.0;
-    double uValue;
-    analyzeTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
-      isGoodUpper, inBeamUpper, terrainBlockedUpper, uValue, upperWt);
-    countValue(isGoodUpper, upperWt, uValue, missingMask, totalWt, totalsum, count);
-  }
-
-  // We always mask missing between the two main tilts that aren't blocked
-  // This fills in more than the beam width..it's full spread fill which I guess looks better?
-  missingMask = missingMask || (haveUpper && haveLower && !terrainBlockedUpper && !terrainBlockedLower);
-
-  if (haveLLower) {
-    bool isGoodLower2 = false;
-    bool inBeamLower2 = false;
-    double lowerWt2   = 0.0;
-    double lValue2;
-    bool terrainBlockedLower2 = false;
-    const AngleDegs spread2   =
-      haveUpper ? std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation) : 0.0;
-    analyzeTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread2,
-      isGoodLower2, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2);
-    countValue(isGoodLower2, lowerWt2, lValue2, missingMask, totalWt, totalsum, count);
-  }
-
-  if (haveUUpper) {
-    bool isGoodUpper2 = false;
-    bool inBeamUpper2 = false;
-    double upperWt2   = 0.0;
-    double uValue2;
-    bool terrainBlockedUpper2 = false;
-    const AngleDegs spread3   =
-      haveLower ? std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
-    analyzeTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread3,
-      isGoodUpper2, inBeamUpper2, terrainBlockedUpper, uValue2, upperWt2);
-    countValue(isGoodUpper2, upperWt2, uValue2, missingMask, totalWt, totalsum, count);
-  }
-
-  if (count > 0) {
-    const auto rw   = 1.0 / std::pow(vv.virtualRangeKMs, 2); // inverse square
-    const double aV = totalsum / totalWt;
-    vv.dataValue = aV;
-    vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
-    vv.bottomSum = rw;
+  // Query information for the location
+  // For the 'one' volume type, we have a single upper layer always (if we have data)
+  // FIXME: If this works we might make API more obvious.  This is because the
+  // search is set up to hit immediately, giving us null null, tilt, null for the layers.
+  // Basically our virtual subtype angle is always < max.
+  // FIXME: Obviously reduce all the mess in this class if this works.
+  if (queryUpper(vv)) {
+    const double& value = vv.getUpperValue().value;
+    if (Constants::isGood(value)) {
+      // This weight is for merging with other radars...so still need it.
+      const auto rw   = 1.0 / std::pow(vv.virtualRangeKMs, 2); // inverse square
+      const double aV = value;                                 // Only hit value counts, no vertical interpolation/weighting
+      vv.dataValue = aV;
+      vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
+      vv.bottomSum = rw;
+    } else {
+      // Not a good data value, but we hit the product, so missing.
+      vv.dataValue = Constants::MissingData;
+      vv.topSum    = vv.dataValue;
+      vv.bottomSum = 1.0;
+    }
   } else {
-    vv.dataValue = missingMask ? Constants::MissingData : Constants::DataUnavailable;
-    vv.topSum    = vv.dataValue; // Humm our stage2 actually checks this for missing value
-    vv.bottomSum = 1.0;          // ignored for missing
+    // No data, unavailable
+    vv.dataValue = Constants::DataUnavailable;
+    vv.topSum    = vv.dataValue;
+    vv.bottomSum = 1.0;
   }
 } // calc

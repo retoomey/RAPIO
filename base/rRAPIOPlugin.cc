@@ -594,8 +594,14 @@ PluginVolume::getNewVolume(
   // Elevation volume creation
   LogInfo(
     "Creating virtual volume for '" << historyKey << "\n");
+
+  // We break it up into key and the params
+  std::string key, params;
+
+  Strings::splitKeyParam(myVolumeAlg, key, params);
+
   std::shared_ptr<Volume> myVolume =
-    Volume::createFromCommandLineOption(myVolumeAlg, historyKey);
+    Volume::createVolume(key, params, historyKey);
 
   // Stubbornly refuse to run if requested by name and not found or failed
   if (myVolume == nullptr) {
