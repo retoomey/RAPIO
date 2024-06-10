@@ -40,8 +40,10 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 
   // Output 2D by default and declare static product keys for what we write.
   o.setDefaultValue("O", "2D");
-  declareProduct("2D", "Write N 2D layers");
+  declareProduct("2D", "Write N 2D layers merged values");
+  declareProduct("2DMax", "Write N 2D layers max values");
   declareProduct("3D", "Write a 3D layer");
+  declareProduct("3DMax", "Write a 3D max layer");
   declareProduct("S2", "Write Stage2 raw data files");
 }
 
@@ -289,14 +291,8 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // Time, etc. needs to be added
   // ----------------
 
-  // For moment just take everything as an I-frame
-  // and use real time
-  myLLGCache->fillPrimary(Constants::DataUnavailable);
-
   // Write out
   auto& part = myPartitionInfo.getSelectedPartition();
-
-  myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
 
   Time outputTime = p;
 
@@ -305,6 +301,12 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 
   extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
   extraParams["compression"]  = "gz";
+
+  bool wantMerge = (isProductWanted("2D") || isProductWanted("3D"));
+
+  if (wantMerge) {
+    myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
+  }
 
   // ---------------------------------------
   // Output 2D
@@ -331,6 +333,41 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   if (isProductWanted("3D")) { // -O="3D", -O="3D=NameWanted
     myLLGCache->setTime(outputTime);
     myLLGCache->setTypeName("Fused2" + myTypeName);
+    // You must have a netcdf=/folder in your -o when forcing a writer
+    extraParams["onewriter"] = "netcdf";
+    writeOutputProduct("3D", myLLGCache, extraParams);
+    extraParams["onewriter"] = "";
+  }
+
+  bool wantMax = (isProductWanted("2DMax") || isProductWanted("3DMax"));
+
+  if (wantMax) {
+    myDatabase->maxTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
+  }
+
+  // ---------------------------------------
+  // Output 2D Max
+  if (isProductWanted("2DMax")) {
+    auto heightsKM = myFullGrid.getHeightsKM();
+    for (size_t layer = 0; layer < heightsKM.size(); layer++) {
+      LogInfo("Writing max layer " << layer << "\n");
+
+      // Use current time for layer
+      auto output = myLLGCache->get(layer);
+      output->setTime(outputTime);
+      output->setTypeName("Fused2Max" + myTypeName);
+
+      extraParams["onewriter"] = "netcdf";
+      writeOutputProduct("2D", output, extraParams);
+      extraParams["onewriter"] = "";
+    }
+  }
+
+  // ---------------------------------------
+  // Output 3D Max
+  if (isProductWanted("3DMax")) {
+    myLLGCache->setTime(outputTime);
+    myLLGCache->setTypeName("Fused2Max" + myTypeName);
     // You must have a netcdf=/folder in your -o when forcing a writer
     extraParams["onewriter"] = "netcdf";
     writeOutputProduct("3D", myLLGCache, extraParams);

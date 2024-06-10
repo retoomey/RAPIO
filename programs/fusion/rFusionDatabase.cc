@@ -77,6 +77,8 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
 {
   ProcessTimer test("Merging XYZ tree\n");
 
+  cache->fillPrimary(Constants::DataUnavailable);
+
   // Use the coordinates of the cache in case it's a subgrid/tile
   // and not a full grid
   const size_t gridZ = cache->getNumLayers();
@@ -161,6 +163,104 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
 
         // So we have weights, values....divide them to get total
         gridtest[y][x] /= wa[y][x];
+      }
+    }
+  }
+
+  LogInfo(test);
+} // FusionDatabase::mergeTo
+
+void
+FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY)
+{
+  // FIXME: Maybe combine common code or something with the mergeTo..though it might
+  // slow things doing that.
+  //
+  ProcessTimer test("Maxing XYZ tree\n");
+
+  cache->fillPrimary(Constants::DataUnavailable);
+
+  // Use the coordinates of the cache in case it's a subgrid/tile
+  // and not a full grid
+  const size_t gridZ = cache->getNumLayers();
+  const size_t gridY = cache->getNumLats(); // dim 0
+  const size_t gridX = cache->getNumLons(); // dim 1
+
+  // -------------------------------------------------------------
+  // Max pass, gather maximum values in each hit cell
+
+  // We'll still order by z, since we'll probably thread around it
+  for (size_t z = 0; z < gridZ; z++) {
+    std::shared_ptr<LatLonGrid> output = cache->get(z);
+
+    // Use weight as a 'hit' marker here
+    auto w = output->getFloat2D("weights");
+    w->fill(0);
+    auto& wa = output->getFloat2DRef("weights");
+
+    // Max values (borrow final output to save RAM)
+    auto gridtestP = output->getFloat2D();
+    gridtestP->fill(0);
+    auto& gridtest = output->getFloat2DRef();
+
+    // Here's the genius, we don't care about x,y,z ordering...we accumulate
+    // the weights and values randomly...
+    for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
+      auto &r = *(it->second);
+
+      // Value observations accumulate values and weights
+      for (auto& v:r.myAObs[z]) {
+        // Since we can be a tile/partition, shifts global to partition coordinates
+        // atX and atY are local coordinates in the partition
+        // So we clip global to the area we cover
+        const int atX = v.x - offsetX;
+        const int atY = v.y - offsetY;
+        if ((atX < 0) || (atY < 0) || (atX >= gridX) || (atY >= gridY)) {
+          continue;
+        }
+        /// --------------------------------------------
+        // Max logic code
+        // Use weight as a 'hit' marker and just keep the max value
+        //
+        auto& hit  = wa[atY][atX];
+        auto& vref = gridtest[atY][atX];
+        if (hit) { // if already have a value, replace with max...
+          vref = (v.v > vref) ? v.v : vref;
+        } else { // ..otherwise use the first one
+          vref = v.v;
+        }
+        hit = 1;
+        /// --------------------------------------------
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // Finialization pass, handle mask
+  for (size_t z = 0; z < gridZ; z++) {
+    std::shared_ptr<LatLonGrid> output = cache->get(z);
+    auto& wa       = output->getFloat2DRef("weights");
+    auto& gridtest = output->getFloat2DRef();
+    for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
+      for (size_t y = 0; y < gridY; y++) {
+        auto& hit = wa[y][x];
+
+        // if no hit in the cell...use the mask field
+        // FIXME: Generically maybe we prefill with mask values before the 'alg' we're doing.
+        // though this could be slightly slower for hit cells.
+        // prefill would allow use to share this code with mergeTo above
+        // and avoid the hit or weight checks
+        if (hit < 1) {
+          auto& vref = gridtest[y][x];
+          const size_t globalX = offsetX + x;
+          const size_t globalY = offsetY + y;
+          if (myMissings[myHaves.getIndex3D(globalX, globalY, z)] >= cutoff) {
+            vref = Constants::MissingData;
+          } else {
+            vref = Constants::DataUnavailable;
+          }
+          continue;
+        }
       }
     }
   }

@@ -339,9 +339,17 @@ public:
   void
   dumpSources();
 
-  /** First silly simple weighted merger */
+  // ----------------------------------------
+  // These are combination methods we can do with our value/weight data.
+
+  /** Weighted distance merge of given values */
   void
   mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX = 0, size_t offsetY = 0);
+
+  /** Max merge of given values */
+  void
+  maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX = 0, size_t offsetY = 0);
+  // ----------------------------------------
 
   /** Attempt to purge times from database */
   void
