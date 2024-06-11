@@ -33,11 +33,6 @@ Volume::introduceHelp()
 
   help += "Volumes handle a collection of received DataTypes usually some sort of virtual volume.\n";
   help += "Usually these are time purged based on the history window (see help h).\n";
-  auto e = Factory<Volume>::getAll();
-
-  for (auto i: e) {
-    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
-  }
   return help;
 }
 
@@ -187,8 +182,14 @@ VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
     projectors.push_back(v.get()->getProjection().get());
 
     // Push back the subtype used for the getSpreadL search
-    const auto os = v->getSubType();
-    double d      = std::stod(os); // FIXME catch?
+    const auto os = Strings::removeNonNumber(v->getSubType());
+    double d      = 0;
+    try {
+      d = std::stod(os);
+    }catch (const std::exception& e) {
+      // FIXME: How to handle this data error?
+      // LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
+    }
     levels.push_back(d);
   }
   // End padding
@@ -259,9 +260,16 @@ rapio::operator << (std::ostream& os, const Volume& v)
 
   z << "Current Virtual Volume: ";
   for (auto x:v.getVolume()) {
-    const auto os = x->getSubType();
-    double d      = std::stod(os);
-    Time newer    = x->getTime();
+    const auto os = Strings::removeNonNumber(x->getSubType());
+    double d      = 0;
+    try {
+      d = std::stod(os);
+    }catch (const std::exception& e) {
+      // FIXME: How to handle this data error?
+      // LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
+    }
+
+    Time newer = x->getTime();
     if (newer > latest) {
       latest = newer;
     }
@@ -277,4 +285,4 @@ rapio::operator << (std::ostream& os, const Volume& v)
     z << ", ";
   }
   return (os << z.str());
-}
+} // <<

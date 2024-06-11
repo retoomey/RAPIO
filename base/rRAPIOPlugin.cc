@@ -499,10 +499,10 @@ PluginTerrainBlockage::declareOptions(RAPIOOptions& o)
 {
   // Terrain blockage plugin
   // FIXME: Lak is introduced right...so where is this declared generically?
-  o.optional(myName, "lak", // default is lak eh
+  o.optional(myName, "", // default is none
     "Terrain blockage algorithm. Params follow: lak,/DEMS.  Most take root folder of DEMS.");
+  o.addSuboption(myName, "", "Don't apply any terrain algorithm.");
   TerrainBlockage::introduceSuboptions("terrain", o);
-  o.addSuboption("terrain", "", "Don't apply any terrain algorithm.");
 }
 
 void
@@ -537,9 +537,13 @@ PluginTerrainBlockage::getNewTerrainBlockage(
     LogInfo("No terrain blockage algorithm requested.\n");
     return nullptr;
   } else {
+    std::string key, params;
+    Strings::splitKeyParam(myTerrainAlg, key, params);
+
     std::shared_ptr<TerrainBlockage>
-    myTerrainBlockage = TerrainBlockage::createFromCommandLineOption(myTerrainAlg,
+    myTerrainBlockage = TerrainBlockage::createTerrainBlockage(key, params,
         radarLocation, radarRangeKMs, radarName, minTerrainKMs, minAngleDegs);
+
     // Stubbornly refuse to run if terrain requested by name and not found or failed
     if (myTerrainBlockage == nullptr) {
       LogSevere("Terrain blockage '" << myTerrainAlg << "' requested, but failed to find and/or initialize.\n");
@@ -726,43 +730,7 @@ PluginPartition::getPartitionInfo(
 {
   if (isValid()) {
     info = myPartitionInfo; // copy
-
     info.partition(grid);
-    #if 0
-
-    /** Our partition has all the information, except for the
-     * global grid generated info, which we will fill in now */
-    if (!(info.myParamType == PartitionType::none)) {
-      // Break up the grid partitions, assuming 2 dimensions
-      grid.tile(info.myDims[0], info.myDims[1], info.myPartitions);
-
-      // March row order, creating boundary markers in global grid
-      // space for each partition.
-      // Might be easier to do this in the 'tile' method
-      size_t at        = 0;
-      size_t xBoundary = 0;
-      size_t yBoundary = 0;
-      for (size_t y = 0; y < info.myDims[1]; ++y) {
-        auto& g = info.myPartitions[at];
-        for (size_t x = 0; x < info.myDims[0]; ++x) {
-          // Add global boundaries in the X direction
-          if (x == 0) {
-            xBoundary += g.getNumX();
-            info.myPartBoundaryX.push_back(xBoundary);
-          }
-        }
-        // Add global boundaries in the Y direction
-        yBoundary += g.getNumY();
-        info.myPartBoundaryY.push_back(yBoundary);
-        at++;
-      }
-    } else {
-      // Push back dummy boundaries really large
-      info.myPartBoundaryX.push_back(1000000);
-      info.myPartBoundaryY.push_back(1000000);
-    }
-    #endif // if 0
-
     info.printTable();
   } else {
     LogSevere("Partition info incorrect.\n");

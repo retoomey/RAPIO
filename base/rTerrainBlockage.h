@@ -82,16 +82,6 @@ public:
     LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
     AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
 
-  /** Attempt to create TerrainBlockage command param */
-  static std::shared_ptr<TerrainBlockage>
-  createFromCommandLineOption(
-    const std::string & option,
-    const LLH         & radarLocation,
-    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
-    const std::string & radarName,
-    LengthKMs         minTerrainKMs = 0,    // Bottom beam touches this we're blocked
-    AngleDegs         minAngle      = 0.1); // Below this, no blockage occurs
-
   /** Called on subclasses by the TerrainBlockage to create/setup the TerrainBlockage.
    * To use by name, you would override this method and return a new instance of your
    * TerrainBlockage class. */

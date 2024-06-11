@@ -74,11 +74,6 @@ VolumeValueResolver::introduceHelp()
   std::string help;
 
   help += "Value Resolver algorithms determine how values/weights are calculated for a grid location.\n";
-  auto e = Factory<VolumeValueResolver>::getAll();
-
-  for (auto i: e) {
-    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
-  }
   return help;
 }
 

@@ -56,6 +56,10 @@ public:
   countArgs(const std::vector<Option *>& options,
     OptionFilter                       & a);
 
+  /** Output a suboption list for help or advanced help */
+  void
+  dumpSuboptionList(const Option& o, size_t& c1, bool advanced);
+
   /** Output arguments that match a given filter */
   void
   dumpArgs(std::vector<Option *>& options,

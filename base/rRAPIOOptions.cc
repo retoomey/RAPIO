@@ -233,6 +233,36 @@ RAPIOOptions::countArgs(const std::vector<Option *>& options,
   return counter;
 }
 
+void
+RAPIOOptions::dumpSuboptionList(const Option& o, size_t& c1, bool advanced)
+{
+  auto& s = std::cout;
+
+  for (auto& i: o.suboptions) {
+    // Get option name and add "" if it's empty
+    std::string optpad = i.opt;
+    if (optpad.empty()) { // Existance only such as -r
+      optpad = "\"\"";
+    }
+
+    // Pad the option in the list
+    size_t max = o.suboptionmax;
+    while (optpad.length() < max) {
+      optpad += " ";
+    }
+
+    // Print different depending on advanced help or not
+    if (!advanced) {
+      s << setw(c1 + 4) << left << ""; // Indent 1 column
+      std::string out = ColorTerm::fBlue + ColorTerm::bold(optpad)
+        + " --" + i.description;
+      ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
+    } else {
+      s << " " << ColorTerm::fRed << optpad << ColorTerm::fNormal << " : " + i.description << "\n";
+    }
+  }
+}
+
 /** Print a list of arguments with a given filter */
 void
 RAPIOOptions::dumpArgs(std::vector<Option *>& options,
@@ -291,23 +321,9 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
       }
       const bool advancedWillShow = (advancedHelp && (o->advancedHelp != ""));
 
-      // Choices for suboptions....
+      // Choices for suboptions (non advanced indented)
       if ((o->suboptions.size() > 0) && (!advancedWillShow)) {
-        for (auto& i: o->suboptions) {
-          s << setw(c1 + 4) << left << ""; // Indent 1 column
-          std::string optpad = i.opt;
-          if (optpad.empty()) { // Existance only such as -r
-            optpad = "\"\"";
-          }
-          size_t max = o->suboptionmax;
-
-          while (optpad.length() < max) {
-            optpad += " ";
-          }
-          std::string out = ColorTerm::fBlue + ColorTerm::bold(optpad)
-            + " --" + i.description;
-          ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
-        }
+        dumpSuboptionList(*o, c1, advancedWillShow);
       }
       if (advancedWillShow) {
         std::vector<std::string> lines;
@@ -317,12 +333,14 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
         int d = 5;
         s << ColorTerm::bold("DETAILED HELP:\n");
         s << setw(d) << left << ""; // Indent 1 column
+
         for (auto& l:lines) {
           // ColorTerm::wrapWithIndent(d, 0, o->advancedHelp);
           ColorTerm::wrapWithIndent(d, 0, l);
         }
         s << "\n";
 
+        dumpSuboptionList(*o, c1, advancedWillShow);
         // s << fNormal;
       }
     }

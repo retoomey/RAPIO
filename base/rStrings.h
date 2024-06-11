@@ -137,6 +137,10 @@ public:
   static std::string
   removeANSII(const std::string& input);
 
+  /** Remove non-number characters from a string, prepping for number conversion */
+  static std::string
+  removeNonNumber(const std::string& input);
+
   /** Split a string based on a width into words */
   static size_t
   wrap(const std::string       & inputin,

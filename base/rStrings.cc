@@ -228,6 +228,35 @@ Strings::removeANSII(const std::string& input)
   return (nbuffer);
 } // Strings::removeANSII
 
+std::string
+Strings::removeNonNumber(const std::string& input)
+{
+  std::string output;
+  bool decimalPointSeen = false;
+  bool eSeen       = false;
+  bool signAllowed = true;
+
+  for (char c : input) {
+    if (isdigit(c)) {
+      output     += c;
+      signAllowed = false;
+    } else if (((c == '+') || (c == '-') ) && signAllowed) {
+      output     += c;
+      signAllowed = false;
+    } else if ((c == '.') && !decimalPointSeen && !eSeen) {
+      output += c;
+      decimalPointSeen = true;
+      signAllowed      = false;
+    } else if (((c == 'e') || (c == 'E') ) && !eSeen) {
+      output     += c;
+      eSeen       = true;
+      signAllowed = true;
+    }
+  }
+
+  return output;
+}
+
 /** Utility to word wrap a given string into a list where each string is less
  * than width.
  * The StartupOptions uses this to format command line option output */
