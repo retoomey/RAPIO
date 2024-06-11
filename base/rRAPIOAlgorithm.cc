@@ -2,6 +2,13 @@
 
 #include "rRAPIOOptions.h"
 #include "rRAPIOPlugin.h"
+#include "rPluginHeartbeat.h"
+#include "rPluginWebserver.h"
+#include "rPluginNotifier.h"
+#include "rPluginIngestor.h"
+#include "rPluginRecordFilter.h"
+#include "rPluginProductOutput.h"
+#include "rPluginProductOutputFilter.h"
 #include "rError.h"
 #include "rEventLoop.h"
 #include "rTime.h"

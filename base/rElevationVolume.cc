@@ -181,6 +181,13 @@ VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
     pointers.push_back(v.get());
     projectors.push_back(v.get()->getProjection().get());
 
+    // Hack attempt for "at" overloaded meaning (non-angle)
+    const auto atCheck = v->getSubType();
+    if (!atCheck.empty() && (atCheck[0] == 'a')) {
+      levels.push_back(0.5);
+      continue;
+    }
+
     // Push back the subtype used for the getSpreadL search
     const auto os = Strings::removeNonNumber(v->getSubType());
     double d      = 0;
@@ -188,7 +195,7 @@ VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
       d = std::stod(os);
     }catch (const std::exception& e) {
       // FIXME: How to handle this data error?
-      // LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
+      LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
     }
     levels.push_back(d);
   }
@@ -198,7 +205,7 @@ VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
   projectors.push_back(nullptr);
-}
+} // VolumeOfN::getTempPointerVector
 
 void
 VolumeOf1::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
