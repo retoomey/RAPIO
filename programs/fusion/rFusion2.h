@@ -58,6 +58,21 @@ public:
 
 protected:
 
+  /** Write current 3D layer */
+  void
+  write3DLayer(const std::string      & productKey,
+    const std::string                 & aTypeName,
+    std::map<std::string, std::string>& extraParams,
+    Time                              & outputTime);
+
+  /** Write current 2D layers */
+  void
+  write2DLayers(const std::string     & productKey,
+    const std::string                 & label,
+    const std::string                 & aTypeName,
+    std::map<std::string, std::string>& extraParams,
+    Time                              & outputTime);
+
   /** Called to merge what we have and output it */
   void
   mergeAndWriteOutput(const Time& n, const Time& p);
