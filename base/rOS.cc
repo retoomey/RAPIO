@@ -453,6 +453,20 @@ OS::getProcessSizeKB(double& vm_usage, double& resident_set)
   resident_set = rss * page_size_kb;
 }
 
+namespace {
+// Shared copy_file for different BOOST versions
+void
+os_copy_file(const fs::path& fromPath, const fs::path& toPath)
+{
+  #if BOOST_VERSION >= 107400
+  // Use copy_options for Boost 1.74.0 and newer
+  // https://www.boost.org/doc/libs/1_75_0/libs/filesystem/doc/release_history.html
+  fs::copy_file(fromPath, toPath, fs::copy_options::overwrite_existing);
+  #else
+  fs::copy_file(fromPath, toPath, fs::copy_option::overwrite_if_exists);
+  #endif
+}
+}
 bool
 OS::copyFile(const std::string& from, const std::string& to)
 {
@@ -476,9 +490,9 @@ OS::copyFile(const std::string& from, const std::string& to)
     }
 
     // Always copy to a TMP and then rename (atomic for readers)
-    std::string to2 = to + "_TMP";
-    fs::path to2Path(to2);
-    fs::copy_file(fromPath, to2Path, fs::copy_options::overwrite_existing);
+    const std::string to2 = to + "_TMP";
+    const fs::path to2Path(to2);
+    os_copy_file(fromPath, to2Path);
     fs::rename(to2Path, toPath);
     ok = true;
   }catch (const fs::filesystem_error &e)
@@ -521,8 +535,9 @@ OS::moveFile(const std::string& from, const std::string& to, bool quiet)
     try {
       const std::string to2 = to + "_TMP";
       const fs::path to2Path(to2);
-      fs::copy_file(fromPath, to2Path, fs::copy_options::overwrite_existing);
+      os_copy_file(fromPath, to2Path);
       fs::rename(to2Path, toPath);
+
       fs::remove(fromPath); // remove original file
       ok = true;
     }catch (const fs::filesystem_error &e)
