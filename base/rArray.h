@@ -36,23 +36,12 @@ class ArrayBase : public Data
 public:
 
   /** Create array using an initializer list for dimension sizes */
-  ArrayBase(std::initializer_list<size_t> dims)
-  {
-    myDimSize = dims.size(); // default size
-    for (auto x:dims) {
-      myDims.push_back(x);
-    }
-    // Subclasses should call in constructor to call theirs
-    // syncToDims();
-  }
+  ArrayBase(std::initializer_list<size_t> dims) : myDims(dims)
+  { }
 
   /** Create array from vector of dimension sizes */
   ArrayBase(const std::vector<size_t>& dims) : myDims(dims)
-  {
-    myDimSize = dims.size(); // default size
-    // Subclasses should call in constructor to call theirs
-    // syncToDims();
-  }
+  { }
 
   /** Clone this array at a high level where we don't care about its specialization. */
   virtual std::shared_ptr<ArrayBase>
@@ -62,26 +51,22 @@ public:
   size_t
   getNumDimensions()
   {
-    return myDimSize;
+    return myDims.size();
   }
 
   /** Resize using an initialize list of dimensions */
   void
   resize(std::initializer_list<size_t> dims)
   {
-    myDims.clear();
-    for (auto x:dims) {
-      myDims.push_back(x);
-    }
-    syncToDims(); // virtual
+    // Convert initializer list to vector and call the main resize method
+    resize(std::vector<size_t>(dims));
   }
 
   /** Resize using a vector list of dimensions */
-  void
+  virtual void
   resize(const std::vector<size_t>& dims)
   {
     myDims = dims;
-    syncToDims(); // virtual
   }
 
   /** Get a vector of the sizes for each dimension */
@@ -119,10 +104,6 @@ public:
     return ((myDims.size() > 3) ? myDims[3] : 0);
   }
 
-  /** Create the array for current dimensions */
-  virtual bool
-  syncToDims() = 0;
-
   /** Return a raw data pointer if possible */
   virtual void *
   getRawDataPointer() = 0;
@@ -135,10 +116,6 @@ public:
 protected:
   /** Vector of sizes for each dimension */
   std::vector<size_t> myDims;
-
-  /** Save a count of our true number of dimensions, which can differ from passed in dimension
-   * settings. */
-  size_t myDimSize;
 };
 
 /* Storage of an array API.  Wraps another storage system.
@@ -157,22 +134,13 @@ template <typename C, size_t N> class Array : public ArrayBase
 {
 public:
 
-  /** Create a blank array (uninitialized) */
-  Array(){ }
-
   /** Create array using an initializer list for dimension sizes */
-  Array(std::initializer_list<size_t> dims) : ArrayBase(dims)
-  {
-    myDimSize = N; // Our Permanent Dimension size
-    syncToDims();  // Call ours to update storage
-  }
+  Array(std::initializer_list<size_t> dims) : ArrayBase(dims), myStorage(dims)
+  { }
 
   /** Create array from vector of dimension sizes */
-  Array(const std::vector<size_t>& dims) : ArrayBase(dims)
-  {
-    myDimSize = N; // Our Permanent Dimension size
-    syncToDims();  // Call ours to update storage
-  }
+  Array(const std::vector<size_t>& dims) : ArrayBase(dims), myStorage(dims)
+  { }
 
   /** Fill array with given value, requires storage knowledge  */
   void
@@ -197,14 +165,12 @@ public:
     return theDims;
   }
 
-  /** Create the array for current dimensions */
-  virtual bool
-  syncToDims() override
+  /** Resize using a vector list of dimensions */
+  virtual void
+  resize(const std::vector<size_t>& dims) override
   {
-    // FIXME: We need a deep array test.  Possible that changing dimensions
-    // will break.  Most use cases we don't change dimensions
+    myDims = dims;
     myStorage.resize(myDims);
-    return true;
   }
 
   /** Convenience print of Array.  Has to print internal to get the templated method */

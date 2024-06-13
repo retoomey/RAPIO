@@ -14,6 +14,8 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/filesystem.hpp>
+// On alpine at least, need this header to define BOOST_CURRENT_FUNCTION
+#include <boost/current_function.hpp>
 
 #include <string.h> // errno strs
 

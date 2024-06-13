@@ -478,7 +478,7 @@ OS::copyFile(const std::string& from, const std::string& to)
     // Always copy to a TMP and then rename (atomic for readers)
     std::string to2 = to + "_TMP";
     fs::path to2Path(to2);
-    fs::copy_file(fromPath, to2Path, fs::copy_option::overwrite_if_exists);
+    fs::copy_file(fromPath, to2Path, fs::copy_options::overwrite_existing);
     fs::rename(to2Path, toPath);
     ok = true;
   }catch (const fs::filesystem_error &e)
@@ -521,7 +521,7 @@ OS::moveFile(const std::string& from, const std::string& to, bool quiet)
     try {
       const std::string to2 = to + "_TMP";
       const fs::path to2Path(to2);
-      fs::copy_file(fromPath, to2Path, fs::copy_option::overwrite_if_exists);
+      fs::copy_file(fromPath, to2Path, fs::copy_options::overwrite_existing);
       fs::rename(to2Path, toPath);
       fs::remove(fromPath); // remove original file
       ok = true;

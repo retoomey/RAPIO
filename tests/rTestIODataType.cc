@@ -6,6 +6,7 @@
 #include "rIOJSON.h"
 #include "rFactory.h"
 #include <iostream>
+#include <fstream> // g++ 13/14
 
 using namespace rapio;
 
