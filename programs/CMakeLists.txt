@@ -30,3 +30,4 @@ install(TARGETS rtile
 
 add_subdirectory(util)
 add_subdirectory(fusion)
+add_subdirectory(nse)
