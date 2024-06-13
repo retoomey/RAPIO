@@ -77,7 +77,7 @@ public:
    *
    * */
   inline bool
-  getValueAtAzRangeL(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
+  getValueAtAzRange(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
   {
     gateNo   = -1;
     radialNo = -1;
@@ -117,9 +117,9 @@ public:
     return validRadial;
   } // getRadialGate
 
-  /** Experimental linear gate value fetcher */
+  /** Experimental linear gate value fetcher (This dampens even with just 3 gates) */
   inline bool
-  getValueAtAzRange(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
+  getValueAtAzRangeL(const double& azDegs, const double& rangeKMs, double& out, int& radialNo, int&  gateNo)
   {
     gateNo   = -1;
     radialNo = -1;

@@ -222,12 +222,13 @@ FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, si
         // Max logic code
         // Use weight as a 'hit' marker and just keep the max value
         //
-        auto& hit  = wa[atY][atX];
-        auto& vref = gridtest[atY][atX];
-        if (hit) { // if already have a value, replace with max...
-          vref = (v.v > vref) ? v.v : vref;
-        } else { // ..otherwise use the first one
-          vref = v.v;
+        auto& hit     = wa[atY][atX];
+        auto& vref    = gridtest[atY][atX];
+        const auto rv = v.v / v.w; // Resolve value/weight to true value
+        if (hit > 0) {             // if already have a value, replace with max...
+          vref = (rv > vref) ? rv : vref;
+        } else { // ..otherwise use the first one (to avoid caring about background 0)
+          vref = rv;
         }
         hit = 1;
         /// --------------------------------------------
