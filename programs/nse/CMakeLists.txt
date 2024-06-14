@@ -8,6 +8,7 @@ include_directories(. ${RAPIO_INCLUDE_DIRS})
 # Shared code
 add_library(nseshared STATIC 
   nsePoint.cc
+  nseProfile.cc
 )
 
 ##################################################################
