@@ -3,6 +3,8 @@
 #include "rUtility.h"
 #include "rData.h"
 #include "rIO.h"
+#include "rURL.h"
+#include "rTime.h"
 
 #include <string>
 #include <vector>
@@ -12,10 +14,44 @@ extern "C" {
 }
 
 namespace rapio {
+
+/** Simple holder for field information from an idx file */
+class GribIDXField: public Data {
+public:
+   size_t myFieldNumber;   ///< Field number
+   size_t myOffset;        ///< Offset in the grib data
+   //Time myTime;          ///< Time unimplemented due to multiple IDX formats (for now)
+   std::string myDateString;      ///< Date string such as d=YYYYMMDDHH 
+   std::string myProduct;  ///< Product name
+   std::string myLevel;    ///< Level name
+   std::string myType;     ///< Type name such as anl
+
+   /** Print the field */
+   void print(const size_t messageNumber, bool printFieldNumber);
+};
+
+/** Simple holder for a message from an idx file.
+ * Note, for lookup we want fields grouped, for example
+ * the idx file can have 100.1 100.2 for multiple fields
+ * of message 100 */
+class GribIDXMessage: public Data {
+public:
+   /** Create a grib IDX message.  Since we'll vector this I'm
+    * not sure we 'need' to store the message number.  We'll keep
+    * it for now, but for memory could maybe remove this */
+   GribIDXMessage(size_t m):myMessageNumber(m){}
+
+   size_t myMessageNumber; ///< Message number
+
+   std::vector<GribIDXField> myFields; ///< Fields for thie message
+
+   /** Print the message fields */
+   void print();
+};
+
 /** A simple lookup from number to string.
  * Using a vector which actually tends to be quicker than map in practice.
  * This is a two column table sorted as vectors.
- * FIXME: this should go somewhere or become generic
  *
  * @author Robert Toomey */
 class NumberToStringLookup : public Data
@@ -32,23 +68,8 @@ public:
   add(int v, const std::string& s);
 
   /** Simple get */
-  std::string
-  get(int v);
+  std::string get(int v);
 
-  /** Print it out to see */
-  #if 0
-  // I'm so lazy, make it operator<<
-  void
-  dump()
-  {
-    size_t s = myValues.size();
-
-    for (size_t i = 0; i < s; ++i) {
-      std::cout << myValues[i] << " == " << myStrings[i] << "\n";
-    }
-  }
-
-  #endif // if 0
 };
 
 class GribLookup : public IO
@@ -82,6 +103,28 @@ public:
  */
 class GribDatabase : public Utility {
 public:
+  /** a quick dirty wgrib2 gribtab.dat reader to make a lookup database.
+   * Usually we look up by name and level and strings are easier for
+   * the user. 
+   */
+  static void
+  readGribDatabase();
+
+  /** Called by GribField.  Return a wgrib2 style product name generated from table */
+  static std::string
+  getProductName(gribfield * gfld);
+
+  /** Called by GribField.  Return a wgrib2 style level name generated from table */
+  static std::string
+  getLevelName(gribfield * gfld);
+
+  /** Read a line of a idx file, returning field info and the read message number */
+  static bool parseIDXLine(const std::string& line, GribIDXField& idx, size_t& messageNumber);
+
+  /** Read a grib2 idx file into a GribIDXMessage ordered vector */
+  static bool readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages);
+
+private:
 
   // --------------------------------------------
   // Some internal tables similar to wgrib2
@@ -110,32 +153,5 @@ public:
   huntDatabase(int d, int m, int c, int l, int pc, int pn,
     const std::string& k, const std::string& des);
 
-  /** a quick dirty wgrib2 gribtab.dat reader to make a lookup database.
-   * Usually we look up by name and level and strings are easier for
-   * the user.  Grib2 really should have just used a *@#*%) string in
-   * it's original design.
-   * We'll convert the format at some point to csv probably
-   */
-  static void
-  readGribDatabase();
-
-  /** Return a wgrib2 style product name generated from table */
-  static std::string
-  getProductName(gribfield * gfld);
-
-  /** Return a wgrib2 style level name generated from table */
-  static std::string
-  getLevelName(gribfield * gfld);
-
-  /** Match a field to given product and level */
-  static bool
-  match(gribfield * gfld, const std::string& productName,
-    const std::string& levelName);
-
-  /** Do a full convert to name, level etc.
-   * FIXME: Matching might be quicker if we break back on name immediately */
-  static void
-  toCatalog(gribfield * gfld,
-    std::string& productName, std::string& levelName);
 };
 }

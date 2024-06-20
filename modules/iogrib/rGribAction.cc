@@ -17,7 +17,12 @@ GribCatalog::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
   if (f != nullptr) {
     std::string productName = f->getProductName();
     std::string levelName   = f->getLevelName();
-    std::cout << m.getMessageNumber() << ":" << m.getFileOffset() << ":"
+    const size_t num = m.getNumberFields();
+    std::cout << m.getMessageNumber();
+    if (num > 1) {
+      std::cout << "." << fieldNumber;
+    }
+    std::cout << ":" << m.getFileOffset() << ":"
               << "d=" << m.getDateString() << ":" << productName << ":" << levelName << "\n";
   }
   return true; // Keep going, do all messages

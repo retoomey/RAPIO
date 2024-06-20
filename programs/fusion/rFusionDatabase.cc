@@ -360,6 +360,11 @@ FusionDatabase::mergeObservations(std::shared_ptr<SourceList> oldSourcePtr,
 void
 FusionDatabase::dumpSources()
 {
+  // Don't calculate, etc. if not debug logging
+  if (!wouldLogDebug()) {
+    return;
+  }
+
   size_t counter     = 0;
   size_t mcounter    = 0;
   size_t sizeCounter = 0;
@@ -403,9 +408,9 @@ FusionDatabase::dumpSources()
   vm   *= 1024;
   rssm *= 1024; // need bytes for memory print
 
-  LogInfo("Total: " << counter << " v. " << mcounter << " m. (" << counter + mcounter <<
+  LogDebug("Total: " << counter << " v. " << mcounter << " m. (" << counter + mcounter <<
     ") ~RAM: " << Strings::formatBytes(sizeCounter) << " " << Strings::formatBytes(rssm)
-                    << " , VWaste: " << Strings::formatBytes(obsDelta) << "\n");
+                     << " , VWaste: " << Strings::formatBytes(obsDelta) << "\n");
   // Not sure how to guess this in new way yet
   //  LogInfo("X,Y,Z Coverage: " << myXYZs.getPercentFull() << "%\n");
 } // FusionDatabase::dumpSources

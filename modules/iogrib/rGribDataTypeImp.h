@@ -7,6 +7,7 @@
 #include <rIOGrib.h>
 #include <rGribDataType.h>
 #include <rOS.h>
+#include "rGribDatabase.h"
 
 #include <rGribAction.h>
 
@@ -19,23 +20,8 @@ namespace rapio {
  * @author Robert Toomey */
 class GribDataTypeImp : public GribDataType {
 public:
-  GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) : myURL(url), myBuf(buf), myMode(mode)
-  {
-    myDataType = "GribData";
-
-    // Figure out the index name of the ".idx" file
-    std::string root;
-    std::string ext = OS::getRootFileExtension(myURL.toString(), root);
-
-    myIndexURL = URL(root + ".idx");
-
-    // Hack to snag first time.
-    // Gonna force message mode here for the time snag
-    // Note this means direct URL reading breaks. Need field cleanup
-    GribScanFirstMessage scan(this);
-
-    IOGrib::scanGribDataFILE(myURL, &scan);
-  }
+  /** Construct a grib2 implementation */
+  GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode);
 
   /** Call the correct IOGrib scan technique for our mode, and apply the given strategy */
   void
@@ -75,5 +61,12 @@ private:
    * Note doing this in mode 1 can be a large amount of RAM
    * for large grib2 files. */
   std::vector<char> myBuf;
+
+  /** Do we have the IDX messages or do we use global catalog? */
+  bool myHaveIDX;
+
+  /** Index to IDX records for lookup if available.  Otherwise
+   * we fall back to the internal GribDatabase catalog */
+  std::vector<GribIDXMessage> myIDXMessages;
 };
 }

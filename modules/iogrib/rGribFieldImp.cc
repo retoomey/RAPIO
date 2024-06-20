@@ -78,6 +78,16 @@ GribFieldImp::getGridDefTemplateNumber()
   return 0;
 }
 
+size_t
+GribFieldImp::getSigOfRefTime()
+{
+  if (fieldLoaded()) {
+    auto& f = *myGribField;
+    return f.idsect[4];
+  }
+  return 0;
+}
+
 Time
 GribFieldImp::getTime()
 {
@@ -101,11 +111,8 @@ GribFieldImp::printCatalog()
 {
   // Experimenting with printing field directly...
   if (fieldLoaded()) {
-    std::string productName;
-    std::string levelName;
-    GribDatabase::toCatalog(myGribField, productName, levelName);
-    //  std::cout << m.getMessageNumber() << ":" << m.getFileOffset() << ":"
-    //            << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
+    std::string productName = getProductName();
+    std::string levelName = getLevelName();
     std::cout << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
   }
 }

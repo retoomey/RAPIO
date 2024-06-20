@@ -138,7 +138,7 @@ public:
   }
 
   /** Lock for critical log settings/printing */
-  static std::mutex logLock;
+  static std::recursive_mutex logLock;
 
   /** Current log group severity mode */
   // static Log::Severity mode;
@@ -181,6 +181,10 @@ public:
   /** Set the log severity level */
   static void
   setSeverity(Log::Severity severity);
+
+  /** Would we log at current settings? */
+  static bool
+  wouldLog(Log::Severity mode){ return ((mode >= Log::myCurrentLevel) && !Log::isPaused()); }
 
   /** Set the log severity level from a string which can be a level or a URL */
   static void
@@ -305,6 +309,12 @@ operator << (rapio::LogCall1& l, const T& x)
   return l;
 }
 }
+
+/** Would this log at this level?  Useful for turning off calculations,
+ * etc. that only output at a given log level */
+#define wouldLogDebug()  rapio::Log::wouldLog(rapio::Log::Severity::DEBUG)
+#define wouldLogInfo()   rapio::Log::wouldLog(rapio::Log::Severity::INFO)
+#define wouldLogSevere() rapio::Log::wouldLog(rapio::Log::Severity::SEVERE)
 
 #define LogDebug(x) \
   { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, \

@@ -33,6 +33,10 @@ public:
   virtual long
   getDisciplineNumber() = 0;
 
+  /** Get the Significance of Reference Time (see Code Table 1.2) 'gfld->idsect[4]' */
+  virtual size_t
+  getSigOfRefTime() = 0;
+
   /** Get the time stored in this field. (usually just matches message time) 'glfd->idsect[5-10]' */
   virtual Time
   getTime() = 0;

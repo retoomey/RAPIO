@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sys/timeb.h>
 #include <sys/times.h> // struct tms
+#include <iomanip>
 
 #include <sys/time.h> // gettimeofday
 #include <rError.h>
@@ -322,14 +323,25 @@ Time::putString(const std::string& value,
         LogSevere("Failed to convert ms from string '" << millistr << "' to number\n");
       }
       if (ms < 0) { ms = 0; }
-      if (ms > 1000) { ms = 999; }
+      if (ms > 999) { ms = 999; }
     }
   }
 
   // Try to convert everything else
-  tm a;
+  std::tm a = { }; // Make sure fields are zero
+  std::istringstream ss(usevalue);
 
-  strptime(usevalue.c_str(), useformat.c_str(), &a);
+  ss >> std::get_time(&a, useformat.c_str());
+  if (ss.fail()) {
+    return false;
+  } else {
+    // Check for unmatched characters in stream...
+    char c;
+    if (ss >> c) {
+      return false;
+    }
+  }
+
   a.tm_isdst = -1;
   time_t retval = timegm(&a);
 
@@ -341,7 +353,9 @@ Time::putString(const std::string& value,
 
 Time::Time(const std::string& value, const std::string& format)
 {
-  if (putString(value, format)) { } else {
-    LogSevere("Failure matching time string format, time is NOW " << value << " (mismatch) " << format << "\n");
+  if (!putString(value, format)) {
+    std::stringstream ss;
+    ss << "Failure on time string format '" << format << "' for string '" << value << "'";
+    throw std::runtime_error(ss.str());
   }
 }

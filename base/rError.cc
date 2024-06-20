@@ -40,7 +40,7 @@ std::vector<std::string> Log::fillers;
 
 Log::Severity Log::myCurrentLevel = Log::Severity::INFO;
 
-std::mutex Log::logLock;
+std::recursive_mutex Log::logLock;
 
 int Log::myPausedLevel = 0;
 int Log::engine        = 0; // cout
@@ -222,7 +222,10 @@ LogCall1::dump()
   if (!goodlog) { return; }
 
   // RAII lock the guard for this log line
-  const std::lock_guard<std::mutex> lock(Log::logLock);
+  // We need a recursive so that if we call log during ouur logging we
+  // don't deadlock
+  // const std::lock_guard<std::mutex> lock(Log::logLock);
+  const std::lock_guard<std::recursive_mutex> lock(Log::logLock);
 
   // Using BOOST logging setup
   // which could do things like log rotation, etc. at some point
@@ -271,7 +274,7 @@ void
 Log::flush()
 {
   // RAII lock the guard for this log event
-  const std::lock_guard<std::mutex> lock(Log::logLock);
+  const std::lock_guard<std::recursive_mutex> lock(Log::logLock);
 
   // Engine might change..so flush all of them
   instance()->mySink->locked_backend()->flush();

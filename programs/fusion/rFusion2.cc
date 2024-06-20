@@ -224,9 +224,6 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     size_t total = 0;
     db.ingestNewData(data, cutoff, missingcounter, points, total);
 
-    // Dump source list
-    db.dumpSources();
-
     LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
       "\n");
 
@@ -252,6 +249,10 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
       ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << " (" << myDirty <<
         " ingested since last)\n");
     mergeAndWriteOutput(n, p);
+
+    // Dump source list
+    myDatabase->dumpSources();
+
     myDirty = 0;
   }
 }
