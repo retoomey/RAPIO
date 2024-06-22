@@ -9,67 +9,13 @@ using namespace rapio;
 bool
 GribCatalog::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
-  // For now at least return a true grib2 file pointer
-  // I could see wrapping this later, also action might handle N fields instead
-  auto& m = *mp;
-  auto f  = m.getField(fieldNumber);
-
-  if (f != nullptr) {
-    std::string productName = f->getProductName();
-    std::string levelName   = f->getLevelName();
-    const size_t num = m.getNumberFields();
-    std::cout << m.getMessageNumber();
-    if (num > 1) {
-      std::cout << "." << fieldNumber;
-    }
-    std::cout << ":" << m.getFileOffset() << ":"
-              << "d=" << m.getDateString() << ":" << productName << ":" << levelName << "\n";
-  }
+  if (fieldNumber == 1){
+     std::cout << *mp;  // This will go ahead and print all fields
+  }else{
+    // We already printed all fields for this message...
+  } 
   return true; // Keep going, do all messages
 }
-
-#if 0
-GribMessageMatcher::GribMessageMatcher(g2int d, g2int c, g2int p) : myDisciplineNumber(d), myCategoryNumber(c),
-  myParameterNumber(p)
-{
-  myMode = 0;
-}
-
-bool
-GribMessageMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
-{
-  // OLD WAY, if you want this have to rewrite things/add methods to GribField
-  auto& m = *mp;
-  gribfield * gfld = m.readFieldInfo(fieldNumber);
-
-  if (gfld == nullptr) { return true; } // stop on failure
-
-  // Key1: Grib2 discipline is also in the header, but we can get it here
-  g2int disc = gfld->discipline;
-
-  if (disc != myDisciplineNumber) { g2_free(gfld); return false; }
-  // FIXME: is this always valid?
-
-  // Grib2 PRODUCT definition template number.  Tells you which Template 4.x defines
-  // the stuff in the ipdtmpl.  Technically we would have to check all of these to
-  // make sure the Product Category is the first number...
-  // int pdtn = gfld->ipdtnum;
-  // Key 2: Category  Section 4, Octet 10 (For all Templates 4.X)
-  g2int pcat = gfld->ipdtmpl[0];
-
-  if (pcat != myCategoryNumber) { g2_free(gfld); return false; }
-
-  // Key 3: Parameter Number.  Section 4, Octet 11
-  g2int pnum = gfld->ipdtmpl[1];
-
-  if (pnum != myParameterNumber) { g2_free(gfld); return false; }
-
-  // Grib2 Grid Definition Template (GDT) number.  This tells how the grid is projected...
-  // const g2int gdtn = gfld->igdtnum;
-  return true; // stop scanning
-}
-
-#endif // if 0
 
 GribMatcher::GribMatcher(const std::string& key,
   const std::string                       & levelstr) : myKey(key), myLevelStr(levelstr),

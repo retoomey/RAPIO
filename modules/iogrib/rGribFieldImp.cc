@@ -1,6 +1,7 @@
 #include "rGribFieldImp.h"
 #include "rGribDatabase.h"
 #include "rIOGrib.h"
+#include "rGribDataTypeImp.h"
 
 #include <rError.h>
 
@@ -15,7 +16,7 @@ GribFieldImp::~GribFieldImp()
 }
 
 bool
-GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
+GribFieldImp::needsToReload(bool unpacked, bool expanded) const
 {
   // We reload if null or if the unpacked/expanded increases
   // in level.
@@ -30,12 +31,25 @@ GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
       reload = true;
     }
   }
+  return reload;
+}
 
-  if (reload) {
+bool
+GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
+{
+  if (needsToReload(unpacked, expanded)){
     // Get rid of old one.
     if (myGribField != nullptr) {
       g2_free(myGribField);
       myGribField = nullptr;
+    }
+
+    // Load new one.  The myBufferPtr might need the GribDataTypeImp, but
+    // not 'always'.  For now, assume if GribDataTypeImp went out of scope
+    // that we cannot load.
+    if (myDataTypeValid.lock() == nullptr){
+      LogSevere("GribDataType is no longer valid.  Grib fields and Grib messages require it to exist.\n");
+      return false;
     }
     const g2int unpack = unpacked ? 1 : 0; // do/do not unpack
     const g2int expand = expanded ? 1 : 0; // do/do not expand the data?
@@ -106,22 +120,28 @@ GribFieldImp::getTime()
   return Time();
 }
 
-void
-GribFieldImp::printCatalog()
+std::ostream&
+GribFieldImp::print(std::ostream& os)
 {
-  // Experimenting with printing field directly...
   if (fieldLoaded()) {
     std::string productName = getProductName();
     std::string levelName = getLevelName();
-    std::cout << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
+    os << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
   }
+  return os;
 }
 
 std::string
 GribFieldImp::getProductName()
 {
   if (fieldLoaded()) {
-    return (GribDatabase::getProductName(myGribField));
+    std::string product;
+    auto data = myDataTypeValid.lock();
+    if (data && data->myDataType->getIDXProductName(myMessageNumber, myFieldNumber, product)){
+    }else{
+      product = GribDatabase::getLevelName(myGribField);
+    }
+    return product;
   } else {
     return "???";
   }
@@ -131,7 +151,13 @@ std::string
 GribFieldImp::getLevelName()
 {
   if (fieldLoaded()) {
-    return (GribDatabase::getLevelName(myGribField));
+    std::string level;
+    auto data = myDataTypeValid.lock();
+    if (data && data->myDataType->getIDXLevelName(myMessageNumber, myFieldNumber, level)){
+    }else{
+      level = GribDatabase::getLevelName(myGribField);
+    }
+    return level;
   } else {
     return "???";
   }

@@ -3,7 +3,7 @@
 using namespace rapio;
 
 Time
-GribMessage::getTime()
+GribMessage::getTime() const
 {
   Time theTime = Time(mySection1[5], // year
       mySection1[6],                 // month
@@ -18,7 +18,13 @@ GribMessage::getTime()
 }
 
 std::string
-GribMessage::getDateString(const std::string& pattern)
+GribMessage::getDateString(const std::string& pattern) const
 {
   return (getTime().getString(pattern));
+}
+
+std::ostream&
+rapio::operator << (std::ostream& os, GribMessage& p)
+{
+  return p.print(os);
 }

@@ -7,7 +7,9 @@
 
 using namespace rapio;
 
-GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) : myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false)
+GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) : 
+  //myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false),myValidPtr(std::make_shared<int>(0))
+  myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false),myValidPtr(std::make_shared<GribPointerHolder>(this))
 {
     myDataType = "GribData";
 
@@ -33,7 +35,7 @@ GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, i
     // Note this means direct URL reading breaks. Need field cleanup
     GribScanFirstMessage scan(this);
 
-    IOGrib::scanGribDataFILE(myURL, &scan);
+    IOGrib::scanGribDataFILE(myURL, &scan, this);
 }
 
 void
@@ -41,9 +43,9 @@ GribDataTypeImp::scanGribData(GribAction * a)
 {
   // Call the correct helper function for us
   if (myMode == 1) { // FULL read, use the prefilled in buffer
-    IOGrib::scanGribData(myBuf, a);
+    IOGrib::scanGribData(myBuf, a, this);
   } else { // default to by message
-    IOGrib::scanGribDataFILE(myURL, a);
+    IOGrib::scanGribDataFILE(myURL, a, this);
   }
 }
 
@@ -101,4 +103,48 @@ GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLe
     return IOGrib::get3DData(matchN.getMatchedMessages(), matchN.getMatchedFieldNumbers(), zLevels);
   }
   return nullptr;
+}
+
+bool
+GribDataTypeImp::getIDXField(size_t message, size_t field, GribIDXField& out)
+{
+  if (myIDXMessages.size() < 1){ return false; }
+
+  bool checkMatch = false;
+
+  // If we have enough messages...
+  if ((message > 0) && (message-1 < myIDXMessages.size())){
+    // Access the message...
+    auto& m = myIDXMessages[message-1];
+    //...and then the field number
+    if (m.myMessageNumber == message){ // FIXME: maybe we'll remove it
+      if (field <= m.myFields.size()){ // base 1
+	 out = m.myFields[field-1];
+         return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool 
+GribDataTypeImp::getIDXProductName(size_t message, size_t field, std::string& product)
+{
+  GribIDXField f;
+  if (getIDXField(message, field, f)){
+    product = f.myProduct;
+    return true;
+  }
+  return false;
+}
+
+bool 
+GribDataTypeImp::getIDXLevelName(size_t message, size_t field, std::string& level)
+{
+  GribIDXField f;
+  if (getIDXField(message, field, f)){
+    level = f.myLevel;
+    return true;
+  }
+  return false;
 }

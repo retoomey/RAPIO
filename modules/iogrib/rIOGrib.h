@@ -11,6 +11,7 @@ extern "C" {
 
 namespace rapio {
 class GribAction;
+class GribDataTypeImp;
 
 /**
  * The base class of all Grib/2/3/etc formatters.
@@ -35,11 +36,11 @@ public:
 
   /** Scan a grib2 file applying a function to each message */
   static bool
-  scanGribDataFILE(const URL& loc, GribAction * a);
+  scanGribDataFILE(const URL& loc, GribAction * a, GribDataTypeImp* o);
 
   /**Scan a grib2 memory buffer applying a function to each message */
   static bool
-  scanGribData(std::vector<char>& b, GribAction * a);
+  scanGribData(std::vector<char>& b, GribAction * a, GribDataTypeImp* o);
 
   // READING ------------------------------------------------------------
   //

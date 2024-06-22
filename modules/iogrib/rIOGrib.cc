@@ -187,7 +187,7 @@ processGribMessage(GribAction& a, size_t fileOffset, size_t messageCount, std::s
 }
 
 bool
-IOGrib::scanGribDataFILE(const URL& url, GribAction * ap)
+IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp* o)
 {
   // For now since this can be a long operation, notify whenever we call it
   LogInfo("Scanning grib2 using per field mode (RAM per message)...\n");
@@ -246,7 +246,7 @@ IOGrib::scanGribDataFILE(const URL& url, GribAction * ap)
           // field info.
           // Actions might want to hold onto us for future use, so use shared_ptr
           // Might be faster to use objects and 'moves' but easy to mess that up
-          auto m = std::make_shared<GribMessageImp>((size_t) lengrib);
+          auto m = std::make_shared<GribMessageImp>((size_t) lengrib, o->getValidityPtr());
 
           // Go ahead and read the entire record now
           if (!readAt(file, k, m->getBufferPtr(), lengrib)) { return false; }
@@ -276,7 +276,7 @@ IOGrib::scanGribDataFILE(const URL& url, GribAction * ap)
 } // IOGrib::scanGribDataFILE
 
 bool
-IOGrib::scanGribData(std::vector<char>& b, GribAction * ap)
+IOGrib::scanGribData(std::vector<char>& b, GribAction * ap, GribDataTypeImp* o)
 {
   // For now since this can be a long operation, notify whenever we call it
   LogInfo("Scanning grib2 using FULL buffer mode (RAM hogging)...\n");
@@ -310,7 +310,7 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * ap)
           // Get the message info
           messageCount++;
 
-          auto m = std::make_shared<GribMessageImp>(bu + k);
+          auto m = std::make_shared<GribMessageImp>(bu + k, o->getValidityPtr());
 
           // And then process the field, sending to strategy, if
           // we're not to continue, return true and we're done scanning

@@ -7,9 +7,10 @@
 #include <rIOGrib.h>
 #include <rGribDataType.h>
 #include <rOS.h>
-#include "rGribDatabase.h"
 
-#include <rGribAction.h>
+#include "rGribDatabase.h"
+#include "rGribPointerHolder.h"
+#include "rGribAction.h"
 
 #include <memory>
 
@@ -46,7 +47,22 @@ public:
   std::shared_ptr<Array<float, 3> >
   getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec);
 
+  /** Get our validity shared_ptr (only exists if we do)  This is passed to created messages/fields
+   * so they can weak reference it. */
+  std::shared_ptr<GribPointerHolder> getValidityPtr(){ return myValidPtr; }
+
+  // Access IDX if available
+  
+  /** Get product name of field and message number given from our IDX database */
+  bool getIDXProductName(size_t message, size_t field, std::string& product);
+
+  /** Get level name of field and message number given from our IDX database */
+  bool getIDXLevelName(size_t message, size_t field, std::string& level);
+
 private:
+
+  /** Get message/field of our IDX storage, if exists */
+  bool getIDXField(size_t message, size_t field, GribIDXField& out);
 
   /** Store the URL to the grib2 file locationif any */
   URL myURL;
@@ -68,5 +84,11 @@ private:
   /** Index to IDX records for lookup if available.  Otherwise
    * we fall back to the internal GribDatabase catalog */
   std::vector<GribIDXMessage> myIDXMessages;
+
+  /** A dummy std::shared ptr for all created messages and fields to
+   * weak reference (in case this DataType goes out of scope).
+   * We could possibly implement using shared_from_this(), but I can
+   * see possible cases where we just make the object non-shared. */
+  std::shared_ptr<GribPointerHolder> myValidPtr;
 };
 }

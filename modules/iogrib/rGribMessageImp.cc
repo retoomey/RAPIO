@@ -8,6 +8,8 @@ extern "C" {
 #include <grib2.h>
 }
 
+#include <iostream>
+
 using namespace rapio;
 
 bool
@@ -46,11 +48,28 @@ std::shared_ptr<GribField>
 GribMessageImp::getField(size_t fieldNumber)
 {
   if (fieldNumber <= myNumberFields) { // fields at 1 based
-    auto newField = std::make_shared<GribFieldImp>(myBufferPtr, myMessageNumber, fieldNumber);
+    auto newField = std::make_shared<GribFieldImp>(myBufferPtr, myMessageNumber, fieldNumber, myDataTypeValid);
     return newField;
   } else {
     LogSevere("Requesting Grib field " << fieldNumber
                                        << ", but we only have " << myNumberFields << " fields.\n");
   }
   return nullptr;
+}
+
+std::ostream&
+GribMessageImp::print(std::ostream& os)
+{
+    for(size_t fieldNumber=1; fieldNumber<=myNumberFields; ++fieldNumber) {
+      GribFieldImp theField(myBufferPtr, myMessageNumber, fieldNumber, myDataTypeValid);
+      // Message 'header'
+      os << myMessageNumber;
+      if (myNumberFields > 1) {
+        os << "." << fieldNumber;
+      }
+      os << ":" << getFileOffset() << ":";
+      // Now the field
+      theField.print(os);
+    }
+    return os;
 }

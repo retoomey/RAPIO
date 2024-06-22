@@ -2,6 +2,7 @@
 
 #include <rTime.h>
 #include <rGribDataType.h>
+#include "rGribPointerHolder.h"
 
 #include <vector>
 
@@ -10,14 +11,15 @@ extern "C" {
 }
 
 namespace rapio {
+class GribMessageImp;
 /** Field representation.  A wrapper for the gribfield.
  * Some fields overlap with GribMessage, I'm not sure if this is different data or if the
  * grib library is just copying the info from the message.  */
 class GribFieldImp : public GribField {
 public:
   /** Create an empty field */
-  GribFieldImp(unsigned char * data, size_t messageNumber, size_t fieldNumber) : GribField(messageNumber, fieldNumber),
-    myBufferPtr(data), myGribField(nullptr), myUnpacked(false), myExpanded(false){ }
+  GribFieldImp(unsigned char * data, size_t messageNumber, size_t fieldNumber, std::weak_ptr<GribPointerHolder> valid) : GribField(messageNumber, fieldNumber),
+    myBufferPtr(data), myGribField(nullptr), myUnpacked(false), myExpanded(false), myDataTypeValid(valid){ }
 
   // Array methods (assuming grid data)
 
@@ -61,17 +63,20 @@ public:
   virtual std::string
   getLevelName() override;
 
-  // FIXME: operator << , etc. at some point
-  /** Print the catalog line for this field */
-  virtual void
-  printCatalog();
-
   /** Free our internal grib pointer if we have one */
   ~GribFieldImp();
 
+  /** Print this message and N fields.  Called by base operator << virtually */
+  virtual std::ostream& print(std::ostream& os) override;
+
 protected:
 
-  /** Load, reload or cache the field, return true if loaded and valid */
+  /** Does this field need to reload before using? */
+  bool
+  needsToReload(bool unpacked = false, bool expanded = false) const;
+
+  /** Load, reload or cache the field, return true if loaded and valid.
+   * This is lazy called and modifies, but we treat it as const */
   bool
   fieldLoaded(bool unpacked = false, bool expanded = false);
 
@@ -88,5 +93,8 @@ protected:
 
   /** Is our grib pointer expanded? (was g2_getfld called with expand?) */
   bool myExpanded;
+
+  /** Is my DataType still in scope, because we need it to be */
+  std::weak_ptr<GribPointerHolder> myDataTypeValid;
 };
 }
