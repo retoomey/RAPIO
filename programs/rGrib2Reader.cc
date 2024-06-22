@@ -12,7 +12,7 @@ using namespace rapio;
  * @author Robert Toomey; Travis Smith
  **/
 
-std::string ConfigModelInfoXML = "misc/modelRRFS.xml"; //default
+std::string ConfigModelInfoXML = ""; //default
 const std::string modelProjectionsXML = "misc/modelProjections.xml";
 
 bool myReadSettings = false;
@@ -45,7 +45,7 @@ Grib2ReaderAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription("Grib2Reader reads in GRIB2 files and writes out netcdf");
   o.setAuthors("Robert Toomey;Travis Smith");
-  o.optional("model", "RRFS", "which model? Valid models include:\n - RRFS\n - HRRR\n");
+  o.optional("model", "RAP13", "which model? Valid models include:\n - RRFS\n - HRRR\n");
  // - RAP13\n - RAP20\n - RUC20\n - RUC40\n - RUC60\n - GFS\n
 }
 
@@ -53,6 +53,8 @@ void
 Grib2ReaderAlg::processOptions(RAPIOOptions& o)
 { 
   ConfigModelInfoXML = "misc/model" + o.getString("model") + ".xml";
+  LogInfo("using " << ConfigModelInfoXML << "\n");
+  LogInfo("****************************PROCESSING OPTIONS**************\n");
 }
 
 void
@@ -161,13 +163,15 @@ Grib2ReaderAlg::whichFieldsToProcess()
       }
       
     } else {
-      std::cout << "no model info to process file found\n";
+      LogSevere(ConfigModelInfoXML << "does not exist. Exiting.\n");
+      exit(1);
     }
   }
   
   catch(const std::exception& e)
   {
     LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
+    exit(1);
   }
   
 }
