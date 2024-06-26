@@ -26,6 +26,13 @@ install(TARGETS rwatch
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+add_executable(rRemap
+  rRemap.cc
+)
+target_link_libraries(rRemap rapio)
+install(TARGETS rRemap
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 ##################################################################
 # MakeFakeRadarData 
 # FIXME: Not sure if we're keeping this. I'm experimenting with
