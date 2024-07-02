@@ -17,10 +17,11 @@ Remap::declareOptions(RAPIOOptions& o)
   // Mode choice of remap technique...
   // FIXME: For cressmen we 'might' want a N parameter for size of it.
   o.optional("mode", "nearest", "Convert mode for remapping, such as nearest neighbor.");
-  o.addSuboption("mode", "nearest", "Use nearest neighbor sampling.");
+  o.addSuboption("mode", "nearest", "Use nearest neighbor sampling (size is 1).");
   o.addSuboption("mode", "cressman", "Use cressman sampling.");
+  o.addSuboption("mode", "bilinear", "Use bilinear sampling.");
 
-  o.optional("size", "3", "Size of matrix.  For example, Cressman");
+  o.optional("size", "3", "Size of matrix if not nearest.  For example, Cressman and bilinear");
 }
 
 void
@@ -91,115 +92,49 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   // to projection and fusion marching.  Feel like this could be made an iterator
   const size_t numY = outg.getNumY();
   const size_t numX = outg.getNumX();
-  bool nearest      = (myMode == "nearest");
+
+  // ----------------------------------------------------------------
+  // Make the remapper wanted
+  //
+  std::shared_ptr<ArrayAlgorithm> Remap;
+
+  if (myMode == "nearest") {
+    Remap = std::make_shared<ArrayAlgorithm>(NearestNeighbor(llg->getFloat2D(), out->getFloat2D()));
+  } else if (myMode == "cressman") {
+    Remap = std::make_shared<ArrayAlgorithm>(Cressman(llg->getFloat2D(), out->getFloat2D()));
+  } else if (myMode == "bilinear") {
+    Remap = std::make_shared<ArrayAlgorithm>(Bilinear(llg->getFloat2D(), out->getFloat2D()));
+  } else {
+    LogSevere("Can't create remapper '" << myMode << "'\n");
+    exit(1);
+  }
+  LogInfo("Created Array Algorithm '" << myMode << "' to process LatLonGrid primary array\n");
+  auto& r = *Remap;
 
   // Pixel centering stuff
   AngleDegs startLat = outg.getNWLat() - (outg.getLatSpacing() / 2.0); // move south (lat decreasing)
   AngleDegs startLon = outg.getNWLon() + (outg.getLonSpacing() / 2.0); // move east (lon increasing)
   AngleDegs atLat    = startLat;
 
-  size_t counter  = 0;
-  const int N     = mySize; // Cressman cell size
-  const int halfN = N / 2;
+  size_t counter = 0;
 
-  LogInfo("Using matrix size of " << N << " by " << N << "\n");
+  // FIXME: Could we do different directions?  N by N2?  Why not?
+  LogInfo("Using matrix size of " << mySize << " by " << mySize << "\n");
+
+  // Cell hits yof and xof
+  // Note the cell is allowed to be fractional and out of range,
+  // since we're doing a matrix 'some' cells might be in the range
 
   for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
+    const float yof = (orgNWLatDegs - atLat) / orgLatSpacingDegs;
+
     AngleDegs atLon = startLon;
     for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing()) {
-      // Calculation of the X/Y index into the source LatLonGrid.
-      // Note this if a float since int values are the true cell,
-      // while the float is a 'delta' used by say cressman
-      // Duplicates with the rDataProjection math.
-      // FIXME: yo > orgNumLats should be yo > orgNumLats-1 I think
-      const float yo = (orgNWLatDegs - atLat) / orgLatSpacingDegs;
-      if ((yo < 0) || (yo >= orgNumLats)) { // not valid
-        continue;                           // FIXME: Write unavailable?
-        // Constants::DataUnavailable;
+      const float xof = (atLon - orgNWLonDegs ) / orgLonSpacingDegs;
+      if (!r.remap(yof, xof, y, x)) {
+        continue;
       }
-      const float xo = (atLon - orgNWLonDegs ) / orgLonSpacingDegs;
-      if ((xo < 0) || (xo >= orgNumLons)) {
-        continue; // FIXME: Write unavailable?
-        // Constants::DataUnavailable;
-      }
-
-      // In the loop for now though inefficient
-      if (nearest) {
-        // ---------------------------------------------------------
-        //  Nearest neighbor...
-        //
-
-        // For nearest, just round down the values. Though
-        // technically we would round up as well at .5.  We'll
-        // play with this
-        // Also this will pass on mask values such as Missing
-        refOut[y][x] = refIn[yo][xo]; // roundx xo,yo
-        counter++;
-      } else {
-        // ---------------------------------------------------------
-        // Cressman experiment...
-        // FIXME: clean up and put into API
-        //
-
-        // Sum up all the weights for each sample
-        float tot_wt      = 0;
-        float tot_val     = 0;
-        float currentMask = Constants::DataUnavailable;
-        int n = 0;
-
-        for (int i = -halfN; i <= halfN; ++i) {
-          const int yat = static_cast<int>(yo) + i;
-
-          // If the lat is invalid, all the lons in the row will be invalid
-          if (!((yat < 0) || (yat >= orgNumLats))) {
-            // For the change in lon row...
-            for (int j = -halfN; j <= halfN; ++j) {
-              int xat = static_cast<int>(xo) + j;
-
-              // ...if lon valid, check if a good value
-              if (!((xat < 0) || (xat >= orgNumLons))) {
-                float& val = refIn[yat][xat];
-
-                // ...if the data value good, add weight to total...
-                if (Constants::isGood(val)) {
-                  const float lonDist = (xo - xat) * (xo - xat);
-                  const float latDist = (yo - yat) * (yo - yat);
-                  const float dist    = std::sqrt(latDist + lonDist);
-
-                  counter++;
-                  // If the distance is extremely small, use the cell exact value to avoid division by zero
-                  // This also passes on mask when close to a true cell location
-                  if (dist < std::numeric_limits<float>::epsilon()) {
-                    refOut[y][x] = val;
-                    goto getout;
-                  }
-
-                  float wt = 1.0 / dist;
-                  tot_wt  += wt;
-                  tot_val += wt * val;
-                  ++n;
-                } else {
-                  // If any value in our matrix sampling is missing, we'll use that as a mask
-                  // if there are no good values to interpolate.  Should work
-                  if (val == Constants::MissingData) {
-                    currentMask = Constants::MissingData;
-                  }
-                }
-              } // Valid lon
-            }   // End lon row
-          } // Valid lat
-        }   // End lat column
-
-        if (n > 0) {
-          refOut[y][x] = tot_val / tot_wt;
-        } else {
-          refOut[y][x] = currentMask;
-        }
-getout: ;
-
-        //
-        // ---------------------------------------------------------
-      }
+      counter++;
     } // endX
   }   // endY
 
