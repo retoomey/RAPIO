@@ -3,6 +3,7 @@
 #include <rUtility.h>
 #include <rEventTimer.h>
 #include <rRAPIOProgram.h>
+#include <rStrings.h>
 #include <future>
 #include <mutex>
 #include <queue>
@@ -71,10 +72,26 @@ public:
 
   /** Get the file */
   void
-  setFile(const std::string& f)
+  setFile(const std::string& f, std::string type = "text/plain")
   {
     file    = f;
-    message = "file"; // hack for moment, need http codes too
+    message = "file";
+
+    // Basic types we know of.
+    // FIXME: Probably need a table general lookup here
+    if (Strings::endsWith(file, ".png")) {
+      type = "image/png";
+    } else if (Strings::endsWith(file, ".html")) {
+      type = "text/html";
+    } else if (Strings::endsWith(file, ".css")) {
+      type = "text/css";
+    } else if (Strings::endsWith(file, ".js")) {
+      type = "application/javascript";
+    } else if (Strings::endsWith(file, ".wasm")) {
+      type = "application/wasm";
+    }
+
+    setMessage("file", type);
   }
 
   /** Is this a file message */

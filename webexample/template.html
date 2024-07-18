@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAPIO IMGUI attempt</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { 
+            margin: 0; 
+            background-color: black; 
+            display: flex; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden;
+        }
+#vbar {
+    width: 5px;
+    background: #ccc;
+    cursor: ew-resize;
+    z-index: 100;
+}
+
+        #leftDiv, #rightDiv {
+            width: 50%;
+            height: 100%;
+            position: relative;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .emscripten {
+	    position: absolute;
+	    top: 0;
+	    left: 0;
+	    width: 100%;
+	    height: 100%;
+            overflow: hidden;
+            display: block;
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -o-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            -ms-interpolation-mode: nearest-neighbor;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+    <div id="leftDiv">
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+    <div id="vbar"></div>
+    <div id="rightDiv">
+        <div id="map"></div>
+    </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <script type='text/javascript'>
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function() {
+                return function(text) {
+                    text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                };
+            })(),
+            printErr: function(text) {
+                text = Array.prototype.slice.call(arguments).join(' ');
+                console.error(text);
+            },
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                // canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                console.log("status3: " + text);
+            },
+            monitorRunDependencies: function(left) {
+                // no run dependencies to log
+            },
+            onRuntimeInitialized: function() {
+                console.log('lerp result: ' + Module.lerp(1, 2, 0.5));
+            }
+        };
+        window.onerror = function(event) {
+            console.log("onerror: " + event);
+        };
+    </script>
+    {{{ SCRIPT }}}
+
+    <script>
+
+const container = document.getElementById('container');
+const leftCanvas = document.getElementById('leftDiv');
+const rightCanvas = document.getElementById('rightDiv');
+const separator = document.getElementById('vbar');
+
+let isDragging = false;
+
+separator.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    document.body.style.cursor = 'ew-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const offsetX = e.clientX - containerRect.left;
+    const leftWidth = (offsetX / containerRect.width) * 100;
+    const rightWidth = 100 - leftWidth;
+
+    leftCanvas.style.width = `${leftWidth}%`;
+    rightCanvas.style.width = `${rightWidth}%`;
+
+    // Need to fire to reextent the windows properly
+    window.dispatchEvent(new Event('resize'));
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    document.body.style.cursor = 'default';
+});
+
+
+    </script>
+
+</body>
+</html>
+

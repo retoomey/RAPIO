@@ -77,6 +77,7 @@ Information needed:
     <file suffix="netcdf" io="netcdf"/>
     <file suffix="png" io="image"/>
     <file suffix="jpg" io="image"/>
+    <file suffix="mrmstile" io="image"/>
     <file suffix="xml" io="xml"/>
     <file suffix="json" io="json"/>
     <file suffix="raw" io="raw"/>

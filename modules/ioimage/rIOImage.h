@@ -64,6 +64,18 @@ public:
 
   // WRITING ------------------------------------------------------------
 
+  /** Write our raw mrms data tile (for the imgui) */
+  bool writeMRMSTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, 
+   size_t rows, size_t cols, double top, double left, 
+   double deltaLat, double deltaLon, bool transform,
+   const ColorMap& color);
+
+  /** Write a png, jpeg, etc. depending on filename suffix using Magick */
+  bool writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, 
+   size_t rows, size_t cols, double top, double left, 
+   double deltaLat, double deltaLon, bool transform,
+   const ColorMap& color);
+
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,

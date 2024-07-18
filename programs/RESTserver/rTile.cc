@@ -394,11 +394,11 @@ RAPIOTileAlg::handlePathData(WebMessage& w, std::vector<std::string>& pieces)
 }
 
 void
-RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout)
+RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings)
 {
   // Write tile to cache using all the settings
   if (!OS::isRegularFile(pathout)) {
-    writeDirectOutput(URL(pathout), myTileData, myOverride);
+    writeDirectOutput(URL(pathout), myTileData, settings);
   } else {
     // LogInfo("IN CACHE:" << pathout << "\n");
   }
@@ -406,7 +406,8 @@ RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout)
 }
 
 void
-RAPIOTileAlg::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces)
+RAPIOTileAlg::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
+  std::map<std::string, std::string>& settings)
 {
   // If our single file exists use it to make tiles
   if (myTileData == nullptr) {
@@ -414,12 +415,12 @@ RAPIOTileAlg::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces)
   }
 
   // CACHE SETTING (post handleOverrides to avoid any hack there)
-  std::string cache = myOverride["tilecachefolder"];
+  std::string cache = settings["tilecachefolder"];
   // Go through the bbox parameters, check length/type, etc.
   // Make sure they are numbers (harden URL for security)
   std::vector<std::string> bbox;
 
-  Strings::splitWithoutEnds(myOverride["BBOX"], ',', &bbox);
+  Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
   if (bbox.size() != 4) {
     LogSevere("Expected 4 parameters in BBOX for WMS server request, got " << bbox.size() << "\n");
     return;
@@ -434,19 +435,22 @@ RAPIOTileAlg::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces)
   }
   // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
   // We'll have to enhance this for time and multi product at some point
-  std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile.png";
+  std::string suffix  = settings["suffix"];
+  std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile."
+    + suffix;
 
-  LogInfo("WMS_BBOX:" << myOverride["BBOX"] << "\n");
-  myOverride["TILETEXT"] = "";
+  LogInfo("WMS_BBOX:" << settings["BBOX"] << "\n");
+  settings["TILETEXT"] = "";
 
   // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
   // This divides the world into equal spherical mercator squares.  We'll translate to bbox
   // for the writer
-  serveTile(w, pathout);
+  serveTile(w, pathout, settings);
 } // RAPIOTileAlg::handlePathWMS
 
 void
-RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces)
+RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
 {
   // If our single file exists use it to make tiles
   if (myTileData == nullptr) {
@@ -454,7 +458,7 @@ RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces)
   }
 
   // CACHE SETTING (post handleOverrides to avoid any hack there)
-  std::string cache = myOverride["tilecachefolder"];
+  std::string cache = settings["tilecachefolder"];
 
   // Verify the z/y/x and that it's integers
   if (pieces.size() < 4) {
@@ -479,8 +483,9 @@ RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces)
 
   // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
   // We'll have to enhance this for time and multi product at some point
+  std::string suffix  = settings["suffix"];
   std::string pathout = cache + "/tms/" + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y)
-    + ".png";
+    + "." + suffix;
 
   // Slippy tiles to bbox... https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
   const double lon1 = tilex2long(x, z); // Maybe it's backwards?
@@ -488,14 +493,14 @@ RAPIOTileAlg::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces)
   const double lon2 = tilex2long(x + 1, z);
   const double lat2 = tiley2lat(y + 1, z);
 
-  myOverride["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
+  settings["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
     + std::to_string(lat1);
-  myOverride["BBOXSR"]   = "4326"; // Lat/Lon
-  myOverride["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
+  settings["BBOXSR"]   = "4326"; // Lat/Lon
+  settings["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
 
-  LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << myOverride["BBOX"] << "\n");
+  LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << settings["BBOX"] << "\n");
 
-  serveTile(w, pathout);
+  serveTile(w, pathout, settings);
 } // RAPIOTileAlg::handlePathTMS
 
 void
@@ -507,7 +512,7 @@ RAPIOTileAlg::handlePathDefault(WebMessage& w)
   // jailbreak.
   // Note: We're running this behind a firewall as an alpha, lots of work
   // to do to harden this stuff if used in production
-  const std::string WEBROOT = "web/rtile/"; // could be passed in from command line
+  const std::string WEBROOT = "web"; // could be passed in from command line
 
   std::string path = WEBROOT + w.getPath();
 
@@ -533,7 +538,11 @@ RAPIOTileAlg::handlePathDefault(WebMessage& w)
   }
 
   // Find the file...
-  const URL loc = Config::getConfigFile(path);
+  // We want to actually get files from the installed web location,
+  // this is currently PREFIX/bin/web
+  // const URL loc = Config::getConfigFile(path);
+  static std::string root = OS::getProcessPath();
+  const URL loc = root + "/" + path;
 
   w.setFile(loc.toString()); // Web server handles the cases
 } // RAPIOTileAlg::handlePathDefault
@@ -553,30 +562,46 @@ RAPIOTileAlg::logWebMessage(const WebMessage& w)
 }
 
 void
-RAPIOTileAlg::handleOverrides(const std::map<std::string, std::string>& params)
+RAPIOTileAlg::handleOverrides(const std::map<std::string, std::string>& params,
+  std::map<std::string, std::string>                                  & settings)
 {
   // Filter web GET params into ours if needed, WMS/TMS can use
   // different strings.
   for (auto& a:params) {
-    myOverride[a.first] = a.second;
+    settings[a.first] = a.second;
 
     // Leaflet WMS fields to ours...
     if (a.first == "bbox") {
-      myOverride["BBOX"] = a.second;
+      settings["BBOX"] = a.second;
     } else if (a.first == "height") {
-      myOverride["rows"] = a.second;
+      settings["rows"] = a.second;
     } else if (a.first == "width") {
-      myOverride["cols"] = a.second;
+      settings["cols"] = a.second;
     } else if (a.first == "srs") {   // wms source
       if (a.second == "EPSG:4326") { // lat lon
-        myOverride["BBOXSR"] = "4326";
+        settings["BBOXSR"] = "4326";
       } else if (a.second == "EPSG:3857") {
-        myOverride["BBOXSR"] = "3857";
+        settings["BBOXSR"] = "3857";
       }
-    } // wms "format=image/jpeg" should probably handle it
-      // LogSevere("Field " << a.first << " == " << a.second << "\n");
+    }
+    // wms "format=image/jpeg" should probably handle it
+    else if (a.first == "format") {
+      LogSevere(">>>>SUFFIX " << a.second << "\n");
+      // Suffixes for our writer.  jpg, png, mrmstile
+      if (a.second == "image/jpeg") { // FIXME: add others or better translation
+        // Making it png so we have transparency.  Not sure why the wms/tms
+        // are passing image/jpeg by default
+        settings["suffix"] = "png";
+      } else {
+        settings["suffix"] = a.second;
+      }
+    }
+    // LogSevere("Field " << a.first << " == " << a.second << "\n");
   }
-}
+  if (settings["suffix"] == "") {
+    settings["suffix"] = "png";
+  }
+} // RAPIOTileAlg::handleOverrides
 
 void
 RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
@@ -584,18 +609,21 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
   LogInfo("Incoming web url of " << wsp->getPath() << "\n");
   auto& w = *wsp;
 
+  // Local settings for this call
+  std::map<std::string, std::string> settings = myOverride;
+
   // Extra debugging logging to a 'server' file
   const bool debuglog = false;
 
-  myOverride["debug"] = debuglog; // image write could use this for more info
+  settings["debug"] = debuglog; // image write could use this for more info
   if (debuglog) {
     logWebMessage(w);
   }
 
-  // GET current URL params into myOverrides
-  handleOverrides(w.getMap());
+  // GET current URL params into settings
+  handleOverrides(w.getMap(), settings);
 
-  // CACHE SETTING (post handleOverrides to avoid any hack there)
+  // CACHE SETTING (Global/not changable)
   std::string cache = myOverride["tilecachefolder"];
 
   // Break up the URL path first to delegate further
@@ -608,11 +636,23 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
     type = Strings::makeLower(pieces[0]);
   }
 
+  // Note: Was going to have 'format' control the type of tile
+  // generated.  However, browser caching on browsers gets very
+  // confused if two urls get different data back, even with
+  // get params it seems.  So we'll have a dedicated path for
+  // mrmstiles.
+
   // Handle path
   if (type == "wms") {
-    handlePathWMS(w, pieces);
+    handlePathWMS(w, pieces, settings);
+  } else if (type == "wmsdata") {
+    settings["suffix"] = "mrmstile";
+    handlePathWMS(w, pieces, settings);
   } else if (type == "tms") {
-    handlePathTMS(w, pieces);
+    handlePathTMS(w, pieces, settings);
+  } else if (type == "tmsdata") {
+    settings["suffix"] = "mrmstile";
+    handlePathTMS(w, pieces, settings);
     // These are more experimental alpha
   } else if (type == "ui") {
     handlePathUI(w, pieces);

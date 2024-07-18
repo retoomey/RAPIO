@@ -143,6 +143,12 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
           }
 
           if ((*ifs) && ifs->is_open()) {
+            // Add the headers
+            SimpleWeb::CaseInsensitiveMultimap header;
+            for (auto& a:web->getHeaderMap()) {
+              header.emplace(a.first, a.second);
+            }
+
             if (useMacros) {
               // Parse entire file and replace all macros
               std::stringstream stream;
@@ -151,12 +157,11 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
                 stream << Strings::replaceGroup(line, web->myMacroKeys, web->myMacroValues) << "\n";
               }
               // Final write
-              response->write(web->getErrorInternal(), stream);
+              response->write(web->getErrorInternal(), stream, header);
             } else {
               // Ok get the length of the file we're gonna send, let the client know
               auto length = ifs->tellg();
               ifs->seekg(0, ios::beg);
-              SimpleWeb::CaseInsensitiveMultimap header;
               header.emplace("Content-Length", to_string(length));
               response->write(header);
 

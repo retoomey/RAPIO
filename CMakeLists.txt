@@ -93,6 +93,17 @@ function(append_RAPIO_HEADER FOLDER)
 
 endfunction()
 
+#function(watch)
+#    set_property(
+#            DIRECTORY
+#            APPEND
+#            PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARGV}
+#    )
+#endfunction()
+
+# Force cmake rebuild if this file changes...
+#watch("webexample/main.cpp")
+
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
@@ -346,6 +357,30 @@ add_subdirectory(programs)
 # Tests are conditional.  We 'could' make a flag...here we just have to manual
 # go into directory and make.  Not sure what the cmake community does yet
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+
+# Webserver stuff are conditional for moment. This is my imgui/emscripten
+# experiment alpha
+# Since it uses a cross compiler (em++) we make it an external project
+# to avoid stomping on us.
+# Building this oracle 9.  I'm sure on other OS it will need a ton of work
+# Turn on if you love experiments.
+#
+option(BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
+if (BUILD_WEB_MODULE)
+  ExternalProject_Add(
+    rapioweb
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/webexample
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+    # Always build (so if we change the webexample/* it will catch it)
+    BUILD_ALWAYS 1
+  )
+
+  add_custom_target(buildweb
+    COMMAND "ls -l"
+    DEPENDS rapioweb
+  )
+  # Bad: add_subdirectory(webexample)
+endif (BUILD_WEB_MODULE)
 
 # Dump final notes
 get_property(FINAL_RAPIO_MESSAGE GLOBAL PROPERTY FINAL_RAPIO_MESSAGE)

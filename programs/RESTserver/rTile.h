@@ -34,11 +34,11 @@ protected:
 
   /** Process web GET params pairs and update params to image writer */
   void
-  handleOverrides(const std::map<std::string, std::string>& params);
+  handleOverrides(const std::map<std::string, std::string>& params, std::map<std::string, std::string>& settings);
 
   /** Serve a web tile image from a cache */
   void
-  serveTile(WebMessage& w, std::string& pathout);
+  serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings);
 
   /** Process a "/UI" message */
   void
@@ -46,11 +46,11 @@ protected:
 
   /** Process a "/WMS" message */
   void
-  handlePathWMS(WebMessage& w, std::vector<std::string>& pieces);
+  handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
   /** Process a "/TMS" message */
   void
-  handlePathTMS(WebMessage& w, std::vector<std::string>& pieces);
+  handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
   /** Process a "/DATA" message */
   void
@@ -60,7 +60,7 @@ protected:
   void
   handlePathDefault(WebMessage& w);
 
-  /** Override output params for image output */
+  /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
 
   /** Most recent data for creating tiles */

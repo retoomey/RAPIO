@@ -1,0 +1,33 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+}
+
+#leftCanvas {
+   background: green;
+}
+
+#separator {
+    width: 5px;
+    background: #ccc;
+    cursor: ew-resize;
+    z-index: 100;
+}
+

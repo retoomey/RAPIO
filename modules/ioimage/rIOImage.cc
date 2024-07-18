@@ -84,27 +84,136 @@ IOImage::createDataType(const std::string& params)
 }
 
 bool
-IOImage::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
-)
-{
-  // Setup magic
+IOImage::writeMRMSTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat, double deltaLon, bool transform, const ColorMap& color)
+{ 
+    std::vector<float> buffer(rows*cols);
+
+    size_t index = 0;
+    auto startLat = top;
+    for (size_t y = 0; y < rows; y++) {
+      auto startLon = left;
+      for (size_t x = 0; x < cols; x++) {
+
+	// Get the data value
+	float v;
+        if (transform) {
+          double aLat, aLon;
+          proj.xyToLatLon(startLon, startLat, aLat, aLon);
+          v = p.getValueAtLL(aLat, aLon);
+        } else {
+          v = p.getValueAtLL(startLat, startLon);
+        }
+
+	buffer[index++] = v;
+        startLon += deltaLon;
+      }
+      startLat += deltaLat;
+    } 
+
+    // Write the file...
+    std::ofstream file(filename, std::ios::binary);
+    if (!file) {
+        LogSevere("Failed to open file: " << filename << "\n");
+        return false;
+    }
+
+    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(float));
+
+    if (!file) {
+        LogSevere("Failed to write data to file: " << filename << "\n");
+        file.close();
+	return false;
+    }
+
+    file.close();
+
+    return true;
+}
+
+bool
+IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat, double deltaLon, bool transform, const ColorMap& color)
+{ 
+  // --------------------------------------
+  // Setup magic only if we need it
+  //
   static bool setup = false;
 
   if (!setup) {
     #if HAVE_MAGICK
     InitializeMagick(NULL);
     #else
-    LogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out\n");
+    LogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!\n");
     #endif
     setup = true;
   }
-  #if HAVE_MAGICK
-  #else
+#if HAVE_MAGICK
+  // --------------------------------------
+
+  // NOTE: JPEG doesn't support transparency,
+  // so if you're here to fix that give up.
+  //
+  Magick::Image i;
+  i.size(Magick::Geometry(cols, rows));
+  i.magick("RGBA");
+  i.opacity(false); // Our colormaps support alpha, so we want it
+  // image.quiet( false ); // Warning exceptions if wanted
+
+  i.modifyImage();
+
+  // Old school vslice/cappi, etc...where we hunt in the data space
+  // using the coordinate of the destination.
+  auto startLat = top;
+  unsigned char r, g, b, a;
+  Magick::PixelPacket * pixel = i.getPixels(0, 0, cols, rows);
+  for (size_t y = 0; y < rows; y++) {
+    auto startLon = left;
+    for (size_t x = 0; x < cols; x++) {
+
+      // Get the data value
+      if (transform) {
+        double aLat, aLon;
+        proj.xyToLatLon(startLon, startLat, aLat, aLon);
+        const double v = p.getValueAtLL(aLat, aLon);
+        color.getColor(v, r, g, b, a);
+      } else {
+        // Non transform for an equal angle based projection
+        const double v = p.getValueAtLL(startLat, startLon);
+        color.getColor(v, r, g, b, a);
+      }
+
+      // Convert to Magick pixel
+      Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
+      cc.alpha(1.0 - (a / 255.0));
+      *pixel = cc;
+      startLon += deltaLon;
+      pixel++;
+    }
+    startLat += deltaLat;
+  }
+  i.syncPixels();
+
+  // Debug draw text on tile
+  // Since we can do this in leaflet directly and easy, gonna deprecate
+  //if (box) {
+  //  std::list<Drawable> text;
+  //  text.push_back(DrawablePointSize(20));
+  //  text.push_back(DrawableStrokeColor("black"));
+  //  text.push_back(DrawableText(0, rows / 2, keys["TILETEXT"]));
+  //  i.draw(text);
+  // }
+
+  i.write(filename);
+  return true;
+#else
   return false;
+#endif
+}
 
-  #endif
-
+bool
+IOImage::encodeDataType(std::shared_ptr<DataType> dt,
+  std::map<std::string, std::string>              & keys
+)
+{
   // Get DataType Array info to LatLon projection
   DataType& dtr = *dt;
   auto project  = dtr.getProjection(); // primary layer
@@ -116,8 +225,9 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
   // ----------------------------------------------------------
   // Get the filename we should write to
+  std::string suffix = keys["suffix"];
   std::string filename;
-  if (!resolveFileName(keys, "png", "image-", filename)) {
+  if (!resolveFileName(keys, suffix, "image-", filename)) {
     return false;
   }
 
@@ -135,88 +245,33 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   double bottom = 0;
   double right  = 0;
   auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
+  const auto deltaLat = (bottom - top) / rows; // good
+  const auto deltaLon = (right - left) / cols;
+  const bool transform = (proj != nullptr);
 
-  bool transform = (proj != nullptr);
-
+  auto colormap         = dtr.getColorMap();
+  const ColorMap& color = *colormap;
   // ----------------------------------------------------------------------
   // Final rendering using the BBOX
-  bool box = keys["flags"] == "box";
+  //bool box = keys["flags"] == "box";
 
-  #if HAVE_MAGICK
   try{
-    auto colormap         = dtr.getColorMap();
-    const ColorMap& color = *colormap;
-    Magick::Image i;
-    i.size(Magick::Geometry(cols, rows));
-    i.magick("RGBA");
-    i.opacity(false); // Our colormaps support alpha, so we want it
-
-    // Determine if Warning exceptions are thrown.
-    // Use is optional.  Set to true to block Warning exceptions.
-    // image.quiet( false );
-
-    i.modifyImage();
-
-    // Old school vslice/cappi, etc...where we hunt in the data space
-    // using the coordinate of the destination.
-    auto startLat = top;
-    auto deltaLat = (bottom - top) / rows; // good
-    auto deltaLon = (right - left) / cols;
-    unsigned char r, g, b, a;
-    Magick::PixelPacket * pixel = i.getPixels(0, 0, cols, rows);
-    for (size_t y = 0; y < rows; y++) {
-      auto startLon = left;
-      for (size_t x = 0; x < cols; x++) {
-        if (transform) {
-          double aLat, aLon;
-          proj->xyToLatLon(startLon, startLat, aLat, aLon);
-          const double v = p.getValueAtLL(aLat, aLon);
-          color.getColor(v, r, g, b, a);
-        } else {
-          // Non transform for an equal angle based projection
-          const double v = p.getValueAtLL(startLat, startLon);
-          color.getColor(v, r, g, b, a);
-        }
-
-        // Box allows box around which is useful for debugging
-        if (box && ((x < 2) || (y < 2) || (x > cols - 2) || (y > rows - 2))) {
-          Magick::ColorRGB cc = Magick::ColorRGB(1.0, 0.0, 0.0);
-          cc.alpha(0.0);
-          *pixel = cc;
-        } else {
-          Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
-          cc.alpha(1.0 - (a / 255.0));
-          *pixel = cc;
-        }
-        startLon += deltaLon;
-        pixel++;
-      }
-      startLat += deltaLat;
-    }
-    i.syncPixels();
-
-    // Debug draw text on tile
-    if (box) {
-      std::list<Drawable> text;
-      text.push_back(DrawablePointSize(20));
-      text.push_back(DrawableStrokeColor("black"));
-      text.push_back(DrawableText(0, rows / 2, keys["TILETEXT"]));
-      i.draw(text);
-    }
-
-    i.write(filename);
-    successful = true;
-
-    // ----------------------------------------------------------
-    // Post processing such as extra compression, ldm, etc.
-    if (successful) {
-      successful = postWriteProcess(filename, keys);
-    }
+     std::string suffix = keys["suffix"];
+    // LogSevere("-->REQUESTED SUFFIX '"<<suffix<<"'\n");
+     if (suffix == "mrmstile"){
+       successful = writeMRMSTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
+     }else{
+       successful = writeMAGICKTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
+     }
+     // ----------------------------------------------------------
+     // Post processing such as extra compression, ldm, etc.
+     if (successful) {
+       successful = postWriteProcess(filename, keys);
+     }
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");
   }
 
-  #endif // if HAVE_MAGICK
   return successful;
 } // IOImage::encodeDataType
