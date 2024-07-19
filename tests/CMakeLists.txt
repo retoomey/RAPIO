@@ -15,6 +15,7 @@ add_executable(testrapio
   rTestArray.cc
   rTestBimap.cc
   rTestBitset.cc
+  rTestGrid.cc
   rTestIODataType.cc
   rTestMain.cc
   rTestSparseVector.cc

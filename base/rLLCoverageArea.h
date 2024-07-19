@@ -69,7 +69,7 @@ public:
    * 1 2 3
    * 4 5 6
    */
-  void
+  bool
   tile(const size_t x, const size_t y, std::vector<LLCoverageArea>& tiles) const;
 
   inline AngleDegs

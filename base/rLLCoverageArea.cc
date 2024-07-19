@@ -114,45 +114,59 @@ LLCoverageArea::insetRadarRange(
   return out;
 } // LLCoverageArea::insetRadarRange
 
-void
+bool
 LLCoverageArea::tile(
   const size_t x, const size_t y, std::vector<LLCoverageArea>& tiles
 ) const
 {
   if ((x < 1) || (y < 1)) {
     LogSevere("Refusing to sub tile since X=" << x << " Y=" << y << "\n");
-    return;
+    return false;
+  }
+
+  const float checkxBaseSize = numX / x;
+  const float checkyBaseSize = numY / y;
+
+  if ((checkxBaseSize < 1.0) || (checkyBaseSize < 1.0)) {
+    LogSevere("Refusing to sub tile since x or y is larger than x/y of origin grid: "
+      << numX << ", " << numY << " " << x << ", " << y << "\n");
+    return false;
   }
 
   // Divide to get the num of cells in each tile (round down)
   const size_t xBaseSize = numX / x;
   const size_t yBaseSize = numY / y;
 
-  if ((xBaseSize < 1) || (yBaseSize < 1)) {
-    LogSevere("Refusing to sub tile since x or y is larger than x/y of origin grid: "
-      << numX << ", " << numY << " " << x << ", " << y << "\n");
-    return;
-  }
-
   // 'Extra' if x/y doesn't evenly divide into the rows/cols.
   // For example: 700 width into 3 --> 700/3 = 233.33
-  // we would get 1 extra cell.  We add this to the first tile of each row/col
-  const size_t extraX = numX % x;
-  const size_t extraY = numY % y;
+  // We would possibly get many extra cells (round off * number of total).  We distribute over tiles.
+  // For example 700/150 => 4.66.  But 4*150 = 600, leaving us 100 extra cells to distribute.
+  // We then add 1 to the first 100 partitions to distribute them all.
+  // So we end up with 100 partitions of 5 and 50 of size 4 for a total of 150 partitions.
+  size_t extraX = numX % x;
+  size_t extraY = numY % y;
 
   size_t cellY = 0;
 
   for (size_t atY = 0; atY < y; ++atY) { // delta lat here north to south
-    // The cell size in the Y (lat) for this tile, add extra to the first if needed (round off)
-    const size_t cellYSize = yBaseSize + ((atY == 0) ? extraY : 0);
+    // The cell size in the Y (lat) for this tile, add extra if needed (round off)
+    size_t cellYSize = yBaseSize;
+    if (extraY > 0) { // Pad by 1 until run out of extra.
+      cellYSize += 1;
+      extraY--;
+    }
     // Move latitude degs
     const AngleDegs newNWLatDegs = nwLat - cellY * latSpacing; // moving down lat degrees per cell
     const AngleDegs newSELatDegs = newNWLatDegs - cellYSize * latSpacing;
 
     size_t cellX = 0;
     for (size_t atX = 0; atX < x; ++atX) { // delta lon east to west
-      // The cell size in the X (lon) for this tile, add extra to the first if needed (round off)
-      const size_t cellXSize       = xBaseSize + ((atX == 0) ? extraX : 0);
+      // The cell size in the X (lon) for this tile, add extra if needed (round off)
+      size_t cellXSize = xBaseSize;
+      if (extraX > 0) { // Pad by 1 until run out of extra.
+        cellXSize += 1;
+        extraX--;
+      }
       const AngleDegs newNWLonDegs = nwLon + cellX * lonSpacing;
       const AngleDegs newSELonDegs = newNWLonDegs + cellXSize * lonSpacing;
 
@@ -177,6 +191,7 @@ LLCoverageArea::tile(
     }
     cellY += cellYSize;
   }
+  return true;
 } // LLCoverageArea::tile
 
 void

@@ -68,7 +68,7 @@ public:
   }
 
   /** Partition a global grid using current dimensions */
-  void
+  bool
   partition(const LLCoverageArea& grid)
   {
     /** Our partition has all the information, except for the
@@ -77,7 +77,10 @@ public:
 
     // Break up the grid partitions, assuming 2 dimensions
     // This 'could' be 1x1 or the global as well for say 'none'
-    grid.tile(myDims[0], myDims[1], myPartitions);
+    if (!grid.tile(myDims[0], myDims[1], myPartitions)) {
+      return false;
+    }
+    ;
 
     // March row order, creating boundary markers in global grid
     // space for each partition.
@@ -87,20 +90,29 @@ public:
     size_t yBoundary = 0;
 
     for (size_t y = 0; y < myDims[1]; ++y) {
-      auto& g = myPartitions[at];
       for (size_t x = 0; x < myDims[0]; ++x) {
-        // Add global boundaries in the X direction
+        auto& g = myPartitions[at];
+
+        // Note we just need one 'size' of the cube in each
+        // direction, so use x=0, y=0
+
+        // For first X, add boundaries for each Y
         if (x == 0) {
+          // Add global boundaries in the Y direction
+          yBoundary += g.getNumY();
+          myPartBoundaryY.push_back(yBoundary);
+        }
+
+        // For first Y, add boundaries for each X
+        if (y == 0) {
           xBoundary += g.getNumX();
           myPartBoundaryX.push_back(xBoundary);
         }
+        at++;
       }
-      // Add global boundaries in the Y direction
-      yBoundary += g.getNumY();
-      myPartBoundaryY.push_back(yBoundary);
-      at++;
     }
-  }
+    return true;
+  } // partition
 
   /** Get index into partition list from 2D index partition dimensions */
   size_t
