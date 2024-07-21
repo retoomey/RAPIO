@@ -16,6 +16,7 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
@@ -27,10 +28,11 @@
 #include <SDL_opengl.h>
 #endif
 
-// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
-//#ifdef __EMSCRIPTEN__
-//#include "../libs/emscripten/emscripten_mainloop_stub.h"
-//#endif
+// Extra widgets
+// https://github.com/Flix01/imgui
+// has a bunchs of extra classes.  We're going to
+// have to make our own widgets at some point
+//#include "imguidatechooser.h"
 
 // I just added the header directly for us
 #ifdef __EMSCRIPTEN__
@@ -46,7 +48,87 @@ static void MainLoopForEmscripten()     { MainLoopForEmscriptenP(); }
 #define EMSCRIPTEN_MAINLOOP_END
 #endif
 
-// Example
+/** Store all of the application state in a single object.
+ * This wil be easier to pass around.  Also if we write
+ * to cookies or database to maintain will have in one place
+ * for easy load/unload.
+ */
+class myApplicationState {
+public:
+   /** Default settings to start up */
+   myApplicationState():
+     radioMapDataType(0), 
+     backgroundMapShow(true), backgroundMap(0), 
+     dataMap(0), showDebugTiles(true)
+   {};
+	   
+   int radioMapDataType;   //<<< Map data type choice radio
+   bool backgroundMapShow; //<<< Show the background map
+   int backgroundMap;      //<<< Chosen background map
+   int dataMap;            //<<< The displayed map URL
+   bool showDebugTiles;    //<<< Show the tile outline/debug info
+};
+
+/** Variables that leaflet sets */
+// Access JavaScript variables
+double get_lat() {
+    return EM_ASM_DOUBLE({
+        return Module.lat;
+    });
+}
+
+double get_dataValue() {
+    return EM_ASM_DOUBLE({
+        return Module.dataValue;
+    });
+}
+
+/** Get current lat/lon from the mouse over map */
+bool getLatLon(double& lat, double& lon)
+{
+  bool inside = EM_ASM_INT({
+     return Module.isMouseOverMap;
+  });
+
+  // Skip the other fields for speed if
+  // we don't need them
+  if (inside){
+    lat = EM_ASM_DOUBLE({
+      return Module.lat;
+    });
+    lon = EM_ASM_DOUBLE({
+      return Module.lon;
+    });
+  }
+  return inside;
+}
+
+/*
+// Function to get coordinates and tile information
+EM_JS(void, get_tile_info, (double* lon, double* lat, int* zoom, char* tileKey, int* pixelX, int* pixelY, bool* inside), {
+    setValue(lon, Module.lon, 'double');
+    setValue(lat, Module.lat, 'double');
+    setValue(zoom, Module.zoom, 'i32');
+    stringToUTF8(Module.tileKey, tileKey, 256); // Assumes tileKey buffer size is 256
+    setValue(pixelX, Module.pixelX, 'i32');
+    setValue(pixelY, Module.pixelY, 'i32');
+    setValue(inside, Module.isMouseOverMap, 'i8');
+});
+get_tile_info(&lon, &lat, &zoom, tileKey, &pixelX, &pixelY, &mouseOverMap);
+*/
+
+double get_lon() {
+    return EM_ASM_DOUBLE({
+        return Module.lon;
+    });
+}
+
+bool is_mouse_over_map() {
+    return EM_ASM_INT({
+        return Module.isMouseOverMap;
+    });
+}
+
 // Calling from javascript Module. to us.
 float lerp(float a, float b, float t) {
     return (1 - t) * a + t * b;
@@ -54,16 +136,108 @@ float lerp(float a, float b, float t) {
 
 EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("lerp", &lerp);
+  emscripten::class_<myApplicationState>("myApplicationState")
+        .constructor<>()
+        .property("radioMapDataType", &myApplicationState::radioMapDataType)
+        .property("backgroundMap", &myApplicationState::backgroundMap)
+        .property("showDebugTiles", &myApplicationState::showDebugTiles);
 }
 
-/** void initMap() 
+/** void initMap()
  * Create the basic map setup we use
  * https://leaflet-extras.github.io/leaflet-providers/preview/index.html
  *
+ * FIXME: I think 'eventually' we'll move a lot of the EM_JS
+ * into .js files and load them, probably cleaner than compiling each
+ * time.  I don't know enough yet.
  */
 EM_JS(void, initMap, (), {
    var map = L.map('map').setView([35.3333, -97.2777], 3);
+
    Module.map = map;
+   //Module.tileCache = new WeakMap();
+   Module.tileCache = {};
+   Module.lat = 0.0;
+   Module.lon = 0.0;
+   Module.zoom = 0;
+   Module.isMouseOverMap = false;
+
+   // Function to calculate tile information
+   function getTileInfo(latlng, zoom) {
+     // Convert lat/lng to pixel coordinates at the given zoom level
+     var point = map.project(latlng, zoom);
+     var tileSize = 256; // Default tile size in Leaflet
+
+     // Calculate the tile coordinates
+     var tileX = Math.floor(point.x / tileSize);
+     var tileY = Math.floor(point.y / tileSize);
+
+     // Calculate the pixel coordinates within the tile
+     var pixelX = Math.floor(point.x % tileSize);
+     var pixelY = Math.floor(point.y % tileSize);
+
+     return {
+       tileX: tileX,
+       tileY: tileY,
+       pixelX: pixelX,
+       pixelY: pixelY
+     };
+   }
+
+   // Attach move event listener (tracking map itself)
+   // Not using yet
+   map.on('move', function(event) {
+      console.log('Map moved:', event);
+      console.log('Current center:', map.getCenter());
+   });
+
+
+   // Mouse movement
+   map.on('mousemove', function(event) {
+     var zoom = map.getZoom();
+    // var tileInfo = getTileInfo(event.latlng, zoom);
+   //console.log('Mouse moved to:', event.latlng);
+   //console.log('Tile coordinates:', tileInfo.tileX, tileInfo.tileY);
+   //console.log('Pixel position within tile:', tileInfo.pixelX, tileInfo.pixelY);
+     var point = map.project(event.latlng, zoom);
+     var tileSize = 256; // Default tile size in Leaflet
+
+     // Calculate the tile coordinates
+     var tileX = Math.floor(point.x / tileSize);
+     var tileY = Math.floor(point.y / tileSize);
+
+     // Calculate the pixel coordinates within the tile
+     var pixelX = Math.floor(point.x % tileSize);
+     var pixelY = Math.floor(point.y % tileSize);
+
+     Module.lat = event.latlng.lat; // double
+     Module.lon = event.latlng.lng; // double
+     Module.zoom = zoom; // int
+     Module.isMouseOverMap = true;
+     Module.dataValue = 0.0; // First attempt at read out
+
+     // Looking for tile...see if it exists...
+     if (Module.map.myRAPIOLayer){
+        console.log("We have the layer!\n");
+	// Try to get the tile matching coordinates
+        var tileKey = `${zoom}_${tileX}_${tileY}`;
+	var cachedTile = Module.map.myRAPIOLayer.getTileFromCache(tileKey);
+	if (cachedTile){
+	   console.log("Tile found:", tileKey);
+	   // Ok attempt to get the value in the tile at location x,y
+           Module.dataValue = cachedTile.floatData[pixelY*256+pixelX]; // guessing
+	}else{
+	   //console.log("Tile NOT found:", tileKey);
+	}
+     }
+   });
+
+   // Mouse out of map
+   map.on('mouseout', function() {
+     Module.isMouseOverMap = false;
+     Module.dataValue = 0.0;
+   });
+
 });
 
 /** Set up the RAPIO map layer */
@@ -71,6 +245,17 @@ EM_JS(void, initRAPIOLayer, (), {
 
 /*  Create tile layer that uses our server and mrmsdata format */
 var RawDataTileLayer = L.TileLayer.extend({
+
+  initialize: function() {
+    // Call the parent class constructor
+    L.TileLayer.prototype.initialize.apply(this, arguments);
+
+    // Initialize the cache as a Map
+    this.tileCache = new Map();
+
+    // Set up event listeners
+    this.on('tileunload', this.handleTileUnload, this);
+  },
   createTile(coords, done) {
     const tile = document.createElement('canvas');
     tile.coords = coords;
@@ -104,7 +289,7 @@ var RawDataTileLayer = L.TileLayer.extend({
 	}
 	// Create a rawData view..
         //tile.rawData = new Uint8Array(buffer);
-	tile.floatData = new Float32Array(buffer);
+	var floatData = new Float32Array(buffer);
 
         // Get canvas data
         var ctx = tile.getContext('2d');
@@ -120,7 +305,7 @@ var RawDataTileLayer = L.TileLayer.extend({
 	//
 	var index = 0;
         for (var i = 0; i < data.length; i += 4) {
-	    if (tile.floatData[index] < -8000){
+	    if (floatData[index] < -8000){
               data[i] = 0;     // Red
               data[i + 1] = 0; // Green
               data[i + 2] = 0;   // Blue
@@ -136,6 +321,35 @@ var RawDataTileLayer = L.TileLayer.extend({
         // Put the modified image data onto the canvas
         ctx.putImageData(imageData, 0, 0);
 
+//	// Store the canvas in the WeakMap
+//        Module.tileCache.set(tile, {
+//            imageData: imageData
+//        });
+
+	// Generate a unique key for the tile
+	// Note changing data will require some work to
+	// clear cache, etc.
+        var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
+	console.log("New tile key: " +tileKey+"\n");
+
+        // Store the canvas in the cache
+	// Question..do we store in Module globally, or
+	// store in the layer?  Layer might be better,
+	// since if data file changes this cache should purge
+   //     Module.tileCache[tileKey] = {
+   //         canvas: tile,
+   //         imageData: imageData
+   //     };
+        // Store the canvas and image data in the Map
+        this.tileCache.set(tileKey, {
+            canvas: tile,
+            imageData: imageData,
+	    floatData: floatData
+        });
+
+//	console.log(Object.keys(Module.tileCache).length);
+        console.log("Cache size: "+this.getTileCacheSize()+"\n");
+
         done(null, tile);
       })
       .catch(error => { // Async fail read
@@ -143,10 +357,33 @@ var RawDataTileLayer = L.TileLayer.extend({
       });
 
     return tile;
+  },
+  // Method to get a tile from the cache if it exists
+  //getTileFromCache: function(coords) {
+  //    var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
+  //    return this.tileCache.get(tileKey);
+  //},
+  // Method to get a tile from the cache if it exists
+  getTileFromCache: function(tileKey) {
+      return this.tileCache.get(tileKey);
+  },
+  // Method to get the size of the tileCache
+  getTileCacheSize: function() {
+        return this.tileCache.size;
+  },
+  // Handle the tileunload event
+  handleTileUnload: function(event) {
+      var coords = event.coords;
+      var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
+
+      // Remove the tile from the cache
+      console.log("Deleting key "+tileKey+"\n");
+      this.tileCache.delete(tileKey);
   }
+
 });
 
-   //var RAPIOMap = new CustomTileLayer('http://localhost:8080/tms/{z}/{x}/{y}', {
+   // Data pull (Color map is client side)
    var RAPIOMap = new RawDataTileLayer('http://localhost:8080/tmsdata/{z}/{x}/{y}', {
        maxZoom: 18,
        attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
@@ -154,8 +391,18 @@ var RawDataTileLayer = L.TileLayer.extend({
        tileSize: 256,
        transparent: true
    });
-
    Module.map.myRAPIOLayer = RAPIOMap;
+
+   // Regular image pull (Color map is server side)
+   var RAPIOImageMap = new L.TileLayer('http://localhost:8080/tms/{z}/{x}/{y}', {
+       maxZoom: 18,
+       attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
+       id: 'data',
+       tileSize: 256,
+       transparent: true
+   });
+   Module.map.myRAPIOImageLayer = RAPIOImageMap;
+
 });
 
 /** Create debug tile layer.  This is better than us
@@ -196,20 +443,18 @@ EM_JS(void, initDebugLayer, (), {
 });
 
 // Define a JavaScript function to change the tile layer of the Leaflet map
-EM_JS(void, changeMapLayer, (int backgroundMap, bool showDebugTiles), {
+EM_JS(void, changeMapLayer, (bool backgroundMapShow, int backgroundMap, int dataMap, bool showDebugTiles), {
 
-    console.log(">>>changing layers!\n");
+    console.log(">>>changing layers! "+backgroundMapShow+"\n");
 
     // Remove all layers
     Module.map.eachLayer(function (layer) {
         Module.map.removeLayer(layer);
     });
 
+    if (backgroundMapShow == true){
     // Choose background map
     if (backgroundMap == 0){
-
-    /** FIXME: a map list would be good probably (pull from server and config) */
-    }else if (backgroundMap == 1){
 
       var Stadia_AlidadeSmoothDark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.{ext}', {
 	minZoom: 0,
@@ -232,9 +477,14 @@ EM_JS(void, changeMapLayer, (int backgroundMap, bool showDebugTiles), {
 
       Module.map.addLayer(newTileLayer);
     }
+    }
 
     // Map layer
-    Module.map.addLayer(Module.map.myRAPIOLayer);
+    if (dataMap == 0){
+      Module.map.addLayer(Module.map.myRAPIOImageLayer);
+    }else {
+      Module.map.addLayer(Module.map.myRAPIOLayer);
+    }
 
     // Debug layer
     if(showDebugTiles){
@@ -242,20 +492,44 @@ EM_JS(void, changeMapLayer, (int backgroundMap, bool showDebugTiles), {
     }
 });
 
+/*
+void ShowFontSelector(const char* label)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImFont* font_current = ImGui::GetFont();
+    if (ImGui::BeginCombo(label, font_current->GetDebugName()))
+    {
+        for (ImFont* font : io.Fonts->Fonts)
+        {
+            ImGui::PushID((void*)font);
+            if (ImGui::Selectable(font->GetDebugName(), font == font_current))
+                io.FontDefault = font;
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+}
+*/
+
 /** Show the list of background maps */
-void showMapListCombo(int& current_item, bool& showDebugTiles) {
-  static const char* items[] = { "None", "Stadia Black", "White" };
-  ImGui::Text("Background:");
+void showMapListCombo(myApplicationState& state) {
+  static const char* items[] = { "Stadia Black", "White" };
+  if (ImGui::Checkbox("Background:", &state.backgroundMapShow)){
+    changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
+  }
   ImGui::SameLine();
-  if (ImGui::BeginCombo("##maplistcombo", items[current_item])) 
+  if (ImGui::BeginCombo("##maplistcombo", items[state.backgroundMap])) 
   {
 	for (int n = 0; n < IM_ARRAYSIZE(items); n++)
         {
-            bool is_selected = (current_item == n);
+            bool is_selected = (state.backgroundMap == n);
             if (ImGui::Selectable(items[n], is_selected))
             {
-                current_item = n; // Update current item if selected
-                changeMapLayer(current_item, showDebugTiles);
+		state.backgroundMap = n;
+		state.backgroundMapShow = true;
+		// EM_JS needs hoops for class
+                changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
             }
 
             // Set the initial focus when opening the combo
@@ -374,18 +648,15 @@ void SetupImGuiStyle()
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.800000011920929f, 0.800000011920929f, 0.800000011920929f, 0.3499999940395355f);
 }
 
-// Demonstrate creating a window covering the entire screen/viewport
-static void ShowExampleAppFullscreen(bool* p_open, int& currentBackgroundItem, bool& showDebugTiles)
+static void ShowDesktop(bool* p_open, myApplicationState& state)
 {
-#if 0
     static bool use_work_area = true;
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
     ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
-#endif
-    static ImGuiWindowFlags flags;
+    //static ImGuiWindowFlags flags;
 
     // Needs to be static to not 'reset' after change
     static ImVec4 clear_color = ImVec4(0/255.0f, 88/255.0f, 128/255.0f, 1.00f);
@@ -394,19 +665,61 @@ static void ShowExampleAppFullscreen(bool* p_open, int& currentBackgroundItem, b
 
     if (ImGui::Begin("Main window", p_open, flags))
     {
-        ImGui::Text("Controls");
         //ImGui::ColorEdit3("A color", (float*)&clear_color); 
-       // if (ImGui::Button("Toggle map")){
-       //  toggle = !toggle;
-         //changeMapLayer(toggle);
-       // }
-        bool oldDebugTiles = showDebugTiles;
-        ImGui::Checkbox("Show Debug Tiles", &showDebugTiles);
-	if (oldDebugTiles != showDebugTiles){
-           changeMapLayer(currentBackgroundItem, showDebugTiles);
+        if (ImGui::Checkbox("Show Debug Tiles", &state.showDebugTiles)){
+           changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
 	}
-       // ImGui::SameLine();
-	showMapListCombo(currentBackgroundItem, showDebugTiles);
+	showMapListCombo(state);
+
+	// Radio choice
+	int old = state.dataMap;
+        ImGui::Text("Data mode:"); ImGui::SameLine();
+        ImGui::RadioButton("Image", &state.dataMap, 0); ImGui::SameLine();
+        ImGui::RadioButton("Data", &state.dataMap, 1);
+	if (old != state.dataMap){
+           changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
+	}
+
+	// FIXME: if works probably want one function right?
+	//double lon = get_lon();
+	//double lat = get_lat();
+        //bool mouseOver = is_mouse_over_map();
+
+	double lat, lon;
+        bool mouseOver = getLatLon(lat, lon);
+
+	if (mouseOver){
+	  ImGui::Text("Latitude: %.2f", lat);
+	  ImGui::Text("Longitude: %.2f", lon);
+	}else{
+	  ImGui::Text("Latitude:  -");
+	  ImGui::Text("Longitude: -");
+	}
+	// If this works, we're making progress...
+	ImGui::Text("Readout: %.2f", get_dataValue());
+
+	// ------------------------------------------------
+	// Convenient for now as we learn the basics
+	static bool show_demo_window = false;
+        ImGui::Checkbox("Demo Widgets", &show_demo_window);
+        if (show_demo_window){
+           ImGui::ShowDemoWindow(&show_demo_window);
+	}
+	// ------------------------------------------------
+
+        //ShowFontSelector("Fonts##Selector");
+	/*
+	 *
+    if (ImGui::IsItemHovered()) // still learning.  
+    {
+        if (radioValue == 0)
+        {
+            ImGui::SetTooltip("Select Option 1");
+        }
+    }
+    */
+
+	//ImGui::TestDateChooser();
 #if 0
         ImGui::Checkbox("Use work area instead of main area", &use_work_area);
         ImGui::SameLine();
@@ -432,8 +745,7 @@ int main(int, char**)
 {
     // State information (at the top, currently reset on page refresh)
     //
-    static int currentBackgroundItem = 1;
-    static bool showDebugTiles = true;
+    static myApplicationState state;
     static bool show = true; // full screen?
     
     // Javascript setup
@@ -441,8 +753,10 @@ int main(int, char**)
     initRAPIOLayer();
     initDebugLayer();
 
+    //TESTSTATE(&state);
+
     // Create RAPIO map layer
-    changeMapLayer(currentBackgroundItem, showDebugTiles);
+    changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
 
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
@@ -521,7 +835,7 @@ int main(int, char**)
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //io.Fonts->AddFontDefault();
+    io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
@@ -530,7 +844,7 @@ int main(int, char**)
     //IM_ASSERT(font != nullptr);
 
     // Our state
-    bool show_demo_window = true;
+    bool show_demo_window = false;
     bool show_another_window = false;
     //ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImVec4 clear_color = ImVec4(0/255.0f, 88/255.0f, 128/255.0f, 1.00f);
@@ -572,7 +886,13 @@ int main(int, char**)
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-            ImGui::ShowDemoWindow(&show_demo_window);
+	//if (ImGui::Button("Increase Font Size")) {
+	static bool first = true;
+	if (first){
+          ImGui::GetIO().FontGlobalScale += 1.0f;
+	  first = false;
+	}
+       // }
 
 #if 0
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -604,22 +924,22 @@ int main(int, char**)
             ImGui::End();
         }
 
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-		/*
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-	    */
-          
-    renderLeafletMap();
         }
 #endif
 
-        ShowExampleAppFullscreen(&show, currentBackgroundItem, showDebugTiles);
+        ShowDesktop(&show, state);
+
+	// ------------------------------------------------
+	// Convenient for now as we learn the basics
+    //    if (ImGui::Button("Demo Widgets")){
+//	  show_demo_window = true;
+//	}
+    //    ImGui::Checkbox("ADemo Window", &show_demo_window);      // Edit bools storing our window open/close state
+
+      //  if (show_demo_window){
+      //     ImGui::ShowDemoWindow(&show_demo_window);
+//	}
+	// ------------------------------------------------
 
         // Rendering
         ImGui::Render();
