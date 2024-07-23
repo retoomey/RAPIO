@@ -54,6 +54,10 @@ public:
 class VolumeValueResolver : public Utility
 {
 public:
+
+  /** Create a volume value resolver for calculating grid values */
+  VolumeValueResolver() : myGlobalWeight(1.0){ }
+
   /** Enum for layers in queryLayer */
   enum Layer {
     lower, upper, lower2, upper2
@@ -129,7 +133,13 @@ public:
     return std::make_shared<VolumeValueIO>();
   }
 
+  /** Set a global weight multiplier, usually from stage 1 */
+  void setGlobalWeight(float w){ myGlobalWeight = w; }
+
 protected:
+
+  /** The global weight multiplier we can use during calculations */
+  float myGlobalWeight;
 
   // FIXME: Thinking we could do function pointers or something for different methods
   // of querying the data.

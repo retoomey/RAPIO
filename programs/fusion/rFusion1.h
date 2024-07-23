@@ -185,5 +185,8 @@ protected:
 
   /** Are we using a roster setup? */
   bool myUseRoster;
+
+  /** Global stage1 Weight multiplier */
+  float myWeight;
 };
 }

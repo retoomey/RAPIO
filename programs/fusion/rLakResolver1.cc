@@ -222,8 +222,8 @@ LakResolver1::calc(VolumeValue * vvp)
     //   vv.bottomSum = rw * totalWt;  // dem
     const double aV = totalsum / totalWt;
     vv.dataValue = aV;
-    vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
-    vv.bottomSum = rw;
+    vv.topSum    = myGlobalWeight * (rw * aV); // Stage2 just makes v = topSum/bottomSum
+    vv.bottomSum = myGlobalWeight * (rw);
   } else {
     // Background.
     // FIXME: Considering a background flag in VolumeValue

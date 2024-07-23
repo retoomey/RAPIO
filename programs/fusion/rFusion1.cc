@@ -76,6 +76,14 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
 
+  // Global weight scale.  Can be used to reduce or increase weight of a group of radars relative to the whole.
+  // This works if we manually group radar types say 88d and Climavision.  Eventually this may deprecate to
+  // radarinfo.dat and having roster do more advanced decisions on weighting/nearest, or maybe this option will
+  // continue to be useful for archive.
+  o.optional("weight", "1.0", "Weight percentage multiplier.");
+  o.addAdvancedHelp("weight",
+    "Percentage to multiply weights by.  This can reduce or increase globally this radar's contribution.  For example, 0.50 means our weights are halved, while 2.0 that radar would double in the final output of stage2.\nNOTE: The resolver has to be coded to use this provided weight or it has no effect.");
+
   // Roster means we write coverage files and read masks
   // A missing mask:
   //      When NOT using a roster means nothing, we write everything.
@@ -138,6 +146,13 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     myRangeKMs = 1000;
   }
   LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
+  myWeight = o.getFloat("weight");
+  bool goodWeight = true;
+
+  if ((myWeight <= 0) || (myWeight > 10.0)) { // Some reasonable ranges?
+    LogSevere("Weight given is " << myWeight << " which seems wrong, setting to 1.0\n");
+    myWeight = 1.0;
+  }
 
   std::string roster = o.getString("roster");
 
@@ -330,6 +345,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
 
   if (vp) {
     myResolver = vp->getVolumeValueResolver(); // This will exit if not available
+    myResolver->setGlobalWeight(myWeight);
   }
 
   // -------------------------------------------------------------
