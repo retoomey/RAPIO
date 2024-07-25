@@ -281,13 +281,13 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
   // Try to do this quick and efficient, called a LOT
   const double xd = (myLatNWDegs - latDegs) / myLatSpacing;
-  const int x = std::round(xd);
+  const int x     = std::round(xd);
 
   if ((x < 0) || (x > myNumLats)) {
     return Constants::DataUnavailable;
   }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
-  const int y = std::round(yd);
+  const int y     = std::round(yd);
 
   if ((y < 0) || (y > myNumLons)) {
     return Constants::DataUnavailable;
@@ -300,13 +300,13 @@ LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
   // Try to do this quick and efficient, called a LOT
   const double xd = (myLatNWDegs - latDegs) / myLatSpacing;
-  const int x = std::round(xd);
+  const int x     = std::round(xd);
 
   if ((x < 0) || (x > myNumLats)) {
     return Constants::DataUnavailable;
   }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
-  const int y = std::round(yd);
+  const int y     = std::round(yd);
 
   if ((y < 0) || (y > myNumLons)) {
     return Constants::DataUnavailable;

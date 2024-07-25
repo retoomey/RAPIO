@@ -65,6 +65,20 @@ LatLonGrid::Create(
 }
 
 std::shared_ptr<LatLonGrid>
+LatLonGrid::Create(
+  const std::string    & TypeName,
+  const std::string    & Units,
+  const Time           & time,
+  const LLCoverageArea & g)
+{
+  auto newonesp = std::make_shared<LatLonGrid>();
+
+  newonesp->init(TypeName, Units, LLH(g.getNWLat(), g.getNWLon(), 0),
+    time, g.getLatSpacing(), g.getLonSpacing(), g.getNumY(), g.getNumX());
+  return newonesp;
+}
+
+std::shared_ptr<LatLonGrid>
 LatLonGrid::Clone()
 {
   auto nsp = std::make_shared<LatLonGrid>();

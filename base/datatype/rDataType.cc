@@ -37,7 +37,6 @@ DataType::deep_copy(std::shared_ptr<DataType> nsp)
   n.myDataType    = myDataType;
   n.myID             = myID;
   n.myTypeName       = myTypeName;
-  n.myUnits          = myUnits;
   n.myDataProjection = nullptr; // Force regeneration?
 }
 
@@ -286,18 +285,19 @@ DataType::getColorMap()
 std::string
 DataType::getUnits(const std::string& name)
 {
+  // We don't care about names for global units
   std::string units;
 
-  if (name == Constants::PrimaryDataName) {
-    units = myUnits;
+  if (getString("Unit-value", units)) {
+    return units;
   }
-  return units;
+  return "dimensionless";
 }
 
 void
 DataType::setUnits(const std::string& units, const std::string& name)
 {
-  if (name == Constants::PrimaryDataName) {
-    myUnits = units;
-  }
+  // We don't care about names for global units
+  setString("Unit-value", units);
+  setString("Unit-unit", "dimensionless");
 }

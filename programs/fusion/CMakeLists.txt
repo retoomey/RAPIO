@@ -50,6 +50,17 @@ install(TARGETS rFusionRoster
 )
 
 ##################################################################
+# TileJoin
+add_executable(rTileJoin
+  rTileJoin.cc
+)
+
+target_link_libraries(rTileJoin PRIVATE fusionshared PUBLIC rapio)
+install(TARGETS rTileJoin
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
 # PointCloud
 add_executable(rPointCloud1
   rPointCloud.cc

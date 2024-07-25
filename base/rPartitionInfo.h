@@ -4,6 +4,7 @@
 #include <rLLCoverageArea.h>
 #include <rStrings.h>
 #include <rError.h>
+#include <rLL.h>
 
 #include <string>
 #include <vector>
@@ -178,6 +179,26 @@ public:
       partY++;
     }
     return partY;
+  }
+
+  /** Get partition number, if any for given location */
+  int
+  getPartitionNumber(const LL& at)
+  {
+    auto& lat = at.getLatitudeDeg();
+    auto& lon = at.getLongitudeDeg();
+    int part  = 0;
+
+    for (auto& p:myPartitions) {
+      // Inclusive on top left of partition.
+      if ( (lat <= p.getNWLat()) && (lat > p.getSELat()) &&
+        (lon >= p.getNWLon()) && (lon < p.getSELon()) )
+      {
+        return part;
+      }
+      part++;
+    }
+    return -1;
   }
 
   /** Log the partition information */

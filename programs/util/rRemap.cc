@@ -99,17 +99,19 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   std::shared_ptr<ArrayAlgorithm> Remap;
 
   if (myMode == "nearest") {
-    Remap = std::make_shared<ArrayAlgorithm>(NearestNeighbor(llg->getFloat2D(), out->getFloat2D()));
+    Remap = std::make_shared<NearestNeighbor>(llg->getFloat2D(), out->getFloat2D());
   } else if (myMode == "cressman") {
-    Remap = std::make_shared<ArrayAlgorithm>(Cressman(llg->getFloat2D(), out->getFloat2D()));
+    Remap = std::make_shared<Cressman>(llg->getFloat2D(), out->getFloat2D(), mySize, mySize);
   } else if (myMode == "bilinear") {
-    Remap = std::make_shared<ArrayAlgorithm>(Bilinear(llg->getFloat2D(), out->getFloat2D()));
+    Remap = std::make_shared<Bilinear>(llg->getFloat2D(), out->getFloat2D(), mySize, mySize);
   } else {
     LogSevere("Can't create remapper '" << myMode << "'\n");
     exit(1);
   }
   LogInfo("Created Array Algorithm '" << myMode << "' to process LatLonGrid primary array\n");
   auto& r = *Remap;
+
+  #if 0
 
   // Pixel centering stuff
   AngleDegs startLat = outg.getNWLat() - (outg.getLatSpacing() / 2.0); // move south (lat decreasing)
@@ -131,16 +133,21 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
     AngleDegs atLon = startLon;
     for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing()) {
       const float xof = (atLon - orgNWLonDegs ) / orgLonSpacingDegs;
-      if (!r.remap(yof, xof, y, x)) {
-        continue;
+      // if (r.remap(yof, xof, y, x)) {
+      if (r.remap(yof, xof, y, x)) {
+        counter++;
       }
-      counter++;
     } // endX
   }   // endY
 
   if (counter > 0) {
-    LogInfo("Good sample hit counter is " << counter << "\n");
+    LogInfo("Good sample hit(s): " << counter << "\n");
   }
+
+  #endif // if 0
+  // Redo it with the new API:
+  r.remapFromTo(llg, out, mySize, mySize);
+
   // ----------------------------------------------------------------
   // Write the new output
   //

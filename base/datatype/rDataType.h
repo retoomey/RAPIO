@@ -229,7 +229,6 @@ public:
     to->myDataType    = myDataType;
     to->myID       = myID;
     to->myTypeName = myTypeName;
-    to->myUnits    = myUnits;
   }
 
 protected:
@@ -256,9 +255,6 @@ protected:
 
   /** The TypeName of the data contained.  */
   std::string myTypeName;
-
-  /** The primary units of the data contained.  */
-  std::string myUnits;
 
   /** Cached projection object for GIS */
   std::shared_ptr<DataProjection> myDataProjection;

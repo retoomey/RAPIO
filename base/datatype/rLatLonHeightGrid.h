@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rLatLonGrid.h>
+#include <rLLCoverageArea.h>
 
 namespace rapio {
 /** Store an area of data on a uniform 3-D grid of latitude and
@@ -37,6 +38,14 @@ public:
     size_t           num_lats,
     size_t           num_lons,
     size_t           num_levels);
+
+  /** Public API for users to create a single band LatLonHeightGrid quickly */
+  static std::shared_ptr<LatLonHeightGrid>
+  Create(
+    const std::string    & TypeName,
+    const std::string    & Units,
+    const Time           & gridtime,
+    const LLCoverageArea & grid);
 
   /** Public API for users to clone a LatLonHeightGrid */
   std::shared_ptr<LatLonHeightGrid>

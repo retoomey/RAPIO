@@ -74,7 +74,7 @@ DataGrid::init(const std::string & aTypeName,
   //  setReadFactory("netcdf");
 
   setTypeName(aTypeName);
-  setDataAttributeValue("Unit", "dimensionless", Units);
+  setDataAttributeValue("Unit", Units, "dimensionless"); // Maybe setUnits here?
   myLocation = center;
   myTime     = datatime;
   setDims(dimsizes, dimnames);
@@ -824,6 +824,7 @@ DataGrid::unsparseRestore()
 std::string
 DataGrid::getUnits(const std::string& name)
 {
+  // Default to the global units
   std::string units = DataType::getUnits(name);
 
   // Update node if any
@@ -838,7 +839,10 @@ DataGrid::getUnits(const std::string& name)
 void
 DataGrid::setUnits(const std::string& units, const std::string& name)
 {
-  DataType::setUnits(units, name);
+  // Only update the global units if this is primary data.
+  if (name == Constants::PrimaryDataName) {
+    DataType::setUnits(units, name);
+  }
 
   // Get from node if any
   auto n = getNode(name);

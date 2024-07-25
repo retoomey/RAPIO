@@ -136,7 +136,7 @@ LLHGridN2D::get(size_t i)
     Time t = myTime;                           // Default time to our time, caller can change it later
     LLH l  = myLocation;                       // Default location and height is our layer number
     l.setHeightKM(myLayerNumbers[i] / 1000.0); // We stored meter level resolution
-    myGrids[i] = LatLonGrid::Create(myTypeName, myUnits, l, t, getLatSpacing(), getLonSpacing(),
+    myGrids[i] = LatLonGrid::Create(myTypeName, getUnits(), l, t, getLatSpacing(), getLonSpacing(),
         getNumLats(), getNumLons());
     // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
   }

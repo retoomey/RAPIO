@@ -2,6 +2,7 @@
 
 #include <rUtility.h>
 #include <rArray.h>
+#include <rLatLonGrid.h>
 
 #include <memory>
 
@@ -34,9 +35,14 @@ public:
     myWidth(width), myHeight(height)
   { }
 
+  /** Remap from a source to destination LatLonGrid.
+   * FIXME: Maybe this belongs in the LatLonGrid class itself? */
+  virtual void
+  remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatLonGrid> out, size_t width = 1, size_t height = 1);
+
   /** Apply filter to out indexes (copy from source using our technique) */
-  virtual bool remap(float inI, float inJ, size_t outI, size_t outJ)
-  { return false; }
+  virtual bool
+  remap(float inI, float inJ, size_t outI, size_t outJ) = 0;
 
 protected:
 

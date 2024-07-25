@@ -39,6 +39,30 @@ LatLonHeightGrid::Create(
 }
 
 std::shared_ptr<LatLonHeightGrid>
+LatLonHeightGrid::Create(
+  const std::string    & TypeName,
+  const std::string    & Units,
+  const Time           & time,
+  const LLCoverageArea & g)
+{
+  auto newonesp = std::make_shared<LatLonHeightGrid>();
+
+  auto h = g.getHeightsKM();
+  const LengthKMs bottomKMs = (h.size() < 1) ? 0 : h[0];
+
+  newonesp->init(TypeName, Units, LLH(g.getNWLat(), g.getNWLon(), bottomKMs),
+    time, g.getLatSpacing(), g.getLonSpacing(), g.getNumY(), g.getNumX(), g.getNumZ());
+  // Copy CoverageArea heights into our layer numbers since we passed a coverage area
+
+  // Copy into the layer values.  However, these are int, so since the heights
+  // are partial KMs, we need to upscale to fit it.
+  for (size_t i = 0; i < h.size(); i++) {
+    newonesp->setLayerValue(i, h[i] * 1000); // meters
+  }
+  return newonesp;
+}
+
+std::shared_ptr<LatLonHeightGrid>
 LatLonHeightGrid::Clone()
 {
   auto nsp = std::make_shared<LatLonHeightGrid>();
