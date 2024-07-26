@@ -9,8 +9,8 @@ ArrayAlgorithm::remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatL
 {
   myArrayIn  = in->getFloat2D();
   myArrayOut = out->getFloat2D();
-  myRefIn    = myArrayIn->ref();
-  myRefOut   = myArrayOut->ref();
+  myRefIn    = myArrayIn->ptr();
+  myRefOut   = myArrayOut->ptr();
   myMaxI     = myArrayIn->getX();
   myMaxJ     = myArrayIn->getY();
   myWidth    = width;
@@ -75,7 +75,7 @@ NearestNeighbor::remap(float inI, float inJ, size_t outI, size_t outJ)
   if ((j < 0) || (j >= myMaxJ)) {
     return false;
   }
-  myRefOut[outI][outJ] = myRefIn[i][j];
+  (*myRefOut)[outI][outJ] = (*myRefIn)[i][j];
   return true;
 }
 
@@ -104,7 +104,7 @@ Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
 
         // ...if lon valid, check if a good value
         if (!((xat < 0) || (xat >= myMaxJ))) {
-          float& val = myRefIn[yat][xat];
+          float& val = (*myRefIn)[yat][xat];
 
           // ...if the data value good, add weight to total...
           if (Constants::isGood(val)) {
@@ -116,7 +116,7 @@ Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
             // to avoid division by zero
             // This also passes on mask when close to a true cell location
             if (dist < std::numeric_limits<float>::epsilon()) {
-              myRefOut[outI][outJ] = val;
+              (*myRefOut)[outI][outJ] = val;
               goto endcressman;
             }
 
@@ -137,9 +137,9 @@ Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
   }   // End lat column
 
   if (n > 0) {
-    myRefOut[outI][outJ] = tot_val / tot_wt;
+    (*myRefOut)[outI][outJ] = tot_val / tot_wt;
   } else {
-    myRefOut[outI][outJ] = currentMask;
+    (*myRefOut)[outI][outJ] = currentMask;
   }
 endcressman:;
   return true;
@@ -170,7 +170,7 @@ Bilinear::remap(float inI, float inJ, size_t outI, size_t outJ)
 
         // ...if lon valid, check if a good value
         if (!((xat < 0) || (xat >= myMaxJ))) {
-          float& val = myRefIn[yat][xat];
+          float& val = (*myRefIn)[yat][xat];
 
           // ...if the data value good, add weight to total...
           if (Constants::isGood(val)) {
@@ -193,9 +193,9 @@ Bilinear::remap(float inI, float inJ, size_t outI, size_t outJ)
   }   // End lat column
 
   if (n > 0) {
-    myRefOut[outI][outJ] = tot_val / tot_wt;
+    (*myRefOut)[outI][outJ] = tot_val / tot_wt;
   } else {
-    myRefOut[outI][outJ] = currentMask;
+    (*myRefOut)[outI][outJ] = currentMask;
   }
 endbilinear:;
   return true;

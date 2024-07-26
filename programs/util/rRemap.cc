@@ -99,11 +99,11 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   std::shared_ptr<ArrayAlgorithm> Remap;
 
   if (myMode == "nearest") {
-    Remap = std::make_shared<NearestNeighbor>(llg->getFloat2D(), out->getFloat2D());
+    Remap = std::make_shared<NearestNeighbor>();
   } else if (myMode == "cressman") {
-    Remap = std::make_shared<Cressman>(llg->getFloat2D(), out->getFloat2D(), mySize, mySize);
+    Remap = std::make_shared<Cressman>(mySize, mySize);
   } else if (myMode == "bilinear") {
-    Remap = std::make_shared<Bilinear>(llg->getFloat2D(), out->getFloat2D(), mySize, mySize);
+    Remap = std::make_shared<Bilinear>(mySize, mySize);
   } else {
     LogSevere("Can't create remapper '" << myMode << "'\n");
     exit(1);
@@ -111,41 +111,6 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   LogInfo("Created Array Algorithm '" << myMode << "' to process LatLonGrid primary array\n");
   auto& r = *Remap;
 
-  #if 0
-
-  // Pixel centering stuff
-  AngleDegs startLat = outg.getNWLat() - (outg.getLatSpacing() / 2.0); // move south (lat decreasing)
-  AngleDegs startLon = outg.getNWLon() + (outg.getLonSpacing() / 2.0); // move east (lon increasing)
-  AngleDegs atLat    = startLat;
-
-  size_t counter = 0;
-
-  // FIXME: Could we do different directions?  N by N2?  Why not?
-  LogInfo("Using matrix size of " << mySize << " by " << mySize << "\n");
-
-  // Cell hits yof and xof
-  // Note the cell is allowed to be fractional and out of range,
-  // since we're doing a matrix 'some' cells might be in the range
-
-  for (size_t y = 0; y < numY; ++y, atLat -= outg.getLatSpacing()) {
-    const float yof = (orgNWLatDegs - atLat) / orgLatSpacingDegs;
-
-    AngleDegs atLon = startLon;
-    for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing()) {
-      const float xof = (atLon - orgNWLonDegs ) / orgLonSpacingDegs;
-      // if (r.remap(yof, xof, y, x)) {
-      if (r.remap(yof, xof, y, x)) {
-        counter++;
-      }
-    } // endX
-  }   // endY
-
-  if (counter > 0) {
-    LogInfo("Good sample hit(s): " << counter << "\n");
-  }
-
-  #endif // if 0
-  // Redo it with the new API:
   r.remapFromTo(llg, out, mySize, mySize);
 
   // ----------------------------------------------------------------

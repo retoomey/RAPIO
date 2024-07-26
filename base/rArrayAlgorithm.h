@@ -27,11 +27,9 @@ public:
 
   /** Pass in two array for input/output (copy)
    * Currently we're starting off with two 2D arrays.*/
-  ArrayAlgorithm(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<Array<float, 2> > out,
-    size_t width = 1, size_t height = 1) :
-    myArrayIn(in), myArrayOut(out),
-    myRefIn(in->ref()), myRefOut(out->ref()), myMaxI(in->getX()), myMaxJ(in->getY()),
+  ArrayAlgorithm(size_t width = 1, size_t height = 1) :
+    myArrayIn(nullptr), myArrayOut(nullptr),
+    myRefIn(nullptr), myRefOut(nullptr), myMaxI(0), myMaxJ(0),
     myWidth(width), myHeight(height)
   { }
 
@@ -53,10 +51,10 @@ protected:
   std::shared_ptr<Array<float, 2> > myArrayOut;
 
   /** Keep input array reference for speed */
-  boost::multi_array<float, 2>& myRefIn;
+  boost::multi_array<float, 2> * myRefIn;
 
   /** Keep output array reference for speed */
-  boost::multi_array<float, 2>& myRefOut;
+  boost::multi_array<float, 2> * myRefOut;
 
   /** Max dimension for speed in remap */
   size_t myMaxI;
@@ -76,8 +74,7 @@ class NearestNeighbor : public ArrayAlgorithm {
 public:
 
   /** create nearest neighbor from source to destination array */
-  NearestNeighbor(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<Array<float, 2> > out) : ArrayAlgorithm(in, out)
+  NearestNeighbor() : ArrayAlgorithm()
   { }
 
   /** remap the remap */
@@ -121,10 +118,8 @@ class Cressman : public ArrayAlgorithm {
 public:
 
   /** Create nearest neighbor from source to destination array */
-  Cressman(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<Array<float, 2> > out,
-    size_t width = 3, size_t height = 3
-  ) : ArrayAlgorithm(in, out, width, height)
+  Cressman(size_t width = 3, size_t height = 3
+  ) : ArrayAlgorithm(width, height)
   { }
 
   /** Remap grid location to output */
@@ -163,10 +158,8 @@ class Bilinear : public ArrayAlgorithm {
 public:
 
   /** Create nearest neighbor from source to destination array */
-  Bilinear(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<Array<float, 2> > out,
-    size_t width = 3, size_t height = 3
-  ) : ArrayAlgorithm(in, out, width, height)
+  Bilinear(size_t width = 3, size_t height = 3
+  ) : ArrayAlgorithm(width, height)
   { }
 
   /** Remap grid location to output */

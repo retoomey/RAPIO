@@ -108,6 +108,9 @@ protected:
 
   /** Map of keys to data */
   std::map<std::string, TileJoinDatabaseEntry> myEntries;
+
+  /** The remapper we use to copy tiles */
+  std::shared_ptr<ArrayAlgorithm> myArrayAlgorithm;
 };
 
 /** An algorithm to untile partitions created by rFusion2

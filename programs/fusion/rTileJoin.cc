@@ -76,6 +76,10 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
   LogInfo("Generating a final grid for key '" << databaseKey << "'\n");
   auto it = myEntries.find(databaseKey);
 
+  if (myArrayAlgorithm == nullptr) {
+    myArrayAlgorithm = std::make_shared<NearestNeighbor>();
+  }
+
   if (it == myEntries.end()) {
     LogInfo("Key missing?  Can't generate final grid '" << databaseKey << "'\n");
     return;
@@ -86,24 +90,22 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
   bool first = true;
 
   for (auto p:grids) {
-    // Set time, etc. to the first LatLonGrid.
-    if (first) {
-      out->setTime(p->getTime());
-      out->setUnits(p->getUnits());
-      out->setTypeName(p->getTypeName());
-      auto w = out->getFloat2D();
-      w->fill(Constants::DataUnavailable);
-      first = false;
-    }
+    if (p != nullptr) { // Missing a tile which can happen
+      // Set time, etc. to the first LatLonGrid.
+      if (first) {
+        out->setTime(p->getTime());
+        out->setUnits(p->getUnits());
+        out->setTypeName(p->getTypeName());
+        auto w = out->getFloat2D();
+        w->fill(Constants::DataUnavailable);
+        first = false;
+      }
 
-    // -------------------------------------
-    // To do
-    //
-    // FIXME: Refactor remap and maybe use it.
-    // Insert p into the final grid. Note, the tiles 'should' all
-    // be exact, at least for moment
-    // Need remap generalized it's partial.
-    //
+      // Insert p into the final grid. Note, the tiles 'should' all
+      // be exact, at least for moment.  By remapping we do extra
+      // work but then we don't have to worry about exact coordinates
+      myArrayAlgorithm->remapFromTo(p, out);
+    }
   }
 
   // Finalize means remove the key, we're done.
