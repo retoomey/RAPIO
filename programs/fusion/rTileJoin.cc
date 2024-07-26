@@ -96,6 +96,7 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
         out->setTime(p->getTime());
         out->setUnits(p->getUnits());
         out->setTypeName(p->getTypeName());
+        out->setSubType(p->getSubType());
         auto w = out->getFloat2D();
         w->fill(Constants::DataUnavailable);
         first = false;
@@ -172,8 +173,25 @@ TileJoinDatabase::getPartitionNumber(std::shared_ptr<LatLonGrid>& l)
   // Right now you could mess up data in and break things.
   int partNumber = myPartitionInfo.getPartitionNumber(l->getCenterLocation());
 
-  LogSevere("INCOMING CENTER:" << l->getCenterLocation() << ", partition is " << partNumber << "\n");
+  // LogSevere("INCOMING CENTER:" << l->getCenterLocation() << ", partition is " << partNumber << "\n");
   return partNumber;
+}
+
+void
+TileJoinAlg::firstSetup()
+{
+  static bool first = true;
+
+  // Initial setup of database, etc.
+  if (first) {
+    myTileJoinDatabase = std::make_shared<TileJoinDatabase>(myPartitionInfo);
+
+    // Make a LatLonGrid we'll use to store the output tiles into.  Name and
+    // units, etc. will come from the tiles.
+    myLLGOutput = LatLonGrid::Create("Cache", "dBZ", Time(), myFullGrid);
+    // myLLGOutput->fillPrimary(Constants::DataUnavailable);
+  }
+  first = false;
 }
 
 void
@@ -183,6 +201,9 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
   auto l = d.datatype<rapio::LatLonGrid>();
 
   if (l != nullptr) {
+    // Make sure database, etc. ready to go
+    firstSetup();
+
     // We can merge multiple 2D layers/grids by time.  So we need to store tiles until
     // one of two conditions:
     // 1.  We have all the tiles for a time.  Then we write them.
@@ -192,16 +213,6 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
     const std::string aTypeName = l->getTypeName();
     const std::string aSubType  = l->getSubType();
     const std::string key       = aTypeName + aSubType;
-
-    // Initial setup of database
-    if (myTileJoinDatabase == nullptr) {
-      myTileJoinDatabase = std::make_shared<TileJoinDatabase>(myPartitionInfo);
-
-      // Make a LatLonGrid we'll use to store the output tiles into.  Name and
-      // units, etc. will come from the tiles.
-      myLLGOutput = LatLonGrid::Create("Cache", "dBZ", Time(), myFullGrid);
-      // myLLGOutput->fillPrimary(Constants::DataUnavailable);
-    }
 
     std::string databaseKey;
 
@@ -235,8 +246,10 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
 void
 TileJoinAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  // LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
+  // Make sure database, etc. ready to go
+  firstSetup();
 
+  // Expire tile groups that have waited long enough.
   const Time cutoffTime = p - myMaximumHistory;
   auto list = myTileJoinDatabase->getExpiredKeys(p);
 

@@ -145,6 +145,10 @@ public:
   virtual void
   processHeartbeat(const Time& n, const Time& p) override;
 
+  /** First time setup of database, etc. */
+  void
+  firstSetup();
+
 protected:
 
   /** Coordinates for the total merger grid */
