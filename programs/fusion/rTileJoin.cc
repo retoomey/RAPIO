@@ -97,6 +97,11 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
         out->setUnits(p->getUnits());
         out->setTypeName(p->getTypeName());
         out->setSubType(p->getSubType());
+        // Sync the height to the first tile
+        LLH f = p->getLocation();
+        LLH l = out->getLocation();
+        l.setHeightKM(f.getHeightKM());
+        out->setLocation(l);
         auto w = out->getFloat2D();
         w->fill(Constants::DataUnavailable);
         first = false;
@@ -251,7 +256,7 @@ TileJoinAlg::processHeartbeat(const Time& n, const Time& p)
 
   // Expire tile groups that have waited long enough.
   const Time cutoffTime = p - myMaximumHistory;
-  auto list = myTileJoinDatabase->getExpiredKeys(p);
+  auto list = myTileJoinDatabase->getExpiredKeys(cutoffTime);
 
   if (list.size() > 0) {
     LogInfo("We have some expired groups...writing them.\n");
