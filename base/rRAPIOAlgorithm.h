@@ -22,23 +22,6 @@ public:
   /** Construct a stock algorithm */
   RAPIOAlgorithm(const std::string& display = "Algorithm") : RAPIOProgram(display){ };
 
-  // Public intended open API -----------------------
-
-  /** Process a matched new record (occurs as the records come in)  Index number
-   * is index into declared order */
-  virtual void
-  processNewData(RAPIOData&);
-
-  /** Process a web request message when running with a REST webserver mode */
-  virtual void
-  processWebMessage(std::shared_ptr<WebMessage> message) override;
-
-  // End Public intended open API -----------------------
-
-  /** Post load, advanced help request.  This help requires the system to be initialized */
-  virtual void
-  addPostLoadedHelp(RAPIOOptions& o) override;
-
   /** Add a static key for the -O help.  Note that keys can be static, such as
    * '2D' to refer to a class of product, or currently you can also use the
    * DataType typename as a dynamic key. This allows turning on/off products
@@ -64,10 +47,6 @@ public:
   virtual std::string
   resolveProductName(const std::string& key, const std::string& defaultName);
 
-  /** After adding wanted inputs and indexes, execute the algorithm */
-  virtual void
-  execute() override;
-
   /** Handle new record, usually from event queue */
   virtual void
   handleRecordEvent(const Record& rec);
@@ -75,17 +54,6 @@ public:
   /** Handle end of event index event (sent by archives) */
   virtual void
   handleEndDatasetEvent();
-
-  /** Write data based on suffix directly to a given file key,
-   * without notification.  You normally want to call writeOutputProduct
-   * which will autogenerate file names, multi-output and notify, etc.
-   * I'm using this for tiles at moment..I may refactor these two write
-   * functions at some point
-   */
-  // virtual bool
-  // writeDirectOutput(const URL         & path,
-  //   std::shared_ptr<DataType>         outputData,
-  //   std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
@@ -127,24 +95,6 @@ public:
 
 protected:
 
-  /** Hold the postwrite command, if any */
-  std::string myPostWrite;
-
-  /** Hold the postfml command, if any */
-  std::string myPostFML;
-
-  /** History time for index storage */
-  static TimeDuration myMaximumHistory;
-
-  /** The end time of history window.  Which typically in archive is
-   * the time of latest record received, or slightly behind current time */
-  static Time myLastHistoryTime;
-
-  /** The record read mode */
-  static std::string myReadMode;
-
-protected:
-
   /** Declare all default plugins for this class layer,
    * typically you don't need to change at this level.
    * @see declarePlugins */
@@ -162,6 +112,32 @@ protected:
    * @see processOptions */
   virtual void
   finalizeOptions(RAPIOOptions& o) override;
+
+  /** Post loaded help.  Algorithms should use declareAdvancedHelp */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o) override;
+
+  /** After adding wanted inputs and indexes, execute the algorithm */
+  virtual void
+  execute() override;
+
+protected:
+
+  /** Hold the postwrite command, if any */
+  std::string myPostWrite;
+
+  /** Hold the postfml command, if any */
+  std::string myPostFML;
+
+  /** History time for index storage */
+  static TimeDuration myMaximumHistory;
+
+  /** The end time of history window.  Which typically in archive is
+   * the time of latest record received, or slightly behind current time */
+  static Time myLastHistoryTime;
+
+  /** The record read mode */
+  static std::string myReadMode;
 };
 
 //  end class RAPIOAlgorithm

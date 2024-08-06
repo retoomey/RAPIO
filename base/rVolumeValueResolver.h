@@ -9,6 +9,7 @@
 #include <rVolumeValue.h>
 #include <rLLCoverageArea.h>
 #include <rPartitionInfo.h>
+#include <rArrayAlgorithm.h>
 
 namespace rapio {
 class RAPIOAlgorithm;
@@ -95,11 +96,6 @@ public:
     const std::string & key,
     const std::string & params);
 
-  /** Attempt to create VolumeValueResolver command param */
-  static std::shared_ptr<VolumeValueResolver>
-  createFromCommandLineOption(
-    const std::string & option);
-
   /** Called on subclasses by the VolumeVolumeResolver to create/setup the Resolver.
    * To use by name, you would override this method and return a new instance of your
    * Volume class. */
@@ -146,7 +142,7 @@ protected:
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
-  queryMatrixLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l)
+  queryMatrixLayer(VolumeValue& vv, DataType * set, DataProjection * project, ArrayAlgorithm * m, LayerValue& l)
   {
     // l.clear(); We're supposed to check the flag for valid
     if (set == nullptr) { return false; }
@@ -164,8 +160,22 @@ protected:
 
     // If good, query more stuff
     if (p.AzRangeToRadialGate(vv.virtualAzDegs, l.rangeKMs, l.radial, l.gate)) {
+      // Call the remapper with the current data.
+      m->setSource(r.getFloat2D());
+      float value;
+      if (m->remap(l.radial, l.gate, value)) {
+        l.value = value;
+      } else {
+        l.value = Constants::MissingData;
+      }
+
+      #if 0
+      // Old way doing it direct to average.  I want to use the
+      // ArrayAlgorithm class since this will allow plugin/changing it
+      //
       // Data value at gate (getValueAtAzRange sets this)
       auto& d = r.getFloat2DRef();
+
 
       //
       // Complete alpha code...
@@ -212,6 +222,7 @@ protected:
       } else {
         l.value = Constants::MissingData;
       }
+      #endif // if 0
 
       // Meta data of the 'point' is from the hit gate.
 

@@ -109,17 +109,6 @@ VolumeValueResolver::createVolumeValueResolver(
   return f;
 }
 
-std::shared_ptr<VolumeValueResolver>
-VolumeValueResolver::createFromCommandLineOption(
-  const std::string & option)
-{
-  std::string key, params;
-
-  Strings::splitKeyParam(option, key, params);
-  return VolumeValueResolver::createVolumeValueResolver(
-    key, params);
-}
-
 void
 VolumeValueResolver::heightForDegreeShift(VolumeValue& vv, DataType * set, AngleDegs delta, LengthKMs& heightKMs)
 {

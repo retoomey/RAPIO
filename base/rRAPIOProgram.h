@@ -22,7 +22,11 @@ public:
   /** Construct a stock program */
   RAPIOProgram(const std::string& display = "Program") : myMacroApplied(false), myDisplayClass(display){ };
 
-  // Public intended open API -----------------------
+  /**
+   * @name Public API
+   * Methods you typically override in order to create you own program/algorithm
+   * @{
+   */
 
   /** Declare extra command line plugins */
   virtual void
@@ -32,60 +36,61 @@ public:
   virtual void
   declareOptions(RAPIOOptions& o){ };
 
-  /** Declare advanced help for options in declareOptions, if any. */
-  virtual void
-  declareAdvancedHelp(RAPIOOptions& o){ };
-
   /** Gather flags, etc. from the parsed options */
   virtual void
   processOptions(RAPIOOptions& o){ };
 
-  /** Initialize system wide base parsers like XML/JSON
-   * these are typically critical for initial setup */
+  /** Callback for data ingest */
   virtual void
-  initializeBaseParsers();
+  processNewData(rapio::RAPIOData& d)
+  {
+    LogDebug("Received data callback, ignoring.\n");
+  }
 
-  /** Initialize any base modules requiring configuration */
+  /** Callback for heartbeat based plugins
+   * @param n The actual now time triggering the event.
+   * @param p The pinned sync time we're firing for. */
   virtual void
-  initializeBaseline();
+  processHeartbeat(const Time& n, const Time& p)
+  {
+    LogDebug("Received heartbeat callback, ignoring.\n");
+  }
 
-  /** After adding wanted inputs and indexes, execute the algorithm */
+  /** Callback for web plugins. Process a web request message when
+   * running with a REST webserver mode */
   virtual void
-  execute();
+  processWebMessage(std::shared_ptr<WebMessage> message)
+  {
+    LogDebug("Received web callback, ignoring.\n");
+  }
 
-  /** Initialize program from c arguments and execute. */
+  /** Initialize program from c arguments and execute.
+   * Typically you call this in main to run your program.
+   */
   virtual void
   executeFromArgs(int argc,
     char *            argv[]);
 
-  /** Post loaded help.  Algorithms should use declareAdvancedHelp */
-  virtual void
-  addPostLoadedHelp(RAPIOOptions& o){ };
+  /** @} */
+
+  /**
+   * @name Plugin API
+   * Methods called by a subclass of RAPIOPlugin to add command line ablilities
+   * @{
+   */
 
   /** Add a plugin (called by RAPIOPlugin to register) */
   void
-  addPlugin(RAPIOPlugin * p)
-  {
-    myPlugins.push_back(p);
-  }
+  addPlugin(RAPIOPlugin * p);
 
   /** Remove a plugin (called by RAPIOPlugin to deregister) */
   void
-  removePlugin(const std::string& name)
-  {
-    for (size_t i = 0; i < myPlugins.size(); ++i) {
-      if (myPlugins[i]->getName() == name) {
-        RAPIOPlugin * removedItem = myPlugins[i];
-        myPlugins.erase(myPlugins.begin() + i);
-        delete removedItem;
-      }
-    }
-  }
+  removePlugin(const std::string& name);
 
   /** Get back a plugin type for use or nullptr if plugin doesn't exist. */
   template <typename T>
   T *
-  getPlugin(const std::string& name)
+  getPlugin(const std::string& name) const
   {
     for (RAPIOPlugin * p:myPlugins) {
       if (p->getName() == name) {
@@ -96,24 +101,26 @@ public:
     return nullptr;
   }
 
-  // Callback hooks
+  /** @} */
 
-  /** Callback for data ingest */
-  virtual void
-  processNewData(rapio::RAPIOData& d){ };
+  /** Was the macro applied on leftovers? */
+  bool
+  isMacroApplied() const { return myMacroApplied; }
 
-  /** Callback for heartbeat based plugins
-   * @param n The actual now time triggering the event.
-   * @param p The pinned sync time we're firing for. */
-  virtual void
-  processHeartbeat(const Time& n, const Time& p){ };
-
-  /** Callback for web plugins. Process a web request message when
-   * running with a REST webserver mode */
-  virtual void
-  processWebMessage(std::shared_ptr<WebMessage> message){ };
+  /** Are we running a web server? */
+  bool
+  isWebServer(const std::string& key = "web") const;
 
 protected:
+
+  /** Initialize system wide base parsers like XML/JSON
+   * these are typically critical for initial setup */
+  virtual void
+  initializeBaseParsers();
+
+  /** Initialize any base modules requiring configuration */
+  virtual void
+  initializeBaseline();
 
   /** Declare all default plugins for this class layer,
    * typically you don't need to change at this level.
@@ -133,13 +140,13 @@ protected:
   virtual void
   finalizeOptions(RAPIOOptions& o);
 
-  /** Was the macro applied on leftovers? */
-  bool
-  isMacroApplied(){ return myMacroApplied; }
+  /** Declare advanced help for options in declareOptions, if any. */
+  virtual void
+  declareAdvancedHelp(RAPIOOptions& o){ };
 
-  /** Are we running a web server? */
-  bool
-  isWebServer(const std::string& key = "web");
+  /** Post loaded help.  Algorithms should use declareAdvancedHelp */
+  virtual void
+  addPostLoadedHelp(RAPIOOptions& o){ };
 
   /** Write data based on suffix directly to a given file key,
    * without notification.  You normally want to call writeOutputProduct
@@ -158,6 +165,10 @@ protected:
   //     delete p;
   //   }
   // }
+
+  /** After adding wanted inputs and indexes, execute the algorithm */
+  virtual void
+  execute();
 
 protected:
 

@@ -40,7 +40,28 @@ public:
 
   /** Apply filter to out indexes (copy from source using our technique) */
   virtual bool
-  remap(float inI, float inJ, size_t outI, size_t outJ) = 0;
+  remap(float inI, float inJ, float& out) = 0;
+
+  /** Set source array.  Needs to be called before direct remap */
+  void
+  setSource(std::shared_ptr<Array<float, 2> > in)
+  {
+    myArrayIn = in;
+    auto& i = *myArrayIn;
+
+    myRefIn = i.ptr();
+    myMaxI  = i.getX();
+    myMaxJ  = i.getY();
+    // myWidth, myHeight in constructor (param for now)
+  }
+
+  /** Set output array. */
+  void
+  setOutput(std::shared_ptr<Array<float, 2> > out)
+  {
+    myArrayOut = out;
+    myRefOut   = myArrayOut->ptr();
+  }
 
 protected:
 
@@ -79,7 +100,7 @@ public:
 
   /** remap the remap */
   virtual bool
-  remap(float inI, float inJ, size_t outI, size_t outJ) override;
+  remap(float inI, float inJ, float& out) override;
 };
 
 /**
@@ -124,7 +145,7 @@ public:
 
   /** Remap grid location to output */
   virtual bool
-  remap(float inI, float inJ, size_t outI, size_t outJ) override;
+  remap(float inI, float inJ, float& out) override;
 };
 
 /*
@@ -164,6 +185,6 @@ public:
 
   /** Remap grid location to output */
   virtual bool
-  remap(float inI, float inJ, size_t outI, size_t outJ) override;
+  remap(float inI, float inJ, float& out) override;
 };
 }

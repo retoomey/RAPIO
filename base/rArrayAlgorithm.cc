@@ -7,14 +7,12 @@ void
 ArrayAlgorithm::remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatLonGrid> out, size_t width,
   size_t height)
 {
-  myArrayIn  = in->getFloat2D();
-  myArrayOut = out->getFloat2D();
-  myRefIn    = myArrayIn->ptr();
-  myRefOut   = myArrayOut->ptr();
-  myMaxI     = myArrayIn->getX();
-  myMaxJ     = myArrayIn->getY();
-  myWidth    = width;
-  myHeight   = height;
+  setSource(in->getFloat2D());
+  setOutput(out->getFloat2D());
+
+  // Param based, we'll set directly
+  myWidth  = width;
+  myHeight = height;
 
   // FIXME: Could we do different directions?  N by N2?  Why not?
   LogInfo("Remapping using matrix size of " << myWidth << " by " << myHeight << "\n");
@@ -50,7 +48,9 @@ ArrayAlgorithm::remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatL
     AngleDegs atLon = startLon;
     for (size_t x = 0; x < numX; ++x, atLon += out->getLonSpacing()) {
       const float xof = (atLon - inNWLonDegs ) / inLonSpacingDegs;
-      if (remap(yof, xof, y, x)) {
+      float value;
+      if (remap(yof, xof, value)) {
+        (*myRefOut)[y][x] = value;
         counter++;
       }
     } // endX
@@ -62,7 +62,7 @@ ArrayAlgorithm::remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatL
 } // ArrayAlgorithm::remapFromTo
 
 bool
-NearestNeighbor::remap(float inI, float inJ, size_t outI, size_t outJ)
+NearestNeighbor::remap(float inI, float inJ, float& out)
 {
   // for nearest, round to closest cell hit
   const int i = std::round(inI);
@@ -75,12 +75,12 @@ NearestNeighbor::remap(float inI, float inJ, size_t outI, size_t outJ)
   if ((j < 0) || (j >= myMaxJ)) {
     return false;
   }
-  (*myRefOut)[outI][outJ] = (*myRefIn)[i][j];
+  out = (*myRefIn)[i][j];
   return true;
 }
 
 bool
-Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
+Cressman::remap(float inI, float inJ, float& out)
 {
   // Iterator over half size to center sample
   // We could store these probably
@@ -116,7 +116,7 @@ Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
             // to avoid division by zero
             // This also passes on mask when close to a true cell location
             if (dist < std::numeric_limits<float>::epsilon()) {
-              (*myRefOut)[outI][outJ] = val;
+              out = val;
               goto endcressman;
             }
 
@@ -137,16 +137,16 @@ Cressman::remap(float inI, float inJ, size_t outI, size_t outJ)
   }   // End lat column
 
   if (n > 0) {
-    (*myRefOut)[outI][outJ] = tot_val / tot_wt;
+    out = tot_val / tot_wt;
   } else {
-    (*myRefOut)[outI][outJ] = currentMask;
+    out = currentMask;
   }
 endcressman:;
   return true;
 } // Cressman::remap
 
 bool
-Bilinear::remap(float inI, float inJ, size_t outI, size_t outJ)
+Bilinear::remap(float inI, float inJ, float& out)
 {
   // Iterator over half size to center sample
   // We could store these probably
@@ -193,9 +193,9 @@ Bilinear::remap(float inI, float inJ, size_t outI, size_t outJ)
   }   // End lat column
 
   if (n > 0) {
-    (*myRefOut)[outI][outJ] = tot_val / tot_wt;
+    out = tot_val / tot_wt;
   } else {
-    (*myRefOut)[outI][outJ] = currentMask;
+    out = currentMask;
   }
 endbilinear:;
   return true;

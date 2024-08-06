@@ -107,7 +107,7 @@ RAPIOProgram::finalizeOptions(RAPIOOptions& o)
 }
 
 bool
-RAPIOProgram::isWebServer(const std::string& key)
+RAPIOProgram::isWebServer(const std::string& key) const
 {
   for (auto p: myPlugins) {
     if (p->getName() == key) {
@@ -182,7 +182,7 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
       addPostLoadedHelp(o);
       o.addPostLoadedHelp();
       o.finalizeArgs(wantHelp);
-      exit(1);
+      exit(0);
     }
     const bool success = o.finalizeArgs(wantHelp);
     if (!success) { exit(1); }
@@ -206,6 +206,24 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     std::cerr << "Exception during startup: " << e.what() << "\n";
   }
 } // RAPIOProgram::executeFromArgs
+
+void
+RAPIOProgram::addPlugin(RAPIOPlugin * p)
+{
+  myPlugins.push_back(p);
+}
+
+void
+RAPIOProgram::removePlugin(const std::string& name)
+{
+  for (size_t i = 0; i < myPlugins.size(); ++i) {
+    if (myPlugins[i]->getName() == name) {
+      RAPIOPlugin * removedItem = myPlugins[i];
+      myPlugins.erase(myPlugins.begin() + i);
+      delete removedItem;
+    }
+  }
+}
 
 void
 RAPIOProgram::execute()

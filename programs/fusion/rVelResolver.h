@@ -66,7 +66,7 @@ public:
     myUZs.clear();
     myLatDegs.clear();
     myLonDegs.clear();
-    myHeightKMs.clear();
+    myHeightMeters.clear();
     return true;
   }
 
@@ -91,7 +91,7 @@ public:
       myUZs.push_back(vv.uz);
       myLatDegs.push_back(vv.latDegs);
       myLonDegs.push_back(vv.lonDegs);
-      myHeightKMs.push_back(vv.heightKMs);
+      myHeightMeters.push_back(vv.heightKMs * 1000.0);
     }
   }
 
@@ -118,7 +118,7 @@ public:
       auto& uz     = stage2->addFloat1DRef("uz", "dimensionless", { 0 });
       auto& lat    = stage2->addFloat1DRef("latitude", "Degrees", { 0 });
       auto& lon    = stage2->addFloat1DRef("longitude", "Degrees", { 0 });
-      auto& ht     = stage2->addFloat1DRef("height", "KM", { 0 });
+      auto& ht     = stage2->addFloat1DRef("height", "Meters", { 0 });
 
       // Copy into netcdf output
       std::copy(myValues.begin(), myValues.end(), values.data());
@@ -127,7 +127,7 @@ public:
       std::copy(myUZs.begin(), myUZs.end(), uz.data());
       std::copy(myLatDegs.begin(), myLatDegs.end(), lat.data());
       std::copy(myLonDegs.begin(), myLonDegs.end(), lon.data());
-      std::copy(myHeightKMs.begin(), myHeightKMs.end(), ht.data());
+      std::copy(myHeightMeters.begin(), myHeightMeters.end(), ht.data());
 
       std::map<std::string, std::string> extraParams;
       extraParams["showfilesize"] = "yes";
@@ -156,7 +156,7 @@ private:
   std::vector<float> myUZs;
   std::vector<float> myLatDegs;
   std::vector<float> myLonDegs;
-  std::vector<float> myHeightKMs;
+  std::vector<float> myHeightMeters;
 };
 
 /**
@@ -172,6 +172,11 @@ public:
   // ---------------------------------------------------
   // Functions for declaring available to command line
   //
+  VelResolver()
+  {
+    // FIXME: Obviously params later most likely
+    myRemap = std::make_shared<Cressman>(8, 12); // radials, gates coverage of cressman
+  }
 
   /** Introduce into VolumeValueResolver factory */
   static void
@@ -208,5 +213,10 @@ public:
   /** Calculate using VolumeValue inputs, our set of outputs in VolumeValue.*/
   virtual void
   calc(VolumeValue * vvp) override;
+
+protected:
+
+  /** Remapper for the matrix query */
+  std::shared_ptr<ArrayAlgorithm> myRemap;
 };
 }

@@ -210,33 +210,6 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 }
 
 void
-RAPIOAlgorithm::processNewData(RAPIOData&)
-{
-  LogInfo("Received data, ignoring.\n");
-}
-
-void
-RAPIOAlgorithm::processWebMessage(std::shared_ptr<WebMessage> w)
-{
-  LogInfo("Received web message, ignoring.\n");
-  #if 0
-  static int counter = 0;
-
-  std::stringstream stream;
-
-  stream << "<h1>Web request call number: " << ++counter << "</h1>";
-  stream << "Path is: " << w->getPath() << "<br>";
-  auto& map = w->getMap();
-
-  stream << "There are " << map.size() << " fields.<br>";
-  for (auto& a:map) {
-    stream << "Field: " << a.first << " == " << a.second << "<br>";
-  }
-  w->setMessage(stream.str());
-  #endif // if 0
-}
-
-void
 RAPIOAlgorithm::handleEndDatasetEvent()
 {
   if (!isDaemon()) {
