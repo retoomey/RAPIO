@@ -394,6 +394,33 @@ RAPIOTileAlg::handlePathData(WebMessage& w, std::vector<std::string>& pieces)
 }
 
 void
+RAPIOTileAlg::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  std::stringstream json;
+
+  // for moment use the single loaded datatype for color map
+  // though we should be requesting by name I think
+  // This means we will need a way to request meta information on data
+  if (myTileData != nullptr) {
+    // std::shared_ptr<DataType> myTileData;
+    // This assumes the loaded data which at some point we're gonna have to change.
+    // We might want to get color map by NAME actually.
+    auto c = myTileData->getColorMap();
+    // Bleh need a json color map, right?  So we can apply it on front end side
+    // Actually no, it can be a binary format.  It's just less flexible.
+    // Also the web guys will want an svg generator as well.  Lots of color map work
+    // to do.
+    // Needs to be UTF-8 for text/plain.j
+    // w.setMessage("This should work!", "text/plain");
+    // We probably want a json version and a binary version.  Hate to say it.
+    //
+    c->toJSON(json);
+    w.setMessage(json.str());
+  }
+}
+
+void
 RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings)
 {
   // Write tile to cache using all the settings
@@ -653,6 +680,8 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
   } else if (type == "tmsdata") {
     settings["suffix"] = "mrmstile";
     handlePathTMS(w, pieces, settings);
+  } else if (type == "colormap") {
+    handleColorMap(w, pieces, settings);
     // These are more experimental alpha
   } else if (type == "ui") {
     handlePathUI(w, pieces);

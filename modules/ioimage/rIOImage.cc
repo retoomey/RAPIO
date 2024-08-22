@@ -236,33 +236,45 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   //
   bool successful = false;
 
-  // ----------------------------------------------------------------------
-  // Bounding Box settings from given BBOX string
-  size_t rows;
-  size_t cols;
-  double top    = 0;
-  double left   = 0;
-  double bottom = 0;
-  double right  = 0;
-  auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
-  const auto deltaLat = (bottom - top) / rows; // good
-  const auto deltaLon = (right - left) / cols;
-  const bool transform = (proj != nullptr);
-
-  auto colormap         = dtr.getColorMap();
-  const ColorMap& color = *colormap;
-  // ----------------------------------------------------------------------
-  // Final rendering using the BBOX
-  //bool box = keys["flags"] == "box";
-
   try{
      std::string suffix = keys["suffix"];
-    // LogSevere("-->REQUESTED SUFFIX '"<<suffix<<"'\n");
+
+     // A data tile attempt for 2D tabling in the imgui display.
+     // This will break up the 2D array of the data into tiles, without
+     // any projection, giving us a 2D tracking table.  
+     if (suffix == "mrms2dtile"){
+       //try {
+       // I'm thinking we label 'tiles' in the data by a single id
+       // This will be 'partitioned' kinda like the grid partition, right?
+       // Maybe the code can be shared even
+       //id = std::stoi(keys["mrms2dtileid"]); // could except
+       // }
+     }else{
+
+     // These tiles require projection or the BBOX
+     
+     // ----------------------------------------------------------------------
+     // Bounding Box settings from given BBOX string
+     size_t rows, cols;
+     double top    = 0;
+     double left   = 0;
+     double bottom = 0;
+     double right  = 0;
+     auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
+     const auto deltaLat = (bottom - top) / rows; // good
+     const auto deltaLon = (right - left) / cols;
+     const bool transform = (proj != nullptr);
+
+     auto colormap         = dtr.getColorMap();
+     const ColorMap& color = *colormap;
+
      if (suffix == "mrmstile"){
        successful = writeMRMSTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
      }else{
        successful = writeMAGICKTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
      }
+     }
+
      // ----------------------------------------------------------
      // Post processing such as extra compression, ldm, etc.
      if (successful) {

@@ -28,6 +28,8 @@
 #include <SDL_opengl.h>
 #endif
 
+#include <iostream>
+
 // Extra widgets
 // https://github.com/Flix01/imgui
 // has a bunchs of extra classes.  We're going to
@@ -38,6 +40,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/bind.h> 
+#include <emscripten/fetch.h> 
 #include <functional>
 static std::function<void()>            MainLoopForEmscriptenP;
 static void MainLoopForEmscripten()     { MainLoopForEmscriptenP(); }
@@ -77,7 +80,7 @@ double get_lat() {
     });
 }
 
-double get_dataValue() {
+double getReadoutValue() {
     return EM_ASM_DOUBLE({
         return Module.dataValue;
     });
@@ -134,6 +137,102 @@ float lerp(float a, float b, float t) {
     return (1 - t) * a + t * b;
 }
 
+// Experiments to fetch from webserver directly -------------
+
+std::atomic<bool> isFetchInProgress(false);
+
+void OnDataFetched(emscripten_fetch_t *fetch) {
+    if (fetch->status == 200) {
+       std::string data((char*)fetch->data, fetch->numBytes);
+       std::cout << "String is "<<data<<"\n";
+    } else {
+       std::cout << "Failed to fetch data:" << fetch->status << "\n";
+    }
+    isFetchInProgress.store(false);// reset
+    emscripten_fetch_close(fetch);
+}
+
+/** Fetch color map info */
+void FetchData() {
+    // Keep from reenter, not sure working 100%
+    if (isFetchInProgress.load()){
+	   return;
+    }
+    isFetchInProgress.store(true);
+
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+
+    // Set fields after init
+    strcpy(attr.requestMethod, "GET");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY
+	      | EMSCRIPTEN_FETCH_REPLACE;
+    attr.onsuccess = OnDataFetched;
+    attr.onerror = OnDataFetched;
+
+    attr.onerror = [](emscripten_fetch_t *fetch) {
+      printf("The download actually failed.\n");
+      isFetchInProgress.store(false);// reset
+    };
+    /*
+    attr.onprogress = [](emscripten_fetch_t *fetch) {
+      if (fetch->status != 200) return;
+      printf("onprogress: dataOffset: %llu, numBytes: %llu, totalBytes: %llu\n", fetch->dataOffset, fetch->numBytes, fetch->totalBytes);
+      if (fetch->totalBytes > 0) {
+        printf("Downloading.. %.2f%% complete.\n", (fetch->dataOffset + fetch->numBytes) * 100.0 / fetch->totalBytes);
+      } else {
+        printf("Downloading.. %lld bytes complete.\n", fetch->dataOffset + fetch->numBytes);
+      }
+    };
+    */
+
+    //attr.onsuccess = [](emscripten_fetch_t *fetch) {
+    //  printf("Good download.\n");
+    //  isFetchInProgress.store(false);// reset
+    //};
+    emscripten_fetch(&attr, "http://localhost:8080/colormap");
+    //emscripten_fetch(&attr, "https://raw.githubusercontent.com/retoomey/RAPIO/master/webexample/main.cpp");
+
+}
+// END Experiments to fetch from webserver directly -------------
+
+/** Call fetchColorMap from our javascript library */
+void doFetchColorMap() {
+  EM_ASM({
+    // Create a new promise to handle the asynchronous fetch operation
+    // Since Enscripten doesn't handle await guess we're stuck with this
+    // We have a async load the module and async call the method...
+    const p = new Promise((resolve, reject) => {
+      // Dynamically import the module
+      import('./rColorMap.js').then(module => {
+        // Call the fetchColorMap function from the imported module
+        module.fetchColorMap()
+          .then(data => {
+	
+	    // Tell the map about new color map
+	    Module.map.myRAPIOLayer.setColorMap(data);
+	    // FIXME: Can we trigger a refresh of map..maybe in the main loop is best?
+            resolve();  // Resolve the promise once fetchColorMap completes successfully
+          })
+          .catch(error => {
+            console.error("Error calling fetchColorMap:", error);
+            reject(error);  // Reject the promise if there's an error
+          });
+      }).catch(err => {
+        console.error("Failed to import module:", err);
+        reject(err);  // Reject the promise if the module import fails
+      });
+    });
+
+    // Handle the promise returned by the asynchronous operation
+    p.then(() => {
+      //console.log("Promise resolved in EM_ASM");
+    }).catch(error => {
+      console.error("Promise rejected in EM_ASM:", error);
+    });
+  });
+}
+
 EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("lerp", &lerp);
   emscripten::class_<myApplicationState>("myApplicationState")
@@ -147,11 +246,9 @@ EMSCRIPTEN_BINDINGS(my_module) {
  * Create the basic map setup we use
  * https://leaflet-extras.github.io/leaflet-providers/preview/index.html
  *
- * FIXME: I think 'eventually' we'll move a lot of the EM_JS
- * into .js files and load them, probably cleaner than compiling each
- * time.  I don't know enough yet.
  */
 EM_JS(void, initMap, (), {
+
    var map = L.map('map').setView([35.3333, -97.2777], 3);
 
    Module.map = map;
@@ -186,14 +283,25 @@ EM_JS(void, initMap, (), {
 
    // Attach move event listener (tracking map itself)
    // Not using yet
-   map.on('move', function(event) {
-      console.log('Map moved:', event);
-      console.log('Current center:', map.getCenter());
+  // map.on('move', function(event) {
+     // console.log('Map moved:', event);
+     // console.log('Current center:', map.getCenter());
+  // });
+   map.on('resize', function(event){
+     initGLCanvas();
    });
 
 
+   let openGLSetup = false;
+
    // Mouse movement
    map.on('mousemove', function(event) {
+
+     if (!openGLSetup){
+      console.log("-------->Setting up opengl");
+       initGLCanvas();
+       openGLSetup = true;
+     }
      var zoom = map.getZoom();
     // var tileInfo = getTileInfo(event.latlng, zoom);
    //console.log('Mouse moved to:', event.latlng);
@@ -218,191 +326,78 @@ EM_JS(void, initMap, (), {
 
      // Looking for tile...see if it exists...
      if (Module.map.myRAPIOLayer){
-        console.log("We have the layer!\n");
+        //console.log("We have the layer!\n");
 	// Try to get the tile matching coordinates
         var tileKey = `${zoom}_${tileX}_${tileY}`;
 	var cachedTile = Module.map.myRAPIOLayer.getTileFromCache(tileKey);
 	if (cachedTile){
-	   console.log("Tile found:", tileKey);
+	   //console.log("Tile found:", tileKey);
 	   // Ok attempt to get the value in the tile at location x,y
            Module.dataValue = cachedTile.floatData[pixelY*256+pixelX]; // guessing
 	}else{
 	   //console.log("Tile NOT found:", tileKey);
 	}
      }
+
+     // Try opengl overlay hack attempt
+     var mouseEvent = event.originalEvent;
+     drawReadout(mouseEvent.clientX, mouseEvent.clientY);
    });
 
    // Mouse out of map
    map.on('mouseout', function() {
      Module.isMouseOverMap = false;
      Module.dataValue = 0.0;
+     clearReadout();
    });
 
 });
 
 /** Set up the RAPIO map layer */
 EM_JS(void, initRAPIOLayer, (), {
+  Module.mapReady = false;
 
-/*  Create tile layer that uses our server and mrmsdata format */
-var RawDataTileLayer = L.TileLayer.extend({
+  // Can't use 'await' in EM_JS, so here we are promising
+  const mapReady = new Promise((resolve, reject) => {
+  import('./rDataLayer.js').then(module => {
 
-  initialize: function() {
-    // Call the parent class constructor
-    L.TileLayer.prototype.initialize.apply(this, arguments);
+  // ----------------------------------------------------------------------
+  //
+  // Data pull layer (Color map is client side)
+  var RAPIOMap = new module.RAPIODataTileLayer('http://localhost:8080/tmsdata/{z}/{x}/{y}', {
+    maxZoom: 18,
+    attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
+    id: 'data',
+    tileSize: 256,
+    transparent: true
+  });
+  Module.map.myRAPIOLayer = RAPIOMap;
 
-    // Initialize the cache as a Map
-    this.tileCache = new Map();
+  // Regular image layer (Color map is server side)
+  var RAPIOImageMap = new L.TileLayer('http://localhost:8080/tms/{z}/{x}/{y}', {
+    maxZoom: 18,
+    attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
+    id: 'data',
+    tileSize: 256,
+    transparent: true
+  });
+  Module.map.myRAPIOImageLayer = RAPIOImageMap;
 
-    // Set up event listeners
-    this.on('tileunload', this.handleTileUnload, this);
-  },
-  createTile(coords, done) {
-    const tile = document.createElement('canvas');
-    tile.coords = coords;
+  Module.mapReady = true;
+  resolve();
+  // ----------------------------------------------------------------------
 
-    // Get the URL we need
-    const url = this.getTileUrl(coords);
-
-    // Set initial tile sizes, nothing in it yet
-    // Think we can draw error text or something
-    var tileSize = this.getTileSize();
-    tile.setAttribute('width', tileSize.x);
-    tile.setAttribute('height', tileSize.y);
-
-    // We have to pull the data ourselves.  If we use img and
-    // auto browser loading and then canvas we get distorted
-    // data values.  But since it's our tile server we can do
-    // whatever we want.  Currently we just send 256*256*float
-    fetch(url)
-      .then(response => { // Async action
-        if (!response.ok) {
-          throw new Error(`Network response was not ok: ${response.statusText}`);
-        }
-        return response.arrayBuffer();
-      })
-      .then(buffer => { // Async success read
-
-        // Get our raw MRMS data tile
-        const byteLength = buffer.byteLength;
-	if (byteLength != 262144){
-          throw new Error("Unexpected MRMS data tile size: "+byteLength+" != 262144");
-	}
-	// Create a rawData view..
-        //tile.rawData = new Uint8Array(buffer);
-	var floatData = new Float32Array(buffer);
-
-        // Get canvas data
-        var ctx = tile.getContext('2d');
-        var imageData = ctx.createImageData(tileSize.x, tileSize.y);
-        var data = imageData.data;
-
-	// FIXME:
-	// The next thing is developing the server color map ability
-	// and our ability to use one for rendering.
-	// Also we need to use the browser cache for data
-	//
-        // Fill the image data, applying red/green mask color map.
-	//
-	var index = 0;
-        for (var i = 0; i < data.length; i += 4) {
-	    if (floatData[index] < -8000){
-              data[i] = 0;     // Red
-              data[i + 1] = 0; // Green
-              data[i + 2] = 0;   // Blue
-              data[i + 3] = 0; // Alpha
-	    }else{
-              data[i] = 255;     // Red
-              data[i + 1] = 0; // Green
-              data[i + 2] = 0;   // Blue
-              data[i + 3] = 255; // Alpha
-	    }
-	    index++;
-        }
-        // Put the modified image data onto the canvas
-        ctx.putImageData(imageData, 0, 0);
-
-//	// Store the canvas in the WeakMap
-//        Module.tileCache.set(tile, {
-//            imageData: imageData
-//        });
-
-	// Generate a unique key for the tile
-	// Note changing data will require some work to
-	// clear cache, etc.
-        var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
-	console.log("New tile key: " +tileKey+"\n");
-
-        // Store the canvas in the cache
-	// Question..do we store in Module globally, or
-	// store in the layer?  Layer might be better,
-	// since if data file changes this cache should purge
-   //     Module.tileCache[tileKey] = {
-   //         canvas: tile,
-   //         imageData: imageData
-   //     };
-        // Store the canvas and image data in the Map
-        this.tileCache.set(tileKey, {
-            canvas: tile,
-            imageData: imageData,
-	    floatData: floatData
-        });
-
-//	console.log(Object.keys(Module.tileCache).length);
-        console.log("Cache size: "+this.getTileCacheSize()+"\n");
-
-        done(null, tile);
-      })
-      .catch(error => { // Async fail read
-        done(error, null);
-      });
-
-    return tile;
-  },
-  // Method to get a tile from the cache if it exists
-  //getTileFromCache: function(coords) {
-  //    var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
-  //    return this.tileCache.get(tileKey);
-  //},
-  // Method to get a tile from the cache if it exists
-  getTileFromCache: function(tileKey) {
-      return this.tileCache.get(tileKey);
-  },
-  // Method to get the size of the tileCache
-  getTileCacheSize: function() {
-        return this.tileCache.size;
-  },
-  // Handle the tileunload event
-  handleTileUnload: function(event) {
-      var coords = event.coords;
-      var tileKey = `${coords.z}_${coords.x}_${coords.y}`;
-
-      // Remove the tile from the cache
-      console.log("Deleting key "+tileKey+"\n");
-      this.tileCache.delete(tileKey);
-  }
+  }).catch(err => {
+    console.error("Failed to load/create RAPIO data layer (rDataLayer.js): ",err);
+    reject(err);
+  });
 
 });
 
-   // Data pull (Color map is client side)
-   var RAPIOMap = new RawDataTileLayer('http://localhost:8080/tmsdata/{z}/{x}/{y}', {
-       maxZoom: 18,
-       attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
-       id: 'data',
-       tileSize: 256,
-       transparent: true
-   });
-   Module.map.myRAPIOLayer = RAPIOMap;
+});
 
-   // Regular image pull (Color map is server side)
-   var RAPIOImageMap = new L.TileLayer('http://localhost:8080/tms/{z}/{x}/{y}', {
-       maxZoom: 18,
-       attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
-       id: 'data',
-       tileSize: 256,
-       transparent: true
-   });
-   Module.map.myRAPIOImageLayer = RAPIOImageMap;
-
+EM_JS(bool, is_layer_ready, (), {
+  return Module.mapReady;
 });
 
 /** Create debug tile layer.  This is better than us
@@ -445,7 +440,7 @@ EM_JS(void, initDebugLayer, (), {
 // Define a JavaScript function to change the tile layer of the Leaflet map
 EM_JS(void, changeMapLayer, (bool backgroundMapShow, int backgroundMap, int dataMap, bool showDebugTiles), {
 
-    console.log(">>>changing layers! "+backgroundMapShow+"\n");
+    //console.log(">>>changing layers! "+backgroundMapShow+"\n");
 
     // Remove all layers
     Module.map.eachLayer(function (layer) {
@@ -648,6 +643,21 @@ void SetupImGuiStyle()
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.800000011920929f, 0.800000011920929f, 0.800000011920929f, 0.3499999940395355f);
 }
 
+/** Show the readout feedback area */
+static void showReadout()
+{
+  double lat, lon;
+  bool mouseOver = getLatLon(lat, lon);
+
+  if (mouseOver){
+    const auto v = getReadoutValue();
+    ImGui::Text("Readout: %.2f [%.2f,%.2f]", v, lat, lon);
+  }else{
+    ImGui::Text("Readout: ---");
+  }
+
+}
+
 static void ShowDesktop(bool* p_open, myApplicationState& state)
 {
     static bool use_work_area = true;
@@ -665,6 +675,8 @@ static void ShowDesktop(bool* p_open, myApplicationState& state)
 
     if (ImGui::Begin("Main window", p_open, flags))
     {
+	showReadout();
+
         //ImGui::ColorEdit3("A color", (float*)&clear_color); 
         if (ImGui::Checkbox("Show Debug Tiles", &state.showDebugTiles)){
            changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
@@ -685,18 +697,42 @@ static void ShowDesktop(bool* p_open, myApplicationState& state)
 	//double lat = get_lat();
         //bool mouseOver = is_mouse_over_map();
 
-	double lat, lon;
-        bool mouseOver = getLatLon(lat, lon);
+	if (ImGui::Button("Fetch Colormap")) {
+	  doFetchColorMap();
+        }
 
-	if (mouseOver){
-	  ImGui::Text("Latitude: %.2f", lat);
-	  ImGui::Text("Longitude: %.2f", lon);
-	}else{
-	  ImGui::Text("Latitude:  -");
-	  ImGui::Text("Longitude: -");
-	}
-	// If this works, we're making progress...
-	ImGui::Text("Readout: %.2f", get_dataValue());
+#if 0
+        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+
+    const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
+    const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
+        ImVec2 outer_size = ImVec2(0.0f, TEXT_BASE_HEIGHT * 8);
+        if (ImGui::BeginTable("color_scroller", 3, flags, outer_size))
+        {
+            ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
+            ImGui::TableSetupColumn("U", ImGuiTableColumnFlags_None);
+            //ImGui::TableSetupColumn("Two", ImGuiTableColumnFlags_None);
+            //ImGui::TableSetupColumn("Three", ImGuiTableColumnFlags_None);
+            ImGui::TableHeadersRow();
+
+            // Demonstrate using clipper for large vertical lists
+            ImGuiListClipper clipper;
+            clipper.Begin(1000);
+            while (clipper.Step())
+            {
+                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                {
+                    ImGui::TableNextRow();
+                    for (int column = 0; column < 1; column++)
+                    {
+                        ImGui::TableSetColumnIndex(column);
+                        ImGui::Text("Hello %d,%d", column, row);
+                    }
+                }
+            }
+            ImGui::EndTable();
+        }
+#endif
 
 	// ------------------------------------------------
 	// Convenient for now as we learn the basics
@@ -740,9 +776,28 @@ static void ShowDesktop(bool* p_open, myApplicationState& state)
     ImGui::End();
 }
 
+//EMSCRIPTEN_WEBGL_CONTEXT_HANDLE special_context;
+
 // Main code
 int main(int, char**)
 {
+  // Attempt to create a context in the gl-canvas for overlay.  Highly experimental
+#if 0
+  EmscriptenWebGLContextAttributes attrs;
+  emscripten_webgl_init_context_attributes(&attrs);
+  attrs.alpha = 1;
+  attrs.depth = 1;
+  attrs.stencil = 1;
+  attrs.antialias = 1;
+  attrs.majorVersion = 1;
+  attrs.minorVersion = 0;
+
+  special_context = emscripten_webgl_create_context("#gl-canvas", &attrs);
+  //emscripten_webgl_make_context_current(special_context);
+#endif
+
+  // END EXPERIMENT
+
     // State information (at the top, currently reset on page refresh)
     //
     static myApplicationState state;
@@ -756,7 +811,8 @@ int main(int, char**)
     //TESTSTATE(&state);
 
     // Create RAPIO map layer
-    changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
+    // Might not be ready, right?
+ //   changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
 
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
@@ -863,9 +919,14 @@ int main(int, char**)
 
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
+	    adsfasdfasdf
     while (!done)
 #endif
     {
+
+	 // Make sure context set in loop, right?
+	//SDL_GL_MakeCurrent(window, gl_context);
+	 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -892,54 +953,18 @@ int main(int, char**)
           ImGui::GetIO().FontGlobalScale += 1.0f;
 	  first = false;
 	}
-       // }
 
-#if 0
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("ADemo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
-        }
-
-        }
-#endif
-
+	if (is_layer_ready()){
+	  // First post ready, set initial layers, etc.
+	  static bool firstLayer = true;
+          if (firstLayer){
+	    changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
+	    firstLayer = false;
+	  }
         ShowDesktop(&show, state);
-
-	// ------------------------------------------------
-	// Convenient for now as we learn the basics
-    //    if (ImGui::Button("Demo Widgets")){
-//	  show_demo_window = true;
-//	}
-    //    ImGui::Checkbox("ADemo Window", &show_demo_window);      // Edit bools storing our window open/close state
-
-      //  if (show_demo_window){
-      //     ImGui::ShowDemoWindow(&show_demo_window);
-//	}
-	// ------------------------------------------------
+	}else{
+          ImGui::Text("Loading...");
+	}
 
         // Rendering
         ImGui::Render();
@@ -949,6 +974,10 @@ int main(int, char**)
         //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
+
+
+	// Now try special context...
+//	emscripten_webgl_make_context_current(special_context);
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;

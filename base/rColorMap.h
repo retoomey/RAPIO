@@ -165,7 +165,14 @@ public:
     }
   }
 
+  /** For the GUI experiment a JSON streamed color map format we can apply
+   * client size using javascript. */
+  virtual void toJSON(std::ostream&){ }
+
 protected:
+
+  /** Key that was used to get this color map */
+  std::string myName;
 
   /** Upper bound of each color bin */
   std::vector<double> myUpperBounds;
@@ -182,6 +189,59 @@ protected:
 private:
   /** Cache of keys to color maps */
   static std::map<std::string, std::shared_ptr<ColorMap> > myColorMaps;
+};
+
+/** A color map that tries to be more efficient and prepare for the web assembly equivalent */
+class TestColorMap : public ColorMap
+{
+public:
+  /** Store info per bin directly */
+  class TestColorMapInfo : public Data {
+public:
+    TestColorMapInfo(bool l, const std::string& label,
+      double l_, double u_,
+      unsigned char& r_, unsigned char& g_, unsigned char& b_, unsigned char& a_,
+      unsigned char& r2_, unsigned char& g2_, unsigned char& b2_, unsigned char& a2_
+    ) : myLabel(label), myIsLinear(l), l(l_), u(u_), r(r_), g(g_), b(b_), a(a_), r2(r2_), g2(g2_), b2(b2_), a2(a2_), d(std::abs(
+          u_ - l_)){ };
+
+    std::string myLabel;
+    bool myIsLinear;
+    double l;
+    double u;
+    unsigned char r;
+    unsigned char b;
+    unsigned char g;
+    unsigned char a;
+    unsigned char r2;
+    unsigned char b2;
+    unsigned char g2;
+    unsigned char a2;
+    double d;
+  };
+
+  /** For the GUI experiment a JSON streamed color map format we can apply
+   * client size using javascript. */
+  virtual void
+  toJSON(std::ostream&) override;
+
+  /** Add a bin to us */
+  virtual void
+  addBin(bool linear, const std::string& label, double u, double l,
+    unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_,
+    unsigned char r2_, unsigned char g2_, unsigned char b2_, unsigned char a2_);
+
+  /** Given a value, return data color for it.  This ignores special data values like missing, etc. and
+   * treats those values as data, which you normally don't want. */
+  virtual void
+  getDataColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const;
+
+  /** Given a value, return colors for it */
+  virtual void
+  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const;
+
+  // Quesetion is, do we do N vectors or N of a single struct
+  std::vector<TestColorMapInfo> myColorInfo;
 };
 
 class NullColorMap : public ColorMap

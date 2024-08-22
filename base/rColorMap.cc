@@ -6,6 +6,7 @@
 #include "rIOURL.h"
 #include "rConfig.h"
 #include "rStrings.h"
+#include "rIOJSON.h"
 
 using namespace rapio;
 
@@ -105,6 +106,7 @@ ColorMap::getColorMap(const std::string& key)
 
     // Cache this color map so we don't hunt for it again
     myColorMaps[key] = colormap;
+    colormap->myName = key;
   } else {
     colormap = lookup->second;
   }
@@ -266,10 +268,13 @@ std::shared_ptr<ColorMap>
 ColorMap::readW2ColorMap(const URL& url)
 {
   std::shared_ptr<ColorMap> out;
+  std::shared_ptr<TestColorMap> out2;
   auto xml = IODataType::read<PTreeData>(url.toString());
 
   try{
-    out = std::make_shared<ColorMap>();
+    // out = std::make_shared<ColorMap>(); GOOP
+    out  = std::make_shared<ColorMap>();
+    out2 = std::make_shared<TestColorMap>();
     auto map = xml->getTree()->getChild("colorMap");
 
     // This is old read generic ability, which is a ton of color maps
@@ -359,6 +364,10 @@ ColorMap::readW2ColorMap(const URL& url)
         out->myColorBins.push_back(new LinearColorBin(label, upper, lower, c1.r, c1.g, c1.b, c1.a, c2.r, c2.g, c2.b,
           c2.a));
       }
+
+      const bool single = (( c1 == c2) || ( finite(upper) == 0) || ( finite(lower) == 0) );
+      out2->addBin(!single, label, upper, lower, c1.r, c1.g, c1.b, c1.a, c2.r, c2.g, c2.b, c2.a);
+
       lower = upper;
 
       // Make it upper...
@@ -371,7 +380,8 @@ ColorMap::readW2ColorMap(const URL& url)
     LogSevere("Tried to read color map and failed: " << e.what() << "\n");
   }
   LogInfo("Loaded w2 colormap at " << url.toString() << "\n");
-  return out;
+  // return out;
+  return out2;
 } // ColorMap::readW2ColorMap
 
 void
@@ -466,4 +476,143 @@ NullColorMap::getColor(double v, unsigned char& r, unsigned char& g, unsigned ch
     b = 0;
     a = 255;
   }
+}
+
+void
+TestColorMap::toJSON(std::ostream& o)
+{
+  std::shared_ptr<PTreeData> theJson = std::make_shared<PTreeData>();
+  auto tree = theJson->getTree();
+
+  tree->put("Name", myName);
+
+  // Create the array of upperbounds
+  PTreeNode upperBounds;
+
+  #if 0
+  // I don't seem to need this.  The bins hold it..so in
+  // theory we're ok if the color map is formatted correctly.
+  for (size_t i = 0; i < myUpperBounds.size(); ++i) {
+    auto& u = myUpperBounds[i];
+    PTreeNode item; // Dirty just for simple arrays I think
+
+    item.put("", u); // c++ will do inf, -inf, nan
+
+    /*
+     * if (std::isinf(u)){
+     * if (u > 0){
+     * item.put("", "inf");
+     * }else{
+     * item.put("", "-inf");
+     * }
+     * }else if (std::isnan(u)){
+     * item.put("", "nan");
+     * }else{
+     * item.put("", u);
+     * }
+     */
+    upperBounds.addArrayNode(item);
+  }
+  tree->addNode("UpperBounds", upperBounds);
+  #endif // if 0
+
+  // Create array of colors
+  PTreeNode colors;
+
+  for (size_t i = 0; i < myColorInfo.size(); ++i) {
+    auto& c = myColorInfo[i];
+    PTreeNode item;
+    item.put("label", c.myLabel);
+    item.put("linear", c.myIsLinear);
+    item.put("r", c.r);
+    item.put("g", c.g);
+    item.put("b", c.b);
+    item.put("a", c.a);
+    item.put("r2", c.r2);
+    item.put("g2", c.g2);
+    item.put("b2", c.b2);
+    item.put("a2", c.a2);
+    item.put("lower", c.l);
+    item.put("upper", c.u);
+    item.put("delta", c.d);
+    colors.addArrayNode(item);
+  }
+  tree->addNode("Colors", colors);
+
+  // FIXME: We could add a stream option to IOJSON, IOXML.  API could get better
+  //   size_t aLength = IODataType::writeBuffer(theJson, buffer, "json");
+  std::vector<char> buffer;
+
+  IOJSON::writePTreeDataBuffer(theJson, buffer); // better or not? More direct
+
+  if (buffer.size() > 1) { // Skip end 0 marker for stream
+    for (size_t i = 0; i < buffer.size() - 1; ++i) {
+      o << buffer[i];
+    }
+  }
+} // TestColorMap::toJSON
+
+void
+TestColorMap::addBin(bool linear, const std::string& label, double u, double l,
+  unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_,
+  unsigned char r2_, unsigned char g2_, unsigned char b2_, unsigned char a2_)
+{
+  // Instead of classes, use vectors which should be faster
+  // vector or struct of vectors?
+  myUpperBounds.push_back(u);
+
+  myColorInfo.push_back(TestColorMapInfo(linear, label, l, u, r_, g_, b_, a_, r2_, g2_, b2_, a2_));
+}
+
+void
+TestColorMap::getDataColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const
+{
+  // FIXME:
+  // On creation:
+  // 1. Make sure myUpperBounds sorted.
+  // 2. Make sure infinity is the last bin so value always falls into a bin, right?
+  //     This will make wt always < 1.0?
+
+  // This assumes sorted
+  auto i = std::upper_bound(myUpperBounds.begin(), myUpperBounds.end(), v);
+
+  const size_t index = i != myUpperBounds.end() ? (i - myUpperBounds.begin()) : (myColorBins.size() - 1);
+
+  auto& z = myColorInfo[index];
+
+  if (z.myIsLinear) {
+    // Linear bin, interpolated color
+    // v has to be >= z.l and we force z.d to be positive
+    const double wt = (v - z.l) / z.d;
+
+    // wt = 1 and nwt = 0 (special case);
+    // I'm not seeing this actually happen ever? If the color map
+    // covers the full value space, it won't happen, so maybe
+    // we ensure this on creation and toss this > check
+    // if (wt > 1) {
+    //     r = (unsigned char) (0.5 + z.r2); // flooring double up
+    //     g = (unsigned char) (0.5 + z.g2);
+    //     b = (unsigned char) (0.5 + z.b2);
+    //     a = (unsigned char) (0.5 + z.a2);
+    //  }else{
+    const double nwt = (1.0 - wt);
+
+    r = (unsigned char) (0.5 + nwt * z.r + wt * z.r2);
+    g = (unsigned char) (0.5 + nwt * z.g + wt * z.g2);
+    b = (unsigned char) (0.5 + nwt * z.b + wt * z.b2);
+    a = (unsigned char) (0.5 + nwt * z.a + wt * z.a2);
+    //  }
+  } else {
+    // Single bin, direct color
+    r = z.r;
+    g = z.g;
+    b = z.b;
+    a = z.a;
+  }
+} // TestColorMap::getDataColor
+
+void
+TestColorMap::getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const
+{
+  return getDataColor(v, r, g, b, a);
 }

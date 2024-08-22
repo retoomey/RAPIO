@@ -75,7 +75,7 @@ target_include_directories(webbuild PRIVATE ${IMGUI_SOURCE_DIR}/backends)
 # Set the Emscripten specific compiler and linker flags
 set_target_properties(webbuild PROPERTIES
    COMPILE_FLAGS "-sUSE_SDL=2"
-   LINK_FLAGS "-lembind --shell-file ${CMAKE_SOURCE_DIR}/template.html -sUSE_SDL=2"
+   LINK_FLAGS "-lembind --shell-file ${CMAKE_SOURCE_DIR}/template.html -sUSE_SDL=2 -sFETCH=1"
    OUTPUT_NAME "index.html"
 )
 
@@ -90,6 +90,11 @@ install(FILES
     ${CMAKE_BINARY_DIR}/index.wasm
     ${CMAKE_SOURCE_DIR}/styles.css
     ${CMAKE_SOURCE_DIR}/favicon.ico
+    ${CMAKE_SOURCE_DIR}/rDataLayer.js
+    ${CMAKE_SOURCE_DIR}/rColorMap.js
+    ${CMAKE_SOURCE_DIR}/module.js
+    ${CMAKE_SOURCE_DIR}/layout.js
+    ${CMAKE_SOURCE_DIR}/gl-script.js
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/web
 )
 

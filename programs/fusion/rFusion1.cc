@@ -446,9 +446,9 @@ RAPIOFusionOneAlg::readCoverageMask()
     // getting it to work
     myMask.clearAllBits(); // Missing mask AND using roster then no output basically...
     myHaveMask = false;
-    LogInfo("No mask found at: " << fullpath << ", so I'll output everything until told not to.\n");
+    LogInfo("No mask found at: " << fullpath << "\n");
   } else {
-    LogInfo("Found and read nearest coverage mask: " << fullpath << "\n");
+    LogInfo("Mask found at: " << fullpath << "\n");
     myHaveMask = true;
 
     // Do a quick check on mask dimensions to match us:

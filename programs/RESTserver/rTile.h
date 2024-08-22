@@ -60,6 +60,10 @@ protected:
   void
   handlePathDefault(WebMessage& w);
 
+  /** Request a color map */
+  void
+  handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
   /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
 

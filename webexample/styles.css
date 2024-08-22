@@ -1,33 +1,90 @@
-body, html {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/** General tag css settings */
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-#container {
-    display: flex;
-    width: 100%;
-    height: 100%;
+body { 
+  margin: 0; 
+  padding: 0;
+  width: 100vw; 
+  height: 100vh; 
+  overflow: hidden;
+  display: flex; 
+  background-color: black; 
+  justify-content: center;
+  align-items: center;
 }
-
+ 
 canvas {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
-#leftCanvas {
-   background: green;
+/** ID css settings */
+
+/** Dividing bar setup */
+#container {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
-#separator {
-    width: 5px;
-    background: #ccc;
-    cursor: ew-resize;
-    z-index: 100;
+#leftDiv, #rightDiv {
+  width: 50%;
+  height: 100%;
+  position: relative;
 }
 
+#vbar {
+  width: 5px;
+  background: #ccc;
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+/** Leaflet map and the open gl overlay */
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+#gl-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/** Emscripten canvas that display wasm GUI */
+.emscripten {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: block;
+  image-rendering: optimizeSpeed;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -o-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+  z-index: 1;
+}
