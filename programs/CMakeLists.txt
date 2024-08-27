@@ -19,15 +19,13 @@ install(TARGETS rGrib2Reader
 )
 
 ##################################################################
-# RESTServer for tile generation 
-add_executable(rtile
-  RESTserver/rTile.cc
-)
-target_link_libraries(rtile rapio)
-install(TARGETS rtile
-   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
-
-add_subdirectory(util)
+# Algorithms
+#
 add_subdirectory(fusion)
 add_subdirectory(nse)
+
+##################################################################
+# Utility/GUI stuff
+#
+add_subdirectory(util)
+add_subdirectory(RESTserver)

@@ -554,7 +554,7 @@ TestColorMap::toJSON(std::ostream& o)
 } // TestColorMap::toJSON
 
 void
-TestColorMap::toSVG(std::ostream& o, const std::string& units)
+TestColorMap::toSVG(std::ostream& o, const std::string& units, const size_t width, const size_t height)
 {
   // FIXME: flag for flipping ordering or vertical/horizontal maybe
   const int s = myColorInfo.size();
@@ -572,8 +572,8 @@ TestColorMap::toSVG(std::ostream& o, const std::string& units)
   PTreeNode svg;
 
   svg.putAttr("id", "svg_legend");
-  svg.putAttr("width", 80);
-  svg.putAttr("height", 600);
+  svg.putAttr("width", width);
+  svg.putAttr("height", height);
   svg.putAttr("xmlns", "http://www.w3.org/2000/svg");
 
   // The 'defs' let us define gradient colors

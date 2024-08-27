@@ -279,17 +279,19 @@ LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer,
 double
 LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
+  // FIXME: This code now matches the array algorithm,
+  // nearest. We could possibly merge that API
   // Try to do this quick and efficient, called a LOT
   const double xd = (myLatNWDegs - latDegs) / myLatSpacing;
   const int x     = std::round(xd);
 
-  if ((x < 0) || (x > myNumLats)) {
+  if ((x < 0) || (x >= myNumLats)) {
     return Constants::DataUnavailable;
   }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
   const int y     = std::round(yd);
 
-  if ((y < 0) || (y > myNumLons)) {
+  if ((y < 0) || (y >= myNumLons)) {
     return Constants::DataUnavailable;
   }
   return (*my2DLayer)[size_t(x)][size_t(y)];
@@ -302,13 +304,13 @@ LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs)
   const double xd = (myLatNWDegs - latDegs) / myLatSpacing;
   const int x     = std::round(xd);
 
-  if ((x < 0) || (x > myNumLats)) {
+  if ((x < 0) || (x >= myNumLats)) {
     return Constants::DataUnavailable;
   }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
   const int y     = std::round(yd);
 
-  if ((y < 0) || (y > myNumLons)) {
+  if ((y < 0) || (y >= myNumLons)) {
     return Constants::DataUnavailable;
   }
 

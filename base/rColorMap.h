@@ -170,7 +170,9 @@ public:
   virtual void toJSON(std::ostream&){ }
 
   /** For the GUI experiment a SVG color map */
-  virtual void toSVG(std::ostream&, const std::string& units = ""){ }
+  virtual void
+  toSVG(std::ostream&, const std::string& units = "", const size_t width = 80, const size_t height = 600)
+  { }
 
 protected:
 
@@ -230,7 +232,7 @@ public:
 
   /** Create SVG format */
   virtual void
-  toSVG(std::ostream&, const std::string& units = "") override;
+  toSVG(std::ostream&, const std::string& units = "", const size_t width = 80, const size_t height = 600) override;
 
   /** Add a bin to us */
   virtual void
