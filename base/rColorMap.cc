@@ -7,6 +7,7 @@
 #include "rConfig.h"
 #include "rStrings.h"
 #include "rIOJSON.h"
+#include "rIOXML.h"
 
 using namespace rapio;
 
@@ -551,6 +552,180 @@ TestColorMap::toJSON(std::ostream& o)
     }
   }
 } // TestColorMap::toJSON
+
+void
+TestColorMap::toSVG(std::ostream& o, const std::string& units)
+{
+  // FIXME: flag for flipping ordering or vertical/horizontal maybe
+  const int s = myColorInfo.size();
+
+  // Create a PTree and use XML?  It might work, right?
+  //
+  std::shared_ptr<PTreeData> theSVG = std::make_shared<PTreeData>();
+  auto tree = theSVG->getTree();
+  constexpr size_t BoxWidth     = 22; // 50
+  constexpr size_t BoxHeight    = 22;
+  constexpr size_t BoxOffsetX   = 45; // 10;
+  constexpr size_t LabelOffsetX = 23; // BoxOffsetX+(BoxWidth/2);
+  constexpr bool drawTicks      = true;
+
+  PTreeNode svg;
+
+  svg.putAttr("id", "svg_legend");
+  svg.putAttr("width", 80);
+  svg.putAttr("height", 600);
+  svg.putAttr("xmlns", "http://www.w3.org/2000/svg");
+
+  // The 'defs' let us define gradient colors
+  PTreeNode defs;
+
+  for (size_t i = 0; i < s; ++i) {
+    auto& c = myColorInfo[i];
+
+    PTreeNode item;
+
+    if (c.myIsLinear) {
+      // linearGradient item
+      item.putAttr("id", i);
+      item.putAttr("x1", "0%");
+      item.putAttr("y1", "0%");
+      item.putAttr("x2", "0%");
+      item.putAttr("y2", "100%");
+
+      // stop offset 0%
+      PTreeNode start;
+      start.putAttr("offset", "0%");
+      std::stringstream s1;
+      s1 << "stop-color:rgb("
+         << static_cast<unsigned int>(c.r2) << ","
+         << static_cast<unsigned int>(c.g2) << ","
+         << static_cast<unsigned int>(c.b2) << ");stop-opacity:1";
+      start.putAttr("style", s1.str());
+      item.addNode("stop", start);
+
+      // stop offset 100%
+      PTreeNode stop;
+      stop.putAttr("offset", "100%");
+      std::stringstream s2;
+      s2 << "stop-color:rgb("
+         << static_cast<unsigned int>(c.r) << ","
+         << static_cast<unsigned int>(c.g) << ","
+         << static_cast<unsigned int>(c.b) << ");stop-opacity:1";
+      stop.putAttr("style", s2.str());
+      stop.putAttr("marker", "test");
+      item.addNode("stop", stop);
+
+      defs.addNode("linearGradient", item);
+    }
+  }
+  svg.addNode("defs", defs);
+
+  // Add the units
+  PTreeNode text;
+
+  text.putAttr("text-anchor", "middle");
+  text.putAttr("x", "40"); // ??? Some guess on centering values or width?
+  text.putAttr("y", "28");
+  text.putAttr("font-family", "Arial");
+  text.putAttr("font-weight", "bold");
+  text.putAttr("font-size", "16");
+  text.put("", units);
+  svg.addNode("text", text);
+
+  const auto startY = 50.0;
+
+  float y = startY;
+
+  // for (size_t i = 0; i < s; ++i) { // Direction
+  for (size_t i = s; i-- > 0;) {
+    auto& c = myColorInfo[i];
+
+    PTreeNode rect;
+
+    rect.putAttr("x", BoxOffsetX);
+    rect.putAttr("y", y);
+    rect.putAttr("width", BoxWidth);
+    rect.putAttr("height", BoxHeight);
+    if (c.myIsLinear) {
+      rect.putAttr("fill", "url(#" + std::to_string(i) + ")");
+    } else {
+      std::stringstream s3;
+      s3 << "rgb("
+         << static_cast<unsigned int>(c.r) << ","
+         << static_cast<unsigned int>(c.g) << ","
+         << static_cast<unsigned int>(c.b) << ")";
+      rect.putAttr("fill", s3.str());
+    }
+
+    svg.addNode("rect", rect);
+    y += BoxHeight;
+  }
+
+  // Tick marks
+  if (drawTicks) {
+    y  = startY + .5;   // rect y start + .5
+    y += BoxHeight / 2; // To center matching wg labels
+    // for (int i = s; i-- > 0;) {
+    for (size_t i = 0; i < s; ++i) {
+      PTreeNode line;
+      // Alternating like original web page, but wg labels are middle of box
+      // line.putAttr("x1", i%2? BoxOffsetX-5:BoxOffsetX-10); // shift left
+      line.putAttr("x1", BoxOffsetX - 10);
+      line.putAttr("y1", y);
+      line.putAttr("x2", BoxOffsetX); // left of the box
+      line.putAttr("y2", y);
+      line.putAttr("stroke", "black");
+      svg.addNode("line", line);
+      y += BoxHeight;
+    }
+  }
+
+  // Outline the entire color bar, I think this looks better
+  PTreeNode rect;
+
+  rect.putAttr("x", BoxOffsetX);
+  rect.putAttr("y", startY);
+  rect.putAttr("width", BoxWidth);
+  rect.putAttr("height", BoxHeight * s);
+  rect.putAttr("stroke", "black");
+  rect.putAttr("fill", "none");
+  svg.addNode("rect", rect);
+
+  // Text labels
+  y = startY + 5.0;
+  y = y + (BoxHeight / 2); // shift to middle of cell like W2
+  // for (size_t i = 0; i < s; ++i) {
+  for (size_t i = s; i-- > 0;) {
+    auto& c = myColorInfo[i];
+    PTreeNode text;
+    text.putAttr("text-anchor", "middle");
+    text.putAttr("x", LabelOffsetX);
+    text.putAttr("y", y);
+    text.putAttr("font-family", "Arial");
+    text.putAttr("font-weight", "bold");
+    text.putAttr("font-size", "13");
+    // The black outline over white text we use in wg
+    // text.putAttr("stroke", "black");
+    // text.putAttr("fill", "white");
+    // text.putAttr("stroke-width", "");
+    text.put("", c.myLabel);
+
+    svg.addNode("text", text);
+
+    y += BoxHeight;
+  }
+
+  tree->addNode("svg", svg);
+  std::vector<char> buffer;
+
+  IOXML::writePTreeDataBuffer(theSVG, buffer); // better or not? More direct
+
+  if (buffer.size() > 1) { // Skip end 0 marker for stream
+    for (size_t i = 0; i < buffer.size() - 1; ++i) {
+      o << buffer[i];
+    }
+  }
+} // TestColorMap::toSVG
 
 void
 TestColorMap::addBin(bool linear, const std::string& label, double u, double l,

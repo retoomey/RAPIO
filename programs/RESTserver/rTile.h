@@ -64,6 +64,10 @@ protected:
   void
   handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
+  /** Request a SVG */
+  void
+  handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
   /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
 

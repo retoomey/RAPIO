@@ -59,6 +59,20 @@ canvas {
   z-index: 0;
 }
 
+#map_legend {
+  border-radius: 10px;
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  //height: 600px;
+  overflow: hidden; /* Hide overflow content */
+  height: 80%;
+  width: 80px;
+  transform: translateY(-50%);
+  background-color: #ffffffd9;
+  z-index: 9900;
+}
+
 #gl-canvas {
   position: absolute;
   top: 0;

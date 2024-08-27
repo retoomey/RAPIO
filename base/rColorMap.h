@@ -169,6 +169,9 @@ public:
    * client size using javascript. */
   virtual void toJSON(std::ostream&){ }
 
+  /** For the GUI experiment a SVG color map */
+  virtual void toSVG(std::ostream&, const std::string& units = ""){ }
+
 protected:
 
   /** Key that was used to get this color map */
@@ -224,6 +227,10 @@ public:
    * client size using javascript. */
   virtual void
   toJSON(std::ostream&) override;
+
+  /** Create SVG format */
+  virtual void
+  toSVG(std::ostream&, const std::string& units = "") override;
 
   /** Add a bin to us */
   virtual void

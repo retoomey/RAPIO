@@ -52,11 +52,11 @@ public:
   virtual size_t
   encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer) override;
 
-protected:
   /** Write property tree to a memory buffer */
   static size_t
   writePTreeDataBuffer(std::shared_ptr<PTreeData> d, std::vector<char>& buf);
 
+protected:
   /** Write property tree to URL */
   static bool
   writeURL(

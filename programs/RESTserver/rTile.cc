@@ -421,6 +421,30 @@ RAPIOTileAlg::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, st
 }
 
 void
+RAPIOTileAlg::handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  if (myTileData != nullptr) {
+    // std::shared_ptr<DataType> myTileData;
+    // This assumes the loaded data which at some point we're gonna have to change.
+    // We might want to get color map by NAME actually.
+    auto c     = myTileData->getColorMap();
+    auto units = myTileData->getUnits();
+
+    // Creating SVG on the fly, though guess we 'could' have a writer for it and cache files of them.
+    // if (myTileData != nullptr) {
+    // std::shared_ptr<DataType> myTileData;
+    // This assumes the loaded data which at some point we're gonna have to change.
+    // We might want to get color map by NAME actually.
+    //  auto c = myTileData->getSVG();
+    // }
+    std::stringstream svg;
+    c->toSVG(svg, units);
+    w.setMessage(svg.str());
+  }
+}
+
+void
 RAPIOTileAlg::serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings)
 {
   // Write tile to cache using all the settings
@@ -682,6 +706,8 @@ RAPIOTileAlg::processWebMessage(std::shared_ptr<WebMessage> wsp)
     handlePathTMS(w, pieces, settings);
   } else if (type == "colormap") {
     handleColorMap(w, pieces, settings);
+  } else if (type == "svg") {
+    handleSVG(w, pieces, settings);
     // These are more experimental alpha
   } else if (type == "ui") {
     handlePathUI(w, pieces);
