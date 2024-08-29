@@ -73,6 +73,14 @@ canvas {
   z-index: 9900;
 }
 
+#svg_legend {
+  width: 100%;
+  height: auto;
+  min-width: 80px;
+  display: block;
+  //background-color: yellow;
+}
+
 #gl-canvas {
   position: absolute;
   top: 0;

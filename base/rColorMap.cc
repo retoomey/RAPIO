@@ -572,8 +572,9 @@ TestColorMap::toSVG(std::ostream& o, const std::string& units, const size_t widt
   PTreeNode svg;
 
   svg.putAttr("id", "svg_legend");
-  svg.putAttr("width", width);
-  svg.putAttr("height", height);
+  // Seems to mess with viewBox dynamic sizing
+  // svg.putAttr("width", width);
+  // svg.putAttr("height", height);
   svg.putAttr("xmlns", "http://www.w3.org/2000/svg");
 
   // The 'defs' let us define gradient colors
@@ -714,6 +715,12 @@ TestColorMap::toSVG(std::ostream& o, const std::string& units, const size_t widt
 
     y += BoxHeight;
   }
+
+  // Final viewBox setting (allow sizing effects)
+  std::stringstream vb;
+
+  vb << 0 << " " << 0 << " " << width << " " << y + 10;
+  svg.putAttr("viewBox", vb.str());
 
   tree->addNode("svg", svg);
   std::vector<char> buffer;

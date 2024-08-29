@@ -250,8 +250,10 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
         " ingested since last)\n");
     mergeAndWriteOutput(n, p);
 
-    // Dump source list
-    myDatabase->dumpSources();
+    // Dump source list (have to have at least one received source and database created)
+    if (myDatabase != nullptr) {
+      myDatabase->dumpSources();
+    }
 
     myDirty = 0;
   }

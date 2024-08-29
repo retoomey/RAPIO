@@ -7,6 +7,7 @@
 #include "rRecordQueue.h"
 #include "rDirWatcher.h"
 #include "rStrings.h"
+#include "rIODataType.h"
 
 #include <algorithm>
 #include <errno.h>
@@ -130,45 +131,8 @@ FileIndex::handleFile(const std::string& filename)
     std::string aBuilder;
     std::string aFileName;
 
-    // ----------------------------------------------
-    // 1. Try the builder:/pathtofile form
-    // Incoming will look like /folder/path/hmrg:test.gz
-    size_t found              = filename.find_last_of("/\\");
-    std::string prefix        = filename.substr(0, found);
-    std::string localFilename = filename.substr(found + 1);
-    // LogSevere("INCOMING FILE:"<<filename<<"\n");
-    // LogSevere("PREFIX:"<<prefix<<"\n");
-    // LogSevere("FINAL:"<<localFilename << "\n");
-
-    std::vector<std::string> twoStrings;
-    bool splitWorked = true;
-    Strings::splitOnFirst(localFilename, ':', &twoStrings);
-    if (twoStrings.size() > 1) { // Ok have a :
-      // I'm gonna allow URL here..so don't make these builders...
-      // You'd have to file=netcdf:http://pathtofile and NOT
-      // file=http://pathtofile which will just try file extension
-      if ((twoStrings[0] == "http") || (twoStrings[0] == "https")) {
-        splitWorked = false;
-      } else {
-        aBuilder  = twoStrings[0];
-        aFileName = prefix + '/' + twoStrings[1];
-      }
-    } else {
-      splitWorked = false;
-    }
-
-    // ----------------------------------------------
-    // Try file extension...
-    if (!splitWorked) {
-      std::string f = filename;
-      aFileName = filename;
-      // .xml.gz -> "xml", .xml --> "xml"
-      aBuilder = OS::getRootFileExtension(f);
-      if (aBuilder.empty()) {
-        LogInfo("No suffix or given builder for '" << filename << "', will try netcdf.");
-        aBuilder = "netcdf";
-      }
-    }
+    // We're getting our path from -i at moment...
+    IODataType::iPathParse(filename, aFileName, aBuilder);
 
     // Create params for the record
     params.push_back(aBuilder);

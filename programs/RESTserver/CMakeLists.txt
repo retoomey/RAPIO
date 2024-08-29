@@ -5,12 +5,13 @@ link_directories(${RAPIO_INSTALL_LIB})
 include_directories(. ${RAPIO_INCLUDE_DIRS})
 
 ##################################################################
-# RESTServer for tile generation 
-add_executable(rtile
+# Single tile generation 
+#
+add_executable(rGetTile
   rTile.cc
 )
-target_link_libraries(rtile rapio)
-install(TARGETS rtile
+target_link_libraries(rGetTile rapio)
+install(TARGETS rGetTile
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
@@ -33,5 +34,17 @@ add_executable(rGetColorMap
 )
 target_link_libraries(rGetColorMap rapio)
 install(TARGETS rGetColorMap
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
+# Simple GUI experimental REST web server 
+# A quick tool to allow quick viewing of local files
+#
+add_executable(rWebGUI
+  rWebGUI.cc
+)
+target_link_libraries(rWebGUI rapio)
+install(TARGETS rWebGUI
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )

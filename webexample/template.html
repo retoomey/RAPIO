@@ -28,20 +28,43 @@
     <script src="gl-script.js"></script>
     <script src="layout.js"></script>
     <script>
-        // Function to load SVG from a URL and insert into the div
+ 
+	// Pin to the svg auto height
+	function adjustContainerHeight() {
+            var svg = document.getElementById('svg_legend');
+            var container = document.getElementById('map_legend');
+            // Set the container height based on the SVG height
+            container.style.height = svg.clientHeight + 'px';
+        }
+
+       // Function to load SVG from a URL and insert into the div
         function loadSVG(url, elementId) {
             fetch(url)
                 .then(response => response.text())
                 .then(svgContent => {
-                    document.getElementById(elementId).innerHTML = svgContent;
+                    const div = document.getElementById(elementId);
+                    div.innerHTML = svgContent;
+                    const svg = div.querySelector('svg');
+                     if (svg) {
+		       adjustContainerHeight();
+                     }
                 })
                 .catch(error => console.error('Error loading SVG:', error));
         }
+        // Adjust height on page load
+        window.onload = adjustContainerHeight;
+
+        // Adjust height on window resize
+        window.onresize = adjustContainerHeight;
 
         // Load the SVG file into the div
         //loadSVG('Reflectivity.svg', 'map_legend');
         loadSVG('http://localhost:8080/svg', 'map_legend');
+
     </script>
+
+</script>
+
 
 </body>
 </html>

@@ -413,3 +413,63 @@ IODataType::postWriteProcess(
 
   return successful;
 } // IODataType::postWriteProcess
+
+void
+IODataType::iPathParse(const std::string& ipath, std::string& aFileName, std::string& aBuilder)
+{
+  // Ok we're gonna allow explicit builder specification so
+  // 1. file=netcdf:/pathtonetcdf or
+  // 2. file=stuff.netcdf(.gz) and we pull the suffix off
+  // Well we handle the post = part.  Basically split off an explicit builder "builder:"
+
+  // ----------------------------------------------
+  // 1. Try the builder:/pathtofile form
+  // Incoming could look like /folder/path/hmrg:test.gz
+  // or it could be just hmrg:test.gz
+  // I forget why the first case, something with the index. I'd
+  // rather have the builder be always in front.  Maybe with the
+  // input/output refactor we'll solve this.
+  std::string prefix, localFilename;
+  size_t found = ipath.find_last_of("/\\");
+
+  if (found != std::string::npos) {
+    localFilename = ipath.substr(found + 1);
+    prefix        = ipath.substr(0, found) + '/';
+  } else {
+    localFilename = ipath;
+  }
+  // LogSevere("INCOMING FILE:"<<ipath<<"\n");
+  // LogSevere("PREFIX:"<<prefix<<"\n");
+  // LogSevere("FINAL:"<<localFilename << "\n");
+
+  std::vector<std::string> twoStrings;
+  bool splitWorked = true;
+
+  Strings::splitOnFirst(localFilename, ':', &twoStrings);
+  if (twoStrings.size() > 1) { // Ok have a :
+    // I'm gonna allow URL here..so don't make these builders...
+    // You'd have to file=netcdf:http://pathtofile and NOT
+    // file=http://pathtofile which will just try file extension
+    if ((twoStrings[0] == "http") || (twoStrings[0] == "https")) {
+      splitWorked = false;
+    } else {
+      aBuilder  = twoStrings[0];
+      aFileName = prefix + twoStrings[1];
+    }
+  } else {
+    splitWorked = false;
+  }
+
+  // ----------------------------------------------
+  // Try file extension...
+  if (!splitWorked) {
+    std::string f = ipath;
+    aFileName = ipath;
+    // .xml.gz -> "xml", .xml --> "xml"
+    aBuilder = OS::getRootFileExtension(f);
+    if (aBuilder.empty()) {
+      LogInfo("No suffix or given builder for '" << ipath << "', will try netcdf.");
+      aBuilder = "netcdf";
+    }
+  }
+} // IODataType::iPathParse

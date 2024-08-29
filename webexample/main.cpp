@@ -62,7 +62,7 @@ public:
    myApplicationState():
      radioMapDataType(0), 
      backgroundMapShow(true), backgroundMap(0), 
-     dataMap(0), showDebugTiles(true)
+     dataMap(0), showDebugTiles(false)
    {};
 	   
    int radioMapDataType;   //<<< Map data type choice radio
@@ -950,7 +950,7 @@ int main(int, char**)
 	//if (ImGui::Button("Increase Font Size")) {
 	static bool first = true;
 	if (first){
-          ImGui::GetIO().FontGlobalScale += 1.0f;
+          //ImGui::GetIO().FontGlobalScale += 1.0f;
 	  first = false;
 	}
 

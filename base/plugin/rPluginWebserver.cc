@@ -20,14 +20,15 @@ PluginWebserver::declareOptions(RAPIOOptions& o)
     "off",
     "Web server ability for REST pull algorithms. Use a number to assign a port.");
   o.setHidden(myName);
-  o.addGroup("web", "I/O");
+  o.addGroup(myName, "I/O");
 }
 
 void
 PluginWebserver::addPostLoadedHelp(RAPIOOptions& o)
 {
   o.addAdvancedHelp(myName,
-    "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -web=8080 runs your server on http://localhost:8080.");
+    "Allows you to run the algorithm as a web server.  This will call processWebMessage within your algorithm.  -" + myName
+    + "=8080 runs your server on http://localhost:8080.");
 }
 
 void

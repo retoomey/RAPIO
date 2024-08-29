@@ -112,7 +112,11 @@ RadialSetProjection::getValueAtLL(double latDegs, double lonDegs)
   int radial, gate;
 
   Project::LatLonToAzRange(myCenterLatDegs, myCenterLonDegs, latDegs, lonDegs, azDegs, rangeMeters);
-  getValueAtAzRange(azDegs, rangeMeters / 1000.0, value, radial, gate);
+  if (!getValueAtAzRange(azDegs, rangeMeters / 1000.0, value, radial, gate)) {
+    // getValueAtAzRange only sets on a hit for fusion speed, so we handle the non-hit case ourselves
+    // FIXME: 'Maybe' we always set to unavailable in that method
+    value = Constants::DataUnavailable; // outside RadialSet case
+  }
   return value;
 }
 

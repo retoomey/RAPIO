@@ -74,6 +74,10 @@ public:
   // Reader stuff
   //
 
+  /** Split a custom builder off of a string */
+  static void
+  iPathParse(const std::string& ipath, std::string& filename, std::string& builder);
+
   /** Last attempt to guess the encoder factory for a given path */
   static std::shared_ptr<IODataType>
   getFactory(
