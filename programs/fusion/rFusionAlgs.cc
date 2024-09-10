@@ -1,0 +1,302 @@
+#include "rFusionAlgs.h"
+
+using namespace rapio;
+
+void
+RAPIOFusionAlgs::declareOptions(RAPIOOptions& o)
+{
+  o.setDescription(
+    "RAPIO Fusion Stage Three Algorithm.  Runs algorithms on received 3D cubes.");
+  o.setAuthors("Robert Toomey");
+}
+
+/** RAPIOAlgorithms process options on start up */
+void
+RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
+{ } // RAPIOFusionAlgs::processOptions
+
+void
+RAPIOFusionAlgs::firstDataSetup()
+{
+  static bool setup = false;
+
+  if (setup) { return; }
+
+
+  auto myVIL = std::make_shared<VIL>();
+
+  myAlgs.push_back(myVIL);
+}
+
+void
+RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
+{
+  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Stage3---" << ColorTerm::fNormal << "\n");
+  firstDataSetup();
+
+  auto llg = d.datatype<rapio::LatLonHeightGrid>();
+
+  if (llg != nullptr) {
+    for (auto& a:myAlgs) {
+      a->processVolume(llg, this);
+    }
+  }
+} // RAPIOFusionAlgs::processNewData
+
+void
+RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
+{
+  // Probably don't need heartbeat for the algorithms.  Should be one 3D cube to outputs.
+  if (isDaemon()) { // just checking, don't think we get message if we're not
+    LogInfo(
+      ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---\n");
+  }
+}
+
+void
+VIL::firstDataSetup()
+{
+  static bool setup = false;
+
+  if (setup) { return; }
+
+  LogInfo("Precalculating VIL weight table\n");
+  // Precreate the vil weights.  Saves a little time on each volume
+  // computes weights for each dBZ values >= 0 based on a lookup table.
+  const float puissance = 4.0 / 7.0;
+
+  for (size_t i = 0; i < 100; ++i) {
+    float dbzval = (float) i;
+    float zval   = pow(10., (dbzval / 10.));
+    myVilWeights[i] = pow(zval, puissance);
+  }
+}
+
+void
+VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
+{
+  // FIXME: Wondering if we should just have an array of output LatLonGrids
+  // and use enum
+  auto& llg = *input; // assuming non-null
+  const Time forTime = llg.getTime();
+  const LLCoverageArea coverage = llg.getLLCoverageArea();
+
+  auto create = ((myVilGrid == nullptr) || (myCachedCoverage != coverage));
+
+  if (!create) {
+    LogInfo("Using cached grids at time " << forTime << "\n");
+    // Update the time to the input for output
+    myVilGrid->setTime(forTime);
+    myVildGrid->setTime(forTime);
+    myViiGrid->setTime(forTime);
+    myMaxGust->setTime(forTime);
+    return;
+  }
+
+  // --------------------------------------------
+  // Create the output product grids we generate
+  // Thought about using a single grid, but some fields relay on others
+  // so we store all of them
+  //
+  LogInfo("Coverage has changed, creating new output grids...\n");
+  myVilGrid = LatLonGrid::Create("VIL", "kg/m^2", forTime, coverage);
+  myVilGrid->setDataAttributeValue("SubType", "");
+
+  myVildGrid = LatLonGrid::Create("VIL_Density", "g/m^3", forTime, coverage);
+  myVildGrid->setDataAttributeValue("SubType", "");
+
+  myViiGrid = LatLonGrid::Create("VII", "kg/m^2", forTime, coverage);
+  myViiGrid->setDataAttributeValue("SubType", "");
+  myViiGrid->setDataAttributeValue("ColorMap", "VIL");
+
+  myMaxGust = LatLonGrid::Create("MaxGustEstimate", "m/s", forTime, coverage);
+  myMaxGust->setDataAttributeValue("ColorMap", "WindSpeed");
+  myMaxGust->setDataAttributeValue("SubType", "");
+
+  myCachedCoverage = coverage;
+} // VIL::checkOutputGrids
+
+void
+VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
+{
+  // Now the real question is WHY can't the VIL algorithm run standalone, taking
+  // a 3D cube input?  So it 'should' be a regular algorithm, right?
+  // In other words, this could be a processNewData within a regular algorithm
+  firstDataSetup();
+
+  auto& llg = *input; // assuming non-null
+
+  #if 0
+  myNSEGrid->updateTime(grid.getTime() );
+  #endif
+
+  constexpr int vil_upper = 56;
+
+  // --------------------------------------------
+  // Gather original grid information and check
+  // cached outputs
+  //
+  const Time forTime = llg.getTime();
+  LogInfo("Computing VIL at " << forTime << "\n");
+
+  const size_t numLats = llg.getNumLats();
+  const size_t numLons = llg.getNumLons();
+  const size_t numHts  = llg.getNumLayers();
+  const auto l         = llg.getLocation();
+  const LLCoverageArea coverage = llg.getLLCoverageArea();
+  checkOutputGrids(input);
+
+  // Get the primary arrays of the datatypes
+  // This differs from MRMS since we can have multiple arrays per DataType
+  auto& grid     = input->getFloat3DRef();
+  auto& vilgrid  = myVilGrid->getFloat2DRef();
+  auto& vildgrid = myVildGrid->getFloat2DRef();
+  auto& viigrid  = myViiGrid->getFloat2DRef();
+  auto& maxgust  = myMaxGust->getFloat2DRef();
+
+  // FIXME: why copying?
+  // Go through the heights and set up the height difference
+  // to the next lower level.
+  std::vector<float> hlevels; // , height_diff;
+  for (size_t h = 0; h < numHts; h++) {
+    auto layerValue = llg.getLayerValue(h);
+    hlevels.push_back(layerValue);
+    // LogInfo("Pushed back " << layerValue << "\n");
+  }
+  // LogSevere("Done with test\n");
+  // grid.setLayerValue(10, 123456); works.
+  // vilgrid->setLayerValue(0, 6000); // Should change height, right?
+  // p->writeOutputProduct("TESTING", vilgrid);
+
+  #if 0
+  const code::LatLonGrid& h263grid = myNSEGrid->getGrid(Height_263K);
+  const code::LatLonGrid& h233grid = myNSEGrid->getGrid(Height_233K);
+  #endif
+
+  for (size_t i = 0; i < numLats; ++i) {
+    for (size_t j = 0; j < numLons; ++j) {
+      // Default data value will be unavailable unless we find a missing or data value
+      float d = Constants::DataUnavailable;
+
+      // Compute Echo Top Interpolated (18 dBZ) using utility function
+      // This is inline for speed here
+      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
+      // const float et18 = 20;
+      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
+      // FIXME: This might be slow
+      const float et18 = doEchoTop(*input, 18.0, hlevels, numHts, i, j);
+
+      #if 0
+      // And get values from NSE grid
+      const float H263K = h263grid[i][j];
+      const float H233K = h233grid[i][j];
+      #endif
+
+      // For each height add up the sum parts of VIL and VII
+      float vii = 0;
+      float vil = 0;
+
+      float lastH = hlevels[0];
+      for (size_t k = 0; k < numHts; ++k) {
+        // The data value we're interested in
+        const float v = grid[k][i][j];
+
+        // Skip on unavailable data...
+        if (v == Constants::DataUnavailable) {
+          lastH = hlevels[k];
+          continue;
+        }
+        // ...otherwise missing is the new default data value...
+        d = Constants::MissingData;
+
+        if (Constants::isGood(v)) {
+          const int vpos    = (int) fabs(v);
+          const float hdiff = hlevels[k] - lastH; // So k 0 always is diff of zero and no vil sum?? Hummmm
+
+          // Compute VIL sum part (constrained from 0 to the higher of vil_upper or 100)
+          int vint = vpos;
+          if (vint > vil_upper) { vint = vil_upper; }
+          if (vint < 100) {
+            vil += myVilWeights[vint] * hdiff;
+          }
+
+          // Compute VII sum part (constrained between -10C and -40C altitudes)
+          // if ((vpos < 100) && ((H263K < hlevels[k]) && (hlevels[k] < H233K))) {
+          if ((vpos < 100)) {
+            // vii+=vil_wt[vpos]*height_diff[k];
+            vii += myVilWeights[vpos] * hdiff;
+          }
+        }
+        lastH = hlevels[k];
+      } // end k loop
+
+      // Toomey: Multiplying by a positive number (..344) before the <= check wastes cycles since
+      // it will be negative before and after...so check vil <= 0 first... this also avoids checking
+      // vil <= 0 again for the vil density calculation.
+      float vild;
+      float w;
+
+      if (vil <= 0) {
+        // Actually should be unavailable unless height found one not...
+        vil  = d;
+        vild = d; // Density here is missing as well
+        w    = d;
+      } else { // vil > 0
+        // Compute final VIL (pulled multiplication out of the sum)
+        vil = 0.00000344 * vil;
+        // KCooper, per Travis - trying to match NMQ VIL?
+        // if (vil <= 1) vil = Constants::MissingData;
+
+        // Compute VIL Density.  We already know vil > 0 here, so check valid echo top
+        //
+        // VILD(g m ^ -3) = 1000 x vil (kgm ^ -2)     1000 * vil (kgm ^ -2)
+        //                  --------------------- =  --------------------------  = v/18km
+        //                     18 dbz ET (m)           1000* 18 dbz ET (Km)
+        // Our echotop is in KM.
+        // vild = (et18 > 0.)? vil/et18: d;
+        if (et18 > 0.) {
+          vild = vil / et18;
+
+          // Compute estimate of potential maximum gust with a descending downdraft
+          // NWS SR-136 Stacy R. Stewart
+          // https://docs.lib.noaa.gov/noaa_documents/NWS/NWS_SR/TM_NWS_SR_136.pdf
+          // max gust estimate = [20 m/s^2 vil - 3.125x10^-6 * et^2]^ .5
+          // Toomey: For this pass I'm assuming VIL and EchoTop should be > 0 for a valid
+          // value...
+          const float et2 = (et18) * (et18); // Kms gives us m/2 at end
+          // Stewart: w = ((20.628571 * vil) - (0.000003125*et2));
+          // Air Force Air Weather Service numbers, 1996:
+          w = ((15.780608 * vil) - (0.0000023810964 * et2));
+          w = pow((double) w, (double) 0.5);
+        } else {
+          vild = d;
+          w    = d;
+        }
+      }
+
+      // Compute VII
+      vii = 0.00000607 * vii;
+      if (vii <= 0.5) { vii = d; }
+
+      // Fill final grids with final values
+      vilgrid[i][j]  = vil;
+      vildgrid[i][j] = vild;
+      viigrid[i][j]  = vii;
+      maxgust[i][j]  = w;
+    }
+  }
+
+  // Without nse data 'yet'
+  p->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
+  p->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
+  p->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
+  p->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
+} // VIL::processVolume
+
+int
+main(int argc, char * argv[])
+{
+  RAPIOFusionAlgs alg = RAPIOFusionAlgs();
+
+  alg.executeFromArgs(argc, argv);
+} // main

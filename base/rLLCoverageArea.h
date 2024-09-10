@@ -26,7 +26,10 @@ public:
   LLCoverageArea(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs east, AngleDegs southDelta,
     AngleDegs eastSpacing,
     size_t aNumX, size_t aNumY) : nwLat(north), nwLon(west), seLat(south), seLon(east),
-    latSpacing(southDelta), lonSpacing(eastSpacing), startX(0), startY(0), numX(aNumX), numY(aNumY){ }
+    latSpacing(southDelta), lonSpacing(eastSpacing), startX(0), startY(0), numX(aNumX), numY(aNumY)
+  {
+    sync();
+  }
 
   /** Sync anything relying on the values, such as distances */
   void
@@ -118,6 +121,17 @@ public:
   /** Get unique parse string using a _ format that can be used as part of a unique folder name */
   std::string
   getParseUniqueString() const;
+
+  /** Comparison of grid coverage */
+  bool
+  operator == (const LLCoverageArea& other) const;
+
+  /** Not equal test */
+  bool
+  operator != (const LLCoverageArea& other) const
+  {
+    return !(*this == other);
+  }
 
   /** Allow operator << to access our internal fields */
   friend std::ostream&

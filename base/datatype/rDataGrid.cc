@@ -24,7 +24,7 @@ DataGrid::DataGrid()
 std::shared_ptr<DataGrid>
 DataGrid::Create(const std::string& aTypeName,
   const std::string               & Units,
-  const LLH                       & center,
+  const LLH                       & location,
   const Time                      & datatime,
   const std::vector<size_t>       & dimsizes,
   const std::vector<std::string>  & dimnames)
@@ -34,7 +34,7 @@ DataGrid::Create(const std::string& aTypeName,
   newonesp->setDataType("DataGrid");
   newonesp->setReadFactory("netcdf");
 
-  newonesp->init(aTypeName, Units, center, datatime, dimsizes, dimnames);
+  newonesp->init(aTypeName, Units, location, datatime, dimsizes, dimnames);
   return newonesp;
 }
 
@@ -64,7 +64,7 @@ DataGrid::Clone()
 bool
 DataGrid::init(const std::string & aTypeName,
   const std::string              & Units,
-  const LLH                      & center,
+  const LLH                      & location,
   const Time                     & datatime,
   const std::vector<size_t>      & dimsizes,
   const std::vector<std::string> & dimnames)
@@ -75,7 +75,7 @@ DataGrid::init(const std::string & aTypeName,
 
   setTypeName(aTypeName);
   setDataAttributeValue("Unit", Units, "dimensionless"); // Maybe setUnits here?
-  myLocation = center;
+  myLocation = location;
   myTime     = datatime;
   setDims(dimsizes, dimnames);
   return true;

@@ -39,6 +39,17 @@ install(TARGETS rFusion2
 )
 
 ##################################################################
+# FusionAlgs
+add_executable(rFusionAlgs
+  rFusionAlgs.cc
+)
+
+target_link_libraries(rFusionAlgs PRIVATE fusionshared PUBLIC rapio)
+install(TARGETS rFusionAlgs
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
 # FusionRoster
 add_executable(rFusionRoster
   rFusionRoster.cc

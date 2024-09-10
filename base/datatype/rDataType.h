@@ -168,7 +168,7 @@ public:
 
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH
-  getCenterLocation()
+  getCenterLocation() const
   {
     return myLocation;
   }
@@ -182,7 +182,7 @@ public:
 
   /** Return Time that corresponds to this DataType */
   Time
-  getTime(){ return myTime; }
+  getTime() const { return myTime; }
 
   /** Set the Time that corresponds to this DataType */
   void

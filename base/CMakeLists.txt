@@ -74,6 +74,7 @@ rIOJSON.h
 rIOURL.h
 watcher/rIOWatcher.h
 rIOXML.h
+datatype/rLatLonArea.h
 datatype/rLatLonGrid.h
 datatype/rLatLonHeightGrid.h
 rLength.h
@@ -198,6 +199,7 @@ rIOJSON.cc
 rIOURL.cc
 watcher/rIOWatcher.cc
 rIOXML.cc
+datatype/rLatLonArea.cc
 datatype/rLatLonGrid.cc
 datatype/rLatLonHeightGrid.cc
 rLength.cc

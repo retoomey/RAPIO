@@ -64,16 +64,54 @@ public:
 
   /** Get the number of latitude cells */
   virtual size_t
-  getNumLats() override
+  getNumLats() const override
   {
     return myDims.size() > 1 ? myDims[1].size() : 0;
   }
 
   /** Get the number of longitude cells */
   virtual size_t
-  getNumLons() override
+  getNumLons() const override
   {
     return myDims.size() > 2 ? myDims[2].size() : 0;
+  }
+
+  // Layer information ability
+  virtual size_t
+  getNumLayers() const override
+  {
+    // Subclass such as LLHGribN2D doesn't have myDims
+    // set the same, so use the height array size
+    // Other option is override it there
+    // return myDims.size() > 0 ? myDims[0].size() : 0;
+    auto array = getFloat1D("Height");
+
+    return array ? array->getX() : 0;
+  }
+
+  /** Get the layer value for given level. */
+  virtual int
+  getLayerValue(size_t l) override
+  {
+    auto array = getFloat1D("Height");
+
+    if (array) {
+      auto& r = array->ref();
+      return r[l];
+    }
+    return 0;
+  }
+
+  /** Set the layer value for given level. */
+  virtual void
+  setLayerValue(size_t l, int v) override
+  {
+    auto array = getFloat1D("Height");
+
+    if (array) {
+      auto& r = array->ref();
+      r[l] = v;
+    }
   }
 
   /** Handle post read by sparse uncompression if wanted */

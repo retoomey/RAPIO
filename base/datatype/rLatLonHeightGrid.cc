@@ -110,9 +110,6 @@ LatLonHeightGrid::init(
   // A Height array
   addFloat1D("Height", "Meters", { 0 });
 
-  // Note layers random...you need to fill them all during data reading
-  // FIXME: Could use an array, right?  Gotta write it anyway
-  myLayerNumbers.resize(num_layers);
   return true;
 }
 

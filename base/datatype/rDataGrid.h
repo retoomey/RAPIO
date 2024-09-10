@@ -40,12 +40,12 @@ protected:
  */
 #define DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, DIMENSION) \
   inline std::shared_ptr<Array<TYPE, DIMENSION> > \
-  get ## TYPESTRING ## DIMENSION ## D(const std::string& name = Constants::PrimaryDataName) \
+  get ## TYPESTRING ## DIMENSION ## D(const std::string& name = Constants::PrimaryDataName) const \
   { \
     return get<Array<TYPE, DIMENSION> >(name); \
   } \
   inline boost::multi_array<TYPE, DIMENSION>& \
-  get ## TYPESTRING ## DIMENSION ## DRef(const std::string& name = Constants::PrimaryDataName) \
+  get ## TYPESTRING ## DIMENSION ## DRef(const std::string& name = Constants::PrimaryDataName) const \
   { \
     auto temp = get<Array<TYPE, DIMENSION> >(name); \
     if (!temp) { \
@@ -83,11 +83,11 @@ public:
 
   /** Return the number of dimensions */
   size_t
-  size(){ return mySize; }
+  size() const { return mySize; }
 
   /** Get the name of this dimension */
   std::string
-  name(){ return myName; }
+  name() const { return myName; }
 
 protected:
 
@@ -119,7 +119,7 @@ public:
   static std::shared_ptr<DataGrid>
   Create(const std::string         & aTypeName,
     const std::string              & Units,
-    const LLH                      & center,
+    const LLH                      & location,
     const Time                     & datatime,
     const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);
@@ -309,7 +309,7 @@ public:
   /** Get node for this key */
   template <typename T>
   std::shared_ptr<T>
-  get(const std::string& name)
+  get(const std::string& name) const
   {
     for (auto i:myNodes) {
       if (i->getName() == name) {
@@ -389,7 +389,7 @@ protected:
   bool
   init(const std::string           & aTypeName,
     const std::string              & Units,
-    const LLH                      & center,
+    const LLH                      & location,
     const Time                     & datatime,
     const std::vector<size_t>      & dimsizes,
     const std::vector<std::string> & dimnames);

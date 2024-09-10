@@ -99,10 +99,6 @@ LLHGridN2D::init(
   // addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
   myGrids = std::vector<std::shared_ptr<LatLonGrid> >(num_layers, nullptr);
 
-  // Note layers random...you need to fill them all during data reading
-  // FIXME: Couldn't we use a regular array here
-  myLayerNumbers.resize(num_layers);
-
   // A Height array
   addFloat1D("Height", "Meters", { 0 });
 
@@ -133,9 +129,9 @@ LLHGridN2D::get(size_t i)
   // Lazy creation or explicit creation method?
   // Create a new working space LatLonGrid for the layer
   if (myGrids[i] == nullptr) {
-    Time t = myTime;                           // Default time to our time, caller can change it later
-    LLH l  = myLocation;                       // Default location and height is our layer number
-    l.setHeightKM(myLayerNumbers[i] / 1000.0); // We stored meter level resolution
+    Time t = myTime;                          // Default time to our time, caller can change it later
+    LLH l  = myLocation;                      // Default location and height is our layer number
+    l.setHeightKM(getLayerValue(i) / 1000.0); // We stored meter level resolution
     myGrids[i] = LatLonGrid::Create(myTypeName, getUnits(), l, t, getLatSpacing(), getLonSpacing(),
         getNumLats(), getNumLons());
     // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
@@ -150,7 +146,6 @@ LLHGridN2D::get(size_t i)
 void
 LLHGridN2D::fillPrimary(float value)
 {
-  // std::vector<int> myLayerNumbers;
   const size_t size = myGrids.size();
 
   for (size_t i = 0; i < size; i++) {
@@ -164,13 +159,6 @@ LLHGridN2D::fillPrimary(float value)
 void
 LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
 {
-  // Copy height array
-  auto& heights = getFloat1DRef("Height");
-
-  for (size_t i = 0; i < myLayerNumbers.size(); ++i) {
-    heights[i] = myLayerNumbers[i];
-  }
-
   // Check if sparse already...
   auto pixelptr = getFloat1D("pixel_x");
 

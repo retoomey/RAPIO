@@ -608,3 +608,33 @@ LLCoverageArea::getParseUniqueString() const
   ss << myHeightParse;
   return ss.str();
 }
+
+bool
+LLCoverageArea::operator == (const LLCoverageArea& other) const
+{
+  // Equal doesn't include myHeightParse
+  bool same = (nwLat == other.nwLat &&
+    nwLon == other.nwLon &&
+    seLat == other.seLat &&
+    seLon == other.seLon &&
+    latSpacing == other.latSpacing &&
+    lonSpacing == other.lonSpacing &&
+    startX == other.startX &&
+    startY == other.startY &&
+    numX == other.numX &&
+    numY == other.numY &&
+    latKMPerPixel == other.latKMPerPixel && // These are calculated
+    lonKMPerPixel == other.lonKMPerPixel &&
+    heightsKM.size() == other.heightsKM.size());
+
+  // if same here height sizes match.  If a height is different,
+  // return false
+  if (same) {
+    for (size_t h = 0; h < heightsKM.size(); h++) {
+      if (heightsKM[h] != other.heightsKM[h]) {
+        return false;
+      }
+    }
+  }
+  return same;
+}

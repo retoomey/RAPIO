@@ -250,9 +250,9 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
     grid.setReadFactory("netcdf"); // Default would call us to write
 
     // Heights are stored in the layers
-    auto gridLayers = grid.getLayerValues();
-    for (size_t i = 0; i < gridLayers.size(); i++) {
-      gridLayers[i] = heightMeters[i];
+    const auto layerSize = grid.getNumLayers();
+    for (size_t i = 0; i < layerSize; i++) {
+      grid.setLayerValue(i, heightMeters[i]);
     }
 
     // This gonna be slower than W2 because the data ordering is different
@@ -344,11 +344,10 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
   BinaryIO::writeInt(fp, temp2);
   BinaryIO::writeInt(fp, dxy_scale);
 
-  // Write the height levels, scaled by Z_scale
-  auto& heights = llg.getLayerValues();
+  const auto layerSize = llg.getNumLayers();
 
-  for (size_t h = 0; h < heights.size(); h++) {
-    float aHeightMeters = heights[h];
+  for (size_t h = 0; h < layerSize; h++) {
+    float aHeightMeters = llg.getLayerValue(h);
     BinaryIO::writeInt(fp, aHeightMeters * z_scale);
   }
   BinaryIO::writeInt(fp, z_scale);
