@@ -7,8 +7,8 @@ RAPIOData::RAPIOData(const Record& aRec)
   : rec(aRec)
 { }
 
-Record
-RAPIOData::record()
+const Record&
+RAPIOData::record() const
 {
   return (rec);
 }

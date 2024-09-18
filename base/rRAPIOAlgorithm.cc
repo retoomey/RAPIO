@@ -205,6 +205,12 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
     purgeTimeWindow();
 
     RAPIOData d(rec);
+
+    // DataTypeHistory might store the created DataType, we
+    // don't want to double create if the alg uses it also.
+    DataTypeHistory::processNewData(d);
+
+    // Now the algorithm can also process if wanted
     processNewData(d);
   }
 }

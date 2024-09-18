@@ -66,7 +66,7 @@ Volume::createVolume(
     // Pass onto the factory method
     f = f->create(historyKey, params);
     if (f != nullptr) {
-      DataTypeHistory::registerVolume(historyKey, f); // We want time message for expiration
+      VolumeHistory::registerVolume(historyKey, f); // We want time message for expiration
     }
   }
   return f;

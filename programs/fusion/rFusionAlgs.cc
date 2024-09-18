@@ -21,9 +21,12 @@ RAPIOFusionAlgs::firstDataSetup()
   static bool setup = false;
 
   if (setup) { return; }
+  setup = true;
 
 
   auto myVIL = std::make_shared<VIL>();
+
+  myVIL->initialize(); // hack for moment
 
   myAlgs.push_back(myVIL);
 }
@@ -34,6 +37,10 @@ RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
   LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Stage3---" << ColorTerm::fNormal << "\n");
   firstDataSetup();
 
+  // This will read the data even it if isn't the type wanted.  Interesting.
+  // In operations this doesn't always matter since we tend to only send wanted
+  // data to the algorithm anyway.  Or we're 'supposed' to.
+  // Perhaps we can expand record ability to allow more filtering options
   auto llg = d.datatype<rapio::LatLonHeightGrid>();
 
   if (llg != nullptr) {
@@ -54,6 +61,18 @@ RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
 }
 
 void
+VIL::initialize()
+{
+  // Directly follow grids at moment.  Probably should call on the
+  // start up of the algorithm not at first data.
+  // FIXME: configuration at some point
+  // NSEGridHistory::followGrid("height273", "Heightof0C", 3920);
+  myHeight263 = NSEGridHistory::followGrid("height263", "Heightof-10C", 5000);
+  // NSEGridHistory::followGrid("height253", "Heightof-20C", 6200);
+  myHeight233 = NSEGridHistory::followGrid("height233", "Heightof-40C", 8600);
+}
+
+void
 VIL::firstDataSetup()
 {
   static bool setup = false;
@@ -70,7 +89,44 @@ VIL::firstDataSetup()
     float zval   = pow(10., (dbzval / 10.));
     myVilWeights[i] = pow(zval, puissance);
   }
-}
+
+  #if 0
+  NSE will have special expire time in the data I think:
+  : ExpiryInterval - unit = "Minutes";
+  : ExpiryInterval - value = "1440";
+  < hda >
+  < height273 product       = "Heightof0C" default = "3920" / >
+    < height263 product     = "Heightof-10C" default = "5000" / >
+    < height253 product     = "Heightof-20C" default = "6200" / >
+    < height233 product     = "Heightof-40C" default = "8600" / >
+    < heightTerrain product = "TerrainElevation" default = "0" / >
+    < / hda >
+
+    < vilextras >
+    < slopeWE product = "Slope_WestToEast" default = "0" note = "For tilted hail/vil products" / >
+    < slopeNS product = "Slope_NorthToSouth" default = "0" note = "For tilted hail/vil products" / >
+    < meantemp500mb400mb product = "Temp500_400" default = "-15" note =
+    "For VIL of day: mean temperature between 500 and 400 mb" / >
+    < / vilextras >
+
+  #endif // if 0
+
+  #if 0
+  // the doc gives the xml infor for 'what' and a form of group.
+  // The group is maybe not neccessary.
+  // So when we 'follow' we have a default background value that
+  // it provided for the output grid.
+  Height_263K = myNSEGrid->followGrid(doc, "hda", "height263");
+  Height_233K = myNSEGrid->followGrid(doc, "hda", "height233");
+  if (doDilateTilt) {
+    SlopeWE  = myNSEGrid->followGrid(doc, "vilextras", "slopeWE");
+    SlopeNS  = myNSEGrid->followGrid(doc, "vilextras", "slopeNS");
+    MeanTemp = myNSEGrid->followGrid(doc, "vilextras", "meantemp500mb400mb");
+  }
+  #endif // if 0
+  // DataTypeHistory::followDataTypeKey("vileextras");
+  // DataTypeHistory::followDataType("hda");
+} // VIL::firstDataSetup
 
 void
 VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
@@ -173,8 +229,19 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
   const code::LatLonGrid& h233grid = myNSEGrid->getGrid(Height_233K);
   #endif
 
-  for (size_t i = 0; i < numLats; ++i) {
-    for (size_t j = 0; j < numLons; ++j) {
+  // MRMS maps the nse grids to conus then uses direct index.  Not sure
+  // if we'll do that or query directly...
+  // FIXME: Really feel like we need a LLG lat/lon iterator class of some sort
+  // FIXME: Having to do lat/lon iteration also seems bleh
+  AngleDegs deltaLat = llg.getLatSpacing();
+  AngleDegs deltaLon = llg.getLonSpacing();
+  LLH nw = llg.getTopLeftLocationAt(0, 0);
+  AngleDegs startLat = nw.getLatitudeDeg() - (deltaLat / 2.0);  // move south (lat decreasing)
+  AngleDegs startLon = nw.getLongitudeDeg() + (deltaLon / 2.0); // move east (lon increasing)
+  AngleDegs atLat    = startLat;
+  for (size_t i = 0; i < numLats; ++i, atLat -= deltaLat) {
+    AngleDegs atLon = startLon;
+    for (size_t j = 0; j < numLons; ++j, atLon += deltaLon) {
       // Default data value will be unavailable unless we find a missing or data value
       float d = Constants::DataUnavailable;
 
@@ -186,11 +253,9 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
       // FIXME: This might be slow
       const float et18 = doEchoTop(*input, 18.0, hlevels, numHts, i, j);
 
-      #if 0
-      // And get values from NSE grid
-      const float H263K = h263grid[i][j];
-      const float H233K = h233grid[i][j];
-      #endif
+      // Query values from NSE grid
+      const float H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
+      const float H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
 
       // For each height add up the sum parts of VIL and VII
       float vii = 0;
@@ -221,8 +286,7 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
           }
 
           // Compute VII sum part (constrained between -10C and -40C altitudes)
-          // if ((vpos < 100) && ((H263K < hlevels[k]) && (hlevels[k] < H233K))) {
-          if ((vpos < 100)) {
+          if ((vpos < 100) && ((H263K < hlevels[k]) && (hlevels[k] < H233K))) {
             // vii+=vil_wt[vpos]*height_diff[k];
             vii += myVilWeights[vpos] * hdiff;
           }

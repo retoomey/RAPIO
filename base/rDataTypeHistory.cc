@@ -9,14 +9,30 @@
 using namespace rapio;
 using namespace std;
 
-std::map<std::string, std::shared_ptr<Volume> > DataTypeHistory::myVolumes;
+std::map<std::string, std::shared_ptr<Volume> > VolumeHistory::myVolumes;
+
+// NSE Grid static stuff.  FIXME: introduce classes
+std::vector<std::string> NSEGridHistory::myKeys;
+
+std::vector<std::string> NSEGridHistory::myDataTypeNames;
+
+std::vector<std::shared_ptr<DataType> > NSEGridHistory::myDataTypeCache;
+
+std::vector<float> NSEGridHistory::myDefaultValues;
 
 void
-DataTypeHistory::registerVolume(const std::string& key, std::shared_ptr<Volume> v)
+VolumeHistory::registerVolume(const std::string& key, std::shared_ptr<Volume> v)
 {
   myVolumes[key] = v;
 }
 
+void
+DataTypeHistory::processNewData(RAPIOData& d)
+{
+  NSEGridHistory::processNewData(d);
+}
+
+#if 0
 void
 DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
 {
@@ -84,8 +100,18 @@ DataTypeHistory::deleteSubtypeGroup(
   return counter;
 }
 
+#endif // if 0
+
 void
 DataTypeHistory::purgeTimeWindow(const Time& currentTime)
+{
+  // Notify all our histories of a time window event.
+  VolumeHistory::purgeTimeWindow(currentTime);
+  // NSE history?
+}
+
+void
+VolumeHistory::purgeTimeWindow(const Time& currentTime)
 {
   // Time purge any volumes.  Volume named product containing N subtypes.
   // We're assuming data time in is the 'newest' in realtime and archive.
@@ -96,35 +122,54 @@ DataTypeHistory::purgeTimeWindow(const Time& currentTime)
   }
 }
 
-void
-DataTypeHistory::addRecord(Record& rec)
+int
+NSEGridHistory::followGrid(const std::string& key, const std::string& aTypeName, float defaultValue)
 {
-  // History is stored by an ordered tree of selections.
-  // Records internal to the tree would be inefficient, so we convert
-  // to a new data structure here.
-  LogSevere("Adding record: \n");
-  // for(auto& p:rec.getBuilderParams()){
-  //  std::cout << "   " << p << "\n";
-  // }
-  auto& sels   = rec.getSelections();
-  size_t aSize = sels.size();
-
-  // There should always be at least three selections
-  if (aSize <= 3) {
-    // The last selection is assumed to be the time string, we don't store that
-    // We 'could' do maps of maps but that would be so memory intensive...
-
-    // Index number is const for a particular algorithm run..
-    // This corresponds to the 'source' for the moment.  We need a 'name'
-    // for a source to refer to it actually. The display does this with a name
-    // to index location lookup which as a direct algorithm we don't have currently.
-    const size_t i = rec.getIndexNumber();
-    std::cout << "Index in is " << i << "\n";
-
-    for (int i = aSize - 2; i >= 0; i--) {
-      std::cout << "   " << sels[i] << "\n";
+  // If already following, return the index (Note we only add, never remove)
+  for (size_t i = 0; i < myKeys.size(); ++i) {
+    if (myKeys[i] == key) {
+      return i;
     }
-  } else {
-    LogSevere("Trying to add record to history with a selections size of " << aSize << " which is unknown.\n");
+  }
+
+  // FIXME: Might be better to encapsulate into a class to avoid errors
+  myKeys.push_back(key);
+  myDataTypeNames.push_back(aTypeName);
+  myDataTypeCache.push_back(nullptr);
+  myDefaultValues.push_back(defaultValue);
+  LogInfo(
+    "Following NSE: '" << key << "' with typename '" << aTypeName << "' and default value of " << defaultValue <<
+      "\n");
+  return myKeys.size() - 1;
+}
+
+std::shared_ptr<DataType>
+NSEGridHistory:: getGrid(const std::string& aTypeName)
+{
+  // Uggh MRMS remaps and scales to the conus?
+  // I'm not sure I like this.  I'd rather query by lat/lon but that could
+  // also make porting algs more difficult.
+  return nullptr;
+}
+
+void
+NSEGridHistory::processNewData(RAPIOData& d)
+{
+  // See if DataType matches our follow list...then we create the DataType
+  // and cache it for later.
+  const std::string& dt = d.record().getDataType();
+  bool found = false;
+
+  for (size_t i = 0; i < myDataTypeNames.size(); ++i) {
+    if (myDataTypeNames[i] == dt) {
+      LogInfo("NSE received " << dt << ", caching.\n");
+      myDataTypeCache[i] = d.datatype<DataType>();
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    // FIXME: Do we need to remap or anything at this moment?
   }
 }

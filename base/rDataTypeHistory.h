@@ -4,6 +4,7 @@
 #include <rDataType.h>
 #include <rRecord.h>
 #include <rElevationVolume.h>
+#include <rRAPIOData.h>
 
 #include <memory>
 
@@ -12,21 +13,26 @@
 namespace rapio {
 /** Store a history of objects of some sort.
  * API meant to be called for incoming data of interest.
- * FIXME: Maybe we go though DataType and/or flags to
- * auto do this?  This current way requires an algorithm
- * to call update commands to add to caches.
  *
  * The main algorithm purges the history cache based on the -h
  * history.
+ *
+ * 2. For NSE grids or auto watching a subtype.  The NSE grid
+ * would have a 'followGrid' which had a key and default lookup
+ * to match a given DataType.  Also, I don't think it time purges,
+ * or if it does it would be different than the history.  An NSE grid
+ * might hang around a lot longer.
+ *
+ * FIXME: Guess we could introduce history subclasses.
+ * I'm just hardcoding them for the moment...
  *
  * @author Robert Toomey
  */
 class DataTypeHistory : public Data {
 public:
 
-  /** Register a volume for a particular key (overriding the updateVolume creation method) */
-  static void
-  registerVolume(const std::string& key, std::shared_ptr<Volume> v);
+  #if 0
+  // Keeping for the moment
 
   /** Update the virtual volume for this DataType if possible,
    * Volumes are named by product and contain N subtypes, for example
@@ -50,19 +56,95 @@ public:
    * a processed SubtypeGroup is not processed again */
   static size_t
   deleteSubtypeGroup(const std::string& subtype, const std::vector<std::string>& keys);
+  #endif // if 0
+
+  /** Called automatically by the algorithm on new incoming records */
+  static void
+  processNewData(RAPIOData& d);
 
   /** Purge history for volumes, collections, etc.  Called by
    * RAPIO automatically you don't need to call it.  Use the -h
    * option to determine max time window */
   static void
   purgeTimeWindow(const Time& time);
+};
 
-  /** New record stuff for now */
+/** A simple volume history. Volume classes register here in order
+ * to receive the -h time window from the algorithm.  This allows
+ * volumes to expire their tilts.
+ *
+ * @author Robert Toomey
+ */
+class VolumeHistory : public DataTypeHistory {
+public:
+  friend DataTypeHistory;
+
+  /** Register a volume for a particular key (overriding the updateVolume creation method) */
   static void
-  addRecord(Record& rec);
+  registerVolume(const std::string& key, std::shared_ptr<Volume> v);
+
 protected:
+  /** Purge history for volumes */
+  static void
+  purgeTimeWindow(const Time& time);
 
   // Storage for volumes
   static std::map<std::string, std::shared_ptr<Volume> > myVolumes;
+};
+
+/** Storage of DataTypes that come in rarely, such as NSE grids*/
+class NSEGridHistory : public DataTypeHistory {
+public:
+  friend DataTypeHistory;
+
+  /** Follow a given grid.  Currently I'm hardcoding the datatype and the
+   * default value, though MRMS uses an xml config lookup. */
+  static int
+  followGrid(const std::string& key, const std::string& aTypeName, float aDefault);
+
+  /** Do we handle this data? */
+  static void
+  processNewData(RAPIOData& d);
+
+  /** Get a grid.  If followGrid has been called, this will return a
+   * valid grid for use.  This is a cached grid and shared.
+   * Maybe we could return a reference to the primary to make alg
+   * locic simplier? */
+  static std::shared_ptr<DataType>
+  getGrid(const std::string& aTypeName);
+
+  /** Direct query by Lat lon */
+  static float
+  queryGrid(size_t key, AngleDegs lat, AngleDegs lon)
+  {
+    // FIXME: This will be slower than direct index, but less ram.
+    // We might optimize this.
+    if (key < myDataTypeCache.size()) {
+      auto& d = myDataTypeCache[key];
+      if (d) {
+        auto p = d->getProjection();
+        return (p->getValueAtLL(lat, lon));
+      } else {
+        return myDefaultValues[key];
+      }
+    }
+    return 0; // what to do
+  }
+
+protected:
+
+  // FIXME: maybe a class
+
+  /** List of followed keys  */
+  static std::vector<std::string> myKeys;
+
+  /** List of followed TypeNames */
+  static std::vector<std::string> myDataTypeNames;
+
+  /** Cache of DataTypes, if existing */
+  static std::vector<std::shared_ptr<DataType> > myDataTypeCache;
+
+  /** Cache of default values */
+  static std::vector<float> myDefaultValues;
 };
 }

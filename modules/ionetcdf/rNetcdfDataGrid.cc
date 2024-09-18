@@ -43,8 +43,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     DataGrid& dataGrid = *dataGridSP;
     const int ncid     = std::stoi(keys["NETCDF_NCID"]);
     const URL loc      = URL(keys["NETCDF_URL"]);
-    // const bool uncompressMRMSSparse = true; // Possibly a param later
-    const bool uncompressMRMSSparse = false; // We're migrating to the DataType
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -67,10 +65,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     std::vector<size_t> dimsizes;
     auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
 
-    // Remove sparse dimension, if MRMS netcdf sparse and wanted
-    bool sparse = uncompressMRMSSparse ?
-      IONetcdf::isMRMSSparse(dimids, dimnames, dimsizes) : false;
-
     // Declare dimensions in data structure
     dataGridSP->setDims(dimsizes, dimnames);
 
@@ -88,12 +82,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
       std::string name;
       NETCDF(nc_inq_varname(ncid, i, &name_in[0]));
       name = std::string(name_in);
-
-      // If MRMS sparse field and we're doing sparse, skip normal
-      // processing of those since they will be uncompressed
-      if (sparse && IONetcdf::isMRMSSparseField(name)) {
-        continue;
-      }
 
       // Now for this variable with given name
       // ... get number of dimensions
@@ -142,15 +130,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
       // Handle the special sparse data MRMS format first...
       bool handled = false;
-      if (sparse) {
-        // Sparse array is 1D, float and matches our typename...
-        if ((ndimsp2 == 1) && (xtypep == NC_FLOAT) && (name == aTypeName)) {
-          if (!IONetcdf::readSparse(ncid, varid, arrayName, units, dimsizes, dataGrid)) {
-            return false;
-          }
-          handled = true;
-        }
-      }
 
       // All others, generically try to create array using DataGrid factory
       if (!handled) {
@@ -168,7 +147,6 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
         if (data != nullptr) {
           NETCDF(nc_get_var(ncid, varid, data));
         }
-
 
         // This should fill in attributes per array, such as the stored Units in wdssii
         auto theList = dataGridSP->getAttributes(arrayName);

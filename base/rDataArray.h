@@ -51,7 +51,7 @@ public:
     myAttributes = std::make_shared<DataAttributeList>();
 
     myName = name;
-    setString("Units", units); // use attributes
+    setString(Constants::Units, units); // Make sure the units field set to given
     myStorageType = type;
     myDimIndexes  = dimindexes;
 

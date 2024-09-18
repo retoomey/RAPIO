@@ -246,6 +246,10 @@ public:
   virtual void
   processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p) override;
 
+  /** initialize */
+  void
+  initialize();
+
 protected:
   /** Stuff on start up */
   void
@@ -272,6 +276,12 @@ protected:
 
   /** Cache for maxgustp */
   std::shared_ptr<LatLonGrid> myMaxGust;
+
+  /** Field key */
+  int myHeight263;
+
+  /** Field key */
+  int myHeight233;
 };
 
 /**

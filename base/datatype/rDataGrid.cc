@@ -358,7 +358,7 @@ DataGrid::unsparse2D(
 
   if (!pixelXptr) {
     // No sparse array so give up
-    LogInfo("Data isn't sparse so we're done reading.\n");
+    // LogInfo("Data isn't sparse so we're done reading.\n");
     return;
   }
 

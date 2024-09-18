@@ -93,6 +93,7 @@ RAPIOFusionTwoAlg::createLLGCache(
       // Create a secondary float buffer for accumulating weights.  Crazy idea
       auto w = output->addFloat2D("weights", "Dimensionless", { 0, 1 });
       w->fill(0);
+      output->setVisible("weights", false); // Don't write to disk
 
       // Create a buffer for accumulating mask.  Tried playing with v/w to do this,
       // but it's just better separate

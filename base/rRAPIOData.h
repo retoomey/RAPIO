@@ -17,8 +17,8 @@ public:
   RAPIOData(const Record& aRec);
 
   /** Get the old style record if any associated with this data */
-  Record
-  record();
+  const Record&
+  record() const;
 
   /** Get datatype as shared_ptr of particular type */
   template <class T> std::shared_ptr<T>
