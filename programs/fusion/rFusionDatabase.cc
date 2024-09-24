@@ -144,8 +144,7 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
     auto& gridtest = output->getFloat2DRef();
     for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
       for (size_t y = 0; y < gridY; y++) {
-        // if no values with enough weight...
-        if (wa[y][x] < 0.0000001) {
+        if (wa[y][x] == 0) { // If no values hit (weight should be 0 from the init)
           // Use the missing flag array....
           // if (ma[y][x] > 0) {
           // FIXME: Feel like with some ordering could skip the indexing calculation

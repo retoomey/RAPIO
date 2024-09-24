@@ -154,7 +154,7 @@ public:
 };
 #endif // if HAVE_LZMA
 
-#if RAPIO_USE_SNAPPY == 1
+#if HAVE_SNAPPY
 
 /** Google snappyfilter for compressing/uncompressing snappy.
  */
@@ -177,5 +177,5 @@ public:
   applyURL(const URL& infile, const URL& outfile,
     std::map<std::string, std::string> &params) override;
 };
-#endif // if RAPIO_USE_SNAPPY == 1
+#endif // if HAVE_SNAPPY
 }

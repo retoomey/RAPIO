@@ -2,6 +2,11 @@
 # Top cmake for RAPIO building
 cmake_minimum_required (VERSION 3.10)
 
+# Some things like .gz support and netcdf we're dead in the water at NSSL without
+# these, though in theory you don't strictly require them.  Setting no here
+# will increase compile chances.
+option(BUILD_MRMS "Force libraries for MRMS NSSL environment" YES)
+
 # Set type of build.  This has effect on different os it seems based on some settings here:
 # CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel") google these
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -93,17 +98,6 @@ function(append_RAPIO_HEADER FOLDER)
 
 endfunction()
 
-#function(watch)
-#    set_property(
-#            DIRECTORY
-#            APPEND
-#            PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARGV}
-#    )
-#endfunction()
-
-# Force cmake rebuild if this file changes...
-#watch("webexample/main.cpp")
-
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
@@ -154,23 +148,23 @@ else()
   set(BOOST_LIBRARYDIR "${CMAKE_INSTALL_PREFIX}/boost/lib")
 endif()
 
-###########################################################################
-# We don't have a chance without zlib, bzip2 and boost.  NSSL data
-# and our code relies on it.
-#
-# BOOST will dynamically fail on compression reading/writing these. So
-# check these first before anything else.
-# The question is if the installed apk/rpm/etc versions
-# of boost support the XZ, ZLIB, BZIP2 compressions (did they build with them?)
-find_package(ZLIB REQUIRED)
-find_package(BZip2 REQUIRED)
-
 # Pretty sure boost links us to Threads::Threads, but ensure pthreads first
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 #find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
 find_package(Boost 1.66 REQUIRED COMPONENTS
   system log log_setup thread filesystem serialization iostreams timer
 )
+set(RAPIO_DEFINITIONS
+  -DBOOST_LOG_DYN_LINK
+)
+
+###########################################################################
+# Various compression/decompression libraries
+#
+
+addRAPIONote("Compression support:")
+find_package(ZLIB REQUIRED)
+addRAPIONote("      Found: (.z) ZLIB")
 
 # Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
 # variant of Redhat, and is therefore ancient using Boost 1.66
@@ -190,13 +184,35 @@ endif()
 
 if (${Boost_VERSION} VERSION_GREATER_EQUAL ${TEST_BOOST_VERSION})
   add_definitions(-DHAVE_LZMA)
-  addRAPIONote("BOOST ${Boost_VERSION} with LZMA support for .xz and .lzma compressed files.")
+  addRAPIONote("      Found: (.xz, .lzma) LZMA")
 else()
-  addRAPIONote("BOOST ${Boost_VERSION} < ${TEST_BOOST_VERSION} no LZMA support.  Only matters if you want to read .xz or .lzma compressed files.")
+  addRAPIONote("      Missing: (.xz, .lzma) LZMA")
 endif()
-set(RAPIO_DEFINITIONS
-  -DBOOST_LOG_DYN_LINK
-)
+
+if (BUILD_MRMS)
+  find_package(BZip2 REQUIRED)
+else()
+  # FIXME: Probably need flags/checks in code.  Have zlib I think in various places.
+  find_package(BZip2 QUIET)
+endif(BUILD_MRMS)
+if (BZip2_FOUND)
+  addRAPIONote("      Found: (.bz2) BZIP2")
+else()
+  addRAPIONote("      Missing: (.bz2) BZIP2")
+endif(BZip2_FOUND)
+
+# Snappy in Oracle 9 at least
+find_package(Snappy QUIET)
+if (Snappy_FOUND)
+  add_definitions(-DHAVE_SNAPPY)
+  # At least on oracle 9 it's not setting the libraries/headers.  It should 'normally' be
+  # just snappy, so we'll do that for now.
+  set(Snappy_LIBRARIES "-lsnappy")
+  addRAPIONote("      Found: (.sz) Google Snappy ${Snappy_VERSION}")
+  append_RAPIO("${Snappy_INCLUDE_DIRS}" "${Snappy_LIBRARIES}")
+else()
+  addRAPIONote("      Missing: (.sz) Google Snappy")
+endif(Snappy_FOUND)
 
 ###########################################################################
 # Creating RAPIO_INCLUDE_DIRS and RAPIO.h

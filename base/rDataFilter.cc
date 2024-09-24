@@ -16,7 +16,7 @@
 # include <boost/iostreams/filter/lzma.hpp> // .lzma files
 #endif
 
-#if RAPIO_USE_SNAPPY == 1
+#if HAVE_SNAPPY
 # include "snappy.h" // google .sz files
 #endif
 
@@ -33,20 +33,27 @@ namespace {
 bool
 applyBOOSTURL(const URL& infile, const URL& outfile, bi::filtering_streambuf<bi::output>& outbuf)
 {
-  // Copy from infile to outfile, passing through gzip
-  try{
-    std::ifstream filein(infile.toString(), std::ios_base::in | std::ios_base::binary);
-    std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
+  std::ifstream filein(infile.toString(), std::ios_base::in | std::ios_base::binary);
 
-    // Add extra stuff to the passed in stream
+  if (!filein.is_open()) {
+    LogSevere("Unable to open input file: " << infile);
+    return false;
+  }
+
+  std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
+
+  if (!fileout.is_open()) {
+    LogSevere("Unable to open output file: " << outfile);
+    return false;
+  }
+
+  try {
     outbuf.push(fileout);
-    // Convert streambuf to ostream
     std::ostream out(&outbuf);
     out << filein.rdbuf();
-    bi::close(outbuf);
-    fileout.close();
-    return true;
-  }catch (const std::exception& e) {
+    out.flush();  // Ensure all data is flushed out
+    outbuf.pop(); // Finalize the compression/filtering process
+  } catch (const std::exception& e) {
     LogSevere("From " << infile << " to " << outfile << " filter failed: " << e.what() << "\n");
     return false;
   }
@@ -59,7 +66,7 @@ applyBOOSTOstream(std::vector<char>& input, std::vector<char>& output, bi::filte
   // BOOST gz decompressor
   try{
     os.push(bi::back_inserter(output));
-    bi::write(os, &input[0], input.size());
+    bi::write(os, input.data(), input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
   }catch (const bi::gzip_error& e) {
     LogSevere("Filter failure on stream: " << e.what() << "\n"); // Let caller notify?
@@ -86,12 +93,7 @@ DataFilter::introduceSelf()
   LZMADataFilter::introduceSelf();
   #endif
 
-  #if RAPIO_USE_SNAPPY == 1
-  // Playing with snappy some.  The downside it that for whatever
-  // reason that while snappy-devel tends to exist on modern linux,
-  // a basic snappy decompress binary does not seem to, so this makes this
-  // format inconvenient for regular users. We could probably build a simple
-  // command line tool.
+  #if HAVE_SNAPPY
   SnappyDataFilter::introduceSelf();
   #endif
 }
@@ -232,7 +234,7 @@ LZMADataFilter::applyURL(const URL& infile, const URL& outfile,
 
 #endif // if HAVE_LZMA
 
-#if RAPIO_USE_SNAPPY == 1
+#if HAVE_SNAPPY
 void
 SnappyDataFilter::introduceSelf()
 {
@@ -244,19 +246,28 @@ SnappyDataFilter::introduceSelf()
 bool
 SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
 {
-  try{
-    // Get size of the uncompressed data for output buffer
+  try {
+    // Get the size of the uncompressed data for output buffer
     size_t outputsize;
-    bool valid = snappy::GetUncompressedLength(&input[0], input.size(), &outputsize);
+    bool valid = snappy::GetUncompressedLength(input.data(), input.size(), &outputsize);
     if (!valid) {
       LogSevere("Snappy data format not recognized.\n");
       return false;
     }
-    output.resize(outputsize);
-    snappy::RawUncompress(&input[0], input.size(), &output[0]);
 
-    return false;
-  }catch (const std::exception& e) {
+    output.resize(outputsize);
+
+    // Attempt to decompress the data
+    snappy::RawUncompress(input.data(), input.size(), output.data());
+
+    // Check if the decompression was successful by ensuring the output is valid
+    if (output.size() != outputsize) {
+      LogSevere("Decompressed size does not match expected size.\n");
+      return false;
+    }
+
+    return true; // Return true if everything succeeded
+  } catch (const std::exception& e) {
     LogSevere("Snappy filter failed: " << e.what() << "\n");
     return false;
   }
@@ -266,30 +277,40 @@ bool
 SnappyDataFilter::applyURL(const URL& infile, const URL& outfile,
   std::map<std::string, std::string> &params)
 {
-  // Copy from infile to outfile, passing through gzip
-  try{
-    std::ifstream filein(infile.toString(), std::ios_base::in | std::ios_base::binary);
-    std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
+  std::vector<char> bufin;
+  std::vector<char> bufout;
 
-    std::vector<char> bufin;
-    std::vector<char> bufout;
-    if (IOURL::read(infile, bufin) > 0) {
-      // Get the max output vector size...
-      size_t outputsize = snappy::MaxCompressedLength(bufin.size());
-      bufout.resize(outputsize);
-      snappy::RawCompress(&bufin[0], bufin.size(), &bufout[0], &outputsize);
-      //      LogSevere("Read in file to buffer..in size " << bufin.size() << " and out is " << outputsize << "\n");
+  // Read input file into buffer
+  if (IOURL::read(infile, bufin) > 0) {
+    try {
+      // Determine maximum output size
+      size_t maxOutputSize = snappy::MaxCompressedLength(bufin.size());
+      bufout.resize(maxOutputSize);
 
-      fileout.write(&bufout[0], bufout.size());
+      // Compress the data
+      size_t compressedSize = 0;
+      snappy::RawCompress(&bufin[0], bufin.size(), &bufout[0], &compressedSize);
+
+      // Open output file for writing compressed data
+      std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
+      if (!fileout.is_open()) {
+        LogSevere("Unable to open output file: " << outfile);
+        return false;
+      }
+
+      // Write only the compressed size to file
+      fileout.write(&bufout[0], compressedSize);
       fileout.close();
-    }
 
-    return true;
-  }catch (const std::exception& e) {
-    LogSevere("Snappy compress from " << infile << " to " << outfile << " failed.\n");
+      return true;
+    } catch (const std::exception& e) {
+      LogSevere("Snappy compress from " << infile << " to " << outfile << " failed: " << e.what());
+      return false;
+    }
+  } else {
+    LogSevere("Unable to read input file: " << infile);
     return false;
   }
-  return true;
-}
+} // SnappyDataFilter::applyURL
 
-#endif // if RAPIO_USE_SNAPPY == 1
+#endif // if HAVE_SNAPPY
