@@ -31,8 +31,15 @@ public:
 
 protected:
 
+  /** A delay before processing a file in seconds, < zero if no delay.  Useful
+   * for certain testing and other things. */
+  float myBeforeDelaySeconds;
+
   /** A delay after processing a file in seconds, < zero if no delay.  Useful
    * for certain testing and other things. */
-  float myDelaySeconds;
+  float myAfterDelaySeconds;
+
+  /** When writing, update the DataType time to current time */
+  bool myUpdateTime;
 };
 }
