@@ -143,9 +143,9 @@ else()
   #set(JASPER_LIBRARY_RELEASE "${CMAKE_INSTALL_PREFIX}/lib;/usr/lib64")
 
   # BOOST we tell directly since we got a common cmake module
-  set(BOOST_ROOT "${CMAKE_INSTALL_PREFIX}/boost")
-  set(BOOST_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/boost/include")
-  set(BOOST_LIBRARYDIR "${CMAKE_INSTALL_PREFIX}/boost/lib")
+  #  set(Boost_ROOT "${CMAKE_INSTALL_PREFIX}/boost")
+  #set(Boost_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/boost/include")
+  #set(Boost_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/boost/lib")
 endif()
 
 # Pretty sure boost links us to Threads::Threads, but ensure pthreads first

@@ -7,6 +7,8 @@
 #include "rColorMap.h"
 #include "rImageDataTypeImp.h"
 
+#include <fstream>
+
 // GraphicMagick or ImageMagick in centos/fedora
 #if HAVE_MAGICK
 # include <Magick++.h>

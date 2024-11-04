@@ -25,6 +25,11 @@ add_subdirectory(fusion)
 add_subdirectory(nse)
 
 ##################################################################
+# Modular Algorithms (callable from groups such as FusionAlgs)
+#
+add_subdirectory(3DVIL)
+
+##################################################################
 # Utility/GUI stuff
 #
 add_subdirectory(util)

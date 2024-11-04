@@ -831,7 +831,7 @@ DataGrid::getUnits(const std::string& name)
   auto n = getNode(name);
 
   if (n != nullptr) {
-    n->getString("Units", units);
+    n->getString(Constants::Units, units);
   }
   return units;
 }
@@ -848,6 +848,6 @@ DataGrid::setUnits(const std::string& units, const std::string& name)
   auto n = getNode(name);
 
   if (n != nullptr) {
-    n->setString("Units", units);
+    n->setString(Constants::Units, units);
   }
 }
