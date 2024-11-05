@@ -31,6 +31,7 @@ public:
     const Time       & datatime,
     const float      elevationDegrees,
     const float      firstGateDistanceMeters,
+    const float      gateWidthMeters,
     const size_t     num_radials,
     const size_t     num_gates);
 
@@ -217,6 +218,7 @@ public:
     const Time       & datatime,
     const float      elevationDegrees,
     const float      firstGateDistanceMeters,
+    const float      gateWidthMeters,
     const size_t     num_radials,
     const size_t     num_gates);
 

@@ -70,7 +70,7 @@ NetcdfRadialSet::getTestObject(
 
   float firstGateDistanceMeters = 1000.0;
   auto radialSetSP = RadialSet::Create("Reflectivity", "dbZ", location, time,
-      elev_angle, firstGateDistanceMeters, num_radials, num_gates);
+      elev_angle, firstGateDistanceMeters, gate_width, num_radials, num_gates);
   RadialSet& radialSet = *radialSetSP;
   // radialSet.setNyquistVelocityUnit(nyq_unit);
 
@@ -78,8 +78,8 @@ NetcdfRadialSet::getTestObject(
   auto& azimuths   = azimuthsA->ref();
   auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
   auto& beamwidths = beamwidthsA->ref();
-  auto gatewidthsA = radialSet.getFloat1D("GateWidth");
-  auto& gatewidths = gatewidthsA->ref();
+  //auto gatewidthsA = radialSet.getFloat1D("GateWidth");
+  //auto& gatewidths = gatewidthsA->ref();
 
   auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
@@ -88,7 +88,7 @@ NetcdfRadialSet::getTestObject(
     float start_az = i; // Each degree
     azimuths[i]   = start_az;
     beamwidths[i] = beam_width;
-    gatewidths[i] = gate_width;
+    //gatewidths[i] = gate_width;
     for (size_t j = 0; j < num_gates; ++j) {
       data[i][j] = i;
     }

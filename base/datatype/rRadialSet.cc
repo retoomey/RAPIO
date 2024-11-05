@@ -30,12 +30,13 @@ RadialSet::Create(
   const Time       & datatime,
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
+  const float      gateWidthMeters,
   const size_t     num_radials,
   const size_t     num_gates)
 {
   auto newonesp = std::make_shared<RadialSet>();
 
-  newonesp->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters,
+  newonesp->init(TypeName, Units, center, datatime, elevationDegrees, firstGateDistanceMeters, gateWidthMeters,
     num_radials, num_gates);
   return newonesp;
 }
@@ -72,6 +73,7 @@ RadialSet::init(
   const Time       & datatime,
   const float      elevationDegrees,
   const float      firstGateDistanceMeters,
+  const float      gateWidthMeters,
   const size_t     num_radials,
   const size_t     num_gates)
 {
@@ -85,18 +87,28 @@ RadialSet::init(
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
   /** Azimuth per radial */
-  // addFloat1D("Azimuth", "Degrees", {0}, 0.0f);
-  addFloat1D("Azimuth", "Degrees", { 0 });
+  auto a = addFloat1D("Azimuth", "Degrees", { 0 });
+
+  // For a default azimuth, let's divide a circle by the number of radials
+  // and calculate beamwidth based on that for each radial.  Obvious this is
+  // just a simple default.  Anyone doing advanced stuff would probably fill
+  // in this data themselves.
+  auto& azimuths  = a->ref();
+  float increment = 360.0 / num_radials;
+  float at        = 0.0;
+
+  for (size_t z = 0; z < num_radials; ++z) {
+    azimuths[z] = at;
+    at += increment;
+  }
 
   /** Beamwidth per radial */
-  // addFloat1D("BeamWidth", "Degrees", {0}, 1.0f);
-  addFloat1D("BeamWidth", "Degrees", { 0 });
+  addFloat1D("BeamWidth", "Degrees", { 0 }, increment);
 
-  /** Gate width per radial */
-  // addFloat1D("GateWidth", "Meters", {0}, 1000.0f);
-  addFloat1D("GateWidth", "Meters", { 0 });
+  /** Gate width per radial. */
+  addFloat1D("GateWidth", "Meters", { 0 }, gateWidthMeters);
   return true;
-}
+} // RadialSet::init
 
 bool
 RadialSet::initFromGlobalAttributes()

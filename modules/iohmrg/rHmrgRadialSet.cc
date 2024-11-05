@@ -138,7 +138,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
 
   auto radialSetSP = RadialSet::Create(name, units, center, dataTime, elevAngleDegs, distanceToFirstGateMeters,
-      num_radials, num_gates);
+      gateSpacingMeters, num_radials, num_gates);
   RadialSet& radialSet = *radialSetSP;
 
   radialSet.setUnits(units);
@@ -154,8 +154,8 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   auto& azimuths   = azimuthsA->ref();
   auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
   auto& beamwidths = beamwidthsA->ref();
-  auto gatewidthsA = radialSet.getFloat1D("GateWidth");
-  auto& gatewidths = gatewidthsA->ref();
+  //auto gatewidthsA = radialSet.getFloat1D("GateWidth");
+  //auto& gatewidths = gatewidthsA->ref();
 
   auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
@@ -175,7 +175,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
     // Adding would be faster.  Does it matter?
     azimuths[i]   = std::fmod(firstAzimuthDegs + (i * azimuthResDegs), 360);
     beamwidths[i] = 1; // Correct?
-    gatewidths[i] = gateSpacingMeters;
+    //gatewidths[i] = gateSpacingMeters;
     for (size_t j = 0; j < num_gates; ++j) {
       auto old = rawBuffer[rawBufferIndex];
       data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], dataUnavailable, dataMissing,

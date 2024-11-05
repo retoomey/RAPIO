@@ -77,9 +77,10 @@ MakeFakeRadarData::execute()
 
   Time myTime;
   LengthMs firstGateDistanceMeters = 0;
+  LengthMs gateSpacing = 250;
 
   auto myRadialSet = RadialSet::Create("Percentage", "dbZ", myCenter, myTime,
-      elevAngleDegs, firstGateDistanceMeters, myNumRadials, myNumGates);
+      elevAngleDegs, firstGateDistanceMeters, gateSpacing, myNumRadials, myNumGates);
 
   myRadialSet->setRadarName(myRadarName);
   myRadialSet->setTime(Time::CurrentTime());

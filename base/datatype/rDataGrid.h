@@ -57,15 +57,15 @@ protected:
   } \
   std::shared_ptr<Array<TYPE, DIMENSION> > \
   add ## TYPESTRING ## DIMENSION ## D(const std::string& name, const std::string& units, \
-    const std::vector<size_t>& dimindexes) \
+    const std::vector<size_t>& dimindexes, TYPE fillValue = TYPE()) \
   { \
-    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes); \
+    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes, fillValue); \
   } \
   inline boost::multi_array<TYPE, DIMENSION>& \
   add ## TYPESTRING ## DIMENSION ## DRef(const std::string& name, const std::string& units, \
-    const std::vector<size_t>& dimindexes) \
+    const std::vector<size_t>& dimindexes, TYPE fillValue = TYPE()) \
   { \
-    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes)->ref(); \
+    return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes, fillValue)->ref(); \
   }
 
 /** Declare up to 3D array access, haven't seen a need for anything higher 'yet'.
@@ -88,6 +88,12 @@ public:
   /** Get the name of this dimension */
   std::string
   name() const { return myName; }
+
+  /** Set the size of the dimension */
+  void setSize(size_t s){ mySize = s; }
+
+  /** Set the name of the dimension */
+  void setName(const std::string& n){ myName = n; }
 
 protected:
 
@@ -127,6 +133,20 @@ public:
   /** Public API for users to clone a DataGrid */
   std::shared_ptr<DataGrid>
   Clone();
+
+  /** Resize existing dimensions given a vector list */
+  void
+  resize(const std::vector<size_t>& dimsizes);
+
+  /** Use a parameter pack so you can call resize(x,y,z...) */
+  template <typename ... Sizes>
+  void
+  resize(Sizes... dimsizes)
+  {
+    std::vector<size_t> dimVec{ dimsizes ... };
+
+    resize(dimVec);
+  }
 
   /** Destroy a DataGrid */
   virtual ~DataGrid(){ }
@@ -217,7 +237,7 @@ public:
   template <typename T, unsigned int S>
   std::shared_ptr<Array<T, S> >
   add(const std::string& name, const std::string& units, const DataArrayType& type,
-    const std::vector<size_t>& dimindexes)
+    const std::vector<size_t>& dimindexes, T fillValue = T())
   {
     // Map indexes to actual dimension sizes (generically)
     std::vector<size_t> sizes;
@@ -236,6 +256,11 @@ public:
 
     auto newNode = std::make_shared<DataArray>();
     auto ptr     = newNode->init<T, S>(name, units, type, sizes, dimindexes);
+
+    // Call fill only if the provided fillValue differs from the default-initialized value
+    if (fillValue != T()) {
+      ptr->fill(fillValue);
+    }
 
     // Add or replace the named node
     int at = getNodeIndex(name);

@@ -23,6 +23,7 @@ install(TARGETS rGrib2Reader
 #
 add_subdirectory(fusion)
 add_subdirectory(nse)
+add_subdirectory(polarMerge)
 
 ##################################################################
 # Modular Algorithms (callable from groups such as FusionAlgs)

@@ -148,11 +148,23 @@ DataGrid::setDims(const std::vector<size_t>& dimsizes,
     myDims.push_back(DataGridDimension(dimnames[zz], dimsizes[zz]));
   }
 
-  // Resize all arrays to given dimensions...this only gets
-  // calls if someone is trying to 'expand' or reduce the size of
-  // our stuff.  I've tested some but not 100% hammered it yet
-  // I probably need to design a DataGrid test in tests for this
-  // purpose.
+  resize(dimsizes);
+} // DataGrid::setDims
+
+void
+DataGrid::resize(const std::vector<size_t>& dimsizes)
+{
+  if (myDims.size() != dimsizes.size()) {
+    LogSevere("Trying to resize " << myDims.size() << " dimensions but using " << dimsizes.size() << " values.\n");
+    return;
+  }
+
+  // Change the dimension size first.
+  for (size_t zz = 0; zz < dimsizes.size(); ++zz) {
+    myDims[zz].setSize(dimsizes[zz]);
+  }
+
+  // Resize each arrays to new size.
   for (auto l:myNodes) {
     auto i    = l->getDimIndexes();
     auto name = l->getName();
@@ -169,7 +181,7 @@ DataGrid::setDims(const std::vector<size_t>& dimsizes,
     auto array = l->getArray();
     array->resize(sizes);
   }
-} // DataGrid::setDims
+}
 
 namespace {
 void
