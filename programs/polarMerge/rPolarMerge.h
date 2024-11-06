@@ -62,9 +62,12 @@ public:
 
   /** Process the virtual volume. */
   void
-  processVolume(const Time& outTime, const std::string& subtypeMarker);
+  processVolume(const Time& outTime, float useElevDegs, const std::string& useSubtype);
 
 protected:
+
+  /** The upto inclusion amount */
+  float myUptoDegs;
 
   /** Store first radar name.  Currently we can only handle 1 radar */
   std::string myRadarName;

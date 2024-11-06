@@ -18,11 +18,15 @@ PolarMerge::declareOptions(RAPIOOptions& o)
   o.setDescription(
     "PolarMerge collapses a virtual volume into a single polar product.");
   o.setDefaultValue("terrain", "lak");
+  o.optional("upto", "1000",
+    "Over this value in elevation angle degs is ignored.  So upto=3.5 for RadialSets means only include tilts of 3.5 or less.\n");
 }
 
 void
 PolarMerge::processOptions(RAPIOOptions& o)
-{ }
+{
+  myUptoDegs = o.getFloat("upto");
+}
 
 void
 PolarMerge::processNewData(rapio::RAPIOData& d)
@@ -33,10 +37,15 @@ PolarMerge::processNewData(rapio::RAPIOData& d)
   if (r != nullptr) {
     const bool addedTilt = processRadialSet(r);
 
-    // For moment, output after every tilt.
+
     if (addedTilt) {
-      const std::string subtype = "at_" + r->getSubType();
-      processVolume(r->getTime(), subtype); // Since just added, use time of incoming
+      // The time, elev angle, and direct subtype for output folder
+      // Subtype attribute will be the elev angle, but we'll write "at"
+      const std::string useSubtype = "at" + r->getSubType();
+      const float useElevDegs      = r->getElevationDegs();
+      const Time useTime = r->getTime(); // Triggering output tilt, use time of tilt
+
+      processVolume(useTime, useElevDegs, useSubtype); // Since just added, use time of incoming
     }
   }
 }
@@ -44,6 +53,10 @@ PolarMerge::processNewData(rapio::RAPIOData& d)
 bool
 PolarMerge::processRadialSet(std::shared_ptr<RadialSet> r)
 {
+  if (r->getElevationDegs() > myUptoDegs) {
+    return false;
+  }
+
   LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---RadialSet---" << ColorTerm::fNormal << "\n");
   // Need a radar name in data to handle it currently
   std::string name = "UNKNOWN";
@@ -133,7 +146,7 @@ PolarMerge::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& rada
 } // PolarMerge::firstDataSetup
 
 void
-PolarMerge::processVolume(const Time& aTime, const std::string& subtypeMarker)
+PolarMerge::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
   // Do the work of processing the virtual volume.  For our 'start' we're gonna try
   // doing an absolute maximum.  This will expand to be plugins that we could also call
@@ -173,13 +186,13 @@ PolarMerge::processVolume(const Time& aTime, const std::string& subtypeMarker)
   myMergedSet = RadialSet::Create(base->getTypeName() + "_2DMax",
       base->getUnits(),
       base->getLocation(),
-      aTime, // Could see current time or tilt time
-      0.5,   // virtual doesn't matter
+      useTime, // Could see current time or tilt time
+      useElevDegs,
       base->getDistanceToFirstGateM(),
       base->getGateWidthKMs() * 1000.0,
       maxRadials,
       maxGates);
-  myMergedSet->setSubType(subtypeMarker); // Mark special
+  myMergedSet->setSubType(useSubtype); // Mark special
 
   // -------------------------------------------------------------
   // Iterate over the volume, projection from largest to the other
@@ -192,7 +205,8 @@ PolarMerge::processVolume(const Time& aTime, const std::string& subtypeMarker)
   // FIXME: We should make a gate iterator for this type of stuff
   // Iteratring over griss a radials sets.
   // RadialSetIterator and LatLonGridIterator, etc.
-  //
+  // FIXME: Playing with iterator class and it's a lot slower so far,
+  // if it can be made faster than 'maybe' we use it
 
   // Gather the radial set projections for speed
   std::vector<RadialSetProjection *> projectors;
@@ -204,7 +218,6 @@ PolarMerge::processVolume(const Time& aTime, const std::string& subtypeMarker)
       projectors.push_back(p);
     }
   }
-
 
   auto& outData = myMergedSet->getFloat2DRef();
   auto& az      = myMergedSet->getFloat1DRef("Azimuth");
@@ -256,6 +269,7 @@ PolarMerge::processVolume(const Time& aTime, const std::string& subtypeMarker)
   }
 
   std::map<std::string, std::string> myOverride;
+
 
   writeOutputProduct(myMergedSet->getTypeName(), myMergedSet, myOverride); // Typename will be replaced by -O filters
 } // PolarMerge::processVolume
