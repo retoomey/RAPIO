@@ -93,7 +93,8 @@ rProcessTimer.h
 rProject.h
 datatype/rPTreeData.h
 datatype/rRadialSet.h
-rRadialSetLookup.h
+datatype/rRadialSetIterator.h
+datatype/rRadialSetProjection.h
 rRAPIOAlgorithm.h
 rRAPIOData.h
 rRapio.h
@@ -218,7 +219,8 @@ rProcessTimer.cc
 rProject.cc
 datatype/rPTreeData.cc
 datatype/rRadialSet.cc
-rRadialSetLookup.cc
+datatype/rRadialSetIterator.cc
+datatype/rRadialSetProjection.cc
 rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc

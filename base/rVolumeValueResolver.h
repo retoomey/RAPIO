@@ -5,7 +5,7 @@
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
 #include <rRadialSet.h>
-#include <rRadialSetLookup.h>
+#include <rRadialSetProjection.h>
 #include <rVolumeValue.h>
 #include <rLLCoverageArea.h>
 #include <rPartitionInfo.h>

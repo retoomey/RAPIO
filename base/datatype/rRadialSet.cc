@@ -1,5 +1,5 @@
 #include "rRadialSet.h"
-#include "rRadialSetLookup.h"
+#include "rRadialSetProjection.h"
 
 #include "rError.h"
 #include "rUnit.h"

@@ -148,6 +148,69 @@ PolarMerge::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& rada
 void
 PolarMerge::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
+  /** New way using the callback iterator API.  This will allow us to hide
+   * the 'normal' ways of iterating over DataTypes.  In particular,
+   * the LatLonGrid is complicated. Typically one marches over lat/lon and
+   * has to do angle calculations, etc.  We can hide all that from users. */
+  class myRadialSetCallback : public RadialSetCallback {
+public:
+
+    /** Add a projection for a RadialSet.  We'll project into
+     * each tilt to get the value there */
+    void
+    addProjection(RadialSetProjection * p)
+    {
+      projectors.push_back(p);
+    }
+
+    /** For each gate, we've gonna take the absolute max of the other gates
+     * in the volume vertically */
+    virtual void
+    handleGate(RadialSetIterator * it)
+    {
+      // We want the current center azimuth/range of our RadialSet gate,
+      // this will be used to project into the other RadialSets.
+      const auto atAzDegs  = it->getCenterAzimuthDegs();
+      const auto atRangeKM = it->getCenterRangeMeters() / 1000.0; // FIXME: units?
+
+      float currentMaxAbs = 0.0;
+      bool foundOne = false;
+      bool missingMask = false;
+      int radialNo, gateNo;
+      double value;
+
+      // For each RadialSet in the volume...
+      for (size_t i = 0; i < projectors.size(); ++i) {
+        // ...see if we hit it...
+        if (projectors[i]->getValueAtAzRange(atAzDegs, atRangeKM, value, radialNo, gateNo)) {
+          missingMask = true; // Because we 'hit' radar coverage
+
+          // ...and if a good value, keep the maximum
+          if (Constants::isGood(value)) {
+            value = std::fabs(value);
+            if (value >= currentMaxAbs) { currentMaxAbs = value; }
+            foundOne = true;
+          }
+        }
+
+        // Maybe a group method for this?  This is probably a common thing
+        // it->setValueMask(foundOne, missingMask, value);
+
+        if (foundOne) {
+          it->setValue(currentMaxAbs);
+          //  outData[r][g] = currentMaxAbs;
+        } else {
+          it->setValue(missingMask ? Constants::MissingData : Constants::DataUnavailable);
+          // outData[r][g] = missingMask ? Constants::MissingData : Constants::DataUnavailable;
+        }
+      }
+    } // handleGate
+
+private:
+    // Gather the radial set projections for speed
+    std::vector<RadialSetProjection *> projectors;
+  };
+
   // Do the work of processing the virtual volume.  For our 'start' we're gonna try
   // doing an absolute maximum.  This will expand to be plugins that we could also call
   // directly from fusion I think.
@@ -193,6 +256,9 @@ PolarMerge::processVolume(const Time& useTime, float useElevDegs, const std::str
       maxRadials,
       maxGates);
   myMergedSet->setSubType(useSubtype); // Mark special
+  // Debating forcing RadarName in Create, but make sure we
+  // have one since many algs require this field.
+  myMergedSet->setRadarName(base->getRadarName());
 
   // -------------------------------------------------------------
   // Iterate over the volume, projection from largest to the other
@@ -208,16 +274,23 @@ PolarMerge::processVolume(const Time& useTime, float useElevDegs, const std::str
   // FIXME: Playing with iterator class and it's a lot slower so far,
   // if it can be made faster than 'maybe' we use it
 
+  myRadialSetCallback myCallback;
+
   // Gather the radial set projections for speed
-  std::vector<RadialSetProjection *> projectors;
+  // std::vector<RadialSetProjection *> projectors;
 
   for (size_t i = 0; i < tilts.size(); ++i) {
     auto pd = tilts[i]->getProjection().get();
     RadialSetProjection * p = static_cast<RadialSetProjection *>(pd);
     if (p != nullptr) {
-      projectors.push_back(p);
+      // projectors.push_back(p);
+      myCallback.addProjection(p);
     }
   }
+
+  #if 0
+  Old way without an iterator / callback class.I think the iterator
+  way is better.Leaving code for a bit longer.
 
   auto& outData = myMergedSet->getFloat2DRef();
   auto& az      = myMergedSet->getFloat1DRef("Azimuth");
@@ -267,6 +340,12 @@ PolarMerge::processVolume(const Time& useTime, float useElevDegs, const std::str
       KMOut += gw1; // move along ray
     }
   }
+  #else // if 0
+
+  RadialSetIterator iter(*myMergedSet);
+  iter.iterateRadialGates(myCallback);
+  #endif // if 0
+
 
   std::map<std::string, std::string> myOverride;
 
