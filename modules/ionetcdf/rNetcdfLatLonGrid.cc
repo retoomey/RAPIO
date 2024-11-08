@@ -44,7 +44,7 @@ NetcdfLatLonGrid::write(std::shared_ptr<DataType> dt,
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Lat", "Lon"
 
-  auto * llhg = (LatLonHeightGrid *) (dt.get());
+  auto * llg = (LatLonGrid *) (dt.get());
 
   return (NetcdfDataGrid::write(dt, keys));
 } // NetcdfLatLonGrid::write

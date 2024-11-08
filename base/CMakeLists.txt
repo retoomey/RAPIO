@@ -76,7 +76,9 @@ watcher/rIOWatcher.h
 rIOXML.h
 datatype/rLatLonArea.h
 datatype/rLatLonGrid.h
+datatype/rLatLonGridProjection.h
 datatype/rLatLonHeightGrid.h
+datatype/rLatLonHeightGridProjection.h
 rLength.h
 rLLCoverageArea.h
 rLL.h
@@ -202,7 +204,9 @@ watcher/rIOWatcher.cc
 rIOXML.cc
 datatype/rLatLonArea.cc
 datatype/rLatLonGrid.cc
+datatype/rLatLonGridProjection.cc
 datatype/rLatLonHeightGrid.cc
+datatype/rLatLonHeightGridProjection.cc
 rLength.cc
 rLL.cc
 rLLCoverageArea.cc

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <rLatLonGrid.h>
+#include <rLatLonArea.h>
 #include <rLLCoverageArea.h>
+#include <rLatLonHeightGridProjection.h>
 
 namespace rapio {
 /** Store an area of data on a uniform 3-D grid of latitude and
@@ -18,7 +19,7 @@ public:
   // We could basically pick a 2D layer at moment for testing
   // FIXME:  We'll pass general params to the projection object
   // which will allow 2d, vslice, etc.
-  friend LatLonHeightGridProjection;
+  friend class LatLonHeightGridProjection;
 
   /** Construct uninitialized LatLonHeightGrid, usually for
    * factories.  You probably want the Create method */

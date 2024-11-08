@@ -1,7 +1,5 @@
 #include "rLatLonGrid.h"
-#include "rProject.h"
-
-#include "rProcessTimer.h"
+#include "rLatLonGridProjection.h"
 
 using namespace rapio;
 using namespace std;

@@ -1,8 +1,6 @@
 #pragma once
 
 #include <rDataProjection.h>
-#include <rUtility.h>
-#include <rConstants.h>
 #include <rArray.h>
 
 #include <vector>

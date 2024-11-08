@@ -4,6 +4,7 @@
 #include <rLLH.h>
 #include <rTime.h>
 #include <rLLCoverageArea.h>
+#include <rLatLonGridProjection.h>
 
 namespace rapio {
 /** Store an area of data on a uniform 2-D grid of latitude and
@@ -13,7 +14,7 @@ namespace rapio {
  */
 class LatLonGrid : public LatLonArea {
 public:
-  friend LatLonGridProjection;
+  friend class LatLonGridProjection;
 
   /** Construct uninitialized LatLonGrid, usually for
    * factories.  You probably want the Create method */
