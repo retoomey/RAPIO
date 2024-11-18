@@ -139,7 +139,7 @@ GribFieldImp::getProductName()
     auto data = myDataTypeValid.lock();
     if (data && data->myDataType->getIDXProductName(myMessageNumber, myFieldNumber, product)){
     }else{
-      product = GribDatabase::getLevelName(myGribField);
+      product = GribDatabase::getProductName(myGribField);
     }
     return product;
   } else {
