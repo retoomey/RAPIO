@@ -74,15 +74,11 @@ NetcdfRadialSet::getTestObject(
   RadialSet& radialSet = *radialSetSP;
   // radialSet.setNyquistVelocityUnit(nyq_unit);
 
-  auto azimuthsA   = radialSet.getFloat1D("Azimuth");
-  auto& azimuths   = azimuthsA->ref();
-  auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
-  auto& beamwidths = beamwidthsA->ref();
-  //auto gatewidthsA = radialSet.getFloat1D("GateWidth");
-  //auto& gatewidths = gatewidthsA->ref();
+  auto& azimuths   = radialSet.getFloat1DRef(RadialSet::Azimuth);
+  auto& beamwidths = radialSet.getFloat1DRef(RadialSet::BeamWidth);
+  //auto& gatewidths = radialSet.getFloat1D(RadialSet::GateWidth);
 
-  auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
-  auto& data = array->ref();
+  auto& data = radialSet.getFloat2DRef(Constants::PrimaryDataName);
 
   for (size_t i = 0; i < num_radials; ++i) {
     float start_az = i; // Each degree

@@ -89,7 +89,7 @@ MakeFakeRadarData::execute()
   auto dataPtr = myRadialSet->getFloat2D();
 
   dataPtr->fill(Constants::DataUnavailable);
-  //  auto & data = myRadialSet->getFloat2D()->ref();
+  //  auto & data = myRadialSet->getFloat2DRef();
   auto & rs = *myRadialSet;
 
   // Create terrain blockage
@@ -115,7 +115,7 @@ MakeFakeRadarData::execute()
   rs.setDataAttributeValue(Constants::Units, "dimensionless");
 
   // RadialSet is indexed Azimuth, Gates...
-  auto & data = rs.getFloat2D()->ref();
+  auto & data = rs.getFloat2DRef();
 
   for (size_t i = 0; i < myNumGates; ++i) {
     for (size_t j = 0; j < myNumRadials; ++j) {
@@ -199,7 +199,6 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
     LLH theCenter = rs.getLocation();
     LengthKMs stationHeightKMs = theCenter.getHeightKM();
 
-    // auto& gw  = rs.getGateWidthVector()->ref();
     LengthKMs startKM  = rs.getDistanceToFirstGateM() / 1000.0;
     LengthKMs rangeKMs = startKM;
     LengthKMs aTerrain;
@@ -420,8 +419,6 @@ MakeFakeRadarData::terrainAngleChart2(RadialSet& rs)
   myDataGrid->addFloat2D("TerrainHeight", "Meters", { 0, 1 }); // Y1  API just addFloat, use the dimensions
   auto & base = myDataGrid->getFloat2DRef("TerrainHeight");
 
-  // auto & azData    = rs.getFloat1D("Azimuth")->ref();
-
   // Kinda stock for marching over radial set, should be a visitor probably
   LengthKMs startKM = rs.getDistanceToFirstGateM() / 1000.0;
   LengthKMs rangeKMs = startKM;
@@ -466,19 +463,19 @@ MakeFakeRadarData::addRadials(RadialSet& rs)
   const AngleDegs elevDegs = rs.getElevationDegs();
 
   // Fill beamwidth
-  auto bwPtr = rs.getFloat1D("BeamWidth");
+  auto bwPtr = rs.getFloat1D(RadialSet::BeamWidth);
 
   bwPtr->fill(myBeamWidthDegs);
 
   // Fill gatewidth
-  auto gwPtr = rs.getFloat1D("GateWidth");
+  auto gwPtr = rs.getFloat1D(RadialSet::GateWidth);
 
   gwPtr->fill(myGateWidthM);
 
   AngleDegs azDegs = 0;
-  auto & azData    = rs.getFloat1D("Azimuth")->ref();
+  auto & azData    = rs.getFloat1DRef(RadialSet::Azimuth);
 
-  auto & data = rs.getFloat2D()->ref();
+  auto & data = rs.getFloat2DRef();
 
   LengthKMs aTerrain;
 

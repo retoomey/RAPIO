@@ -268,87 +268,22 @@ private:
 
   // Do the algorithm.  Here we're going to do an absolute max as POC
 
-  // FIXME: We should make a gate iterator for this type of stuff
-  // Iteratring over griss a radials sets.
-  // RadialSetIterator and LatLonGridIterator, etc.
-  // FIXME: Playing with iterator class and it's a lot slower so far,
-  // if it can be made faster than 'maybe' we use it
-
   myRadialSetCallback myCallback;
 
   // Gather the radial set projections for speed
-  // std::vector<RadialSetProjection *> projectors;
-
   for (size_t i = 0; i < tilts.size(); ++i) {
     auto pd = tilts[i]->getProjection().get();
     RadialSetProjection * p = static_cast<RadialSetProjection *>(pd);
     if (p != nullptr) {
-      // projectors.push_back(p);
       myCallback.addProjection(p);
     }
   }
 
-  #if 0
-  Old way without an iterator / callback class.I think the iterator
-  way is better.Leaving code for a bit longer.
-
-  auto& outData = myMergedSet->getFloat2DRef();
-  auto& az      = myMergedSet->getFloat1DRef("Azimuth");
-  auto& beam    = myMergedSet->getFloat1DRef("BeamWidth");
-  auto& gw      = myMergedSet->getFloat1DRef("GateWidth");
-  const float firstGateKM = myMergedSet->getDistanceToFirstGateM() / 1000.0;
-  const size_t radials    = myMergedSet->getNumRadials(); // x
-  const size_t gates      = myMergedSet->getNumGates();   // y
-
-  for (size_t r = 0; r < radials; ++r) {
-    auto beam1 = beam[r];
-    auto az1   = az[r] + (beam1 / 2.0); // center
-    auto gw1   = gw[r] / 1000.0;        // gatewidth is by azimuth, you would think it woudl be gate
-
-    float KMOut = firstGateKM;
-    for (size_t g = 0; g < gates; ++g) {
-      float currentMaxAbs = 0.0;
-      bool foundOne       = false;
-      bool missingMask    = false;
-
-      for (size_t i = 0; i < projectors.size(); ++i) {
-        // -----------------------------------------------
-        // All the loop work to get 'here' the meat of
-        // what we're doing.  Which makes me want to create
-        // an iterator class.  Let's see if the code works
-        // first than we can refactor
-        int radialNo, gateNo;
-        double value;
-        if (projectors[i]->getValueAtAzRange(az1, KMOut, value, radialNo, gateNo)) {
-          missingMask = true; // Because we 'hit' radar coverage
-
-          if (Constants::isGood(value)) {
-            value = std::fabs(value);
-            if (value >= currentMaxAbs) { currentMaxAbs = value; }
-            foundOne = true;
-          }
-        }
-        // -----------------------------------------------
-      }
-
-      if (foundOne) {
-        outData[r][g] = currentMaxAbs;
-      } else {
-        outData[r][g] = missingMask ? Constants::MissingData : Constants::DataUnavailable;
-      }
-
-      KMOut += gw1; // move along ray
-    }
-  }
-  #else // if 0
-
   RadialSetIterator iter(*myMergedSet);
-  iter.iterateRadialGates(myCallback);
-  #endif // if 0
 
+  iter.iterateRadialGates(myCallback);
 
   std::map<std::string, std::string> myOverride;
-
 
   writeOutputProduct(myMergedSet->getTypeName(), myMergedSet, myOverride); // Typename will be replaced by -O filters
 } // PolarMerge::processVolume

@@ -14,6 +14,12 @@ namespace rapio {
 class RadialSet : public DataGrid {
 public:
 
+  // Constants for special fields
+  static constexpr const char * BeamWidth      = "BeamWidth";
+  static constexpr const char * Azimuth        = "Azimuth";
+  static constexpr const char * GateWidth      = "GateWidth";
+  static constexpr const char * AzimuthSpacing = "AzimuthSpacing";
+
   /** Construct uninitialized RadialSet, usually for
    * factories.  You probably want the Create method */
   RadialSet();
@@ -97,7 +103,7 @@ public:
   getGateWidthKMs()
   {
     LengthKMs widthKM = .250;
-    auto& gw = getFloat1D("GateWidth")->ref();
+    auto& gw = getFloat1DRef(GateWidth);
 
     if (gw.size() > 0) {
       widthKM = gw[0] / 1000.0;
@@ -135,41 +141,41 @@ public:
 
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
-  getAzimuthVector(){ return getFloat1D("Azimuth"); }
+  getAzimuthVector(){ return getFloat1D(Azimuth); }
 
   /** Return quick ref to azimuths */
   ArrayFloat1DRef
   getAzimuthRef()
   {
-    return (getFloat1D("Azimuth"))->ref();
+    return (getFloat1D(Azimuth))->ref();
   }
 
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
   getAzimuthSpacingVector()
   {
-    auto array = getFloat1D("AzimuthSpacing");
+    auto array = getFloat1D(AzimuthSpacing);
 
     if (array == nullptr) {
-      array = getFloat1D("BeamWidth");
+      array = getFloat1D(BeamWidth);
     }
     return array;
   }
 
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
-  getBeamWidthVector(){ return getFloat1D("BeamWidth"); }
+  getBeamWidthVector(){ return getFloat1D(BeamWidth); }
 
   /** Return quick ref to beam width, assuming it exists. */
   ArrayFloat1DRef
   getBeamWidthRef()
   {
-    return (getFloat1D("BeamWidth"))->ref();
+    return (getFloat1D(BeamWidth))->ref();
   }
 
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
-  getGateWidthVector(){ return getFloat1D("GateWidth"); }
+  getGateWidthVector(){ return getFloat1D(GateWidth); }
 
   /** Get number of radials for radial set */
   size_t

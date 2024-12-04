@@ -87,7 +87,7 @@ RadialSet::init(
   addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
   /** Azimuth per radial */
-  auto a = addFloat1D("Azimuth", "Degrees", { 0 });
+  auto a = addFloat1D(Azimuth, "Degrees", { 0 });
 
   // For a default azimuth, let's divide a circle by the number of radials
   // and calculate beamwidth based on that for each radial.  Obvious this is
@@ -103,10 +103,10 @@ RadialSet::init(
   }
 
   /** Beamwidth per radial */
-  addFloat1D("BeamWidth", "Degrees", { 0 }, increment);
+  addFloat1D(BeamWidth, "Degrees", { 0 }, increment);
 
   /** Gate width per radial. */
-  addFloat1D("GateWidth", "Meters", { 0 }, gateWidthMeters);
+  addFloat1D(GateWidth, "Meters", { 0 }, gateWidthMeters);
   return true;
 } // RadialSet::init
 

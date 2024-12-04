@@ -24,8 +24,8 @@ initToRadialSet(RadialSet& rs)
   myDistToFirstGateM = rs.getDistanceToFirstGateM();
   myDistToLastGateM  = myDistToFirstGateM + (myNumGates * myGateWidthM);
 
-  const auto& azimuths   = rs.getFloat1D("Azimuth")->ref();
-  const auto& azimuthsSP = rs.getFloat1D("BeamWidth")->ref();
+  const auto& azimuths   = rs.getFloat1DRef(RadialSet::Azimuth);
+  const auto& azimuthsSP = rs.getFloat1DRef(RadialSet::BeamWidth);
   const int maxSize      = int(myAzToRadialNum.size());
   const int fullCircle   = 360 * myAccuracy;
 

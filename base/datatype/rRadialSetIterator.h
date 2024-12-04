@@ -52,9 +52,9 @@ public:
     : set(set), myNumRadials(set.getNumRadials()), myNumGates(set.getNumGates()),
     myFirstGateMeters(set.getDistanceToFirstGateM()),
     myPrimaryData(set.getFloat2DRef()),
-    myAzimuths(set.getFloat1DRef("Azimuth")),
-    myBeamWidths(set.getFloat1DRef("BeamWidth")),
-    myGateWidths(set.getFloat1DRef("GateWidth")){ }
+    myAzimuths(set.getFloat1DRef(RadialSet::Azimuth)),
+    myBeamWidths(set.getFloat1DRef(RadialSet::BeamWidth)),
+    myGateWidths(set.getFloat1DRef(RadialSet::GateWidth)){ }
 
   /** Iterate over radial set  */
   inline void

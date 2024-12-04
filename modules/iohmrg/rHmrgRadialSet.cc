@@ -150,11 +150,11 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
 
   radialSet.setReadFactory("netcdf"); // Default would call us to write
 
-  auto azimuthsA   = radialSet.getFloat1D("Azimuth");
+  auto azimuthsA   = radialSet.getFloat1D(RadialSet::Azimuth);
   auto& azimuths   = azimuthsA->ref();
-  auto beamwidthsA = radialSet.getFloat1D("BeamWidth");
+  auto beamwidthsA = radialSet.getFloat1D(RadialSet::BeamWidth);
   auto& beamwidths = beamwidthsA->ref();
-  //auto gatewidthsA = radialSet.getFloat1D("GateWidth");
+  //auto gatewidthsA = radialSet.getFloat1D(RadialSet::GateWidth);
   //auto& gatewidths = gatewidthsA->ref();
 
   auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
@@ -204,7 +204,7 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
   auto& radialset        = *radialsetp;
   const auto num_radials = radialset.getNumRadials();
   const auto num_gates   = radialset.getNumGates();
-  auto& azimuth = radialset.getFloat1DRef("Azimuth");
+  auto& azimuth = radialset.getFloat1DRef(RadialSet::Azimuth);
 
   // for (size_t i = 0; i < num_radials; ++i) {
   //   std::cout << azimuth[i] << ",";
@@ -239,7 +239,7 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
 
   // ----------------------------------------------------------------------------
   // Check all gatewidths are the same (FIXME: function)
-  auto& gatewidth = radialset.getFloat1DRef("GateWidth");
+  auto& gatewidth = radialset.getFloat1DRef(RadialSet::GateWidth);
   float gateW     = 0;
 
   for (size_t i = 0; i < num_radials; ++i) {

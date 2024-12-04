@@ -26,6 +26,7 @@ rBoostConnection.h
 rColor.h
 rColorMap.h
 rColorTerm.h
+config/rConfigColorMap.h
 config/rConfigDirectoryMapping.h
 config/rConfig.h
 config/rConfigIODataType.h
@@ -162,6 +163,7 @@ rColor.cc
 rColorMap.cc
 rColorTerm.cc
 config/rConfig.cc
+config/rConfigColorMap.cc
 config/rConfigDirectoryMapping.cc
 config/rConfigIODataType.cc
 config/rConfigLogging.cc
