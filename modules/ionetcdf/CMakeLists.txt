@@ -7,7 +7,11 @@ include_directories(${RAPIO_INCLUDE_DIRS})
 # Add any definitions RAPIO might need
 add_definitions(${RAPIO_DEFINITIONS})
 
-find_package(Netcdf)
+if (BUILD_MRMS)
+  find_package(Netcdf REQUIRED)
+else()
+  find_package(Netcdf QUIET)
+endif(BUILD_MRMS)
 
 # Add conditional flag
 if (Netcdf_FOUND)
@@ -35,7 +39,7 @@ if (Netcdf_FOUND)
   install(TARGETS rapionetcdf
     LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
   )
-  addRAPIONote("NETCDF library. Needed for a ton of NSSL netcdf data files.")
+  addRAPIONote("      Found: NETCDF")
 else()
-  addRAPIONote("No NETCDF library. You probably _want_ this to read NSSL netcdf data files!")
+  addRAPIONote("      Missing: NETCDF")
 endif(Netcdf_FOUND)

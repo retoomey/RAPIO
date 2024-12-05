@@ -2,10 +2,39 @@
 # Top cmake for RAPIO building
 cmake_minimum_required (VERSION 3.10)
 
+###########################################################################
+# Options
+# Can use "ccmake ." in the BUILD directory to toggle, sometimes it's
+# convenient to just modify things here
+#
 # Some things like .gz support and netcdf we're dead in the water at NSSL without
 # these, though in theory you don't strictly require them.  Setting no here
 # will increase compile chances.
 option(BUILD_MRMS "Force libraries for MRMS NSSL environment" YES)
+
+# Webserver stuff are conditional for moment. This is my imgui/emscripten
+# experiment alpha
+# Since it uses a cross compiler (em++) we make it an external project
+# to avoid stomping on us.
+# Building this oracle 9.  I'm sure on other OS it will need a ton of work
+# Turn on if you love experiments.
+#
+option(BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
+# Examples with option to turn off since it will grow probably
+option(BUILD_EXAMPLES "Build example directory rexample" YES)
+
+# These two for NSSL common data files
+option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
+option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
+
+option(BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
+
+option(BUILD_GDAL_MODULE "Build GDAL module" YES)
+option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
+option(USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
+option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
+
+###########################################################################
 
 # Set type of build.  This has effect on different os it seems based on some settings here:
 # CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel") google these
@@ -158,6 +187,12 @@ set(RAPIO_DEFINITIONS
   -DBOOST_LOG_DYN_LINK
 )
 
+if (BUILD_MRMS)
+  addRAPIONote("Stricter build requirements for MRMS Environment: ENABLED")
+else()
+  addRAPIONote("Stricter build requirements for MRMS Environment: ***DISABLED***")
+endif()
+
 ###########################################################################
 # Various compression/decompression libraries
 #
@@ -252,12 +287,14 @@ else()
 endif(Proj_FOUND)
 
 # Used by web pulling abilities like webindex reading or remote URL pulling
+addRAPIONote("Network support (pulling webindex data):")
 find_package(CURL) 
 if (CURL_FOUND)
   add_definitions(-DHAVE_CURL)
   append_RAPIO("${CURL_INCLUDE_DIR}" "${CURL_LIBRARIES}")
+  addRAPIONote("      Found: CURL")
 else()
-  addRAPIONote("No CURL library.  Will use BOOST::ASIO network library for network URL (experimental).")
+  addRAPIONote("      Missing: CURL.  Will use BOOST::ASIO network library for network URL (experimental).")
 endif(CURL_FOUND)
 
 # Used by AWS stuff (optional)
@@ -282,8 +319,6 @@ endif(UDUnits2_FOUND)
 # Directories
 add_subdirectory(base)
 
-# Examples with option to turn off since it will grow probably
-option(BUILD_EXAMPLES "Build example directory rexample" YES)
 if (BUILD_EXAMPLES)
   add_subdirectory(rexample)
 endif (BUILD_EXAMPLES)
@@ -291,23 +326,19 @@ endif (BUILD_EXAMPLES)
 ###########################################################################
 # Independent module building
 #
-option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
+addRAPIONote("File format support:")
 if (BUILD_NETCDF_MODULE)
   add_subdirectory(modules/ionetcdf)
 endif (BUILD_NETCDF_MODULE)
 
-option(BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
 if (BUILD_IMAGE_MODULE)
   add_subdirectory(modules/ioimage)
 endif (BUILD_IMAGE_MODULE)
 
-option(BUILD_GDAL_MODULE "Build GDAL module" YES)
 if (BUILD_GDAL_MODULE)
   add_subdirectory(modules/iogdal)
 endif (BUILD_GDAL_MODULE)
 
-option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
-option(USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
 if (BUILD_GRIB2_MODULE)
 
   # Go ahead and die now...otherwise it will die when pulling external project
@@ -352,7 +383,6 @@ if (BUILD_GRIB2_MODULE)
   add_subdirectory(modules/iogrib)
 endif (BUILD_GRIB2_MODULE)
 
-option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
 if (BUILD_TEXT_MODULE)
   add_subdirectory(modules/iotext)
 endif (BUILD_TEXT_MODULE)
@@ -362,7 +392,6 @@ endif (BUILD_TEXT_MODULE)
 add_subdirectory(modules/iopython)
 add_subdirectory(modules/ioraw)
 
-option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 if (BUILD_HMRG_MODULE)
   add_subdirectory(modules/iohmrg)
 endif (BUILD_HMRG_MODULE)
@@ -374,14 +403,6 @@ add_subdirectory(programs)
 # go into directory and make.  Not sure what the cmake community does yet
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
-# Webserver stuff are conditional for moment. This is my imgui/emscripten
-# experiment alpha
-# Since it uses a cross compiler (em++) we make it an external project
-# to avoid stomping on us.
-# Building this oracle 9.  I'm sure on other OS it will need a ton of work
-# Turn on if you love experiments.
-#
-option(BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
 if (BUILD_WEB_MODULE)
   ExternalProject_Add(
     rapioweb

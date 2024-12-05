@@ -6,7 +6,6 @@ add_definitions(-DHAVE_GRIB2C)
 
 # Toggle for using nceplibs vs trying system 
 if(${USE_NCEPLIBS_GRIB2})
-  addRAPIONote("NCEPLIBS-g2c github grib2 library (You want this for grib2 files.)")
 
   # Building our own so assume found
   set(Grib2C_FOUND TRUE)
@@ -60,7 +59,6 @@ if(${USE_NCEPLIBS_GRIB2})
 
 
 else()
-  addRAPIONote("G2CLIB library (deprecated and not recommended)")
   find_package(Grib2C)  # Note sets Grib2C_FOUND
   set(NCEPLIBS_ADD FALSE)
   set(GRIB2_RAPIO_INCLUDES "${Grib2C_INCLUDE_DIR}")
@@ -81,6 +79,7 @@ if (Grib2C_FOUND)
 
   # Add dependency has to be after add_library
   if (NCEPLIBS_ADD)
+    addRAPIONote("      Found: GRIB2 (NCEPLIBS-g2c github)")
     add_dependencies(rapiogrib NCEPLIBS-g2c)
     # Explicitly force linking openjpeg or jasper libraries to the dynamic library
     if (USE_OPENJPEG_NCEPLIBS)
@@ -89,6 +88,8 @@ if (Grib2C_FOUND)
     if (USE_JASPER_NCEPLIBS)
       target_link_libraries(rapiogrib PRIVATE jasper)
     endif()
+  else()
+    addRAPIONote("      Found: GRIB2 (g2clib-devel --deprecated--)")
   endif()
 
   # Include libraries
@@ -111,5 +112,5 @@ if (Grib2C_FOUND)
     DESTINATION ${RAPIO_INSTALL_LIB}
   )
 else()
-  message(WARNING "Couldn't find G2C library, Only matters if you want to directly read Grib2 files.")
+  addRAPIONote("      missing: GRIB2")
 endif(Grib2C_FOUND)
