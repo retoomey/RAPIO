@@ -78,7 +78,7 @@ public:
   getMaximumHistory();
 
   /** Do a purge of time based histories */
-  static void
+  void
   purgeTimeWindow();
 
   /** Is given time in the time window from -h */
@@ -86,11 +86,11 @@ public:
   inTimeWindow(const Time& aTime);
 
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
-  static bool
+  bool
   isDaemon();
 
   /** Are we reading old records? */
-  static bool
+  bool
   isArchive();
 
 protected:
@@ -131,13 +131,6 @@ protected:
 
   /** History time for index storage */
   static TimeDuration myMaximumHistory;
-
-  /** The end time of history window.  Which typically in archive is
-   * the time of latest record received, or slightly behind current time */
-  static Time myLastHistoryTime;
-
-  /** The record read mode */
-  static std::string myReadMode;
 };
 
 //  end class RAPIOAlgorithm

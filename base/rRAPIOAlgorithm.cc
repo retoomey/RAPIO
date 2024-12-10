@@ -1,14 +1,6 @@
 #include "rRAPIOAlgorithm.h"
 
 #include "rRAPIOOptions.h"
-#include "rRAPIOPlugin.h"
-#include "rPluginHeartbeat.h"
-#include "rPluginWebserver.h"
-#include "rPluginNotifier.h"
-#include "rPluginIngestor.h"
-#include "rPluginRecordFilter.h"
-#include "rPluginProductOutput.h"
-#include "rPluginProductOutputFilter.h"
 #include "rError.h"
 #include "rEventLoop.h"
 #include "rTime.h"
@@ -21,6 +13,17 @@
 #include "rDataTypeHistory.h"
 #include "rConfigParamGroup.h"
 
+// Plugins algorithms use by default
+#include "rRAPIOPlugin.h"
+#include "rPluginHeartbeat.h"
+#include "rPluginWebserver.h"
+#include "rPluginNotifier.h"
+#include "rPluginIngestor.h"
+#include "rPluginRecordFilter.h"
+#include "rPluginProductOutput.h"
+#include "rPluginProductOutputFilter.h"
+#include "rPluginRealTime.h"
+
 #include <iostream>
 #include <string>
 
@@ -28,22 +31,14 @@ using namespace rapio;
 using namespace std;
 
 TimeDuration RAPIOAlgorithm::myMaximumHistory;
-Time RAPIOAlgorithm::myLastHistoryTime; // Defaults to epoch here
-std::string RAPIOAlgorithm::myReadMode; // Defaults to "" here
 
 void
 RAPIOAlgorithm::initializeOptions(RAPIOOptions& o)
 {
-  // The realtime option for reading archive, realtime, etc.
-  const std::string r = "r";
 
-  o.optional(r, "old", "Read mode for algorithm.");
-  o.addGroup(r, "TIME");
-  o.addSuboption(r, "old", "Only process existing old records and stop.");
-  o.addSuboption(r, "new", "Only process new incoming records. Same as -r");
-  o.addSuboption(r, "", "Same as new, original realtime flag.");
-  o.addSuboption(r, "all", "All old records, then wait for new.");
-
+  // FIXME: These will become plugins too I think.  Eventually all algorithms/programs
+  // will just declare plugin abilities.  Little by little
+  
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
   // if more precision is needed.
@@ -89,36 +84,38 @@ RAPIOAlgorithm::getMaximumHistory()
 void
 RAPIOAlgorithm::purgeTimeWindow()
 {
-  if (isDaemon()) { // update to clock if real time algorithm
-    myLastHistoryTime = Time::CurrentTime();
-  }
-  DataTypeHistory::purgeTimeWindow(myLastHistoryTime);
+  DataTypeHistory::purgeTimeWindow(Time::CurrentTime());
 }
 
 bool
 RAPIOAlgorithm::inTimeWindow(const Time& aTime)
 {
-  if (isDaemon()) { // update to clock if real time algorithm
-    myLastHistoryTime = Time::CurrentTime();
-  }
-  const TimeDuration window = myLastHistoryTime - aTime;
+  const TimeDuration window = Time::CurrentTime() - aTime;
 
-  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << myLastHistoryTime << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
+  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << Time::CurrentTime() << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
   return (window <= myMaximumHistory);
 }
 
 bool
 RAPIOAlgorithm::isDaemon()
 {
-  // If we are -r, -r=new or -r=new we are a daemon awaiting new records
-  return ((myReadMode == "") || (myReadMode == "new") || (myReadMode == "all"));
+  auto r = getPlugin<PluginRealTime>("r");
+
+  if (r) {
+    return r->isDaemon();
+  }
+  return false;
 }
 
 bool
 RAPIOAlgorithm::isArchive()
 {
-  // If we are missing -r, -r=old or -r=all we read archive
-  return (myReadMode == "old") || (myReadMode == "all");
+  auto r = getPlugin<PluginRealTime>("r");
+
+  if (r) {
+    return (r->isArchive());
+  }
+  return false;
 }
 
 void
@@ -129,6 +126,7 @@ RAPIOAlgorithm::initializePlugins()
   // than forcing subclass to call us to setup.
   // FIXME: We could not add them unless wanted in the particular
   // algorithm, might be better to be consistent though.
+  PluginRealTime::declare(this, "r");     // Record mode ability
   PluginHeartbeat::declare(this, "sync"); // Heartbeat ability/options
   PluginWebserver::declare(this, "web");  // Webserver ability/options
   // I/O plugins
@@ -156,8 +154,6 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
   }
   myMaximumHistory = TimeDuration::Seconds(history);
 
-  myReadMode = o.getString("r");
-
   // Gather postwrite option
   myPostWrite = o.getString("postwrite");
   myPostFML   = o.getString("postfml");
@@ -173,6 +169,9 @@ RAPIOAlgorithm::execute()
     p->execute(this);
   }
 
+  // Set the time mode for system.(post plugin setup)
+  Time::setArchiveMode(!isDaemon());
+
   // Time until end of program.  Make it dynamic memory instead of heap or
   // the compiler will kill it too early (too smartz)
   static std::shared_ptr<ProcessTimer> fulltime(
@@ -184,24 +183,16 @@ RAPIOAlgorithm::execute()
 void
 RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 {
+  // FIXME: Should be able to do once on start up so move there
+  // Set the time mode for system.
+  Time::setArchiveMode(!isDaemon());
+
   if (rec.getSelections().back() == "EndDataset") {
     handleEndDatasetEvent();
   } else {
-    // Give data to algorithm to process
-    // I've noticed some older indexes the record fractional
-    // isn't equal to the loaded product (netcdf) fractional,
-    // but unless we're doing indexed with nano data items probably
-    // don't have to worry here.
+    // Always just keep the latest data time
+    Time::setLatestDataTime(rec.getTime());
 
-    // I think realtime we purge off the clock, but 'archive' mode we purge
-    // based on the 'latest' record in archive.  This requires archives to be
-    // time sorted to work correctly, We'll try doing a 'max' as latest.
-    if (!isDaemon()) {
-      Time newTime = rec.getTime();
-      if (newTime > myLastHistoryTime) {
-        myLastHistoryTime = newTime;
-      }
-    }
     purgeTimeWindow();
 
     RAPIOData d(rec);

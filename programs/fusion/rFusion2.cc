@@ -156,7 +156,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   // we're considering it 'new' to a single time.  It's complicated.
   auto record  = d.record();
   auto recTime = record.getTime();
-  const Time cutoffTime = myLastHistoryTime - myMaximumHistory; // FIXME: add util to time
+  const Time cutoffTime = Time::CurrentTime() - myMaximumHistory; // FIXME: add util to time
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
   if (recTime < cutoffTime) {
@@ -211,7 +211,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     auto& db = *myDatabase;
 
     #if 0
-    const Time cutoffTime = myLastHistoryTime - myMaximumHistory; // FIXME: add util to time
+    const Time cutoffTime = Time::CurrentTime() - myMaximumHistory; // FIXME: add util to time
     const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
     if (radar.myTime < cutoffTime) {
       LogSevere("Ignoring " << radar.myName << " OLD: " << radar.myTime.getString("%H:%M:%S") << "\n");
@@ -235,7 +235,8 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // 'some' point for archive.  We could add more settings/controls for this later
     // This will try to merge and output every incoming record
     if (isArchive()) {
-      mergeAndWriteOutput(myLastHistoryTime, myLastHistoryTime);
+      auto t = Time::CurrentTime(); // Should be archive latest time
+      mergeAndWriteOutput(t, t);
     }
   }
 } // RAPIOFusionTwoAlg::processNewData
@@ -321,12 +322,13 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // We might not have gotten data in a while..slowly expire off
   // the heartbeat time.  Archive won't have a heartbeat so we'll need
   // some work for that.
-  // const Time cutoffTime = myLastHistoryTime - myMaximumHistory;
+  // const Time cutoffTime = Time::CurrentTime() - myMaximumHistory;
   const Time cutoffTime = p - myMaximumHistory;
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
   // LogSevere("Cut off epoch: " << cutoff << " vs NOW " << Time::CurrentTime().getSecondsSinceEpoch() << "\n");
-  myDatabase->timePurge(myLastHistoryTime, myMaximumHistory);
+  // FIXME: Humm should this be real time or the cutoff time from above?
+  myDatabase->timePurge(Time::CurrentTime(), myMaximumHistory);
   LogInfo(timepurge << "\n");
 
   // ----------------

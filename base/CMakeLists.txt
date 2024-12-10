@@ -107,6 +107,7 @@ plugin/rPluginHeartbeat.h
 plugin/rPluginWebserver.h
 plugin/rPluginNotifier.h
 plugin/rPluginIngestor.h
+plugin/rPluginRealTime.h
 plugin/rPluginRecordFilter.h
 plugin/rPluginProductOutput.h
 plugin/rPluginProductOutputFilter.h
@@ -235,6 +236,7 @@ plugin/rPluginHeartbeat.cc
 plugin/rPluginWebserver.cc
 plugin/rPluginNotifier.cc
 plugin/rPluginIngestor.cc
+plugin/rPluginRealTime.cc
 plugin/rPluginRecordFilter.cc
 plugin/rPluginProductOutput.cc
 plugin/rPluginProductOutputFilter.cc

@@ -12,6 +12,9 @@
 
 using namespace rapio;
 
+Time Time::myLastHistoryTime; // Defaults to epoch here
+bool Time::myArchiveMode = false;
+
 std::chrono::system_clock::time_point
 Time::toTimepoint(const timeval& src)
 {
@@ -145,6 +148,11 @@ Time::set(time_t epoch_sec, double frac_sec)
 Time
 Time::CurrentTime()
 {
+  // If archive mode, we return the latest data received
+  if (myArchiveMode) {
+    return myLastHistoryTime;
+  }
+
   // #1 TIMEB    millisecond accuracy (oldest) (MMM)
   // timeb, ftime.  Use .time and .millitm
   // #2 TIMEVAL  microsecond accuracy (newer) (MMMMMM)
@@ -174,6 +182,15 @@ Time::CurrentTime()
   // clock_gettime(CLOCK_REALTIME, &result);
   // static const double NANO = pow(10.0, 9.0);
   // return (SecondsSinceEpoch(result.tv_sec, result.tv_nsec / NANO));
+} // Time::CurrentTime
+
+void
+Time::setLatestDataTime(const Time& newTime)
+{
+  // We'll keep the latest time, even if it's not used
+  if (newTime > myLastHistoryTime) {
+    myLastHistoryTime = newTime;
+  }
 }
 
 std::string

@@ -73,9 +73,19 @@ public:
   static Time
   SecondsSinceEpoch(time_t t, double f = 0);
 
-  /** Return Time corresponding to current state of system clock. */
+  /** Current time in archive mode is the time of the latest data/record
+  * received.  This allows real time algorithms to run archive without
+  * time jitter effects caused by a real system clock.
+  * In real time, this is just the current state of the system clock. */
   static Time
   CurrentTime();
+
+  /** Set the latest data time */
+  static void
+  setLatestDataTime(const Time& newTime);
+
+  /** Set the archive mode determining if current time is system or latest based */
+  static void setArchiveMode(const bool f){ myArchiveMode = f; }
 
   /**
    * Return the last possible time representable by this Time object.
@@ -211,6 +221,13 @@ public:
   /** Static from chrono time point to timeval conversion */
   static timeval
   toTimeval(std::chrono::system_clock::time_point now);
+
+protected:
+  /** In archive mode, the 'current' time is the latest time given to us */
+  static Time myLastHistoryTime;
+
+  /* Archive mode means a current time that is set and updated */
+  static bool myArchiveMode;
 };
 
 /** Output a time */
