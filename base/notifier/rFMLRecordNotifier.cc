@@ -127,9 +127,9 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   // First part of multi-write.  I'm gonna to append the factory
   // to the end of the fml filename.  This won't work for multiple
   // records from a single writer
-  const std::vector<std::string>& p = rec.getBuilderParams();
+  const std::string dataSourceType = rec.getDataSourceType();
 
-  filename << '_' << p[0] << ".fml";
+  filename << '_' << dataSourceType << ".fml";
 
   // Write record to tmp .fml file ------------------------------
   std::string tempDir = outputDir + ".working/"; // For file 'locking'

@@ -61,10 +61,13 @@ operator << (std::ostream& os, const rapio::Record& rec)
   return (os);
 }
 
-const std::string&
+std::string
 Record::getDataSourceType() const
 {
-  return (this->getBuilderParams()[0]);
+  if (myParams.size() > 0) {
+    return myParams[0];
+  }
+  return "NONE";
 }
 
 const std::string&
@@ -76,12 +79,6 @@ Record::getDataType() const
   static std::string Unknown("Unknown");
 
   return (Unknown);
-}
-
-const std::string&
-Record::getEventType() const
-{
-  return (this->getDataType());
 }
 
 namespace rapio {
@@ -96,21 +93,6 @@ operator < (const Record& a, const Record& b)
   // Use index count iff sorting larger collections of records...
   if (a.myIndexCount != b.myIndexCount) {
     return (a.myIndexCount < b.myIndexCount);
-  }
-
-  // same time ... events go before non-events
-  const bool a_isevt = a.isEvent();
-  const bool b_isevt = b.isEvent();
-
-  if (a_isevt != b_isevt) {
-    return (a_isevt);
-  }
-
-  // sort events by event number
-  if (a_isevt) {
-    const int ano = atoi(a.getBuilderParams()[1].c_str());
-    const int bno = atoi(b.getBuilderParams()[1].c_str());
-    return (ano < bno);
   }
 
   // two data records ... If you have Reflectivity:01.50 and Velocity:00.50
@@ -137,20 +119,22 @@ operator < (const Record& a, const Record& b)
 }
 
 std::string
-Record::getParamString(const std::vector<std::string>& params)
+Record::getFileName() const
 {
-  const size_t tot_parts(params.size());
+  // If only builder return nothing...
+  auto size = myParams.size();
 
-  if (tot_parts < 1) {
-    LogSevere("Params missing everything but builder name.\n");
+  if (size < 1) {
     return "";
   }
 
-  std::string p;
+  // ...otherwise append the strings
+  std::stringstream ss;
 
   bool first = true;
 
-  for (auto& s:params) {
+  for (size_t i = 1; i < size; ++i) {
+    auto& s = myParams[i];
     // Some WDSSII xml indexes have a GzippedFile/xmldata randomly stuffed into params,
     // we don't want this to be part of the path.
     // Netcdf format looks like:
@@ -160,46 +144,31 @@ Record::getParamString(const std::vector<std::string>& params)
     if (s == "GzippedFile") { continue; }
     if (s == "xmldata") { continue; }
     if (first) {
-      p     = s; // http for example shouldn't have a first slash
+      ss << s; // http for example shouldn't have a first slash
       first = false;
       continue;
     }
-    p += "/" + s;
+    ss << "/" << s;
   }
 
-  return p;
-}
+  return ss.str();
+} // Record::getFileName
 
 std::shared_ptr<DataType>
-Record::createObject(size_t i) const
+Record::createObject() const
 {
-  // make sure we have enough params to get a data type
-  auto params(getBuilderParams(i));
+  auto& p(getParams());
 
-  if (params.empty()) {
-    LogSevere("No data type specified!\n");
-    return (0);
+  if (p.size() < 1) {
+    LogSevere("Empty record parameters, can't create anything!\n");
+    return nullptr;
   }
 
-  // pop the data type off the params list...
-  const std::string dataSourceType(params.front());
+  // All our builders mostly use a compressed string representing a URL or file name
+  // FIXME: Pass record maybe or vector, let builder determine param use.
+  const std::string factoryparams = getFileName();
+  std::shared_ptr<DataType> dt    = IODataType::readDataType(factoryparams, p[0]);
 
-  params.erase(params.begin());
-
-  // Note param determines type here
-  const std::string factoryparams = getParamString(params);
-  std::shared_ptr<DataType> dt    = IODataType::readDataType(factoryparams, dataSourceType);
-
-  if (dt != nullptr) {
-    // set sub-type
-    if (this->getSelections().size() > 2) {
-      dt->setSubType(this->getSelections()[2]);
-    }
-  } else {
-    // Possibly the module is there and the data was corrupt or something,
-    // let submodules report on why
-    // LogSevere("Failed to create new datatype, no IO module for type '" << dataSourceType << "'\n");
-  }
   return (dt);
 } // Record::createObject
 
@@ -343,7 +312,7 @@ Record::constructXMLString(std::ostream& ss, const std::string& indexPath) const
 
   // Params tag -------------------------------------------------------
   ss << " <params>";
-  for (auto& p2:getBuilderParams(0)) {
+  for (auto& p2:getParams()) {
     std::string p = p2;
     // W2 uses w2merger, not raw...HACK for moment
     //    if (p =="raw"){

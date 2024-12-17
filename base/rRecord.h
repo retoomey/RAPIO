@@ -14,8 +14,11 @@ class IndexType;
 class RecordFilter;
 class RecordQueue;
 
-/** Records store individual information for items in a index.
- * Typically a single DataType object can be created from a single Record. */
+/** Records are metadata of data we want to read and process.
+ * Records store individual information for items in a index.
+ * Typically a single DataType object can be created from a single Record.
+ * Note: Record fields might not match what you get out of the final
+ * read/created DataType. */
 class Record : public Data {
 public:
 
@@ -27,28 +30,49 @@ public:
     const std::vector<std::string>     & selects,
     const rapio::Time                  & productTime);
 
-  /** Standard get the parameter string, or the non-builder part of the param list */
-  static std::string
-  getParamString(const std::vector<std::string>& params);
-
   /**
    * Create the object referenced by this record.
-   * If this record corresponds to a montage, specify the index
-   * of the DataType you want.
-   *
    * @return invalid-pointer on error.
    */
   std::shared_ptr<DataType>
-  createObject(size_t i = 0) const;
+  createObject() const;
 
-  /** For a valid record, returns builder parameters.
-   *  If this record corresponds to a montage, specify the index
-   *  of the DataType you want.
-   * This is the full set of parameters, suitable for passing
-   * immediately to the Builder's getBuilderWithFullParams
+  /** The time of the product referenced by this record. */
+  const Time&
+  getTime() const
+  {
+    return (myTime);
+  }
+
+  /**
+   * DataType (from 2nd selection)
+   * Note: This might not match what the builder ends up creating.
+   */
+  const std::string&
+  getDataType() const;
+
+  /** Get the parameter string as a file name.  This is done by 'most'
+   * builders, but possibly later we might expand on this. */
+  std::string
+  getFileName() const;
+
+  /** What is the data source for this record?  For example, netcdf.
+   * This is typically parameter 0 */
+  std::string
+  getDataSourceType() const;
+
+  /** We consider record valid if it at least specifies a builder */
+  bool
+  isValid() const
+  {
+    return (myParams.size() > 0);
+  }
+
+  /** For a valid record, returns parameters.
+   * This is the full unfiltered set of parameters.
    */
   const std::vector<std::string>&
-  getBuilderParams(size_t i = 0) const
+  getParams() const
   {
     return (myParams);
   }
@@ -58,67 +82,6 @@ public:
   getSelections() const
   {
     return (mySelections);
-  }
-
-  /** The time of the product referenced by this record. */
-  const Time&
-  getTime() const
-  {
-    return (myTime);
-  }
-
-  /** What is the data source for this record?  For example, netcdf */
-  const std::string&
-  getDataSourceType() const;
-
-  /**
-   * The second selection criterion is the data type for data records
-   * or the event name (e.g: "NewElevation") for event records.
-   */
-  const std::string&
-  getDataType() const;
-
-  /**
-   * The second selection criterion is the data type for data records
-   * or the event name (e.g: "NewElevation") for event records.
-   */
-  const std::string&
-  getEventType() const;
-
-  /**
-   *  Does this record match the specification? The specification
-   *  may be of two forms:
-   *  <ol>
-   *     <li> DataType alone e.g:  Reflectivity
-   *     <li> DataType:Subtype   e.g:  Reflectivity:00.50
-   *  </ol>
-   */
-  bool
-  matches(const std::string& spec) const;
-
-  /** Sorting of records happens by time, i.e. in chronological order.  */
-  friend bool
-  operator < (const Record& a,
-    const Record          & b);
-
-  /** Does this record correspond to a montage or to only one
-   *  DataType? */
-  //  bool isMontage() const
-  //  {
-  //    return (myParams.size() > 1);
-  //  }
-
-  /** Does this record correspond to an event or to data? */
-  bool
-  isEvent() const
-  {
-    return (myParams.front() == "Event");
-  }
-
-  bool
-  isValid() const
-  {
-    return (myParams.size() > 0);
   }
 
   /** Get the subtype of record from mySelections */
@@ -140,6 +103,23 @@ public:
   /** Set the optional source */
   void
   setSourceName(const std::string& s){ mySourceName = s; }
+
+  /** Set a process id for meta data.  It is not per record and we don't want that
+   * because records take up memory. */
+  static void
+  setProcessName(const std::string& pname)
+  {
+    theProcessName = pname;
+  }
+
+  /** Get the process id for meta data. */
+  static const std::string&
+  getProcessName()
+  {
+    return (theProcessName);
+  }
+
+  // XML (FIXME: Should have a rConfigRecord probably)
 
   /** Read param tag of record. */
   virtual void
@@ -164,21 +144,26 @@ public:
   virtual void
   constructXMLString(std::ostream&, const std::string& indexPath) const;
 
-  /** Set a process id for meta data.  It is not per record and we don't want that
-   * because records take up memory. */
-  static void
-  setProcessName(const std::string& pname)
-  {
-    theProcessName = pname;
-  }
+  // Matching/sorting
 
-  /** Get the process id for meta data. */
-  static const std::string&
-  getProcessName()
-  {
-    return (theProcessName);
-  }
+  /**
+   *  Does this record match the specification? The specification
+   *  may be of two forms:
+   *  <ol>
+   *     <li> DataType alone e.g:  Reflectivity
+   *     <li> DataType:Subtype   e.g:  Reflectivity:00.50
+   *  </ol>
+   */
+  bool
+  matches(const std::string& spec) const;
 
+  /** Sorting of records happens by time, i.e. in chronological order.  */
+  friend bool
+  operator < (const Record& a,
+    const Record          & b);
+
+  /** Does this record correspond to a montage or to only one
+   *  DataType? */
   /** Print the contents of record */
   friend std::ostream&
   operator << (std::ostream&, const Record& rec);

@@ -57,7 +57,7 @@ EXERecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
 
   // FIXME: More advanced ability at some point
   // I'm just calling system and background at moment
-  auto params = rec.getBuilderParams();
+  auto params = rec.getParams();
 
   if (params.size() > 1) {
     std::string command = myExe;
