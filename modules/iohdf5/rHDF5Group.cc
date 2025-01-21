@@ -45,11 +45,19 @@ HDF5Group::hasGroup(const hid_t t_id, const std::string& name)
   }
 
   // Get object info
+  #if H5_VERSION_GE(1, 12, 0)
   H5O_info2_t obj_info;
 
   if (H5Oget_info_by_name3(t_id, name.c_str(), &obj_info, H5O_INFO_BASIC, H5P_DEFAULT) < 0) {
     return false; // Unable to get object info
   }
+  #else
+  H5O_info_t obj_info;
+
+  if (H5Oget_info_by_name(t_id, name.c_str(), &obj_info, H5P_DEFAULT) < 0) {
+    return false; // Unable to get object info
+  }
+  #endif // if H5_VERSION_GE(1, 12, 0)
 
   // Check if the object is a group
   return (obj_info.type == H5O_TYPE_GROUP);

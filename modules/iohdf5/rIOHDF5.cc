@@ -148,7 +148,11 @@ print_attributes(hid_t obj_id, const char * obj_name)
 
 // Enhanced callback function to list objects and their attributes
 herr_t
+#if H5_VERSION_GE(1, 12, 0)
 list_objects(hid_t loc_id, const char * name, const H5O_info2_t * info, void * op_data)
+#else
+list_objects(hid_t loc_id, const char * name, const H5O_info_t * info, void * op_data)
+#endif
 {
   if (info->type == H5O_TYPE_GROUP) {
     printf("Group: %s\n", name);
