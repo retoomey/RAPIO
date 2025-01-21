@@ -4,6 +4,7 @@
 #include "rColorTerm.h"
 #include "rFactory.h"
 #include "rDataType.h"
+#include "rMultiDataType.h"
 #include "rStrings.h"
 #include "rDataFilter.h"
 #include "rOS.h"
@@ -168,18 +169,46 @@ IODataType::write(std::shared_ptr<DataType> dt,
   const std::string                         & factory,
   std::map<std::string, std::string>        & outputParams)
 {
-  // The static method grabs the first factory and sends to it to handle
-  // This is assuming outputinfo is a file name?
-  // 1. Get the factory for this output
-  std::string f = factory; // either passed in, or blank or suffix guess stuff.
-  auto encoder  = getFactory(f, outputinfo, dt);
+  auto anySuccess = false;
 
-  if (encoder == nullptr) {
-    LogSevere("Unable to write using unknown factory '" << f << "'\n");
-    return false;
+  // MultiDataTypes hold multiple DataTypes, each needing to write
+  auto m = std::dynamic_pointer_cast<MultiDataType>(dt);
+
+  if (m) {
+    size_t s = m->size();
+
+    // Handle each data type stored.  It's assuming writing parameters,
+    // etc. match for each thing in the group.
+    for (size_t i = 0; i < s; ++i) {
+      auto dataType = m->getDataType(i);
+
+      std::string f = factory; // either passed in, or blank or suffix guess stuff.
+      auto encoder  = getFactory(f, outputinfo, dt);
+      if (encoder == nullptr) {
+        LogSevere("Unable to write using unknown factory '" <<
+          f << "' for index " << i << " of MultiDataType.\n");
+      } else {
+        if (encoder->writeout(dataType, outputinfo, records, f, outputParams)) {
+          anySuccess = true; // Make true if ANY write successfully
+        }
+      }
+    }
+    LogInfo("MultiDataType attempted to write " << s << " DataTypes\n");
+  } else {
+    // The static method grabs the first factory and sends to it to handle
+    // This is assuming outputinfo is a file name?
+    // 1. Get the factory for this output
+    std::string f = factory; // either passed in, or blank or suffix guess stuff.
+    auto encoder  = getFactory(f, outputinfo, dt);
+
+    if (encoder == nullptr) {
+      LogSevere("Unable to write using unknown factory '" << f << "'\n");
+      return false;
+    }
+
+    anySuccess = encoder->writeout(dt, outputinfo, records, f, outputParams);
   }
-
-  return encoder->writeout(dt, outputinfo, records, f, outputParams);
+  return anySuccess;
 } // IODataType::write
 
 void

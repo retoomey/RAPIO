@@ -49,8 +49,8 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   // "<output mode="tile" suffix="png" cols="500" rows="500" zoom="12" centerLatDegs="35.22" centerLonDegs="-97.44"/>";
   myOverride["mode"] = "tile"; // We want tile mode for output
   myOverride["zoom"] = o.getString("zoom");
-  myOverride["cols"] = o.getString("image-height");
-  myOverride["rows"] = o.getString("image-width");
+  myOverride["cols"] = o.getString("image-width");
+  myOverride["rows"] = o.getString("image-height");
   myOverride["centerLatDegs"] = o.getString("center-latitude");
   myOverride["centerLonDegs"] = o.getString("center-longitude");
   myOverride["flags"]         = o.getString("flags");

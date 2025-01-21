@@ -113,7 +113,9 @@ IONetcdf::createDataType(const std::string& params)
         keys["NETCDF_NCID"] = to_string(ncid);
         keys["NETCDF_URL"]  = url.toString();
         datatype = fmt->read(keys, nullptr);
-        datatype->postRead(keys);
+	if (datatype){
+          datatype->postRead(keys);
+	}
       }
     } else {
       LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");

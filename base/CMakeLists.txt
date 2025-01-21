@@ -101,6 +101,8 @@ datatype/rRadialSetProjection.h
 rRAPIOAlgorithm.h
 rRAPIOData.h
 rRapio.h
+datatype/rMultiDataType.h
+datatype/rDataTable.h
 rRAPIOOptions.h
 plugin/rRAPIOPlugin.h
 plugin/rPluginHeartbeat.h
@@ -176,6 +178,7 @@ rDataArray.cc
 rDataFilter.cc
 datatype/rDataGrid.cc
 rDataProjection.cc
+datatype/rMultiDataType.cc
 datatype/rDataTable.cc
 datatype/rDataType.cc
 rDataTypeHistory.cc

@@ -66,7 +66,7 @@ Information needed:
     writer to be called multiple times.  For example writing png and jpeg at 
     same time.
  -->
-<datatype subdirs="true">
+<datatype subdirs="true"> 
 
 <!-- Lookup table from file endings to io type.  Typically used with the
    file index or file output for direct read/write.  This information is
@@ -75,6 +75,8 @@ Information needed:
   <suffixes>
     <file suffix="nc" io="netcdf"/>
     <file suffix="netcdf" io="netcdf"/>
+    <file suffix="hd5" io="hdf5"/>
+    <file suffix="hdf5" io="hdf5"/>
     <file suffix="png" io="image"/>
     <file suffix="jpg" io="image"/>
     <file suffix="mrmstile" io="image"/>
@@ -102,7 +104,13 @@ Information needed:
      deflate_level: 0 no compression to 9 max compression
 -->
   <io names="netcdf netcdf3" module="librapionetcdf.so">
-    <output ncflags="256" deflate_level="0"/>
+    <output ncflags="256" deflate_level="0" compression="gz"/>
+  </io>
+
+<!-- HDF5 module settings
+-->
+  <io names="hdf5" module="librapiohdf5.so">
+    <output/>
   </io>
 
 <!-- Python module settings

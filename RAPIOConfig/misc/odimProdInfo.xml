@@ -1,0 +1,36 @@
+<odimProdInfo>
+
+  <!-- Reference file used to match ODIM_H5 data types to MRMS product types. -->
+  <!-- Please see ODIM_H5 reference guide Version 2.2 Table 16 (Pages 22-24) -->
+
+  <!-- DBZH - data1 - Logged horizontally-polarized (corrected) reflectivity factor -->
+  <prodInfo prodName="DBZH" type="CorrectedRef" unit="dBZ" colorMap="Reflectivity"> </prodInfo>
+
+  <!-- RhoHV - data2 - Correlation between Zh and Zv -->
+  <prodInfo prodName="RHOHV" type="RhoHV" unit="Dimensionless" colorMap="RhoHV"> </prodInfo>
+
+  <!-- uPhiDP - data3 - Description not available in guide (assuming uncorrected PHIDP -->
+  <prodInfo prodName="UPHIDP" type="UnCorrectedPhiDP" unit="Degrees" colorMap="PhiDP"> </prodInfo>
+
+  <!-- WRADH - data4 - Spectral width of radial velocity - horizontally-polarized -->
+  <prodInfo prodName="WRADH" type="SpectrumWidth" unit="MetersPerSecond" colorMap="SpectrumWidth"> </prodInfo>
+
+  <!-- PhiDP - data5 - Differential phase -->
+  <prodInfo prodName="PHIDP" type="CorrectedPhiDP" unit="Degrees" colorMap="PhiDP"> </prodInfo>
+
+  <!-- ZDR - data6  Logged differential reflectivity -->
+  <prodInfo prodName="ZDR" type="Zdr" unit="dBZ" colorMap="Zdr"> </prodInfo>
+
+  <!-- KDP - data7 - Specific differential phase -->
+  <prodInfo prodName="KDP" type="Kdp" unit="DegreePerKilometer" colorMap="Kdp"> </prodInfo>
+
+  <!-- SQIH - data8 - Signal quality index - horizontally-polarized -->
+  <prodInfo prodName="SQIH" type="SQIH" unit="Dimensionless" colorMap="RhoHV"> </prodInfo>
+
+  <!-- VRADH - data9 - Radial velocity - horizontally-polarized -->
+  <prodInfo prodName="VRADH" type="RadialVelocity" unit="MetersPerSecond" colorMap="Reflectivity"> </prodInfo>
+
+  <!-- Reflectivity - data10 - Logged horizontally-polarized uncorrected reflectivity -->
+  <prodInfo prodName="TH" type="UnCorrectedRef" unit="dBZ" colorMap="Reflectivity"> </prodInfo>
+
+</odimProdInfo>
