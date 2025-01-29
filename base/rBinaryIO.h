@@ -10,6 +10,240 @@
 
 // included in .cc files that need binary IO capability
 namespace rapio {
+/*** Class for weak wrapping a marching data source
+ * using C style function calls.  Many libraries make
+ * this way of calling more convenient and cleaner than
+ * using C++ streams.
+ * We store if the data is expected in big or little endian,
+ * which is then swapped if needed for the system endian.*/
+class StreamBuffer : public Data {
+public:
+
+  /** Create a StreamBuffer.  Assuming data little endian. */
+  StreamBuffer() : myDataBigEndian(false){ }
+
+  virtual
+  ~StreamBuffer() = default;
+
+  /** Reads an integer from the stream buffer */
+  virtual int
+  readInt() = 0;
+
+  /** Read a scaled integer in a float */
+  inline float
+  readScaledInt(float scale)
+  {
+    int temp = readInt();
+
+    return float(temp) / scale;
+  }
+
+  /** Read a time from stream */
+  Time
+  readTime(int year = -99);
+
+  /** Reads a short from the stream buffer */
+  virtual short
+  readShort() = 0;
+
+  /** Reads a float from the stream buffer */
+  virtual float
+  readFloat() = 0;
+
+  /** Read a single character */
+  virtual char
+  readChar() = 0;
+
+  /** Read a std::string from a character length */
+  virtual std::string
+  readString(size_t length) = 0;
+
+  // Movement ----------------------------
+  /** Add a method to reset or seek to a specific position */
+  virtual bool
+  seek(size_t position) = 0;
+
+  /** Go backward a given number of bytes */
+  virtual void
+  backward(size_t count) = 0;
+
+  /** Go forward a given number of bytes */
+  virtual void
+  forward(size_t count) = 0;
+  // -------------------------------------
+
+  /** Get the current position */
+  virtual size_t
+  tell() const = 0;
+
+  /** Do we expect the data itself to be big endian? */
+  void setDataBigEndian(){ myDataBigEndian = true; }
+
+  /** Do we expect the data itself to be little endian? */
+  void setDataLittleEndian(){ myDataBigEndian = false; }
+
+protected:
+
+  /** Set the endian of the data.  If it's opposite to the
+   * system endian, we swap bytes */
+  bool myDataBigEndian;
+};
+
+/** Wrap a FILE* */
+class FileStreamBuffer : public StreamBuffer {
+public:
+
+  /** Create a FileStreamBuffer referring to a FILE*
+   * We don't own it or close it.  Up to caller */
+  explicit FileStreamBuffer(FILE * filein) : file(filein), marker(0)
+  { }
+
+  /** Reads an integer from the stream buffer */
+  int
+  readInt() override;
+
+  /** Reads a short from the stream buffer */
+  short
+  readShort() override;
+
+  /** Reads a float from the stream buffer */
+  float
+  readFloat() override;
+
+  /** Read a single character */
+  char
+  readChar() override;
+
+  /** Read a std::string from a character length */
+  std::string
+  readString(size_t length) override;
+
+  // Movement ----------------------------
+  /** Add a method to reset or seek to a specific position */
+  bool
+  seek(size_t position) override;
+
+  /** Go backward a given number of bytes */
+  void
+  backward(size_t count) override;
+
+  /** Go forward a given number of bytes */
+  void
+  forward(size_t count) override;
+  // -------------------------------------
+
+  /** Get the current position */
+  size_t
+  tell() const override;
+
+  // -----------------------------
+  // Unique for moment
+  //
+  /** How many bytes remaining? */
+  long
+  bytesRemaining();
+
+private:
+  FILE * file;
+  size_t marker;
+};
+
+/** Wrap a gzfile */
+class GzipFileStreamBuffer : public StreamBuffer {
+public:
+  explicit GzipFileStreamBuffer(gzFile gzfile) : gzfile(gzfile), marker(0){ }
+
+  /** Reads an integer from the stream buffer */
+  int
+  readInt() override;
+
+  /** Reads a short from the stream buffer */
+  short
+  readShort() override;
+
+  /** Reads a float from the stream buffer */
+  float
+  readFloat() override;
+
+  /** Read a single character */
+  char
+  readChar() override;
+
+  /** Read a std::string from a character length */
+  std::string
+  readString(size_t length) override;
+
+  // Movement ----------------------------
+  /** Add a method to reset or seek to a specific position */
+  bool
+  seek(size_t position) override;
+
+  /** Go backward a given number of bytes */
+  void
+  backward(size_t count) override;
+
+  /** Go forward a given number of bytes */
+  void
+  forward(size_t count) override;
+  // -------------------------------------
+
+  /** Get the current position */
+  size_t
+  tell() const override;
+
+private:
+  size_t marker;
+  gzFile gzfile;
+};
+
+/** Wrap a std::vector<unsigned char> */
+class MemoryStreamBuffer : public StreamBuffer {
+public:
+  explicit MemoryStreamBuffer(const std::vector<char>& data)
+    : data(data), marker(0){ }
+
+  /** Reads an integer from the stream buffer */
+  int
+  readInt() override;
+
+  /** Reads a short from the stream buffer */
+  short
+  readShort() override;
+
+  /** Reads a float from the stream buffer */
+  float
+  readFloat() override;
+
+  /** Read a single character */
+  char
+  readChar() override;
+
+  /** Read a std::string from a character length */
+  std::string
+  readString(size_t length) override;
+
+  // Movement ----------------------------
+  /** Add a method to reset or seek to a specific position */
+  bool
+  seek(size_t position) override;
+
+  /** Go backward a given number of bytes */
+  void
+  backward(size_t count) override;
+
+  /** Go forward a given number of bytes */
+  void
+  forward(size_t count) override;
+  // -------------------------------------
+
+  size_t
+  tell() const override;
+
+private:
+  const std::vector<char>& data;
+  size_t marker;
+};
+
 /** This is a helper class of functions for binary IO.
  * 'Maybe' would be better using all C++ streams everywhere, but
  * I find the C style can be cleaner for certain byte reading/writing,
@@ -289,41 +523,33 @@ public:
   // making API consistent with 'non-gzfile' calls above.  I'll leave that
   // for yet another clean up pass
 
-  /** Read a value scaled by another */
-  static float
-  readScaledInt(gzFile fp, float scale);
-
   /** Write a scaled integer with correct endian */
   static void
   writeScaledInt(gzFile fp, float w, float scale);
 
   /** Read an integer with correct endian and return as an int */
   static int
-  readInt(gzFile fp);
+  readInt(FILE * fp);
+
+  /** Read an integer with correct endian and return as an int */
+  static int
+  readShort(FILE * fp);
 
   /** Write an integer with correct endian and return as an int */
   static void
   writeInt(gzFile fp, int w);
-
-  /** Read a float with correct endian and return as a float */
-  static int
-  readFloat(gzFile fp);
 
   /** Write a float with correct endian and return as a float */
   static void
   writeFloat(gzFile fp, float w);
 
   /** Read up to length characters into a std::string */
-  static std::string
-  readChar(gzFile fp, size_t length);
+  // static std::string
+  // readChar(FILE * fp, size_t length);
 
   /** Write up to length characters from a std::string */
   static void
   writeChar(gzFile fp, std::string c, size_t length);
-
-  /** Convenience method to read time, with optional predefined year */
-  static Time
-  readTime(gzFile fp, int year = -99);
 
   /** Convenience method to write time */
   static void

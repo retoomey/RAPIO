@@ -66,16 +66,19 @@ HmrgLatLonGrids::write(
 std::shared_ptr<DataType>
 HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 {
+  GzipFileStreamBuffer g(fp);
+  g.setDataLittleEndian();
+
   // Time
-  Time time = BinaryIO::readTime(fp, year);
+  Time time = g.readTime(year);
 
   // Dimensions
-  const int num_x = BinaryIO::readInt(fp); // 25-28
-  const int num_y = BinaryIO::readInt(fp); // 29-32
-  const int num_z = BinaryIO::readInt(fp); // 33-36
+  const int num_x = g.readInt(); // 25-28
+  const int num_y = g.readInt(); // 29-32
+  const int num_z = g.readInt(); // 33-36
 
   // Projection
-  const std::string projection = BinaryIO::readChar(fp, 4); // 37-40
+  const std::string projection = g.readString(4); // 37-40
   // Perhaps LL is the only one actually used, we can warn on others though
   // "    " proj1=0;
   // "PS  " proj1=1;
@@ -83,18 +86,18 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   // "MERC" proj1=3;
   // "LL  " proj1=4;
 
-  const int map_scale    = BinaryIO::readInt(fp);                  // 41-44
-  const float lat1       = BinaryIO::readScaledInt(fp, map_scale); // 45-48
-  const float lat2       = BinaryIO::readScaledInt(fp, map_scale); // 49-52
-  const float lon        = BinaryIO::readScaledInt(fp, map_scale); // 53-56
-  const float lonNWDegs1 = BinaryIO::readScaledInt(fp, map_scale); // 57-60
-  const float latNWDegs1 = BinaryIO::readScaledInt(fp, map_scale); // 61-64
+  const int map_scale    = g.readInt();                  // 41-44
+  const float lat1       = g.readScaledInt(map_scale); // 45-48
+  const float lat2       = g.readScaledInt(map_scale); // 49-52
+  const float lon        = g.readScaledInt(map_scale); // 53-56
+  const float lonNWDegs1 = g.readScaledInt(map_scale); // 57-60
+  const float latNWDegs1 = g.readScaledInt(map_scale); // 61-64
 
   // Manually scale since scale after the values
-  const int xy_scale         = BinaryIO::readInt(fp); // 65-68 Deprecated, used anywhere?
-  const int temp1            = BinaryIO::readInt(fp); // 69-72
-  const int temp2            = BinaryIO::readInt(fp); // 73-76
-  const int dxy_scale        = BinaryIO::readInt(fp); // 77-80
+  const int xy_scale         = g.readInt(); // 65-68 Deprecated, used anywhere?
+  const int temp1            = g.readInt(); // 69-72
+  const int temp2            = g.readInt(); // 73-76
+  const int dxy_scale        = g.readInt(); // 77-80
   const float lonSpacingDegs = (float) temp1 / (float) dxy_scale;
   const float latSpacingDegs = (float) temp2 / (float) dxy_scale;
   // HMRG uses center of cell for northwest corner, while we use the actual northwest corner
@@ -111,7 +114,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   levels.resize(num_z);
   gzread(fp, &levels[0], num_z * sizeof(int));
 
-  const int z_scale = BinaryIO::readInt(fp);
+  const int z_scale = g.readInt();
   std::vector<float> heightMeters;
 
   heightMeters.resize(num_z);
@@ -126,8 +129,8 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   gzread(fp, &placeholder[0], 10 * sizeof(int));
 
   // Get the variable name and units
-  std::string varName = BinaryIO::readChar(fp, 20);
-  std::string varUnit = BinaryIO::readChar(fp, 6);
+  std::string varName = g.readString(20);
+  std::string varUnit = g.readString(6);
 
   // Convert HMRG names etc to w2 expected
   std::string orgName = varName;
@@ -137,21 +140,21 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 
   // Common code here with Radial
   // Scale for scaling data values
-  int dataScale = BinaryIO::readInt(fp);
+  int dataScale = g.readInt();
 
   if (dataScale == 0) {
     LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
     dataScale = 1;
   }
 
-  const int dataMissingValue = BinaryIO::readInt(fp);
+  const int dataMissingValue = g.readInt();
 
   // Read number and names of contributing radars
-  int numRadars = BinaryIO::readInt(fp);
+  int numRadars = g.readInt();
   std::vector<std::string> radars;
 
   for (size_t i = 0; i < numRadars; i++) {
-    std::string r = BinaryIO::readChar(fp, 4);
+    std::string r = g.readString(4);
     radars.push_back(r);
   }
 

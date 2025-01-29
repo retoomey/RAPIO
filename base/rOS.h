@@ -23,6 +23,10 @@
 # define ON_LITTLE_ENDIAN(func) func
 #endif
 
+// Macro for conditional byte-swapping
+#define ON_ENDIAN_DIFF(dataIsBigEndian, func) \
+  if (dataIsBigEndian != IS_BIG_ENDIAN) { func; }
+
 namespace rapio {
 /**
  * A utility for common system calls.

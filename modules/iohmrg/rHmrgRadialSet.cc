@@ -57,11 +57,14 @@ HmrgRadialSet::write(
 std::shared_ptr<DataType>
 HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
 {
+  GzipFileStreamBuffer g(fp);
+  g.setDataLittleEndian();
+
   // name passed in was used to check type
-  const int headerScale      = BinaryIO::readInt(fp);                    // 5-8
-  const float radarMSLmeters = BinaryIO::readScaledInt(fp, headerScale); // 9-12
-  const float radarLatDegs   = BinaryIO::readFloat(fp);                  // 13-16
-  const float radarLonDegs   = BinaryIO::readFloat(fp);                  // 17-20
+  const int headerScale      = g.readInt();                    // 5-8
+  const float radarMSLmeters = g.readScaledInt(headerScale);   // 9-12
+  const float radarLatDegs   = g.readFloat();                  // 13-16
+  const float radarLonDegs   = g.readFloat();                  // 17-20
 
   #if 0
   // Time
@@ -72,46 +75,47 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   const int min   = IOHmrg::readInt(fp); // 37-40
   const int sec   = IOHmrg::readInt(fp); // 41-44
   #endif
-  Time dataTime = BinaryIO::readTime(fp);
+  Time dataTime = g.readTime();
 
-  const float nyquest = BinaryIO::readScaledInt(fp, headerScale); // 45-48  // FIXME: Volume number?
-  const int vcp       = BinaryIO::readInt(fp);                    // 49-52
+  const float nyquest = g.readScaledInt(headerScale); // 45-48  // FIXME: Volume number?
+  const int vcp       = g.readInt();                    // 49-52
 
-  const int tiltNumber      = BinaryIO::readInt(fp);                    // 53-56
-  const float elevAngleDegs = BinaryIO::readScaledInt(fp, headerScale); // 57-60
+  const int tiltNumber      = g.readInt();                    // 53-56
+  const float elevAngleDegs = g.readScaledInt(headerScale); // 57-60
 
-  const int num_radials = BinaryIO::readInt(fp); // 61-64
-  const int num_gates   = BinaryIO::readInt(fp); // 65-68
+  const int num_radials = g.readInt(); // 61-64
+  const int num_gates   = g.readInt(); // 65-68
 
-  const float firstAzimuthDegs = BinaryIO::readScaledInt(fp, headerScale);          // 69-72
-  const float azimuthResDegs   = BinaryIO::readScaledInt(fp, headerScale);          // 73-76
-  const float distanceToFirstGateMeters = BinaryIO::readScaledInt(fp, headerScale); // 77-80
-  const float gateSpacingMeters         = BinaryIO::readScaledInt(fp, headerScale); // 81-84
+  const float firstAzimuthDegs = g.readScaledInt(headerScale);          // 69-72
+  const float azimuthResDegs   = g.readScaledInt(headerScale);          // 73-76
+  const float distanceToFirstGateMeters = g.readScaledInt(headerScale); // 77-80
+  const float gateSpacingMeters         = g.readScaledInt(headerScale); // 81-84
 
-  std::string name = BinaryIO::readChar(fp, 20); // 85-104
+  std::string name = g.readString(20); // 85-104
 
   // Convert HMRG names etc to w2 expected
   std::string orgName = name;
   IOHmrg::HmrgToW2Name(name, name);
   LogInfo("Convert: " << orgName << " to " << name << "\n");
 
-  const std::string units = BinaryIO::readChar(fp, 6); // 105-110
+  const std::string units = g.readString(6); // 105-110
 
-  int dataScale = BinaryIO::readInt(fp);
+  int dataScale = g.readInt();
 
   if (dataScale == 0) {
     LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
     dataScale = 1;
   }
-  const int dataMissingValue = BinaryIO::readInt(fp);
+  const int dataMissingValue = g.readInt();
 
   // The placeholder.. 8 ints
-  const std::string placeholder = BinaryIO::readChar(fp, 8 * sizeof(int)); // 119-150
+  const std::string placeholder = g.readString(8 * sizeof(int)); // 119-150
 
   // RAPIO types
   LLH center(radarLatDegs, radarLonDegs, radarMSLmeters); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
 
   if (debug) {
+    LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
     LogDebug("   Scale is " << headerScale << "\n");
     LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
     LogDebug("   Date: " << dataTime.getString("%Y %m %d %H %M %S") << "\n");
