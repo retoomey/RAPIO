@@ -66,7 +66,7 @@ public:
   }
 
   /** Calculate marching box for generating square images */
-  virtual std::shared_ptr<ProjLibProject>
+  static std::shared_ptr<ProjLibProject>
   getBBOX(std::map<std::string, std::string>& keys,
     size_t& rows, size_t& cols, double& left, double& bottom, double& right, double& top);
 

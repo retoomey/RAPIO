@@ -3,6 +3,7 @@
 #include "rIODataType.h"
 #include "rDataGrid.h"
 #include "rIO.h"
+#include "rMultiDataType.h"
 
 #include <iomanip>
 
@@ -65,16 +66,16 @@ public:
   // WRITING ------------------------------------------------------------
 
   /** Write our raw mrms data tile (for the imgui) */
-  bool writeMRMSTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, 
-   size_t rows, size_t cols, double top, double left, 
-   double deltaLat, double deltaLon, bool transform,
-   const ColorMap& color);
+  bool
+  writeMRMSTile(MultiDataType& mdt, const std::string& filename, ProjLibProject& proj,
+    size_t rows, size_t cols, double top, double left,
+    double deltaLat, double deltaLon, bool transform);
 
   /** Write a png, jpeg, etc. depending on filename suffix using Magick */
-  bool writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, 
-   size_t rows, size_t cols, double top, double left, 
-   double deltaLat, double deltaLon, bool transform,
-   const ColorMap& color);
+  bool
+  writeMAGICKTile(MultiDataType& mdt, const std::string& filename, ProjLibProject& proj,
+    size_t rows, size_t cols, double top, double left,
+    double deltaLat, double deltaLon, bool transform);
 
   /** Encode this data type to path given format settings */
   virtual bool

@@ -86,55 +86,101 @@ IOImage::createDataType(const std::string& params)
 }
 
 bool
-IOImage::writeMRMSTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat, double deltaLon, bool transform, const ColorMap& color)
-{ 
-    std::vector<float> buffer(rows*cols);
+IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
+  ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat,
+  double deltaLon, bool transform)
+{
+  // Precache color maps and data types for speed in loop lookup.
+  // and check for null colormaps, null datatypes, etc.
+  std::vector<DataProjection*> ps;
+  size_t s  = mdt.size();
+  for(size_t i=0; i<s; ++i){
+     auto aDT = mdt.getDataType(i);
+     if (aDT){
+       auto aProjection = aDT->getProjection();
+       if (aProjection){
+         ps.push_back(aProjection.get());
+       }
+     }
+  }   
 
-    size_t index = 0;
-    auto startLat = top;
-    for (size_t y = 0; y < rows; y++) {
-      auto startLon = left;
-      for (size_t x = 0; x < cols; x++) {
+  std::vector<float> buffer(rows * cols);
 
-	// Get the data value
-	float v;
-        if (transform) {
-          double aLat, aLon;
-          proj.xyToLatLon(startLon, startLat, aLat, aLon);
-          v = p.getValueAtLL(aLat, aLon);
-        } else {
-          v = p.getValueAtLL(startLat, startLon);
-        }
+  size_t index  = 0;
+  auto startLat = top;
 
-	buffer[index++] = v;
-        startLon += deltaLon;
+  for (size_t y = 0; y < rows; y++) {
+    auto startLon = left;
+    for (size_t x = 0; x < cols; x++) {
+
+      // Transform coordinate system if wanted
+      double aLat = startLat, aLon = startLon;
+      if (transform) {
+        proj.xyToLatLon(startLon, startLat, aLat, aLon);
       }
-      startLat += deltaLat;
-    } 
 
-    // Write the file...
-    std::ofstream file(filename, std::ios::binary);
-    if (!file) {
-        LogSevere("Failed to open file: " << filename << "\n");
-        return false;
+      // Loop through datatypes.
+      float v = Constants::DataUnavailable;
+      for (size_t j = 0; j < ps.size(); ++j){
+        // Get the data value
+        v = ps[j]->getValueAtLL(aLat, aLon);
+
+        // For moment, first hit wins.  We could possible
+        // add some sort of simple 'merge' later if wanted
+        if (v != Constants::DataUnavailable){
+          break;
+        }
+      }
+
+      buffer[index++] = v;
+      startLon       += deltaLon;
     }
+    startLat += deltaLat;
+  }
 
-    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(float));
+  // Write the file...
+  std::ofstream file(filename, std::ios::binary);
 
-    if (!file) {
-        LogSevere("Failed to write data to file: " << filename << "\n");
-        file.close();
-	return false;
-    }
+  if (!file) {
+    LogSevere("Failed to open file: " << filename << "\n");
+    return false;
+  }
 
+  file.write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
+
+  if (!file) {
+    LogSevere("Failed to write data to file: " << filename << "\n");
     file.close();
+    return false;
+  }
 
-    return true;
-}
+  file.close();
+
+  return true;
+} // IOImage::writeMRMSTile
 
 bool
-IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat, double deltaLon, bool transform, const ColorMap& color)
-{ 
+IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
+  ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat,
+  double deltaLon, bool transform)
+{
+  // Precache color maps and data types for speed in loop lookup.
+  // and check for null colormaps, null datatypes, etc.
+  std::vector<DataProjection*> ps;
+  std::vector<ColorMap*> cms;
+  size_t s  = mdt.size();
+  for(size_t i=0; i<s; ++i){
+     auto aDT = mdt.getDataType(i);
+     if (aDT){
+       auto aColorMap = aDT->getColorMap();
+       auto aProjection = aDT->getProjection();
+       if (aColorMap && aProjection){
+         ps.push_back(aProjection.get());
+         cms.push_back(aColorMap.get());
+       }
+     }
+  }   
+
   // --------------------------------------
   // Setup magic only if we need it
   //
@@ -148,7 +194,7 @@ IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLib
     #endif
     setup = true;
   }
-#if HAVE_MAGICK
+  #if HAVE_MAGICK
   // --------------------------------------
 
   // NOTE: JPEG doesn't support transparency,
@@ -171,22 +217,32 @@ IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLib
     auto startLon = left;
     for (size_t x = 0; x < cols; x++) {
 
-      // Get the data value
+      // Transform coordinate system if wanted
+      double aLat = startLat, aLon = startLon;
       if (transform) {
-        double aLat, aLon;
         proj.xyToLatLon(startLon, startLat, aLat, aLon);
-        const double v = p.getValueAtLL(aLat, aLon);
-        color.getColor(v, r, g, b, a);
-      } else {
-        // Non transform for an equal angle based projection
-        const double v = p.getValueAtLL(startLat, startLon);
-        color.getColor(v, r, g, b, a);
+      }
+
+      // Loop through datatypes.
+      for (size_t j = 0; j < ps.size(); ++j){
+        auto& p = ps[j];
+        auto& color = cms[j];
+
+        // Get the data value
+        const double v = p->getValueAtLL(aLat, aLon);
+        color->getColor(v, r, g, b, a);
+
+        // For moment, first hit wins.  We could possible
+        // add some sort of simple 'merge' later if wanted
+        if (v != Constants::DataUnavailable){
+          break;
+        }
       }
 
       // Convert to Magick pixel
       Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
       cc.alpha(1.0 - (a / 255.0));
-      *pixel = cc;
+      *pixel    = cc;
       startLon += deltaLon;
       pixel++;
     }
@@ -196,7 +252,7 @@ IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLib
 
   // Debug draw text on tile
   // Since we can do this in leaflet directly and easy, gonna deprecate
-  //if (box) {
+  // if (box) {
   //  std::list<Drawable> text;
   //  text.push_back(DrawablePointSize(20));
   //  text.push_back(DrawableStrokeColor("black"));
@@ -206,29 +262,23 @@ IOImage::writeMAGICKTile(const std::string& filename, DataProjection& p, ProjLib
 
   i.write(filename);
   return true;
-#else
+
+  #else // if HAVE_MAGICK
   return false;
-#endif
-}
+
+  #endif // if HAVE_MAGICK
+} // IOImage::writeMAGICKTile
 
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>              & keys
 )
 {
-  // Get DataType Array info to LatLon projection
-  DataType& dtr = *dt;
-  auto project  = dtr.getProjection(); // primary layer
-  if (project == nullptr) {
-    LogSevere("No projection ability for this datatype.\n");
-    return false;
-  }
-  auto& p = *project;
-
   // ----------------------------------------------------------
   // Get the filename we should write to
   std::string suffix = keys["suffix"];
   std::string filename;
+
   if (!resolveFileName(keys, suffix, "image-", filename)) {
     return false;
   }
@@ -239,49 +289,54 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   bool successful = false;
 
   try{
-     std::string suffix = keys["suffix"];
+    std::string suffix = keys["suffix"];
 
-     // A data tile attempt for 2D tabling in the imgui display.
-     // This will break up the 2D array of the data into tiles, without
-     // any projection, giving us a 2D tracking table.  
-     if (suffix == "mrms2dtile"){
-       //try {
-       // I'm thinking we label 'tiles' in the data by a single id
-       // This will be 'partitioned' kinda like the grid partition, right?
-       // Maybe the code can be shared even
-       //id = std::stoi(keys["mrms2dtileid"]); // could except
-       // }
-     }else{
+    // A data tile attempt for 2D tabling in the imgui display.
+    // This will break up the 2D array of the data into tiles, without
+    // any projection, giving us a 2D tracking table.
+    if (suffix == "mrms2dtile") {
+      // try {
+      // I'm thinking we label 'tiles' in the data by a single id
+      // This will be 'partitioned' kinda like the grid partition, right?
+      // Maybe the code can be shared even
+      // id = std::stoi(keys["mrms2dtileid"]); // could except
+      // }
+    } else {
+      // These tiles require projection or the BBOX
 
-     // These tiles require projection or the BBOX
-     
-     // ----------------------------------------------------------------------
-     // Bounding Box settings from given BBOX string
-     size_t rows, cols;
-     double top    = 0;
-     double left   = 0;
-     double bottom = 0;
-     double right  = 0;
-     auto proj     = p.getBBOX(keys, rows, cols, left, bottom, right, top);
-     const auto deltaLat = (bottom - top) / rows; // good
-     const auto deltaLon = (right - left) / cols;
-     const bool transform = (proj != nullptr);
+      // ----------------------------------------------------------------------
+      // Bounding Box settings from given BBOX string
+      // FIXME: Could put more of this into getBBOX I think.
+      // This is also a marching box similar to the fusion/grid stuff so
+      // could combine/reduce classes at some point
+      size_t rows, cols;
+      double top           = 0;
+      double left          = 0;
+      double bottom        = 0;
+      double right         = 0;
+      auto proj            = DataProjection::getBBOX(keys, rows, cols, left, bottom, right, top);
+      const auto deltaLat  = (bottom - top) / rows; // good
+      const auto deltaLon  = (right - left) / cols;
+      const bool transform = (proj != nullptr);
 
-     auto colormap         = dtr.getColorMap();
-     const ColorMap& color = *colormap;
+      // We'll make it use a multi data type to allow combining multiple datatypes
+      // into a single image.
+      MultiDataType multi;
+      multi.addDataType(dt);
 
-     if (suffix == "mrmstile"){
-       successful = writeMRMSTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
-     }else{
-       successful = writeMAGICKTile(filename, p, *proj, rows, cols, top, left, deltaLat, deltaLon, transform, color);
-     }
-     }
+      if (suffix == "mrmstile") {
+        successful = writeMRMSTile(multi, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
+      } else {
+        successful =
+          writeMAGICKTile(multi, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
+      }
+    }
 
-     // ----------------------------------------------------------
-     // Post processing such as extra compression, ldm, etc.
-     if (successful) {
-       successful = postWriteProcess(filename, keys);
-     }
+    // ----------------------------------------------------------
+    // Post processing such as extra compression, ldm, etc.
+    if (successful) {
+      successful = postWriteProcess(filename, keys);
+    }
   }catch (const Exception& e)
   {
     LogSevere("Exception write testing image output " << e.what() << "\n");
