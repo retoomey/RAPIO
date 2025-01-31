@@ -92,17 +92,18 @@ IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
 {
   // Precache color maps and data types for speed in loop lookup.
   // and check for null colormaps, null datatypes, etc.
-  std::vector<DataProjection*> ps;
-  size_t s  = mdt.size();
-  for(size_t i=0; i<s; ++i){
-     auto aDT = mdt.getDataType(i);
-     if (aDT){
-       auto aProjection = aDT->getProjection();
-       if (aProjection){
-         ps.push_back(aProjection.get());
-       }
-     }
-  }   
+  std::vector<DataProjection *> ps;
+  size_t s = mdt.size();
+
+  for (size_t i = 0; i < s; ++i) {
+    auto aDT = mdt.getDataType(i);
+    if (aDT) {
+      auto aProjection = aDT->getProjection();
+      if (aProjection) {
+        ps.push_back(aProjection.get());
+      }
+    }
+  }
 
   std::vector<float> buffer(rows * cols);
 
@@ -112,7 +113,6 @@ IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
   for (size_t y = 0; y < rows; y++) {
     auto startLon = left;
     for (size_t x = 0; x < cols; x++) {
-
       // Transform coordinate system if wanted
       double aLat = startLat, aLon = startLon;
       if (transform) {
@@ -121,13 +121,13 @@ IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
 
       // Loop through datatypes.
       float v = Constants::DataUnavailable;
-      for (size_t j = 0; j < ps.size(); ++j){
+      for (size_t j = 0; j < ps.size(); ++j) {
         // Get the data value
         v = ps[j]->getValueAtLL(aLat, aLon);
 
         // For moment, first hit wins.  We could possible
         // add some sort of simple 'merge' later if wanted
-        if (v != Constants::DataUnavailable){
+        if (v != Constants::DataUnavailable) {
           break;
         }
       }
@@ -166,20 +166,21 @@ IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
 {
   // Precache color maps and data types for speed in loop lookup.
   // and check for null colormaps, null datatypes, etc.
-  std::vector<DataProjection*> ps;
-  std::vector<ColorMap*> cms;
-  size_t s  = mdt.size();
-  for(size_t i=0; i<s; ++i){
-     auto aDT = mdt.getDataType(i);
-     if (aDT){
-       auto aColorMap = aDT->getColorMap();
-       auto aProjection = aDT->getProjection();
-       if (aColorMap && aProjection){
-         ps.push_back(aProjection.get());
-         cms.push_back(aColorMap.get());
-       }
-     }
-  }   
+  std::vector<DataProjection *> ps;
+  std::vector<ColorMap *> cms;
+  size_t s = mdt.size();
+
+  for (size_t i = 0; i < s; ++i) {
+    auto aDT = mdt.getDataType(i);
+    if (aDT) {
+      auto aColorMap   = aDT->getColorMap();
+      auto aProjection = aDT->getProjection();
+      if (aColorMap && aProjection) {
+        ps.push_back(aProjection.get());
+        cms.push_back(aColorMap.get());
+      }
+    }
+  }
 
   // --------------------------------------
   // Setup magic only if we need it
@@ -216,7 +217,6 @@ IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
   for (size_t y = 0; y < rows; y++) {
     auto startLon = left;
     for (size_t x = 0; x < cols; x++) {
-
       // Transform coordinate system if wanted
       double aLat = startLat, aLon = startLon;
       if (transform) {
@@ -224,8 +224,8 @@ IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
       }
 
       // Loop through datatypes.
-      for (size_t j = 0; j < ps.size(); ++j){
-        auto& p = ps[j];
+      for (size_t j = 0; j < ps.size(); ++j) {
+        auto& p     = ps[j];
         auto& color = cms[j];
 
         // Get the data value
@@ -234,7 +234,7 @@ IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
 
         // For moment, first hit wins.  We could possible
         // add some sort of simple 'merge' later if wanted
-        if (v != Constants::DataUnavailable){
+        if (v != Constants::DataUnavailable) {
           break;
         }
       }
@@ -319,16 +319,24 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
       const auto deltaLon  = (right - left) / cols;
       const bool transform = (proj != nullptr);
 
-      // We'll make it use a multi data type to allow combining multiple datatypes
-      // into a single image.
-      MultiDataType multi;
-      multi.addDataType(dt);
+      // If the incoming is a MultiDataType someone has already given us
+      // a group of products to output......
+      std::shared_ptr<MultiDataType> useMe;
+
+      if (auto multiDT = std::dynamic_pointer_cast<MultiDataType>(dt)) {
+        useMe = multiDT;
+        // ... or we'll make it use a multi data type to allow combining multiple datatypes
+        // into a single image.
+      } else {
+        useMe = std::make_shared<MultiDataType>();
+        useMe->addDataType(dt);
+      }
 
       if (suffix == "mrmstile") {
-        successful = writeMRMSTile(multi, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
+        successful = writeMRMSTile(*useMe, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
       } else {
         successful =
-          writeMAGICKTile(multi, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
+          writeMAGICKTile(*useMe, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
       }
     }
 
