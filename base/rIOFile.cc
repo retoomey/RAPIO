@@ -53,16 +53,11 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 
   // Get the new proxy factory for this output
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
-  auto encoder  = getFactory(f, outputinfo, dt);
-
-  if (encoder == nullptr) {
-    LogSevere("Unable to write using unknown factory '" << f << "'\n");
-    return false;
-  }
 
   // We are going to proxy to another IODataType
   outputParams["filepathmode"] = "direct";
-  bool success = encoder->writeout(dt, outputinfo, records, f, outputParams);
+  const bool success = write1(dt, outputinfo, records, f, outputParams);
+  if (!success){ return false; }
 
   // Notification currently has default paths and things, if we do want notification for single
   // files we'll have to tweek that code some.  FIXME: I can see doing this

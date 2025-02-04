@@ -202,6 +202,13 @@ public:
 
 protected:
 
+  /** Internal write 1 DataType by looking up factory first */
+  static bool
+  write1(std::shared_ptr<DataType> dt, const std::string& outputinfo,
+    std::vector<Record>              & records,
+    std::string& factory,
+    std::map<std::string, std::string>& outputParams);
+
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,

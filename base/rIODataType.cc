@@ -163,52 +163,55 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
 //
 
 bool
+IODataType::write1(std::shared_ptr<DataType> dt,
+  const std::string                          & outputinfo,
+  std::vector<Record>                        & records,
+  std::string                                & factory,
+  std::map<std::string, std::string>         & outputParams)
+{
+  bool success  = false;
+  std::string f = factory; // either passed in, or blank or suffix guess stuff.
+  auto encoder  = getFactory(f, outputinfo, dt);
+
+  if (encoder == nullptr) {
+    LogSevere("Unable to write DataType using unknown factory '" << f << "'\n");
+  } else {
+    success = encoder->writeout(dt, outputinfo, records, f, outputParams);
+  }
+  return success;
+}
+
+bool
 IODataType::write(std::shared_ptr<DataType> dt,
   const std::string                         & outputinfo,
   std::vector<Record>                       & records,
   const std::string                         & factory,
   std::map<std::string, std::string>        & outputParams)
 {
-  auto anySuccess = false;
+  auto success  = false;
+  std::string f = factory; // either passed in, or blank or suffix guess stuff.
 
   // MultiDataTypes hold multiple DataTypes, each needing to write
   auto m = std::dynamic_pointer_cast<MultiDataType>(dt);
 
   if (m) {
-    size_t s = m->size();
+    const bool groupedWrite = m->getSendToWriterAsGroup();
 
-    // Handle each data type stored.  It's assuming writing parameters,
-    // etc. match for each thing in the group.
-    for (size_t i = 0; i < s; ++i) {
-      auto dataType = m->getDataType(i);
-
-      std::string f = factory; // either passed in, or blank or suffix guess stuff.
-      auto encoder  = getFactory(f, outputinfo, dt);
-      if (encoder == nullptr) {
-        LogSevere("Unable to write using unknown factory '" <<
-          f << "' for index " << i << " of MultiDataType.\n");
-      } else {
-        if (encoder->writeout(dataType, outputinfo, records, f, outputParams)) {
-          anySuccess = true; // Make true if ANY write successfully
-        }
+    if (!groupedWrite) {
+      // Break it up and pass each DataType by itself.
+      // Handle each data type stored.  It's assuming writing parameters,
+      // etc. match for each thing in the group.
+      const size_t s = m->size();
+      for (size_t i = 0; i < s; ++i) {
+        success |= write1(m->getDataType(i), outputinfo, records, f, outputParams);
       }
+      LogInfo("MultiDataType attempted to write " << s << " DataTypes\n");
+      return success;
     }
-    LogInfo("MultiDataType attempted to write " << s << " DataTypes\n");
-  } else {
-    // The static method grabs the first factory and sends to it to handle
-    // This is assuming outputinfo is a file name?
-    // 1. Get the factory for this output
-    std::string f = factory; // either passed in, or blank or suffix guess stuff.
-    auto encoder  = getFactory(f, outputinfo, dt);
-
-    if (encoder == nullptr) {
-      LogSevere("Unable to write using unknown factory '" << f << "'\n");
-      return false;
-    }
-
-    anySuccess = encoder->writeout(dt, outputinfo, records, f, outputParams);
   }
-  return anySuccess;
+
+  success = write1(dt, outputinfo, records, f, outputParams);
+  return success;
 } // IODataType::write
 
 void

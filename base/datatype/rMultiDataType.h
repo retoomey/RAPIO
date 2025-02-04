@@ -16,11 +16,11 @@ class MultiDataType : public DataType {
 public:
 
   /** Create empty MultiDataType */
-  MultiDataType(){ };
+  MultiDataType(bool groupWrite = false) : myGroupWrite(groupWrite){ };
 
   /** Public API for users to create a MultiDataType quickly */
   static std::shared_ptr<MultiDataType>
-  Create();
+  Create(bool groupWrite = false);
 
   /** Destroy a MultiDataType */
   virtual ~MultiDataType(){ }
@@ -32,6 +32,19 @@ public:
    */
   static std::shared_ptr<DataType>
   Simplify(std::shared_ptr<MultiDataType>& m);
+
+  /** Set the write mode.  The default mode is to break up the
+   * MultiDataType into N DataTypes, sending each independently to
+   * the write module.  However, some writers have the ability to
+   * handle MultiDataTypes.  IOIMAGE can take N DataTypes and create
+   * a single output image from the data from all of them.  In this
+   * case we can set this flag to send the entire group to the
+   * writer module. */
+  void setSendToWriterAsGroup(bool flag){ myGroupWrite = flag; }
+
+  /** Get the current write as group flag, determine how it's
+   * send to writer modules */
+  bool getSendToWriterAsGroup(){ return myGroupWrite; }
 
   /** Add a DataType to our collection */
   void
@@ -49,5 +62,8 @@ protected:
 
   /** Hold onto a collection of DataTypes */
   std::vector<std::shared_ptr<DataType> > myDataTypes;
+
+  /** Writer mode flag */
+  bool myGroupWrite;
 };
 }
