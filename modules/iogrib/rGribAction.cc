@@ -9,17 +9,16 @@ using namespace rapio;
 bool
 GribCatalog::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
 {
-  if (fieldNumber == 1){
-     std::cout << *mp;  // This will go ahead and print all fields
-  }else{
+  if (fieldNumber == 1) {
+    std::cout << *mp; // This will go ahead and print all fields
+  } else {
     // We already printed all fields for this message...
-  } 
+  }
   return true; // Keep going, do all messages
 }
 
 GribMatcher::GribMatcher(const std::string& key,
-  const std::string                       & levelstr) : myKey(key), myLevelStr(levelstr),
-  myMatchedFieldNumber(0)
+  const std::string                       & levelstr) : myKey(key), myLevelStr(levelstr)
 { }
 
 bool
@@ -32,11 +31,57 @@ GribMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
   bool match = f->matches(myKey, myLevelStr);
 
   if (match) {
-    LogInfo("Found '" << myKey << "' and '" << myLevelStr << "' single match for 2D.\n");
-    myMatchedMessage     = mp; // Hold onto this message
-    myMatchedFieldNumber = fieldNumber;
+    LogInfo("Found '" << myKey << "' and '" << myLevelStr << "' at message number: " << f->getMessageNumber() << "\n");
+    myMatchedMessages.push_back(mp);
+    myMatchedFieldNumbers.push_back(fieldNumber);
+
+    #if 0
+    // Debug print out a few values
+    auto array2D   = f->getFloat2D();
+    auto maxX      = array2D->getX();
+    auto maxY      = array2D->getY();
+    auto& ref      = array2D->ref(); // or (*ref)[x][y]
+    size_t counter = 0;
+    for (size_t x = 0; x < maxX; ++x) {
+      for (size_t y = 0; y < maxY; ++y) {
+        if (ref[x][y] != 0) {
+          if (++counter < 50) {
+            std::cout << ref[x][y] << ",  ";
+          }
+        }
+      }
+    }
+    std::cout << "\n";
+    #endif // if 0
   }
-  return !match; // Continue searching if no match
+  // We're matching whole file now, not stop on first
+  return true;
+  // Here we stop on the first successful match
+  // return !match; // Continue searching if no match
+} // GribMatcher::action
+
+std::shared_ptr<GribMessage>
+GribMatcher::getMatchedMessage()
+{
+  // Return the last match found for now.  This is how old legacy
+  // code handled the field match.
+  const size_t s = myMatchedMessages.size();
+
+  if (s > 0) {
+    return myMatchedMessages[s - 1];
+  }
+  return nullptr;
+}
+
+size_t
+GribMatcher::getMatchedFieldNumber()
+{
+  const size_t s = myMatchedFieldNumbers.size();
+
+  if (s > 0) {
+    return myMatchedFieldNumbers[s - 1];
+  }
+  return 0;
 }
 
 GribNMatcher::GribNMatcher(const std::string& key,

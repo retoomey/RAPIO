@@ -45,6 +45,9 @@ public:
 };
 #endif // if 0
 
+/** Match any field matching the given key and levelstr.  This can
+ * match multiple fields.  Currently we return the latest found.
+ * FIXME: We could add a N interface here */
 class GribMatcher : public GribAction
 {
   /** The key we look for */
@@ -54,10 +57,10 @@ class GribMatcher : public GribAction
   std::string myLevelStr;
 
   /** Matched message, or nullptr */
-  std::shared_ptr<GribMessage> myMatchedMessage;
+  std::vector<std::shared_ptr<GribMessage> > myMatchedMessages;
 
-  /** Match field number iff matched message */
-  size_t myMatchedFieldNumber;
+  /** Matched field numbers */
+  std::vector<size_t> myMatchedFieldNumbers;
 
 public:
 
@@ -68,11 +71,13 @@ public:
   virtual bool
   action(std::shared_ptr<GribMessage>& m, size_t fieldNumber) override;
 
-  /** The messsage we matched if any, and other info. */
-  std::shared_ptr<GribMessage> getMatchedMessage(){ return myMatchedMessage; }
+  /** The last message we matched */
+  std::shared_ptr<GribMessage>
+  getMatchedMessage();
 
-  /** The field number we matched if any */
-  size_t getMatchedFieldNumber(){ return myMatchedFieldNumber; }
+  /** The last field number we matched if any */
+  size_t
+  getMatchedFieldNumber();
 };
 
 /** Matcher matching N fields in the grib2 source.  Used for our 3D creation */
