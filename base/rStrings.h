@@ -102,25 +102,17 @@ public:
     std::vector<std::string> * setme);
 
   /** Splits the string,s, on the first occurence of the
-   *  character,sep, passsed in.
-   *
-   *  The pieces are placed
-   *  into the vector passed in. Returns 2 if sep is in the string
-   *  and zero if sep is not in the string.
-   *
-   *  Thus, the split produce a maximum of two pieces. In the
-   *  absence of the sep character, no pieces are added to the vector,
-   *  and zero is returned.
+   *  string passed in.
    *
    *  @param in the string to split
    *  @param delimiter split token to search for in `splitme'
    *  @param setme result
-   *  @return number of fields
+   *  @return true on a match
    */
-  static size_t
+  static bool
   splitOnFirst(const std::string & in,
-    char                       delimiter,
-    std::vector<std::string> * setme);
+    const std::string       delimiter,
+    std::vector<std::string>& setme);
 
   /** Replace all occurences of `from' with `to' in string `s'. */
   static void

@@ -98,21 +98,20 @@ Strings::split(const std::string & in,
   return (setme->size());
 }
 
-size_t
-Strings::splitOnFirst(const std::string & in,
-  char                                  delimiter,
-  std::vector<std::string> *            setme)
+bool
+Strings::splitOnFirst(const std::string& in, const std::string delimiter, std::vector<std::string>& setme)
 {
-  size_t n_tokens = 0;
-  const std::string::size_type pos(in.find(delimiter));
+  setme.clear();
+  size_t pos = in.find(delimiter);
 
   if (pos != std::string::npos) {
-    setme->push_back(in.substr(0, pos));
-    setme->push_back(in.substr(pos + 1, in.size() - (pos + 1)));
-    n_tokens = 2;
+    setme.push_back(in.substr(0, pos));                 // Prefix
+    setme.push_back(in.substr(pos + delimiter.size())); // Suffix
+    return true;
   }
 
-  return (n_tokens);
+  setme.push_back(in); // No delimiter found, return full input
+  return false;
 }
 
 void
@@ -657,7 +656,7 @@ Strings::splitKeyParam(const std::string& commandline, std::string& key, std::st
 {
   std::vector<std::string> twoparams;
 
-  Strings::splitOnFirst(commandline, ',', &twoparams);
+  Strings::splitOnFirst(commandline, ",", twoparams);
   if (twoparams.size() > 1) {
     key    = twoparams[0];
     params = twoparams[1];

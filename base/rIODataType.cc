@@ -477,7 +477,7 @@ IODataType::iPathParse(const std::string& ipath, std::string& aFileName, std::st
   std::vector<std::string> twoStrings;
   bool splitWorked = true;
 
-  Strings::splitOnFirst(localFilename, ':', &twoStrings);
+  Strings::splitOnFirst(localFilename, ":", twoStrings);
   if (twoStrings.size() > 1) { // Ok have a :
     // I'm gonna allow URL here..so don't make these builders...
     // You'd have to file=netcdf:http://pathtofile and NOT

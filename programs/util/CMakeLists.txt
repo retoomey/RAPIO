@@ -33,6 +33,15 @@ target_link_libraries(rRemap rapio)
 install(TARGETS rRemap
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+
+add_executable(rMakeIndex
+  rMakeIndex.cc
+)
+target_link_libraries(rMakeIndex rapio)
+install(TARGETS rMakeIndex
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
 ##################################################################
 # MakeFakeRadarData 
 # FIXME: Not sure if we're keeping this. I'm experimenting with

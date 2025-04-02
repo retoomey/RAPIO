@@ -64,9 +64,7 @@ DirWalker::process(const char * filePath, const struct stat * fileInfo, int type
   // LogInfo("(virtual) PATH IS " << filePath << " " << fileInfo->st_mtime << " " << fileInfo->st_size << "\n");
   std::string aFilePath(filePath); // go back to c++ for interface consistency
 
-  /** pathInfo is a FTW which contains the following.  I don't currently see a need for this
-   *  ability, but we could pass it later:
-   *
+  /** pathInfo is a FTW which contains the following.
    *  struct FTW {
    *         int base;
    *         int level;
@@ -76,11 +74,17 @@ DirWalker::process(const char * filePath, const struct stat * fileInfo, int type
    * which has depth 0).
    */
 
+  // Convert to hide the internals
+  //  file depth is always the directory + 1 (it counts as another depth)
+  myDepth      = pathInfo->level;
+  myFileOffset = pathInfo->base;
+
   DirWalker::Action a = Action::CONTINUE;
 
   switch (type) {
       case FTW_F:
         // Handle a regular file
+        myFileCounter++;
         a = processRegularFile(aFilePath, fileInfo);
         break;
       case FTW_D:

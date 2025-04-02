@@ -53,6 +53,10 @@ public:
   /** Simple counter of popped records */
   static long long poppedRecords;
 
+  /** Low level access the queue if needed */
+  std::priority_queue<Record, std::vector<Record>, RecordQueueSort>&
+  getQueue(){ return myQueue; }
+
 protected:
 
   /** The algorithm we send records to */

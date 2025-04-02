@@ -66,7 +66,7 @@ public:
   };
 
   /** Create default walker with flags */
-  DirWalker(){ }
+  DirWalker() : myDepth(0), myFileOffset(0), myFileCounter(0){ }
 
   /** Do a directory walk */
   bool
@@ -88,6 +88,15 @@ public:
   static void
   printPath(const std::string& prefix, const std::string& path, const struct stat * info);
 
+  /** Get current directory depth of traversal */
+  size_t getDepth(){ return myDepth; }
+
+  /** Get current local file offset in the full file name */
+  size_t getFileOffset(){ return myFileOffset; }
+
+  /** Get current file number processed */
+  size_t getFileCounter(){ return myFileCounter; }
+
 private:
 
   /** Top level callback from hidden nftw details. */
@@ -103,5 +112,14 @@ private:
   /** Directly static callback for nftw, not to be changed */
   static int
   nftwCallback(const char * filePath, const struct stat * fileInfo, int typeFlag, struct FTW * pathInfo);
+
+  /** Directory depth counter */
+  size_t myDepth;
+
+  /** File offset in current full file name path */
+  size_t myFileOffset;
+
+  /** File counter */
+  size_t myFileCounter;
 };
 }

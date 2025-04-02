@@ -706,7 +706,7 @@ RAPIOOptions::expandArgs(const std::vector<std::string>& args, std::string& left
     if (isArgument(at) && !helpString) {
       // -z=zvalue
       std::vector<std::string> twoargs;
-      Strings::splitOnFirst(at, '=', &twoargs);
+      Strings::splitOnFirst(at, "=", twoargs);
       if (twoargs.size() > 1) {
         expanded.push_back(twoargs[0]);
         expanded.push_back(twoargs[1]);
