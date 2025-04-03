@@ -38,8 +38,8 @@ Lak2DResolver::calc(VolumeValue * vvp)
     if (Constants::isGood(value)) {
       // This weight is for merging with other radars...so still need it.
       // Well we need it for 2D distance merging, for max it will be cancelled out.
-      const auto rw   = 1.0 / std::pow(vv.virtualRangeKMs, 2); // inverse square
-      const double aV = value;                                 // Only hit value counts, no vertical interpolation/weighting
+      const auto rw   = rangeToWeight(vv.virtualRangeKMs, myVarianceWeight);
+      const double aV = value; // Only hit value counts, no vertical interpolation/weighting
       vv.dataValue = aV;
       vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
       vv.bottomSum = rw;

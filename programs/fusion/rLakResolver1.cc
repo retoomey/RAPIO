@@ -198,7 +198,7 @@ LakResolver1::calc(VolumeValue * vvp)
     // Calculate range weight factor here, we can still add it in
     // We're assuming range weight factor is the same for each contributing
     // value, which is different from e1, e2...en elevation weights
-    const auto rw = 1.0 / std::pow(vv.virtualRangeKMs, 2); // inverse square
+    const auto rw = rangeToWeight(vv.virtualRangeKMs, myVarianceWeight);
 
     // Don't wanna lose weight info
     // v = totalsum / totalWt; // Actual value which loses info..so

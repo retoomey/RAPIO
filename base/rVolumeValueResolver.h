@@ -57,7 +57,7 @@ class VolumeValueResolver : public Utility
 public:
 
   /** Create a volume value resolver for calculating grid values */
-  VolumeValueResolver() : myGlobalWeight(1.0){ }
+  VolumeValueResolver() : myGlobalWeight(1.0), myVarianceWeight(1.0 / 62500.0){ }
 
   /** Enum for layers in queryLayer */
   enum Layer {
@@ -129,13 +129,36 @@ public:
     return std::make_shared<VolumeValueIO>();
   }
 
+  /** Generate the weight from range for a resolver.  Magic number comes
+   * from original w2merger.  Variance affects the speed of drop off as
+   * you increase in range from radar center */
+  static inline double
+  rangeToWeight(LengthKMs r, double varianceU1)
+  {
+    // Inverse square (similiar to exponential decay for default values)
+    // return (1.0 / (r*r));
+    // const double V=50;  W2merger parameter
+    // const double TimeVariance = 5*5;
+    // const double DistanceVariance = V*V;
+    // const double variance = DistanceVariance * TimeVariance;
+    // Division is slower than multiplication, so we use 1/variance here
+    // FIXME: We could experiment using Schraudolph fast exp here.
+    return ::expf(-(r * r) * varianceU1);
+  }
+
   /** Set a global weight multiplier, usually from stage 1 */
   void setGlobalWeight(float w){ myGlobalWeight = w; }
+
+  /** Set a global variance weight multiplier, usually from stage 1 */
+  void setVarianceWeight(float v){ myVarianceWeight = v; }
 
 protected:
 
   /** The global weight multiplier we can use during calculations */
   float myGlobalWeight;
+
+  /** The global sigma weight multiplier we can use during calculations */
+  float myVarianceWeight;
 
   // FIXME: Thinking we could do function pointers or something for different methods
   // of querying the data.

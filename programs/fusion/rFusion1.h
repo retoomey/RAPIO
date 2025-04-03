@@ -188,5 +188,8 @@ protected:
 
   /** Global stage1 Weight multiplier */
   float myWeight;
+
+  /** Global sigma value */
+  float mySigmaWeight;
 };
 }

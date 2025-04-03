@@ -83,6 +83,13 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   o.optional("weight", "1.0", "Weight percentage multiplier.");
   o.addAdvancedHelp("weight",
     "Percentage to multiply weights by.  This can reduce or increase globally this radar's contribution.  For example, 0.50 means our weights are halved, while 2.0 that radar would double in the final output of stage2.\nNOTE: The resolver has to be coded to use this provided weight or it has no effect.");
+  o.addGroup("weight", "weighting");
+
+  o.optional("S", "50",
+    "Sigma for exponential distance weighting exp(-(range^2)/variance, where variance = 25*sigma*sigma.");
+  o.addAdvancedHelp("S",
+    "For legacy reasons, variance = 25*sigma*sigma. So a value of S of 50 yields a variance of 62500, and S of 10 yields 2500 in the denominator the exp weighting.");
+  o.addGroup("S", "weighting");
 
   // Roster means we write coverage files and read masks
   // A missing mask:
@@ -146,12 +153,20 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     myRangeKMs = 1000;
   }
   LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
+
+  // Weight information
   myWeight = o.getFloat("weight");
   bool goodWeight = true;
 
   if ((myWeight <= 0) || (myWeight > 10.0)) { // Some reasonable ranges?
     LogSevere("Weight given is " << myWeight << " which seems wrong, setting to 1.0\n");
     myWeight = 1.0;
+  }
+
+  mySigmaWeight = o.getFloat("S");
+  if (mySigmaWeight <= 0) {
+    LogSevere("Sigma given is " << mySigmaWeight << " which seems wrong, setting to 50.\n");
+    mySigmaWeight = 50;
   }
 
   std::string roster = o.getString("roster");
@@ -346,6 +361,9 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   if (vp) {
     myResolver = vp->getVolumeValueResolver(); // This will exit if not available
     myResolver->setGlobalWeight(myWeight);
+
+    // 25 here is a magic number from w2merger for time variance squared.
+    myResolver->setVarianceWeight(1.0 / (25.0 * (mySigmaWeight * mySigmaWeight)));
   }
 
   // -------------------------------------------------------------
