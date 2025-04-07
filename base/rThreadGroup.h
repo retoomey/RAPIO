@@ -10,6 +10,7 @@
 #include <queue>
 #include <memory>
 #include <atomic>
+#include <future>
 
 #include <boost/thread.hpp>
 
@@ -17,12 +18,44 @@ namespace rapio {
 /** What we do with a worker thread?  Subclass to do more */
 class ThreadTask : public Utility {
 public:
+
+  /** Create a thread task with a future */
+  ThreadTask() : myFuture(myPromise.get_future()){ }
+
   /** Do our job.  Override to do your stuff. */
   virtual void
   execute()
   {
     LogInfo("--->Thread task execute that does nothing. You should be subclassing ThreadTask.\n");
+    // Any subclass MUST call markDone when finished, or calling thread will
+    // hang waiting on you forever.
+    markDone();
   };
+
+  /** Mark the task as complete (call this at end of execute) */
+  void
+  markDone()
+  {
+    myPromise.set_value();
+  }
+
+  /** Block until this task is finished */
+  void
+  waitUntilDone()
+  {
+    myFuture.wait();
+  }
+
+  /** Returns true if task has finished */
+  bool
+  isFinished() const
+  {
+    return myFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+  }
+
+protected:
+  std::promise<void> myPromise;
+  std::future<void> myFuture;
 };
 
 /** Write the standard output thread task.

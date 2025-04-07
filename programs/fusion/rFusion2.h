@@ -106,6 +106,9 @@ protected:
   /** My database of 3D point observations */
   std::shared_ptr<FusionDatabase> myDatabase;
 
+  /** Precision flag for output preprocessing */
+  float myPrecision;
+
   /** How many data files have come in since a process volume? */
   size_t myDirty;
 

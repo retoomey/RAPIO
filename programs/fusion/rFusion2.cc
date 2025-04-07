@@ -38,6 +38,9 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
   // Format is seconds then mins
   o.setDefaultValue("sync", "0 */2 * * * *");
 
+  o.optional("p", "-1",
+    "Sets a round-off precision to use. Use a value of 0.5 to round off to the nearest half. Negative value disables.");
+
   // Output 2D by default and declare static product keys for what we write.
   o.setDefaultValue("O", "2D");
   declareProduct("2D", "Write N 2D layers merged values");
@@ -51,6 +54,12 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 void
 RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 {
+  // Get output precision
+  myPrecision = o.getFloat("p");
+  if (myPrecision > 0) {
+    LogInfo("Rounding off values to nearest " << myPrecision << "\n");
+  }
+
   // ----------------------------------------
   // Check partition information
   bool success = false;
@@ -355,7 +364,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 
   if (wantMerge) {
     const std::string typeMerged = "Fused2" + myTypeName;
-    myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
+    myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
     write2DLayers("2D", "Writing fused layer ", typeMerged, extraParams, outputTime);
     write3DLayer("3D", typeMerged, extraParams, outputTime);
   }
@@ -366,7 +375,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 
   if (wantMax) {
     const std::string typeMaxed = "Fused2Max" + myTypeName;
-    myDatabase->maxTo(myLLGCache, cutoff, part.getStartX(), part.getStartY());
+    myDatabase->maxTo(myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
     write2DLayers("2DMax", "Writing max layer ", typeMaxed, extraParams, outputTime);
     write3DLayer("3DMax", typeMaxed, extraParams, outputTime);
   }

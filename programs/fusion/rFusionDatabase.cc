@@ -73,7 +73,8 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
 } // FusionDatabase::ingestNewData
 
 void
-FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY)
+FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY,
+  float precision)
 {
   ProcessTimer test("Merging XYZ tree\n");
 
@@ -144,7 +145,10 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
     auto& gridtest = output->getFloat2DRef();
     for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
       for (size_t y = 0; y < gridY; y++) {
-        if (wa[y][x] == 0) { // If no values hit (weight should be 0 from the init)
+        auto& v = gridtest[y][x];
+        auto& w = wa[y][x];
+
+        if (w == 0) { // If no values hit (weight should be 0 from the init)
           // Use the missing flag array....
           // if (ma[y][x] > 0) {
           // FIXME: Feel like with some ordering could skip the indexing calculation
@@ -153,15 +157,18 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
           const size_t globalX = offsetX + x;
           const size_t globalY = offsetY + y;
           if (myMissings[myHaves.getIndex3D(globalX, globalY, z)] >= cutoff) {
-            gridtest[y][x] = Constants::MissingData;
+            v = Constants::MissingData;
           } else {
-            gridtest[y][x] = Constants::DataUnavailable;
+            v = Constants::DataUnavailable;
           }
           continue;
         }
 
         // So we have weights, values....divide them to get total
-        gridtest[y][x] /= wa[y][x];
+        v /= w;
+        if (precision > 0) {
+          v = Arith::roundOff(v, precision);
+        }
       }
     }
   }
@@ -170,7 +177,8 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
 } // FusionDatabase::mergeTo
 
 void
-FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY)
+FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY,
+  float precision)
 {
   // FIXME: Maybe combine common code or something with the mergeTo..though it might
   // slow things doing that.
@@ -228,6 +236,9 @@ FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, si
           vref = (rv > vref) ? rv : vref;
         } else { // ..otherwise use the first one (to avoid caring about background 0)
           vref = rv;
+        }
+        if (precision > 0) {
+          vref = Arith::roundOff(vref, precision);
         }
         hit = 1;
         /// --------------------------------------------

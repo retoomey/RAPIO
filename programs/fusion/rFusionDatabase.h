@@ -344,11 +344,11 @@ public:
 
   /** Weighted distance merge of given values */
   void
-  mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX = 0, size_t offsetY = 0);
+  mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY, float promise);
 
   /** Max merge of given values */
   void
-  maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX = 0, size_t offsetY = 0);
+  maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY, float promise);
   // ----------------------------------------
 
   /** Attempt to purge times from database */
