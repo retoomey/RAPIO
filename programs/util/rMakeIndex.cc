@@ -93,7 +93,6 @@ public:
       // make common code doing this, maybe in ConfigRecord
       std::vector<std::string> params;
       std::vector<std::string> selects;
-      params.push_back(factory);
 
       const bool fullMode = false; // do builder filename only
       if (fullMode) {
@@ -126,9 +125,10 @@ public:
       for (size_t i = at; i < fields.size(); ++i) {
         selects.push_back(fields[i]);
       }
-
-      Record rec(params, selects, aTime);
-      Record::theRecordQueue->addRecord(rec);
+      if (selects.size() > 1) {
+        Record rec(params, factory, aTime, selects[1], selects[2]);
+        Record::theRecordQueue->addRecord(rec);
+      }
       // -------------------------------------------------------------------
     } else {
       // Couldn't time scan, so what next?
@@ -213,7 +213,7 @@ MakeIndex::execute()
   ss << ">\n";
   while (!myQueue.empty()) {
     ss << "<item>\n";
-    myQueue.top().constructXMLString(ss, indexPath);
+    ConfigRecord::constructXMLString(myQueue.top(), ss, indexPath);
     myQueue.pop(); // Remove the processed record
     ss << "</item>\n";
   }
