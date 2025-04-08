@@ -33,6 +33,7 @@ config/rConfigIODataType.h
 config/rConfigLogging.h
 config/rConfigParamGroup.h
 config/rConfigRadarInfo.h
+config/rConfigRecord.h
 rConstants.h
 rCurlConnection.h
 rDataArray.h
@@ -172,6 +173,7 @@ config/rConfigIODataType.cc
 config/rConfigLogging.cc
 config/rConfigParamGroup.cc
 config/rConfigRadarInfo.cc
+config/rConfigRecord.cc
 rConstants.cc
 rCurlConnection.cc
 rDataArray.cc
@@ -292,7 +294,12 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 
 # Link libraries
 target_link_libraries(rapio
-  ${RAPIO_THIRD_LIBRARIES}
+  # Go ahead and make our linked libraries public for now.  In theory,
+  # would be better some private
+  PUBLIC ${RAPIO_THIRD_LIBRARIES}
+  # Explicitly add public dlsys for any binaries c
+  # calling dynamic loading methods.  rMakeIndex calls factory creation
+  PUBLIC dl
 )
 
 # Install the RAPIO headers

@@ -6,6 +6,7 @@
 #include "rOS.h"
 #include "rIODataType.h"
 #include "rRecordQueue.h"
+#include "rConfigRecord.h"
 
 #include <iostream>
 
@@ -87,7 +88,7 @@ XMLIndex::initialRead(bool realtime, bool archive)
       for (auto r: items) {
         // Note priority queue time sorts all initial indexes
         Record rec;
-        if (rec.readXML(r, indexPath, indexLabel)) {
+        if (ConfigRecord::readXML(rec, r, indexPath, indexLabel)) {
           Record::theRecordQueue->addRecord(rec);
         }
       }

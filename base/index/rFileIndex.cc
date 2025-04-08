@@ -123,7 +123,6 @@ FileIndex::handleFile(const std::string& filename)
     Time time = Time::CurrentTime();
 
     std::vector<std::string> params;
-    std::vector<std::string> selects;
 
     // Ok we're gonna allow explicit builder specification so
     // 1. file=netcdf:/pathtonetcdf or
@@ -138,14 +137,8 @@ FileIndex::handleFile(const std::string& filename)
     params.push_back(aBuilder);
     params.push_back(aFileName);
 
-    // Selections matter for display mostly...not sure how to
-    // create generically.
-    selects.push_back("");        // Record will fill it for us
-    selects.push_back("default"); // humm
-    selects.push_back("file");
-
     // Add record for the file
-    Record rec(params, selects, time);
+    Record rec(params, aBuilder, time, "default", "file");
     Record::theRecordQueue->addRecord(rec);
   }
 } // FileIndex::handleFile

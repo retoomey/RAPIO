@@ -6,6 +6,7 @@
 #include "rIODataType.h"
 #include "rDirWatcher.h"
 #include "rOS.h"
+#include "rConfigRecord.h"
 
 using namespace rapio;
 
@@ -106,7 +107,7 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
    */
   try{
     auto item = tree->getChild("item");
-    return (rec.readXML(item, myIndexPath, getIndexLabel()));
+    return (ConfigRecord::readXML(rec, item, myIndexPath, getIndexLabel()));
   }catch (const std::exception& e) {
     LogSevere("Missing item tag in FML record\n");
   }

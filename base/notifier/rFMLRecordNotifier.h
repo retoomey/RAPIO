@@ -30,6 +30,15 @@ public:
   static std::string
   getHelpString(const std::string& fkey);
 
+  /** Calculate output directory and index location for FML record/message from parameters */
+  void
+  getOutputFolder(std::map<std::string, std::string>& outputParams,
+    std::string& outputDir, std::string& indexLocation);
+
+  /** Notify about this message. */
+  virtual void
+  writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) override;
+
   /** Notify for a single record */
   virtual void
   writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) override;

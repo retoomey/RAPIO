@@ -8,6 +8,7 @@
 #include "rStrings.h"
 #include "rEXEWatcher.h"
 #include "rIODataType.h"
+#include "rConfigRecord.h"
 
 #include <algorithm>
 
@@ -129,7 +130,7 @@ StreamIndex::handleNewEvent(WatchEvent * w)
                   Record rec;
                   auto tree = xml->getTree();
                   auto item = tree->getChild("item");
-                  if (rec.readXML(item, "", getIndexLabel())) {
+                  if (ConfigRecord::readXML(rec, item, "", getIndexLabel())) {
                     Record::theRecordQueue->addRecord(rec);
                   }
                 } else {

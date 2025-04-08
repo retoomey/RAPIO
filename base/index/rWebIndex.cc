@@ -6,6 +6,7 @@
 #include "rRecordQueue.h"
 #include "rIODataType.h"
 #include "rWebIndexWatcher.h"
+#include "rConfigRecord.h"
 
 #include <iostream>
 #include <algorithm>
@@ -201,7 +202,7 @@ WebIndex::readRemoteRecords()
         for (auto r: recs) { // Can boost get first child?
           // Note priority queue time sorts all initial indexes
           Record rec;
-          if (rec.readXML(r, indexPath, getIndexLabel())) {
+          if (ConfigRecord::readXML(rec, r, indexPath, getIndexLabel())) {
             Record::theRecordQueue->addRecord(rec);
           }
           count++;

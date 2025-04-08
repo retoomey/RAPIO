@@ -42,6 +42,13 @@ public:
 
   /** Callback for data ingest */
   virtual void
+  processNewMessage(const Message& m)
+  {
+    LogDebug("Received message callback, ignoring.\n");
+  }
+
+  /** Callback for data ingest */
+  virtual void
   processNewData(rapio::RAPIOData& d)
   {
     LogDebug("Received data callback, ignoring.\n");

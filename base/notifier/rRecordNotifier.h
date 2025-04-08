@@ -15,6 +15,10 @@ public:
   /** Destory a record notifier */
   ~RecordNotifierType(){ }
 
+  /** Notify about this message. */
+  virtual void
+  writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) = 0;
+
   /** Notify about this record. */
   virtual void
   writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) = 0;

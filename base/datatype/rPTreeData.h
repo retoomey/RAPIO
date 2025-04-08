@@ -39,7 +39,7 @@ public:
 
   /** Simple get all attributes, if any as a string map */
   std::map<std::string, std::string>
-  getAttrMap()
+  getAttrMap() const
   {
     std::map<std::string, std::string> attrList;
     auto attrs = node.get_child_optional("<xmlattr>");
@@ -110,7 +110,7 @@ public:
 
   /** Read child of node */
   std::shared_ptr<PTreeNode>
-  getChildOptional(const std::string& path)
+  getChildOptional(const std::string& path) const
   {
     // PTreeNode child;
     auto thing = node.get_child_optional(path);
@@ -126,7 +126,7 @@ public:
   /** Get the name of first real tag, used for factories based off
    * tag identification.  Ignore comments */
   std::string
-  getFirstChildName()
+  getFirstChildName() const
   {
     for (auto r: node.get_child("")) {
       if (r.first == "<xmlcomment>") {
@@ -140,7 +140,7 @@ public:
   /** BOOST is a dom so we just copy into our wrapper.
    * a SAX based XML would probably want pull iterator */
   std::vector<PTreeNode>
-  getChildren(const std::string& filter)
+  getChildren(const std::string& filter) const
   {
     std::vector<PTreeNode> list;
 
@@ -155,7 +155,7 @@ public:
   }
 
   std::vector<std::shared_ptr<PTreeNode> >
-  getChildrenPtr(const std::string& filter)
+  getChildrenPtr(const std::string& filter) const
   {
     std::vector<std::shared_ptr<PTreeNode> > list;
 
@@ -190,7 +190,7 @@ public:
 
   /** Get root of document tree, valid only while PTree is. */
   std::shared_ptr<PTreeNode>
-  getTree()
+  getTree() const
   {
     return myRoot;
   }

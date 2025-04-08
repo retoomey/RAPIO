@@ -49,10 +49,14 @@ EXERecordNotifier::~EXERecordNotifier()
 { }
 
 void
+EXERecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& rec)
+{
+  LogDebug("-->EXE TRYING TO WRITE MESSAGE\n");
+}
+
+void
 EXERecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
 {
-  if (!rec.isValid()) { return; }
-
   // const std::string outputinfo = outputParams["outputfolder"];
 
   // FIXME: More advanced ability at some point

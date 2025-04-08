@@ -6,6 +6,7 @@
 #include "rStaticMethodFactory.h"
 #include "fstream"
 #include "rStrings.h"
+#include "rConfigRecord.h"
 
 #include <stdio.h>
 
@@ -72,17 +73,19 @@ FMLRecordNotifier::makeDirectories(const std::string& outdir, const std::string&
 FMLRecordNotifier::~FMLRecordNotifier()
 { }
 
-
 void
-FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
+FMLRecordNotifier::getOutputFolder(std::map<std::string, std::string>& outputParams,
+  std::string& outputDir, std::string& indexLocation)
 {
-  if (!rec.isValid()) { return; }
+  // Maybe we can cache this somehow for speed improvements
+  // Typically the output directory will stay the same. Someone could
+  // change the outputParams in theory
 
   const std::string outputinfo = outputParams["outputfolder"];
 
   // We assume the outputinfo is a directory.  Override with myOutputDir if requested
   // on the notifier param line:
-  std::string outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
+  outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
 
   // Now add any require subfolder to our output dir.
   const std::string subfolder = outputParams["outputsubfolder"];
@@ -96,7 +99,6 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   // Find the macro indexLocation from cache or create it
   // We have to check this each time because the output directory
   // can be different for each writer.  We can cache per output path though
-  std::string indexLocation;
   auto indexPath = myIndexPaths.find(outputDir);
 
   if (indexPath == myIndexPaths.end()) {
@@ -107,33 +109,35 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
 
   // Append code_index.fam always for fam (We decided this is less confusing in operations)
   outputDir = outputDir + "code_index.fam/"; // ...then put in subfolder of default output
+} // FMLRecordNotifier::getOutputFolder
 
-  // Construct fml filename from the selections string
-  const std::vector<std::string>& s = rec.getSelections();
-  std::stringstream filename;
+void
+FMLRecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& m)
+{
+  // Promote the message to a record, send it on it's way
+  Record r(m);
 
-  filename << s[0];
-  for (size_t i = 1; i < s.size(); ++i) {
-    filename << '_' << s[i];
-  }
+  writeRecord(outputParams, r);
+}
 
-  // Add sourcename to avoid data stomping with multi-radar output
-  const std::string sourceName = rec.getSourceName();
+void
+FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
+{
+  std::string outputDir, indexLocation;
 
-  if (!sourceName.empty()) {
-    filename << '_' << sourceName;
-  }
+  // Calculate the output folder location .../code_index.fml
+  getOutputFolder(outputParams, outputDir, indexLocation);
 
-  // First part of multi-write.  I'm gonna to append the factory
-  // to the end of the fml filename.  This won't work for multiple
-  // records from a single writer
-  const std::string dataSourceType = rec.getDataSourceType();
-
-  filename << '_' << dataSourceType << ".fml";
+  // ---------------------------------------------------
+  // Get the fml filename.
+  // std::stringstream filename;
+  // filename << rec.getIDString() << ".fml";
+  std::string filename = rec.getIDString() + ".fml";
 
   // Write record to tmp .fml file ------------------------------
   std::string tempDir = outputDir + ".working/"; // For file 'locking'
-  const std::string tmpfilename = tempDir + filename.str();
+  // const std::string tmpfilename = tempDir + filename.str();
+  const std::string tmpfilename = tempDir + filename;
   std::ofstream ofp;
 
   ofp.open(tmpfilename.c_str());
@@ -155,21 +159,20 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   // multiple items.  FAM just writes one
   // WDSSII breaking bad on this...plus guess XML doesn't want multiple head nodes?  Interesting
   //  ofp << "<meta>\n";
-  //  rec.constructXMLMeta(ofp);
+  //  ConfigRecord::constructXMLMeta(rec, ofp);
   //  ofp << "</meta>\n";
 
   ofp << "<item>\n";
-  rec.constructXMLString(ofp, indexLocation);
+  ConfigRecord::constructXMLString(rec, ofp, indexLocation);
   ofp << "</item>\n";
   ofp.close();
   // End write record to tmp .fml file --------------------------
 
   // Rename from tmp to final
-  const std::string outfilename = outputDir + filename.str();
+  const std::string outfilename = outputDir + filename;
   int result = rename(tmpfilename.c_str(), outfilename.c_str());
 
   if (result == 0) {
-    LogDebug("FML Notify File -->>" << outfilename << "\n");
     // -----------------------------------------------------------------------
     // Post write command on a written file (comes from postfml key)
     const std::string postCommand = outputParams["postfml"];

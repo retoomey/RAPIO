@@ -35,10 +35,9 @@ TimeDuration RAPIOAlgorithm::myMaximumHistory;
 void
 RAPIOAlgorithm::initializeOptions(RAPIOOptions& o)
 {
-
   // FIXME: These will become plugins too I think.  Eventually all algorithms/programs
   // will just declare plugin abilities.  Little by little
-  
+
   // All stock algorithms have a optional history setting.  We can overload this
   // in time
   // if more precision is needed.
@@ -183,16 +182,12 @@ RAPIOAlgorithm::execute()
 void
 RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 {
-  // FIXME: Should be able to do once on start up so move there
-  // Set the time mode for system.
-  Time::setArchiveMode(!isDaemon());
+  // Always just keep the latest data time as 'current time'
+  // for archive.  Or real clock in real time.
+  Time::setLatestDataTime(rec.getTime());
 
-  if (rec.getSelections().back() == "EndDataset") {
-    handleEndDatasetEvent();
-  } else {
-    // Always just keep the latest data time
-    Time::setLatestDataTime(rec.getTime());
-
+  // Handle 'data' messages/records with filenames
+  if (rec.isData()) {
     purgeTimeWindow();
 
     RAPIOData d(rec);
@@ -203,6 +198,12 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 
     // Now the algorithm can also process if wanted
     processNewData(d);
+  }
+
+  // Handle messages.  Note: It is intended that a data
+  // record with added messages get sent here.
+  if (rec.isMessage()) {
+    processNewMessage(rec);
   }
 }
 
@@ -259,6 +260,53 @@ RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& de
 }
 
 void
+RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
+  std::map<std::string, std::string>            & outputParams)
+{
+  // Try to make this a bit unique to avoid any stepping over issues from
+  // other algorithms.
+  auto m = m_in; // FIXME: possibly wasteful.  Not wanting to set the
+  // source by default though.
+  std::stringstream n;
+
+  n << "M_" << OS::getHostName() << "_" << OS::getProcessName(true) << "_" << OS::getProcessID();
+  m.setSourceName(n.str());
+
+  // We need output folders to send the message to.  For now, assuming
+  // each product output location.  However each IODataType can generate this
+  // with handleCommandParam.  Since we're not writing a DataType we don't
+  // have the subclass.  The only one currently different is the IOPython, which
+  // splits the field up.
+  // FIXME: I think when we 'eventually' refactor the -i -O we will have
+  // to revisit this. Or we do a clean up pass/api improvement here.
+  //
+  const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
+
+  for (auto& w:writers) {
+    // Hardset writer to one only...this requires a writer=/path in -o to work
+    // For example 2D fusion forces hmrg binary by -o hmrg=/path and setting onewriter to hmrg
+    if (!outputParams["onewriter"].empty()) {
+      if (w.factory != outputParams["onewriter"]) {
+        continue;
+      }
+    }
+    outputParams["outputfolder"] = w.outputinfo; // Hack: w.outputinfo is processed by handleCommandParam
+
+    // Send to each notifier.  Let the notifier promote to record if wanted
+    for (auto& n:PluginNotifier::theNotifiers) {
+      n->writeMessage(outputParams, m);
+    }
+
+    // Path with datatype, setting outputfolder per output info:
+    // IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
+    //    --> write1(dt, outputinfo, records, f, outputParams);
+    //    auto encoder  = getFactory(f, outputinfo, dt);
+    //    encoder->writeout(dt, outputinfo, records, f, outputParams);
+    //    encoder->handleCommandParam(outputinfo);
+  }
+} // RAPIOAlgorithm::writeOutputMessage
+
+void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType>                         outputData,
   std::map<std::string, std::string>                & outputParams)
@@ -282,7 +330,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       outputData->setTypeName(newProductName);
     }
 
-    // Can call write multiple times for each output wanted.
     const auto& writers = ConfigParamGroupo::getWriteOutputInfo();
     for (auto& w:writers) {
       // Hardset writer to one only...this requires a writer=/path in -o to work
@@ -293,6 +340,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
         }
       }
 
+      // Can call write multiple times for each output wanted.
       std::vector<Record> records;
       const bool success = IODataType::write(outputData, w.outputinfo, records, w.factory, outputParams);
 

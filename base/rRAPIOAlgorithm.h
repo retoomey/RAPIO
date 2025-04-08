@@ -55,6 +55,20 @@ public:
   virtual void
   handleEndDatasetEvent();
 
+  /** Write message */
+  virtual void
+  writeOutputMessage(const Message    & m,
+    std::map<std::string, std::string>& outputParams);
+
+  /** Write message with empty overrides */
+  virtual void
+  writeOutputMessage(const Message& m)
+  {
+    std::map<std::string, std::string> outputParams;
+
+    writeOutputMessage(m, outputParams);
+  }
+
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void

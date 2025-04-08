@@ -72,7 +72,7 @@ DataType::generateFileName(
   { "{datatype}", "{/subtype}", "{_subtype}", "{subtype}", "{time}", "{source}", "{/source}" };
   const std::string sub1       = subType.empty() ? ("") : ('/' + subType);
   const std::string sub2       = subType.empty() ? ("") : ('_' + subType);
-  const std::string time       = rsTime.getString(Record::RECORD_TIMESTAMP);
+  const std::string time       = rsTime.getString(Message::RECORD_TIMESTAMP);
   const std::string source2    = sourcename.empty() ? ("") : ('/' + sourcename);
   std::vector<std::string> tos =
   { dataType, sub1, sub2, subType, time, sourcename, source2 };
@@ -97,9 +97,9 @@ DataType::generateRecord(
   std::string sfilepath = pathin.getBaseName();
 
   const rapio::Time rsTime      = getTime();
-  const std::string time_string = rsTime.getString(Record::RECORD_TIMESTAMP);
+  const std::string time_string = rsTime.getString(Message::RECORD_TIMESTAMP);
   const std::string dataType    = getTypeName();
-  const std::string spec        = getSubType();
+  const std::string subType     = getSubType();
 
   // Create record params
   std::vector<std::string> params;
@@ -113,15 +113,7 @@ DataType::generateRecord(
   // FIXME: We need absolute path here, or the indexlocation thing.
   params.push_back(filepath);
 
-  // Create record selections
-  std::vector<std::string> selections;
-
-  selections.push_back(time_string);
-  selections.push_back(dataType);
-  if (!spec.empty()) {
-    selections.push_back(spec);
-  }
-  Record rec(params, selections, rsTime);
+  Record rec(params, factory, rsTime, dataType, subType);
 
   std::string source;
 
