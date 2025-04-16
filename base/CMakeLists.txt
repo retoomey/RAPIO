@@ -7,9 +7,7 @@
 # this means when we add a file we have to force cmake
 # to recognize the change so for now we'll hard list the files
 # ls -1 *.h
-set(HEADER_FILES
-${CMAKE_CURRENT_BINARY_DIR}/RAPIO.h
-${CMAKE_CURRENT_BINARY_DIR}/config.h
+set(RELATIVE_HEADERS
 ccronexpr.h
 rAlgConfigFile.h
 rAlgorithm.h
@@ -302,11 +300,27 @@ target_link_libraries(rapio
   PUBLIC dl
 )
 
-# Install the RAPIO headers
+# Declare the RAPIO headers for installation
+target_include_directories(rapio PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/rapio>
+)
+
+# Make absolute for top level install
+foreach(hdr IN LISTS RELATIVE_HEADERS)
+  list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${hdr}")
+endforeach()
+# Add the webserver header from webserver
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/server_http.hpp")
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/asio_compatibility.hpp")
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/mutex.hpp")
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/utility.hpp")
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/status_code.hpp")
+
+# Add the created headers
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_BINARY_DIR}/RAPIO.h")
+list(APPEND HEADER_FILES "${CMAKE_CURRENT_BINARY_DIR}/config.h")
+
 set_target_properties(rapio PROPERTIES
   PUBLIC_HEADER "${HEADER_FILES}"
-)
-install(TARGETS rapio
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/rapiobase
-  LIBRARY DESTINATION ${RAPIO_INSTALL_LIB}
 )

@@ -110,22 +110,32 @@ endfunction()
 
 # Function for generating the global RAPIO.h list
 # We flatten the directories into RAPIO.h and add to RAPIO_INCLUDE_DIRS
-function(append_RAPIO_HEADER FOLDER)
+function(append_RAPIO_HEADERS FOLDER FILE_LIST)
 
-  # Add flat contents of directory to the RAPIO.h header
+  # Compute full path to the header directory
   set(PUBLIC_HEADER_BASE "${CMAKE_CURRENT_SOURCE_DIR}/${FOLDER}")
   set(PUBLIC_HEADERS "${PUBLIC_HEADERS}// Headers from ${FOLDER}\n")
-  file(GLOB PUBLIC_HEADERS_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
-  foreach(filename ${PUBLIC_HEADERS_LIST})
+
+  foreach(filename ${FILE_LIST})
     set(PUBLIC_HEADERS "${PUBLIC_HEADERS}#include \"${filename}\"\n")
   endforeach()
+
+  # Expose results to parent scope
   set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
 
-  # Append the new directory to RAPIO_INCLUDE_DIRS
-  # Note: Incorrect way: list(APPEND RAPIO_INCLUDE_DIRS "${PUBLIC_HEADER_BASE}" PARENT_SCOPE)
   list(APPEND RAPIO_INCLUDE_DIRS "${PUBLIC_HEADER_BASE}")
   set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
 
+message(STATUS "${RAPIO_INCLUDE_DIRS}")
+endfunction()
+
+# Add .h files in a folder to the RAPIO.h and includes
+function(append_RAPIO_HEADERS_GLOB_H FOLDER)
+  set(PUBLIC_HEADER_BASE "${CMAKE_CURRENT_SOURCE_DIR}/${FOLDER}")
+  file(GLOB FILE_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
+  append_RAPIO_HEADERS("${FOLDER}" "${FILE_LIST}")
+  set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
+  set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
 endfunction()
 
 # Generate a config.h (note this goes into the build so it's unique per build)
@@ -138,6 +148,7 @@ configure_file(base/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/config.h @ONLY)
 
 # Define CMAKE_INSTALL_LIBDIR, INCLUDEDIR, etc.
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Our package modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -154,9 +165,9 @@ else()
   # versions of supporting libraries that have to be a particular version.  We don't
   # want these to change if IT patches a system, etc.
   cmake_policy(SET CMP0060 NEW)
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-  set(RAPIO_INSTALL_LIB "${CMAKE_INSTALL_PREFIX}/lib")
+  set(RAPIO_INSTALL_LIB "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   # Give the third party build folder search location to my packages
   # If you replace the FindNetcdf say then force the include/lib here
@@ -166,7 +177,7 @@ else()
   # Use the ZLIB built in module and tell it to hunt local
   set(ZLIB_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
   cmake_policy(SET CMP0074 NEW)
-  set(ZLIB_ROOT "${CMAKE_INSTALL_PREFIX}/lib")
+  set(ZLIB_ROOT "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   # Use Jasper built in module
   #set(JASPER_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include;/usr/include")
@@ -253,13 +264,15 @@ endif(Snappy_FOUND)
 ###########################################################################
 # Creating RAPIO_INCLUDE_DIRS and RAPIO.h
 #
-append_RAPIO_HEADER("base/")
-append_RAPIO_HEADER("base/config/")
-append_RAPIO_HEADER("base/watcher/")
-append_RAPIO_HEADER("base/index/")
-append_RAPIO_HEADER("base/notifier/")
-append_RAPIO_HEADER("base/datatype/")
-append_RAPIO_HEADER("base/plugin/")
+append_RAPIO_HEADERS_GLOB_H("base/")
+append_RAPIO_HEADERS_GLOB_H("base/config/")
+append_RAPIO_HEADERS_GLOB_H("base/watcher/")
+append_RAPIO_HEADERS_GLOB_H("base/index/")
+append_RAPIO_HEADERS_GLOB_H("base/notifier/")
+append_RAPIO_HEADERS_GLOB_H("base/datatype/")
+append_RAPIO_HEADERS_GLOB_H("base/plugin/")
+# Bleh.
+append_RAPIO_HEADERS("webserver/" "server_http.hpp;asio_compatibility.hpp;mutex.hpp;utility.hpp;status_code.hpp")
 
 append_RAPIO("${ZLIB_INCLUDE_DIRS}" "${ZLIB_LIBRARIES}")
 append_RAPIO("${BZip2_INCLUDE_DIRS}" "${BZip2_LIBRARIES}")
@@ -423,6 +436,45 @@ if (BUILD_WEB_MODULE)
   )
   # Bad: add_subdirectory(webexample)
 endif (BUILD_WEB_MODULE)
+
+# Install the library and headers from the base library
+# Supposedly best practice is to do it top level.
+# GNU will pick lib or lib64 for the install folder depending on OS
+install(TARGETS rapio
+  EXPORT rapioTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for static libs, if any
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}  # for Windows
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rapio
+)
+
+
+# ---------------------------------------------------
+# Create cmake files for find_package
+#
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/rapioConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/rapioConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rapio
+)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/rapioConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(EXPORT rapioTargets
+  FILE rapioTargets.cmake
+  NAMESPACE rapio::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rapio
+)
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/rapioConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/rapioConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rapio
+)
+# ---------------------------------------------------
 
 # Dump final notes
 get_property(FINAL_RAPIO_MESSAGE GLOBAL PROPERTY FINAL_RAPIO_MESSAGE)

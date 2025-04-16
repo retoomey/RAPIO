@@ -8,10 +8,8 @@
 #include <mutex>
 #include <queue>
 
-// We can do a local include here since this is a header only library
-// if installed, algorithms won't have this header, that's ok
-// right now we'll provide our own interface
-#include "../webserver/server_http.hpp"
+// From the webserver folder 
+#include "server_http.hpp"
 
 using namespace std;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
