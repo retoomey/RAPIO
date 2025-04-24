@@ -6,8 +6,7 @@
 #include "rError.h"
 #include "rIOURL.h"
 #include "rOS.h"
-
-#include <boost/property_tree/json_parser.hpp>
+#include "rBOOST.h"
 
 using namespace rapio;
 

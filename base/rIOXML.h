@@ -5,9 +5,8 @@
 #include <rIODataType.h>
 #include <rPTreeData.h>
 #include "rDataGrid.h"
+#include <rBOOST.h>
 #include <memory>
-
-#include <boost/property_tree/ptree.hpp>
 
 namespace rapio {
 class URL;

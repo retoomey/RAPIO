@@ -87,6 +87,7 @@ Information needed:
     <file suffix="txt" io="text"/>
     <file suffix="grib2" io="grib"/>
     <file suffix="gb2" io="grib"/>
+    <file suffix="grb2" io="grib"/>
   </suffixes>
 
 <!-- Settings for the built in XML reader --> 

@@ -3,13 +3,11 @@
 #include <rData.h>
 #include <rConstants.h>
 #include <rError.h>
+#include <rBOOST.h>
 
 #include <map>
 #include <string>
 #include <memory>
-
-#include <boost/any.hpp>
-#include <boost/optional.hpp>
 
 namespace rapio {
 class Time;

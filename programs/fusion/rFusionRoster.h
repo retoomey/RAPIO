@@ -92,7 +92,7 @@ public:
 
   /** Declare extra command line plugins */
   virtual void
-  declarePlugins();
+  declarePlugins() override;
 
   /** Declare all algorithm options */
   virtual void

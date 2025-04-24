@@ -1,10 +1,7 @@
 #pragma once
 
 #include <rData.h>
-
-#include <boost/bimap.hpp>
-#include <boost/bimap/set_of.hpp>
-#include <boost/bimap/multiset_of.hpp>
+#include <rBOOST.h>
 
 #include <map>
 

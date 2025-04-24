@@ -16,6 +16,9 @@
 #include <algorithm>
 #include <iostream>
 
+// Generated header
+#include "config.h"
+
 using namespace rapio;
 using namespace std;
 
@@ -875,6 +878,11 @@ RAPIOOptions::dumpHeaderLine()
   // std::string built = ColorTerm::bold("Binary Built:"+std::string(__DATE__) + "
   // " + __TIME__;
   // wrapWithIndent(0, 0, built);
+  // FIXME: Maybe we make this in settings, use a token string
+  // Right now with various compilers, etc. this is useful
+  std::string built = " (" + std::string(COMPILER_NAME) + " " + COMPILER_VERSION + " C++" + CXX_VERSION
+    + " " + BUILD_DATE + " " + BUILD_TIME + " UTC)";
+  ColorTerm::wrapWithIndent(0, 0, built);
 }
 
 void
