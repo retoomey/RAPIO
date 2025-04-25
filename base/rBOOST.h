@@ -15,9 +15,21 @@
 // Suppress Clang warning for enum constexpr conversions
 // This causes errors and breaks the build.  We don't have
 // much control over boost internals
+// #if defined(__clang__)
+// # pragma clang diagnostic push
+// # pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+// #elif defined(__GNUC__) && !defined(__clang__)
+// # pragma GCC diagnostic push
+// #endif
+
 #if defined(__clang__)
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+// Only ignore the warning if Clang is new enough to support it
+# if __clang_major__ >= 17
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+# else
+#  pragma clang diagnostic push
+# endif
 #elif defined(__GNUC__) && !defined(__clang__)
 # pragma GCC diagnostic push
 #endif

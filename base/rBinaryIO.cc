@@ -294,20 +294,18 @@ FileStreamBuffer::readChar()
 std::string
 FileStreamBuffer::readString(size_t length)
 {
-  // Create a string with the exact size (uninitialized storage)
-  std::string name(length + 1, '\0'); // Initializes string with `length` zero bytes
+  std::string name(length, '\0'); // Allocate exact size
+  size_t bytesRead = fread(&name[0], 1, length, file);
 
-  // Read into the string's underlying buffer
-  const size_t bytesRead = fread(&name[0], 1, length, file);
-
-  // Find the first occurrence of '\0'
-  auto pos = std::find_first_of(name.begin(), name.begin() + bytesRead, "\0", "\0" + 1);
-
-  // Resize the string to remove trailing zero bytes if found
-  if (pos != name.end()) {
-    name.resize(std::distance(name.begin(), pos)); // Shrink to the first zero byte
+  if (bytesRead == 0) {
+    return { }; // Return empty string on EOF or error
   }
 
+  // Find first null terminator in read portion
+  auto pos = std::find(name.begin(), name.begin() + bytesRead, '\0');
+
+  // Trim string to before null terminator if found
+  name.resize(std::distance(name.begin(), pos));
   return name;
 }
 

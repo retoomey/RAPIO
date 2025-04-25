@@ -69,7 +69,8 @@ public:
   #endif // ifdef MEM_CHECK
 
   /** Default Constructor with optional predeclared size */
-  DataStore<T>(size_t aSize = 0){
+  DataStore(size_t aSize = 0)
+  {
     if (aSize > 0) {
       d = (T *) malloc(sizeof(T) * aSize);
       s = aSize;
@@ -91,7 +92,7 @@ public:
   }
 
   /** Constructor where default fill value is provided */
-  DataStore<T>(size_t aSize, T v) : DataStore(aSize)
+  DataStore(size_t aSize, T v) : DataStore(aSize)
   {
     std::fill(begin(), end(), v);
   }
@@ -154,7 +155,7 @@ public:
    * C++ standard copy constructor will just value copy
    * each field, causing our d pointer to be double deleted
    * ...so we need to make sure our memory is unique */
-  DataStore<T>(const DataStore<T> &o)
+  DataStore(const DataStore<T> &o)
   {
     if (o.s > 0) {
       d = (T *) malloc(sizeof(T) * o.s);
@@ -174,7 +175,7 @@ public:
   }
 
   /** C++03 COPY assignment operator */
-  DataStore<T>&
+  DataStore&
   operator = (const DataStore<T>& o)
   {
     // DataStore<float> a(50000)
@@ -200,7 +201,7 @@ public:
   // C++11
 
   /** C++11 Move Constructor */
-  DataStore<T>(DataStore<T> && other)
+  DataStore(DataStore<T> && other)
   {
     // Steal other's resources
     d = other.d;
@@ -211,9 +212,8 @@ public:
     other.s = 0;
   }
 
-
   /** C++11 Move Assignment Operator */
-  DataStore<T>&
+  DataStore&
   operator = (DataStore<T>&& o)
   {
     if (this != &o) {
