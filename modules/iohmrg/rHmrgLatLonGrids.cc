@@ -27,18 +27,18 @@ HmrgLatLonGrids::read(
   std::map<std::string, std::string>& keys,
   std::shared_ptr<DataType>         dt)
 {
-  gzFile fp = IOHmrg::keyToGZFile(keys);
+  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
 
-  if (fp != nullptr) {
+  if (g != nullptr) {
     int dataYear;
     try{
       dataYear = std::atoi(keys["DataYear"].c_str());
     }catch (...) {
       dataYear = Time().getYear();
     }
-    return readLatLonGrids(fp, dataYear, true);
+    return readLatLonGrids(*g, dataYear);
   } else {
-    LogSevere("Invalid gzfile pointer, cannot read\n");
+    LogSevere("Invalid stream buffer pointer, cannot read\n");
   }
   return nullptr;
 }
@@ -49,26 +49,23 @@ HmrgLatLonGrids::write(
   std::map<std::string, std::string>& keys)
 {
   bool success = false;
-  gzFile fp    = IOHmrg::keyToGZFile(keys);
+  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
 
-  if (fp != nullptr) {
+  if (g != nullptr) {
     auto latlonarea = std::dynamic_pointer_cast<LatLonArea>(dt);
     if (latlonarea != nullptr) {
-      success = writeLatLonGrids(fp, latlonarea);
+      success = writeLatLonGrids(*g, latlonarea);
     }
   } else {
-    LogSevere("Invalid gzfile pointer, cannot write\n");
+    LogSevere("Invalid stream buffer pointer, cannot write\n");
   }
 
   return success;
 }
 
 std::shared_ptr<DataType>
-HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
+HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
 {
-  GzipFileStreamBuffer g(fp);
-  g.setDataLittleEndian();
-
   // Time
   Time time = g.readTime(year);
 
@@ -107,12 +104,11 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   const float lonNWDegs = lonNWDegs1 - (.5 * lonSpacingDegs);
   const float latNWDegs = latNWDegs1 + (.5 * latSpacingDegs);
 
-
   // Read the height levels, scaled by Z_scale
   std::vector<int> levels;
 
   levels.resize(num_z);
-  gzread(fp, &levels[0], num_z * sizeof(int));
+  g.readVector(&levels[0], num_z * sizeof(int));
 
   const int z_scale = g.readInt();
   std::vector<float> heightMeters;
@@ -126,7 +122,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   std::vector<int> placeholder;
 
   placeholder.resize(10);
-  gzread(fp, &placeholder[0], 10 * sizeof(int));
+  g.readVector(&placeholder[0], 10 * sizeof(int));
 
   // Get the variable name and units
   std::string varName = g.readString(20);
@@ -161,8 +157,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   // Common code here with Radial
   std::vector<short int> rawBuffer;
 
-  // FIXME: will probably remove at some point
-  if (debug) {
+#if 0
     for (size_t i = 0; i < numRadars; i++) {
       LogDebug("   Got radar '" << radars[i] << "'\n");
     }
@@ -182,6 +177,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
       LogDebug("  Spacing is " << latSpacingDegs << ", " << lonSpacingDegs << "\n");
     }
   }
+#endif
 
   LLH location(latNWDegs, lonNWDegs, heightMeters[0] / 1000.0); // takes kilometers...
 
@@ -194,7 +190,7 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
   int count = num_x * num_y * num_z;
 
   rawBuffer.resize(count);
-  ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+  g.readVector(&rawBuffer[0], count * sizeof(short int)); // FIXME: vector doesn't check endian right?
 
   // Handle single layer
   size_t at = 0;
@@ -281,17 +277,30 @@ HmrgLatLonGrids::readLatLonGrids(gzFile fp, const int year, bool debug)
 } // IOHmrg::readLatLonGrid
 
 bool
-HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
+HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> llgp)
 {
   bool success = false;
+  auto& llg = *llgp;
 
-  // FIXME: Get from lookup table.  I think lookup table needs refactor at some point
-  // We could also use keys to pass these down
-  const int dataMissingValue = -99;
-  const int dataScale        = 10;
+  // ------------------------------------------------------------------
+  // Lookup table information to get scaling, etc.
+  // and convert W2 to MRMS binary fields
+  // This pulls from the table, but in theory we 'should' make this in
+  // out parameter map to allow writers to manually override.
+  // FIXME: become a function probably. Shared with radial set
+  std::string units = llg.getUnits();
+  std::string typeName = llg.getTypeName();
+  std::string name     = typeName; // name used
+
+  // Defaults if missing in table
+  int dataMissingValue = -99;
+  int dataNCValue      = -999;
+  int dataScale        = 10;
+
+  // --------------------------
+  // FIXME: Not 100% sure what these represent, we'll tweak later
   const int map_scale        = 1000;
   const int z_scale = 1;
-  // FIXME: Not 100% sure what these represent, we'll tweak later
   const float lat1 = 30;      // FIXME: what is this?  Calculate these properly
   const float lat2 = 60;      // FIXME: what is this?
   const float lon  = -60.005; // FIXME: what is this?
@@ -299,25 +308,39 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
   // Values appear fixed, not sure they matter much, they only compress a couple values
   const int xy_scale  = 1000; // Not used?
   const int dxy_scale = 100000;
+  // --------------------------
 
-  auto& llg = *llgp;
+  ProductInfo* pi = IOHmrg::getProductInfo(typeName, units);
+  if (pi != nullptr){
+     LogInfo("(Found) MRMS binary product info for " << typeName << "/" << units << "\n");
+     name = pi->varName;
+     units = pi->varUnit;
+     dataMissingValue = pi->varMissing;
+     dataNCValue = pi->varNoCoverage;
+     dataScale = pi->varScale;
+     // FIXME: use the w2missing and w2unavailable table values for replace?
+  }else{
+     LogInfo("No mrms binary product info for " << typeName << ", using defaults\n");
+  }
+  // End field conversion
+  // ------------------------------------------------------------------
 
   // Time
-  BinaryIO::writeTime(fp, llg.getTime());
+  g.writeTime(llg.getTime());
 
   // Dimensions
   const int num_y = llg.getNumLats();
   const int num_x = llg.getNumLons();
   const int num_z = llg.getNumLayers(); // LLG is 1, LLHG can be 1 or more
 
-  BinaryIO::writeInt(fp, num_x);
-  BinaryIO::writeInt(fp, num_y);
-  BinaryIO::writeInt(fp, num_z);
+  g.writeInt(num_x);
+  g.writeInt(num_y);
+  g.writeInt(num_z);
 
   // Projection
   const std::string projection = "LL  ";
 
-  BinaryIO::writeChar(fp, projection, 4);
+  g.writeString(projection, 4);
 
   // Calculate scaled lat/lon spacing values
   const float lonSpacingDegs = llg.getLonSpacing();
@@ -335,66 +358,55 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
   const float lonNWDegs1 = lonNWDegs + (.5 * lonSpacingDegs); // -94.995;
   const float latNWDegs1 = latNWDegs - (.5 * latSpacingDegs); // 37.495;
 
-  BinaryIO::writeInt(fp, map_scale);
-  BinaryIO::writeScaledInt(fp, lat1, map_scale);
-  BinaryIO::writeScaledInt(fp, lat2, map_scale);
-  BinaryIO::writeScaledInt(fp, lon, map_scale);
-  BinaryIO::writeScaledInt(fp, lonNWDegs1, map_scale);
-  BinaryIO::writeScaledInt(fp, latNWDegs1, map_scale);
+  g.writeInt(map_scale);
+  g.writeScaledInt(lat1, map_scale);
+  g.writeScaledInt(lat2, map_scale);
+  g.writeScaledInt(lon, map_scale);
+  g.writeScaledInt(lonNWDegs1, map_scale);
+  g.writeScaledInt(latNWDegs1, map_scale);
 
-  BinaryIO::writeInt(fp, xy_scale);
-  BinaryIO::writeInt(fp, temp1);
-  BinaryIO::writeInt(fp, temp2);
-  BinaryIO::writeInt(fp, dxy_scale);
+  g.writeInt(xy_scale);
+  g.writeInt(temp1);
+  g.writeInt(temp2);
+  g.writeInt(dxy_scale);
 
   const auto layerSize = llg.getNumLayers();
 
   for (size_t h = 0; h < layerSize; h++) {
     float aHeightMeters = llg.getLayerValue(h);
-    BinaryIO::writeInt(fp, aHeightMeters * z_scale);
+    // FIXME: Humm aren't these just scaled int writes?
+    g.writeInt(aHeightMeters * z_scale);
+    // g.writeScaledInt(aHeightMeters, z_scale);
   }
-  BinaryIO::writeInt(fp, z_scale);
+  g.writeInt(z_scale);
 
-  // Write the placeholder array
-  std::vector<int> placeholder;
-
-  placeholder.resize(10);
-  ERRNO(gzwrite(fp, &placeholder[0], 10 * sizeof(int)));
-
-  // Convert W2 names to HMRG names
-  std::string typeName = llg.getTypeName();
-  std::string name     = typeName;
-
-  IOHmrg::W2ToHmrgName(name, name);
+  // Write the placeholder array of 10
+  // I think we could use this to 'extend' the format if wanted
+  for(size_t p=0; p<10; ++p){
+    g.writeInt(0);
+  }
 
   // Write the variable name and units
-  std::string varUnit = llg.getUnits();
+  g.writeString(name, 20);
+  g.writeString(units, 6);
+  g.writeInt(dataScale);
+  g.writeInt(dataMissingValue);
 
-  BinaryIO::writeChar(fp, name, 20);
-  BinaryIO::writeChar(fp, varUnit, 6);
-
-  BinaryIO::writeInt(fp, dataScale);
-
-  BinaryIO::writeInt(fp, dataMissingValue);
-
+#if 0
   LogDebug("Convert: " << typeName << " to " << name << "\n");
-  LogDebug("Output units is " << varUnit << "\n");
+  LogDebug("Output units is " << units << "\n");
   LogDebug("   LatLons: " << lonSpacingDegs << ", " << latSpacingDegs << ", " << lonNWDegs1 << ", "
                           << latNWDegs1 << ", " << lonNWDegs << ", " << latNWDegs << "\n");
-
-  // Scaled versions
-  const int dataMissing = dataMissingValue * dataScale;
-
-  const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
+#endif
 
   // Write number and names of contributing radars
   // Leaving this none for now.  We could use attributes in the LatLonGrid
   // to store this on a read to perserve anything from incoming mrms binary files
   // Also, W2 netcdf could use this ability to be honest
-  BinaryIO::writeInt(fp, 1);
+  g.writeInt(1);
   std::string radar = "none";
 
-  BinaryIO::writeChar(fp, radar, 4);
+  g.writeString(radar, 4);
 
   // Write in the data from LatLonGrid
   // For now convert which eats some ram for big stuff.  I think we could
@@ -407,9 +419,6 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
 
   // FIXME: Make configurable. Alpha: Add write block ability due to having to write pretty
   // large grids, and this avoids doubling RAM usage. Well have to test this more
-  // FIXME: Make a buffer object stream to hide all these details I think.  The only issue
-  // is it would require one extra jump per item.  Something like:
-  // hmrgOutBuffer(fp, maxsize); buff << value; buff.finalize();
   std::vector<short int> rawBuffer;
   const size_t maxItems = 524288; // Max items to write at once, here about 1 MB per 500K items
 
@@ -423,6 +432,9 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
   // Various classes we support writing. FIXME: Should probably use specializer API and
   // break up this code that way instead.
 
+  const int dataMissing = dataMissingValue * dataScale; // prescaled for speed
+  const int dataUnavailable = dataNCValue * dataScale;  // prescaled for speed
+
   if (auto llgptr = std::dynamic_pointer_cast<LatLonGrid>(llgp)) {
     LogInfo("HMRG writer: --LatLonGrid--\n");
     auto& data = llg.getFloat2DRef(Constants::PrimaryDataName);
@@ -432,13 +444,13 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
       for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
         rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
         if (++at >= count) {
-          ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+          g.writeVector(rawBuffer.data(), count * sizeof(short int));
           at = 0;
         }
       }
     }
     if (at != 0) { // final left over
-      ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
+      g.writeVector(rawBuffer.data(), at * sizeof(short int));
     }
     success = true;
   } else if (auto llnptr = std::dynamic_pointer_cast<LLHGridN2D>(llgp)) {
@@ -447,21 +459,21 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
 
     for (size_t z = 0; z < num_z; ++z) {
       // Each 3D is a 2N layer here
-      auto g     = lln.get(z);
-      auto& data = g->getFloat2DRef();
+      auto llg     = lln.get(z);
+      auto& data = llg->getFloat2DRef();
 
       for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
         for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
           rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
           if (++at >= count) {
-            ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+            g.writeVector(rawBuffer.data(), count * sizeof(short int));
             at = 0;
           }
         }
       }
     }
     if (at != 0) { // final left over
-      ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
+      g.writeVector(rawBuffer.data(), at * sizeof(short int));
     }
     success = true;
   } else if (auto llhgptr = std::dynamic_pointer_cast<LatLonHeightGrid>(llgp)) {
@@ -477,14 +489,14 @@ HmrgLatLonGrids::writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> llgp)
         for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
           rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
           if (++at >= count) {
-            ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int)));
+            g.writeVector(rawBuffer.data(), count * sizeof(short int));
             at = 0;
           }
         }
       }
     }
     if (at != 0) { // final left over
-      ERRNO(gzwrite(fp, &rawBuffer[0], at * sizeof(short int)));
+      g.writeVector(rawBuffer.data(), at * sizeof(short int));
     }
     success = true;
   } else {

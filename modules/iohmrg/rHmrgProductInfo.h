@@ -69,15 +69,13 @@ public:
   void
   readConfigFile();
 
+  /** Get the product info based on fields */
+  ProductInfo* getProductInfo(const std::string& varName, const std::string& units);
+
   /** Give back W2 info based on passed in HMRG */
   bool
   HmrgToW2Name(const std::string& varName,
     std::string                 & outW2Name);
-
-  /** Give back HMRG info based on passed in W2 */
-  bool
-  W2ToHmrgName(const std::string& varName,
-    std::string                 & outHmrgName);
 
   /** Print the table for debugging */
   void

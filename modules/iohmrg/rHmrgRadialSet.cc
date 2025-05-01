@@ -23,13 +23,13 @@ HmrgRadialSet::read(
   std::map<std::string, std::string>& keys,
   std::shared_ptr<DataType>         dt)
 {
-  gzFile fp = IOHmrg::keyToGZFile(keys);
+  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
 
-  if (fp != nullptr) {
+  if (g != nullptr) {
     std::string radarName = keys["RadarName"];
-    return readRadialSet(fp, radarName, true);
+    return readRadialSet(*g, radarName);
   } else {
-    LogSevere("Invalid gzfile pointer, cannot read\n");
+    LogSevere("Invalid stream buffer pointer, cannot read\n");
   }
   return nullptr;
 }
@@ -40,25 +40,23 @@ HmrgRadialSet::write(
   std::map<std::string, std::string>& keys)
 {
   bool success = false;
-  gzFile fp    = IOHmrg::keyToGZFile(keys);
+  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
 
-  if (fp != nullptr) {
+  if (g != nullptr) {
     auto radialSet = std::dynamic_pointer_cast<RadialSet>(dt);
     if (radialSet != nullptr) {
-      success = writeRadialSet(fp, radialSet);
+      success = writeRadialSet(*g, radialSet);
     }
   } else {
-    LogSevere("Invalid gzfile pointer, cannot write\n");
+    LogSevere("Invalid stream buffer pointer, cannot write\n");
   }
 
   return success;
 }
 
 std::shared_ptr<DataType>
-HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug)
+HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
 {
-  GzipFileStreamBuffer g(fp);
-  g.setDataLittleEndian();
 
   // name passed in was used to check type
   const int headerScale      = g.readInt();                    // 5-8
@@ -114,7 +112,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   // RAPIO types
   LLH center(radarLatDegs, radarLonDegs, radarMSLmeters); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
 
-  if (debug) {
+#if 0
     LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
     LogDebug("   Scale is " << headerScale << "\n");
     LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
@@ -128,7 +126,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
                                                                    << gateSpacingMeters << "\n");
     LogDebug("   Name and units: '" << name << "' and '" << units << "'\n");
     LogDebug("   Data scale and missing value: " << dataScale << " and " << dataMissingValue << "\n");
-  }
+#endif
 
   // Read the data right?  Buffer the short ints we'll have to unscale them into the netcdf
   // We'll handle endian swapping in the convert loop.  So these shorts 'could' be flipped if
@@ -139,7 +137,7 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
   std::vector<short int> rawBuffer;
 
   rawBuffer.resize(count);
-  ERRNO(gzread(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+  g.readVector(&rawBuffer[0], count * sizeof(short int));
 
   auto radialSetSP = RadialSet::Create(name, units, center, dataTime, elevAngleDegs, distanceToFirstGateMeters,
       gateSpacingMeters, num_radials, num_gates);
@@ -199,13 +197,42 @@ HmrgRadialSet::readRadialSet(gzFile fp, const std::string& radarName, bool debug
 } // IOHmrg::readRadialSet
 
 bool
-HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
+HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radialsetp)
 {
   bool success = false;
+  auto& radialset        = *radialsetp;
+
+  // ------------------------------------------------------------------
+  // Lookup table information to get scaling, etc.
+  // and convert W2 to MRMS binary fields
+  // This pulls from the table, but in theory we 'should' make this in
+  // out parameter map to allow writers to manually override.
+  // FIXME: become a function probably. Shared with radial set
+  std::string units = radialset.getUnits();
+  std::string typeName = radialset.getTypeName();
+  std::string name     = typeName; // name used
+
+  // Defaults if missing in table
+  int dataMissingValue = -99;
+  int dataNCValue      = -999;
+  int dataScale        = 10; // radial default
+
+  ProductInfo* pi = IOHmrg::getProductInfo(typeName, units);
+  if (pi != nullptr){
+     LogInfo("(Found) MRMS binary product info for " << typeName << "/" << units << "\n");
+     name = pi->varName;
+     units = pi->varUnit;
+     dataMissingValue = pi->varMissing;
+     dataNCValue = pi->varNoCoverage;
+     dataScale = pi->varScale;
+  }else{
+     LogInfo("No mrms binary product info for " << typeName << ", using defaults\n");
+  }
+  // End field conversion
+  // ------------------------------------------------------------------
 
   // HMRG radial sets have to have a starting azimuth and a delta that works for
   // all azimuths
-  auto& radialset        = *radialsetp;
   const auto num_radials = radialset.getNumRadials();
   const auto num_gates   = radialset.getNumGates();
   auto& azimuth = radialset.getFloat1DRef(RadialSet::Azimuth);
@@ -260,88 +287,72 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
   // FIXME: From the data, etc.
   const int headerScale = 100;
 
-  std::string radarName = "NONE";
-
-  radialset.getString("radarName-value", radarName); // FIXME: API getRadarName I think for clarity
-  std::string typeName = radialset.getTypeName();
-
-  // With the writer we want the radar name.
-  ERRNO(gzwrite(fp, &radarName[0], 4 * sizeof(unsigned char)));
+  // Get radar name or set to none if missing
+  std::string radarName = radialset.getRadarName();
+  if (radarName.empty()){
+    radarName = "NONE";
+  }
+  g.writeString(radarName, 4);
 
   // name passed in was used to check type
-  BinaryIO::writeInt(fp, headerScale);
+  g.writeInt(headerScale);
 
   auto loc = radialset.getLocation();
   auto radarMSLmeters = loc.getHeightKM() * 1000;
   auto radarLatDegs   = loc.getLatitudeDeg();
   auto radarLonDegs   = loc.getLongitudeDeg();
 
-  BinaryIO::writeScaledInt(fp, radarMSLmeters, headerScale); // 9-12
-  BinaryIO::writeFloat(fp, radarLatDegs);                    // 13-16
-  BinaryIO::writeFloat(fp, radarLonDegs);                    // 17-20
+  g.writeScaledInt(radarMSLmeters, headerScale); // 9-12
+  g.writeFloat(radarLatDegs);                    // 13-16
+  g.writeFloat(radarLonDegs);                    // 17-20
 
   // Time
-  BinaryIO::writeTime(fp, radialset.getTime());
+  g.writeTime(radialset.getTime());
 
   const float nyquest = 10;
 
-  BinaryIO::writeScaledInt(fp, nyquest, headerScale); // 45-48  // FIXME: Volume number?
+  g.writeScaledInt(nyquest, headerScale); // 45-48  // FIXME: Volume number?
 
-  int vcp = -99;
-  std::string vcpstr = "";
-
-  radialset.getString("vcp-value", vcpstr); // FIXME: API getVCP I think for clarity
-  try{
-    vcp = std::stoi(vcpstr);
-  }catch (const std::exception&) { }
-  BinaryIO::writeInt(fp, vcp); // 49-52
+  g.writeInt(radialset.getVCP()); // 49-52
 
   const int tiltNumber = 1; // FIXME: we could have an optional tiltNumber stored
 
-  BinaryIO::writeInt(fp, tiltNumber); // 53-56
+  g.writeInt(tiltNumber); // 53-56
 
   const float elevAngleDegs = radialset.getElevationDegs();
 
-  BinaryIO::writeScaledInt(fp, elevAngleDegs, headerScale); // 57-60
+  g.writeScaledInt(elevAngleDegs, headerScale); // 57-60
 
   // Get data
   auto& data = radialset.getFloat2DRef();
 
-  BinaryIO::writeInt(fp, num_radials); // 61-64
-  BinaryIO::writeInt(fp, num_gates);   // 65-68
-
-  BinaryIO::writeScaledInt(fp, firstAzimuthDegs, headerScale); // 69-72
-  BinaryIO::writeScaledInt(fp, azimuthResDegs, headerScale);   // 73-76
+  g.writeInt(num_radials); // 61-64
+  g.writeInt(num_gates);   // 65-68
+  g.writeScaledInt(firstAzimuthDegs, headerScale); // 69-72
+  g.writeScaledInt(azimuthResDegs, headerScale);   // 73-76
   const float distanceToFirstGateMeters = radialset.getDistanceToFirstGateM();
 
-  BinaryIO::writeScaledInt(fp, distanceToFirstGateMeters, headerScale); // 77-80
+  g.writeScaledInt(distanceToFirstGateMeters, headerScale); // 77-80
 
   // const float gateSpacingMeters =  10.0;
-  BinaryIO::writeScaledInt(fp, gateSpacingMeters, headerScale); // 81-84
+  g.writeScaledInt(gateSpacingMeters, headerScale); // 81-84
 
-  std::string name = typeName;
+  g.writeString(name, 20); // 85-104
 
-  IOHmrg::W2ToHmrgName(name, name);
-  LogInfo("Convert: " << typeName << " to " << name << "\n");
+  g.writeString(units, 6); // 105-110
 
-  BinaryIO::writeChar(fp, name, 20); // 85-104
+  g.writeInt(dataScale);
 
-  name = radialset.getUnits();
-  BinaryIO::writeChar(fp, name, 6); // 105-110
+  const int dataMissing = dataMissingValue * dataScale; // prescaled for speed
+  const int dataUnavailable = dataNCValue * dataScale;  // prescaled for speed
 
-  int dataScale = 10;
-
-  BinaryIO::writeInt(fp, dataScale);
-
-  const int dataMissing = -99;
-
-  BinaryIO::writeInt(fp, dataMissing);
+  g.writeInt(dataMissing); // FIXME: missing or scaled?
 
   // The placeholder.. 8 ints
   int fill = 0;
 
   for (size_t i = 0; i < 8; i++) {
-    ERRNO(gzwrite(fp, &fill, sizeof(int)));
+    g.writeInt(0);
   }
 
   const int count = num_radials * num_gates;
@@ -349,8 +360,6 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
 
   rawBuffer.resize(count);
 
-  // const int dataMissing     = dataMissingValue * dataScale;
-  const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
   size_t at = 0;
 
   for (size_t i = 0; i < num_radials; ++i) {
@@ -358,7 +367,7 @@ HmrgRadialSet::writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialsetp)
       rawBuffer[at++] = IOHmrg::toHmrgValue(data[i][j], dataUnavailable, dataMissing, dataScale);
     }
   }
-  ERRNO(gzwrite(fp, &rawBuffer[0], count * sizeof(short int))); // should be 2 bytes, little endian order
+  g.writeVector(rawBuffer.data(), count * sizeof(short int));
 
   return true;
 } // HmrgRadialSet::writeRadialSet

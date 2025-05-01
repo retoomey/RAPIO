@@ -11,6 +11,7 @@
 #include "rRadialSet.h"
 #include "rLatLonGrid.h"
 #include "rLatLonHeightGrid.h"
+#include "rBinaryIO.h"
 
 using namespace rapio;
 
@@ -52,18 +53,17 @@ IOHmrg::initialize()
 IOHmrg::~IOHmrg()
 { }
 
+ProductInfo*
+IOHmrg::getProductInfo(const std::string& varName, const std::string& units)
+{
+  return theProductInfos.getProductInfo(varName, units);
+}
+
 bool
 IOHmrg::HmrgToW2Name(const std::string& varName,
   std::string                         & outW2Name)
 {
   return theProductInfos.HmrgToW2Name(varName, outW2Name);
-}
-
-bool
-IOHmrg::W2ToHmrgName(const std::string& varName,
-  std::string                         & outW2Name)
-{
-  return theProductInfos.W2ToHmrgName(varName, outW2Name);
 }
 
 bool
@@ -121,7 +121,11 @@ IOHmrg::createDataType(const std::string& params)
     // --------------------------------------------------------------------------
     // Factory
     std::map<std::string, std::string> keys;
-    GZFileToKey(keys, fp);
+
+    GzipFileStreamBuffer g(fp);
+    g.setDataLittleEndian();
+    StreamBufferToKey(keys, &g);
+
     if (validASCII) {
       LogInfo("HMRG reader: " << url << " (Guess: MRMS Polar Binary)\n");
       std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("RadialSet");
@@ -192,9 +196,11 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
 
     // Write hmrg binary to a disk file here
     try {
-      GZFileToKey(keys, fp);
+      GzipFileStreamBuffer g(fp);
+      g.setDataLittleEndian();
+      StreamBufferToKey(keys, &g);
       successful = fmt->write(dt, keys);
-      GZFileToKey(keys, nullptr);
+      StreamBufferToKey(keys, nullptr);
     } catch (...) {
       successful = false;
       LogSevere("Failed to write hmrg file for DataType\n");
@@ -225,23 +231,23 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   return successful;
 } // IOHmrg::encodeDataType
 
-gzFile
-IOHmrg::keyToGZFile(std::map<std::string, std::string>& keys)
+StreamBuffer*
+IOHmrg::keyToStreamBuffer(std::map<std::string, std::string>& keys)
 {
-  gzFile fp;
+  StreamBuffer* sb;
 
   // Make sure enough address numbers for 128 bit machines and forever hopefully
   try{
-    unsigned long long rawPointer = std::stol(keys["GZFILE_ID"]);
-    fp = (gzFile) (rawPointer); // Clip down to os pointer size
+    unsigned long long rawPointer = std::stol(keys["BUFFER_ID"]);
+    sb = (StreamBuffer*) (rawPointer); // Clip down to os pointer size
   }catch (...) {                // allow fail to nullptr
-    fp = nullptr;
+    sb = nullptr;
   }
-  return fp;
+  return sb;
 }
 
 void
-IOHmrg::GZFileToKey(std::map<std::string, std::string>& keys, gzFile fp)
+IOHmrg::StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer* sb)
 {
-  keys["GZFILE_ID"] = to_string((unsigned long long) (fp));
+  keys["BUFFER_ID"] = to_string((unsigned long long) (sb));
 }

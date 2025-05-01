@@ -151,6 +151,16 @@ FileStreamBuffer::readInt()
   return temp;
 }
 
+void
+FileStreamBuffer::writeInt(int i)
+{
+  int temp = i;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(fwrite(&temp, sizeof(int), 1, file));
+  marker += sizeof(int);
+}
+
 short
 FileStreamBuffer::readShort()
 {
@@ -170,6 +180,16 @@ FileStreamBuffer::readFloat()
   ERRNO(fread(&temp, sizeof(short), 1, file));
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   return temp;
+}
+
+void
+FileStreamBuffer::writeFloat(float f)
+{
+  float temp = f;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(fwrite(&temp, sizeof(float), 1, file));
+  marker += sizeof(float);
 }
 
 long
@@ -213,6 +233,15 @@ GzipFileStreamBuffer::readInt()
   return temp;
 }
 
+void
+GzipFileStreamBuffer::writeInt(int i)
+{
+  int temp = i;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(gzwrite(gzfile, &temp, sizeof(int)));
+}
+
 short
 GzipFileStreamBuffer::readShort()
 {
@@ -233,13 +262,19 @@ GzipFileStreamBuffer::readFloat()
   return temp;
 }
 
+void
+GzipFileStreamBuffer::writeFloat(float f)
+{
+  float temp = f;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(gzwrite(gzfile, &temp, sizeof(float)));
+}
+
 int
 MemoryStreamBuffer::readInt()
 {
-  // ERRNO
-  if (marker + sizeof(int) > data.size()) {
-    throw std::out_of_range("Not enough data in memory buffer to read int");
-  }
+  ensureAvailable(sizeof(int));
   int temp;
 
   std::memcpy(&temp, &data[marker], sizeof(int));
@@ -248,13 +283,22 @@ MemoryStreamBuffer::readInt()
   return temp;
 }
 
+void
+MemoryStreamBuffer::writeInt(int i)
+{
+  ensureAvailable(sizeof(int));
+
+  int temp = i;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  std::memcpy(&data[marker], &temp, sizeof(int));
+  marker += sizeof(int);
+}
+
 short
 MemoryStreamBuffer::readShort()
 {
-  // ERRNO
-  if (marker + sizeof(short) > data.size()) {
-    throw std::out_of_range("Not enough data in memory buffer to read short");
-  }
+  ensureAvailable(sizeof(short));
   short temp;
 
   std::memcpy(&temp, &data[marker], sizeof(short));
@@ -267,10 +311,7 @@ MemoryStreamBuffer::readShort()
 float
 MemoryStreamBuffer::readFloat()
 {
-  // ERRNO
-  if (marker + sizeof(float) > data.size()) {
-    throw std::out_of_range("Not enough data in memory buffer to read float");
-  }
+  ensureAvailable(sizeof(float));
   float temp;
 
   std::memcpy(&temp, &data[marker], sizeof(float));
@@ -278,6 +319,18 @@ MemoryStreamBuffer::readFloat()
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
 
   return temp;
+}
+
+void
+MemoryStreamBuffer::writeFloat(float f)
+{
+  ensureAvailable(sizeof(float));
+
+  float temp = f;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  std::memcpy(&data[marker], &temp, sizeof(float));
+  marker += sizeof(float);
 }
 
 char
@@ -309,6 +362,51 @@ FileStreamBuffer::readString(size_t length)
   return name;
 }
 
+void
+FileStreamBuffer::writeString(const std::string& c, size_t upto)
+{
+  int toWrite = std::min<int>(c.size(), upto);
+
+  if (fwrite(c.data(), 1, toWrite, file) != static_cast<size_t>(toWrite)) {
+    throw std::runtime_error("Failed to write string to file");
+  }
+
+  marker += toWrite;
+
+  // Pad with nulls if string is shorter than `upto`
+  if (toWrite < upto) {
+    int pad = upto - toWrite;
+    static const char zeros[16] = { }; // small zero buffer
+
+    while (pad > 0) {
+      int chunk = std::min(pad, static_cast<int>(sizeof(zeros)));
+      if (fwrite(zeros, 1, chunk, file) != static_cast<size_t>(chunk)) {
+        throw std::runtime_error("Failed to write null padding to file");
+      }
+      marker += chunk;
+      pad    -= chunk;
+    }
+  }
+}
+
+void
+FileStreamBuffer::readVector(void * data, size_t size)
+{
+  size_t bytesRead = fread(data, 1, size, file);
+
+  if (bytesRead != size) {
+    throw std::runtime_error("Failed to read vector from file stream");
+  }
+}
+
+void
+FileStreamBuffer::writeVector(const void * data, size_t size)
+{
+  if (fwrite(data, 1, size, file) != size) {
+    throw std::runtime_error("Failed to write vector to file stream");
+  }
+}
+
 char
 GzipFileStreamBuffer::readChar()
 {
@@ -323,22 +421,65 @@ GzipFileStreamBuffer::readChar()
 std::string
 GzipFileStreamBuffer::readString(size_t length)
 {
-  // FIXME: File and GZIPFile are different techniques
-  std::vector<unsigned char> v;
+  std::string name(length, '\0'); // Pre-allocate buffer
+  int bytesRead = gzread(gzfile, &name[0], length);
 
-  v.resize(length);
-  const size_t bytes = length * sizeof(unsigned char);
-
-  ERRNO(gzread(gzfile, &v[0], bytes));
-  std::string name;
-
-  // Use zero to finish std::string
-  for (size_t i = 0; i < bytes; i++) {
-    if (v[i] == 0) { break; }
-    name += v[i];
+  if (bytesRead <= 0) {
+    return { }; // Error or EOF
   }
 
+  // Trim at first null terminator
+  auto pos = std::find(name.begin(), name.begin() + bytesRead, '\0');
+
+  name.resize(std::distance(name.begin(), pos));
   return name;
+}
+
+void
+GzipFileStreamBuffer::writeString(const std::string& c, size_t upto)
+{
+  size_t toWrite = std::min(c.size(), upto);
+
+  if (gzwrite(gzfile, c.data(), toWrite) != static_cast<int>(toWrite)) {
+    throw std::runtime_error("Failed to write string to gzip stream");
+  }
+
+  marker += toWrite;
+
+  // Optionally pad with nulls if needed
+  if (toWrite < upto) {
+    size_t pad = upto - toWrite;
+    static const char zeros[16] = { };
+
+    while (pad > 0) {
+      size_t chunk = std::min(pad, sizeof(zeros));
+      if (gzwrite(gzfile, zeros, chunk) != static_cast<int>(chunk)) {
+        throw std::runtime_error("Failed to write null padding to gzip stream");
+      }
+      marker += chunk;
+      pad    -= chunk;
+    }
+  }
+}
+
+void
+GzipFileStreamBuffer::readVector(void * data, size_t size)
+{
+  int bytesRead = gzread(gzfile, data, static_cast<unsigned int>(size));
+
+  if (bytesRead != static_cast<int>(size)) {
+    throw std::runtime_error("Failed to read vector from gzip stream");
+  }
+
+  marker += bytesRead;
+}
+
+void
+GzipFileStreamBuffer::writeVector(const void * data, size_t size)
+{
+  if (gzwrite(gzfile, data, size) != static_cast<int>(size)) {
+    throw std::runtime_error("Failed to write vector to gzip stream");
+  }
 }
 
 char
@@ -427,100 +568,6 @@ BinaryIO::read_string8(std::string& s, FILE * fp)
   rawReadString(s, len, fp);
 }
 
-void
-BinaryIO::writeScaledInt(gzFile fp, float w, float scale)
-{
-  int temp = w * scale;
-
-  ON_BIG_ENDIAN(OS::byteswap(temp));
-  ERRNO(gzwrite(fp, &temp, sizeof(int)));
-}
-
-int
-BinaryIO::readInt(FILE * fp)
-{
-  int temp;
-
-  ERRNO(fread(&temp, sizeof(int), 1, fp));
-  ON_BIG_ENDIAN(OS::byteswap(temp));
-  return temp;
-}
-
-int
-BinaryIO::readShort(FILE * fp)
-{
-  short temp;
-
-  ERRNO(fread(&temp, sizeof(short), 1, fp));
-  ON_BIG_ENDIAN(OS::byteswap(temp));
-  return temp;
-}
-
-void
-BinaryIO::writeInt(gzFile fp, int w)
-{
-  int temp = w;
-
-  ON_BIG_ENDIAN(OS::byteswap(temp));
-  ERRNO(gzwrite(fp, &temp, sizeof(int)));
-}
-
-void
-BinaryIO::writeFloat(gzFile fp, float w)
-{
-  float temp = w;
-
-  ON_BIG_ENDIAN(OS::byteswap(temp));
-  ERRNO(gzwrite(fp, &temp, sizeof(float)));
-}
-
-#if 0
-std::string
-BinaryIO::readChar(FILE * fp, size_t length)
-{
-  // Create a string with the exact size (uninitialized storage)
-  std::string name(length + 1, '\0'); // Initializes string with `length` zero bytes
-
-  // Read into the string's underlying buffer
-  const size_t bytesRead = fread(&name[0], 1, length, fp);
-
-  // Find the first occurrence of '\0'
-  auto pos = std::find_first_of(name.begin(), name.begin() + bytesRead, "\0", "\0" + 1);
-
-  // Resize the string to remove trailing zero bytes if found
-  if (pos != name.end()) {
-    name.resize(std::distance(name.begin(), pos)); // Shrink to the first zero byte
-  }
-
-  return name;
-}
-
-#endif // if 0
-
-void
-BinaryIO::writeChar(gzFile fp, std::string c, size_t length)
-{
-  if (length < 1) { return; }
-  std::vector<unsigned char> v;
-
-  v.resize(length);
-
-  const size_t max = std::min(c.length(), length);
-
-  // Write up to std::string chars
-  for (size_t i = 0; i < max; i++) {
-    v[i] = c[i];
-  }
-  // Fill with zeros
-  for (size_t i = max; i < length; i++) {
-    v[i] = 0;
-  }
-
-  const size_t bytes = length * sizeof(unsigned char);
-
-  ERRNO(gzwrite(fp, &v[0], bytes));
-}
-
 Time
 StreamBuffer::readTime(int year)
 {
@@ -543,13 +590,13 @@ StreamBuffer::readTime(int year)
 }
 
 void
-BinaryIO::writeTime(gzFile fp, const Time& t)
+StreamBuffer::writeTime(const Time& t)
 {
   // Time
-  BinaryIO::writeInt(fp, t.getYear());
-  BinaryIO::writeInt(fp, t.getMonth());
-  BinaryIO::writeInt(fp, t.getDay());
-  BinaryIO::writeInt(fp, t.getHour());
-  BinaryIO::writeInt(fp, t.getMinute());
-  BinaryIO::writeInt(fp, t.getSecond());
+  writeInt(t.getYear());
+  writeInt(t.getMonth());
+  writeInt(t.getDay());
+  writeInt(t.getHour());
+  writeInt(t.getMinute());
+  writeInt(t.getSecond());
 }
