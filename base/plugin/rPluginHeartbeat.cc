@@ -35,20 +35,38 @@ PluginHeartbeat::processOptions(RAPIOOptions& o)
 }
 
 void
+PluginHeartbeat::postRecordEvent(RAPIOProgram * caller, const Record& rec)
+{
+  // Call a heartbeat check after every record, this
+  // will make archive work (no timer)
+  if (myHeartBeat && (caller->isArchive())) {
+    myHeartBeat->checkForPulse();
+  }
+}
+
+void
 PluginHeartbeat::execute(RAPIOProgram * caller)
 {
-  // Add Heartbeat (if wanted)
-  std::shared_ptr<Heartbeat> heart = nullptr;
-
+  myHeartBeat = nullptr;     // fixme; constructor
   if (!myCronList.empty()) { // None required, don't make it
-    LogInfo("Attempting to create a heartbeat for " << myCronList << "\n");
+    // Create heartbeat
+    myHeartBeat = std::make_shared<Heartbeat>(caller);
 
-    heart = std::make_shared<Heartbeat>((RAPIOAlgorithm *) (caller), 1000);
-    if (!heart->setCronList(myCronList)) {
+    if (!myHeartBeat->setCronList(myCronList)) {
       LogSevere("Bad format for -" << myName << " string, aborting\n");
       exit(1);
     }
-    EventLoop::addEventHandler(heart);
+
+    // Note: Need -r to be daemon, even if using ifam in daemon mode
+    // FIXME: -r needs some more work.
+    // We're gonna do a !archive here instead of daemon
+    bool daemon = !(caller->isArchive());
+    if (daemon) {
+      // Wrap with a timer, it will call the heartbeat for us
+      std::shared_ptr<HeartbeatTimer> timer = nullptr;
+      timer = std::make_shared<HeartbeatTimer>(myHeartBeat, 1000);
+      EventLoop::addEventHandler(timer);
+    }
     myActive = true;
   }
 }

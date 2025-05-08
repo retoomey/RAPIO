@@ -60,7 +60,7 @@ public:
   virtual void
   processHeartbeat(const Time& n, const Time& p)
   {
-    LogDebug("Received heartbeat callback, ignoring.\n");
+    LogDebug("Received heartbeat at " << n.getString() << " for " << p.getString() << ", ignoring\n");
   }
 
   /** Callback for web plugins. Process a web request message when
@@ -117,6 +117,14 @@ public:
   /** Are we running a web server? */
   bool
   isWebServer(const std::string& key = "web") const;
+
+  /** Are we a daemon algorithm? For example, waiting on realtime data. */
+  virtual bool
+  isDaemon(){ return false; }
+
+  /** Are we reading old records? */
+  virtual bool
+  isArchive(){ return false; }
 
 protected:
 

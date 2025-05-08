@@ -6,20 +6,32 @@ namespace {
 /** Analyze a tilt layer for contribution to final.  We do this for each of the tilts
  * around the point so we just put the common code here */
 static void inline
-analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
+processTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   // OUTPUTS:
-  bool& isGood, bool& inBeam, bool& terrainBlocked, double& outvalue, double& weight)
+  bool& isGood, bool& isMask, bool& inBeam, bool& terrainBlocked, double& outvalue, double& weight,
+
+  // Value counts towards merger
+  double& totalWt, double& totalsum, size_t& count, bool& thresh)
 {
   static const float ELEV_FACTOR = log(0.005); // Formula constant from paper
   // FIXME: These could be parameters fairly easily and probably will be at some point
   static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
   static const float MAX_SPREAD_DEGS  = 4;   // Max spread of degrees between tilts
   static const float BEAMWIDTH_THRESH = .50; // Assume half-degree to meet beamwidth test
+  static const float ELEV_THRESH      = .45; // -E Smoothing of w2merger
 
   // ------------------------------------------------------------------------------
   // Discard tilts/values that hit terrain
   if ((layer.terrainCBBPercent > TERRAIN_PERCENT) || (layer.beamHitBottom)) {
     terrainBlocked = true;
+    // Note terrain blocked means isMask is false (shouldn't affect mask)
+    //  countValue(ELEV_THRESH, false, lowerWt2, lValue2,
+    //     OUTS: totalWt, totalsum, count, inThreshLower2);
+    //     Ok so inThreshLower = wt > ELEV_THRESH.  But wt isn't set right?
+    //     no, wt is 0, so it's not in the thresh.  Lucky.
+    //     So we can just inThresh = false, Mask = false;
+    //     No need to call countValue now which saves time.
+    //     But totalWt, totalSum, count not affects since good = false
     return; // don't waste time on other math, or do we need to?
   }
 
@@ -34,6 +46,11 @@ analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   const double& value = layer.value;
 
   isGood = Constants::isGood(value);
+  // isMask = Constants::isMask(value);
+  // Mask will be missing unless data unavailable or range folded in data.
+  // Note we don't check inBeam here that depends on total counted beams, so will
+  // be done as a group later
+  isMask = (value != Constants::DataUnavailable) && (value != Constants::RangeFolded);
 
   // Max of beamwidth or the tilt below us.  If too large a spread we
   // treat as if it's not there
@@ -50,8 +67,15 @@ analyzeTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
 
   weight = exp(alpha * alpha * alpha * ELEV_FACTOR); // always
 
+  thresh = (weight > ELEV_THRESH);         // Are we in the threshhold?
+  const bool doCount = (isGood && thresh); // Do we count the value?
+
+  totalWt  += doCount * (weight);         // Add to total weight if counted
+  totalsum += doCount * (weight * value); // Add to total sum if counted
+  count    += doCount;                    // Increase value counter
+
   outvalue = value;
-} // analyzeTilt
+} // processTilt
 }
 
 void
@@ -73,26 +97,29 @@ LakResolver1::create(const std::string & params)
   return std::make_shared<LakResolver1>();
 }
 
+#if 0
 namespace {
 // Inline for clarity.  In theory branchless will be faster than if/then thus our 'always' calculating
 inline void
-countValue(const bool good, const double wt, const double value, bool& missingMask, double& totalWt, double& totalsum,
-  size_t& count)
+countValue(const float ELEV_THRESH, const bool good, const double wt, const double value,
+  double& totalWt, double& totalsum, size_t& count, bool& thresh)
 {
-  static const float ELEV_THRESH = .45;    // -E Smoothing of w2merger
-  const bool thresh  = (wt > ELEV_THRESH); // Are we in the threshhold?
-  const bool doCount = (good && thresh);   // Do we count the value?
+  thresh = (wt > ELEV_THRESH);           // Are we in the threshhold?
+  const bool doCount = (good && thresh); // Do we count the value?
 
-  missingMask = missingMask || thresh;  // Missing if in thresh (not used if we have count anyway)
-  totalWt    += doCount * (wt);         // Add to total weight if counted
-  totalsum   += doCount * (wt * value); // Add to total sum if counted
-  count      += doCount;                // Increase value counter
+  totalWt  += doCount * (wt);         // Add to total weight if counted
+  totalsum += doCount * (wt * value); // Add to total sum if counted
+  count    += doCount;                // Increase value counter
 }
 }
+#endif // if 0
 
 void
 LakResolver1::calc(VolumeValue * vvp)
 {
+  // FIXME: Make a parameter at some point
+  static const float ELEV_THRESH = .45; // -E Smoothing of w2merger
+
   // Count each value if it contributes, if masks are covered than make missing
   auto& vv        = *(VolumeValueWeightAverage *) (vvp);
   double totalWt  = 0.0;
@@ -134,34 +161,41 @@ LakResolver1::calc(VolumeValue * vvp)
   // vs the spread for close elevations in the VCP
   const AngleDegs spread = (haveLower && haveUpper) ? std::abs(
     vv.getUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
-  bool terrainBlockedLower = false;
-  bool terrainBlockedUpper = false;
-  bool missingMask         = false;
+
+  // Maskable counted location will be missing in output
+  bool lMask          = false;
+  bool uMask          = false;
+  bool uuMask         = false;
+  bool llMask         = false;
+  bool inThreshLower  = false;
+  bool inThreshUpper  = false;
+  bool inThreshLower2 = false;
+  bool inThreshUpper2 = false;
 
   if (haveLower) {
-    // FIXME: Feels like these tilt blocks are begging for a single function now
-    bool isGoodLower = false;
-    bool inBeamLower = false;
-    double lowerWt   = 0.0;
+    bool terrainBlockedLower = false;
+    bool isGoodLower         = false;
+    bool inBeamLower         = false;
+    double lowerWt = 0.0;
     double lValue;
-    analyzeTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
-      isGoodLower, inBeamLower, terrainBlockedLower, lValue, lowerWt);
-    countValue(isGoodLower, lowerWt, lValue, missingMask, totalWt, totalsum, count);
+    processTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
+      isGoodLower, lMask, inBeamLower, terrainBlockedLower, lValue, lowerWt,
+      totalWt, totalsum, count, inThreshLower);
+
+    // countValue(ELEV_THRESH, isGoodLower, lowerWt, lValue, totalWt, totalsum, count, inThreshLower);
   }
 
   if (haveUpper) {
-    bool isGoodUpper = false;
-    bool inBeamUpper = false;
-    double upperWt   = 0.0;
+    bool terrainBlockedUpper = false;
+    bool isGoodUpper         = false;
+    bool inBeamUpper         = false;
+    double upperWt = 0.0;
     double uValue;
-    analyzeTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
-      isGoodUpper, inBeamUpper, terrainBlockedUpper, uValue, upperWt);
-    countValue(isGoodUpper, upperWt, uValue, missingMask, totalWt, totalsum, count);
+    processTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
+      isGoodUpper, uMask, inBeamUpper, terrainBlockedUpper, uValue, upperWt,
+      totalWt, totalsum, count, inThreshLower);
+    // countValue(ELEV_THRESH, isGoodUpper, upperWt, uValue, totalWt, totalsum, count, inThreshUpper);
   }
-
-  // We always mask missing between the two main tilts that aren't blocked
-  // This fills in more than the beam width..it's full spread fill which I guess looks better?
-  missingMask = missingMask || (haveUpper && haveLower && !terrainBlockedUpper && !terrainBlockedLower);
 
   // ------------------------------------------------------------------------------
   // Extra tilts beyond.  Closer to merger.  I suspect with static cache merger
@@ -176,9 +210,10 @@ LakResolver1::calc(VolumeValue * vvp)
     bool terrainBlockedLower2 = false;
     const AngleDegs spread2   =
       haveUpper ? std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation) : 0.0;
-    analyzeTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread2,
-      isGoodLower2, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2);
-    countValue(isGoodLower2, lowerWt2, lValue2, missingMask, totalWt, totalsum, count);
+    processTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread2,
+      isGoodLower2, llMask, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2,
+      totalWt, totalsum, count, inThreshLower);
+    // countValue(ELEV_THRESH, isGoodLower2, lowerWt2, lValue2, totalWt, totalsum, count, inThreshLower2);
   }
 
   if (haveUUpper) {
@@ -189,9 +224,10 @@ LakResolver1::calc(VolumeValue * vvp)
     bool terrainBlockedUpper2 = false;
     const AngleDegs spread3   =
       haveLower ? std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
-    analyzeTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread3,
-      isGoodUpper2, inBeamUpper2, terrainBlockedUpper, uValue2, upperWt2);
-    countValue(isGoodUpper2, upperWt2, uValue2, missingMask, totalWt, totalsum, count);
+    processTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread3,
+      isGoodUpper2, uuMask, inBeamUpper2, terrainBlockedUpper2, uValue2, upperWt2,
+      totalWt, totalsum, count, inThreshLower);
+    // countValue(ELEV_THRESH, isGoodUpper2, upperWt2, uValue2, totalWt, totalsum, count, inThreshUpper2);
   }
 
   if (count > 0) {
@@ -225,6 +261,14 @@ LakResolver1::calc(VolumeValue * vvp)
     vv.topSum    = myGlobalWeight * (rw * aV); // Stage2 just makes v = topSum/bottomSum
     vv.bottomSum = myGlobalWeight * (rw);
   } else {
+    // Mask is only calculated iff no good values count.
+    // Mask flags are set iff data is actually a maskable (typically missing) at the tilt sample
+    bool missingMask = (inThreshLower && lMask); // Single beam contribution
+    missingMask |= (inThreshUpper && uMask);     // Single beam contribution
+    missingMask |= (inThreshUpper2 && uuMask);   // Single beam contribution needed?
+    missingMask |= (inThreshLower2 && llMask);   // Single beam contribution needed?
+    missingMask |= (lMask && uMask);             // Smear between if maskable values
+                                                 // Note this is why we delayed the in thresh test
     // Background.
     // FIXME: Considering a background flag in VolumeValue
     // Note: dataValue is direct 2D output, top/bottom for stage2 here

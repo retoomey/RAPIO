@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rRAPIOPlugin.h"
+#include "rHeartbeat.h"
 
 namespace rapio {
 class RAPIOProgram;
@@ -33,9 +34,16 @@ public:
   virtual void
   execute(RAPIOProgram * caller) override;
 
+  /** Handle a post record event */
+  virtual void
+  postRecordEvent(RAPIOProgram * caller, const Record& rec) override;
+
 protected:
 
   /** The cronlist for heartbeat/sync if any */
   std::string myCronList;
+
+  /** The heartbeat we call */
+  std::shared_ptr<Heartbeat> myHeartBeat;
 };
 }
