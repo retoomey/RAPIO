@@ -240,6 +240,11 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     //    db.dumpXYZ();
     myDirty++;
 
+    #if 0
+    // Deprecated.  Heartbeat should now be calling processHeartbeat
+    // with record simulated time.  Leaving this code for now
+    // until fully tested.
+    //
     // If we're realtime we'll get a heartbeat for us, if not we need to process at
     // 'some' point for archive.  We could add more settings/controls for this later
     // This will try to merge and output every incoming record
@@ -247,6 +252,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
       auto t = Time::CurrentTime(); // Should be archive latest time
       mergeAndWriteOutput(t, t);
     }
+    #endif // if 0
   }
 } // RAPIOFusionTwoAlg::processNewData
 

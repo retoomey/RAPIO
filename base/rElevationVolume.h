@@ -27,6 +27,10 @@ public:
   /** Create a new volume */
   Volume(const std::string& k) : myKey(k){ };
 
+  /** Destruction */
+  virtual
+  ~Volume() = default;
+
   // --------------------------------------------------------
   // Factory methods for doing things by name.  Usually if you
   // want to support command line choosing of a Volume

@@ -3,9 +3,6 @@
 #include "rError.h"
 #include "rStrings.h"
 
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-
 namespace asio = boost::asio;
 namespace ssl  = asio::ssl;
 

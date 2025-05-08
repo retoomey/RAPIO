@@ -3,8 +3,7 @@
 #include "rIODataType.h"
 #include "rIOHmrg.h"
 #include "rLatLonGrid.h"
-
-#include <zlib.h>
+#include "rBinaryIO.h"
 
 namespace rapio {
 /**
@@ -30,11 +29,11 @@ public:
 
   /** Do the heavy work of reading a LatLonGrid or LatLonHeightGrid */
   static std::shared_ptr<DataType>
-  readLatLonGrids(gzFile fp, const int year, bool debug = false);
+  readLatLonGrids(StreamBuffer& g, const int year);
 
   /** Do the heavy work of writing a LatLonGrid or LatLonHeightGrid */
   static bool
-  writeLatLonGrids(gzFile fp, std::shared_ptr<LatLonArea> latlongrid);
+  writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> latlongrid);
 
   /** Initial introduction of HmrgLatLonGrids specializer to IOHMRG */
   static void

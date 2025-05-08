@@ -70,6 +70,23 @@ ProductInfoSet::readConfigFile()
   }
 } // ProductInfoSet::readConfigFile
 
+ProductInfo*
+ProductInfoSet::getProductInfo(const std::string& w2Name, const std::string& w2Units)
+{
+  ProductInfo* pi;
+  for(size_t i =0; i < myProductInfos.size(); ++i){
+    // FIXME: Should we try to match more than name and units?
+    // I could see cases with strange missing/unavailable values to deal with.
+    // For now this 'should' get like 99% of things
+    if (myProductInfos[i].w2Name == w2Name) {
+       if (myProductInfos[i].w2Unit == w2Units){
+         return &myProductInfos[i];
+       }
+    }
+  }
+  return nullptr;
+}
+
 bool
 ProductInfoSet::HmrgToW2Name(const std::string& varName,
   std::string                                 & outW2Name)
@@ -83,22 +100,6 @@ ProductInfoSet::HmrgToW2Name(const std::string& varName,
     if (p.varName == varName) {
       outW2Name = p.w2Name;
       success   = true;
-      break;
-    }
-  }
-  return success;
-}
-
-bool
-ProductInfoSet::W2ToHmrgName(const std::string& varName,
-  std::string                                 & outHMRGName)
-{
-  bool success = false;
-
-  for (auto& p:myProductInfos) {
-    if (p.w2Name == varName) {
-      outHMRGName = p.varName;
-      success     = true;
       break;
     }
   }

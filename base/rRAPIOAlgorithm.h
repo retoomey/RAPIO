@@ -101,11 +101,11 @@ public:
 
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
   bool
-  isDaemon();
+  isDaemon() override;
 
   /** Are we reading old records? */
   bool
-  isArchive();
+  isArchive() override;
 
 protected:
 

@@ -2,19 +2,9 @@
 
 #include "rFactory.h"
 #include "rIOURL.h"
+#include "rBOOST.h"
 
 #include <fstream>
-
-// BOOST compression
-#include <boost/iostreams/filtering_stream.hpp>
-
-#include <boost/iostreams/filter/gzip.hpp>  // .gz files
-#include <boost/iostreams/filter/bzip2.hpp> // .bz2 files
-#include <boost/iostreams/filter/zlib.hpp>  // .z files
-
-#if HAVE_LZMA
-# include <boost/iostreams/filter/lzma.hpp> // .lzma files
-#endif
 
 #if HAVE_SNAPPY
 # include "snappy.h" // google .sz files

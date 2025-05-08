@@ -6,14 +6,10 @@
 #include <rArray.h>
 #include <rPTreeData.h>
 #include <rDataArray.h>
+#include <rBOOST.h>
 
 #include <vector>
 #include <stdexcept>
-
-#include <boost/multi_array.hpp>
-#include <boost/variant.hpp>
-#include <boost/any.hpp>
-#include <boost/optional.hpp>
 
 namespace rapio {
 /* Exception for calling any Ref function that is assuming an array exists */

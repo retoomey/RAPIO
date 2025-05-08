@@ -58,8 +58,11 @@ project (RAPIO
     VERSION 1.0)
 
 # Specify the C++ standard
+# Currently tested from 11 to 23. Will avoid new features for now
+# for legacy compatibility.
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+# Allow it to go higher to compiler default
+set(CMAKE_CXX_STANDARD_REQUIRED False)
 
 ###########################################################################
 # Convenient add to a RAPIO note list

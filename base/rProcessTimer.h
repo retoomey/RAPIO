@@ -7,7 +7,7 @@
 #include <rColorTerm.h>
 
 /** Using boost timer class now internally */
-#include <boost/timer/timer.hpp>
+#include <rBOOST.h>
 
 namespace rapio {
 class ProcessTimer;

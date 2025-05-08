@@ -3,8 +3,8 @@
 #include <rData.h>
 #include <rUtility.h>
 #include <rDimensionMapper.h>
+#include <rBOOST.h>
 
-#include <boost/dynamic_bitset.hpp>
 #include <cmath>
 
 #include <rError.h>
@@ -22,13 +22,17 @@ class StaticVector : public DimensionMapper {
 public:
 
   /** Empty constructor */
-  StaticVector() : DimensionMapper({ 0 }){ }
+  StaticVector() : DimensionMapper(){ }
 
   /** Pass along dimensions if wanted */
   StaticVector(std::vector<size_t> dimensions) : DimensionMapper(dimensions){ }
 
   /** Single dimension */
   StaticVector(size_t dimension) : DimensionMapper(dimension){ }
+
+  /** Destructor */
+  virtual
+  ~StaticVector() = default;
 
   /** Factory method that returns a subclass of StaticVector depending on size.
    * If trim is true, pin to the smallest power of 2 that works.  This is a tradeoff on speed vs

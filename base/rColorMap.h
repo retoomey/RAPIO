@@ -122,11 +122,11 @@ public:
   /** Given a value, return data color for it.  This ignores special data values like missing, etc. and
    * treats those values as data, which you normally don't want. */
   virtual void
-  getDataColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const;
+  getDataColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const override;
 
   /** Given a value, return colors for it */
   virtual void
-  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const;
+  getColor(double v, unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a) const override;
 
 protected:
 

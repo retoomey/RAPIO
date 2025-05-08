@@ -6,7 +6,7 @@
 #include <memory>
 #include <iostream>
 
-#include <boost/multi_array.hpp>
+#include "rBOOST.h"
 
 namespace rapio {
 // Define the ArrayFloat1DRef, ArrayFloat1DPtr, etc. that are types hiding the boost:multi_array

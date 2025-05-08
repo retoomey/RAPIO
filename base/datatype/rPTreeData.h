@@ -3,8 +3,7 @@
 #include <rDataType.h>
 #include <rTime.h>
 #include <rLLH.h>
-
-#include <boost/property_tree/ptree.hpp>
+#include <rBOOST.h>
 
 namespace rapio {
 /** Property Tree holder class.  This is typically used

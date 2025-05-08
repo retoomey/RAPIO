@@ -5,6 +5,7 @@
 #include "rHmrgProductInfo.h"
 #include "rIO.h"
 #include "rOS.h"
+#include "rBinaryIO.h"
 
 #include <zlib.h>
 
@@ -57,13 +58,17 @@ public:
   /** Convert float to scaled compressed int. */
   static inline short int
   toHmrgValue(float v, const int dataUnavailable, const int dataMissing,
-    const float dataScale)
+    const float dataScale, 
+    SentinelDouble w2missing=Constants::MissingData,
+    SentinelDouble w2unavailable=Constants::DataUnavailable)
   {
     short int out;
 
-    if (v == Constants::DataUnavailable) {
+    // Some netcdf products aren't formatted 100% correctly, so the hmrg
+    // sends in the special values
+    if (v == w2unavailable) {
       out = dataUnavailable;
-    } else if (v == Constants::MissingData) {
+    } else if (v == w2missing) {
       out = dataMissing;
     } else {
       out = v * dataScale;
@@ -77,24 +82,22 @@ public:
   static bool
   isMRMSValidYear(int year);
 
+  /** Give back unique product info table entry based on fields */
+  static ProductInfo*
+  getProductInfo(const std::string& varName, const std::string& units);
+
   /** Give back W2 info based on passed in HMRG */
   static bool
   HmrgToW2Name(const std::string& varName,
     std::string                 & outW2Name);
 
-  /** Give back HMRGinfo based on passed in WG */
-  static bool
-  W2ToHmrgName(const std::string& varName,
-    std::string                 & outHmrgName);
-
   /** Convert keys string to gzfile pointer in generic parameter passing */
-  static gzFile
-  keyToGZFile(std::map<std::string, std::string>& keys);
+  static StreamBuffer*
+  keyToStreamBuffer(std::map<std::string, std::string>& keys);
 
   /** Convert gzFile pointer to keys string in generic parameter passing */
   static void
-  GZFileToKey(std::map<std::string, std::string>& keys, gzFile fp);
-
+  StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer* b);
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */

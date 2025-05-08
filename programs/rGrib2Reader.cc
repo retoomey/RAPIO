@@ -407,8 +407,8 @@ Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
 					vgrid_[j][i] == Constants::DataUnavailable ||
 					vgrid_[j][i] == Constants::DataUnavailable)
 			{
-				uwind_[j][i] == ugrid_[j][i];
-				vwind_[j][i] == vgrid_[j][i];
+				uwind_[j][i] = ugrid_[j][i];
+				vwind_[j][i] = vgrid_[j][i];
 			} else {
 				uwind_[j][i] = a*ugrid_[j][i] + b*vgrid_[j][i];
 				vwind_[j][i] = -b*ugrid_[j][i] + a*vgrid_[j][i];

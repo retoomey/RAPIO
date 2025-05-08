@@ -3,8 +3,7 @@
 #include "rIODataType.h"
 #include "rRadialSet.h"
 #include "rIOHmrg.h"
-
-#include <zlib.h>
+#include "rBinaryIO.h"
 
 namespace rapio {
 /**
@@ -30,11 +29,11 @@ public:
 
   /** Do the heavy work of creating a RadialSet */
   static std::shared_ptr<DataType>
-  readRadialSet(gzFile fp, const std::string& radarName, bool debug = false);
+  readRadialSet(StreamBuffer& g, const std::string& radarName);
 
   /** Do the heavy work of writing a RadialSet as MRMS 2D */
   static bool
-  writeRadialSet(gzFile fp, std::shared_ptr<RadialSet> radialset);
+  writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radialset);
 
   /** Initial introduction of HmrgRadialSet specializer to IOHMRG */
   static void

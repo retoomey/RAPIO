@@ -29,6 +29,10 @@ public:
   virtual int
   readInt() = 0;
 
+  /** Writes an integer to the stream buffer */
+  virtual void
+  writeInt(int i) = 0;
+
   /** Read a scaled integer in a float */
   inline float
   readScaledInt(float scale)
@@ -38,9 +42,22 @@ public:
     return float(temp) / scale;
   }
 
+  /** Write a scaled integer */
+  inline void
+  writeScaledInt(float w, float scale)
+  {
+    int temp = w * scale;
+
+    writeInt(temp);
+  }
+
   /** Read a time from stream */
   Time
   readTime(int year = -99);
+
+  /** Convenience method to write time */
+  void
+  writeTime(const Time& time);
 
   /** Reads a short from the stream buffer */
   virtual short
@@ -50,6 +67,10 @@ public:
   virtual float
   readFloat() = 0;
 
+  /** Writes a float to the stream buffer */
+  virtual void
+  writeFloat(float i) = 0;
+
   /** Read a single character */
   virtual char
   readChar() = 0;
@@ -57,6 +78,19 @@ public:
   /** Read a std::string from a character length */
   virtual std::string
   readString(size_t length) = 0;
+
+  /** Write a fixed length string from a std::string,
+   * padding with null if too short, clip if too long. */
+  virtual void
+  writeString(const std::string& c, size_t length) = 0;
+
+  /** Read a vector of data */
+  virtual void
+  readVector(void * data, size_t size) = 0;
+
+  /** Write a vector of data */
+  virtual void
+  writeVector(const void * data, size_t size) = 0;
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -102,6 +136,10 @@ public:
   int
   readInt() override;
 
+  /** Writes an integer to the stream buffer */
+  void
+  writeInt(int i) override;
+
   /** Reads a short from the stream buffer */
   short
   readShort() override;
@@ -110,6 +148,10 @@ public:
   float
   readFloat() override;
 
+  /** Write a float */
+  void
+  writeFloat(float w) override;
+
   /** Read a single character */
   char
   readChar() override;
@@ -117,6 +159,19 @@ public:
   /** Read a std::string from a character length */
   std::string
   readString(size_t length) override;
+
+  /** Write a fixed length string from a std::string,
+   * padding with null if too short, clip if too long. */
+  virtual void
+  writeString(const std::string& c, size_t length) override;
+
+  /** Read a vector of data */
+  virtual void
+  readVector(void * data, size_t size) override;
+
+  /** Write a vector of data */
+  virtual void
+  writeVector(const void * data, size_t size) override;
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -157,6 +212,10 @@ public:
   int
   readInt() override;
 
+  /** Writes an integer to the stream buffer */
+  void
+  writeInt(int i) override;
+
   /** Reads a short from the stream buffer */
   short
   readShort() override;
@@ -165,6 +224,10 @@ public:
   float
   readFloat() override;
 
+  /** Writes a float to the stream buffer */
+  void
+  writeFloat(float f) override;
+
   /** Read a single character */
   char
   readChar() override;
@@ -172,6 +235,19 @@ public:
   /** Read a std::string from a character length */
   std::string
   readString(size_t length) override;
+
+  /** Write a fixed length string from a std::string,
+   * padding with null if too short, clip if too long. */
+  virtual void
+  writeString(const std::string& c, size_t length) override;
+
+  /** Read a vector of data */
+  virtual void
+  readVector(void * data, size_t size) override;
+
+  /** Write a vector of data */
+  virtual void
+  writeVector(const void * data, size_t size) override;
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -199,12 +275,25 @@ private:
 /** Wrap a std::vector<unsigned char> */
 class MemoryStreamBuffer : public StreamBuffer {
 public:
-  explicit MemoryStreamBuffer(const std::vector<char>& data)
+  explicit MemoryStreamBuffer(std::vector<char>& data)
     : data(data), marker(0){ }
+
+  /** Check overflow of memory buffer */
+  inline void
+  ensureAvailable(size_t bytes) const
+  {
+    if (marker + bytes > data.size()) {
+      throw std::out_of_range("Not enough space in memory buffer");
+    }
+  }
 
   /** Reads an integer from the stream buffer */
   int
   readInt() override;
+
+  /** Writes an integer to the stream buffer */
+  void
+  writeInt(int i) override;
 
   /** Reads a short from the stream buffer */
   short
@@ -213,6 +302,10 @@ public:
   /** Reads a float from the stream buffer */
   float
   readFloat() override;
+
+  /** Write a float */
+  void
+  writeFloat(float w) override;
 
   /** Read a single character */
   char
@@ -240,7 +333,7 @@ public:
   tell() const override;
 
 private:
-  const std::vector<char>& data;
+  std::vector<char>& data;
   size_t marker;
 };
 
@@ -518,42 +611,6 @@ public:
   {
     fread(&s, sizeof(T), 1, fp);
   }
-
-  // Functions for direct read/write to gzfile.  Debating subclass and or
-  // making API consistent with 'non-gzfile' calls above.  I'll leave that
-  // for yet another clean up pass
-
-  /** Write a scaled integer with correct endian */
-  static void
-  writeScaledInt(gzFile fp, float w, float scale);
-
-  /** Read an integer with correct endian and return as an int */
-  static int
-  readInt(FILE * fp);
-
-  /** Read an integer with correct endian and return as an int */
-  static int
-  readShort(FILE * fp);
-
-  /** Write an integer with correct endian and return as an int */
-  static void
-  writeInt(gzFile fp, int w);
-
-  /** Write a float with correct endian and return as a float */
-  static void
-  writeFloat(gzFile fp, float w);
-
-  /** Read up to length characters into a std::string */
-  // static std::string
-  // readChar(FILE * fp, size_t length);
-
-  /** Write up to length characters from a std::string */
-  static void
-  writeChar(gzFile fp, std::string c, size_t length);
-
-  /** Convenience method to write time */
-  static void
-  writeTime(gzFile fp, const Time& time);
 
   /*
    * // Toomey: Simple run-length encoding of data values. There's a lot of

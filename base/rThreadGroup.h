@@ -3,6 +3,7 @@
 #include <rUtility.h>
 #include <rError.h>
 #include <rDataType.h>
+#include <rBOOST.h>
 
 #include <thread>
 #include <mutex>
@@ -11,8 +12,6 @@
 #include <memory>
 #include <atomic>
 #include <future>
-
-#include <boost/thread.hpp>
 
 namespace rapio {
 /** What we do with a worker thread?  Subclass to do more */

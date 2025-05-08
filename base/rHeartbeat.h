@@ -2,8 +2,10 @@
 
 #include <rEventTimer.h>
 #include <rTime.h>
+#include <rUtility.h>
 
 #include <string>
+#include <memory>
 
 // Apache 2.0 license
 // Think this is ok here, including license for it
@@ -15,27 +17,29 @@ namespace rapio {
 class RAPIOProgram;
 
 /**
- * A baby cron format timer, except we have seconds as well
+ * A baby cron format, except we have seconds as well
  * This is used to fire timed events at a program for
  * accumulative non-data drive actions.
  *
  * @author Robert Toomey
  */
-class Heartbeat : public EventTimer {
+class Heartbeat : public Utility {
 public:
+
   /** Build the heartbeat */
-  Heartbeat(RAPIOProgram * prog, size_t milliseconds);
+  Heartbeat(RAPIOProgram * prog);
 
   /** Parse our special crontablike language string
    * @param cronlist The string from the program parameters. */
   bool
   setCronList(const std::string& cronlist);
 
-  /** Do the timer action */
-  virtual void
-  action() override;
+  /** Check for pulse and send message to program */
+  void
+  checkForPulse();
 
 protected:
+
   /** The program we send events to */
   RAPIOProgram * myProgram;
 
@@ -50,5 +54,24 @@ protected:
 
   /** Cron expression if successfully parsed */
   cron_expr myCronExpr;
+};
+
+/**
+ * An event timer that calls a heartbeat
+ *
+ * @author Robert Toomey
+ */
+class HeartbeatTimer : public EventTimer {
+public:
+  /** Build the heartbeat */
+  HeartbeatTimer(std::shared_ptr<Heartbeat>, size_t milliseconds);
+
+  /** Do the timer action */
+  virtual void
+  action() override;
+
+protected:
+  /** The heartbeat we send timed calls to */
+  std::shared_ptr<Heartbeat> myHeartbeat;
 };
 }

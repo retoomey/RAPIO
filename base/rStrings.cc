@@ -1,8 +1,8 @@
 #include "rStrings.h"
 
 #include <rError.h>
+#include <rBOOST.h>
 
-#include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <iomanip>
 

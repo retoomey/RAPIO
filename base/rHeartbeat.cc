@@ -7,7 +7,7 @@
 using namespace rapio;
 using namespace std;
 
-Heartbeat::Heartbeat(RAPIOProgram * prog, size_t milliseconds) : EventTimer(milliseconds, "Heartbeat"), myProgram(prog),
+Heartbeat::Heartbeat(RAPIOProgram * prog) : myProgram(prog),
   myFirstPulse(true), myParsed(false), myCronExpr(cron_expr())
 { }
 
@@ -24,16 +24,17 @@ Heartbeat::setCronList(const std::string& cronlist)
   }
   myParsed = true;
   return true;
-} // Heartbeat::parse
+}
 
 void
-Heartbeat::action()
+Heartbeat::checkForPulse()
 {
   if (!myParsed) {
     return;
   }
 
-  // Get now
+  // This is either now for realtime, or latest record
+  // for archive mode
   Time n = Time::CurrentTime();
 
   // Get the next pulse using cron expr.
@@ -51,6 +52,19 @@ Heartbeat::action()
       myProgram->processHeartbeat(n, myLastPulseTime);
     }
     myLastPulseTime = pulse;
-    // LogSevere("PULSE: "<<n << " --- " << pulse << "\n");
+    // LogSevere("PULSE: " << n << " --- " << pulse << "\n");
   }
-} // Heartbeat::action
+} // Heartbeat::checkForPulse
+
+HeartbeatTimer::HeartbeatTimer(std::shared_ptr<Heartbeat> h, size_t milliseconds) : EventTimer(milliseconds,
+    "HeartbeatTimer"),
+  myHeartbeat(h)
+{ }
+
+void
+HeartbeatTimer::action()
+{
+  if (myHeartbeat) {
+    myHeartbeat->checkForPulse();
+  }
+} // HeartbeatTimer::action

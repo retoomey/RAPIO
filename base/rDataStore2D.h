@@ -13,16 +13,16 @@ namespace rapio
 template <typename T> class DataStore2D : public DataStore<T>
 {
 public:
-  DataStore2D<T>() : DataStore<T>(){
+  DataStore2D() : DataStore<T>()
+  {
     myX = myY = 0;
   }
 
-  DataStore2D<T>(size_t x, size_t y) : DataStore<T>(x * y)
+  DataStore2D(size_t x, size_t y) : DataStore<T>(x * y)
   {
     myX = x;
     myY = y;
   }
-
 
   /** We want extra information on a resize, make it difficult
    * for people to resize without changing X and Y*/

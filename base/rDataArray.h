@@ -3,10 +3,9 @@
 #include <rData.h>
 #include <rArray.h>
 #include <rNamedAny.h>
+#include <rBOOST.h>
 
 #include <vector>
-
-#include <boost/optional.hpp>
 
 namespace rapio {
 /** Type marker of data to help out reader/writers.  This is modeled mostly on netcdf since we use it

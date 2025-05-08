@@ -37,7 +37,7 @@ public:
   /** Read a url and pass extra HTTP headers */
   virtual int
   readH(const std::string& url, const std::vector<std::string>& headers,
-    std::vector<char>& buf);
+    std::vector<char>& buf) override;
 
   /** Put a url and pass extra HTTP headers */
   // virtual int

@@ -11,9 +11,7 @@
 
 #include <rColorTerm.h>
 #include <rTime.h>
-
-#include <boost/log/expressions.hpp>
-#include <boost/format.hpp>
+#include <rBOOST.h>
 
 using namespace rapio;
 using namespace std;

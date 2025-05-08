@@ -13,17 +13,17 @@ namespace rapio
 template <typename T> class DataStore3D : public DataStore<T>
 {
 public:
-  DataStore3D<T>() : DataStore<T>(){
+  DataStore3D() : DataStore<T>()
+  {
     myX = myY = myZ = 0;
   }
 
-  DataStore3D<T>(size_t x, size_t y, size_t z) : DataStore<T>(x * y * z)
+  DataStore3D(size_t x, size_t y, size_t z) : DataStore<T>(x * y * z)
   {
     myX = x;
     myY = y;
     myZ = z;
   }
-
 
   /** We want extra information on a resize, make it difficult
    * for people to resize without changing X and Y and Z*/

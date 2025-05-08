@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rUtility.h>
+#include <rRecord.h>
 
 #include <string>
 
@@ -56,6 +57,11 @@ public:
   /** Setup/run the plugin */
   virtual void
   execute(RAPIOProgram * caller)
+  { }
+
+  /** Handle a post record event */
+  virtual void
+  postRecordEvent(RAPIOProgram * caller, const Record& rec)
   { }
 
 protected:

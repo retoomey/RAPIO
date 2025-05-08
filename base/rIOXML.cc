@@ -5,11 +5,10 @@
 #include "rError.h"
 #include "rIOURL.h"
 #include "rOS.h"
+#include "rBOOST.h"
 
 // Default built in DataType support
 #include "rDataTable.h"
-
-#include <boost/property_tree/xml_parser.hpp>
 
 using namespace rapio;
 

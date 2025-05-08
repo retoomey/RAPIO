@@ -57,7 +57,8 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   // We are going to proxy to another IODataType
   outputParams["filepathmode"] = "direct";
   const bool success = write1(dt, outputinfo, records, f, outputParams);
-  if (!success){ return false; }
+
+  if (!success) { return false; }
 
   // Notification currently has default paths and things, if we do want notification for single
   // files we'll have to tweek that code some.  FIXME: I can see doing this

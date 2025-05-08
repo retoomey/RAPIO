@@ -8,7 +8,7 @@
 #include <mutex>
 #include <queue>
 
-// From the webserver folder 
+// From the webserver folder
 #include "server_http.hpp"
 
 using namespace std;

@@ -245,7 +245,7 @@ public:
   /** Send human readable output to a ostream.  This is
    * called by iotext and rdump to view the file */
   virtual bool
-  dumpToText(std::ostream& s);
+  dumpToText(std::ostream& s) override;
 
   /** Number of values stored (non-missing) */
   size_t getValueSize(){ return myValueSize; }
@@ -357,7 +357,7 @@ public:
   /** Send human readable output to a ostream.  This is
    * called by iotext and rdump to view the file */
   virtual bool
-  dumpToText(std::ostream& s)
+  dumpToText(std::ostream& s) override
   {
     const std::string i = "\t";
 

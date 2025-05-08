@@ -37,6 +37,7 @@ rCurlConnection.h
 rDataArray.h
 rDataFilter.h
 datatype/rDataGrid.h
+rBOOST.h
 rData.h
 rDataProjection.h
 rDataStore2D.h

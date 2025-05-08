@@ -205,6 +205,12 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
   if (rec.isMessage()) {
     processNewMessage(rec);
   }
+
+  // Finally, notify plugins.  In archive mode the
+  // heartbeat needs the new record time to pulse.
+  for (auto p: myPlugins) {
+    p->postRecordEvent(this, rec);
+  }
 }
 
 void

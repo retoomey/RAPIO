@@ -44,7 +44,7 @@ public:
 
   /** We're going to use the weighted average */
   virtual std::shared_ptr<VolumeValue>
-  getVolumeValue()
+  getVolumeValue() override
   {
     return std::make_shared<VolumeValueWeightAverage>();
   }
