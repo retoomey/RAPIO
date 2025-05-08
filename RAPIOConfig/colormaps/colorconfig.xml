@@ -41,9 +41,12 @@
 <!-- FIXME: Might add pattern matching at some point, right now it's a simple key match  -->
 <!-- Reflectivity here would work anyway since we would also try adding .xml to it -->
   <colormap key="Reflectivity" type="w2" filename="Reflectivity.xml"/>
+  <colormap key="jwb" type="w2" filename="jwb.xml"/>
   <colormap key="MergedReflectivityQC" type="w2" filename="Reflectivity.xml"/>
   <colormap key="MergedReflectivityComposite" type="w2" filename="Reflectivity.xml"/>
-
+  <colormap key="TestColor" type="w2" filename="TestColor.xml"/>
+  <colormap key="PaletteTest" type="pal" filename="PaletteTest.pal"/>
+  <colormap key="PalRef" type="pal" filename="PalRef.pal"/>
 <!-- Matlab style color maps or more GIS generated.  These typically work by taking data ranges -->
   <colormap key="disable-MergedReflectivityComposite" type="para" filename="idl_colormaps.xml" name="BLUE-WHITE"  lowdata="-50" highdata="50" missing="#00000000" unavailable="#C800C822"/>
 </colormaps>

@@ -5,6 +5,8 @@
 
 #include <string>
 
+#include <library_sci_palette.h>
+
 namespace rapio {
 /** Does the work of reading in color map configurations */
 class ConfigColorMap : public ConfigType {
@@ -25,6 +27,12 @@ public:
   static bool
   read1ColorConfig(const std::string& key, std::map<std::string, std::string> & attributes);
 
+  static std::shared_ptr<ColorMap>
+  readPalColorMap(const URL& url);
+
+  static std::shared_ptr<ColorMap>
+  readPalColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+
   /** Read a W2 Color map */
   static std::shared_ptr<ColorMap>
   readW2ColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
@@ -36,6 +44,8 @@ public:
   /** Read a W2 color map from a given URL */
   static std::shared_ptr<ColorMap>
   readW2ColorMap(const URL& u);
+
+  SCIPalette *SCIPaletteFromFile(char *filename);
 
 private:
 
