@@ -1,5 +1,5 @@
 // Add this at top for any BOOST test
-#include <boost/test/unit_test.hpp>
+#include "rBOOSTTest.h"
 
 /** Test fusion stage2 data. */
 #include "../programs/fusion/rStage2Data.h"

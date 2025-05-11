@@ -1,5 +1,5 @@
 // Add this at top for any BOOST test
-#include <boost/test/unit_test.hpp>
+#include "rBOOSTTest.h"
 
 /** Test for network */
 #include "rCurlConnection.h"

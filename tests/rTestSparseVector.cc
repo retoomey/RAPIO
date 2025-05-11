@@ -1,5 +1,5 @@
 // Add this at top for any BOOST test
-#include <boost/test/unit_test.hpp>
+#include "rBOOSTTest.h"
 
 /** Test for sparse vector and probably the bitset under it as well,
  * we might revamp all the simple data classes into a single test

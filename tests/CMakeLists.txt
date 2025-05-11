@@ -11,6 +11,11 @@ link_directories(../../lib)
 # Build source as a shared library
 enable_testing()
 
+# Guard against multiple inclusions or redundant setup
+if(NOT TARGET Boost::unit_test_framework)
+  find_package(Boost 1.66 REQUIRED COMPONENTS unit_test_framework)
+endif()
+
 add_executable(testrapio
   rTestArray.cc
   rTestBimap.cc
@@ -28,8 +33,13 @@ add_executable(testrapio
 )
 
 # Link to other libraries
-target_link_libraries(testrapio
-  boost_unit_test_framework
+#target_link_libraries(testrapio
+#  boost_unit_test_framework
+#  rapio
+#)
+
+target_link_libraries(testrapio PRIVATE
+  Boost::unit_test_framework
   rapio
 )
 

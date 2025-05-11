@@ -1,5 +1,5 @@
 // Add this at top for any BOOST test
-#include <boost/test/unit_test.hpp>
+#include "rBOOSTTest.h"
 
 #include "rIODataType.h"
 #include "rIOXML.h"
