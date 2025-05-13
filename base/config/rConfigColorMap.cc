@@ -210,12 +210,11 @@ ConfigColorMap::readParaColorMap(const std::string& key,
 } // ColorMap::readParaColorMap
 
 
-//FIXME: edited version of readW2colormap for reading in .pal
+//Function for reading in .pal files
 std::shared_ptr<ColorMap>
 ConfigColorMap::readPalColorMap(const std::string& key,
   std::map<std::string, std::string>            & attributes)
 {
-  std::cout << "readPalColorMap called" << "\n";
   std::shared_ptr<ColorMap> colormap;
   const std::string rootpath = "colormaps/"; // FIXME: const?
 
@@ -231,10 +230,12 @@ ConfigColorMap::readPalColorMap(const std::string& key,
     filename = rootpath + key + ".xml";
   }
 
+  //This find step is copied over from the other palette reader functions
   // Now try to read it
   URL find = Config::getConfigFile(filename);
   std::cout << "find: " << find << "\n";
 
+  //This redirects to the function which actually reads the colormap
   if (!find.empty()) {
     colormap = readPalColorMap(find.toString());
 
@@ -243,16 +244,15 @@ ConfigColorMap::readPalColorMap(const std::string& key,
   return colormap;
 }
 
+//Function for reading in .pal files
 std::shared_ptr<ColorMap>
 ConfigColorMap::readPalColorMap(const URL& url)
 {
   std::shared_ptr<DefaultColorMap> colormap;
-  std::cout << "url is: " << url << "\n";
   auto xml = IODataType::read<PTreeData>(url.toString());
   try{
-    std::cout << "Entering Try area" << "\n";
     // out = std::make_shared<ColorMap>(); GOOP
-    colormap = std::make_shared<DefaultColorMap>();
+  colormap = std::make_shared<DefaultColorMap>();
     //auto map = xml->getTree()->getChild("colorMap");
 
     // This is old read generic ability, which is a ton of color maps
@@ -260,8 +260,8 @@ ConfigColorMap::readPalColorMap(const URL& url)
 
     //auto bins    = map.getChildren("colorBin");
 
-    SCIPalette *pal;
-    pal = new SCIPalette;
+  SCIPalette *pal;
+  pal = new SCIPalette;
 
   char flag[8],buffer[128];
   FILE *inf;
@@ -270,6 +270,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
 
   if( (inf=fopen(fname.c_str(),"r"))==NULL )  return NULL;
 
+  //count the number of range colors and linear colors in the .pal file, as these are handled differently
   pal->number_range_colors = 0;
   pal->number_linear_colors = 0;
   while( fgets(buffer,126,inf)!=NULL)  {
@@ -277,6 +278,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
       if(buffer[0]=='L')  ++pal->number_linear_colors;
     }
 
+    //Prepare to add range colors, if present
   if(pal->number_range_colors > 0) {
     pal->ranges = new short int* [pal->number_range_colors];
     pal->range_palette = new int* [pal->number_range_colors];
@@ -286,6 +288,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
       pal->range_palette[c] = new int [3];
       }
     }
+    //Prepare to add linear colors, if present
   if(pal->number_linear_colors > 0) {
     pal->linear_palette = new int* [pal->number_linear_colors];
 
@@ -295,7 +298,8 @@ ConfigColorMap::readPalColorMap(const URL& url)
     }
 
     int ri=0,li=0;
-  rewind(inf);
+    rewind(inf);
+    //While there are still lines in the colormap file, read colormap data to the range colors array, linear colors array, or min/max values
   while( fgets(buffer,126,inf)!=NULL) {
     if(buffer[0]=='R') {
       sscanf(buffer,"%s %hd %hd %d %d %d",flag,&(pal->ranges[ri][LOW]),&(pal->ranges[ri][HIGH]),
@@ -312,11 +316,8 @@ ConfigColorMap::readPalColorMap(const URL& url)
     }
   fclose(inf);
 
-    std::cout << "made it past palette test block" << "\n";
     int colors = pal->number_range_colors;
-    std::cout << "num range colors: " << colors << "\n";
     int colors2 = pal->number_linear_colors;
-    std::cout << "num linear colors: " << colors2 << "\n";
     double lower = -HUGE_VAL;
     double upper = HUGE_VAL;
 
@@ -326,6 +327,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
 
     float lin_spacing = 1;
 
+    //Derive the spacing for the linear colors in the colormap
     if(colors2 > 0){
       lin_spacing = (float)((ubound-lbound)/colors2);
     }
@@ -335,6 +337,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
 
     std::string tname;
 
+    //Turn the colormap data from the file into colormap data that algorithms can use
     for(int k = 0; k < colors; k++){
       int lrange = pal->range_palette[k][LOW];
       int urange = pal->range_palette[k][HIGH];
@@ -380,87 +383,6 @@ ConfigColorMap::readPalColorMap(const URL& url)
       lbound = ubound;
     }
 
-     /* for (auto& b:bins) {
-      // parseColorBin(b, currentUpper, nextUpper, aNEWBIN);
-
-      // Get each 'bin' of color map.
-      // ColorMap -------------------------------------------------------
-
-      // Read the upperBound tag as a string, parse to numbers
-      auto upperStr = b.getAttr("upperBound", std::string(""));
-      //    double upper = 0.0;
-      if (upperStr.empty()) {
-        LogSevere("Bad or missing upperbound value in colorBin attribute\n");
-        return nullptr;
-      }
-      if (upperStr == "infinity") {
-        upper = HUGE_VAL;
-      } else if (upperStr == "-infinity") {
-        upper = -HUGE_VAL;
-      } else {
-        upper = atof(upperStr.c_str());
-      }
-
-      // colors
-      auto colors = b.getChildren("color");
-
-      if (colors.size() < 0) {
-        LogSevere("Missing colors in colorBin\n");
-        return nullptr;
-      }
-      // Color class, right? Or faster without it?
-      Color c1, c2;
-      if (colors.size() > 0) {
-        // These will default to white if missing
-        // I don't consider this super critical, since user will see it visually
-        // and know to fix the color map
-        std::string s;
-        s    = colors[0].getAttr("r", (std::string) "0xFF");
-        c1.r = strtol(s.c_str(), NULL, 0);
-        s    = colors[0].getAttr("b", (std::string) "0xFF");
-        c1.b = strtol(s.c_str(), NULL, 0);
-        s    = colors[0].getAttr("g", (std::string) "0xFF");
-        c1.g = strtol(s.c_str(), NULL, 0);
-        s    = colors[0].getAttr("a", (std::string) "0xFF");
-        c1.a = strtol(s.c_str(), NULL, 0);
-        if (colors.size() > 1) {
-          s    = colors[1].getAttr("r", (std::string) "0xFF");
-          c2.r = strtol(s.c_str(), NULL, 0);
-          s    = colors[1].getAttr("b", (std::string) "0xFF");
-          c2.b = strtol(s.c_str(), NULL, 0);
-          s    = colors[1].getAttr("g", (std::string) "0xFF");
-          c2.g = strtol(s.c_str(), NULL, 0);
-          s    = colors[1].getAttr("a", (std::string) "0xFF");
-          c2.a = strtol(s.c_str(), NULL, 0);
-        } else {
-          c2 = c1;
-        }
-      } 
-
-      auto label = b.getAttr("name", std::string(""));
-      std::string name;
-
-      // If no name is given for bin, use the bound to make one
-      if (label.empty()) { // This can be done better I think..
-        char buf[ 64 ];
-        if (c1 == c2) {
-          snprintf(buf, sizeof(buf), "%.1f", upper);
-        } else {
-          snprintf(buf, sizeof(buf), "%.1f-%.1f", lower, upper);
-        }
-        name = buf;
-      } else {
-        name = label;
-      }
-
-      const bool single = (( c1 == c2) || ( finite(upper) == 0) || ( finite(lower) == 0) );
-      colormap->addBin(!single, label, upper, lower, c1.r, c1.g, c1.b, c1.a, c2.r, c2.g, c2.b, c2.a);
-
-      lower = upper;
-
-      // Make it upper...
-      // bins[upperBound] = bin;  so map from upperbound to 'bin' with color...
-    } */
 
     // FIXME: need to read the unit right? Conversion?
   }catch (const std::exception& e) {

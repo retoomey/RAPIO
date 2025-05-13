@@ -27,9 +27,11 @@ public:
   static bool
   read1ColorConfig(const std::string& key, std::map<std::string, std::string> & attributes);
 
+  /** Read a colormap from a .pal file */
   static std::shared_ptr<ColorMap>
   readPalColorMap(const URL& url);
 
+  /** Read a colormap from a .pal file */
   static std::shared_ptr<ColorMap>
   readPalColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
 
@@ -45,6 +47,7 @@ public:
   static std::shared_ptr<ColorMap>
   readW2ColorMap(const URL& u);
 
+  /** Palette file reader */
   SCIPalette *SCIPaletteFromFile(char *filename);
 
 private:

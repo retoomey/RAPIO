@@ -301,7 +301,7 @@ operator << (rapio::LogCall1& l, const T& x)
 }
 }
 
-//FIXME: added a LINE_ID macro in order to simplify future debugging.
+//LINE_ID macro in order to simplify debugging.
 #define LINE_ID __FILE__ << ':' << __LINE__ << ' ' << __func__
 
 /** Would this log at this level?  Useful for turning off calculations,
