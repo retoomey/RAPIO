@@ -45,13 +45,13 @@ Lak2DResolver::calc(VolumeValue * vvp)
       vv.bottomSum = rw;
     } else {
       // Not a good data value, but we hit the product, so missing.
-      vv.dataValue = Constants::MissingData;
+      vv.dataValue = myMissing;
       vv.topSum    = vv.dataValue;
       vv.bottomSum = 1.0;
     }
   } else {
     // No data, unavailable
-    vv.dataValue = Constants::DataUnavailable;
+    vv.dataValue = myUnavailable;
     vv.topSum    = vv.dataValue;
     vv.bottomSum = 1.0;
   }

@@ -50,6 +50,7 @@ processTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   // Mask will be missing unless data unavailable or range folded in data.
   // Note we don't check inBeam here that depends on total counted beams, so will
   // be done as a group later
+  // Note: incoming data, so we don't use our output myMissing/myUnavailable here
   isMask = (value != Constants::DataUnavailable) && (value != Constants::RangeFolded);
 
   // Max of beamwidth or the tilt below us.  If too large a spread we
@@ -96,23 +97,6 @@ LakResolver1::create(const std::string & params)
 {
   return std::make_shared<LakResolver1>();
 }
-
-#if 0
-namespace {
-// Inline for clarity.  In theory branchless will be faster than if/then thus our 'always' calculating
-inline void
-countValue(const float ELEV_THRESH, const bool good, const double wt, const double value,
-  double& totalWt, double& totalsum, size_t& count, bool& thresh)
-{
-  thresh = (wt > ELEV_THRESH);           // Are we in the threshhold?
-  const bool doCount = (good && thresh); // Do we count the value?
-
-  totalWt  += doCount * (wt);         // Add to total weight if counted
-  totalsum += doCount * (wt * value); // Add to total sum if counted
-  count    += doCount;                // Increase value counter
-}
-}
-#endif // if 0
 
 void
 LakResolver1::calc(VolumeValue * vvp)
@@ -181,8 +165,6 @@ LakResolver1::calc(VolumeValue * vvp)
     processTilt(vv.getLowerValue(), vv.virtualElevDegs, spread,
       isGoodLower, lMask, inBeamLower, terrainBlockedLower, lValue, lowerWt,
       totalWt, totalsum, count, inThreshLower);
-
-    // countValue(ELEV_THRESH, isGoodLower, lowerWt, lValue, totalWt, totalsum, count, inThreshLower);
   }
 
   if (haveUpper) {
@@ -193,8 +175,7 @@ LakResolver1::calc(VolumeValue * vvp)
     double uValue;
     processTilt(vv.getUpperValue(), vv.virtualElevDegs, spread,
       isGoodUpper, uMask, inBeamUpper, terrainBlockedUpper, uValue, upperWt,
-      totalWt, totalsum, count, inThreshLower);
-    // countValue(ELEV_THRESH, isGoodUpper, upperWt, uValue, totalWt, totalsum, count, inThreshUpper);
+      totalWt, totalsum, count, inThreshUpper);
   }
 
   // ------------------------------------------------------------------------------
@@ -212,8 +193,7 @@ LakResolver1::calc(VolumeValue * vvp)
       haveUpper ? std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation) : 0.0;
     processTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread2,
       isGoodLower2, llMask, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2,
-      totalWt, totalsum, count, inThreshLower);
-    // countValue(ELEV_THRESH, isGoodLower2, lowerWt2, lValue2, totalWt, totalsum, count, inThreshLower2);
+      totalWt, totalsum, count, inThreshLower2);
   }
 
   if (haveUUpper) {
@@ -226,8 +206,7 @@ LakResolver1::calc(VolumeValue * vvp)
       haveLower ? std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
     processTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread3,
       isGoodUpper2, uuMask, inBeamUpper2, terrainBlockedUpper2, uValue2, upperWt2,
-      totalWt, totalsum, count, inThreshLower);
-    // countValue(ELEV_THRESH, isGoodUpper2, upperWt2, uValue2, totalWt, totalsum, count, inThreshUpper2);
+      totalWt, totalsum, count, inThreshUpper2);
   }
 
   if (count > 0) {
@@ -270,9 +249,7 @@ LakResolver1::calc(VolumeValue * vvp)
     missingMask |= (lMask && uMask);             // Smear between if maskable values
                                                  // Note this is why we delayed the in thresh test
     // Background.
-    // FIXME: Considering a background flag in VolumeValue
-    // Note: dataValue is direct 2D output, top/bottom for stage2 here
-    vv.dataValue = missingMask ? Constants::MissingData : Constants::DataUnavailable;
+    vv.dataValue = missingMask ? myMissing : myUnavailable;
     vv.topSum    = vv.dataValue; // Humm our stage2 actually checks this for missing value
     vv.bottomSum = 1.0;          // ignored for missing
   }

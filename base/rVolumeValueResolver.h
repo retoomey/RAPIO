@@ -57,7 +57,8 @@ class VolumeValueResolver : public Utility
 public:
 
   /** Create a volume value resolver for calculating grid values */
-  VolumeValueResolver() : myGlobalWeight(1.0), myVarianceWeight(1.0 / 62500.0){ }
+  VolumeValueResolver() : myGlobalWeight(1.0), myVarianceWeight(1.0 / 62500.0), myMissing(Constants::MissingData),
+    myUnavailable(Constants::DataUnavailable){ }
 
   /** Enum for layers in queryLayer */
   enum Layer {
@@ -152,6 +153,14 @@ public:
   /** Set a global variance weight multiplier, usually from stage 1 */
   void setVarianceWeight(float v){ myVarianceWeight = v; }
 
+  /** Set a missing output value, usually in stage 1.  This allows
+   * basic mask generation overriding. */
+  void setMissingValue(const SentinelDouble& i){ myMissing = i; }
+
+  /** Set an unavailable output value, usually in stage 1.  This allows
+   * basic mask generation overriding. */
+  void setUnavailableValue(const SentinelDouble& i){ myUnavailable = i; }
+
 protected:
 
   /** The global weight multiplier we can use during calculations */
@@ -159,6 +168,12 @@ protected:
 
   /** The global sigma weight multiplier we can use during calculations */
   float myVarianceWeight;
+
+  /** The missing value used by the resolver */
+  SentinelDouble myMissing;
+
+  /** The unavailable value used by the resolver */
+  SentinelDouble myUnavailable;
 
   // FIXME: Thinking we could do function pointers or something for different methods
   // of querying the data.

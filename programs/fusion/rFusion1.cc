@@ -72,6 +72,13 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   o.boolean("presmooth", "Apply Lak's moving average filter to the incoming radial set.");
   o.addGroup("presmooth", "debug");
 
+  // A boolean to set missing to unavailable in output, basically turning off the mask.
+  // At this point I consider the background mask/unavailable to be a separate product.
+  o.boolean("nomissing",
+    "Missing output values become unavailable.");
+  o.addAdvancedHelp("nomissing",
+    "Resolvers typically calculate values as well as a background mask of missing/unavailable values.  This flag makes any missing output become unavailable, which basically removes the background mask in situations where the data may be unreliable.  It can also speed things up in low weather conditions, but at the cost of loss of background information.");
+
   // Range to use in KMs.  Default is 460.  This determines subgrid and max range of valid
   // data for the radar
   o.optional("rangekm", "460", "Range in kilometers for radar.");
@@ -162,6 +169,9 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     LogSevere("Weight given is " << myWeight << " which seems wrong, setting to 1.0\n");
     myWeight = 1.0;
   }
+
+  // Missing or not?
+  myNoMissing = o.getBoolean("nomissing");
 
   mySigmaWeight = o.getFloat("S");
   if (mySigmaWeight <= 0) {
@@ -361,6 +371,10 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   if (vp) {
     myResolver = vp->getVolumeValueResolver(); // This will exit if not available
     myResolver->setGlobalWeight(myWeight);
+    if (myNoMissing) {
+      LogInfo("No missing set, turning off missing output values\n");
+      myResolver->setMissingValue(Constants::DataUnavailable);
+    }
 
     // 25 here is a magic number from w2merger for time variance squared.
     myResolver->setVarianceWeight(1.0 / (25.0 * (mySigmaWeight * mySigmaWeight)));
@@ -586,6 +600,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // processVolume(rTime);
     myDirty++;
   }
+  // In archive process volume with every incoming tilt.  This is ok I think.
   if (!isDaemon()) {
     processVolume(r->getTime());
   }
@@ -594,8 +609,13 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
-  processVolume(p); // n or p is the question...?
+  // In realtime process volume on the heartbeat (not every tilt)
+  // In archive, we called processVolume with every tilt so we ignore
+  // any heartbeats.
+  if (isDaemon()) {
+    LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
+    processVolume(p); // n or p is the question...?
+  }
 }
 
 size_t

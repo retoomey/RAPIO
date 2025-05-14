@@ -259,21 +259,21 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  if (isDaemon()) { // just checking, don't think we get message if we're not
-    // LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
-    // Trying a slight throttle. Wait for 20 stage2 before writing
-    LogInfo(
-      ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << " (" << myDirty <<
-        " ingested since last)\n");
-    mergeAndWriteOutput(n, p);
+  // Process heartbeat called in real time or archive stimulated time.
+  // so we don't check program mode here
+  // LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+  // Trying a slight throttle. Wait for 20 stage2 before writing
+  LogInfo(
+    ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << " (" << myDirty <<
+      " ingested since last)\n");
+  mergeAndWriteOutput(n, p);
 
-    // Dump source list (have to have at least one received source and database created)
-    if (myDatabase != nullptr) {
-      myDatabase->dumpSources();
-    }
-
-    myDirty = 0;
+  // Dump source list (have to have at least one received source and database created)
+  if (myDatabase != nullptr) {
+    myDatabase->dumpSources();
   }
+
+  myDirty = 0;
 }
 
 void

@@ -62,37 +62,37 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
   // doing it in the value calculation.  I recommend doing it this way because
   // logically it frys your brain a bit less.  You can 'have' an upper tilt,
   // but have bad values or missing, etc..so the cases are not one to one
-  double v = Constants::DataUnavailable;
+  double v = myUnavailable;
 
   if (haveUpper && haveLower) { // 11 Four binary possibilities
-    v = Constants::MissingData;
+    v = myMissing;
   } else {
     if (haveUpper) { // 10
       if (inUpperBeamwidth) {
-        v = Constants::MissingData;
+        v = myMissing;
       }
     } else if (haveLower) { // 01
       if (inLowerBeamwidth) {
-        v = Constants::MissingData;
+        v = myMissing;
       }
     } else {
-      // v = Constants::DataUnavailable; // 00
+      // v = myUnavailable; // 00
     }
   }
   // Make values unavailable if cumulative blockage is over 50%
   // FIXME: Could be configurable
   if (vv.getUpperValue().terrainCBBPercent > .50) {
-    vv.getUpperValue().value = Constants::DataUnavailable;
+    vv.getUpperValue().value = myUnavailable;
   }
   if (vv.getLowerValue().terrainCBBPercent > .50) {
-    vv.getLowerValue().value = Constants::DataUnavailable;
+    vv.getLowerValue().value = myUnavailable;
   }
   // Make values unavailable if elevation layer bottom hits terrain
   if (vv.getLowerValue().beamHitBottom) {
-    vv.getLowerValue().value = Constants::DataUnavailable;
+    vv.getLowerValue().value = myUnavailable;
   }
   if (vv.getUpperValue().beamHitBottom) {
-    vv.getUpperValue().value = Constants::DataUnavailable;
+    vv.getUpperValue().value = myUnavailable;
   }
 
 

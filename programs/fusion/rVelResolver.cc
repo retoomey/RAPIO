@@ -26,7 +26,8 @@ namespace {
 static void inline
 analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
   // OUTPUTS:
-  float&value, bool& isGood, bool& inBeam, bool& terrainBlocked)
+  float&value, bool& isGood, bool& inBeam, bool& terrainBlocked,
+  const SentinelDouble& myMissing, const SentinelDouble& myUnavailable)
 {
   static const float TERRAIN_PERCENT  = .50; // Cutoff terrain cumulative blockage
   static const float BEAMWIDTH_THRESH = .50; // Assume half-degree to meet beamwidth test
@@ -93,9 +94,9 @@ analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
     // Note missing only needed for 2D/3D CAPPI debugging output, we'll be making
     // tables for our stage2.
     if (inBeam) {
-      vv.dataValue = Constants::MissingData;
+      vv.dataValue = myMissing;
     } else {
-      vv.dataValue = Constants::DataUnavailable;
+      vv.dataValue = myUnavailable;
     }
   }
 } // analyzeTilt
@@ -156,12 +157,12 @@ VelResolver::calc(VolumeValue * vvp)
 
   if (haveLower) {
     analyzeTilt(vv, vv.getLowerValue(), vv.virtualElevDegs,
-      value, isGood, inBeam, terrainBlocked);
+      value, isGood, inBeam, terrainBlocked, myMissing, myUnavailable);
   } else if (haveUpper) {
     analyzeTilt(vv, vv.getUpperValue(), vv.virtualElevDegs,
-      value, isGood, inBeam, terrainBlocked);
+      value, isGood, inBeam, terrainBlocked, myMissing, myUnavailable);
   } else {
     // No tilts at all...so unavailable
-    vv.dataValue = Constants::DataUnavailable;
+    vv.dataValue = myUnavailable;
   }
 } // calc

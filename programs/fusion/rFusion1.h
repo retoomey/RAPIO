@@ -191,5 +191,8 @@ protected:
 
   /** Global sigma value */
   float mySigmaWeight;
+
+  /** Skip missing values in output? */
+  bool myNoMissing;
 };
 }
