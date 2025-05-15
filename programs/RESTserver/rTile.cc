@@ -56,14 +56,16 @@ RAPIOTileAlg::declareOptions(RAPIOOptions& o)
   // Optional flags (my debugging stuff, or maybe future filters/etc.)
   o.optional("flags", "", "Extra flags for determining tile drawing");
 
-  //FIXME: colormap test
+  //Colormap
   o.optional("map", "", "Colormap");
-  o.boolean("multi", "Set this option on if using more than one image for a single picture.");
-  o.boolean("multi_list", "for testing");
-  o.optional("second_file","","If multi is turned on, enter the second file with this option.");
-  o.optional("third_file","","If multi is turned on, enter the third file with this option.");
-  o.optional("number_in_list", "", "number of files in the list, for testing file_list");
-  o.optional("file_list", "", "If multi is turned on, enter a space-separated string of file names, such as 'firstfile secondfile thirdfile ...'");
+
+  /** Variables for other version of multi file read, keeping in case needed */
+  //o.boolean("multi", "Set this option on if using more than one image for a single picture.");
+  //o.boolean("multi_list", "for testing");
+  //o.optional("second_file","","If multi is turned on, enter the second file with this option.");
+  //o.optional("third_file","","If multi is turned on, enter the third file with this option.");
+  //o.optional("number_in_list", "", "number of files in the list, for testing file_list");
+  //o.optional("file_list", "", "If multi is turned on, enter a space-separated string of file names, such as 'firstfile secondfile thirdfile ...'");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -77,8 +79,6 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
 
   //FIXME: colormap test
   colorm = o.getString("map");
-  path2 = o.getString("second_file");
-  path3 = o.getString("third_file");
 
   myOverride["mode"] = "tile"; // We want tile mode for output
   myOverride["zoom"] = o.getString("zoom");
@@ -107,6 +107,7 @@ RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
   // Look for any data the system knows how to read...
   auto r = d.datatype<rapio::DataType>();
 
+
   if(datatypes.size() == infos.size()){
 
   }
@@ -124,6 +125,9 @@ RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
       myMulti->setSendToWriterAsGroup(true);
       writeOutputProduct(r->getTypeName(), myMulti, myOverride); // Typename will be replaced by -O filters
   }
+
+  /** Code for getting extra input files the old way, saved for testing */
+
     /*if(mult_list == true){
       std::string ftemp = "";
       auto myMulti = std::make_shared<MultiDataType>();
