@@ -110,6 +110,10 @@ ConfigRecord::readXML(Record& rec, const PTreeNode& item,
         fractional = std::stof("." + s[1]);
       }
 
+      // Get the message main text 'Message' from the item
+      auto t = item.get(std::string(""));
+      rec.setValue("MessageText", t);
+
       // Params as p= in item.  A missing p means it's a
       // message
       const auto pattr = item.getAttr("p", std::string(""));
@@ -130,22 +134,46 @@ ConfigRecord::readXML(Record& rec, const PTreeNode& item,
       // <selections>19990503-213435.057 Velocity 00.50 </selections>
       // </item>
 
+      // We also have this fun stuff.  It's an older attempt at messaging.
+      // We'll check for 'Event' and convert to our parameter list.
+      // <item>
+      // <time fractional="0.358000"> 1747425326 </time>
+      // <params>Event 3530 </params>
+      // <selections>20250516-195526.358 NewVolume </selections>
+      // </item>
+
       // Time as <time>
       const auto time = item.getChild("time");
       timelong   = time.get(0l);
       fractional = time.getAttr("fractional", 1.0f);
 
-      // Params as <params>
-      haveParams = true; // forced with old format
+      // Params as <params> and selections as <selections>
+      haveParams = true;
       const auto paramTag   = item.getChild("params");
       const auto p          = item.get("params", std::string("")); // direct
       const auto changeAttr = paramTag.getAttr("changes", std::string(""));
-      // inline?
       ConfigRecord::readParams(p, changeAttr, theParams, indexPath);
-
-      // Seleciions as <selections>
       const auto selections = item.get("selections", std::string(""));
       Strings::split(selections, &theSelections);
+
+      // Special check Lak's message format, convert the event number and
+      // text to our message.  Note, messages don't have selections
+      // and have empty params.
+      if ((theParams.size() > 0) && (theParams[0] == "Event")) {
+        // Event 12345.  Store as Count
+        if (theParams.size() > 1) {
+          rec.setValue("Count", theParams[1]);
+        }
+
+        // Selections: timestamp 'message', where message is say NewVolume
+        if (theSelections.size() > 1) {
+          rec.setValue("MessageText", theSelections[1]);
+        }
+
+        theSelections.clear(); // Don't need these and might break
+        theParams.clear();
+        haveParams = false;
+      }
     }
 
     // Finalize the record

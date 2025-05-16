@@ -276,9 +276,9 @@ public:
     // dirty and messy.
     const auto s = in.size();
 
-    if (s > 0) {
+    if (s > 1) {
       myDataType = in[1];
-      if (s > 1) {
+      if (s > 2) {
         mySubType = in[2];
       }
       // Extra we ignore now for space.  Can use later if really needed.
