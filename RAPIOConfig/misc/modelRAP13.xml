@@ -3,9 +3,8 @@ Intial assumpion is that we are reading pressure level files for the 3D
 -->
 <modelfields>
 	<!-- Temperatures -->
-	<!--
-	<field id="TMP" type="2D" name="Temp" unit="K" layer="surface"/>
-	<field id="TMP" type="2D" name="Temp" unit="K" layer="cloud top"/>
+	<field id="TMP" type="2D" name="Temp" unit="K" layer="2 m above ground"/>
+	<field id="TMP" type="2D" name="Temp" unit="K" layer="tropopause"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="100 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="125 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="150 mb"/>
@@ -43,9 +42,7 @@ Intial assumpion is that we are reading pressure level files for the 3D
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="950 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="975 mb"/>
 	<field id="TMP" type="3D" name="Temp" unit="K" layer="1000 mb"/>
-	-->
 	<!-- Heights -->
-	<!--
 	<field id="HGT" type="2D" name="Height" unit="m" layer="surface"/>
 	<field id="HGT" type="2D" name="Height" unit="m" layer="0C isotherm"/>
 	<field id="HGT" type="3D" name="Height" unit="m" layer="100 mb"/>
@@ -85,57 +82,166 @@ Intial assumpion is that we are reading pressure level files for the 3D
 	<field id="HGT" type="3D" name="Height" unit="m" layer="950 mb"/>
 	<field id="HGT" type="3D" name="Height" unit="m" layer="975 mb"/>
 	<field id="HGT" type="3D" name="Height" unit="m" layer="1000 mb"/>
-	-->
-	<!-- Dew Point -->
-	<!--
-	<field id="DPT" type="2D" name="DewPoint" unit="K" layer="surface"/>
-	<field id="DPT" type="2D" name="DewPoint" unit="K" layer="cloud top"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="100 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="125 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="150 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="175 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="200 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="225 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="250 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="275 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="300 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="325 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="350 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="375 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="400 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="425 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="450 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="475 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="500 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="525 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="550 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="575 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="600 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="625 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="650 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="675 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="700 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="725 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="750 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="775 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="800 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="825 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="850 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="875 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="900 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="925 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="950 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="975 mb"/>
-	<field id="DPT" type="3D" name="DewPoint" unit="K" layer="1000 mb"/>
-	-->
-	<!-- Pressure -->
-	<field id="PRES" type="2D" name="Surface" unit="mb" layer="surface"/>
+	<!-- Relative Humidity -->
+	<field id="RH" type="2D" name="RH" unit="%" layer="2 m above ground"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="100 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="125 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="150 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="175 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="200 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="225 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="250 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="275 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="300 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="325 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="350 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="375 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="400 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="425 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="450 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="475 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="500 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="525 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="550 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="575 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="600 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="625 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="650 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="675 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="700 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="725 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="750 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="775 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="800 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="825 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="850 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="875 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="900 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="925 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="950 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="975 mb"/>
+	<field id="RH" type="3D" name="RH" unit="%" layer="1000 mb"/>
+	<!-- Vertical Velocity -->
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="100 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="125 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="150 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="175 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="200 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="225 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="250 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="275 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="300 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="325 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="350 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="375 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="400 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="425 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="450 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="475 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="500 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="525 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="550 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="575 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="600 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="625 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="650 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="675 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="700 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="725 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="750 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="775 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="800 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="825 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="850 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="875 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="900 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="925 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="950 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="975 mb"/>
+	<field id="VVEL" type="3D" name="VerticalVel" unit="m s-1" layer="1000 mb"/>
+
+
 	<!-- UGrid/VGrid combination -->
-	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
-	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
 	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
 	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="100 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="125 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="125 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="150 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="150 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="175 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="175 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="200 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="200 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="225 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="225 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="250 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="250 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="275 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="275 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="300 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="300 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="325 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="325 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="350 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="350 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="375 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="375 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="400 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="400 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="425 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="425 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="450 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="450 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="475 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="475 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="500 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="525 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="525 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="550 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="550 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="575 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="575 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="600 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="600 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="625 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="625 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="650 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="650 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="675 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="675 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="700 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="725 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="725 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="750 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="750 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="775 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="775 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="800 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="800 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="825 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="825 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="850 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="850 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="875 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="875 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="900 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="900 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="925 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="925 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="950 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="950 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="975 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="975 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="1000 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="1000 mb" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="UGRD" type="2D" name="UGrid" unit="m s-1" layer="10 m above ground" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+	<field id="VGRD" type="2D" name="VGrid" unit="m s-1" layer="10 m above ground" rotateWinds="LCC:38.5:-97.5:UWind:VWind"/>
+
+	<!-- Pressure -->
+	<field id="PRES" type="2D" name="Pressure" unit="mb" layer="surface"/>
+	<field id="MSLMA" type="2D" name="Pressure" unit="mb" layer="mean sea level"/>
+
 
 </modelfields>
