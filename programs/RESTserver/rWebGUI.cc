@@ -623,17 +623,16 @@ RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
     }
     // wms "format=image/jpeg" should probably handle it
     else if (a.first == "format") {
-      LogSevere(">>>>SUFFIX " << a.second << "\n");
       // Suffixes for our writer.  jpg, png, mrmstile
-      if (a.second == "image/jpeg") { // FIXME: add others or better translation
+      std::string trimS = a.second;
+      if (trimS == "image/jpeg") {
         // Making it png so we have transparency.  Not sure why the wms/tms
         // are passing image/jpeg by default
-        settings["suffix"] = "png";
-      } else {
-        settings["suffix"] = a.second;
+        trimS = "png";
       }
+      Strings::removePrefix(trimS, "image/");
+      settings["suffix"] = trimS;
     }
-    // LogSevere("Field " << a.first << " == " << a.second << "\n");
   }
   if (settings["suffix"] == "") {
     settings["suffix"] = "png";
@@ -659,6 +658,29 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
 
   // GET current URL params into settings
   handleOverrides(w.getMap(), settings);
+
+  // Arcgis or other gis software asking for capabilities.
+  if ((settings["service"] == "WMS") && (settings["request"] == "GetCapabilities")) {
+
+    // Arcgis earth (or others) asking for WMS capabilities.
+    const URL url = Config::getConfigFile("misc/webguicapabilities.xml");
+    if (url.empty()) {
+      LogInfo("Received capabilities request but can't find webguicapabilities.xml\n");
+      w.setMessage("Error");
+      return;
+    }else{
+      LogInfo("Request for capabilities succeeded.\n");
+    }
+
+    std::ifstream file(url.toString());
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    w.setMessage(buffer.str(), "application/xml");
+    return;
+  } else {
+    bool service = (settings["service"] == "WMS");
+    LogInfo("Settings?  " << service << "\n");
+  }
 
   // CACHE SETTING (Global/not changable)
   std::string cache = myOverride["tilecachefolder"];

@@ -534,6 +534,11 @@ ConfigColorMap::getColorMap(const std::string& key)
       else if (type == "pal") {
         colormap = readPalColorMap(key, attributes);
       }
+    } else {
+      // If not in the config, try the with w2 which will
+      // look for key.xml
+      attributes["filename"] = ""; // Force reader to use key.xml
+      colormap = readW2ColorMap(key, attributes);
     }
 
     // If anything failed use my debugging high contrast all data map

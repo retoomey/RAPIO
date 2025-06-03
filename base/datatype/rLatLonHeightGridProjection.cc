@@ -34,6 +34,13 @@ LatLonHeightGridProjection::getValueAtLL(double latDegs, double lonDegs)
   if ((x < 0) || (x >= myNumLats)) {
     return Constants::DataUnavailable;
   }
+
+  // Try to wrap reasonably.
+  if (lonDegs < myLonNWDegs) {
+    lonDegs += 360;
+  } else if (lonDegs > (myLonNWDegs + myLonSpacing * myNumLons)) {
+    lonDegs -= 360; // < -180 web wrap forward.
+  }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
   const int y     = std::round(yd);
 
@@ -49,8 +56,8 @@ LatLonHeightGridProjection::LLCoverageCenterDegree(const float degreeOut, const 
   float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
 {
   // location is the top left, find the absolute center (for x, y > 0)
-  const auto lonc = myLonNWDegs + (myLonSpacing * myNumLons / 2.0);
-  const auto latc = myLatNWDegs - (myLatSpacing * myNumLats / 2.0);
+  const auto lonc = myLonNWDegs + (myLonSpacing * myNumLons * 0.5);
+  const auto latc = myLatNWDegs - (myLatSpacing * myNumLats * 0.5);
 
   Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
   return true;
@@ -83,7 +90,7 @@ LatLonHeightGridProjection::LLCoverageTile(
   // Ok this should be correct even for spherical mercator..since the east-west
   // matches geodetic.  North-south is where the stretching is.
   const double degWidth  = 360.0 / pow(2, zoomLevel); // lol I wrote 2 ^ zoomlevel which is not c++
-  const double halfDeg   = degWidth / 2.0;
+  const double halfDeg   = degWidth * 0.5;
   const double degreeOut = halfDeg;
 
   //  Project::createLatLonGrid(centerLatDegs, centerLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs,
@@ -104,7 +111,7 @@ LatLonHeightGridProjection::LLCoverageTile(
   deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
   auto lat = centerLatDegs;
 
-  topDegs = lat - (deltaLatDegs * numRows / 2.0);
+  topDegs = lat - (deltaLatDegs * numRows * 0.5);
 
   return true;
 } // LatLonGridProjection::LLCoverageTile

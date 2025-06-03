@@ -24,6 +24,12 @@ LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid 
 double
 LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
 {
+  // Map tiles pass in -180 to 180 normalized.  And our grid might
+  // be somethings like -200 to 100. We want to make sure that 179
+  // maps to the -181 to fall into the range of our data.
+  // -180                                             180   (360 degrees)
+  //
+
   // FIXME: This code now matches the array algorithm,
   // nearest. We could possibly merge that API
   // Try to do this quick and efficient, called a LOT
@@ -32,6 +38,13 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
 
   if ((x < 0) || (x >= myNumLats)) {
     return Constants::DataUnavailable;
+  }
+
+  // Try to wrap reasonably.
+  if (lonDegs < myLonNWDegs) {
+    lonDegs += 360;
+  } else if (lonDegs > (myLonNWDegs + myLonSpacing * myNumLons)) {
+    lonDegs -= 360; // < -180 web wrap forward.
   }
   const double yd = (lonDegs - myLonNWDegs) / myLonSpacing;
   const int y     = std::round(yd);
@@ -47,8 +60,8 @@ LatLonGridProjection::LLCoverageCenterDegree(const float degreeOut, const size_t
   float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs)
 {
   // location is the top left, find the absolute center (for x, y > 0)
-  const auto lonc = myLonNWDegs + (myLonSpacing * myNumLons / 2.0);
-  const auto latc = myLatNWDegs - (myLatSpacing * myNumLats / 2.0);
+  const auto lonc = myLonNWDegs + (myLonSpacing * myNumLons * 0.5);
+  const auto latc = myLatNWDegs - (myLatSpacing * myNumLats * 0.5);
 
   Project::createLatLonGrid(latc, lonc, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs, deltaLonDegs);
   return true;
@@ -81,7 +94,7 @@ LatLonGridProjection::LLCoverageTile(
   // Ok this should be correct even for spherical mercator..since the east-west
   // matches geodetic.  North-south is where the stretching is.
   const double degWidth  = 360.0 / pow(2, zoomLevel); // lol I wrote 2 ^ zoomlevel which is not c++
-  const double halfDeg   = degWidth / 2.0;
+  const double halfDeg   = degWidth * 0.5;
   const double degreeOut = halfDeg;
 
   //  Project::createLatLonGrid(centerLatDegs, centerLonDegs, degreeOut, numRows, numCols, topDegs, leftDegs, deltaLatDegs,
@@ -102,7 +115,7 @@ LatLonGridProjection::LLCoverageTile(
   deltaLatDegs = -deltaLonDegs; // keep the same square per pixel
   auto lat = centerLatDegs;
 
-  topDegs = lat - (deltaLatDegs * numRows / 2.0);
+  topDegs = lat - (deltaLatDegs * numRows * 0.5);
 
   return true;
 } // LatLonGridProjection::LLCoverageTile

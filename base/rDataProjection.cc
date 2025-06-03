@@ -145,7 +145,9 @@ DataProjection::getBBOX(
     } else if (bboxsr == "3857") { // Coordinates are already in webmerc
       return theWebMercToLatLon;
     } else {
-      LogSevere("Unknown projection requested: " << bboxsr << "\n");
+      // WMS capabilities xml we have <CRS>EPSG:3857</CRS>
+      // LogSevere("Unknown projection requested: " << bboxsr << "\n");
+      return theWebMercToLatLon;
     }
   }
 
