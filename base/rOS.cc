@@ -7,6 +7,16 @@
 #include "rStrings.h"
 #include "rBOOST.h"
 
+BOOST_WRAP_PUSH
+#include <boost/asio.hpp>
+#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/process.hpp>
+// #include <boost/date_time/posix_time/posix_time.hpp>
+BOOST_WRAP_POP
+
 #include <string>
 #include <iostream>
 #include <fstream>

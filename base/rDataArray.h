@@ -5,6 +5,10 @@
 #include <rNamedAny.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/optional.hpp>
+BOOST_WRAP_POP
+
 #include <vector>
 
 namespace rapio {

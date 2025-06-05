@@ -6,8 +6,12 @@
 #include <rPTreeData.h>
 #include <rDataGrid.h>
 #include <rBOOST.h>
-#include <memory>
 
+BOOST_WRAP_PUSH
+#include <boost/property_tree/json_parser.hpp>
+BOOST_WRAP_POP
+
+#include <memory>
 #include <ostream>
 
 namespace rapio {

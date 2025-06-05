@@ -4,6 +4,11 @@
 
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+BOOST_WRAP_POP
+
 namespace rapio {
 /** BOOST::asio network reader
  * FIXME: Currently alpha, has issues but have to start somewhere

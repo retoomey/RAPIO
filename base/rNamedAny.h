@@ -5,6 +5,11 @@
 #include <rError.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/any.hpp>
+#include <boost/optional.hpp>
+BOOST_WRAP_POP
+
 #include <map>
 #include <string>
 #include <memory>

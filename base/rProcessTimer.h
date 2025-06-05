@@ -9,6 +9,10 @@
 /** Using boost timer class now internally */
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/timer/timer.hpp>
+BOOST_WRAP_POP
+
 namespace rapio {
 class ProcessTimer;
 

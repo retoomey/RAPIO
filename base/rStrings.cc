@@ -3,6 +3,10 @@
 #include <rError.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/algorithm/string.hpp>
+BOOST_WRAP_POP
+
 #include <fstream>
 #include <iomanip>
 

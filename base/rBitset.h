@@ -5,6 +5,10 @@
 #include <rDimensionMapper.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/dynamic_bitset.hpp>
+BOOST_WRAP_POP
+
 #include <cmath>
 
 #include <rError.h>

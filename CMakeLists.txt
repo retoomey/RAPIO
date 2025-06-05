@@ -49,6 +49,8 @@ endif()
 #set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 #set(CMAKE_VERBOSE_MAKEFILE)
 
+#add_compile_options(-ftime-report)  # For GCC, shows time per compilation unit
+
 ##################################################################################################
 # Set the project info
 project (RAPIO 
@@ -360,6 +362,8 @@ if (BUILD_GDAL_MODULE)
   add_subdirectory(modules/iogdal)
 endif (BUILD_GDAL_MODULE)
 
+set(jasper OFF)
+set(openjpeg OFF)
 if (BUILD_GRIB2_MODULE)
 
   # Go ahead and die now...otherwise it will die when pulling external project
@@ -369,39 +373,39 @@ if (BUILD_GRIB2_MODULE)
   # And jasper is deprecated is seems. Depending on OS you might have issues
   # and have to play with turning on one vs the other.
 
-  # Make sure off until found explicitly below
-  set(USE_JASPER_NCEPLIBS NO)
-  set(USE_OPENJPEG_NCEPLIBS NO)
-  set(JPEG_COMPRESSION_FOUND NO)
-
   find_package(OpenJPEG QUIET)
   if (OpenJPEG_FOUND)
-    set(USE_OPENJPEG_NCEPLIBS YES)
-    set(JPEG_COMPRESSION_FOUND YES)
+    set(openjpeg ON)
     message(STATUS "Found OpenJPEG2 for NCEPGRIB2.")
+    message(STATUS "INSIDE VALUE = ${openjpeg}")
   else()
-    set(USE_OPENJPEG_NCEPLIBS NO)
 
     # Ok try to fall back to jasper
     find_package(Jasper QUIET)
     if (Jasper_FOUND)
-      set(USE_JASPER_NCEPLIBS YES)
-      set(JPEG_COMPRESSION_FOUND YES)
+      set(jasper ON)
       message(STATUS "Found Jasper for NCEPGRIB2 (if build fails you can install OpenJpeg2).")
-    else()
-      set(USE_JASPER_NCEPLIBS NO)
     endif()
   endif()
 
   # Manual override if needed, only use one:
-  #set(USE_OPENJPEG_NCEPLIBS YES)
-  #set(USE_JASPER_NCEPLIBS NO)
+  #set(jasper ON)
+  #set(openjpeg OFF)
+endif (BUILD_GRIB2_MODULE)
 
-  if (NOT JPEG_COMPRESSION_FOUND)
-    addRAPIONote("No OpenJPEG2 or Jasper library.  A LOT of grib2 has JPEG compression so these files may fail to read.")
+# Make sure and set once to prevent rebuilding
+set(USE_JASPER_NCEPLIBS ${jasper} CACHE BOOL "Use Jasper JPEG compression library")
+set(USE_OPENJPEG_NCEPLIBS ${openjpeg} CACHE BOOL "Use OpenJPEG JPEG compression library")
+
+if (BUILD_GRIB2_MODULE)
+  #add_subdirectory(modules/iowgrib)
+  add_subdirectory(modules/iogrib)  # deprecated
+  if(jasper)
+    addRAPIONote("          -->JPEG: Jasper")
   endif()
-  
-  add_subdirectory(modules/iogrib)
+  if(openjpeg)
+    addRAPIONote("          -->JPEG: OpenJPEG")
+  endif()
 endif (BUILD_GRIB2_MODULE)
 
 if (BUILD_TEXT_MODULE)

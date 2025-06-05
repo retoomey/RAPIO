@@ -8,6 +8,10 @@
 
 #include "rBOOST.h"
 
+BOOST_WRAP_PUSH
+#include <boost/multi_array.hpp>
+BOOST_WRAP_POP
+
 namespace rapio {
 // Define the ArrayFloat1DRef, ArrayFloat1DPtr, etc. that are types hiding the boost:multi_array
 // in case we ever swap it with another array system, this will prevent algorithms

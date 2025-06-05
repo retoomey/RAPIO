@@ -6,6 +6,11 @@
 #include <rPTreeData.h>
 #include "rDataGrid.h"
 #include <rBOOST.h>
+
+BOOST_WRAP_PUSH
+#include <boost/property_tree/xml_parser.hpp>
+BOOST_WRAP_POP
+
 #include <memory>
 
 namespace rapio {

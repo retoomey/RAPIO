@@ -5,6 +5,10 @@
 #include <rLLH.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/property_tree/ptree.hpp>
+BOOST_WRAP_POP
+
 namespace rapio {
 /** Property Tree holder class.  This is typically used
  * for XML, JSON, YAML, etc.. We wrap BOOST here currently*/

@@ -3,6 +3,12 @@
 #include <rData.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/bimap.hpp>
+#include <boost/bimap/set_of.hpp>
+#include <boost/bimap/multiset_of.hpp>
+BOOST_WRAP_POP
+
 #include <map>
 
 namespace rapio {

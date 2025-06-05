@@ -5,6 +5,10 @@
 #include <rDataType.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/thread.hpp>
+BOOST_WRAP_POP
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>

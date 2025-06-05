@@ -5,6 +5,19 @@
 #include <rEventTimer.h>
 #include <rBOOST.h>
 
+BOOST_WRAP_PUSH
+#include <boost/log/expressions.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/utility/manipulators/add_value.hpp>
+#include <boost/filesystem.hpp>
+// On alpine at least, need this header to define BOOST_CURRENT_FUNCTION
+#include <boost/current_function.hpp>
+BOOST_WRAP_POP
+
 #include <memory>
 #include <mutex>
 
@@ -301,7 +314,7 @@ operator << (rapio::LogCall1& l, const T& x)
 }
 }
 
-//LINE_ID macro in order to simplify debugging.
+// LINE_ID macro in order to simplify debugging.
 #define LINE_ID __FILE__ << ':' << __LINE__ << ' ' << __func__
 
 /** Would this log at this level?  Useful for turning off calculations,
