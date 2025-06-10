@@ -1,6 +1,8 @@
 ##################################################################
 # CMakeLists for building programs
 #
+project(rNse)
+
 link_directories(${RAPIO_INSTALL_LIB})
 include_directories(. ${RAPIO_INCLUDE_DIRS})
 
@@ -11,13 +13,15 @@ add_library(nseshared STATIC
   nseProfile.cc
 )
 
+target_link_libraries(nseshared PUBLIC rapio)
 ##################################################################
 # NSE
-#add_executable(nse
-#  rNSE.cc
-#)
-#target_link_libraries(PRIVATE nseshared PUBLIC rapio)
-#install(TARGETS rFusion1
-#   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-#)
+add_executable(rNSE
+  rNSE.cc
+)
+target_link_libraries(rNSE PRIVATE nseshared)
+
+install(TARGETS rNSE
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 
