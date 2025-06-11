@@ -21,6 +21,7 @@
 
 #include "f_rapio_callback.h"
 
+// AGAIN
 // Magic variables used by wgrib2.  I'll describe what I understand of them.
 
 extern int decode; /** Set during init iff we want the grib field decoded */
@@ -102,58 +103,6 @@ grib2_get_valid_time(unsigned char ** sec)
   return ref_time + (time_t) (fcst_time * unit_seconds[unit_code]);
 } /* grib2_get_valid_time */
 
-#if 0
-void
-get_latlon_bounds(unsigned char ** sec, int nx, int ny,
-  double * min_lat, double * max_lat,
-  double * min_lon, double * max_lon)
-{
-  *min_lat = 90.0;
-  *max_lat = -90.0;
-  *min_lon = 360.0;
-  *max_lon = -360.0;
-
-  double lat, lon;
-
-  for (int i = 0; i < nx; i++) {
-    // Top row
-    ij2ll(sec, nx, ny, i, 0, &lon, &lat);
-    if (lon > 180.0) { lon -= 360.0; }
-    if (lat < *min_lat) { *min_lat = lat; }
-    if (lat > *max_lat) { *max_lat = lat; }
-    if (lon < *min_lon) { *min_lon = lon; }
-    if (lon > *max_lon) { *max_lon = lon; }
-
-    // Bottom row
-    ij2ll(sec, nx, ny, i, ny - 1, &lon, &lat);
-    if (lon > 180.0) { lon -= 360.0; }
-    if (lat < *min_lat) { *min_lat = lat; }
-    if (lat > *max_lat) { *max_lat = lat; }
-    if (lon < *min_lon) { *min_lon = lon; }
-    if (lon > *max_lon) { *max_lon = lon; }
-  }
-
-  for (int j = 0; j < ny; j++) {
-    // Left column
-    ij2ll(sec, nx, ny, 0, j, &lon, &lat);
-    if (lon > 180.0) { lon -= 360.0; }
-    if (lat < *min_lat) { *min_lat = lat; }
-    if (lat > *max_lat) { *max_lat = lat; }
-    if (lon < *min_lon) { *min_lon = lon; }
-    if (lon > *max_lon) { *max_lon = lon; }
-
-    // Right column
-    ij2ll(sec, nx, ny, nx - 1, j, &lon, &lat);
-    if (lon > 180.0) { lon -= 360.0; }
-    if (lat < *min_lat) { *min_lat = lat; }
-    if (lat > *max_lat) { *max_lat = lat; }
-    if (lon < *min_lon) { *min_lon = lon; }
-    if (lon > *max_lon) { *max_lon = lon; }
-  }
-} /* get_latlon_bounds */
-
-#endif /* if 0 */
-
 int
 f_rapio_callback(ARG1)
 {
@@ -165,13 +114,35 @@ f_rapio_callback(ARG1)
   if (mode == -1) { // BEGIN
     // This is called first to initialize things
     // It is called once per wgrib2 call, not per field
-    decode = 1; // Decode the matched field.  We want the data
-    latlon = 1; // Get the lat lon array, if any.
+    
+    // Default to off until callback says otherwise
+    decode = 0; // Decode the matched field.  We want the data
+    latlon = 0; // Get the lat lon array, if any.
 
-    cb->initialize(cb);    // FIXME: let call back pick maybe?
+    // We can call on the same filename multiple times
+    // from mrms/rapio.  However, wgrib2 doesn't reset the
+    // file seek location (it caches files and we just get EOF
+    // which we don't want.  This makes sure the file will
+    // be actually closed after we scan it once.
+    mk_file_transient(cb->getfilename(cb));
+
+    cb->initialize(cb, &decode, &latlon);
   } else if (mode == -2) { // END
     cb->finalize(cb);
   } else if (mode >= 0) { // PROCESS
+
+    // FIXME: I think the cb could give us a flag telling us
+    // the action to do here basically. We could possibly
+    // pass 'everything' to the C++, but then it relies more on
+    // grib2 internals.  For now we'll handle our few cases
+    // directly here in the patch.
+
+    // FIXME: Need to trace code and see if we're supposed to
+    // free stuff or if wgrib2 does it.
+    if (decode == 0){
+      return 0;
+    }
+
     // This is how wgrib2 checks if it's a valid grid data.
     // Curious if we can handle other types?
     if (!(lat && lon)) {
@@ -193,19 +164,18 @@ f_rapio_callback(ARG1)
     // Initialize GCTP projection.  This takes the source grib2 lon, lat
     if (gctpc_ll2xy_init(sec, lon, lat) != 0) {
       printf("GCTPC initialize projection failed\n");
-      free(lon);
-      free(lat);
       return 1;
     }
-    // I think we can free these now.  Not sure. Need to check projection
-    // code if it uses it at all.
-    // free(lon), free(lat).
 
     // ---------------------------------------------------
     // MRMS grid definition.
 
     double lat_start, lat_end, dlat, lon_start, lon_end, dlon;
     int mrms_nlon, mrms_nlat;
+
+    // Notify the lat lon coordinates...
+    cb->setlatlon(cb, lat, lon, nx, ny);
+    // Then request the coverage wanted afterwards
     cb->getllcoverage(cb, &lat_start, &lon_start, &lat_end, &lon_end, &dlat, &dlon, &mrms_nlat, &mrms_nlon);
     printf("values1: %f %f %f %f %f %f %d %d\n", lat_start, lat_end, dlat, lon_start, lon_end, dlon, mrms_nlon,
       mrms_nlat);
@@ -222,23 +192,25 @@ f_rapio_callback(ARG1)
     // each point.
     int at = 0;
     for (int j = 0; j < mrms_nlat; j++) {
-      double lat = lat_start - j * dlat;
+      double atlat = lat_start - j * dlat;
       for (int i = 0; i < mrms_nlon; i++) {
-        double lon = lon_start + i * dlon;
-        mrms_lat[at] = lat;
-        mrms_lon[at] = lon;
+        double atlon = lon_start + i * dlon;
+        mrms_lat[at] = atlat;
+        mrms_lon[at] = atlon;
         ++at;
       }
     }
     // ---------------------------------------------------
     printf("Number of points is %d * %d = %d\n", mrms_nlon, mrms_nlat, npoints);
 
-    // exit(1);
     // Allocate index, which we will destroy at end.
     // 'or' we could ask the callback for the memory which would allow us to
     // use the heap and say a vector.
+    // FIXME: Pull array from C++ to avoid copy?
     unsigned int * index = (unsigned int *) malloc(sizeof(unsigned int) * npoints);
     gctpc_ll2i(npoints, mrms_lon, mrms_lat, index);
+    free(mrms_lat);
+    free(mrms_lon);
 
     // Bleh I think we need to get this from the cb, so we don't need to
     // copy it.
@@ -250,13 +222,16 @@ f_rapio_callback(ARG1)
       // The index is shifted by 1 item, 0 is now out of bounds
       if (idx == 0) {
         // FIXME: pass in these, handle undefined too.
-        output[i] = -99903.0f; // Data Unavailable
+        //output[i] = -99903.0f; // Data Unavailable
+        output[i] = 300; // -99903.0f; // Data Unavailable
       } else {
         output[i] = data[idx - 1]; // mrms = grib2
       }
     }
 
     cb->on_data(cb, output, npoints);
+    free(index);
+    free(output);
   }
   return 0;
 } /* f_rapio_callback */

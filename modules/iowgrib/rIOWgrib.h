@@ -11,6 +11,10 @@ namespace rapio {
 class IOWgrib : public IODataType {
 public:
 
+  /** Helper for capturing wgrib2_api output */
+  static std::vector<std::string>
+  capture_vstdout_of_wgrib2(int argc, const char * argv[]);
+
   /** Help for grib module */
   virtual std::string
   getHelpString(const std::string& key) override;

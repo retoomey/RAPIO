@@ -89,6 +89,9 @@ addRAPIONote("      Found: WGRIB2")
 # Build rapio module
 #
 add_library(rapiowgrib SHARED
+  rWgribDataTypeImp.cc
+  rCatalogCallback.cc
+  rGridCallback.cc
   rIOWgrib.cc
 )
 add_dependencies(rapiowgrib g2c wgrib2)
