@@ -10,6 +10,7 @@
 #include "rWgribCallback.h"
 #include "rWgribDataTypeImp.h"
 
+#include "rArrayCallback.h"
 #include "rGridCallback.h"
 
 #include <fstream>
@@ -116,21 +117,42 @@ IOWgrib::capture_vstdout_of_wgrib2(int argc, const char * argv[])
 std::shared_ptr<DataType>
 IOWgrib::readGribDataType(const URL& url)
 {
+  #if 0
   // Lazy read the url if exists, handle later with custom calls.
   // FIXME: still working on flushing out routines.
-  // std::shared_ptr<WgribDataTypeImp> g = std::make_shared<WgribDataTypeImp>(url);
-  // return g;  Our new gribtype
+  std::shared_ptr<WgribDataTypeImp> g = std::make_shared<WgribDataTypeImp>(url);
+  return g; // Our new gribtype
 
+  #endif
+
+  #if 1
   // -----------------------------------------
   // Just directly return the test LatLonGrid
   //
-  std::shared_ptr<GridCallback> action = std::make_shared<GridCallback>(url);
+  std::shared_ptr<GridCallback> action = std::make_shared<GridCallback>(url, ":TMP:surface:");
 
   action->execute();
   auto hold = GridCallback::myTempLatLonGrid;
 
   GridCallback::myTempLatLonGrid = nullptr;
   return hold;
+
+  #endif // if 0
+
+  #if 0
+  // -----------------------------------------
+  // Just directly return the 2D array
+  //
+  std::shared_ptr<ArrayCallback> action = std::make_shared<ArrayCallback>(url);
+
+  action->execute();
+  return nullptr;
+
+  #endif
+  // auto hold = GridCallback::myTempLatLonGrid;
+
+  // GridCallback::myTempLatLonGrid = nullptr;
+  // return hold;
 } // IOWgrib::readGribDataType
 
 std::shared_ptr<DataType>

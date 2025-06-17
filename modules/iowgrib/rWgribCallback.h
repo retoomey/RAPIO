@@ -5,6 +5,7 @@
 #include "rURL.h"
 
 #include <memory>
+#include <vector>
 
 namespace rapio {
 /** Root virtual class visitor for wgrib2 match callbacks.
@@ -29,9 +30,12 @@ public:
   virtual
   ~WgribCallback() = default;
 
+  /** Add extra wgrib2 args if wanted */
+  virtual void addExtraArgs(std::vector<std::string>& args){ }
+
   /** Execute the callback, calling wgrib2 */
   virtual void
-  execute() = 0;
+  execute();
 
   /** Initialize at the start of a grib2 catalog pass */
   virtual void
@@ -43,16 +47,12 @@ public:
 
   /** Suggest a minimum LLCoverageArea based on grib2 extents */
   virtual void
-  handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny) = 0;
+  handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny){ };
 
   /** Fill a LLCoverageArea wanted for grid interpolation, if we handle grids. */
   virtual void
   handleGetLLCoverageArea(double * nwLat, double * nwLon, double * seLat, double * seLon, double * dLat, double * dLon,
-    int * nLat, int * nLon) = 0;
-
-  /** Handle getting data from wgrib2 */
-  virtual void
-  handleData(const float * data, int n) = 0;
+    int * nLat, int * nLon){ };
 
   /** Return a const char * to the stored URL, valid while we're in scope */
   const char *
@@ -60,6 +60,12 @@ public:
   {
     return myFilename.c_str();
   }
+
+  /** Called with raw data */
+  virtual void handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index){ };
+
+  /** Return action type for the c module */
+  virtual ActionType handleGetActionType(){ return ACTION_NONE; }
 
 protected:
 
@@ -74,10 +80,8 @@ protected:
  * the linker lambas in every subclass, avoid duplication.
  */
 struct RAPIOCallbackCPP : public RapioCallback {
-  // std::shared_ptr<WgribCallback> myCallback;
   WgribCallback * myCallback;
 
-  // RAPIOCallbackCPP(std::shared_ptr<WgribCallback> m) : myCallback(m)
   RAPIOCallbackCPP(WgribCallback * m) : myCallback(m)
   {
     // Create a vtable for the C calls, linking to the true callback.
@@ -99,12 +103,16 @@ struct RAPIOCallbackCPP : public RapioCallback {
           dLon, nLat, nLon);
       };
 
-    on_data = [](RapioCallback * self, const float * data, int n) {
-        static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleData(data, n);
-      };
-
     getfilename = [](RapioCallback * self) -> const char * {
         return static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleGetFileName();
+      };
+
+    setdataarray = [](RapioCallback * self, float * data, int nlats, int nlons, unsigned int * index) {
+        static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleSetDataArray(data, nlats, nlons, index);
+      };
+
+    getactiontype = [](RapioCallback * self) -> ActionType {
+        return static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleGetActionType();
       };
   }
 };

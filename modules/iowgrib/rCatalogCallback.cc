@@ -7,6 +7,7 @@
 
 using namespace rapio;
 
+#if 0
 void
 CatalogCallback::execute()
 {
@@ -43,6 +44,8 @@ CatalogCallback::execute()
   }
 } // CatalogCallback::execute
 
+#endif // if 0
+
 void
 CatalogCallback::handleInitialize(int * decode, int * latlon)
 {
@@ -68,8 +71,4 @@ void
 CatalogCallback::handleGetLLCoverageArea(double * nwLat, double * nwLon,
   double * seLat, double * seLon, double * dLat, double * dLon,
   int * nLat, int * nLon)
-{ }
-
-void
-CatalogCallback::handleData(const float * data, int n)
 { }

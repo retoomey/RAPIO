@@ -90,7 +90,9 @@ addRAPIONote("      Found: WGRIB2")
 #
 add_library(rapiowgrib SHARED
   rWgribDataTypeImp.cc
+  rWgribCallback.cc
   rCatalogCallback.cc
+  rArrayCallback.cc
   rGridCallback.cc
   rIOWgrib.cc
 )

@@ -11,9 +11,6 @@
 namespace rapio {
 /**
  * Callback that processes grid data.
- * Basic projection using wgrib2 and return of
- * grids 2D/3D.  We should be able to get
- * arrays of data and/or LatLonGrids.
  *
  * Remember callbacks should directly use
  * std::cout not logging since we capture this
@@ -21,11 +18,11 @@ namespace rapio {
  *
  * @author Robert Toomey
  */
-class GridCallback : public WgribCallback {
+class ArrayCallback : public WgribCallback {
 public:
 
   /** Initialize a Catalog callback */
-  GridCallback(const URL& u, const std::string& match);
+  ArrayCallback(const URL& u, const std::string& match);
 
   /** Initialize at the start of a grib2 catalog pass */
   void
@@ -41,36 +38,16 @@ public:
 
   /** Return action type for the c module */
   ActionType
-  handleGetActionType() override { return ACTION_LATLONGRID; }
-
-  /** Calculate a minimum LLCoverageArea based on grib2 extents */
-  void
-  handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny) override;
-
-  /** Get a LLCoverageArea wanted for grid interpolation. */
-  void
-  handleGetLLCoverageArea(double * nwLat, double * nwLon,
-    double * seLat, double * seLon, double * dLat, double * dLon,
-    int * nLat, int * nLon) override;
+  handleGetActionType() override { return ACTION_ARRAY; }
 
   /** Called with raw data, unprojected */
   virtual void
   handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index) override;
 
-  /** Our C++ get coverage area.  Used for wgrib2 and output */
-  LLCoverageArea
-  getLLCoverageArea()
-  {
-    return myLLCoverageArea;
-  }
-
-  /** Temp storage of returned LatLonGrid */
-  static std::shared_ptr<LatLonGrid> myTempLatLonGrid;
+  /** Temp storage of returned 2D Array */
+  static std::shared_ptr<Array<float, 2> > myTemp2DArray;
 
 protected:
-
-  /** Current coverage area wanted for output */
-  LLCoverageArea myLLCoverageArea;
 
   /** The match part of wgrib2 args */
   std::string myMatch;

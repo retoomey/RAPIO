@@ -10,7 +10,8 @@ using namespace rapio;
 
 std::shared_ptr<LatLonGrid> GridCallback::myTempLatLonGrid;
 
-GridCallback::GridCallback(const URL& u) : WgribCallback(u)
+GridCallback::GridCallback(const URL& u, const std::string& match)
+  : WgribCallback(u), myMatch(match)
 {
   // A default lat lon coverage for the moment.
   // FIXME: Probably just conus to start?
@@ -31,45 +32,6 @@ GridCallback::GridCallback(const URL& u) : WgribCallback(u)
 }
 
 void
-GridCallback::execute()
-{
-  RAPIOCallbackCPP catalog(this);
-
-  // convert pointer to integer and stream to string
-  // string now holds a decimal address
-  std::ostringstream oss;
-
-  oss << reinterpret_cast<uintptr_t>(&catalog);
-  std::string pointer = oss.str();
-
-  // Catalog doesn't 'really' need a callback, but seems cleaner this way
-  const char * argv[] = {
-    "wgrib2",
-    myFilename.c_str(), // in scope
-    // "-match", ":TMP:850 mb:", // Note: Don't add quotes they will be part of the match
-    "-match", ":TMP:2 m above ground:", // Ground should match the us map if projection good.
-    // "-match", ":TMP:", // Tell wgrib2 what to match.  Note, no quotes here.
-    "-rapio",       // Use our callback patch
-    pointer.c_str() // Send address of our RapioCallback class.
-  };
-  int argc = sizeof(argv) / sizeof(argv[0]);
-
-  std::ostringstream param;
-
-  for (size_t i = 0; i < argc; ++i) {
-    param << argv[i];
-    if (i < argc - 1) { param << " "; }
-  }
-  LogInfo("Calling: " << param.str() << "\n");
-
-  std::vector<std::string> result = IOWgrib::capture_vstdout_of_wgrib2(argc, argv);
-
-  for (size_t i = 0; i < result.size(); ++i) {
-    LogInfo("[wgrib2] " << result[i] << "\n");
-  }
-} // GridCallback::execute
-
-void
 GridCallback::handleInitialize(int * decode, int * latlon)
 {
   std::cout << "[C++] Initialize grid callback\n";
@@ -77,6 +39,14 @@ GridCallback::handleInitialize(int * decode, int * latlon)
   *decode = 1;
   // For grids, we want the lat lon values
   *latlon = 1;
+}
+
+void
+GridCallback::addExtraArgs(std::vector<std::string>& args)
+{
+  args.push_back("-match");
+
+  args.push_back(myMatch);
 }
 
 void
@@ -98,6 +68,7 @@ GridCallback::handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny)
   // Degrees from wgrib
   double minLat, minLon, maxLat, maxLon;
 
+  // Create a bounding box from the passed in wgrib2 arrays
   const size_t count = nx * ny;
 
   for (size_t i = 0; i < count; ++i) {
@@ -150,34 +121,45 @@ GridCallback::handleGetLLCoverageArea(double * nwLat, double * nwLon,
 }
 
 void
-GridCallback::handleData(const float * data, int n)
+GridCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
 {
-  // Since this is called by wgrib2, any output get captured
-  // by our wrapper, thus we don't call Log here but std::cout
-  std::cout << "\n[C++] Got " << n << " values from GRIB2\n";
-  std::cout << "[C++] ";
-  for (size_t i = 0; i < 10; ++i) {
-    std::cout << data[i];
-    if (i < 10 - 1) { std::cout << ","; }
+  if (index == nullptr) {
+    std::cout << "[C++} Data index is null, can't fill output grid.\n";
+    return;
   }
-  std::cout << "\n";
 
+  const auto npoints = nlats * nlons;
+
+  // Create a LatLonGrid and fill in the projected array.
+  // FIXME: 3D will have to be a bit differently done
   LLCoverageArea a = getLLCoverageArea();
 
   myTempLatLonGrid = LatLonGrid::Create(
-    "Temperature",
+    "Temperature", // FIXME: from data somehow? Or caller sets?
     "K",
-    Time(),
+    Time(), // Will become data time at some point
     a);
 
-  auto& array = myTempLatLonGrid->getFloat2DRef();
+  auto& array   = myTempLatLonGrid->getFloat2DRef();
+  auto * output = array.data();
 
-  // wgrib2 should at least fill our array directly. We shouldn't
-  // have to transform y or anything here.
-  // There are way too many arrays copying and projection and
-  // indexing, etc.  But baby steps get it working first.
-  // FIXME: Pass the array.data() point into the C.  It's a boost
-  // array, but the memory should be correct.
-  std::memcpy(array.data(), data, n * sizeof(float));
-  std::cout << "-----> Done Setting LatLonGrid \n";
-}
+  for (int i = 0; i < npoints; i++) {
+    const int idx = index[i];
+
+    // 0 or negative index means data unavailable
+    if (idx <= 0) {
+      // output[i] = 300.0f; // Unavailable
+      output[i] = Constants::DataUnavailable;
+    } else {
+      float& value = data[idx - 1]; // wgrib2 is 1-based
+
+      // Optionally check for NaN or sentinel inside data
+      if (std::isnan(value)) {
+        // output[i] = -99900.0f; // Missing
+        output[i] = Constants::MissingData;
+      } else {
+        output[i] = value;
+      }
+    }
+  }
+} // GridCallback::handleSetDataArray

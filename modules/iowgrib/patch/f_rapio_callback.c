@@ -7,9 +7,9 @@
 // We create a custom callback function:
 // rapio 'RapioCallback*' (extra options)
 //
-// Alpha.
-// FIXME: Pretty sure not free-in stuff properly yet.
-// FIXME: Calculate a suggest grid for projected data using lat lon boundaries.
+// Our goal is to cleanly put as much of the work into the C++, while
+// using the wgrib2 functions as necessary.
+//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +103,86 @@ grib2_get_valid_time(unsigned char ** sec)
   return ref_time + (time_t) (fcst_time * unit_seconds[unit_code]);
 } /* grib2_get_valid_time */
 
+/** Project the array into a LatLonGrid 2D Array */
+int
+projectLatLonGrid(RapioCallback* cb, unsigned char ** sec, float* data)
+{
+  const int gdt     = code_table_3_1(sec);
+  printf("Incoming grid: %d, %d with projection %d\n", nx, ny, gdt);
+
+  // Initialize GCTP projection.  This takes the source grib2 lon, lat
+  if (gctpc_ll2xy_init(sec, lon, lat) != 0) {
+    printf("GCTPC initialize projection failed\n");
+    return 1;
+  }
+
+  // ---------------------------------------------------
+  // MRMS grid definition.
+  // Maybe we just ask cb for all of this at once
+  // It creates the lookup lat/lon for each point
+  //
+
+  double lat_start, lat_end, dlat, lon_start, lon_end, dlon;
+  int mrms_nlon, mrms_nlat;
+
+  // Notify the lat lon coordinates...
+  cb->setlatlon(cb, lat, lon, nx, ny);
+  // Then request the coverage wanted afterwards
+  cb->getllcoverage(cb, &lat_start, &lon_start, 
+     &lat_end, &lon_end, &dlat, &dlon, &mrms_nlat, &mrms_nlon);
+  //printf("values1: %f %f %f %f %f %f %d %d\n", lat_start, lat_end, 
+  //   dlat, lon_start, lon_end, dlon, mrms_nlon, mrms_nlat);
+
+  // 'Feels' like this logic should be in the C++.
+  // gctcp_ll2i takes double pointers.
+  int npoints       = mrms_nlon * mrms_nlat;
+  double * mrms_lon = (double *) malloc(sizeof(double) * npoints);
+  double * mrms_lat = (double *) malloc(sizeof(double) * npoints);
+
+  // Projection requires an array of lat lon, so we generate
+  // one for each cell of the MRMS grid.
+  // FIXME: Do the half angle thing at some point, we probably want
+  // cell centers right?
+  int at = 0;
+  for (int j = 0; j < mrms_nlat; j++) {
+    double atlat = lat_start - j * dlat;
+    for (int i = 0; i < mrms_nlon; i++) {
+      double atlon = lon_start + i * dlon;
+      mrms_lat[at] = atlat;
+      mrms_lon[at] = atlon;
+      ++at;
+    }
+  }
+  printf("Number of points is %d * %d = %d\n", mrms_nlon, mrms_nlat, npoints);
+
+  // ---------------------------------------------------
+  // Allocate index and project data using lat lon
+  //
+  unsigned int * index = (unsigned int *) malloc(sizeof(unsigned int) * npoints);
+  gctpc_ll2i(npoints, mrms_lon, mrms_lat, index);
+
+  free(mrms_lat);
+  free(mrms_lon);
+
+  // ---------------------------------------------------
+  // Send projected data to callback
+  //
+  cb->setdataarray(cb, data, mrms_nlat, mrms_nlon, index);
+
+  free(index);
+
+  return 0;
+}
+
+/** Handle a raw 2D array of wgrib2 data for working in the native projection
+ * space */
+int
+project2DArray(RapioCallback* cb, unsigned char ** sec, float* data, int nlats, int nlons)
+{
+  cb->setdataarray(cb, data, nlats, nlons, 0);
+  return 0;
+}
+
 int
 f_rapio_callback(ARG1)
 {
@@ -131,107 +211,20 @@ f_rapio_callback(ARG1)
     cb->finalize(cb);
   } else if (mode >= 0) { // PROCESS
 
-    // FIXME: I think the cb could give us a flag telling us
-    // the action to do here basically. We could possibly
-    // pass 'everything' to the C++, but then it relies more on
-    // grib2 internals.  For now we'll handle our few cases
-    // directly here in the patch.
-
-    // FIXME: Need to trace code and see if we're supposed to
-    // free stuff or if wgrib2 does it.
-    if (decode == 0){
-      return 0;
+    // Add actions if you add more types of C++ callbacks
+    ActionType type = cb->getactiontype(cb);
+    switch(type){
+      case ACTION_NONE:   // Just text output wgrib2 commands
+        return 0;
+      case ACTION_LATLONGRID:  // projection related grids
+        return projectLatLonGrid(cb, sec, data);
+      case ACTION_ARRAY:       // raw array related
+        return project2DArray(cb, sec, data, ny, nx); // ny lats, nx lons
+      default:
+       printf("\n Called unknown action type\n");
+       return 1;
     }
 
-    // This is how wgrib2 checks if it's a valid grid data.
-    // Curious if we can handle other types?
-    if (!(lat && lon)) {
-      printf("Matched field in not a grid type!\n");
-      return 1;
-    }
-
-    const int grib_nx = nx;
-    const int grib_ny = ny;
-    const int gdt     = code_table_3_1(sec);
-    printf("Incoming grid: %d, %d with projection %d\n", grib_nx, grib_ny, gdt);
-
-    int forecast_time = forecast_time_in_units(sec);
-    int time_unit     = code_table_4_4(sec);
-    printf("TIME is %d %d\n", forecast_time, time_unit);
-    time_t t = grib2_get_valid_time(sec);
-    printf("Epoch time: %ld\n", (long) t);
-
-    // Initialize GCTP projection.  This takes the source grib2 lon, lat
-    if (gctpc_ll2xy_init(sec, lon, lat) != 0) {
-      printf("GCTPC initialize projection failed\n");
-      return 1;
-    }
-
-    // ---------------------------------------------------
-    // MRMS grid definition.
-
-    double lat_start, lat_end, dlat, lon_start, lon_end, dlon;
-    int mrms_nlon, mrms_nlat;
-
-    // Notify the lat lon coordinates...
-    cb->setlatlon(cb, lat, lon, nx, ny);
-    // Then request the coverage wanted afterwards
-    cb->getllcoverage(cb, &lat_start, &lon_start, &lat_end, &lon_end, &dlat, &dlon, &mrms_nlat, &mrms_nlon);
-    printf("values1: %f %f %f %f %f %f %d %d\n", lat_start, lat_end, dlat, lon_start, lon_end, dlon, mrms_nlon,
-      mrms_nlat);
-
-    int npoints       = mrms_nlon * mrms_nlat;
-    double * mrms_lon = (double *) malloc(sizeof(double) * npoints);
-    double * mrms_lat = (double *) malloc(sizeof(double) * npoints);
-
-    // Projection requires an array of lat lon, so we generate
-    // one for each cell of the MRMS grid.
-    // FIXME: Do the half angle thing at some point
-    // Temped to port the wgrib2 code here to avoid needing this
-    // extra memory.  We could simple march over lat/lon and project
-    // each point.
-    int at = 0;
-    for (int j = 0; j < mrms_nlat; j++) {
-      double atlat = lat_start - j * dlat;
-      for (int i = 0; i < mrms_nlon; i++) {
-        double atlon = lon_start + i * dlon;
-        mrms_lat[at] = atlat;
-        mrms_lon[at] = atlon;
-        ++at;
-      }
-    }
-    // ---------------------------------------------------
-    printf("Number of points is %d * %d = %d\n", mrms_nlon, mrms_nlat, npoints);
-
-    // Allocate index, which we will destroy at end.
-    // 'or' we could ask the callback for the memory which would allow us to
-    // use the heap and say a vector.
-    // FIXME: Pull array from C++ to avoid copy?
-    unsigned int * index = (unsigned int *) malloc(sizeof(unsigned int) * npoints);
-    gctpc_ll2i(npoints, mrms_lon, mrms_lat, index);
-    free(mrms_lat);
-    free(mrms_lon);
-
-    // Bleh I think we need to get this from the cb, so we don't need to
-    // copy it.
-    float * output = (float *) malloc(sizeof(float) * npoints);
-
-    for (int i = 0; i < npoints; i++) {
-      int idx = index[i];
-
-      // The index is shifted by 1 item, 0 is now out of bounds
-      if (idx == 0) {
-        // FIXME: pass in these, handle undefined too.
-        //output[i] = -99903.0f; // Data Unavailable
-        output[i] = 300; // -99903.0f; // Data Unavailable
-      } else {
-        output[i] = data[idx - 1]; // mrms = grib2
-      }
-    }
-
-    cb->on_data(cb, output, npoints);
-    free(index);
-    free(output);
   }
   return 0;
 } /* f_rapio_callback */

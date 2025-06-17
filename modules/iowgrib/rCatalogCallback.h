@@ -24,8 +24,8 @@ public:
   { }
 
   /** Execute the callback, calling wgrib2 */
-  void
-  execute() override;
+  //  void
+  //  execute() override;
 
   /** Initialize at the start of a grib2 catalog pass */
   void
@@ -48,9 +48,5 @@ public:
   handleGetLLCoverageArea(double * nwLat, double * nwLon,
     double * seLat, double * seLon, double * dLat, double * dLon,
     int * nLat, int * nLon) override;
-
-  /** Handle getting data from wgrib2 */
-  void
-  handleData(const float * data, int n);
 };
 }

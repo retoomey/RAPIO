@@ -4,6 +4,7 @@
 // Callbacks
 #include "rCatalogCallback.h"
 #include "rGridCallback.h"
+#include "rArrayCallback.h"
 
 #include <fstream>
 
@@ -33,24 +34,40 @@ std::shared_ptr<Array<float, 2> >
 WgribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
 {
   LogSevere("------------------start get float 2d\n");
-  std::shared_ptr<GridCallback> action = std::make_shared<GridCallback>(myURL);
+
+  // Construct the -match by appending currently.
+  // FIXME: Change the API to be more wgrib2 regex friendly.  For now
+  // keeping it the same so I don't have to mess with original iogrib, etc.
+  std::string match = ":" + key + ":" + levelstr + ":";
+
+  // FIXME: In real life we'll probably need to run catalog first and count the
+  // matches.  If not what's expected, don't call the Grid because we don't want to
+  // decode too much stuff and hang/freeze our realtime alg.
+  // std::shared_ptr<GridCallback> action = std::make_shared<GridCallback>(myURL, match);
+  std::shared_ptr<ArrayCallback> action = std::make_shared<ArrayCallback>(myURL, match);
 
   action->execute();
+
+  // Send back the array, clearing our ownership of it
+  auto temp = ArrayCallback::myTemp2DArray;
+
+  ArrayCallback::myTemp2DArray = nullptr;
   LogSevere("------------------end get float 2d\n");
-  return nullptr;
+  return temp;
 }
 
 std::shared_ptr<Array<float, 3> >
 WgribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLevels)
 {
-  return nullptr;
+  LogSevere("------------------start get float 3d\n");
 
   size_t nz = zLevels.size();
 
+  LogSevere("---3D is asking for " << nz << " levels\n");
   if ((nz < 1)) {
     LogSevere("Need at least 1 z level for 3D");
-    return nullptr;
   }
 
+  LogSevere("------------------end get float 2d\n");
   return nullptr;
 }
