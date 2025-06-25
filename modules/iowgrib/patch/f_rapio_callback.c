@@ -28,6 +28,11 @@ extern int decode; /** Set during init iff we want the grib field decoded */
 extern int mode;   /** Mode set to -1 to init, -2 to final, others for internal work state */
 extern int latlon; /** Set this in init iff we want the lat, lon arrays below filled in */
 extern int nx, ny; /** Set to the grid dimensions (if lat lon not null) */
+extern int msg_no; /** Set to the current grib2 message number */
+extern int submsg; /** Set to the current grib2 field number */
+extern long int pos; /** Set to the current grib2 byte pos */
+extern unsigned long int len; /** Set to the current length of grib2 section */
+extern int inv_no; /** I think this is the matched record number.  Might be useful?  */
 
 /** Lat Lon for each point of grid data. It is in wesn (row-major) order.
  * So the layout is:
@@ -39,6 +44,7 @@ extern int nx, ny; /** Set to the grid dimensions (if lat lon not null) */
  */
 extern double * lat, * lon;
 
+#if 0
 #include <time.h>
 // #define UINT2(a, b)   ((((a) & 255) << 8) + ((b) & 255))
 #define GB2_Int2(p) UINT2((p)[0], (p)[1])
@@ -102,6 +108,16 @@ grib2_get_valid_time(unsigned char ** sec)
 
   return ref_time + (time_t) (fcst_time * unit_seconds[unit_code]);
 } /* grib2_get_valid_time */
+#endif
+
+int
+handleNormal(RapioCallback* cb, unsigned char ** sec)
+{
+  // Catalog, etc there's no data to pass.
+  // FIXME: Still feels weak on API for the various action types
+  cb->setdataarray(cb, 0, 0, 0, 0);
+  return 0;
+}
 
 /** Project the array into a LatLonGrid 2D Array */
 int
@@ -211,11 +227,15 @@ f_rapio_callback(ARG1)
     cb->finalize(cb);
   } else if (mode >= 0) { // PROCESS
 
+    // Always send certain information to cb.
+    // Note: sec has length in it so we don't pass len
+    cb->setfieldinfo(cb,sec, msg_no, submsg, pos);
+
     // Add actions if you add more types of C++ callbacks
     ActionType type = cb->getactiontype(cb);
     switch(type){
       case ACTION_NONE:   // Just text output wgrib2 commands
-        return 0;
+        return handleNormal(cb, sec);
       case ACTION_LATLONGRID:  // projection related grids
         return projectLatLonGrid(cb, sec, data);
       case ACTION_ARRAY:       // raw array related

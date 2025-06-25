@@ -24,7 +24,7 @@ class WgribCallback : public Utility {
 public:
 
   /** Create a wgrib callback with a given URL file location */
-  WgribCallback(const URL& gribfile) : myFilename(gribfile.toString())
+  WgribCallback(const URL& gribfile, const std::string& match) : myFilename(gribfile.toString()), myMatch(match)
   { }
 
   virtual
@@ -61,6 +61,10 @@ public:
     return myFilename.c_str();
   }
 
+  /** Called with field info such as section data */
+  virtual void
+  handleSetFieldInfo(unsigned char ** sec, int msg_no, int submsg, long int pos);
+
   /** Called with raw data */
   virtual void handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index){ };
 
@@ -71,6 +75,29 @@ protected:
 
   /** Store the filename of the grib2 location */
   std::string myFilename;
+
+  /** The match part of wgrib2 args */
+  std::string myMatch;
+
+public:
+
+  // These work for a single match.  Multiple match callbacks this
+  // will be the last matched item.  Might need more work here
+
+  /** Current/latest Section 0 fields */
+  std::array<long, 3> mySection0;
+
+  /** Current/latest Section 1 fields */
+  std::array<long, 13> mySection1;
+
+  /** Current/latest message number */
+  int myMessageNumber;
+
+  /** Current/latest submsg/field number */
+  int myFieldNumber;
+
+  /** Current/latest file position */
+  int myFilePosition;
 };
 
 /** C++ version of the C RapioCallback.
@@ -105,6 +132,10 @@ struct RAPIOCallbackCPP : public RapioCallback {
 
     getfilename = [](RapioCallback * self) -> const char * {
         return static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleGetFileName();
+      };
+
+    setfieldinfo = [](RapioCallback * self, unsigned char ** sec, int msg_no, int submsg, long int pos) {
+        static_cast<RAPIOCallbackCPP *>(self)->myCallback->handleSetFieldInfo(sec, msg_no, submsg, pos);
       };
 
     setdataarray = [](RapioCallback * self, float * data, int nlats, int nlons, unsigned int * index) {

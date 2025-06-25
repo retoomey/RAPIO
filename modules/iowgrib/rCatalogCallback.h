@@ -20,12 +20,7 @@ class CatalogCallback : public WgribCallback {
 public:
 
   /** Initialize a Catalog callback */
-  CatalogCallback(const URL& u) : WgribCallback(u)
-  { }
-
-  /** Execute the callback, calling wgrib2 */
-  //  void
-  //  execute() override;
+  CatalogCallback(const URL& u, const std::string& match);
 
   /** Initialize at the start of a grib2 catalog pass */
   void
@@ -35,18 +30,16 @@ public:
   void
   handleFinalize() override;
 
-  // -----------------------------------------------
-  // We don't handle dealing with data, but the C table
-  // needs the functions anyway.
+  /** Called with raw data, unprojected */
+  virtual void
+  handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index) override;
 
-  /** Calculate a minimum LLCoverageArea based on grib2 extents */
-  void
-  handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny) override;
+  /** Get the match count from the run */
+  int getMatchCount(){ return myMatchCount; }
 
-  /** Get a LLCoverageArea wanted for grid interpolation. */
-  void
-  handleGetLLCoverageArea(double * nwLat, double * nwLon,
-    double * seLat, double * seLon, double * dLat, double * dLon,
-    int * nLat, int * nLon) override;
+protected:
+
+  /** Match counter */
+  int myMatchCount;
 };
 }

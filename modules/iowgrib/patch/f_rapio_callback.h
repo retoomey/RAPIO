@@ -40,6 +40,10 @@ typedef struct RapioCallback {
    */
   const char * (*getfilename)(struct RapioCallback * self);
 
+  /** Send field info to callback */
+  void (* setfieldinfo)(struct RapioCallback * self, unsigned char ** sec,
+    int msg_no, int submsg, long int pos);
+
   /** Send raw data to callback, and optional projection index */
   void (* setdataarray)(struct RapioCallback * self, float * data, int nlats, int nlons, unsigned int * index);
 

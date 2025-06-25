@@ -31,10 +31,6 @@ public:
   void
   handleInitialize(int * decode, int * latlon) override;
 
-  /** Add extra wgrib2 args if wanted */
-  virtual void
-  addExtraArgs(std::vector<std::string>& args) override;
-
   /** Finalize at the end of a grib2 catalog pass */
   void
   handleFinalize() override;
@@ -71,8 +67,5 @@ protected:
 
   /** Current coverage area wanted for output */
   LLCoverageArea myLLCoverageArea;
-
-  /** The match part of wgrib2 args */
-  std::string myMatch;
 };
 }

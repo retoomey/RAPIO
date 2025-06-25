@@ -9,13 +9,13 @@ using namespace rapio;
 
 std::shared_ptr<Array<float, 2> > ArrayCallback::myTemp2DArray;
 
-ArrayCallback::ArrayCallback(const URL& u, const std::string& match) : WgribCallback(u), myMatch(match)
+ArrayCallback::ArrayCallback(const URL& u, const std::string& match) : WgribCallback(u, match)
 { }
 
 void
 ArrayCallback::handleInitialize(int * decode, int * latlon)
 {
-  std::cout << "[C++] Initialize array callback\n";
+  std::cout << "[C++] Initialize array\n";
   // For grids, we want decoding/unpacking of data
   *decode = 1;
   // For grids, we want the lat lon values
@@ -24,18 +24,9 @@ ArrayCallback::handleInitialize(int * decode, int * latlon)
 }
 
 void
-ArrayCallback::addExtraArgs(std::vector<std::string>& args)
-{
-  args.push_back("-match");
-
-  // Will need parameters for this I think
-  args.push_back(myMatch);
-}
-
-void
 ArrayCallback::handleFinalize()
 {
-  std::cout << "[C++] Finalize array callback\n";
+  std::cout << "[C++] Finalize array\n";
 }
 
 void

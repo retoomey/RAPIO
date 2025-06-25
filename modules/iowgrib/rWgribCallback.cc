@@ -7,6 +7,57 @@
 
 using namespace rapio;
 
+namespace {
+uint64_t
+GB2_Int8(const unsigned char * p)
+{
+  return ((uint64_t) p[0] << 56)
+         | ((uint64_t) p[1] << 48)
+         | ((uint64_t) p[2] << 40)
+         | ((uint64_t) p[3] << 32)
+         | ((uint64_t) p[4] << 24)
+         | ((uint64_t) p[5] << 16)
+         | ((uint64_t) p[6] << 8)
+         | ((uint64_t) p[7]);
+}
+
+uint16_t
+GB2_Int2(const unsigned char * p)
+{
+  return ((uint16_t) p[0] << 8) | p[1];
+}
+}
+
+void
+WgribCallback::handleSetFieldInfo(unsigned char ** sec, int msg_no, int submsg, long int pos)
+{
+  myMessageNumber = msg_no; // Message number
+  myFieldNumber   = submsg; // Field number
+  myFilePosition  = pos;
+
+  if (!sec || !sec[0] || !sec[1]) { return; }
+
+  // Section 0:  Discipline (1 byte), Edition (1 byte), Total Length (8 bytes)
+  mySection0[0] = sec[0][6];            // Discipline
+  mySection0[1] = sec[0][7];            // GRIB Edition
+  mySection0[2] = GB2_Int8(sec[0] + 8); // Message Length (8-byte int)
+
+  // Section 1: Center, Subcenter, Master Table, RefTime, etc.
+  mySection1[0]  = GB2_Int2(sec[1] + 5);  // Originating center
+  mySection1[1]  = GB2_Int2(sec[1] + 7);  // Subcenter
+  mySection1[2]  = sec[1][9];             // Master Table version
+  mySection1[3]  = sec[1][10];            // Local Table version
+  mySection1[4]  = sec[1][11];            // Significance of RT
+  mySection1[5]  = GB2_Int2(sec[1] + 12); // Year
+  mySection1[6]  = sec[1][14];            // Month
+  mySection1[7]  = sec[1][15];            // Day
+  mySection1[8]  = sec[1][16];            // Hour
+  mySection1[9]  = sec[1][17];            // Minute
+  mySection1[10] = sec[1][18];            // Second
+  mySection1[11] = sec[1][19];            // Production status
+  mySection1[12] = sec[1][20];            // Data type (e.g. analysis, forecast)
+}
+
 void
 WgribCallback::execute()
 {
@@ -18,7 +69,12 @@ WgribCallback::execute()
   args.push_back("wgrib2");
   args.push_back(myFilename);
 
-  // Allow subclasses to add extra args such as -match
+  if (!myMatch.empty()) {
+    args.push_back("-match");
+    args.push_back(myMatch);
+  }
+
+  // Allow subclasses to add extra args
   addExtraArgs(args);
 
   // Convert pointer to integer for callback

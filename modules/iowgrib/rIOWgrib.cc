@@ -117,7 +117,7 @@ IOWgrib::capture_vstdout_of_wgrib2(int argc, const char * argv[])
 std::shared_ptr<DataType>
 IOWgrib::readGribDataType(const URL& url)
 {
-  #if 0
+  #if 1
   // Lazy read the url if exists, handle later with custom calls.
   // FIXME: still working on flushing out routines.
   std::shared_ptr<WgribDataTypeImp> g = std::make_shared<WgribDataTypeImp>(url);
@@ -125,7 +125,7 @@ IOWgrib::readGribDataType(const URL& url)
 
   #endif
 
-  #if 1
+  #if 0
   // -----------------------------------------
   // Just directly return the test LatLonGrid
   //

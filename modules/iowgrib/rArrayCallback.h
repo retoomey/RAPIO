@@ -28,10 +28,6 @@ public:
   void
   handleInitialize(int * decode, int * latlon) override;
 
-  /** Add extra wgrib2 args if wanted */
-  virtual void
-  addExtraArgs(std::vector<std::string>& args) override;
-
   /** Finalize at the end of a grib2 catalog pass */
   void
   handleFinalize() override;
@@ -46,10 +42,5 @@ public:
 
   /** Temp storage of returned 2D Array */
   static std::shared_ptr<Array<float, 2> > myTemp2DArray;
-
-protected:
-
-  /** The match part of wgrib2 args */
-  std::string myMatch;
 };
 }

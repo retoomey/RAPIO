@@ -11,7 +11,7 @@ using namespace rapio;
 std::shared_ptr<LatLonGrid> GridCallback::myTempLatLonGrid;
 
 GridCallback::GridCallback(const URL& u, const std::string& match)
-  : WgribCallback(u), myMatch(match)
+  : WgribCallback(u, match)
 {
   // A default lat lon coverage for the moment.
   // FIXME: Probably just conus to start?
@@ -34,7 +34,7 @@ GridCallback::GridCallback(const URL& u, const std::string& match)
 void
 GridCallback::handleInitialize(int * decode, int * latlon)
 {
-  std::cout << "[C++] Initialize grid callback\n";
+  std::cout << "[C++] Initialize grid\n";
   // For grids, we want decoding/unpacking of data
   *decode = 1;
   // For grids, we want the lat lon values
@@ -42,17 +42,9 @@ GridCallback::handleInitialize(int * decode, int * latlon)
 }
 
 void
-GridCallback::addExtraArgs(std::vector<std::string>& args)
-{
-  args.push_back("-match");
-
-  args.push_back(myMatch);
-}
-
-void
 GridCallback::handleFinalize()
 {
-  std::cout << "[C++] Finalize grid callback\n";
+  std::cout << "[C++] Finalize grid\n";
 }
 
 void
@@ -123,7 +115,7 @@ GridCallback::handleGetLLCoverageArea(double * nwLat, double * nwLon,
 void
 GridCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
 {
-  if (index == nullptr) {
+  if ((data == nullptr) || (index == nullptr)) {
     std::cout << "[C++} Data index is null, can't fill output grid.\n";
     return;
   }
