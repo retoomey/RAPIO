@@ -56,7 +56,18 @@ WgribCallback::handleSetFieldInfo(unsigned char ** sec, int msg_no, int submsg, 
   mySection1[10] = sec[1][18];            // Second
   mySection1[11] = sec[1][19];            // Production status
   mySection1[12] = sec[1][20];            // Data type (e.g. analysis, forecast)
-}
+
+  Time theTime = Time(mySection1[5], // year
+      mySection1[6],                 // month
+      mySection1[7],                 // day
+      mySection1[8],                 // hour
+      mySection1[9],                 // minute
+      mySection1[10],                // second
+      0.0                            // fractional
+  );
+
+  myTime = theTime;
+} // WgribCallback::handleSetFieldInfo
 
 void
 WgribCallback::execute()
@@ -98,8 +109,23 @@ WgribCallback::execute()
   // Print the arguments to command line
   std::ostringstream param;
 
+  bool nextQuoted  = false;
+  bool nextIgnored = false;
+
   for (size_t i = 0; i < argc; ++i) {
-    param << argv[i];
+    std::string a = argv[i];
+
+    if (a == "-rapio") { nextIgnored = true; continue; }
+    if (nextIgnored) { nextIgnored = false; continue; }
+
+    // quote match for shell. Let's us copy/paste for debugging
+    if (nextQuoted) {
+      param << "\"" << a << "\"";
+      nextQuoted = false;
+    } else {
+      param << a;
+    }
+    if (a == "-match") { nextQuoted = true; }
     if (i < argc - 1) { param << " "; }
   }
   LogInfo("Calling: " << param.str() << "\n");

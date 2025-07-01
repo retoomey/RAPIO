@@ -1,5 +1,6 @@
 #include "rWgribMessageImp.h"
 #include "rWgribFieldImp.h"
+#include "rCatalogCallback.h"
 #include "rIOWgrib.h"
 
 #include <rError.h>
@@ -8,6 +9,7 @@ using namespace rapio;
 
 WgribMessageImp::WgribMessageImp(const URL& url,
   int messageNumber,
+  int numFields,
   long int filePos,
   std::array<long, 3>& sec0, std::array<long, 13>& sec1) : myURL(url)
 {
@@ -19,18 +21,31 @@ WgribMessageImp::WgribMessageImp(const URL& url,
   std::copy(sec1.begin(), sec1.end(), mySection1);
   myMessageNumber  = messageNumber;
   myFileLocationAt = (size_t) (filePos);
-
-  // FIXME: We need to do another query in order to get number of fields, right?
-  // Or we do it higher up and pass in.
+  myNumberFields   = numFields;
 }
 
 std::shared_ptr<GribField>
 WgribMessageImp::getField(size_t fieldNumber)
 {
-  // FIXME: Create and return a proper field.
-
   if (fieldNumber <= myNumberFields) { // fields at 1 based
-    auto newField = std::make_shared<WgribFieldImp>();
+    // We query now for the given field number, say "^12:" for a single field,
+    // or "^12.5:" for multiple fields.
+    std::string match = "^" + std::to_string(myMessageNumber);
+    if (myNumberFields > 1) {
+      match += "." + std::to_string(fieldNumber);
+    }
+    match += ":";
+    CatalogCallback c(myURL, match);
+    c.execute();
+    auto count = c.getMatchCount();
+    if (count > 1) {
+      LogSevere("Match of \"" << match << "\" matches " << count << " fields and it should be 1.\n");
+      return nullptr;
+    }
+
+    auto newField = std::make_shared<WgribFieldImp>(myURL, myMessageNumber, fieldNumber,
+        c.getFilePosition(), c.getSection0(),
+        c.getSection1());
     return newField;
   } else {
     LogSevere("Requesting Grib field " << fieldNumber

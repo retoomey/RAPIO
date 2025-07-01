@@ -148,3 +148,11 @@ GribDataTypeImp::getIDXLevelName(size_t message, size_t field, std::string& leve
   }
   return false;
 }
+
+
+std::shared_ptr<LatLonGrid>
+GribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& levelstr)
+{
+  LogSevere("Get LatLonGrid not implemented in iogrib2 module, try iowgrib2\n");
+  return nullptr;
+}

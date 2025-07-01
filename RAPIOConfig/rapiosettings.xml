@@ -85,9 +85,9 @@ Information needed:
     <file suffix="raw" io="raw"/>
     <file suffix="shp" io="gdal"/>
     <file suffix="txt" io="text"/>
-    <file suffix="grib2" io="grib"/>
-    <file suffix="gb2" io="grib"/>
-    <file suffix="grb2" io="grib"/>
+    <file suffix="grib2" io="wgrib"/>
+    <file suffix="gb2" io="wgrib"/>
+    <file suffix="grb2" io="wgrib"/>
     <file suffix="pal" io="file"/>
   </suffixes>
 
@@ -167,6 +167,10 @@ Information needed:
 -->
   <io names="grib" module="librapiogrib.so">
     <output bmode="0"/>
+  </io>
+
+  <io names="wgrib" module="librapiowgrib.so">
+    <output />
   </io>
 
 <!-- RAW module settings

@@ -3,6 +3,7 @@
 #include "patch/f_rapio_callback.h"
 #include "rUtility.h"
 #include "rURL.h"
+#include "rTime.h"
 
 #include <memory>
 #include <vector>
@@ -71,6 +72,29 @@ public:
   /** Return action type for the c module */
   virtual ActionType handleGetActionType(){ return ACTION_NONE; }
 
+  // These get the latest match info only.
+
+  /** Get current message number */
+  int getMessageNumber(){ return myMessageNumber; }
+
+  /** Get current field number */
+  int getFieldNumber(){ return myFieldNumber; }
+
+  /** Get current file position */
+  int getFilePosition(){ return myFilePosition; }
+
+  /** Get current time */
+  Time getTime(){ return myTime; }
+
+  /** Get current section0 */
+  std::array<long, 3>& getSection0(){ return mySection0; }
+
+  /** Get current section1 */
+  std::array<long, 13>& getSection1(){ return mySection1; }
+
+  /** Time from section information */
+  Time myTime;
+
 protected:
 
   /** Store the filename of the grib2 location */
@@ -78,8 +102,6 @@ protected:
 
   /** The match part of wgrib2 args */
   std::string myMatch;
-
-public:
 
   // These work for a single match.  Multiple match callbacks this
   // will be the last matched item.  Might need more work here

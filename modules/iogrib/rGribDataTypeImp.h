@@ -47,6 +47,10 @@ public:
   std::shared_ptr<Array<float, 3> >
   getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec);
 
+  /** Get a projected LatLonGrid from the grib data */
+  std::shared_ptr<LatLonGrid>
+  getLatLonGrid(const std::string& key, const std::string& levelstr);
+
   /** Get our validity shared_ptr (only exists if we do)  This is passed to created messages/fields
    * so they can weak reference it. */
   std::shared_ptr<GribPointerHolder> getValidityPtr(){ return myValidPtr; }

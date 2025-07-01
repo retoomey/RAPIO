@@ -398,8 +398,8 @@ set(USE_JASPER_NCEPLIBS ${jasper} CACHE BOOL "Use Jasper JPEG compression librar
 set(USE_OPENJPEG_NCEPLIBS ${openjpeg} CACHE BOOL "Use OpenJPEG JPEG compression library")
 
 if (BUILD_GRIB2_MODULE)
-  #add_subdirectory(modules/iowgrib)
-  add_subdirectory(modules/iogrib)  # deprecated
+  add_subdirectory(modules/iowgrib)
+  #add_subdirectory(modules/iogrib)  # deprecated
   if(jasper)
     addRAPIONote("          -->JPEG: Jasper")
   endif()

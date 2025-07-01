@@ -5,20 +5,16 @@
 
 #include <vector>
 
-extern "C" {
-#include <grib2.h>
-}
-
 namespace rapio {
 class WgribMessageImp;
 
-/** Field representation.  A wrapper for the gribfield.
- * Some fields overlap with GribMessage, I'm not sure if this is different data or if the
- * grib library is just copying the info from the message.  */
+/** Field representation */
 class WgribFieldImp : public GribField {
 public:
-  /** Create an empty field */
-  WgribFieldImp() : GribField(1, 1){ };
+
+  /** Create an empty field.  Field takes same as message, since in the wgrib2 model, the 'message' is just the first field */
+  WgribFieldImp(const URL& url, int messageNumber, int fieldNumber, long int filepos, std::array<long, 3>& sec0,
+    std::array<long, 13>& sec1);
 
   // Array methods (assuming grid data)
 
@@ -70,5 +66,17 @@ public:
   print(std::ostream& os) override;
 
 protected:
+
+  /** Store the URL passed to use for filename */
+  URL myURL;
+
+  // FIXME: with the iogrib module we used gribfield not the sections,
+  // so it's a bit messy here.
+
+  /** [Indicator, Discipline, GRIB Version] */
+  std::array<long, 3> mySection0;
+
+  /** [Section1 metadata] */
+  std::array<long, 13> mySection1;
 };
 }

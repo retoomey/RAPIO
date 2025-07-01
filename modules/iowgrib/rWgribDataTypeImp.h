@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rGribDataType.h>
+#include <rCatalogCallback.h>
 
 namespace rapio {
 /** DataType for holding Grib data
@@ -30,6 +31,16 @@ public:
    */
   std::shared_ptr<Array<float, 3> >
   getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec);
+
+  /** Get a projected LatLonGrid from the grib data */
+  std::shared_ptr<LatLonGrid>
+  getLatLonGrid(const std::string& key, const std::string& levelstr);
+
+protected:
+
+  /** Match a single field in a grib2 file */
+  std::shared_ptr<CatalogCallback>
+  haveSingleMatch(const std::string& match);
 
 private:
 

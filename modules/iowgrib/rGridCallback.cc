@@ -127,9 +127,9 @@ GridCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned in
   LLCoverageArea a = getLLCoverageArea();
 
   myTempLatLonGrid = LatLonGrid::Create(
-    "Temperature", // FIXME: from data somehow? Or caller sets?
-    "K",
-    Time(), // Will become data time at some point
+    "SetMyTypeName", // FIXME: from data somehow? Or caller sets?
+    "SetMyUnits",
+    getTime(),
     a);
 
   auto& array   = myTempLatLonGrid->getFloat2DRef();
