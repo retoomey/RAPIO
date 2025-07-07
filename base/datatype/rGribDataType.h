@@ -3,6 +3,7 @@
 #include <rIO.h>
 #include <rDataType.h>
 #include <rDataGrid.h>
+#include <rLatLonGrid.h>
 
 namespace rapio {
 /** A field of a grib2 message.
@@ -246,6 +247,10 @@ public:
   /** Get a 3D array from grib data */
   virtual std::shared_ptr<Array<float, 3> >
   getFloat3D(const std::string& key, std::vector<std::string> zLevelsVec) = 0;
+
+  /** Get a projected LatLonGrid from the grib data */
+  virtual std::shared_ptr<LatLonGrid>
+  getLatLonGrid(const std::string& key, const std::string& levelstr) = 0;
 };
 
 /** Output a GribMessage */
