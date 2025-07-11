@@ -24,6 +24,7 @@ rBoostConnection.h
 rColor.h
 rColorMap.h
 rColorTerm.h
+config/library_sci_palette.h
 config/rConfigColorMap.h
 config/rConfigDirectoryMapping.h
 config/rConfig.h
