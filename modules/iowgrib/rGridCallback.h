@@ -60,10 +60,20 @@ public:
     return myLLCoverageArea;
   }
 
-  /** Temp storage of returned LatLonGrid */
-  static std::shared_ptr<LatLonGrid> myTempLatLonGrid;
+  /** Pull the current LatLonGrid, taking ownership */
+  static std::shared_ptr<LatLonGrid>
+  pullLatLonGrid()
+  {
+    auto temp = myTempLatLonGrid;
+
+    myTempLatLonGrid = nullptr;
+    return temp;
+  }
 
 protected:
+
+  /** Temp storage of returned LatLonGrid */
+  static std::shared_ptr<LatLonGrid> myTempLatLonGrid;
 
   /** Current coverage area wanted for output */
   LLCoverageArea myLLCoverageArea;

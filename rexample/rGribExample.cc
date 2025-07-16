@@ -34,7 +34,7 @@ GribExampleAlg::testGet2DArray(std::shared_ptr<GribDataType> grib2)
   // 2D test
   //
   const std::string name2D = "TMP";
-  const std::string layer  = "surface";
+  const std::string layer  = "100 mb";
 
   LogInfo("Trying to read " << name2D << " as direct 2D from data...\n");
   auto array2D = grib2->getFloat2D(name2D, layer);
@@ -70,7 +70,8 @@ GribExampleAlg::testGet3DArray(std::shared_ptr<GribDataType> grib2)
   // and don't care about transforming/projection say to mrms output grids.
   // Note that the dimensions have to match for all layers given
   const std::string name3D = "TMP";
-  const std::vector<std::string> layers = { "16 hybrid level", "17 hybrid level", "18 hybrid level" };
+  // const std::vector<std::string> layers = { "16 hybrid level", "17 hybrid level", "18 hybrid level" };
+  const std::vector<std::string> layers = { "100 mb", "125 mb", "150 mb" };
 
   LogInfo("Trying to read '" << name3D << "' as direct 3D from data...\n");
   auto array3D = grib2->getFloat3D(name3D, layers);
@@ -78,10 +79,25 @@ GribExampleAlg::testGet3DArray(std::shared_ptr<GribDataType> grib2)
   if (array3D != nullptr) {
     LogInfo("Found '" << name3D << "'\n");
     LogInfo("Dimensions: " << array3D->getX() << ", " << array3D->getY() << ", " << array3D->getZ() << "\n");
+
+    // Print 3D layer 0 which should match the 2D called before, right?
+    auto& ref = array3D->ref(); // or (*ref)[x][y]
+    LogInfo("First 10x10 values:\n");
+    LogInfo("----------------------------------------------------\n");
+    for (size_t x = 0; x < 10; ++x) {
+      for (size_t y = 0; y < 10; ++y) {
+        // FIXME: LatLonHeightGrids store in layer, lat, lon.  But array
+        // at the moment we're using lat, lon, layer.  'Maybe' we sync
+        // the ordering at some point.  Might not matter.
+        std::cout << ref[x][y][0] << ",  ";
+      }
+      std::cout << "\n";
+    }
+    LogInfo("----------------------------------------------------\n");
   } else {
     LogSevere("Couldn't get 3D '" << name3D << "' out of grib data\n");
   }
-}
+} // GribExampleAlg::testGet3DArray
 
 void
 GribExampleAlg::testGetMessageAndField(std::shared_ptr<GribDataType> grib2)

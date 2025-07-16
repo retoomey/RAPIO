@@ -7,7 +7,8 @@
 
 using namespace rapio;
 
-std::shared_ptr<Array<float, 2> > ArrayCallback::myTemp2DArray;
+std::shared_ptr<Array<float, 2> > Array2DCallback::myTemp2DArray;
+std::shared_ptr<Array<float, 3> > Array3DCallback::myTemp3DArray;
 
 ArrayCallback::ArrayCallback(const URL& u, const std::string& match) : WgribCallback(u, match)
 { }
@@ -30,7 +31,7 @@ ArrayCallback::handleFinalize()
 }
 
 void
-ArrayCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
+Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
 {
   myTemp2DArray = Arrays::CreateFloat2D(nlats, nlons);
   auto& output = myTemp2DArray->ref();
@@ -48,4 +49,70 @@ ArrayCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned i
       }
     }
   }
+}
+
+void
+Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
+{
+  if (myLayerNumber == 0) {
+    // Found first match.  Create the array.
+
+    myTemp3DArray = Arrays::CreateFloat3D(nlats, nlons, myLayers.size());
+    // We should probably 'store' the nlats, nlons and make sure future callbacks
+    // match the dimensions.
+    auto& output = myTemp3DArray->ref();
+  } else  { }
+
+  if (myTemp3DArray != nullptr) {
+    auto& output = myTemp3DArray->ref();
+
+    #if  0
+    // Need to check the ordering right?
+    const auto layer = myLayerNumber;
+    for (int lat = 0; lat < nlats; ++lat) {
+      for (int lon = 0; lon < nlons; ++lon) {
+        const size_t flipLat = nlats - (lat + 1);
+        //    Untested.  I'll probably try pulling it out and displaying each layer later
+        const size_t i = layer * nlats * nlons + flipLat * nlons + lon; // 3D row-major indexing
+        float& value   = data[i];
+
+        if (std::isnan(value)) {
+          output[lat][lon][layer] = Constants::MissingData;
+        } else {
+          output[lat][lon][layer] = value;
+        }
+      }
+    }
+    #endif // if  0
+
+    const auto layer         = myLayerNumber;
+    const size_t layerOffset = layer * nlats * nlons;
+
+    for (size_t lat = 0, flippedLat = nlats - 1; lat < nlats; ++lat, --flippedLat) {
+      size_t rowOffset = layerOffset + flippedLat * nlons;
+      for (size_t lon = 0; lon < nlons; ++lon) {
+        size_t i     = rowOffset + lon;
+        float& value = data[i];
+
+        if (std::isnan(value)) {
+          output[lat][lon][layer] = Constants::MissingData;
+        } else {
+          output[lat][lon][layer] = value;
+        }
+      }
+    }
+  }
+} // Array3DCallback::handleSetDataArray
+
+void
+Array3DCallback::executeLayer(size_t layer)
+{
+  std::string holdMatch = myMatch; // Original key
+
+  myMatch       = myMatch + ":" + myLayers[layer] + ":";
+  myLayerNumber = layer;
+
+  std::cout << "----------------------> EXECUTE " << layer << "\n";
+  execute();
+  myMatch = holdMatch;
 }

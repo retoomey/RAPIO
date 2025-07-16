@@ -86,35 +86,42 @@ WgribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr
   if (!c) { return nullptr; }
 
   // Run array now on single match
-  std::shared_ptr<ArrayCallback> action = std::make_shared<ArrayCallback>(myURL, match);
+  std::shared_ptr<Array2DCallback> action = std::make_shared<Array2DCallback>(myURL, match);
 
   action->execute();
 
-  // Send back the array, clearing our ownership of it
-  auto temp = ArrayCallback::myTemp2DArray;
-
-  ArrayCallback::myTemp2DArray = nullptr;
-  return temp;
+  return Array2DCallback::pull2DArray();
 } // WgribDataTypeImp::getFloat2D
 
 std::shared_ptr<Array<float, 3> >
 WgribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLevels)
 {
-  LogSevere("Float 3D direct not implemented yet with iowgrib module\n");
-
-  return nullptr;
-
-  #if 0
-  size_t nz = zLevels.size();
-
-  if ((nz < 1)) {
-    LogSevere("Need at least 1 z level for 3D");
+  // ---------------------------------------------------
+  // Checking for unique one match per layer
+  //
+  for (size_t i = 0; i < zLevels.size(); ++i) {
+    const std::string match = ":" + key + ":" + zLevels[i] + ":";
+    auto c = haveSingleMatch(match);
+    if (!c) {
+      LogSevere("For 3D level " << i << " " << match << " didn't not match a layer.\n");
+      return nullptr;
+    }
   }
 
-  return nullptr;
 
-  #endif
-}
+  // ---------------------------------------------------
+  // Create a 3D callback and fill the layers
+  //
+  std::shared_ptr<Array3DCallback> action =
+    std::make_shared<Array3DCallback>(myURL, key, zLevels);
+
+  for (size_t i = 0; i < zLevels.size(); ++i) {
+    LogInfo("Level " << i << " is set to " << zLevels[i] << "\n");
+    action->executeLayer(i);
+  }
+
+  return Array3DCallback::pull3DArray();
+} // WgribDataTypeImp::getFloat3D
 
 std::shared_ptr<LatLonGrid>
 WgribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& levelstr)
@@ -131,9 +138,5 @@ WgribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& level
 
   action->execute();
 
-  // Send back the LatLonGrid, clearing our ownership of it
-  auto temp = GridCallback::myTempLatLonGrid;
-
-  GridCallback::myTempLatLonGrid = nullptr;
-  return temp;
+  return GridCallback::pullLatLonGrid();
 }
