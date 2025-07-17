@@ -36,18 +36,14 @@ Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
   myTemp2DArray = Arrays::CreateFloat2D(nlats, nlons);
   auto& output = myTemp2DArray->ref();
 
-  for (int lat = 0; lat < nlats; ++lat) {
-    for (int lon = 0; lon < nlons; ++lon) {
-      const size_t flipLat = nlats - (lat + 1);
-      const int i  = flipLat * nlons + lon; // row-major
-      float& value = data[i];
+  size_t i = (nlats - 1) * nlons; // Start at highest latitude row
 
-      if (std::isnan(value)) {
-        output[lat][lon] = Constants::MissingData;
-      } else {
-        output[lat][lon] = value;
-      }
+  for (size_t lat = 0; lat < nlats; ++lat) {
+    for (size_t lon = 0; lon < nlons; ++lon, ++i) {
+      float& value = data[i];
+      output[lat][lon] = std::isnan(value) ? Constants::MissingData : value;
     }
+    i -= 2 * nlons; // Move to previous row (reversing lat)
   }
 }
 
@@ -71,21 +67,15 @@ Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
   if (myTemp3DArray != nullptr) {
     auto& output = myTemp3DArray->ref();
 
-    const auto layer         = myLayerNumber;
-    const size_t layerOffset = layer * nlats * nlons;
+    const auto layer = myLayerNumber;
 
-    for (size_t lat = 0, flippedLat = nlats - 1; lat < nlats; ++lat, --flippedLat) {
-      size_t rowOffset = layerOffset + flippedLat * nlons;
-      for (size_t lon = 0; lon < nlons; ++lon) {
-        size_t i     = rowOffset + lon;
+    size_t i = (nlats - 1) * nlons; // Start at highest latitude row
+    for (size_t lat = 0; lat < nlats; ++lat) {
+      for (size_t lon = 0; lon < nlons; ++lon, ++i) {
         float& value = data[i];
-
-        if (std::isnan(value)) {
-          output[lat][lon][layer] = Constants::MissingData;
-        } else {
-          output[lat][lon][layer] = value;
-        }
+        output[lat][lon][layer] = std::isnan(value) ? Constants::MissingData : value;
       }
+      i -= 2 * nlons; // Move to previous row (reversing lat)
     }
   }
 } // Array3DCallback::handleSetDataArray
