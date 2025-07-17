@@ -98,5 +98,11 @@ protected:
 
   /** Temp storage of returned 3D Array */
   static std::shared_ptr<Array<float, 3> > myTemp3DArray;
+
+  /** Temp store the number of lats */
+  int myNLats;
+
+  /** Temp store the number of lons */
+  int myNLons;
 };
 }

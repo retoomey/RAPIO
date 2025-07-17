@@ -56,34 +56,20 @@ Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
 {
   if (myLayerNumber == 0) {
     // Found first match.  Create the array.
-
     myTemp3DArray = Arrays::CreateFloat3D(nlats, nlons, myLayers.size());
-    // We should probably 'store' the nlats, nlons and make sure future callbacks
-    // match the dimensions.
-    auto& output = myTemp3DArray->ref();
-  } else  { }
+    myNLats       = nlats;
+    myNLons       = nlons;
+  }
+
+  // Check that nlats/nlons matches what we expect
+  if ((nlats != myNLats) || (nlons != myNLons)) {
+    std::cerr << "\nError: (For layer " << myLayerNumber << " mismatched grid size " << nlats << "!= " << myNLats
+              << " or " << nlons << " != " << myNLons << ")\n";
+    return;
+  }
 
   if (myTemp3DArray != nullptr) {
     auto& output = myTemp3DArray->ref();
-
-    #if  0
-    // Need to check the ordering right?
-    const auto layer = myLayerNumber;
-    for (int lat = 0; lat < nlats; ++lat) {
-      for (int lon = 0; lon < nlons; ++lon) {
-        const size_t flipLat = nlats - (lat + 1);
-        //    Untested.  I'll probably try pulling it out and displaying each layer later
-        const size_t i = layer * nlats * nlons + flipLat * nlons + lon; // 3D row-major indexing
-        float& value   = data[i];
-
-        if (std::isnan(value)) {
-          output[lat][lon][layer] = Constants::MissingData;
-        } else {
-          output[lat][lon][layer] = value;
-        }
-      }
-    }
-    #endif // if  0
 
     const auto layer         = myLayerNumber;
     const size_t layerOffset = layer * nlats * nlons;
@@ -112,7 +98,6 @@ Array3DCallback::executeLayer(size_t layer)
   myMatch       = myMatch + ":" + myLayers[layer] + ":";
   myLayerNumber = layer;
 
-  std::cout << "----------------------> EXECUTE " << layer << "\n";
   execute();
   myMatch = holdMatch;
 }
