@@ -34,7 +34,7 @@ RAPIOFusionAlgs::firstDataSetup()
 void
 RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Stage3---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Stage3---" << ColorTerm::reset() << "\n");
   firstDataSetup();
 
   // This will read the data even it if isn't the type wanted.  Interesting.
@@ -56,7 +56,7 @@ RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
   // Probably don't need heartbeat for the algorithms.  Should be one 3D cube to outputs.
   if (isDaemon()) { // just checking, don't think we get message if we're not
     LogInfo(
-      ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---\n");
+      ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
   }
 }
 

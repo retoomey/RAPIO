@@ -26,8 +26,8 @@ RecordNotifier::introduceHelp()
 
   help +=
     "If blank, set to {OutputDir}/code_index.fam, while if set to 'disable' then turned off (could speed up archive processing.)\n";
-  help += " " + ColorTerm::fRed + "fml" + ColorTerm::fNormal + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
-  help += " " + ColorTerm::fRed + "exe" + ColorTerm::fNormal + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
+  help += " " + ColorTerm::red() + "fml" + ColorTerm::reset() + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
+  help += " " + ColorTerm::red() + "exe" + ColorTerm::reset() + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
   return help;
 }
 

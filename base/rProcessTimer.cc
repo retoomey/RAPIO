@@ -132,9 +132,9 @@ printTimerLine(std::ostream& os,
   const double currentRSS = rsskb * 1024;
   const double changeVM   = (vmkb - myVM_KB) * 1024;
   const double changeRSS  = (rsskb - myRSS_KB) * 1024;
-  const std::string c1    = changeVM > 0 ? ColorTerm::fRed : ColorTerm::fGreen;
-  const std::string c2    = changeRSS > 0 ? ColorTerm::fRed : ColorTerm::fGreen;
-  const std::string e     = ColorTerm::fNormal;
+  const std::string c1    = changeVM > 0 ? ColorTerm::red() : ColorTerm::green();
+  const std::string c2    = changeRSS > 0 ? ColorTerm::red() : ColorTerm::green();
+  const std::string e     = ColorTerm::reset();
 
   // A standard output message
   os << msg << ": " <<

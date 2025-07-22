@@ -335,7 +335,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -503,7 +503,7 @@ RAPIOFusionOneAlg::readCoverageMask()
 void
 RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 {
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---RadialSet---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
   // Need a radar name in data to handle it currently
   std::string name = "UNKNOWN";
 
@@ -613,7 +613,7 @@ RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
   // In archive, we called processVolume with every tilt so we ignore
   // any heartbeats.
   if (isDaemon()) {
-    LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
+    LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
     processVolume(p); // n or p is the question...?
   }
 }

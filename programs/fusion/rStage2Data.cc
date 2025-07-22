@@ -54,7 +54,7 @@ Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   size_t finalMissingSize    = 0;
   size_t count = 0;
 
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Outputting---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Outputting---" << ColorTerm::reset() << "\n");
   for (auto& s:myStorage) {
     s->send(alg, aTime, asName);
     finalValueSize      += s->getAddedValueCount();

@@ -257,11 +257,11 @@ RAPIOOptions::dumpSuboptionList(const Option& o, size_t& c1, bool advanced)
     // Print different depending on advanced help or not
     if (!advanced) {
       s << setw(c1 + 4) << left << ""; // Indent 1 column
-      std::string out = ColorTerm::fBlue + ColorTerm::bold(optpad)
+      std::string out = ColorTerm::blue() + ColorTerm::bold(optpad)
         + " --" + i.description;
       ColorTerm::wrapWithIndent(c1 + 4, c1 + 4 + max + 3, out);
     } else {
-      s << " " << ColorTerm::fRed << optpad << ColorTerm::fNormal << " : " + i.description << "\n";
+      s << " " << ColorTerm::red() << optpad << ColorTerm::reset() << " : " + i.description << "\n";
     }
   }
 }
@@ -293,8 +293,8 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
       }
 
       // Always output the first two columns, regardless of terminal width...
-      s << ColorTerm::fRed << ColorTerm::fBold;
-      s << setw(c1) << left << opt << ColorTerm::fNormal;
+      s << ColorTerm::red() << ColorTerm::bold();
+      s << setw(c1) << left << opt << ColorTerm::reset();
 
       // Create the status string
       std::string status;
@@ -311,16 +311,16 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
       }
       // Import that status include the colors so fill spaces
       // don't get them.
-      status = ColorTerm::fBlue + status + ColorTerm::fNormal;
+      status = ColorTerm::blue() + status + ColorTerm::reset();
       ColorTerm::wrapWithIndent(c1, c1, status);
 
       // Usage, using our width wrapping output
       if (o->usage != "") {
-        // s << fGreen;
+        // s << ColorTerm::green();
         s << setw(c1 + 2) << left << ""; // Indent 1 column
         ColorTerm::wrapWithIndent(c1 + 2, c1 + 4, o->usage);
 
-        // s << fNormal;
+        // s << ColorTerm::reset();
       }
       const bool advancedWillShow = (advancedHelp && (o->advancedHelp != ""));
 
@@ -331,7 +331,7 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
       if (advancedWillShow) {
         std::vector<std::string> lines;
         Strings::splitWithoutEnds(o->advancedHelp, '\n', &lines);
-        // s << fGreen;
+        // s << ColorTerm::green();
         // s << setw(c1+2) << left << ""; // Indent 1 column
         int d = 5;
         s << ColorTerm::bold("DETAILED HELP:\n");
@@ -344,7 +344,7 @@ RAPIOOptions::dumpArgs(std::vector<Option *>& options,
         s << "\n";
 
         dumpSuboptionList(*o, c1, advancedWillShow);
-        // s << fNormal;
+        // s << ColorTerm::reset();
       }
     }
   }

@@ -57,7 +57,7 @@ PolarMerge::processRadialSet(std::shared_ptr<RadialSet> r)
     return false;
   }
 
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---RadialSet---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
   // Need a radar name in data to handle it currently
   std::string name = "UNKNOWN";
 
@@ -106,7 +106,7 @@ PolarMerge::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& rada
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();

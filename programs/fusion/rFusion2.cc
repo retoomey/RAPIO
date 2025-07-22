@@ -122,7 +122,7 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
 
   myTypeName = data->getTypeName();
 
@@ -151,7 +151,7 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Stage2---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Stage2---" << ColorTerm::reset() << "\n");
   // We'll check the record time before reading all the data.  This should be >= all the times
   // in the stage2, so we can pretoss out data _before_ reading it in (which is slower)
   // This means we're falling behind somewhat.
@@ -264,7 +264,7 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
   // LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
   // Trying a slight throttle. Wait for 20 stage2 before writing
   LogInfo(
-    ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << " (" << myDirty <<
+    ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << " (" << myDirty <<
       " ingested since last)\n");
   mergeAndWriteOutput(n, p);
 

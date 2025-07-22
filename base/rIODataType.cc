@@ -21,24 +21,24 @@ IODataType::introduceHelp()
   help +=
     "  The key= part is the builder, these are typically in metadata files (index, fml) as the first part of the <params> section.";
   help += "  Some builders are static, some are dynamically loaded from rapiosettings.xml on demand.\n";
-  help += ColorTerm::fBlue + "Static built-in builders:" + ColorTerm::fNormal + "\n";
+  help += ColorTerm::blue() + "Static built-in builders:" + ColorTerm::reset() + "\n";
   auto full = Factory<IODataType>::getAll();
 
   for (auto a:full) {
-    help += " " + ColorTerm::fRed + a.first + ColorTerm::fNormal + " : " + a.second->getHelpString(a.first) + "\n";
+    help += " " + ColorTerm::red() + a.first + ColorTerm::reset() + " : " + a.second->getHelpString(a.first) + "\n";
     // shouldn't be null, rightmyList.push_back(ele.second);
   }
-  help += ColorTerm::fBlue + "Dynamic loaded builders:" + ColorTerm::fBlue + "\n";
+  help += ColorTerm::blue() + "Dynamic loaded builders:" + ColorTerm::blue() + "\n";
   // We're fully loading now...but that's ok help dies afterwards
   auto fulld = Factory<IODataType>::getAllDynamic();
 
   for (auto ele:fulld) {
     auto& f = ele.second;
-    help += ColorTerm::fRed + " ";
+    help += ColorTerm::red() + " ";
     for (auto& s:f.alias) {
       help += s + " ";
     }
-    help += ColorTerm::fNormal + " : ";
+    help += ColorTerm::reset() + " : ";
     if (f.stored == nullptr) {
       help += " couldn't find/load this module!!!";
     } else {

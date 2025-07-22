@@ -80,7 +80,7 @@ RAPIOPointCloudAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::stri
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Initial Startup---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -183,7 +183,7 @@ RAPIOPointCloudAlg::bufferToRadialSet(std::shared_ptr<RadialSet> r)
 void
 RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 {
-  LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---RadialSet---" << ColorTerm::fNormal << "\n");
+  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
 
   auto& rad = *r;
 
@@ -392,7 +392,7 @@ RAPIOPointCloudAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOPointCloudAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  // LogInfo(ColorTerm::fGreen << ColorTerm::fBold << "---Heartbeat---" << ColorTerm::fNormal << "\n");
+  // LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::fNormal << "\n");
 
   // FIXME: For moment, we'll write out for each tilt...though it should be an aggregate of
   // everything received in a time window.

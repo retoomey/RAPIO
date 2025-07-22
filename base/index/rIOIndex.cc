@@ -46,11 +46,11 @@ IOIndex::introduceHelp()
   help += "Default no protocol ending in .fam is an ifam index.\n";
   help += "Default url with 'source' or web macro is a web index.\n";
   help += "Indexes ingest data into the system.\n";
-  help += ColorTerm::fBlue + "The following types are registered:" + ColorTerm::fNormal + "\n";
+  help += ColorTerm::blue() + "The following types are registered:" + ColorTerm::reset() + "\n";
   auto e = Factory<IndexType>::getAll();
 
   for (auto i: e) {
-    help += " " + ColorTerm::fRed + i.first + ColorTerm::fNormal + " : " + i.second->getHelpString(i.first) + "\n";
+    help += " " + ColorTerm::red() + i.first + ColorTerm::reset() + " : " + i.second->getHelpString(i.first) + "\n";
   }
   return help;
 }

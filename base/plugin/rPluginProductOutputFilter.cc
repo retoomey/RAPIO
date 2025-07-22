@@ -30,9 +30,9 @@ PluginProductOutputFilter::addPostLoadedHelp(RAPIOOptions& o)
 
   // Add list of registered static products
   if (myKeys.size() > 0) {
-    help += ColorTerm::fBlue + "Registered product output keys:" + ColorTerm::fNormal + "\n";
+    help += ColorTerm::blue() + "Registered product output keys:" + ColorTerm::reset() + "\n";
     for (size_t i = 0; i < myKeys.size(); ++i) {
-      help += " " + ColorTerm::fRed + myKeys[i] + ColorTerm::fNormal + " : " + myKeyHelp[i] + "\n";
+      help += " " + ColorTerm::red() + myKeys[i] + ColorTerm::reset() + " : " + myKeyHelp[i] + "\n";
     }
   }
   o.addAdvancedHelp(myName, help);
