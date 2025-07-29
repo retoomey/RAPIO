@@ -1,366 +1,507 @@
-#include "rFusionAlgs.h"
+#include "rFusionRoster.h"
+#include "rFusionCache.h"
+#include "rError.h"
+#include "rConfigRadarInfo.h"
+#include "rDirWalker.h"
 
 using namespace rapio;
 
 void
-RAPIOFusionAlgs::declareOptions(RAPIOOptions& o)
+RAPIOFusionRosterAlg::declarePlugins()
+{
+  // We don't want the "-i" standard input at least for now, so we'll disable it
+  // Could use it for the roster files, but we use --roster for that in stage 1,
+  // so we'll stay consistent since we don't need notification
+  removePlugin("i");
+}
+
+void
+RAPIOFusionRosterAlg::declareOptions(RAPIOOptions& o)
 {
   o.setDescription(
-    "RAPIO Fusion Stage Three Algorithm.  Runs algorithms on received 3D cubes.");
+    "RAPIO Fusion Roster Algorithm.  Watches metainfo from N stage one algorithms and updates generation masks.");
   o.setAuthors("Robert Toomey");
+
+  // legacy use the t, b and s to define a grid
+  o.declareLegacyGrid();
+
+  // Set roster directory to home by default for the moment.
+  // We might want to turn it off in archive mode or testing at some point
+  const std::string home(OS::getEnvVar("HOME"));
+
+  o.optional("roster", home, "Location of roster/cache folder.");
+
+  #if USE_STATIC_NEAREST
+  // In this case, we'll use FUSION_MAX_CONTRIBUTING
+  #else
+  o.optional("nearest", "3", "How many sources contribute? Note: The largest this is the more RAM to run roster.");
+  #endif
+
+  o.boolean("static", "Coverage files don't expire keeping a static nearest N.");
+  o.addAdvancedHelp("static",
+    "This has to do with radars/sources going up and down.  Coverage files from stage1 by default expire. This gives us a dynamic nearest N radars, where a further source can join in if one of the first N is down. However, with static turned on, all sources that exist are counted, even if offline.");
+
+  // Default sync heartbeat to 1 mins
+  // Note that roster probably takes longer than this, but that's fine
+  // we'll just get another trigger immediately
+  // Format is seconds then mins
+  o.setDefaultValue("sync", "0 */1 * * * *");
 }
 
 /** RAPIOAlgorithms process options on start up */
 void
-RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
-{ } // RAPIOFusionAlgs::processOptions
+RAPIOFusionRosterAlg::processOptions(RAPIOOptions& o)
+{
+  o.getLegacyGrid(myFullGrid);
+
+  FusionCache::setRosterDir(o.getString("roster"));
+
+  #ifdef USE_STATIC_NEAREST
+  myNearestCount = FUSION_MAX_CONTRIBUTING;
+  #else
+  myNearestCount = o.getInteger("nearest");
+  if (myNearestCount < 1) {
+    LogInfo("Setting nearest to 1\n");
+    myNearestCount = 1;
+  }
+  if (myNearestCount > 6) {
+    LogInfo("Setting nearest to 6\n");
+    myNearestCount = 6;
+  }
+  #endif // ifdef USE_STATIC_NEAREST
+  LogInfo(">>>>>>Using a nearest neighbor value of " << myNearestCount << "\n");
+
+  myStatic = o.getBoolean("static");
+  if (myStatic) {
+    LogInfo("Static mode on, we will use expired coverage files.\n");
+  } else {
+    LogInfo("Dynamic mode on, coverage files will expire.\n");
+  }
+} // RAPIOFusionRosterAlg::processOptions
 
 void
-RAPIOFusionAlgs::firstDataSetup()
+RAPIOFusionRosterAlg::firstTimeSetup()
 {
-  static bool setup = false;
+  // Full tile/CONUS we represent
+  size_t size = myNearestCount;
+  int NFULL   = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
+  ProcessTimer createGrid("Created");
 
-  if (setup) { return; }
-  setup = true;
+  myNearestIndex = DimensionMapper({ myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ() });
 
+  #ifdef USE_STATIC_NEAREST
+  // Old way, grouped by static nearest (compile only size, probably slightly quicker)
+  LogInfo("Creating nearest array of size " << NFULL << ", each cell " << sizeof(NearestIDs) << " bytes.\n");
+  myNearest = std::vector<NearestIDs>(NFULL);
+  #else
 
-  auto myVIL = std::make_shared<VIL>();
+  // New way, grouped separately (dynamic for possible memory locality issues)
+  LogInfo("Creating nearest array of size " << NFULL << ", each cell " <<
+    (sizeof(SourceIDKey) + sizeof(float)) * (NFULL * size) << " bytes.\n");
+  myNearestSourceIDKeys = std::vector<SourceIDKey>(NFULL * size, 0);
+  myNearestRanges       = std::vector<float>(NFULL * size, std::numeric_limits<float>::max()); // The ranges per location
+  #endif
 
-  myVIL->initialize(); // hack for moment
-
-  myAlgs.push_back(myVIL);
+  LogInfo(createGrid << "\n");
 }
 
 void
-RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
+RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Stage3---" << ColorTerm::reset() << "\n");
-  firstDataSetup();
+  // We won't be running this way probably
+  // performRoster();
+}
 
-  // This will read the data even it if isn't the type wanted.  Interesting.
-  // In operations this doesn't always matter since we tend to only send wanted
-  // data to the algorithm anyway.  Or we're 'supposed' to.
-  // Perhaps we can expand record ability to allow more filtering options
-  auto llg = d.datatype<rapio::LatLonHeightGrid>();
+bool
+RAPIOFusionRosterAlg::expiredCoverage(const std::string& sourcename, const std::string& fullpath)
+{
+  // Get the time of the coverage file.  If it's older than -h then we assume that source
+  // is down or not reporting and we remove it from this masking pass.
+  // 'Unless' static mode is on
+  if (!myStatic) { // So dynamic mode the default...
+    Time fileTime;
 
-  if (llg != nullptr) {
-    for (auto& a:myAlgs) {
-      a->processVolume(llg, this);
+    if (OS::getFileModificationTime(fullpath, fileTime)) {
+      // FIXME: Need a time age method I think
+      const Time current    = Time::CurrentTime();
+      const Time cutoffTime = current - myMaximumHistory;
+      const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
+      if (fileTime.getSecondsSinceEpoch() < cutoff) {
+        // File is too old so we ignore it...
+        LogInfo("Ignored '" << sourcename << "' since it is too old. " << fileTime << "\n");
+        return true;
+      }
+    } else {
+      // Say something here?
+      return false; // Strange to happen since we're walking..maybe the file got deleted?
     }
   }
-} // RAPIOFusionAlgs::processNewData
+  return false;
+}
 
 void
-RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
+RAPIOFusionRosterAlg::walkerCallback(const std::string& what, const std::string& sourcename,
+  const std::string& fullpath)
 {
-  // Probably don't need heartbeat for the algorithms.  Should be one 3D cube to outputs.
-  if (isDaemon()) { // just checking, don't think we get message if we're not
-    LogInfo(
-      ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
+  if (what == "INGEST") {
+    // Reading in .cache files
+    ingest(sourcename, fullpath);
+  } else if (what == "DELETE") {
+    // Deleting masks for old stuff we didn't have a cache file for
+    deleteMask(sourcename, fullpath);
   }
 }
 
 void
-VIL::initialize()
+RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& fullpath)
 {
-  // Directly follow grids at moment.  Probably should call on the
-  // start up of the algorithm not at first data.
-  // FIXME: configuration at some point
-  // NSEGridHistory::followGrid("height273", "Heightof0C", 3920);
-  myHeight263 = NSEGridHistory::followGrid("height263", "Heightof-10C", 5000);
-  // NSEGridHistory::followGrid("height253", "Heightof-20C", 6200);
-  myHeight233 = NSEGridHistory::followGrid("height233", "Heightof-40C", 8600);
-}
-
-void
-VIL::firstDataSetup()
-{
-  static bool setup = false;
-
-  if (setup) { return; }
-
-  LogInfo("Precalculating VIL weight table\n");
-  // Precreate the vil weights.  Saves a little time on each volume
-  // computes weights for each dBZ values >= 0 based on a lookup table.
-  const float puissance = 4.0 / 7.0;
-
-  for (size_t i = 0; i < 100; ++i) {
-    float dbzval = (float) i;
-    float zval   = pow(10., (dbzval / 10.));
-    myVilWeights[i] = pow(zval, puissance);
+  // Don't handle expired files (not included in mask calculations)
+  if (expiredCoverage(sourcename, fullpath)) {
+    return; // ignore it
   }
 
-  #if 0
-  NSE will have special expire time in the data I think:
-  : ExpiryInterval - unit = "Minutes";
-  : ExpiryInterval - value = "1440";
-  < hda >
-  < height273 product       = "Heightof0C" default = "3920" / >
-    < height263 product     = "Heightof-10C" default = "5000" / >
-    < height253 product     = "Heightof-20C" default = "6200" / >
-    < height233 product     = "Heightof-40C" default = "8600" / >
-    < heightTerrain product = "TerrainElevation" default = "0" / >
-    < / hda >
+  ProcessTimer merge("Reading range/merging 1 took:\n");
 
-    < vilextras >
-    < slopeWE product = "Slope_WestToEast" default = "0" note = "For tilted hail/vil products" / >
-    < slopeNS product = "Slope_NorthToSouth" default = "0" note = "For tilted hail/vil products" / >
-    < meantemp500mb400mb product = "Temp500_400" default = "-15" note =
-    "For VIL of day: mean temperature between 500 and 400 mb" / >
-    < / vilextras >
+  size_t startX, startY, numX, numY; // subgrid coordinates
 
-  #endif // if 0
+  // We're reading to get the data and grid..which we need to generate the mask
+  std::vector<FusionRangeCache> out;
 
-  #if 0
-  // the doc gives the xml infor for 'what' and a form of group.
-  // The group is maybe not neccessary.
-  // So when we 'follow' we have a default background value that
-  // it provided for the output grid.
-  Height_263K = myNSEGrid->followGrid(doc, "hda", "height263");
-  Height_233K = myNSEGrid->followGrid(doc, "hda", "height233");
-  if (doDilateTilt) {
-    SlopeWE  = myNSEGrid->followGrid(doc, "vilextras", "slopeWE");
-    SlopeNS  = myNSEGrid->followGrid(doc, "vilextras", "slopeNS");
-    MeanTemp = myNSEGrid->followGrid(doc, "vilextras", "meantemp500mb400mb");
-  }
-  #endif // if 0
-  // DataTypeHistory::followDataTypeKey("vileextras");
-  // DataTypeHistory::followDataType("hda");
-} // VIL::firstDataSetup
-
-void
-VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
-{
-  // FIXME: Wondering if we should just have an array of output LatLonGrids
-  // and use enum
-  auto& llg = *input; // assuming non-null
-  const Time forTime = llg.getTime();
-  const LLCoverageArea coverage = llg.getLLCoverageArea();
-
-  auto create = ((myVilGrid == nullptr) || (myCachedCoverage != coverage));
-
-  if (!create) {
-    LogInfo("Using cached grids at time " << forTime << "\n");
-    // Update the time to the input for output
-    myVilGrid->setTime(forTime);
-    myVildGrid->setTime(forTime);
-    myViiGrid->setTime(forTime);
-    myMaxGust->setTime(forTime);
+  if (!FusionCache::readRangeFile(fullpath, startX, startY, numX, numY, out)) {
     return;
   }
 
-  // --------------------------------------------
-  // Create the output product grids we generate
-  // Thought about using a single grid, but some fields relay on others
-  // so we store all of them
-  //
-  LogInfo("Coverage has changed, creating new output grids...\n");
-  myVilGrid = LatLonGrid::Create("VIL", "kg/m^2", forTime, coverage);
-  myVilGrid->setDataAttributeValue("SubType", "");
+  // Make sure we have correct size..or skip
+  const size_t numZ     = myFullGrid.getNumZ();
+  const size_t expected = numX * numY * numZ;
 
-  myVildGrid = LatLonGrid::Create("VIL_Density", "g/m^3", forTime, coverage);
-  myVildGrid->setDataAttributeValue("SubType", "");
+  if (out.size() != expected) {
+    LogSevere("Expected " << expected << " points but got " << out.size() << " for " << fullpath << "\n");
+    LogSevere("EXTRA: " << numX << ", " << numY << ", " << numZ << "\n");
+    return;
+  }
+  // FIXME: check read errors?
 
-  myViiGrid = LatLonGrid::Create("VII", "kg/m^2", forTime, coverage);
-  myViiGrid->setDataAttributeValue("SubType", "");
-  myViiGrid->setDataAttributeValue("ColorMap", "VIL");
+  // We're going to redo this everytime, because of chicken/egg issues.
 
-  myMaxGust = LatLonGrid::Create("MaxGustEstimate", "m/s", forTime, coverage);
-  myMaxGust->setDataAttributeValue("ColorMap", "WindSpeed");
-  myMaxGust->setDataAttributeValue("SubType", "");
+  if (mySourceInfos.size() == 0) {
+    // zero is reserved as missing...so plug in one
+    mySourceInfos.push_back(SourceInfo());
+  }
 
-  myCachedCoverage = coverage;
-} // VIL::checkOutputGrids
+  // Find the info and id for this source...technically if we're reading once only then
+  // we'll always be adding new IDs
+  // FIXME: since we add each time now...clean this up (the find shouldn't be necessary)
+  SourceInfo * info = nullptr;
+  auto infoitr      = myNameToInfo.find(sourcename);
+
+  std::string newname = sourcename;
+
+  if (infoitr != myNameToInfo.end()) {
+    info = &mySourceInfos[infoitr->second];                        // existing
+    LogInfo("Found '" << info->name << "' in source database.\n"); // This shouldn't happen anymore
+  } else {
+    mySourceInfos.push_back(SourceInfo()); // FIXME: constructor
+    info = &mySourceInfos[mySourceInfos.size() - 1];
+
+    info->id     = mySourceInfos.size() - 1;
+    info->startX = startX; // gotta keep info to generate matching mask later
+    info->startY = startY; // start NORTH (lat)
+    info->numX   = numX;
+    info->numY   = numY;
+    info->name   = newname;
+    myNameToInfo[newname] = info->id;
+
+    // A mask of bits
+    try{
+      info->mask = Bitset({ numX, numY, numZ }, 1);
+      info->mask.clearAllBits();
+    }catch (std::bad_alloc& e) {
+      LogSevere("We ran out of memory allocating mask. This will crash.\n");
+      LogSevere("ATTEMPTED: '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
+        numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
+      exit(1);
+    }
+
+    LogInfo("Added '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
+      numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
+  }
+
+  // Nearest neighbor merge this source's info into the nearest N array...
+  // We'll make masks later
+  nearestNeighbor(out, info->id, info->startX, info->startY, info->numX, info->numY);
+  if (myWalkTimer != nullptr) {
+    myWalkTimer->add(merge);
+  }
+  myWalkCount++;
+} // RAPIOFusionRosterAlg::ingest
 
 void
-VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
+RAPIOFusionRosterAlg::deleteMask(const std::string& sourcename, const std::string& fullpath)
 {
-  // Now the real question is WHY can't the VIL algorithm run standalone, taking
-  // a 3D cube input?  So it 'should' be a regular algorithm, right?
-  // In other words, this could be a processNewData within a regular algorithm
-  firstDataSetup();
+  // See if this mask is in our known cache list
+  bool found = false;
 
-  auto& llg = *input; // assuming non-null
-
-  #if 0
-  myNSEGrid->updateTime(grid.getTime() );
-  #endif
-
-  constexpr int vil_upper = 56;
-
-  // --------------------------------------------
-  // Gather original grid information and check
-  // cached outputs
-  //
-  const Time forTime = llg.getTime();
-  LogInfo("Computing VIL at " << forTime << "\n");
-
-  const size_t numLats = llg.getNumLats();
-  const size_t numLons = llg.getNumLons();
-  const size_t numHts  = llg.getNumLayers();
-  const auto l         = llg.getLocation();
-  const LLCoverageArea coverage = llg.getLLCoverageArea();
-  checkOutputGrids(input);
-
-  // Get the primary arrays of the datatypes
-  // This differs from MRMS since we can have multiple arrays per DataType
-  auto& grid     = input->getFloat3DRef();
-  auto& vilgrid  = myVilGrid->getFloat2DRef();
-  auto& vildgrid = myVildGrid->getFloat2DRef();
-  auto& viigrid  = myViiGrid->getFloat2DRef();
-  auto& maxgust  = myMaxGust->getFloat2DRef();
-
-  // FIXME: why copying?
-  // Go through the heights and set up the height difference
-  // to the next lower level.
-  std::vector<float> hlevels; // , height_diff;
-  for (size_t h = 0; h < numHts; h++) {
-    auto layerValue = llg.getLayerValue(h);
-    hlevels.push_back(layerValue);
-    // LogInfo("Pushed back " << layerValue << "\n");
-  }
-  // LogSevere("Done with test\n");
-  // grid.setLayerValue(10, 123456); works.
-  // vilgrid->setLayerValue(0, 6000); // Should change height, right?
-  // p->writeOutputProduct("TESTING", vilgrid);
-
-  #if 0
-  const code::LatLonGrid& h263grid = myNSEGrid->getGrid(Height_263K);
-  const code::LatLonGrid& h233grid = myNSEGrid->getGrid(Height_233K);
-  #endif
-
-  // MRMS maps the nse grids to conus then uses direct index.  Not sure
-  // if we'll do that or query directly...
-  // FIXME: Really feel like we need a LLG lat/lon iterator class of some sort
-  // FIXME: Having to do lat/lon iteration also seems bleh
-  AngleDegs deltaLat = llg.getLatSpacing();
-  AngleDegs deltaLon = llg.getLonSpacing();
-  LLH nw = llg.getTopLeftLocationAt(0, 0);
-  AngleDegs startLat = nw.getLatitudeDeg() - (deltaLat / 2.0);  // move south (lat decreasing)
-  AngleDegs startLon = nw.getLongitudeDeg() + (deltaLon / 2.0); // move east (lon increasing)
-  AngleDegs atLat    = startLat;
-  for (size_t i = 0; i < numLats; ++i, atLat -= deltaLat) {
-    AngleDegs atLon = startLon;
-    for (size_t j = 0; j < numLons; ++j, atLon += deltaLon) {
-      // Default data value will be unavailable unless we find a missing or data value
-      float d = Constants::DataUnavailable;
-
-      // Compute Echo Top Interpolated (18 dBZ) using utility function
-      // This is inline for speed here
-      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
-      // const float et18 = 20;
-      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
-      // FIXME: This might be slow
-      const float et18 = doEchoTop(*input, 18.0, hlevels, numHts, i, j);
-
-      // Query values from NSE grid
-      const float H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
-      const float H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
-
-      // For each height add up the sum parts of VIL and VII
-      float vii = 0;
-      float vil = 0;
-
-      float lastH = hlevels[0];
-      for (size_t k = 0; k < numHts; ++k) {
-        // The data value we're interested in
-        const float v = grid[k][i][j];
-
-        // Skip on unavailable data...
-        if (v == Constants::DataUnavailable) {
-          lastH = hlevels[k];
-          continue;
-        }
-        // ...otherwise missing is the new default data value...
-        d = Constants::MissingData;
-
-        if (Constants::isGood(v)) {
-          const int vpos    = (int) fabs(v);
-          const float hdiff = hlevels[k] - lastH; // So k 0 always is diff of zero and no vil sum?? Hummmm
-
-          // Compute VIL sum part (constrained from 0 to the higher of vil_upper or 100)
-          int vint = vpos;
-          if (vint > vil_upper) { vint = vil_upper; }
-          if (vint < 100) {
-            vil += myVilWeights[vint] * hdiff;
-          }
-
-          // Compute VII sum part (constrained between -10C and -40C altitudes)
-          if ((vpos < 100) && ((H263K < hlevels[k]) && (hlevels[k] < H233K))) {
-            // vii+=vil_wt[vpos]*height_diff[k];
-            vii += myVilWeights[vpos] * hdiff;
-          }
-        }
-        lastH = hlevels[k];
-      } // end k loop
-
-      // Toomey: Multiplying by a positive number (..344) before the <= check wastes cycles since
-      // it will be negative before and after...so check vil <= 0 first... this also avoids checking
-      // vil <= 0 again for the vil density calculation.
-      float vild;
-      float w;
-
-      if (vil <= 0) {
-        // Actually should be unavailable unless height found one not...
-        vil  = d;
-        vild = d; // Density here is missing as well
-        w    = d;
-      } else { // vil > 0
-        // Compute final VIL (pulled multiplication out of the sum)
-        vil = 0.00000344 * vil;
-        // KCooper, per Travis - trying to match NMQ VIL?
-        // if (vil <= 1) vil = Constants::MissingData;
-
-        // Compute VIL Density.  We already know vil > 0 here, so check valid echo top
-        //
-        // VILD(g m ^ -3) = 1000 x vil (kgm ^ -2)     1000 * vil (kgm ^ -2)
-        //                  --------------------- =  --------------------------  = v/18km
-        //                     18 dbz ET (m)           1000* 18 dbz ET (Km)
-        // Our echotop is in KM.
-        // vild = (et18 > 0.)? vil/et18: d;
-        if (et18 > 0.) {
-          vild = vil / et18;
-
-          // Compute estimate of potential maximum gust with a descending downdraft
-          // NWS SR-136 Stacy R. Stewart
-          // https://docs.lib.noaa.gov/noaa_documents/NWS/NWS_SR/TM_NWS_SR_136.pdf
-          // max gust estimate = [20 m/s^2 vil - 3.125x10^-6 * et^2]^ .5
-          // Toomey: For this pass I'm assuming VIL and EchoTop should be > 0 for a valid
-          // value...
-          const float et2 = (et18) * (et18); // Kms gives us m/2 at end
-          // Stewart: w = ((20.628571 * vil) - (0.000003125*et2));
-          // Air Force Air Weather Service numbers, 1996:
-          w = ((15.780608 * vil) - (0.0000023810964 * et2));
-          w = pow((double) w, (double) 0.5);
-        } else {
-          vild = d;
-          w    = d;
-        }
-      }
-
-      // Compute VII
-      vii = 0.00000607 * vii;
-      if (vii <= 0.5) { vii = d; }
-
-      // Fill final grids with final values
-      vilgrid[i][j]  = vil;
-      vildgrid[i][j] = vild;
-      viigrid[i][j]  = vii;
-      maxgust[i][j]  = w;
+  for (auto& s:myNameToInfo) {
+    SourceInfo& source = mySourceInfos[s.second];
+    if (source.name == sourcename) { // FIXME: check uppercase always
+      found = true;
+      break;
     }
   }
 
-  // Without nse data 'yet'
-  p->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
-  p->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
-  p->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
-  p->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
-} // VIL::processVolume
+  if (!found) {
+    LogInfo("Deleting mask for '" << sourcename << "', since we didn't get a good cache file for it.\n");
+
+    if (!OS::deleteFile(fullpath)) {
+      LogSevere("Unable to delete old mask file for '" << sourcename << "'\n");
+    }
+  }
+}
+
+void
+RAPIOFusionRosterAlg::generateNearest()
+{
+  myWalkTimer = new ProcessTimerSum();
+  myWalkCount = 0;
+  LogInfo("Grid is " << myFullGrid << "\n");
+  //  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
+  firstTimeSetup();
+
+  // Clear out our stored radars
+  mySourceInfos.clear();
+  myNameToInfo.clear();
+
+  // Walk the cache directory looking for current/good files
+  std::string directory = FusionCache::getRangeDirectory(myFullGrid);
+  myDirWalker walk("INGEST", this, ".cache");
+
+  walk.traverse(directory);
+
+  LogInfo("Total walk/merge time " << *myWalkTimer << " (" << myWalkCount << ") sources active.\n");
+  delete myWalkTimer;
+} // RAPIOFusionRosterAlg::generateNearest
+
+void
+RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t id, size_t startX, size_t startY,
+  size_t numX, size_t numY)
+{
+  size_t counter    = 0;
+  const size_t size = myNearestCount;
+
+  #if USER_STATIC_NEAREST
+
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = startY; y < startY + numY; ++y) {   // north to south
+      for (size_t x = startX; x < startX + numX; ++x) { // east to west
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        // Update the 'nearest' for this radar id, etc.
+        auto v = out[counter++];
+
+        // Maintain sorted from lowest to highest.
+        auto& c = myNearest[at];
+
+        // Find the correct position to insert v using linear search (small N)
+        int index = 0;
+        while (index < size && v >= c.range[index]) {
+          ++index;
+        }
+
+        // If not pass end of array...
+        if (index < size) {
+          // ...then shift elements to make room for v
+          // which pushes out the largest
+          if (index < size - 1) {
+            for (int i = size - 1; i > index; --i) {
+              c.range[i] = c.range[i - 1];
+              c.id[i]    = c.id[i - 1];
+            }
+          }
+
+          // and add v
+          c.range[index] = v;
+          c.id[index]    = id;
+        }
+      }
+    }
+  }
+  #else // if USER_STATIC_NEAREST
+
+  // NEW WAY TESTING
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = startY; y < startY + numY; ++y) {   // north to south
+      for (size_t x = startX; x < startX + numX; ++x) { // east to west
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        // Update the 'nearest' for this radar id, etc.
+        auto v = out[counter++];
+
+        // Find the correct position to insert v using linear search (small N)
+        const size_t atr = at * size; // relative into group
+        auto& k       = myNearestSourceIDKeys;
+        auto& r       = myNearestRanges;
+        size_t index2 = 0;
+        while (index2 < size && v >= r[atr + index2]) {
+          ++index2;
+        }
+
+        // If not pass end of array...
+        if (index2 < size) {
+          // ...then shift elements to make room for v
+          // which pushes out the largest
+          if (index2 < size - 1) {
+            for (int i = size - 1; i > index2; --i) {
+              r[atr + i] = r[atr + i - 1];
+              k[atr + i] = k[atr + i - 1];
+            }
+          }
+
+          // and add v
+          k[atr + index2] = id;
+          r[atr + index2] = v;
+        }
+      }
+    }
+  }
+  #endif // if USER_STATIC_NEAREST
+} // RAPIOFusionRosterAlg::nearestNeighbor
+
+void
+RAPIOFusionRosterAlg::generateMasks()
+{
+  LogInfo("Generating converage bit masks...\n");
+  ProcessTimer maskGen("Generating coverage bit masks took:\n");
+  const size_t size = myNearestCount;
+
+  // Clear old bits
+  for (auto& s:mySourceInfos) {
+    s.mask.clearAllBits();
+  }
+
+  #if USE_STATIC_NEAREST
+  // Mask generation algorithm
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
+      for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        auto& c = myNearest[at];
+
+        for (size_t i = 0; i < size; ++i) {
+          // if we find a 0 id, then since we're insertion sorted by range,
+          // then this means all are 0 later...so continue
+          if (c.id[i] == 0) {
+            continue;
+          }
+          // If not zero, we need the sourceInfo for it.  This is why
+          // we store as ids in a vector it makes this lookup fast
+          SourceInfo * info = &mySourceInfos[c.id[i]];
+          Bitset& b         = info->mask;         // refer to mask
+          const size_t lx   = x - (info->startX); // "shouldn't" underflow
+          const size_t ly   = y - (info->startY);
+          const size_t li   = b.getIndex3D(lx, ly, z);
+          info->mask.set1(li); // Set one bit
+          counter++;
+        }
+      }
+    }
+  }
+  #else // if USE_STATIC_NEAREST
+
+  // Mask generation algorithm
+  auto& k = myNearestSourceIDKeys;
+  auto& r = myNearestRanges;
+  for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
+    for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
+      for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {
+        size_t at = myNearestIndex.getIndex3D(x, y, z);
+
+        const size_t atr = at * size; // relative into group
+
+        for (size_t i = 0; i < size; ++i) {
+          // if we find a 0 id, then since we're insertion sorted by range,
+          // then this means all are 0 later...so continue
+          if (k[atr + i] == 0) {
+            continue;
+          }
+          // If not zero, we need the sourceInfo for it.  This is why
+          // we store as ids in a vector it makes this lookup fast
+          SourceInfo * info = &mySourceInfos[k[atr + i]];
+          Bitset& b         = info->mask;         // refer to mask
+          const size_t lx   = x - (info->startX); // "shouldn't" underflow
+          const size_t ly   = y - (info->startY);
+          const size_t li   = b.getIndex3D(lx, ly, z);
+          info->mask.set1(li); // Set one bit
+        }
+      }
+    }
+  }
+  #endif // if USE_STATIC_NEAREST
+  LogInfo(maskGen);
+} // RAPIOFusionRosterAlg::generateMasks
+
+void
+RAPIOFusionRosterAlg::writeMasks()
+{
+  // Write masks to disk
+  ProcessTimer maskTimer("Writing masks took:\n");
+  size_t maskCount = 0;
+
+  std::string directory = FusionCache::getMaskDirectory(myFullGrid);
+
+  OS::ensureDirectory(directory);
+  LogInfo("Mask directory is " << directory << "\n");
+  size_t all = 0;
+  size_t on  = 0;
+
+  for (auto& s:myNameToInfo) {
+    SourceInfo& source   = mySourceInfos[s.second];
+    std::string maskFile = FusionCache::getMaskFilename(source.name, myFullGrid, directory);
+    std::string fullpath = directory + maskFile;
+    FusionCache::writeMaskFile(source.name, fullpath, source.mask);
+    on  += source.mask.getAllOnBits();
+    all += source.mask.size();
+    maskCount++;
+  }
+  LogInfo("Writing " << maskCount << " masks took: " << maskTimer << "\n");
+
+  float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
+
+  percent = 100.0 - (percent * 100.0);
+  LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
+
+  // Now we need to delete masks for things we didn't have a cache file for.
+  myDirWalker walk("DELETE", this, ".mask");
+
+  walk.traverse(directory);
+
+  LogInfo(maskTimer);
+} // RAPIOFusionRosterAlg::writeMasks
+
+void
+RAPIOFusionRosterAlg::performRoster()
+{
+  generateNearest(); // Read all stage1 info files, for example "KTLX.cache" and merge nearest values
+
+  generateMasks(); // In RAM, create 1/0 bit array for each source
+
+  writeMasks(); // Write bit array, for example "KTLX.mask" for stage1
+
+  LogInfo("Finished one pass...\n");
+} // RAPIOFusionRosterAlg::processNewData
+
+void
+RAPIOFusionRosterAlg::processHeartbeat(const Time& n, const Time& p)
+{
+  LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+  performRoster();
+}
 
 int
 main(int argc, char * argv[])
 {
-  RAPIOFusionAlgs alg = RAPIOFusionAlgs();
+  RAPIOFusionRosterAlg alg = RAPIOFusionRosterAlg();
 
   alg.executeFromArgs(argc, argv);
 } // main

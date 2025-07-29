@@ -25,7 +25,7 @@ void
 PluginHeartbeat::addPostLoadedHelp(RAPIOOptions& o)
 {
   o.addAdvancedHelp(myName,
-    "Sends heartbeat to program.  Note if your program lags due to calculation/write times, you may miss a heartbeat. The format is a 6 star second supported cronlist.\nCommon use cases:\n    '*/10 * * * * *' -- Run every 10 seconds.  Note max seconds is 59 here.\n    '0  */2 * * * *' -- Run every 2 minutes at the 0th second.");
+    "Sends heartbeat to program.  Note if your program lags due to calculation/write times, you may miss a heartbeat. The format is a 6 star second supported cronlist.\nRealtime mode uses system clock to trigger a heartbeat.  Archive mode triggers when the latest record is 'sync' time newer than the last, and once at the end of the archive to finalize.\nCommon use cases:\n    '*/10 * * * * *' -- Run every 10 seconds.  Note max seconds is 59 here.\n    '0  */2 * * * *' -- Run every 2 minutes at the 0th second.");
 }
 
 void

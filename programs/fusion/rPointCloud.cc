@@ -43,6 +43,12 @@ RAPIOPointCloudAlg::declareOptions(RAPIOOptions& o)
   // Default sync heartbeat to 30 seconds for writing
   // Format is seconds then mins
   o.setDefaultValue("sync", "*/30 * * * * *");
+
+  // Super verbose and slow.  Output after every processed tilt.  Usually in archive/realtime
+  // you output after so much time has passed, either say 2 minutes of realtime or 2 minutes
+  // of records
+  o.boolean("everytilt", "Output after every tilt received and ignore heartbeat/sync");
+  o.addGroup("everytilt", "time");
 } // RAPIOPointCloudAlg::declareOptions
 
 /** RAPIOAlgorithms process options on start up */
@@ -54,6 +60,7 @@ RAPIOPointCloudAlg::processOptions(RAPIOOptions& o)
 
   myWriteStage2Name  = "None";          // will get from first radialset typename
   myWriteOutputUnits = "Dimensionless"; // will get from first radialset units
+  myEveryTilt        = o.getOption("everytilt");
   #if 0
   myThrottleCount = o.getInteger("throttle");
   if (myThrottleCount > 10) {
@@ -336,13 +343,6 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 
   // Copy the current buffer into RadialSet. We store a virtual volume of these.
   bufferToRadialSet(r);
-
-  // If archive mode, write immediately.  Eh do we need a grouping counter?
-  // FIXME: We could have a group counter, so say output every 10 tilts..which would
-  // group archive
-  if (isArchive()) {
-    writeCollectedData(r->getTime()); // Use radial set time at moment...direct 1 to 1
-  }
 } // RAPIOPointCloudAlg::processRadialSet
 
 void
@@ -365,6 +365,10 @@ RAPIOPointCloudAlg::processNewData(rapio::RAPIOData& d)
     myDirty++;
 
     processRadialSet(r);
+
+    if (myEveryTilt) {
+      writeCollectedData(r->getTime()); // Use radial set time at moment...direct 1 to 1
+    }
 
     #if 0
     // Create another as a test...
@@ -392,11 +396,8 @@ RAPIOPointCloudAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOPointCloudAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  // LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::fNormal << "\n");
-
-  // FIXME: For moment, we'll write out for each tilt...though it should be an aggregate of
-  // everything received in a time window.
-  if (isDaemon()) {
+  // If we're not writing every tilt, do it on heartbeat pulse
+  if (!myEveryTilt) {
     writeCollectedData(p); // n or p is the question...?
   }
 }
@@ -417,11 +418,6 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
   // We need to process all tilts we currently have in the volume
   // in this time period.  Each RadialSet already has all the information,
   // just need to copy/group into a single output file.
-
-  // FIXME: needs to work with archive properly...for moment we wrap it
-  if (isDaemon()) {
-    purgeTimeWindow();
-  }
 
   auto volume = myElevationVolume->getVolume();
 

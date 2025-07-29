@@ -194,5 +194,8 @@ protected:
 
   /** Skip missing values in output? */
   bool myNoMissing;
+
+  /** Output after every tilt, not on time range */
+  bool myEveryTilt;
 };
 }

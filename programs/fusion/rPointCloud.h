@@ -229,5 +229,8 @@ protected:
 
   /** Calculated uz for row */
   std::vector<float> myZs;
+
+  /** Output after every tilt, not on time range */
+  bool myEveryTilt;
 };
 }

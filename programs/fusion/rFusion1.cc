@@ -110,6 +110,12 @@ RAPIOFusionOneAlg::declareOptions(RAPIOOptions& o)
   // Format is seconds then mins
   o.setDefaultValue("sync", "*/30 * * * * *");
 
+  // Super verbose and slow.  Output after every processed tilt.  Usually in archive/realtime
+  // you output after so much time has passed, either say 2 minutes of realtime or 2 minutes
+  // of records
+  o.boolean("everytilt", "Output after every tilt received and ignore heartbeat/sync");
+  o.addGroup("everytilt", "time");
+
   // Output S2 by default and declare static product keys for what we write.
   o.setDefaultValue("O", "S2");
   declareProduct("S2", "Write Stage2 raw data files. (Normal operations)");
@@ -185,6 +191,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   if (myUseRoster) {
     FusionCache::setRosterDir(roster);
   }
+  myEveryTilt = o.getOption("everytilt");
 } // RAPIOFusionOneAlg::processOptions
 
 void
@@ -600,8 +607,8 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
     // processVolume(rTime);
     myDirty++;
   }
-  // In archive process volume with every incoming tilt.  This is ok I think.
-  if (!isDaemon()) {
+  // Output now on the every tilt option.  We're ignoring heartbeats
+  if (myEveryTilt) {
     processVolume(r->getTime());
   }
 }
@@ -609,10 +616,9 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 void
 RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  // In realtime process volume on the heartbeat (not every tilt)
-  // In archive, we called processVolume with every tilt so we ignore
-  // any heartbeats.
-  if (isDaemon()) {
+  // Realtime/archive sends us pulses.  But if we're outputting every tilt
+  // no need for doing it here.
+  if (!myEveryTilt) {
     LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
     processVolume(p); // n or p is the question...?
   }
