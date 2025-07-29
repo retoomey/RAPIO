@@ -32,6 +32,10 @@ public:
   void
   remap(std::shared_ptr<LatLonGrid> llg);
 
+  /** Remap in the algorithm for moment */
+  void
+  remap(std::shared_ptr<RadialSet> rs);
+
 protected:
 
   /** Coordinates for the output grid we remap to */
@@ -42,5 +46,19 @@ protected:
 
   /** Size of the matrix for remapping */
   size_t mySize;
+
+  // Radial set only parameters
+
+  /** Gate width in meters of output */
+  int myGateWidthMeters;
+
+  /** Number of radials to output */
+  int myNumRadials;
+
+  /** Number of gates to output */
+  int myNumGates;
+
+  /** Project RadialSet to ground? */
+  bool myProjectGround;
 };
 }

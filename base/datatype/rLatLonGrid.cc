@@ -84,6 +84,66 @@ LatLonGrid::Clone()
 }
 
 void
+LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> remapper)
+{
+  if (out == nullptr) { return; }
+
+  auto& r = *remapper;
+  auto& o = *out;
+
+  // FIXME: Can we know name/params of the particular remapper
+  LogInfo("Remapping using matrix size of " << r.myWidth << " by " << r.myHeight << "\n");
+
+  // FIXME: We're only mapping primary data array
+  r.setSource(getFloat2D());
+  r.setOutput(o.getFloat2D());
+
+  // Input coordinates
+  const LLH inCorner = getTopLeftLocationAt(0, 0); // not centered
+  const AngleDegs inNWLatDegs = inCorner.getLatitudeDeg();
+  const AngleDegs inNWLonDegs = inCorner.getLongitudeDeg();
+  const auto inLatSpacingDegs = getLatSpacing();
+  const auto inLonSpacingDegs = getLonSpacing();
+
+  // Output coordinates
+  const LLH outCorner = o.getTopLeftLocationAt(0, 0); // not centered
+  const AngleDegs outNWLatDegs = outCorner.getLatitudeDeg();
+  const AngleDegs outNWLonDegs = outCorner.getLongitudeDeg();
+
+  const AngleDegs startLat = outNWLatDegs - (o.getLatSpacing() / 2.0); // move south (lat decreasing)
+  const AngleDegs startLon = outNWLonDegs + (o.getLonSpacing() / 2.0); // move east (lon increasing)
+  const size_t numY        = o.getNumLats();
+  const size_t numX        = o.getNumLons();
+
+  // Cell hits yof and xof
+  // Note the cell is allowed to be fractional and out of range,
+  // since we're doing a matrix 'some' cells might be in the range
+  size_t counter = 0;
+
+  AngleDegs atLat = startLat;
+
+  auto& array = *r.myRefOut;
+
+  for (size_t y = 0; y < numY; ++y, atLat -= o.getLatSpacing()) {
+    const float yof = (inNWLatDegs - atLat) / inLatSpacingDegs;
+
+    AngleDegs atLon = startLon;
+    for (size_t x = 0; x < numX; ++x, atLon += o.getLonSpacing()) {
+      const float xof = (atLon - inNWLonDegs ) / inLonSpacingDegs;
+      float value;
+      if (r.remap(yof, xof, value)) {
+        array[y][x] = value; // y/x is boost memory order for speed
+        counter++;
+      }
+    } // endX
+  }   // endY
+
+  if (counter > 0) {
+    LogInfo("Sample hit counter is " << counter << "\n");
+  }
+} // LatLonGrid::RemapInto
+
+void
 LatLonGrid::deep_copy(std::shared_ptr<LatLonGrid> nsp)
 {
   LatLonArea::deep_copy(nsp);

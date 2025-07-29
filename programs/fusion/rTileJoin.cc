@@ -110,7 +110,7 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
       // Insert p into the final grid. Note, the tiles 'should' all
       // be exact, at least for moment.  By remapping we do extra
       // work but then we don't have to worry about exact coordinates
-      myArrayAlgorithm->remapFromTo(p, out);
+      p->RemapInto(out, myArrayAlgorithm);
     }
   }
 

@@ -45,6 +45,15 @@ public:
   std::shared_ptr<RadialSet>
   Clone();
 
+  /** Remap to another RadialSet resolution, optionally projecting
+   * slant range to ground.  Useful for polar algorithms that need to
+   * march in vertical polar with multiple elevation angles. */
+  std::shared_ptr<RadialSet>
+  Remap(const float gateWidthMeters,
+    const size_t    num_radials,
+    const size_t    num_gates,
+    bool            projectToGround);
+
   /** Return the location of the radar. */
   const LLH&
   getRadarLocation() const

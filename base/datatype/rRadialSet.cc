@@ -1,5 +1,6 @@
 #include "rRadialSet.h"
 #include "rRadialSetProjection.h"
+#include "rRadialSetIterator.h"
 
 #include "rError.h"
 #include "rUnit.h"
@@ -49,6 +50,97 @@ RadialSet::Clone()
   RadialSet::deep_copy(nsp);
   return nsp;
 }
+
+namespace {
+/* Compute slant range from ground range and elevation angle
+ * This is what Lak did originally.  It assumes a flat earth
+ * which starts to fail with long ranges and high elevation.
+ */
+inline double
+computeSlantRangeSimpleKMs(double groundRangeKMs, double elevationRadians)
+{
+  return (groundRangeKMs / std::cos(elevationRadians));
+}
+}
+
+std::shared_ptr<RadialSet>
+RadialSet::Remap(const float gateWidthMeters,
+  const size_t               numRadials,
+  const size_t               numGates,
+  bool                       projectToGround)
+{
+  // -------------------------------------------
+  // FIXME: Maybe pass a flag to deep copy that turns off array copying
+  // Only the numRadials/numGates matter which will
+  // generate the arrays.  We'll deep copy over all
+  // the other attributes.
+  auto R = Create(getTypeName(),
+      getUnits(),
+      getRadarLocation(),
+      getTime(),
+      getElevationDegs(),
+      getDistanceToFirstGateM(),
+      gateWidthMeters,
+      numRadials,
+      numGates);
+
+  // Skip DataArray which handles dims/arrays
+  DataType::deep_copy(R);
+  // -------------------------------------------
+
+  // Fill unavailable in the new grid
+  auto fullgrid = R->getFloat2D();
+
+  fullgrid->fill(Constants::DataUnavailable);
+
+  // FIXME: Can't we lambda this might look cleaner?  Lamba limits
+  // the callback methods though.
+  // For each gate of the new output
+  class remapCallback : public RadialSetCallback {
+public:
+    remapCallback(std::shared_ptr<RadialSetProjection> p, double elevRad, bool flatten)
+      : myProjection(p), myElevRad(elevRad), myFlatten(flatten){ }
+
+    virtual void
+    handleGate(RadialSetIterator * it)
+    {
+      // Would be nice to use the ArrayAlgorithm stuff, but
+      // RadialSets aren't homogeneous in space like LLG.
+      auto az = it->getCenterAzimuthDegs();
+      auto slantRangeKMs = it->getCenterRangeMeters() * .001;
+
+      if (myFlatten) {
+        // Project from 'ground' up to slant height.
+        // This flattens the output.
+        slantRangeKMs = computeSlantRangeSimpleKMs(slantRangeKMs, myElevRad);
+      }
+
+      double out;
+      int radialNo, gateNo;
+
+      myProjection->getValueAtAzRange(az, slantRangeKMs, out, radialNo, gateNo);
+      if ((radialNo > -1) && (gateNo > -1)) {
+        it->setValue(out);
+      }
+    }
+
+private:
+    std::shared_ptr<RadialSetProjection> myProjection;
+    double myElevRad;
+    bool myFlatten;
+  };
+
+  auto elevRad = getElevationDegs() * DEG_TO_RAD;
+  auto p       = getProjection();
+  std::shared_ptr<RadialSetProjection> radialProj = std::dynamic_pointer_cast<RadialSetProjection>(p);
+  remapCallback myCallback(radialProj, elevRad, projectToGround);
+
+  RadialSetIterator iter(*R);
+
+  iter.iterateRadialGates(myCallback);
+
+  return R;
+} // RadialSet::Remap
 
 void
 RadialSet::deep_copy(std::shared_ptr<RadialSet> nsp)
@@ -107,8 +199,10 @@ RadialSet::init(
 
   /** Gate width per radial. */
   addFloat1D(GateWidth, "Meters", { 0 }, gateWidthMeters);
+  auto f = getGateWidthKMs();
+
   return true;
-} // RadialSet::init
+}// RadialSet::init
 
 bool
 RadialSet::initFromGlobalAttributes()

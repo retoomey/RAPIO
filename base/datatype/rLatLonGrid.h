@@ -5,6 +5,7 @@
 #include <rTime.h>
 #include <rLLCoverageArea.h>
 #include <rLatLonGridProjection.h>
+#include <rArrayAlgorithm.h>
 
 namespace rapio {
 /** Store an area of data on a uniform 2-D grid of latitude and
@@ -45,6 +46,11 @@ public:
   /** Public API for users to clone a LatLonGrid */
   std::shared_ptr<LatLonGrid>
   Clone();
+
+  /** Public API for users to remap a LatLonGrid into another
+   * LatLonGrid of a different resolution using a sampling remapper. */
+  void
+  RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> remapper);
 
   /** Get the number of latitude cells */
   virtual size_t

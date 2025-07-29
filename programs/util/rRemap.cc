@@ -22,6 +22,19 @@ Remap::declareOptions(RAPIOOptions& o)
   o.addSuboption("mode", "bilinear", "Use bilinear sampling.");
 
   o.optional("size", "3", "Size of matrix if not nearest.  For example, Cressman and bilinear");
+
+  // RadialSet options
+  o.optional("g", "-1", "Gatewidth in meters, -1 for source");
+  o.addGroup("g", "RadialSet");
+
+  o.optional("radials", "-1", "Radial count, -1 for source");
+  o.addGroup("radials", "RadialSet");
+
+  o.optional("gates", "-1", "Gate count, -1 for source");
+  o.addGroup("gates", "RadialSet");
+
+  o.boolean("ground", "Project to ground..");
+  o.addGroup("ground", "RadialSet");
 }
 
 void
@@ -36,6 +49,10 @@ Remap::processOptions(RAPIOOptions& o)
   if (mySize > 40) {
     mySize = 40;
   }
+  myGateWidthMeters = o.getInteger("g");
+  myNumRadials      = o.getInteger("radials");
+  myNumGates        = o.getInteger("gates");
+  myProjectGround   = o.getBoolean("ground");
 }
 
 void
@@ -111,7 +128,38 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   LogInfo("Created Array Algorithm '" << myMode << "' to process LatLonGrid primary array\n");
   auto& r = *Remap;
 
-  r.remapFromTo(llg, out, mySize, mySize);
+  llg->RemapInto(out, Remap);
+
+  // ----------------------------------------------------------------
+  // Write the new output
+  //
+  std::map<std::string, std::string> myOverrides;
+
+  writeOutputProduct(out->getTypeName(), out, myOverrides); // Typename will be replaced by -O filters
+} // Remap::remap
+
+void
+Remap::remap(std::shared_ptr<RadialSet> rs)
+{
+  LogInfo("Remapping an incoming RadialSet...\n");
+
+  // Use overriden settings for radial set if wanted
+  auto gateWidthMeters = myGateWidthMeters;
+
+  if (myGateWidthMeters < 0) {
+    gateWidthMeters = rs->getGateWidthKMs() * 1000.0;
+  }
+  auto numRadials = myNumRadials;
+
+  if (myNumRadials < 0) {
+    numRadials = rs->getNumRadials();
+  }
+  auto numGates = myNumGates;
+
+  if (myNumGates < 0) {
+    numGates = rs->getNumGates();
+  }
+  auto out = rs->Remap(gateWidthMeters, numRadials, numGates, myProjectGround);
 
   // ----------------------------------------------------------------
   // Write the new output
@@ -126,17 +174,17 @@ Remap::processNewData(rapio::RAPIOData& d)
 {
   LogInfo("Data received: " << d.getDescription() << "\n");
 
-  // We only handle the area classes
-  auto data = d.datatype<rapio::LatLonArea>();
+  auto LLG = d.datatype<rapio::LatLonGrid>();
 
-  if (data != nullptr) {
-    // Reproject LLG
-    auto LLG = d.datatype<rapio::LatLonGrid>();
-    if (LLG != nullptr) {
-      remap(LLG);
-    }
+  if (LLG != nullptr) {
+    remap(LLG);
   } else {
-    LogSevere("Not a LatLonArea class, can't remap at moment.\n");
+    auto R = d.datatype<rapio::RadialSet>();
+    if (R != nullptr) {
+      remap(R);
+    } else {
+      LogSevere("Unsupported remap class, can't remap at moment.\n");
+    }
   }
 } // Remap::processNewData
 

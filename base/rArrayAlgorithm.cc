@@ -3,64 +3,6 @@
 using namespace rapio;
 using namespace std;
 
-void
-ArrayAlgorithm::remapFromTo(std::shared_ptr<LatLonGrid> in, std::shared_ptr<LatLonGrid> out, size_t width,
-  size_t height)
-{
-  setSource(in->getFloat2D());
-  setOutput(out->getFloat2D());
-
-  // Param based, we'll set directly
-  myWidth  = width;
-  myHeight = height;
-
-  // FIXME: Could we do different directions?  N by N2?  Why not?
-  LogInfo("Remapping using matrix size of " << myWidth << " by " << myHeight << "\n");
-
-  // Input coordinates
-  const LLH inCorner = in->getTopLeftLocationAt(0, 0); // not centered
-  const AngleDegs inNWLatDegs = inCorner.getLatitudeDeg();
-  const AngleDegs inNWLonDegs = inCorner.getLongitudeDeg();
-  const auto inLatSpacingDegs = in->getLatSpacing();
-  const auto inLonSpacingDegs = in->getLonSpacing();
-
-  // Output coordinates (FIXME: We could add a getNWLat() and getNWLon() method)
-  // Don't we start at the center location, right?
-  const LLH outCorner = out->getTopLeftLocationAt(0, 0); // not centered
-  const AngleDegs outNWLatDegs = outCorner.getLatitudeDeg();
-  const AngleDegs outNWLonDegs = outCorner.getLongitudeDeg();
-
-  const AngleDegs startLat = outNWLatDegs - (out->getLatSpacing() / 2.0); // move south (lat decreasing)
-  const AngleDegs startLon = outNWLonDegs + (out->getLonSpacing() / 2.0); // move east (lon increasing)
-  const size_t numY        = out->getNumLats();
-  const size_t numX        = out->getNumLons();
-
-  // Cell hits yof and xof
-  // Note the cell is allowed to be fractional and out of range,
-  // since we're doing a matrix 'some' cells might be in the range
-  size_t counter = 0;
-
-  AngleDegs atLat = startLat;
-
-  for (size_t y = 0; y < numY; ++y, atLat -= out->getLatSpacing()) {
-    const float yof = (inNWLatDegs - atLat) / inLatSpacingDegs;
-
-    AngleDegs atLon = startLon;
-    for (size_t x = 0; x < numX; ++x, atLon += out->getLonSpacing()) {
-      const float xof = (atLon - inNWLonDegs ) / inLonSpacingDegs;
-      float value;
-      if (remap(yof, xof, value)) {
-        (*myRefOut)[y][x] = value;
-        counter++;
-      }
-    } // endX
-  }   // endY
-
-  if (counter > 0) {
-    LogInfo("Sample hit counter is " << counter << "\n");
-  }
-} // ArrayAlgorithm::remapFromTo
-
 bool
 NearestNeighbor::remap(float inI, float inJ, float& out)
 {
