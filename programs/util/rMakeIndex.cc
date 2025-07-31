@@ -94,6 +94,9 @@ public:
       std::vector<std::string> params;
       std::vector<std::string> selects;
 
+      // First param is the builder
+      params.push_back(factory);
+
       const bool fullMode = false; // do builder filename only
       if (fullMode) {
         params.push_back(filePath);
