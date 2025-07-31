@@ -586,12 +586,12 @@ public:
   static void inline
   rawReadString(std::string& s, size_t len, FILE * fp)
   {
-    s = "";
+    s.resize(len); // allocate the final size up front
+    size_t nread = fread(&s[0], 1, len, fp);
 
-    for (size_t i = 0; i < len; ++i) {
-      char c;
-      fread(&c, sizeof(char), 1, fp);
-      s = s + c;
+    if (nread != len) {
+      // handle error if needed
+      s.resize(nread);
     }
   }
 
@@ -609,6 +609,9 @@ public:
   template <typename T> static void
   read_type(T& s, FILE * fp)
   {
+    static_assert(std::is_trivial<T>::value && std::is_standard_layout<T>::value,
+      "read_type only works for POD types");
+
     fread(&s, sizeof(T), 1, fp);
   }
 

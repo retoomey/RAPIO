@@ -477,12 +477,20 @@ FusionBinaryTable::readBlock(const std::string& path, FILE * fp)
     BinaryIO::read_type<long>(yBase, fp);
     setLong("yBase", yBase);
 
-    LLH center;
-    Time t;
-    BinaryIO::read_type<LLH>(center, fp);
-    setLocation(center);
-    BinaryIO::read_type<Time>(t, fp);
-    setTime(t);
+    // LLH
+    double lat, lon;
+    float ht;
+    BinaryIO::read_type<double>(lat, fp);
+    BinaryIO::read_type<double>(lon, fp);
+    BinaryIO::read_type<float>(ht, fp);
+    setLocation(LLH(lat, lon, ht));
+
+    // Time
+    time_t t;
+    double f;
+    BinaryIO::read_type<time_t>(t, fp);
+    BinaryIO::read_type<double>(f, fp);
+    setTime(Time(t, f));
 
     // Read the sizes of the value/missing arrays
     BinaryIO::read_type<size_t>(myValueSize, fp);
@@ -646,8 +654,15 @@ FusionBinaryTable::writeBlock(FILE * fp)
     BinaryIO::write_string8(units, fp);
     BinaryIO::write_type<long>(xBase, fp);
     BinaryIO::write_type<long>(yBase, fp);
-    BinaryIO::write_type<LLH>(center, fp);
-    BinaryIO::write_type<Time>(t, fp);
+
+    // Write LLH
+    BinaryIO::write_type<double>(center.getLatitudeDeg(), fp);
+    BinaryIO::write_type<double>(center.getLongitudeDeg(), fp);
+    BinaryIO::write_type<float>(center.getHeightKM(), fp);
+
+    // Write Time
+    BinaryIO::write_type<time_t>(t.getSecondsSinceEpoch(), fp);
+    BinaryIO::write_type<double>(t.getFractional(), fp);
 
     // Write the sizes of the value/missing arrays
     myValueSize   = myXs.size();

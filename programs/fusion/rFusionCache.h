@@ -25,37 +25,31 @@ class SinCosLatLonCache : public Utility
 {
 public:
   SinCosLatLonCache(size_t numX, size_t numY) :
-    myNumX(numX), myNumY(numY), mySinGcdIR(numX * numY), myCosGcdIR(numX * numY), myAt(0)
+    myNumX(numX), myNumY(numY), mySinGcdIR(numX * numY), myCosGcdIR(numX * numY)
   { }
 
-  /** Reset iterator functions */
-  inline void
-  reset()
-  {
-    myAt = 0;
-  }
+  /** Access raw pointer of sin data for fast read thread-safe iteration */
+  inline const double *
+  sinGcdIRData() const { return mySinGcdIR.data(); }
 
-  /** Go to next location */
-  inline void
-  next()
-  {
-    myAt++;
-  }
+  /** Access raw pointer of cos data for fast read thread-safe iteration */
+  inline const double *
+  cosGcdIRData() const { return myCosGcdIR.data(); }
 
   /** Set at current position */
   inline void
-  setAt(const double sinGcdIR, const double cosGcdIR)
+  set(size_t at, const double sinGcdIR, const double cosGcdIR)
   {
-    mySinGcdIR[myAt] = sinGcdIR;
-    myCosGcdIR[myAt] = cosGcdIR;
+    mySinGcdIR[at] = sinGcdIR;
+    myCosGcdIR[at] = cosGcdIR;
   }
 
-  /** Get at current position */
+  /** Get at current position (slower access) */
   inline void
-  getAt(double& sinGcdIR, double& cosGcdIR)
+  get(size_t at, double& sinGcdIR, double& cosGcdIR)
   {
-    sinGcdIR = mySinGcdIR[myAt];
-    cosGcdIR = myCosGcdIR[myAt];
+    sinGcdIR = mySinGcdIR[at];
+    cosGcdIR = myCosGcdIR[at];
   }
 
 protected:
@@ -65,9 +59,6 @@ protected:
 
   /** The Y size of our cache */
   size_t myNumY;
-
-  /** Current location for raw iteration */
-  size_t myAt;
 
   /** Cached sin */
   std::vector<double> mySinGcdIR;

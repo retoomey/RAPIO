@@ -242,12 +242,12 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
       AngleDegs atLat    = startLat;
 
       llp.reset();
-      ssc.reset();
+      size_t atssc = 0;
 
       for (size_t y = 0; y < g.getNumY(); y++, atLat -= g.getLatSpacing()) { // a north to south
         AngleDegs atLon = startLon;
         // a east to west row, changing lon per cell
-        for (size_t x = 0; x < g.getNumX(); x++, atLon += g.getLonSpacing(), llp.next(), ssc.next()) {
+        for (size_t x = 1; x < g.getNumX(); x++, atLon += g.getLonSpacing(), llp.next()) {
           //
           // The sin/cos attenuation factors from radar center to lat lon
           // This doesn't need height so it can be just a single layer
@@ -256,9 +256,9 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
             // First layer we'll create the sin/cos cache
             Project::stationLatLonToTarget(
               atLat, atLon, cLat, cLon, sinGcdIR, cosGcdIR);
-            ssc.setAt(sinGcdIR, cosGcdIR);
+            ssc.set(atssc, sinGcdIR, cosGcdIR);
           } else {
-            ssc.getAt(sinGcdIR, cosGcdIR);
+            ssc.get(atssc, sinGcdIR, cosGcdIR);
           }
 
           // Calculate and cache a virtual azimuth, elevation and range for each
@@ -267,6 +267,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
             cLat, cLon, cHeight, sinGcdIR, cosGcdIR, virtualElevDegs, virtualAzDegs, virtualRangeKMs);
 
           llp.setAt(virtualAzDegs, virtualElevDegs, virtualRangeKMs);
+          atssc++;
         }
       }
     }
@@ -664,11 +665,14 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   auto output    = myLLGCache->get(layer);
   auto& gridtest = output->getFloat2DRef();
 
-  auto& ssc       = *(mySinCosCache);
+  /** Get cache start pointers */
+  auto& ssc = *(mySinCosCache);
+  const double * sinGcdIR = ssc.sinGcdIRData();
+  const double * cosGcdIR = ssc.cosGcdIRData();
+
   auto& llp       = *myLLProjections[layer];
   auto& levelSame = *myLevelSames[layer];
 
-  ssc.reset();
   llp.reset();
   levelSame.reset();
 
@@ -711,7 +715,9 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
       myPartitionInfo.nextY(sY + y, yPartDim); // increment dimension Y if needed
       AngleDegs atLon = startLon;
       size_t xPartDim = startPartXDim;
-      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
+      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(),
+        sinGcdIR++, cosGcdIR++, levelSame.next())
+      {
         myPartitionInfo.nextX(sX + x, xPartDim); // increment dimension X if needed
 
         // Mask check.
@@ -749,7 +755,8 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
 
         // Resolve the value/weight at location and add to output
         attemptCount++;
-        ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
+        vv.sinGcdIR = *sinGcdIR;
+        vv.cosGcdIR = *cosGcdIR;
         llp.getAzDegsAt(vv.virtualAzDegs);
         vv.setAtLocationLatLonDegs(atLat, atLon);
         resolver.calc(vvp);
@@ -774,7 +781,9 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
       myPartitionInfo.nextY(sY + y, yPartDim); // increment dimension Y if needed
       AngleDegs atLon = startLon;
       size_t xPartDim = startPartXDim;
-      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(), ssc.next(), levelSame.next()) {
+      for (size_t x = 0; x < numX; ++x, atLon += outg.getLonSpacing(), llp.next(),
+        sinGcdIR++, cosGcdIR++, levelSame.next())
+      {
         myPartitionInfo.nextX(sX + x, xPartDim); // increment dimension X if needed
 
         // Mask check.
@@ -821,7 +830,8 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         }
 
         attemptCount++;
-        ssc.getAt(vv.sinGcdIR, vv.cosGcdIR);
+        vv.sinGcdIR = *sinGcdIR;
+        vv.cosGcdIR = *cosGcdIR;
         llp.getAzDegsAt(vv.virtualAzDegs);
         vv.setAtLocationLatLonDegs(atLat, atLon);
         resolver.calc(vvp);

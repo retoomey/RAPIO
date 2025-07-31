@@ -550,11 +550,18 @@ BinaryIO::write_string8(const std::string& s, FILE * fp)
 void
 BinaryIO::read_string16(std::string& s, FILE * fp, size_t maxlen)
 {
-  unsigned short len;
+  /** Read the length of the wanted string */
+  uint16_t len;
 
-  fread(&len, sizeof(len), 1, fp);
+  if (fread(&len, sizeof(len), 1, fp) != 1) {
+    s.clear();
+    return;
+  }
 
-  if (len > maxlen) { return; }
+  if (len > maxlen) {
+    s.clear();
+    return;
+  }
 
   rawReadString(s, len, fp);
 }
@@ -562,9 +569,14 @@ BinaryIO::read_string16(std::string& s, FILE * fp, size_t maxlen)
 void
 BinaryIO::read_string8(std::string& s, FILE * fp)
 {
+  /** Read the length of the wanted string */
   unsigned char len;
 
-  fread(&len, sizeof(len), 1, fp);
+  if (fread(&len, 1, 1, fp) != 1) { // read 1 byte
+    s.clear();
+    return;
+  }
+
   rawReadString(s, len, fp);
 }
 
