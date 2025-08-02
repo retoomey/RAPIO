@@ -81,6 +81,86 @@ WebMessageQueue::action()
 }
 
 void
+WebServer::handleSendError(std::shared_ptr<HttpServer::Response>& response,
+  std::shared_ptr<WebMessage>                                   & web,
+  size_t                                                        errnumber,
+  const std::string                                             & message)
+{
+  // Run message error through web object in case of filtering.
+  // Error?
+  // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
+
+  web->setMessage(message);
+  web->setError(errnumber);
+  std::stringstream stream;
+
+  stream << web->getMessage();
+  response->write(web->getErrorInternal(), stream);
+}
+
+void
+WebServer::handleSendFilepath(std::shared_ptr<HttpServer::Response>& response,
+  std::shared_ptr<WebMessage>                                      & web)
+{
+  auto& w = *web;
+  const std::string path = w.getFile();
+
+  // Handle directories
+  if (OS::isDirectory(path)) {
+    LogSevere("Directory forbidden: " + path);
+    handleSendError(response, web, 403,
+      "Directory currently forbidden: " + path);
+    return;
+  }
+
+  // Handle regular files
+  if (OS::isRegularFile(path)) {
+    // auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
+    bool useMacros = (w.myMacroKeys.size() > 0);
+    useMacros = false; // Deprecate.  I don't think we need em
+
+    auto flags = w.myMacroKeys.empty() ?
+      (std::ios::in | std::ios::binary | std::ios::ate) :
+      std::ios::in;
+    auto ifs = std::make_shared<std::ifstream>(w.getFile(), flags);
+
+    // If opened file successfully...
+    if ((*ifs) && ifs->is_open()) {
+      // Add the headers
+      SimpleWeb::CaseInsensitiveMultimap header;
+      for (auto& a:web->getHeaderMap()) {
+        header.emplace(a.first, a.second);
+      }
+
+      // Parse the file and replace macros...
+      if (useMacros) {
+        std::stringstream stream;
+        std::string line;
+        while (std::getline(*ifs, line)) {
+          stream << Strings::replaceGroup(line, w.myMacroKeys, w.myMacroValues) << "\n";
+        }
+        w.setError(200);
+        response->write(w.getErrorInternal(), stream, header);
+
+        // ...or just stream file to output
+      } else {
+        // Ok get the length of the file we're gonna send, let the client know
+        auto length = ifs->tellg();
+        ifs->seekg(0, ios::beg);
+        header.emplace("Content-Length", to_string(length));
+        response->write(header);
+
+        FileServer::read_and_send(response, ifs);
+      }
+    } else {
+      handleSendError(response, web, 404, "Failed to open: " + path);
+    }
+  } else {
+    handleSendError(response, web, 404, "Failed regular file check: " + path);
+  }
+} // WebServer::handleSendFilepath
+
+void
 WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
   std::shared_ptr<HttpServer::Request>                     request)
 {
@@ -111,82 +191,19 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
     bool result = fut.get(); // wait on the algorithm thread to process this
 
     // We've been waiting on this WebMessage, dump its message for now.
-    // FIXME: I'm gonna want file/MIME support here, etc.
-    // First pass just doing text..lots of glue work left to do.
     if (result) {
-      // How to send an error properly...
-      // response->write(SimpleWeb::StatusCode::client_error_bad_request, "Could not open path " + request->path + ": " + e.what());
-
       if (web->isFile()) {
-        // Simple attempt to send a file
-        const std::string path = web->getFile();
-        bool sendText = false;
-
-        if (OS::isDirectory(path)) {
-          LogSevere("Directory forbidden: " + web->getFile());
-          web->setMessage("Directory forbidden, though we could add this ability: " + web->getFile());
-          web->setError(403);
-          sendText = true;
-        } else if (OS::isRegularFile(path)) {
-          auto ifs = std::make_shared<ifstream>(); // cute trick, auto close
-          const bool useMacros = (web->myMacroKeys.size() > 0);
-
-          if (useMacros) {
-            ifs->open(web->getFile());
-          } else {
-            ifs->open(web->getFile(), ifstream::in | ios::binary | ios::ate);
-          }
-
-          if ((*ifs) && ifs->is_open()) {
-            // Add the headers
-            SimpleWeb::CaseInsensitiveMultimap header;
-            for (auto& a:web->getHeaderMap()) {
-              header.emplace(a.first, a.second);
-            }
-
-            if (useMacros) {
-              // Parse entire file and replace all macros
-              std::stringstream stream;
-              std::string line;
-              while (std::getline(*ifs, line)) {
-                stream << Strings::replaceGroup(line, web->myMacroKeys, web->myMacroValues) << "\n";
-              }
-              // Final write
-              response->write(web->getErrorInternal(), stream, header);
-            } else {
-              // Ok get the length of the file we're gonna send, let the client know
-              auto length = ifs->tellg();
-              ifs->seekg(0, ios::beg);
-              header.emplace("Content-Length", to_string(length));
-              response->write(header);
-
-              FileServer::read_and_send(response, ifs);
-            }
-          } else {
-            LogSevere("Failed to open: " << path << "\n");
-            web->setMessage("Failed to open: " + path);
-            web->setError(404);
-            sendText = true;
-          }
-        }
-
-        if (sendText) {
-          std::stringstream stream;
-          stream << web->getMessage();
-          response->write(web->getErrorInternal(), stream);
-        }
+        handleSendFilepath(response, web);
       } else {
         LogInfo("Sending text\n");
-        //    response->write(SimpleWeb::StatusCode::client_error_bad_request, "Testing error");
-        //         // FIXME: need to check message was ever set
-
-        auto aSize = web->getMessage().size();
 
         // Fill in header from web message
         SimpleWeb::CaseInsensitiveMultimap header;
         for (auto& a:web->getHeaderMap()) {
           header.emplace(a.first, a.second);
         }
+
+        auto aSize = web->getMessage().size();
         header.emplace("Content-Length", to_string(aSize));
         header.emplace("Access-Control-Allow-Origin", "*");
         header.emplace("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -200,10 +217,10 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
       }
     } else {
       // Algorithm basically reported an error maybe?
+      handleSendError(response, web, 404, "Internal algorithm error\n");
     }
   }catch (const std::exception& e) {
     LogSevere("Error handling web request: " << e.what() << "\n");
-    // FIXME: do http error codes with library properly
   }
 } // WebServer::handleGET
 

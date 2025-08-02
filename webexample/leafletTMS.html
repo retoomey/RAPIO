@@ -26,7 +26,7 @@
 		zoomOffset: -1
 	}).addTo(mymap);
 
-	L.tileLayer('http://localhost:8080/tms/{z}/{x}/{y}', { // y here means 0 at top
+	L.tileLayer('./tms/{z}/{x}/{y}', { // y here means 0 at top
 		//minZoom: 4,
 		maxZoom: 18,
 		attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',

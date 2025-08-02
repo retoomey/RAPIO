@@ -91,7 +91,7 @@ export class SimpleColorMap extends ColorMapBase {
  */
 export async function fetchColorMap() {
   try{
-    const response = await fetch('http://localhost:8080/colormap'); // should be param or config right?
+    const response = await fetch('./colormap'); // should be param or config right?
     const data = await response.json();
 
     // It's our job here to make sure the color map is valid

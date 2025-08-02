@@ -84,5 +84,8 @@ protected:
 
   /** Start up file name, if any */
   std::string myStartUpFile;
+
+  /** Root of all web files */
+  std::string myRoot;
 };
 }

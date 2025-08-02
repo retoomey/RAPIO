@@ -190,7 +190,7 @@ void FetchData() {
     //  printf("Good download.\n");
     //  isFetchInProgress.store(false);// reset
     //};
-    emscripten_fetch(&attr, "http://localhost:8080/colormap");
+    emscripten_fetch(&attr, "./colormap");
     //emscripten_fetch(&attr, "https://raw.githubusercontent.com/retoomey/RAPIO/master/webexample/main.cpp");
 
 }
@@ -340,8 +340,8 @@ EM_JS(void, initMap, (), {
      }
 
      // Try opengl overlay hack attempt
-     var mouseEvent = event.originalEvent;
-     drawReadout(mouseEvent.clientX, mouseEvent.clientY);
+     //var mouseEvent = event.originalEvent;
+     //drawReadout(mouseEvent.clientX, mouseEvent.clientY);
    });
 
    // Mouse out of map
@@ -364,7 +364,7 @@ EM_JS(void, initRAPIOLayer, (), {
   // ----------------------------------------------------------------------
   //
   // Data pull layer (Color map is client side)
-  var RAPIOMap = new module.RAPIODataTileLayer('http://localhost:8080/tmsdata/{z}/{x}/{y}', {
+  var RAPIOMap = new module.RAPIODataTileLayer('./tmsdata/{z}/{x}/{y}', {
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
     id: 'data',
@@ -374,7 +374,7 @@ EM_JS(void, initRAPIOLayer, (), {
   Module.map.myRAPIOLayer = RAPIOMap;
 
   // Regular image layer (Color map is server side)
-  var RAPIOImageMap = new L.TileLayer('http://localhost:8080/tms/{z}/{x}/{y}', {
+  var RAPIOImageMap = new L.TileLayer('./tms/{z}/{x}/{y}', {
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
     id: 'data',
@@ -691,15 +691,32 @@ static void ShowDesktop(bool* p_open, myApplicationState& state)
 	if (old != state.dataMap){
            changeMapLayer(state.backgroundMapShow, state.backgroundMap, state.dataMap, state.showDebugTiles);
 	}
+  ImGui::SameLine();
 
 	// FIXME: if works probably want one function right?
 	//double lon = get_lon();
 	//double lat = get_lat();
         //bool mouseOver = is_mouse_over_map();
 
-	if (ImGui::Button("Fetch Colormap")) {
+	if (ImGui::Button("Parse Colormap")) {
 	  doFetchColorMap();
         }
+
+  ImGui::Text("Generate:"); ImGui::SameLine();
+  if (ImGui::Button("SVG")) 
+  {
+    EM_ASM({
+        window.open("./svg", "_blank");
+    });
+  }
+  ImGui::SameLine();
+
+  if (ImGui::Button("colormap"))
+  {
+    EM_ASM({
+        window.open("./colormap", "_blank");
+    });
+  }
 
 #if 0
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;

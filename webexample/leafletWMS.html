@@ -27,9 +27,9 @@
 		zoomOffset: -1
 	}).addTo(mymap);
 
-	//L.tileLayer.wms('http://localhost:8080/wms/{z}/{x}/{y}', { // Keep simple for first attempt
-	L.tileLayer.wms('http://localhost:8080/wms/', { // Keep simple for first attempt
-	// FAILS still L.tileLayer('http://localhost:8080/tms/{z}/{x}/{-y}', { // Keep simple for first attempt
+	//L.tileLayer.wms('./wms/{z}/{x}/{y}', { // Keep simple for first attempt
+	L.tileLayer.wms('./wms/', { // Keep simple for first attempt
+	// FAILS still L.tileLayer('./tms/{z}/{x}/{-y}', { // Keep simple for first attempt
 		maxZoom: 18,
 		attribution: 'Map data &copy; <a href="https://github.com/retoomey/RAPIO">RAPIO</a>',
 		id: 'data',

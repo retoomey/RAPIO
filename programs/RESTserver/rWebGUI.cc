@@ -36,6 +36,11 @@ RAPIOWebGUI::declareOptions(RAPIOOptions& o)
 
   o.optional("i", "", "Initial file to use on startup (for quick web browsing).");
   o.optional("o", "CACHE", "Cache location for tile generation.");
+
+  // Get location of binary + web is our default 'root'
+  myRoot = OS::getProcessPath() + "/web";
+
+  o.optional("root", myRoot, "Web root.  Defaults to binary location+'web'.");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -476,7 +481,7 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
   std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile."
     + suffix;
 
-  LogInfo("WMS_BBOX:" << settings["BBOX"] << "\n");
+  // LogInfo("WMS_BBOX:" << settings["BBOX"] << "\n");
   settings["TILETEXT"] = "";
 
   // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
@@ -535,7 +540,7 @@ RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std:
   settings["BBOXSR"]   = "4326"; // Lat/Lon
   settings["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
 
-  LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << settings["BBOX"] << "\n");
+  // LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << settings["BBOX"] << "\n");
 
   serveTile(w, pathout, settings);
 } // RAPIOWebGUI::handlePathTMS
@@ -544,18 +549,16 @@ void
 RAPIOWebGUI::handlePathDefault(WebMessage& w)
 {
   // First try to get the file
-  // FIXME: Note for security we should only go down from the root, no up tracking.
-  // filename remove all ".." from filename, etc.  Need to check this or caller can
-  // jailbreak.
-  // Note: We're running this behind a firewall as an alpha, lots of work
-  // to do to harden this stuff if used in production
-  const std::string WEBROOT = "web"; // could be passed in from command line
-
-  std::string path = WEBROOT + w.getPath();
+  std::string path = w.getPath();
 
   // Set this here instead of webserver since 'maybe' we'll want root
   // directory someday
   if (w.getPath() == "/") { path += "index.html"; }
+
+  #if 0
+  // Deprecated
+  // Don't think we need this.  Relative paths should be
+  // enough.  'Possibly' some info might be needed later?
 
   // oops need the port from settings
   std::string hostname = OS::getHostName();
@@ -572,16 +575,21 @@ RAPIOWebGUI::handlePathDefault(WebMessage& w)
     w.addMacro("WMS", "http://" + hostname + ":" + portStr + "/wms");
     w.addMacro("HOSTNAME", hostname);
     w.addMacro("PORT", portStr);
+    LogSevere("HOSTNAME is " << hostname << " and " << portStr << "\n");
   }
+  #endif // if 0
 
   // Find the file...
-  // We want to actually get files from the installed web location,
-  // this is currently PREFIX/bin/web
-  // const URL loc = Config::getConfigFile(path);
-  static std::string root = OS::getProcessPath();
-  const URL loc = root + "/" + path;
+  // Remove '..' the most dangerous root breaker.
+  size_t pos;
+  std::string toRemove = "..";
 
-  w.setFile(loc.toString()); // Web server handles the cases
+  while ((pos = path.find(toRemove)) != std::string::npos) {
+    path.erase(pos, toRemove.size());
+  }
+  std::string loc = myRoot + path;
+
+  w.setFile(loc); // Web server handles the cases
 } // RAPIOWebGUI::handlePathDefault
 
 void
@@ -642,7 +650,7 @@ RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
 void
 RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
 {
-  LogInfo("Incoming web url of " << wsp->getPath() << "\n");
+  LogInfo("Request: " << wsp->getPath() << "\n");
   auto& w = *wsp;
 
   // Local settings for this call
@@ -661,14 +669,13 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
 
   // Arcgis or other gis software asking for capabilities.
   if ((settings["service"] == "WMS") && (settings["request"] == "GetCapabilities")) {
-
     // Arcgis earth (or others) asking for WMS capabilities.
     const URL url = Config::getConfigFile("misc/webguicapabilities.xml");
     if (url.empty()) {
       LogInfo("Received capabilities request but can't find webguicapabilities.xml\n");
       w.setMessage("Error");
       return;
-    }else{
+    } else {
       LogInfo("Request for capabilities succeeded.\n");
     }
 
@@ -679,7 +686,7 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     return;
   } else {
     bool service = (settings["service"] == "WMS");
-    LogInfo("Settings?  " << service << "\n");
+    // LogInfo("Settings?  " << service << "\n");
   }
 
   // CACHE SETTING (Global/not changable)

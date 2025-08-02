@@ -242,6 +242,18 @@ public:
   static void
   startWebServer(const std::string& params, RAPIOProgram * prog);
 
+  /** Handle sending an error message */
+  static void
+  handleSendError(std::shared_ptr<HttpServer::Response>& response,
+    std::shared_ptr<WebMessage>                        & web,
+    size_t                                             errnumber,
+    const std::string                                  & message);
+
+  /** Handle a filepath from our web folder */
+  static void
+  handleSendFilepath(std::shared_ptr<HttpServer::Response>& response,
+    std::shared_ptr<WebMessage>                           & web);
+
   /** Handle GET */
   static void
   handleGET(std::shared_ptr<HttpServer::Response> response,
