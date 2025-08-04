@@ -54,6 +54,39 @@ install(TARGETS rMakeFakeRadarData
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+##################################################################
+# Single tile generation 
+#
+add_executable(rGetTile
+  rGetTile.cc
+)
+target_link_libraries(rGetTile rapio)
+install(TARGETS rGetTile
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
+# Legend generator (SVG)
+#
+add_executable(rGetLegend
+  rGetLegend.cc
+)
+target_link_libraries(rGetLegend rapio)
+install(TARGETS rGetLegend
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+##################################################################
+# Colormap generator (JSON)
+#
+add_executable(rGetColorMap
+  rGetColorMap.cc
+)
+target_link_libraries(rGetColorMap rapio)
+install(TARGETS rGetColorMap
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
 # Install the makeindex script
 install_python("makeindex.py" ${CMAKE_CURRENT_SOURCE_DIR})
 

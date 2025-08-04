@@ -204,7 +204,7 @@ void doFetchColorMap() {
     // We have a async load the module and async call the method...
     const p = new Promise((resolve, reject) => {
       // Dynamically import the module
-      import('./rColorMap.js').then(module => {
+      import('./js/rColorMap.js').then(module => {
         // Call the fetchColorMap function from the imported module
         module.fetchColorMap()
           .then(data => {
@@ -359,7 +359,7 @@ EM_JS(void, initRAPIOLayer, (), {
 
   // Can't use 'await' in EM_JS, so here we are promising
   const mapReady = new Promise((resolve, reject) => {
-  import('./rDataLayer.js').then(module => {
+  import('./js/rDataLayer.js').then(module => {
 
   // ----------------------------------------------------------------------
   //

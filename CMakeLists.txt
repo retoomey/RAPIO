@@ -377,7 +377,6 @@ if (BUILD_GRIB2_MODULE)
   if (OpenJPEG_FOUND)
     set(openjpeg ON)
     message(STATUS "Found OpenJPEG2 for NCEPGRIB2.")
-    message(STATUS "INSIDE VALUE = ${openjpeg}")
   else()
 
     # Ok try to fall back to jasper
@@ -431,9 +430,9 @@ add_subdirectory(tests EXCLUDE_FROM_ALL)
 if (BUILD_WEB_MODULE)
   ExternalProject_Add(
     rapioweb
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/webexample
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/programs/RESTserver
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-    # Always build (so if we change the webexample/* it will catch it)
+    # Always build (so if we change the RESTserver/* it will catch it)
     BUILD_ALWAYS 1
   )
 
@@ -441,7 +440,7 @@ if (BUILD_WEB_MODULE)
     COMMAND "ls -l"
     DEPENDS rapioweb
   )
-  # Bad: add_subdirectory(webexample)
+  # Bad: add_subdirectory(RESTserver)
 endif (BUILD_WEB_MODULE)
 
 # Install the library and headers from the base library

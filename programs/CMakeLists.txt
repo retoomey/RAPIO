@@ -19,6 +19,20 @@ install(TARGETS rGrib2Reader
 )
 
 ##################################################################
+# Make the rWebGUI here, since the RESTserver builds with em++
+# and we'll build with normal c++ compiler
+if (BUILD_WEB_MODULE)
+  add_executable(rWebGUI
+    RESTserver/rWebGUI.cc
+  )
+  target_link_libraries(rWebGUI rapio)
+  install(TARGETS rWebGUI
+     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+  )
+  add_subdirectory(RESTserver)
+endif (BUILD_WEB_MODULE)
+
+##################################################################
 # Algorithms
 #
 add_subdirectory(fusion)
@@ -34,4 +48,3 @@ add_subdirectory(3DVIL)
 # Utility/GUI stuff
 #
 add_subdirectory(util)
-add_subdirectory(RESTserver)
