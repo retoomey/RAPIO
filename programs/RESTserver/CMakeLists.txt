@@ -46,7 +46,9 @@ ExternalProject_Add(
     emscripten
     PREFIX ${EMSCRIPTEN_SOURCE_DIR}
     GIT_REPOSITORY https://github.com/emscripten-core/emsdk.git
-    GIT_TAG main
+    #GIT_TAG main  Using python 3.8 not there yet on Oracle 8 and others
+    GIT_TAG 3d6d8ee  # Release 3.1.74 Dec 13, 2024
+    #GIT_TAG ca7b40a  # Release 3.1.61 Jun 1, 2024
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ./emsdk install latest && ./emsdk activate latest
@@ -64,7 +66,7 @@ add_custom_target(emscripten_env
 add_dependencies(emscripten_env emscripten)
 
 # Add the executable
-add_executable(webbuild wMain.cc ${IMGUI_FILES})
+add_executable(webbuild wMain.cc wPassthrough.cc ${IMGUI_FILES})
 
 # Link ImGui and Emscripten
 add_dependencies(webbuild emscripten emscripten_env)
@@ -100,6 +102,7 @@ install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/web/leafletWMS.html
     ${CMAKE_CURRENT_SOURCE_DIR}/web/leafletTMS.html
     ${CMAKE_CURRENT_SOURCE_DIR}/web/openlayersTMS.html
+    ${CMAKE_CURRENT_SOURCE_DIR}/web/gz_2010_us_040_00_20m.json
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/web
 )
 

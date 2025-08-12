@@ -247,7 +247,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
       for (size_t y = 0; y < g.getNumY(); y++, atLat -= g.getLatSpacing()) { // a north to south
         AngleDegs atLon = startLon;
         // a east to west row, changing lon per cell
-        for (size_t x = 1; x < g.getNumX(); x++, atLon += g.getLonSpacing(), llp.next()) {
+        for (size_t x = 0; x < g.getNumX(); x++, atLon += g.getLonSpacing(), llp.next()) {
           //
           // The sin/cos attenuation factors from radar center to lat lon
           // This doesn't need height so it can be just a single layer

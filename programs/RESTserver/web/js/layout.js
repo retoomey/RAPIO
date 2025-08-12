@@ -7,6 +7,9 @@ const leftCanvas = document.getElementById('leftDiv');
 const rightCanvas = document.getElementById('rightDiv');
 const separator = document.getElementById('vbar');
 
+/** Only do it if all the elements are there */
+if (container && leftCanvas && rightCanvas && separator){
+
 let isDragging = false;
 
 separator.addEventListener('mousedown', (e) => {
@@ -33,3 +36,4 @@ document.addEventListener('mouseup', () => {
     isDragging = false;
     document.body.style.cursor = 'default';
 });
+}

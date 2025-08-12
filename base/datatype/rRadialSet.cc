@@ -157,6 +157,71 @@ RadialSet::deep_copy(std::shared_ptr<RadialSet> nsp)
   n.myHaveTerrain        = myHaveTerrain;
 }
 
+void
+RadialSet::validateArrays(bool warn, float gateWidthMeters)
+{
+  // -----------------------------------------------------
+  // Ensure primary exists.
+  auto p = getFloat2D();
+
+  if (p == nullptr) {
+    if (warn) {
+      LogSevere("Radial set missing primary array.\n");
+    }
+    addFloat2D(Constants::PrimaryDataName, getUnits(), { 0, 1 });
+  }
+
+  // -----------------------------------------------------
+  // Ensure Azimuth/Beamwidth vectors exist
+  // AzimuthSpacing is an optional array
+  float bwDegs = 1.0;
+  auto az      = getAzimuthVector();
+
+  if (az == nullptr) {
+    if (warn) {
+      LogSevere("Radial set missing Azimuths, guessing from number of radials\n");
+    }
+    /** Azimuth per radial */
+    auto a = addFloat1D(Azimuth, "Degrees", { 0 });
+    auto num_radials = getNumRadials();
+
+    // For a missing azimuth, let's divide a circle by the number of radials
+    // and calculate beamwidth based on that for each radial.  Obvious this is
+    // just a simple default.  Anyone doing advanced stuff would probably fill
+    // in this data themselves.
+    auto& azimuths = a->ref();
+    bwDegs = num_radials > 0 ? (360.0 / num_radials) : 1.0;
+    float at = 0.0;
+
+    for (size_t z = 0; z < num_radials; ++z) {
+      azimuths[z] = at;
+      at += bwDegs;
+    }
+  }
+
+  // -----------------------------------------------------
+  // Ensure BeamWidth vector existence
+  auto bw = getBeamWidthVector();
+
+  if (bw == nullptr) {
+    if (warn) {
+      LogSevere("Radial set missing BeamWidth, guessing " << bwDegs << " degrees.\n");
+    }
+    /** Beamwidth per radial */
+    addFloat1D(BeamWidth, "Degrees", { 0 }, bwDegs);
+  }
+
+  // -----------------------------------------------------
+  // Ensure Gate width vector existence
+  /** Gate width per radial. */
+  auto gw = getGateWidthVector();
+
+  if (gw == nullptr) {
+    if (warn) { }
+    addFloat1D(GateWidth, "Meters", { 0 }, gateWidthMeters);
+  }
+} // RadialSet::validateArrays
+
 bool
 RadialSet::init(
   const std::string& TypeName,
@@ -175,31 +240,9 @@ RadialSet::init(
   myFirstGateDistanceM = firstGateDistanceMeters;
 
   setDataType("RadialSet");
-  /** Primary data storage */
-  addFloat2D(Constants::PrimaryDataName, Units, { 0, 1 });
 
-  /** Azimuth per radial */
-  auto a = addFloat1D(Azimuth, "Degrees", { 0 });
-
-  // For a default azimuth, let's divide a circle by the number of radials
-  // and calculate beamwidth based on that for each radial.  Obvious this is
-  // just a simple default.  Anyone doing advanced stuff would probably fill
-  // in this data themselves.
-  auto& azimuths  = a->ref();
-  float increment = 360.0 / num_radials;
-  float at        = 0.0;
-
-  for (size_t z = 0; z < num_radials; ++z) {
-    azimuths[z] = at;
-    at += increment;
-  }
-
-  /** Beamwidth per radial */
-  addFloat1D(BeamWidth, "Degrees", { 0 }, increment);
-
-  /** Gate width per radial. */
-  addFloat1D(GateWidth, "Meters", { 0 }, gateWidthMeters);
-  auto f = getGateWidthKMs();
+  /** This will initialize the default arrays */
+  validateArrays(false, gateWidthMeters);
 
   return true;
 }// RadialSet::init
@@ -282,6 +325,9 @@ RadialSet::initTerrain()
 void
 RadialSet::postRead(std::map<std::string, std::string>& keys)
 {
+  // Post read make sure no missing arrays.
+  validateArrays(true, 250);
+
   // FIXME: Make it stay compressed for things like rcopy, probably
   // using a key
   unsparse2D(myDims[0].size(), myDims[1].size(), keys);

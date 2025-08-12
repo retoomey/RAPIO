@@ -294,6 +294,15 @@ public:
   // ---------------------------------------------
 
   /**
+   * Builder
+   */
+  inline const std::string&
+  getBuilder() const
+  {
+    return myBuilder;
+  };
+
+  /**
    * DataType (from 2nd selection)
    * Note: This might not match what the builder ends up creating.
    */

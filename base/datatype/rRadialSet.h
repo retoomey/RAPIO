@@ -224,6 +224,10 @@ public:
   virtual bool
   initFromGlobalAttributes() override;
 
+  /** Validate mandatory RadialSet arrays */
+  void
+  validateArrays(bool warnOnMissing, float gateWidthMeters);
+
   /** Initialize a RadialSet to given parameters */
   bool
   init(
