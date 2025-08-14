@@ -4,11 +4,34 @@
 #include <rDataType.h>
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
+#include <rVolumeValue.h>
 
 #include <memory>
 #include <vector>
 
 namespace rapio {
+/** Fast temp pointer cache for using the current volume information.
+ * Only good until volume changes.  Used during a single volume query
+ * pass say in fusion */
+class VolumePointerCache : public Data {
+public:
+  /** Subtypes in order */
+  std::vector<double> levels;
+  /** DataTypes **/
+  std::vector<DataType *> pointers;
+  /** Projection objects, say RadialSetProjection for lookup */
+  std::vector<DataProjection *> projectors;
+
+  // Extra optional pointers, depend on datatype.
+
+  /** Cumulative Beam Blockage */
+  std::vector<ArrayFloat2DPtr> cbb;
+  /** Partial Beam Blockage */
+  std::vector<ArrayFloat2DPtr> pbb;
+  /** Bottom hit array */
+  std::vector<ArrayByte2DPtr> bottomHit;
+};
+
 /* Volumes are named by product and contain N subtypes, for example
  * a Reflectivity volume containing 10 elevations that can be used for
  * interpolating values in space time (CAPPI/VSLICE)
@@ -115,8 +138,7 @@ public:
    * the shared ptrs and this object stay in scope and unchanged.  Used for speed in loops
    * calling the getSpread search below */
   virtual void
-  getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
-    std::vector<DataProjection *>& projectors) = 0;
+  getTempPointerVector(VolumePointerCache&) = 0;
 
   /** Linear search (faster for smaller N) Spread above and below from number vector.  Pointers for speed.
    * This is called during fusion/merger grid a billion times so we want to optimize here. */
@@ -160,6 +182,86 @@ public:
     lower  = upper = nextLower = nextUpper = nullptr;
     lowerP = upperP = nextLowerP = nextUpperP = nullptr;
   }; // getSpreadL
+
+  /** Linear search (faster for smaller N) Spread above and below from number vector.  Pointers for speed.
+   * This is called during fusion/merger grid a billion times so we want to optimize here. */
+  static inline void
+  getSpreadNew(
+    const VolumePointerCache& c,
+    VolumeValue             & v)
+  {
+    // Inline calls should be quick references.
+    const std::vector<double>& subtypes            = c.levels;
+    const std::vector<DataType *>& pointers        = c.pointers;
+    const std::vector<DataProjection *>& pointersP = c.projectors;
+    const auto& cbbp   = c.cbb;
+    const auto& pbbp   = c.pbb;
+    const auto& bottom = c.bottomHit;
+
+    // FIXME: Could just do inline set here
+    // This is a mess. Refacter using enums I think.
+    float& at                    = v.virtualElevDegs; // FIXME:virtualSubtype for general Volume
+    DataType *& lower            = v.getLower();
+    DataType *& upper            = v.getUpper();
+    DataType *& nextLower        = v.get2ndLower();
+    DataType *& nextUpper        = v.get2ndUpper();
+    DataProjection *& lowerP     = v.getLowerP();
+    DataProjection *& upperP     = v.getUpperP();
+    DataProjection *& nextLowerP = v.get2ndLowerP();
+    DataProjection *& nextUpperP = v.get2ndUpperP();
+
+    // 10 20 30 40 50 60
+    // 5 --> nullptr, 10
+    // 10 --> 10 20
+    // 15 --> 10 20
+    // 65 --> 60 nullptr
+    const size_t s = subtypes.size();
+
+    for (size_t i = 0; i < s; i++) {
+      if (at < subtypes[i]) { // Down to just one branch
+        // We padded to optimize the loop, like so:
+        // 0  1  2  3  4  5  6  7  8  9
+        // NP NP 10 20 30 40 50 60 NP NP  (padding)
+        // 10 20 30 40 50 60 MAX_DOUBLE
+        // for 29, we have i == 2 since 29 < 30 ---> then:
+        // The lower is i - 1 at 20, next lower i - 2;
+        // The upper is i, the next upper is i + 1;
+        nextLower = pointers[i];
+        lower     = pointers[i + 1];
+        upper     = pointers[i + 2];
+        nextUpper = pointers[i + 3];
+
+        // Also keep quick references to data projection object
+        nextLowerP = pointersP[i];
+        lowerP     = pointersP[i + 1];
+        upperP     = pointersP[i + 2];
+        nextUpperP = pointersP[i + 3];
+
+        // Give the pointers for terrain if any
+        v.cbb[2] = cbbp[i];
+        v.cbb[0] = cbbp[i + 1];
+        v.cbb[1] = cbbp[i + 2];
+        v.cbb[3] = cbbp[i + 3];
+
+        v.pbb[2] = pbbp[i];
+        v.pbb[0] = pbbp[i + 1];
+        v.pbb[1] = pbbp[i + 2];
+        v.pbb[3] = pbbp[i + 3];
+
+        v.bottom[2] = bottom[i];
+        v.bottom[0] = bottom[i + 1];
+        v.bottom[1] = bottom[i + 2];
+        v.bottom[3] = bottom[i + 3];
+        return;
+      }
+    }
+    // needed for s = 0;
+    lower       = upper = nextLower = nextUpper = nullptr;
+    lowerP      = upperP = nextLowerP = nextUpperP = nullptr;
+    v.cbb[0]    = v.cbb[1] = v.cbb[2] = v.cbb[3] = nullptr;
+    v.pbb[0]    = v.pbb[1] = v.pbb[2] = v.pbb[3] = nullptr;
+    v.bottom[0] = v.bottom[1] = v.bottom[2] = v.bottom[3] = nullptr;
+  }; // getSpreadNew
 
 protected:
 
@@ -231,8 +333,7 @@ public:
    * the shared ptrs and this object stay in scope and unchanged.  Used for speed in loops
    * calling the getSpread search below */
   virtual void
-  getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
-    std::vector<DataProjection *>& projectors) override;
+  getTempPointerVector(VolumePointerCache&) override;
 };
 
 /** A volume that stores N Datatypes by unique subtype.
@@ -291,8 +392,7 @@ public:
    * the shared ptrs and this object stay in scope and unchanged.  Used for speed in loops
    * calling the getSpread search below */
   virtual void
-  getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
-    std::vector<DataProjection *>& projectors) override;
+  getTempPointerVector(VolumePointerCache&) override;
 };
 
 /** Output a Volume */

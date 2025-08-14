@@ -67,9 +67,13 @@ public:
   {
     layer[0]   = layer[1] = layer[2] = layer[3] = nullptr;
     project[0] = project[1] = project[2] = project[3] = nullptr;
+    cbb[0]     = cbb[1] = cbb[2] = cbb[3] = nullptr;
+    pbb[0]     = pbb[1] = pbb[2] = pbb[3] = nullptr;
+    bottom[0]  = bottom[1] = bottom[2] = bottom[3] = nullptr;
   }
 
   // Layers/tilts we handle around the sample location
+  // FIXME: Feels messy. Maybe enum class and avoid the 'special methods'
 
   /** Get the input layer/tilt directly below sample */
   inline DataType *& getLower(){ return layer[0]; }
@@ -106,6 +110,31 @@ public:
 
   /** Get the query results two levels above sample */
   inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
+
+  /** Get the Terrain lookup arrays */
+  inline ArrayFloat2DPtr getLowerCBB(){ return cbb[0]; }
+
+  inline ArrayFloat2DPtr getUpperCBB(){ return cbb[1]; }
+
+  inline ArrayFloat2DPtr get2ndLowerCBB(){ return cbb[2]; }
+
+  inline ArrayFloat2DPtr get2ndUpperCBB(){ return cbb[3]; }
+
+  inline ArrayFloat2DPtr getLowerPBB(){ return pbb[0]; }
+
+  inline ArrayFloat2DPtr getUpperPBB(){ return pbb[1]; }
+
+  inline ArrayFloat2DPtr get2ndLowerPBB(){ return pbb[2]; }
+
+  inline ArrayFloat2DPtr get2ndUpperPBB(){ return pbb[3]; }
+
+  inline ArrayByte2DPtr getLowerBottomHit(){ return bottom[0]; }
+
+  inline ArrayByte2DPtr getUpperBottomHit(){ return bottom[1]; }
+
+  inline ArrayByte2DPtr get2ndLowerBottomHit(){ return bottom[2]; }
+
+  inline ArrayByte2DPtr get2ndUpperBottomHit(){ return bottom[3]; }
 
   // ----------------------------------------------
   // Radar or center location of data
@@ -172,6 +201,9 @@ protected:
   LLH virtualLocation; ///< Location in grid of the virtual layer/CAPPI we're calculating
 
 public:
+  ArrayFloat2DPtr cbb[4];   ///< One Terrain CBB array per layer
+  ArrayFloat2DPtr pbb[4];   ///< One Terrain PBB array per layer
+  ArrayByte2DPtr bottom[4]; ///< One Terrain bottom hit array per layer
 
   AngleDegs virtualAzDegs;   ///< Virtual Azimuth degrees at this location
   AngleDegs virtualElevDegs; ///< Virtual elevation degrees at this location

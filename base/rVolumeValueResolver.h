@@ -269,6 +269,7 @@ protected:
       l.elevation = r.getElevationDegs();
 
       // Terrain info
+      // FIXME:  Use the pointer cache to speed this up as well.
       const bool t = r.haveTerrain();
       l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
       l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
@@ -282,7 +283,8 @@ protected:
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
-  queryLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l)
+  queryLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l, ArrayFloat2DPtr cbb,
+    ArrayFloat2DPtr pbb, ArrayByte2DPtr bottomHit)
   {
     // l.clear();
 
@@ -306,15 +308,39 @@ protected:
       // Data value at gate (getValueAtAzRange sets this)
       // l.value = r.getFloat2DRef()[l.radial][l.gate];
 
-      // Beamwidth info
+      // Beamwidth info (FIXME: Cache this puppy too.)
       l.beamWidth = r.getBeamWidthRef()[l.radial];
 
       // Terrain info
+      // Turns out O(CONUS) of get ref calls is slower than snails, so we cache the pointers
       const bool t = r.haveTerrain();
       l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
-      l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
-      l.terrainPBBPercent = t ? r.getTerrainPBBPercentRef()[l.radial][l.gate] : 0.0;
-      l.beamHitBottom     = t ? (r.getTerrainBeamBottomHitRef()[l.radial][l.gate] != 0) : 0.0;
+      l.terrainCBBPercent = t ? (*cbb)[l.radial][l.gate] : 0.0;
+      l.terrainPBBPercent = t ? (*pbb)[l.radial][l.gate] : 0.0;
+      l.beamHitBottom     = t ? (*bottomHit)[l.radial][l.gate] : 0.0;
+
+
+      // test if there's a difference during Alpha work.
+      #if 0
+      if (t) {
+        if (pbb == nullptr) {
+          LogSevere("pBB is nullptr.  You failed, go home\n");
+          exit(1);
+        }
+        if (cbb == nullptr) {
+          LogSevere("cBB is nullptr.  You failed, go home\n");
+          exit(1);
+        }
+        if (bottomHit == nullptr) {
+          LogSevere("bottomHit is nullptr.  You failed, go home\n");
+          exit(1);
+        }
+        if (l.terrainPBBPercent != (*pbb)[l.radial][l.gate]) {
+          LogSevere("Well that failed! " << l.terrainPBBPercent << " != " << (*pbb)[l.radial][l.gate] << "\n");
+          exit(1);
+        }
+      }
+      #endif // if 0
       return true;
     }
 
@@ -330,28 +356,32 @@ public:
   inline bool
   queryLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getLower(), vv.getLowerP(), vv.getLowerValue()));
+    return (queryLayer(vv, vv.getLower(), vv.getLowerP(), vv.getLowerValue(),
+           vv.getLowerCBB(), vv.getLowerPBB(), vv.getLowerBottomHit()));
   }
 
   /** Query 2nd lower tilt */
   inline bool
   query2ndLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerP(), vv.get2ndLowerValue()));
+    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerP(), vv.get2ndLowerValue(),
+           vv.get2ndLowerCBB(), vv.get2ndLowerPBB(), vv.get2ndLowerBottomHit()));
   }
 
   /** Query upper tilt */
   inline bool
   queryUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getUpper(), vv.getUpperP(), vv.getUpperValue()));
+    return (queryLayer(vv, vv.getUpper(), vv.getUpperP(), vv.getUpperValue(),
+           vv.getUpperCBB(), vv.getUpperCBB(), vv.getUpperBottomHit()));
   }
 
   /** Query 2nd upper tilt */
   inline bool
   query2ndUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperP(), vv.get2ndUpperValue()));
+    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperP(), vv.get2ndUpperValue(),
+           vv.get2ndUpperCBB(), vv.get2ndUpperPBB(), vv.get2ndUpperBottomHit()));
   }
 
   /** Query multiple layers at once.  Maybe there's a future optimization here. */

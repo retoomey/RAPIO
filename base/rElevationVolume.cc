@@ -168,18 +168,41 @@ VolumeOf1::addDataType(std::shared_ptr<DataType> dt)
 }
 
 void
-VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
-  std::vector<DataProjection *>& projectors)
+VolumeOfN::getTempPointerVector(VolumePointerCache& c)
 {
+  auto& levels     = c.levels;
+  auto& pointers   = c.pointers;
+  auto& projectors = c.projectors;
+
   // Padding for search loop so range end checking not needed, which speeds things up.
   pointers.push_back(nullptr);
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
   projectors.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+
   for (auto v:myVolume) {
     // Cached pointers for speed.
-    pointers.push_back(v.get());
-    projectors.push_back(v.get()->getProjection().get());
+    auto dt = v.get();
+    pointers.push_back(dt);
+    projectors.push_back(dt->getProjection().get());
+
+    // Get terrain/beamwidth for radialsets...
+    if (auto r = dynamic_cast<RadialSet *>(dt)) {
+      // FIXME: crashes on null?  If we can just push back
+      c.cbb.push_back(r->getFloat2D(Constants::TerrainCBBPercent)->ptr());
+      c.pbb.push_back(r->getFloat2D(Constants::TerrainPBBPercent)->ptr());
+      c.bottomHit.push_back(r->getByte2D(Constants::TerrainBeamBottomHit)->ptr());
+    } else {
+      c.cbb.push_back(nullptr);
+      c.pbb.push_back(nullptr);
+      c.bottomHit.push_back(nullptr);
+    }
 
     // Hack attempt for "at" overloaded meaning (non-angle)
     const auto atCheck = v->getSubType();
@@ -205,12 +228,21 @@ VolumeOfN::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
   projectors.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
 } // VolumeOfN::getTempPointerVector
 
 void
-VolumeOf1::getTempPointerVector(std::vector<double>& levels, std::vector<DataType *>& pointers,
-  std::vector<DataProjection *>& projectors)
+VolumeOf1::getTempPointerVector(VolumePointerCache& c)
 {
+  auto& levels     = c.levels;
+  auto& pointers   = c.pointers;
+  auto& projectors = c.projectors;
+
   // We're gonna trick the getSpreadL by simply storing a max number first subtype.
   // This means the resolver will always get a 'upper' tilt hit.
   // Padding for search loop so range end checking not needed, which speeds things up.
@@ -218,10 +250,30 @@ VolumeOf1::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
   pointers.push_back(nullptr);
   projectors.push_back(nullptr);
   projectors.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
   if (myVolume.size() > 0) {
     // Push back the DataType and its projection as cached pointers for speed
-    pointers.push_back(myVolume[0].get());
-    projectors.push_back(myVolume[0].get()->getProjection().get());
+    auto dt = myVolume[0].get();
+    pointers.push_back(dt);
+    projectors.push_back(dt->getProjection().get());
+
+    // Get terrain/beamwidth for radialsets...
+    if (auto r = dynamic_cast<RadialSet *>(dt)) {
+      // FIXME: crashes on null?  If we can just push back
+      c.cbb.push_back(r->getFloat2D(Constants::TerrainCBBPercent)->ptr());
+      c.pbb.push_back(r->getFloat2D(Constants::TerrainPBBPercent)->ptr());
+      c.bottomHit.push_back(r->getByte2D(Constants::TerrainBeamBottomHit)->ptr());
+      c.bottomHit.push_back(nullptr);
+    } else {
+      c.cbb.push_back(nullptr);
+      c.pbb.push_back(nullptr);
+      c.bottomHit.push_back(nullptr);
+    }
 
     // Ignore subtype, we want the getSpreadL search to always instantly hit.  So push a max
     // which will cause a < search auto hit
@@ -233,7 +285,13 @@ VolumeOf1::getTempPointerVector(std::vector<double>& levels, std::vector<DataTyp
   pointers.push_back(nullptr); // Might not need this one
   projectors.push_back(nullptr);
   projectors.push_back(nullptr); // Might not need this one
-}
+  c.cbb.push_back(nullptr);
+  c.cbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.pbb.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+  c.bottomHit.push_back(nullptr);
+} // VolumeOf1::getTempPointerVector
 
 std::shared_ptr<DataType>
 Volume::getSubType(const std::string& subtype)
