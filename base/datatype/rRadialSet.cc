@@ -325,12 +325,12 @@ RadialSet::initTerrain()
 void
 RadialSet::postRead(std::map<std::string, std::string>& keys)
 {
-  // Post read make sure no missing arrays.
+  // Uncompress the arrays if needed
+  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
+
+  // Post read/uncompress make sure no missing arrays.
   validateArrays(true, 250);
 
-  // FIXME: Make it stay compressed for things like rcopy, probably
-  // using a key
-  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
 } // RadialSet::postRead
 
 void
