@@ -361,8 +361,6 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
 
   extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
   extraParams["compression"]  = "gz";  // Force compression
-  // You must have a netcdf=/folder in your -o when forcing a writer
-  extraParams["onewriter"] = "netcdf"; // Force netcdf
 
   // ---------------------------------------
   // Output 2D and/or 3D cube
@@ -385,8 +383,6 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
     write2DLayers("2DMax", "Writing max layer ", typeMaxed, extraParams, outputTime);
     write3DLayer("3DMax", typeMaxed, extraParams, outputTime);
   }
-
-  extraParams["onewriter"] = "";
 
   // ---------------------------------------
   // Output stage2 again with group

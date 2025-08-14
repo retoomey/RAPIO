@@ -191,7 +191,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   if (myUseRoster) {
     FusionCache::setRosterDir(roster);
   }
-  myEveryTilt = o.getOption("everytilt");
+  myEveryTilt = o.getBoolean("everytilt");
 } // RAPIOFusionOneAlg::processOptions
 
 void
