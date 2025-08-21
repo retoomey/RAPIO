@@ -5,6 +5,21 @@
 #include <rTime.h>
 
 namespace rapio {
+/** Store collection of pointers for fast access to the RadialSet.
+ * Useful for massive loops like in fusion.  Gets around the safety
+ * checks, etc.  This works for the 'general' most used fields.
+ * With custom arrays you're still stuck with the get methods. */
+class RadialSet;
+class RadialSetPointerCache : public DataTypePointerCache {
+public:
+  ArrayFloat1DPtr bw; ///< Beamwidth reference array
+
+  // Assuming initTerrain is true, otherwise nullptr
+  ArrayFloat2DPtr cbb;      ///< One Terrain Cumulative beam blockage array per layer
+  ArrayFloat2DPtr pbb;      ///< One Terrain Partial beam blockage array per layer
+  ArrayByte2DPtr bottomHit; ///< One Terrain bottom hit array per layer
+};
+
 /** A Radial set is a collection of radials containing gates.  This makes
  * it a 2D data structure.  It stores 1D information for each radials.
  * It can store multiple bands of 2D data.
@@ -53,6 +68,30 @@ public:
     const size_t    num_radials,
     const size_t    num_gates,
     bool            projectToGround);
+
+  /** Get a pointer cache to critical things.  Note, changing the RadialSet
+   * massively might invalidate these pointers.  They can also go out of scope.
+   */
+  std::shared_ptr<DataTypePointerCache>
+  getDataTypePointerCache() override
+  {
+    if (myPointerCache == nullptr) {
+      auto newone = std::make_shared<RadialSetPointerCache>();
+
+      auto& n = *newone;
+      // All these objects are cached as shared_ptr in RadialSet
+      // So they will stay in scope.
+      n.dt      = this;
+      n.project = getProjection().get(); // Using primary (main one)
+      n.bw      = getFloat1D(BeamWidth)->ptr();
+      // FIXME: Check initterrain?
+      n.cbb          = getFloat2D(Constants::TerrainCBBPercent)->ptr();
+      n.pbb          = getFloat2D(Constants::TerrainPBBPercent)->ptr();
+      n.bottomHit    = getByte2D(Constants::TerrainBeamBottomHit)->ptr();
+      myPointerCache = newone;
+    }
+    return myPointerCache;
+  }
 
   /** Return the location of the radar. */
   const LLH&

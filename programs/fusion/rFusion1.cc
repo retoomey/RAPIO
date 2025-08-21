@@ -627,7 +627,7 @@ RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
 
 size_t
 RAPIOFusionOneAlg::processHeightLayer(size_t layer,
-  const VolumePointerCache& cc,
+  const VolumePointerCache                   & cc,
   const Time                                 & rTime, // Time for writing a 2D debug layer
   std::shared_ptr<VolumeValueIO>             stage2p)
 {
@@ -734,7 +734,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
 
         // Search the virtual volume for elevations above/below our virtual one
         llp.getElevDegsAt(vv.virtualElevDegs);
-        ev.getSpreadNew(cc, vv);
+        ev.getSpreadL(cc, vv);
 
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.
@@ -806,7 +806,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
         // Search the virtual volume for elevations above/below our virtual one
         // Linear for 'small' N of elevation volume is faster than binary here.  Interesting
         llp.getElevDegsAt(vv.virtualElevDegs);
-        ev.getSpreadNew(cc, vv);
+        ev.getSpreadL(cc, vv);
 
         // If the upper and lower for this point are the _same_ RadialSets as before, then
         // the interpolation will end up with the same data value.

@@ -76,10 +76,10 @@ public:
 
   /** Process a single height layer */
   size_t
-  processHeightLayer(size_t              layer,
-    const VolumePointerCache& cc,
-    const Time                          & rTime,
-    std::shared_ptr<VolumeValueIO>       stage2p
+  processHeightLayer(size_t        layer,
+    const VolumePointerCache       & cc,
+    const Time                     & rTime,
+    std::shared_ptr<VolumeValueIO> stage2p
   );
 
   /** Process a volume generating stage 2 output */

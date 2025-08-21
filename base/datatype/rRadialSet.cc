@@ -330,7 +330,6 @@ RadialSet::postRead(std::map<std::string, std::string>& keys)
 
   // Post read/uncompress make sure no missing arrays.
   validateArrays(true, 250);
-
 } // RadialSet::postRead
 
 void

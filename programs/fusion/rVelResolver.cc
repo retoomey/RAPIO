@@ -114,8 +114,8 @@ VelResolver::calc(VolumeValue * vvp)
   // Query for tilts directly above/below us
   // FIXME: I want to work on this API to make it cleaner, maybe
   // function pointers or something.
-  bool haveLower = queryMatrixLayer(vv, vv.getLower(), vv.getLowerP(), myRemap.get(), vv.getLowerValue());
-  bool haveUpper = queryMatrixLayer(vv, vv.getUpper(), vv.getUpperP(), myRemap.get(), vv.getUpperValue());
+  bool haveLower = queryMatrixLayer(vv, vv.getLowerValue(), vv.getPC(VolumeValue::Layer::Lower), myRemap.get());
+  bool haveUpper = queryMatrixLayer(vv, vv.getUpperValue(), vv.getPC(VolumeValue::Layer::Upper), myRemap.get());
 
   // ------------------------------------------------------------
   // Get distances and toss out anything over range

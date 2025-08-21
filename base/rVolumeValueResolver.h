@@ -60,11 +60,6 @@ public:
   VolumeValueResolver() : myGlobalWeight(1.0), myVarianceWeight(1.0 / 62500.0), myMissing(Constants::MissingData),
     myUnavailable(Constants::DataUnavailable){ }
 
-  /** Enum for layers in queryLayer */
-  enum Layer {
-    lower, upper, lower2, upper2
-  };
-
   /** Use this to introduce default built-in RAPIO VolumeValueResolver subclasses.
    * Note: You don't have to use this ability, it's not called by default algorithm.
    * To use it, call VolumeValueResolver::introduceSelf()
@@ -180,26 +175,29 @@ protected:
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
-  queryMatrixLayer(VolumeValue& vv, DataType * set, DataProjection * project, ArrayAlgorithm * m, LayerValue& l)
+  queryMatrixLayer(VolumeValue& vv, LayerValue& l, DataTypePointerCache * c, ArrayAlgorithm * m)
   {
-    // l.clear(); We're supposed to check the flag for valid
-    if (set == nullptr) { return false; }
+    // Verified. Tilts can be null high above or below us
+    if (c == nullptr) {
+      return false;
+    }
 
-    // Casts for moment since we currently only work with radialsets.  if eventually we
-    // add in lat lon grids we'll need more work.  I'm trying to avoid virtual for speed.
-    RadialSet& r = *((RadialSet *) set);
-    RadialSetProjection& p = *((RadialSetProjection *) project);
+    // Assume RadialSet cache (FIXME: Generalize for all DataTypes)
+    // Using this pointer cache increases speed massively, like 7x or more
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+    auto * r  = static_cast<RadialSet *>(c->dt);
+    auto * p  = (RadialSetProjection *) (rc->project);
 
     // Projection of height range using attentuation
     // Notice we cached sin and cos GCD for the grid
 
     Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
-      vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
+      vv.sinGcdIR, vv.cosGcdIR, r->getElevationTan(), r->getElevationCos(), l.heightKMs, l.rangeKMs);
 
     // If good, query more stuff
-    if (p.AzRangeToRadialGate(vv.virtualAzDegs, l.rangeKMs, l.radial, l.gate)) {
+    if (p->AzRangeToRadialGate(vv.virtualAzDegs, l.rangeKMs, l.radial, l.gate)) {
       // Call the remapper with the current data.
-      m->setSource(r.getFloat2D());
+      m->setSource(r->getFloat2D());
       float value;
       if (m->remap(l.radial, l.gate, value)) {
         l.value = value;
@@ -265,16 +263,16 @@ protected:
       // Meta data of the 'point' is from the hit gate.
 
       // Beamwidth/elevation info
-      l.beamWidth = r.getBeamWidthRef()[l.radial];
-      l.elevation = r.getElevationDegs();
+      l.beamWidth = (*rc->bw)[l.radial];
+      l.elevation = r->getElevationDegs();
 
       // Terrain info
       // FIXME:  Use the pointer cache to speed this up as well.
-      const bool t = r.haveTerrain();
+      const bool t = r->haveTerrain();
       l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
-      l.terrainCBBPercent = t ? r.getTerrainCBBPercentRef()[l.radial][l.gate] : 0.0;
-      l.terrainPBBPercent = t ? r.getTerrainPBBPercentRef()[l.radial][l.gate] : 0.0;
-      l.beamHitBottom     = t ? (r.getTerrainBeamBottomHitRef()[l.radial][l.gate] != 0) : 0.0;
+      l.terrainCBBPercent = t ? (*rc->cbb)[l.radial][l.gate] : 0.0;
+      l.terrainPBBPercent = t ? (*rc->pbb)[l.radial][l.gate] : 0.0;
+      l.beamHitBottom     = t ? (*rc->bottomHit)[l.radial][l.gate] : 0.0;
       return true;
     }
 
@@ -283,64 +281,52 @@ protected:
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
-  queryLayer(VolumeValue& vv, DataType * set, DataProjection * project, LayerValue& l, ArrayFloat2DPtr cbb,
-    ArrayFloat2DPtr pbb, ArrayByte2DPtr bottomHit)
+  queryLayer(VolumeValue& vv, LayerValue& l, DataTypePointerCache * c)
   {
-    // l.clear();
+    // Verified. Tilts can be null high above or below us
+    if (c == nullptr) {
+      return false;
+    }
 
-    if (set == nullptr) { return false; }
+    // Assume RadialSet cache (FIXME: Generalize for all DataTypes)
+    // Using this pointer cache increases speed massively, like 7x or more
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+    auto * r  = static_cast<RadialSet *>(c->dt);
+    auto * p  = (RadialSetProjection *) (rc->project);
 
-    // Casts for moment since we currently only work with radialsets.  if eventually we
-    // add in lat lon grids we'll need more work.  I'm trying to avoid virtual for speed.
-    RadialSet& r = *((RadialSet *) set);
-    RadialSetProjection& p = *((RadialSetProjection *) project);
-
-    l.elevation = r.getElevationDegs();
+    l.elevation = r->getElevationDegs();
 
     // Projection of height range using attentuation
     // Notice we cached sin and cos GCD for the grid
 
     Project::Cached_BeamPath_LLHtoAttenuationRange(vv.getRadarHeightKMs(),
-      vv.sinGcdIR, vv.cosGcdIR, r.getElevationTan(), r.getElevationCos(), l.heightKMs, l.rangeKMs);
+      vv.sinGcdIR, vv.cosGcdIR, r->getElevationTan(), r->getElevationCos(), l.heightKMs, l.rangeKMs);
 
     // If good, query more stuff
-    if (p.getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate)) {
+    // FIXME: Speed up by making a pointer version of this?
+    if (p->getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate)) {
       // Data value at gate (getValueAtAzRange sets this)
-      // l.value = r.getFloat2DRef()[l.radial][l.gate];
+      // l.value = r.getFloat2DRef()[l.radial][l.gate]; This is slow, projection has pointer
 
-      // Beamwidth info (FIXME: Cache this puppy too.)
-      l.beamWidth = r.getBeamWidthRef()[l.radial];
+      // Beamwidth info
+      l.beamWidth = (*rc->bw)[l.radial];
+      #if 0
+      AngleDegs compare = r->getBeamWidthRef()[l.radial]; // Pull the slooow way and compare
+      AngleDegs compare = (*rc->bw)[l.radial];
+      if (l.beamWidth != compare) {
+        LogSevere("Test beamwidth crash\n");
+        exit(1);
+      }
+      #endif
 
       // Terrain info
       // Turns out O(CONUS) of get ref calls is slower than snails, so we cache the pointers
-      const bool t = r.haveTerrain();
+      const bool t = r->haveTerrain();
       l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
-      l.terrainCBBPercent = t ? (*cbb)[l.radial][l.gate] : 0.0;
-      l.terrainPBBPercent = t ? (*pbb)[l.radial][l.gate] : 0.0;
-      l.beamHitBottom     = t ? (*bottomHit)[l.radial][l.gate] : 0.0;
+      l.terrainCBBPercent = t ? (*rc->cbb)[l.radial][l.gate] : 0.0;
+      l.terrainPBBPercent = t ? (*rc->pbb)[l.radial][l.gate] : 0.0;
+      l.beamHitBottom     = t ? (*rc->bottomHit)[l.radial][l.gate] : 0.0;
 
-
-      // test if there's a difference during Alpha work.
-      #if 0
-      if (t) {
-        if (pbb == nullptr) {
-          LogSevere("pBB is nullptr.  You failed, go home\n");
-          exit(1);
-        }
-        if (cbb == nullptr) {
-          LogSevere("cBB is nullptr.  You failed, go home\n");
-          exit(1);
-        }
-        if (bottomHit == nullptr) {
-          LogSevere("bottomHit is nullptr.  You failed, go home\n");
-          exit(1);
-        }
-        if (l.terrainPBBPercent != (*pbb)[l.radial][l.gate]) {
-          LogSevere("Well that failed! " << l.terrainPBBPercent << " != " << (*pbb)[l.radial][l.gate] << "\n");
-          exit(1);
-        }
-      }
-      #endif // if 0
       return true;
     }
 
@@ -356,32 +342,28 @@ public:
   inline bool
   queryLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getLower(), vv.getLowerP(), vv.getLowerValue(),
-           vv.getLowerCBB(), vv.getLowerPBB(), vv.getLowerBottomHit()));
+    return (queryLayer(vv, vv.getLowerValue(), vv.getPC(VolumeValue::Layer::Lower)));
   }
 
   /** Query 2nd lower tilt */
   inline bool
   query2ndLower(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndLower(), vv.get2ndLowerP(), vv.get2ndLowerValue(),
-           vv.get2ndLowerCBB(), vv.get2ndLowerPBB(), vv.get2ndLowerBottomHit()));
+    return (queryLayer(vv, vv.get2ndLowerValue(), vv.getPC(VolumeValue::Layer::Lower2)));
   }
 
   /** Query upper tilt */
   inline bool
   queryUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.getUpper(), vv.getUpperP(), vv.getUpperValue(),
-           vv.getUpperCBB(), vv.getUpperCBB(), vv.getUpperBottomHit()));
+    return (queryLayer(vv, vv.getUpperValue(), vv.getPC(VolumeValue::Layer::Upper)));
   }
 
   /** Query 2nd upper tilt */
   inline bool
   query2ndUpper(VolumeValue& vv)
   {
-    return (queryLayer(vv, vv.get2ndUpper(), vv.get2ndUpperP(), vv.get2ndUpperValue(),
-           vv.get2ndUpperCBB(), vv.get2ndUpperPBB(), vv.get2ndUpperBottomHit()));
+    return (queryLayer(vv, vv.get2ndUpperValue(), vv.getPC(VolumeValue::Layer::Upper2)));
   }
 
   /** Query multiple layers at once.  Maybe there's a future optimization here. */

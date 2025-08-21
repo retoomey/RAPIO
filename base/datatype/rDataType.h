@@ -15,6 +15,21 @@ class TimeDuration;
 class ColorMap;
 class Record;
 
+/** A class for storing a collection of pointers for fast access
+ * to the DataType internal data. For example, raw pointers to arrays, etc.
+ * Designed to be called once outside of loops for a mostly const
+ * DataType object.
+ */
+class DataType;
+class DataProjection;
+class DataTypePointerCache : public Data {
+public:
+  /** DataType pointer*/
+  DataType * dt;
+  /** Project object for this DataType, if any */
+  DataProjection * project;
+};
+
 /** The abstract base class for all of the GIS MRMS/HMET data objects.
  * Every DataType stores a location in space and time.
  */
@@ -39,6 +54,13 @@ public:
   // -----------------------------------------------------------------
   // Read/write API for MRMS
   //
+
+  /** Return a pointer fast lookup cache for internal arrays, etc. */
+  virtual std::shared_ptr<DataTypePointerCache>
+  getDataTypePointerCache()
+  {
+    return nullptr;
+  }
 
   /** The default prefix pattern (or local path) for writing datatype files,
    * this is a tree using datatable, subtype and timestamp name.
@@ -258,5 +280,8 @@ protected:
 
   /** Cached projection object for GIS */
   std::shared_ptr<DataProjection> myDataProjection;
+
+  /** Cached pointer object for spped */
+  std::shared_ptr<DataTypePointerCache> myPointerCache;
 };
 }

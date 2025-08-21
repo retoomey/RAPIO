@@ -13,13 +13,12 @@ class RAPIOAlgorithm;
  * There's cost/speed associated with calculating the math for a tilt or
  * layer.
  *
- * FIXME: finish get/set stuff to make the API cleaner here.
- *
  * @author Robert Toomey
  */
 class LayerValue : public Utility
 {
 public:
+
   double value;            ///< Value of data at layer
   bool haveTerrain;        ///< Do we have terrain information?
   float terrainCBBPercent; ///< Terrain cumulative beam blockage, if available otherwise 0
@@ -31,23 +30,6 @@ public:
   int radial;              ///< Radial number at the point of interest, or -1
   AngleDegs elevation;     ///< 'True' elevation angle used for this layer value
   AngleDegs beamWidth;     ///< Beamwidth at the point of interest
-
-  /** Clear all the values to default unset state */
-  void
-  clear()
-  {
-    value             = Constants::DataUnavailable;
-    haveTerrain       = false;
-    terrainCBBPercent = 0;
-    terrainPBBPercent = 0;
-    beamHitBottom     = false;
-    heightKMs         = 0;
-    rangeKMs          = 0;
-    gate      = -1;
-    radial    = -1;
-    elevation = Constants::MissingData;
-    beamWidth = 1;
-  }
 };
 
 /** Organizer for in/out of a VolumeValueResolver for resolving the output of
@@ -62,79 +44,112 @@ class VolumeValue : public Utility
 {
 public:
 
+  /** The layers we store, nearest 2 in each direction */
+  enum class Layer {
+    Lower,
+    Upper,
+    Lower2,
+    Upper2,
+  };
+  static constexpr int LayerCount = 4;
+
   /** Ensure cleared out on construction..it should be */
   VolumeValue() : dataValue(0.0) // Default to 1.0 since final = v/w
+  { }
+
+  /** Get DataTypePointerCache for layer */
+  inline DataTypePointerCache *
+  getPC(Layer l)
   {
-    layer[0]   = layer[1] = layer[2] = layer[3] = nullptr;
-    project[0] = project[1] = project[2] = project[3] = nullptr;
-    cbb[0]     = cbb[1] = cbb[2] = cbb[3] = nullptr;
-    pbb[0]     = pbb[1] = pbb[2] = pbb[3] = nullptr;
-    bottom[0]  = bottom[1] = bottom[2] = bottom[3] = nullptr;
+    return pc[static_cast<int>(l)];
   }
 
-  // Layers/tilts we handle around the sample location
-  // FIXME: Feels messy. Maybe enum class and avoid the 'special methods'
+  /** Set DataTypePointerCache for layer */
+  inline void
+  setPC(Layer l, DataTypePointerCache * c)
+  {
+    pc[static_cast<int>(l)] = c;
+  }
+
+  /** Clear all the pointer caches */
+  inline void
+  clearPC()
+  {
+    pc = { };
+  }
 
   /** Get the input layer/tilt directly below sample */
-  inline DataType *& getLower(){ return layer[0]; }
+  inline DataType *
+  getLower()
+  {
+    auto * c = getPC(Layer::Lower);
 
-  /** Get the input projection for layer/tilt below sample */
-  inline DataProjection *& getLowerP(){ return project[0]; }
+    if (c == nullptr) { // not liking the if.  Full cache faster?
+      return nullptr;
+    } else {
+      return c->dt;
+    }
+  }
 
   /** Get the query results below sample */
   inline LayerValue& getLowerValue(){ return layerout[0]; }
 
   /** Get the input layer/tilt directly above sample */
-  inline DataType *& getUpper(){ return layer[1]; }
+  inline DataType *
+  getUpper()
+  {
+    auto * c = getPC(Layer::Upper);
 
-  /** Get the input projection for layer/tilt above sample */
-  inline DataProjection *& getUpperP(){ return project[1]; }
+    if (c == nullptr) {
+      return nullptr;
+    } else {
+      return c->dt;
+    }
+  }
 
   /** Get the query results above sample */
   inline LayerValue& getUpperValue(){ return layerout[1]; }
 
   /** Get the layer/tilt two levels below the sample */
-  inline DataType *& get2ndLower(){ return layer[2]; }
+  inline DataType *
+  get2ndLower()
+  {
+    auto * c = getPC(Layer::Lower2);
 
-  /** Get the input projection for two layers below sample */
-  inline DataProjection *& get2ndLowerP(){ return project[2]; }
+    if (c == nullptr) {
+      return nullptr;
+    } else {
+      return c->dt;
+    }
+  }
 
   /** Get the query results two levels below sample */
   inline LayerValue& get2ndLowerValue(){ return layerout[2]; }
 
   /** Get the layer/tilt two levels above the sample */
-  inline DataType *& get2ndUpper(){ return layer[3]; }
+  inline DataType *
+  get2ndUpper()
+  {
+    auto * c = getPC(Layer::Upper2);
 
-  /** Get the input projection for two layers above sample */
-  inline DataProjection *& get2ndUpperP(){ return project[3]; }
+    if (c == nullptr) {
+      return nullptr;
+    } else {
+      return c->dt;
+    }
+  }
 
   /** Get the query results two levels above sample */
   inline LayerValue& get2ndUpperValue(){ return layerout[3]; }
 
-  /** Get the Terrain lookup arrays */
-  inline ArrayFloat2DPtr getLowerCBB(){ return cbb[0]; }
+  /** Get the DataTypePointerCache */
+  inline DataTypePointerCache * getLowerPC(){ return getPC(Layer::Lower); }
 
-  inline ArrayFloat2DPtr getUpperCBB(){ return cbb[1]; }
+  inline DataTypePointerCache * getUpperPC(){ return getPC(Layer::Upper); }
 
-  inline ArrayFloat2DPtr get2ndLowerCBB(){ return cbb[2]; }
+  inline DataTypePointerCache * get2ndLowerPC(){ return getPC(Layer::Lower2); }
 
-  inline ArrayFloat2DPtr get2ndUpperCBB(){ return cbb[3]; }
-
-  inline ArrayFloat2DPtr getLowerPBB(){ return pbb[0]; }
-
-  inline ArrayFloat2DPtr getUpperPBB(){ return pbb[1]; }
-
-  inline ArrayFloat2DPtr get2ndLowerPBB(){ return pbb[2]; }
-
-  inline ArrayFloat2DPtr get2ndUpperPBB(){ return pbb[3]; }
-
-  inline ArrayByte2DPtr getLowerBottomHit(){ return bottom[0]; }
-
-  inline ArrayByte2DPtr getUpperBottomHit(){ return bottom[1]; }
-
-  inline ArrayByte2DPtr get2ndLowerBottomHit(){ return bottom[2]; }
-
-  inline ArrayByte2DPtr get2ndUpperBottomHit(){ return bottom[3]; }
+  inline DataTypePointerCache * get2ndUpperPC(){ return getPC(Layer::Upper2); }
 
   // ----------------------------------------------
   // Radar or center location of data
@@ -193,17 +208,21 @@ public:
   //
 protected:
 
-  DataType * layer[4];         ///< Currently four layers, 2 above, 2 below, getSpread fills
-  DataProjection * project[4]; ///< One projection per layer
-  LayerValue layerout[4];      ///< Output for layers, queryLayer fills
+  // These are the inputs used for each layer...
+  // We 'could' store them in the LayerValue.
+  // Passed to queryLayer and then we fill in LayerValue.
+  // I think the reason we didn't is because LayerValue is called
+  // each time per grid point and we'd have to copy all those pointers
+  // for every LayerValue output.
+  // We could have a LayerInputValue or something though.
+public:
+  std::array<DataTypePointerCache *, LayerCount> pc{ }; // < Four layers, 2 above, 2 below
+protected:
 
   LLH radarLocation;   ///< Radar location (constant for a grid)
   LLH virtualLocation; ///< Location in grid of the virtual layer/CAPPI we're calculating
 
 public:
-  ArrayFloat2DPtr cbb[4];   ///< One Terrain CBB array per layer
-  ArrayFloat2DPtr pbb[4];   ///< One Terrain PBB array per layer
-  ArrayByte2DPtr bottom[4]; ///< One Terrain bottom hit array per layer
 
   AngleDegs virtualAzDegs;   ///< Virtual Azimuth degrees at this location
   AngleDegs virtualElevDegs; ///< Virtual elevation degrees at this location
@@ -219,6 +238,8 @@ public:
   // That usually requires more fields, which are added by subclasses of VolumeValue.
   // Basically, if we make stage1 output CAPPI layers directly, we need a value to put in
   // the 2D/3D output.  This is it.
+
+  LayerValue layerout[LayerCount]; ///< Output for layers, queryLayer fills
 
   double dataValue; ///< Final output calculated data value by resolve
   // Subclasses can add addition output fields
