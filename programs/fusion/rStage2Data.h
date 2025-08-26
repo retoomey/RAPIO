@@ -6,7 +6,7 @@
 #include <rBitset.h>
 #include <rRAPIOData.h>
 #include <rDataGrid.h>
-#include <rBinaryTable.h>
+#include <rFusionBinaryTable.h>
 #include <rVolumeValueResolver.h>
 #include <rPartitionInfo.h>
 
@@ -34,12 +34,16 @@ public:
     const std::string   & typeName,
     const std::string   & units,
     const LLH           & center,
-    const LLCoverageArea& radarGrid) :
+    const LLCoverageArea& radarGrid,
+    const bool          noMissingSet) :
     myDimensions({ radarGrid.getNumX(), radarGrid.getNumY(), radarGrid.getNumZ() }),
     myMissingSet(myDimensions),
     myMissingRLECounter(0), myAddValueCounter(0), myAddMissingCounter(0)
   {
     myTable = std::make_shared<FusionBinaryTable>();
+    if (noMissingSet) {
+      myTable->setUseMissingAsUnavailable();
+    }
     myTable->setString("Sourcename", radarName);
     myTable->setString("Radarname", radarName);
     myTable->setString("Typename", typeName);
@@ -256,6 +260,7 @@ public:
     const std::string & typeName,
     const std::string & units,
     const LLH         & center,
+    const bool        noMissingSet,
 
     // Partitioning info
     const PartitionInfo & partition,
@@ -273,7 +278,7 @@ public:
       // array there uses the radar grid (x,y,z) not the partition coordinates.
       // std::make_shared<Stage2Storage>(radarName, typeName, units, center, partition.myPartitions[i]);
       std::shared_ptr<Stage2Storage> newOne =
-        std::make_shared<Stage2Storage>(radarName, typeName, units, center, radarGrid);
+        std::make_shared<Stage2Storage>(radarName, typeName, units, center, radarGrid, noMissingSet);
 
       // Set the partition subfolder.
       if ((partition.myParamType == PartitionType::tile)) {
@@ -330,6 +335,13 @@ public:
   get(float& n, float& d, short& x, short& y, short& z)
   {
     return myTable->get(n, d, x, y, z);
+  }
+
+  /** Get the missing mode from this source's data */
+  bool
+  getNoMissingSet()
+  {
+    return myTable->getUseMissingAsUnavailable();
   }
 
   /** Get the radarname */

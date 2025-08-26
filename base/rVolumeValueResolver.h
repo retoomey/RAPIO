@@ -31,6 +31,7 @@ public:
     const std::string    & typeName,
     const std::string    & units,
     const LLH            & center,
+    const bool           noMissingSet, // FIXME: Thinking general param passing
     const PartitionInfo  & partition,
     const LLCoverageArea &radarGrid
   )

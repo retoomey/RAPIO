@@ -8,11 +8,12 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
   ProcessTimer timer("Ingest Source");
 
   // Metadata info
-  std::string name      = data.getRadarName();
-  std::string aTypeName = data.getTypeName();
-  Time dataTime         = data.getTime();
-  const size_t xBase    = data.getXBase();
-  const size_t yBase    = data.getYBase();
+  std::string name            = data.getRadarName();
+  std::string aTypeName       = data.getTypeName();
+  Time dataTime               = data.getTime();
+  const size_t xBase          = data.getXBase();
+  const size_t yBase          = data.getYBase();
+  const bool dataNoMissingSet = data.getNoMissingSet();
 
   //    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
 
@@ -56,7 +57,7 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
       break;
     }
     if (v == Constants::MissingData) {
-      addMissing(newSource, x, y, z, t); // update mask
+      addMissing(newSource, x, y, z, t, dataNoMissingSet); // update mask
       missingcounter++;
     } else {
       addObservation(newSource, v, w, x, y, z, t);
@@ -311,16 +312,24 @@ FusionDatabase::addObservation(SourceList& list, float v, float w, size_t x, siz
 }
 
 void
-FusionDatabase::addMissing(SourceList& list, size_t x, size_t y, size_t z, time_t t)
+FusionDatabase::addMissing(SourceList& list, size_t x, size_t y, size_t z, time_t t, bool dataNoMissingSet)
 {
   // -----------------------------------------
   // add to the source missing list
   //  list.addMissing(x, y, z, t);
-  // Add to global missing array mask
+  //  FIXME: So we're not using per source missing anyway now, so
+  //  we could probably deprecate/delete anything with that.
+
   size_t i = myHaves.getIndex3D(x, y, z);
 
-  if (myMissings[i] < t) { // Always update to latest time from all
-    myMissings[i] = t;
+  // If no missing set, then we only use missing to update the have array.  This means any old
+  // data in that location won't be added back into the new data, expiring it basically.
+  // However, by not adding to myMissings, no missing background will show.
+  if (!dataNoMissingSet) {
+    // Add to global missing array mask
+    if (myMissings[i] < t) { // Always update to latest time from all
+      myMissings[i] = t;
+    }
   }
 
   // Mark that we have this point

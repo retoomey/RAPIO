@@ -381,7 +381,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
     myResolver->setGlobalWeight(myWeight);
     if (myNoMissing) {
       LogInfo("No missing set, turning off missing output values\n");
-      myResolver->setMissingValue(Constants::DataUnavailable);
+      // myResolver->setMissingValue(Constants::DataUnavailable);
     }
 
     // 25 here is a magic number from w2merger for time variance squared.
@@ -902,7 +902,8 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   auto stage2IO = myResolver->getVolumeValueIO();
 
   if (stage2IO) {
-    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, myPartitionInfo, outg);
+    stage2IO->initForSend(myRadarName, myTypeName, myWriteOutputUnits, myRadarCenter, myNoMissing, myPartitionInfo,
+      outg);
   }
 
   size_t attemptCount = 0;

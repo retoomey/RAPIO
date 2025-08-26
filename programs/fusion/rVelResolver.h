@@ -50,6 +50,7 @@ public:
     const std::string    & typeName,
     const std::string    & units,
     const LLH            & center,
+    const bool           noMissingSet,
     const PartitionInfo  & partition,
     const LLCoverageArea & radarGrid
   ) override

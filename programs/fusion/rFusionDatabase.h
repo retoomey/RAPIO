@@ -333,7 +333,7 @@ public:
 
   /** Add missing mask observation */
   void
-  addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time);
+  addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time, bool dataNoMissingSet);
 
   /** Debugging print out each source list and points held */
   void

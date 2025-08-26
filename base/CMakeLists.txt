@@ -62,6 +62,7 @@ watcher/rFAMWatcher.h
 index/rFileIndex.h
 index/rFMLIndex.h
 notifier/rFMLRecordNotifier.h
+datatype/rFusionBinaryTable.h
 datatype/rGDALDataType.h
 datatype/rGribDataType.h
 rHeartbeat.h
@@ -102,6 +103,7 @@ datatype/rRadialSetProjection.h
 rRAPIOAlgorithm.h
 rRAPIOData.h
 rRapio.h
+datatype/rMergerBinaryTable.h
 datatype/rMultiDataType.h
 datatype/rDataTable.h
 rRAPIOOptions.h
@@ -180,6 +182,7 @@ rDataArray.cc
 rDataFilter.cc
 datatype/rDataGrid.cc
 rDataProjection.cc
+datatype/rMergerBinaryTable.cc
 datatype/rMultiDataType.cc
 datatype/rDataTable.cc
 datatype/rDataType.cc
@@ -197,6 +200,7 @@ watcher/rFAMWatcher.cc
 index/rFileIndex.cc
 index/rFMLIndex.cc
 notifier/rFMLRecordNotifier.cc
+datatype/rFusionBinaryTable.cc
 datatype/rGDALDataType.cc
 datatype/rGribDataType.cc
 rHeartbeat.cc

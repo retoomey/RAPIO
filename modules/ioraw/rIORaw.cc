@@ -2,6 +2,8 @@
 
 #include "rIOURL.h"
 #include "rBinaryTable.h"
+#include "rFusionBinaryTable.h"
+#include "rMergerBinaryTable.h"
 
 using namespace rapio;
 
