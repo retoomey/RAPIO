@@ -242,7 +242,7 @@ public:
 
   /** One way to get 2D data, using key and level string like our HMET library */
   virtual std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& key, const std::string& levelstr) = 0;
+  getFloat2D(const std::string& key, const std::string& levelstr, const std::string& subtypestr = "" ) = 0;
 
   /** Get a 3D array from grib data */
   virtual std::shared_ptr<Array<float, 3> >

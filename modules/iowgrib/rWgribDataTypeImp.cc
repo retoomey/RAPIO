@@ -75,11 +75,12 @@ WgribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr
 } // WgribDataTypeImp::getMessage
 
 std::shared_ptr<Array<float, 2> >
-WgribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
+WgribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, const std::string& subtypestr )
 {
   // FIXME: Change the API to be more wgrib2 regex friendly.  For now
   // keeping it the same so I don't have to mess with original iogrib, etc.
-  const std::string match = levelstr.empty() ? key : ":" + key + ":" + levelstr + ":";
+  const std::string match_tmp = levelstr.empty() ? key : ":" + key + ":" + levelstr;  // + ":";
+  const std::string match = subtypestr.empty() ? match_tmp + ":" : match_tmp + ":" + subtypestr;
 
   auto c = haveSingleMatch(match);
 

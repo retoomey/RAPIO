@@ -23,7 +23,7 @@ public:
 
   /** One way to get 2D data, using key and level string like our HMET library */
   std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& key, const std::string& levelstr);
+  getFloat2D(const std::string& key, const std::string& levelstr, const std::string& subtypestr = "" );
 
   /** Read the GRIB2 data and put it in a 3-D pointer.
    *    @param key - GRIB2 parameter "TMP"
