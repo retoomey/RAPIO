@@ -110,12 +110,14 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   const std::string placeholder = g.readString(8 * sizeof(int)); // 119-150
 
   // RAPIO types
-  LLH center(radarLatDegs, radarLonDegs, radarMSLmeters); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
+  const float radarMSLkm = radarMSLmeters / 1000.0;
+  LLH center(radarLatDegs, radarLonDegs, radarMSLkm); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
 
 #if 0
     LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
+    LogDebug("   Radar height " << radarMSLmeters << "\n");
     LogDebug("   Scale is " << headerScale << "\n");
-    LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
+    //LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
     LogDebug("   Date: " << dataTime.getString("%Y %m %d %H %M %S") << "\n");
     LogDebug("   Time: " << dataTime << "\n");
     LogDebug(
@@ -299,6 +301,8 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
 
   auto loc = radialset.getLocation();
   auto radarMSLmeters = loc.getHeightKM() * 1000;
+  LogDebug("  write: radarMSLmeters = "<< radarMSLmeters<<"\n");
+  LogDebug("  write: loc.getHeightKM() = "<<loc.getHeightKM()<<"\n");
   auto radarLatDegs   = loc.getLatitudeDeg();
   auto radarLonDegs   = loc.getLongitudeDeg();
 
