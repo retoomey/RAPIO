@@ -281,7 +281,7 @@ public:
         std::make_shared<Stage2Storage>(radarName, typeName, units, center, radarGrid, noMissingSet);
 
       // Set the partition subfolder.
-      if ((partition.myParamType == PartitionType::tile)) {
+      if ((partition.getPartitionType() == PartitionInfo::Type::tile)) {
         std::stringstream s;
         s << "partition" << (i + 1);
         newOne->setSubFolder(s.str());

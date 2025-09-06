@@ -10,8 +10,6 @@
 #include <vector>
 
 namespace rapio {
-enum class PartitionType { none, tile, tree };
-
 /** Store partition information for breaking up a grid
  * into a 2D grid of subgrids.
  *
@@ -19,44 +17,50 @@ enum class PartitionType { none, tile, tree };
  */
 class PartitionInfo : public Data {
 public:
+
+  /** Type of partition */
+  enum class Type { none, tile, tree };
+
   /** Create a partition info */
   PartitionInfo() : myPartitionNumber(0){ }
 
-  PartitionType myParamType;  ///< Type of partition such as none, tile, tree
-  std::string myParamValue;   ///< Param such as 'tile:2x2:1'
-  std::vector<size_t> myDims; ///< Dimensions of the partitioning (2 currently)
-  size_t myPartitionNumber;   ///< Selected partition
-
-  // Calculated
-  std::vector<LLCoverageArea> myPartitions; ///< Partitions of the global grid
-  std::vector<size_t> myPartBoundaryX;      ///< Partition global boundary in X direction
-  std::vector<size_t> myPartBoundaryY;      ///< Partition global boundary in Y direction
-
-  /** Get a reference to the selected partition, only good if valid */
-  const LLCoverageArea&
-  getSelectedPartition()
+  /** Set the partition value string */
+  inline void
+  setParamValue(const std::string& s)
   {
-    return myPartitions[myPartitionNumber - 1];
+    myParamValue = s;
+  }
+
+  /** Get the partition value string */
+  inline std::string
+  getParamValue() const
+  {
+    return myParamValue;
   }
 
   /** Set partition type from a string */
   bool
-  setPartitionType(const std::string& partTypeIn)
-  {
-    std::string partType = Strings::makeLower(partTypeIn);
+  setPartitionType(const std::string& partTypeIn);
 
-    if (!((partType == "tree") || (partType == "tile") || (partType == "none"))) {
-      LogSevere("Unrecognized partition type: '" << partType << "'\n");
-      return false;
-    }
-    if (partType == "tile") {
-      myParamType = PartitionType::tile;
-    } else if (partType == "tree") {
-      myParamType = PartitionType::tree;
-    } else {
-      myParamType = PartitionType::none;
-    }
-    return true;
+  /** Get the partition type */
+  inline Type
+  getPartitionType() const
+  {
+    return myParamType;
+  }
+
+  /** Get selection partition number */
+  inline size_t
+  getSelectedPartitionNumber() const
+  {
+    return myPartitionNumber;
+  }
+
+  /** Set the selected partition number */
+  inline void
+  setSelectedPartitionNumber(size_t p)
+  {
+    myPartitionNumber = p;
   }
 
   /** Set the dimensions */
@@ -70,66 +74,24 @@ public:
 
   /** Partition a global grid using current dimensions */
   bool
-  partition(const LLCoverageArea& grid)
+  partition(const LLCoverageArea& grid);
+
+  /** Get a reference to the selected partition, only good if valid */
+  inline const LLCoverageArea&
+  getSelectedPartition() const
   {
-    /** Our partition has all the information, except for the
-     * global grid generated info, which we will fill in now.
-     * The plugin set myDims for us. */
-
-    // Break up the grid partitions, assuming 2 dimensions
-    // This 'could' be 1x1 or the global as well for say 'none'
-    if (!grid.tile(myDims[0], myDims[1], myPartitions)) {
-      return false;
-    }
-    ;
-
-    // March row order, creating boundary markers in global grid
-    // space for each partition.
-    // Might be easier to do this in the 'tile' method
-    size_t at        = 0;
-    size_t xBoundary = 0;
-    size_t yBoundary = 0;
-
-    for (size_t y = 0; y < myDims[1]; ++y) {
-      for (size_t x = 0; x < myDims[0]; ++x) {
-        auto& g = myPartitions[at];
-
-        // Note we just need one 'size' of the cube in each
-        // direction, so use x=0, y=0
-
-        // For first X, add boundaries for each Y
-        if (x == 0) {
-          // Add global boundaries in the Y direction
-          yBoundary += g.getNumY();
-          myPartBoundaryY.push_back(yBoundary);
-        }
-
-        // For first Y, add boundaries for each X
-        if (y == 0) {
-          xBoundary += g.getNumX();
-          myPartBoundaryX.push_back(xBoundary);
-        }
-        at++;
-      }
-    }
-    return true;
-  } // partition
-
-  /** Get index into partition list from 2D index partition dimensions */
-  size_t
-  index(size_t x, size_t y) const
-  {
-    size_t width = myDims[0];
-
-    return y * width + x;
+    return myPartitions[myPartitionNumber - 1];
   }
 
   /** Get the number of partitions we store */
-  size_t
+  inline size_t
   size() const
   {
     return myPartitions.size();
   }
+
+  // The nextX, nextY and index are called in the fusion loop,
+  // so should be inline
 
   /** Increment dimension X if needed for a given global X */
   inline void
@@ -148,6 +110,17 @@ public:
       atDimY++;
     }
   }
+
+  /** Get index into partition list from 2D index partition dimensions */
+  inline size_t
+  index(size_t x, size_t y) const
+  {
+    size_t width = myDims[0];
+
+    return y * width + x;
+  }
+
+  // ^^ Called by fusion loop
 
   /** Get the index partition dimension in X we are in for a global grid X.
    * Note if no partitions than we return 0 (we intend this) */
@@ -181,28 +154,25 @@ public:
     return partY;
   }
 
+  // Called by rTile to join partition grids
+
   /** Get partition number, if any for given location */
   int
-  getPartitionNumber(const LL& at)
-  {
-    auto& lat = at.getLatitudeDeg();
-    auto& lon = at.getLongitudeDeg();
-    int part  = 0;
-
-    for (auto& p:myPartitions) {
-      // Inclusive on top left of partition.
-      if ( (lat <= p.getNWLat()) && (lat > p.getSELat()) &&
-        (lon >= p.getNWLon()) && (lon < p.getSELon()) )
-      {
-        return part;
-      }
-      part++;
-    }
-    return -1;
-  }
+  getPartitionNumber(const LL& at) const;
 
   /** Log the partition information */
   void
   printTable() const;
+
+protected:
+  Type myParamType;           ///< Type of partition such as none, tile, tree
+  std::string myParamValue;   ///< Param such as 'tile:2x2:1'
+  std::vector<size_t> myDims; ///< Dimensions of the partitioning (2 currently)
+  size_t myPartitionNumber;   ///< Selected partition
+
+  // Calculated
+  std::vector<LLCoverageArea> myPartitions; ///< Partitions of the global grid
+  std::vector<size_t> myPartBoundaryX;      ///< Partition global boundary in X direction
+  std::vector<size_t> myPartBoundaryY;      ///< Partition global boundary in Y direction
 };
 }

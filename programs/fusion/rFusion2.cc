@@ -70,7 +70,7 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
     if (success) {
       // Note: 'none' returns 1 since there is a single global partition basically
-      if (myPartitionInfo.myPartitionNumber < 1) {
+      if (myPartitionInfo.getSelectedPartitionNumber() < 1) {
         LogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.\n");
         exit(1);
       }

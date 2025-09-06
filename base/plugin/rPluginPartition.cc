@@ -44,7 +44,7 @@ void
 PluginPartition::processOptions(RAPIOOptions& o)
 {
   myPartitionAlg = o.getString(myName);
-  myPartitionInfo.myParamValue = myPartitionAlg;
+  myPartitionInfo.setParamValue(myPartitionAlg);
   size_t totalPartitions = 0;
 
   // ----------------------------------------------------
@@ -59,9 +59,9 @@ PluginPartition::processOptions(RAPIOOptions& o)
     }
 
     // If none, use the global grid passed in as a single partition...
-    if (myPartitionInfo.myParamType == PartitionType::none) {
+    if (myPartitionInfo.getPartitionType() == PartitionInfo::Type::none) {
       myPartitionInfo.set2DDimensions(1, 1);
-      myPartitionInfo.myPartitionNumber = 1;
+      myPartitionInfo.setSelectedPartitionNumber(1);
       myValid = true;
 
       // ...otherwise we parse extra params.
@@ -98,7 +98,7 @@ PluginPartition::processOptions(RAPIOOptions& o)
                 "'\n");
             return;
           }
-          myPartitionInfo.myPartitionNumber = partNumber;
+          myPartitionInfo.setSelectedPartitionNumber(partNumber);
         }catch (const std::exception& e) {
           LogSevere("Couldn't parse " << myName << " partition number: " << pieces[2] << "\n");
           return;
