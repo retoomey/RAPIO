@@ -94,6 +94,7 @@ rOption.h
 rOptionList.h
 rOS.h
 rPartitionInfo.h
+rPolarAlgorithm.h
 rProcessTimer.h
 rProject.h
 datatype/rPTreeData.h
@@ -231,6 +232,7 @@ rOption.cc
 rOptionList.cc
 rOS.cc
 rPartitionInfo.cc
+rPolarAlgorithm.cc
 rProcessTimer.cc
 rProject.cc
 datatype/rPTreeData.cc

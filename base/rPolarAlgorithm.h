@@ -1,7 +1,9 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
+#include <rRadialSet.h>
+#include <rElevationVolume.h>
+#include <rTerrainBlockage.h>
 
 namespace rapio {
 /*
@@ -23,48 +25,52 @@ namespace rapio {
  *  This algorithm assumes all tilts have the same number of azimuth
  *  and gates, which simplifies iteration.
  *
- * I'm debating having a stage1 fusion that can just do a preprocessing
- * volume merge algorithm.  So this will also follow the dynamic
- * pluging algorithm model.
- *
  * @author Robert Toomey
  **/
-class PolarMerge : public rapio::RAPIOAlgorithm {
+class PolarAlgorithm : public RAPIOAlgorithm {
 public:
 
-  /** Create an example simple algorithm */
-  PolarMerge(){ };
+  /** Create a PolarAlgorithm */
+  PolarAlgorithm(const std::string& display = "Algorithm") : RAPIOAlgorithm(display){ };
 
-  /** Declare all algorithm command line plugins */
-  virtual void
-  declarePlugins() override;
-
-  /** Declare all algorithm options */
-  virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
-
-  /** Process all algorithm options */
-  virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
-
+  // FIXME: Humm should we do this stuff higher up so algs can do this
+  // if wanted?
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
   processNewData(rapio::RAPIOData& d) override;
 
-  /** Process a new incoming RadialSet */
-  bool
-  processRadialSet(std::shared_ptr<RadialSet> r);
-
   /** Initialization done on first incoming data */
-  void
+  virtual void
   firstDataSetup(std::shared_ptr<RadialSet> r,
     const std::string& radarName, const std::string& typeName);
 
+  /** Process a new incoming RadialSet */
+  virtual bool
+  processRadialSet(std::shared_ptr<RadialSet> r);
+
   /** Process the virtual volume. */
-  void
+  virtual void
   processVolume(const Time& outTime, float useElevDegs, const std::string& useSubtype);
 
 protected:
+
+  /** Declare all default plugins for this class layer,
+   * typically you don't need to change at this level.
+   * @see declarePlugins */
+  virtual void
+  initializePlugins() override;
+
+  /** Declare all default options for this class layer,
+   * typically you don't need to change at this level.
+   * @see declareOptions */
+  virtual void
+  initializeOptions(RAPIOOptions& o) override;
+
+  /** Finalize options by processing, etc.,
+   * typically you don't need to change at this level.
+   * @see processOptions */
+  virtual void
+  finalizeOptions(RAPIOOptions& o) override;
 
   /** The upto inclusion amount */
   float myUptoDegs;
