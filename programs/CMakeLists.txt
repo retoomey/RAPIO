@@ -37,7 +37,7 @@ endif (BUILD_WEB_MODULE)
 #
 add_subdirectory(fusion)
 add_subdirectory(nse)
-add_subdirectory(polarMerge)
+add_subdirectory(polar)
 
 ##################################################################
 # Modular Algorithms (callable from groups such as FusionAlgs)

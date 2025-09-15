@@ -26,8 +26,16 @@ PolarAlgorithm::initializeOptions(RAPIOOptions& o)
   o.setDefaultValue("terrain", "lak");
 
   // We'll have default abilities for 'clipping' the volume
-  o.optional("upto", "1000",
-    "Over this value in elevation angle degrees is ignored.  So upto=3.5 for RadialSets means only include tilts of 3.5 degrees or less.\n");
+  // FIXME: Could these be automatic options for volume plugin?
+  // I kinda like that idea, maybe later
+  o.optional("topDegs", "1000",
+    "Elevation angle top cutoff degrees. Tilts outside are ignored.\n");
+  o.optional("bottomDegs", "-1000",
+    "Elevation angle bottom cutoff degrees. Tilts outside are ignored.\n");
+  o.optional("gates", "-1",
+    "Elevation output gates.  -1 uses max gates of tilts in current volume.\n");
+  o.optional("azimuths", "-1",
+    "Elevation output azimuths.  -1 uses max azimuths of tilts in current volume.\n");
 
   return RAPIOAlgorithm::initializeOptions(o);
 }
@@ -35,7 +43,10 @@ PolarAlgorithm::initializeOptions(RAPIOOptions& o)
 void
 PolarAlgorithm::finalizeOptions(RAPIOOptions& o)
 {
-  myUptoDegs = o.getFloat("upto");
+  myTopDegs     = o.getFloat("topDegs");
+  myBottomDegs  = o.getFloat("bottomDegs");
+  myNumGates    = o.getInteger("gates");
+  myNumAzimuths = o.getInteger("azimuths");
   return RAPIOAlgorithm::finalizeOptions(o);
 }
 
@@ -64,7 +75,12 @@ PolarAlgorithm::processNewData(rapio::RAPIOData& d)
 bool
 PolarAlgorithm::processRadialSet(std::shared_ptr<RadialSet> r)
 {
-  if (r->getElevationDegs() > myUptoDegs) {
+  if (r == nullptr) { return false; }
+
+  // Clip based on RadialSet angle
+  auto elevDegs = r->getElevationDegs();
+
+  if ((elevDegs > myTopDegs) || (elevDegs < myBottomDegs)) {
     return false;
   }
 
@@ -156,18 +172,69 @@ PolarAlgorithm::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& 
   }
 } // PolarAlgorithm::firstDataSetup
 
+std::shared_ptr<RadialSet>
+PolarAlgorithm::createOutputRadialSet(
+  const Time& useTime, float useElevDegs, const std::string& useTypename, const std::string& useSubtype)
+{
+  if (myElevationVolume == nullptr) { return nullptr; }
+
+  auto& tilts = myElevationVolume->getVolume();
+
+  if (tilts.size() < 1) { return nullptr; }
+
+  // ----------------------------------
+  // Dynamic size based on the max size of tilt in a volume.
+  // FIXME: A max dimensions method for ElevationVolume/Volume?
+  size_t maxGates   = 1;
+  size_t maxRadials = 1;
+
+  for (size_t i = 0; i < tilts.size(); ++i) {
+    // It should be a radial set.
+    if (auto r = std::dynamic_pointer_cast<rapio::RadialSet>(tilts[i])) {
+      const size_t numGates   = r->getNumGates();
+      const size_t numRadials = r->getNumRadials();
+      if (numGates > maxGates) {
+        maxGates = numGates;
+      }
+      if (numRadials > maxRadials) {
+        maxRadials = numRadials;
+      }
+    }
+  }
+  // Replace with setting if param passed
+  if (myNumGates > -1) { maxGates = myNumGates; }
+  if (myNumAzimuths > -1) { maxRadials = myNumAzimuths; }
+
+  // ----------------------------------
+  // if (maxRadials > 360){ maxRadials = 360; }
+  // if (maxRadials > 720){ maxRadials = 720; }
+
+  // Create the output based on one of the inputs
+  auto base = std::dynamic_pointer_cast<rapio::RadialSet>(tilts[0]);
+
+  // FIXME: Humm a polar might want to change units I think.
+  // Some other settings we might need access as well
+  auto set = RadialSet::Create(useTypename,
+      base->getUnits(),
+      base->getLocation(),
+      useTime, // Could see current time or tilt time
+      useElevDegs,
+      base->getDistanceToFirstGateM(),
+      base->getGateWidthKMs() * 1000.0,
+      maxRadials,
+      maxGates);
+
+  set->setSubType(useSubtype); // Mark special
+  // Debating forcing RadarName in Create, but make sure we
+  // have one since many algs require this field.
+  set->setRadarName(base->getRadarName());
+  // ---------------------------------------------------
+
+  return set;
+} // PolarAlgorithm::createOutputRadialSet
+
 void
 PolarAlgorithm::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
   LogInfo("Base Algorithm does nothing\n");
 } // PolarAlgorithm::processVolume
-
-int
-main(int argc, char * argv[])
-{
-  // Create your algorithm instance and run it.  Isn't this API better?
-  PolarAlgorithm alg = PolarAlgorithm();
-
-  // Run this thing standalone.
-  alg.executeFromArgs(argc, argv);
-}

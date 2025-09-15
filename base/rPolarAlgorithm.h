@@ -2,6 +2,7 @@
 
 #include <rRAPIOAlgorithm.h>
 #include <rRadialSet.h>
+#include <rRadialSetIterator.h>
 #include <rElevationVolume.h>
 #include <rTerrainBlockage.h>
 
@@ -30,6 +31,44 @@ namespace rapio {
 class PolarAlgorithm : public RAPIOAlgorithm {
 public:
 
+  /** New way using the callback iterator API.  This will allow us to hide
+   * the 'normal' ways of iterating over DataTypes.  In particular,
+   * the LatLonGrid is complicated. Typically one marches over lat/lon and
+   * has to do angle calculations, etc.  We can hide all that from users. */
+  class ElevationVolumeCallback : public RadialSetCallback {
+public:
+
+    /** Add an Elevation volume to us */
+    void
+    addVolume(const Volume& e)
+    {
+      auto& tilts = e.getVolume();
+
+      for (size_t i = 0; i < tilts.size(); ++i) {
+        // Scoped as long as ElevationVolume is
+        auto pc = tilts[i]->getDataTypePointerCache();
+        pointerCache.push_back(pc.get());
+      }
+    }
+
+    /** Get reference to pointer cache */
+    inline std::vector<DataTypePointerCache *>&
+    getPointerCache()
+    {
+      return pointerCache;
+    }
+
+    /** For each gate, we've gonna take the absolute max of the other gates
+     * in the volume vertically */
+    virtual void
+    handleGate(RadialSetIterator * it) = 0;
+
+private:
+    /** The pointer cache for our volume items. */
+    std::vector<DataTypePointerCache *> pointerCache;
+  };
+
+  // ------------------------------------
   /** Create a PolarAlgorithm */
   PolarAlgorithm(const std::string& display = "Algorithm") : RAPIOAlgorithm(display){ };
 
@@ -52,6 +91,11 @@ public:
   virtual void
   processVolume(const Time& outTime, float useElevDegs, const std::string& useSubtype);
 
+  /** Create output RadialSet for the current volume */
+  virtual std::shared_ptr<RadialSet>
+  createOutputRadialSet(const Time& useTime, float useElevDegs,
+    const std::string& useTypename, const std::string& useSubtype);
+
 protected:
 
   /** Declare all default plugins for this class layer,
@@ -72,8 +116,20 @@ protected:
   virtual void
   finalizeOptions(RAPIOOptions& o) override;
 
-  /** The upto inclusion amount */
-  float myUptoDegs;
+  /** The top elevation angle inclusion amount */
+  float myTopDegs;
+
+  /** The bottom elevation angle inclusion amount */
+  float myBottomDegs;
+
+  /** Number of output gates, or -1 if max of current volume */
+  int myNumGates;
+
+  /** Number of output azimuths, or -1 if max of current volume */
+  int myNumAzimuths;
+
+  // FIXME: No reason for these simple polar algorithms we can't handle
+  // N moments/radars.  Just need elevation volume per each.
 
   /** Store first radar name.  Currently we can only handle 1 radar */
   std::string myRadarName;
@@ -86,8 +142,5 @@ protected:
 
   /** Store terrain blockage */
   std::shared_ptr<TerrainBlockage> myTerrainBlockage;
-
-  /** The current data used for merging */
-  std::shared_ptr<RadialSet> myMergedSet;
 };
 }

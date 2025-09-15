@@ -11,3 +11,11 @@ target_link_libraries(rPolarVMax rapio)
 install(TARGETS rPolarVMax
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+
+add_executable(rEchoTop
+  rEchoTop.cc
+)
+target_link_libraries(rEchoTop rapio)
+install(TARGETS rEchoTop
+   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
