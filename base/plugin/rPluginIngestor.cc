@@ -110,5 +110,10 @@ PluginIngestor::execute(RAPIOProgram * callerin)
 
   LogInfo(rSize << " initial records from " << wanted << " sources\n");
 
+  // After all connections/archive reading/filtering, tell
+  // RecordQueue to try processing queue.  This is important for the end
+  // record event on empty queue (all records were filtered out, etc.)
+  q->setReady();
+
   myActive = true;
 } // PluginIngestor::execute
