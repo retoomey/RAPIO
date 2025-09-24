@@ -25,18 +25,31 @@ class WgribCallback : public Utility {
 public:
 
   /** Create a wgrib callback with a given URL file location */
-  WgribCallback(const URL& gribfile, const std::string& match) : myFilename(gribfile.toString()), myMatch(match)
+  WgribCallback(const URL& gribfile, const std::string& match, const std::string& dkey)
+    : myFilename(gribfile.toString()), myMatch(match), myDKey(dkey)
   { }
 
   virtual
   ~WgribCallback() = default;
 
   /** Add extra wgrib2 args if wanted */
-  virtual void addExtraArgs(std::vector<std::string>& args){ }
+  virtual void
+  addExtraArgs(std::vector<std::string>& args)
+  {
+    if (!myMatch.empty()) {
+      args.push_back("-match");
+      args.push_back(myMatch);
+    }
+
+    if (!myDKey.empty()) {
+      args.push_back("-d");
+      args.push_back(myDKey);
+    }
+  }
 
   /** Execute the callback, calling wgrib2 */
-  virtual void
-  execute();
+  virtual std::vector<std::string>
+  execute(bool print = true, bool capture = true);
 
   /** Initialize at the start of a grib2 catalog pass */
   virtual void
@@ -100,8 +113,11 @@ protected:
   /** Store the filename of the grib2 location */
   std::string myFilename;
 
-  /** The match part of wgrib2 args */
+  /** The match part of wgrib2 args, using "-match" */
   std::string myMatch;
+
+  /** The d part of wgrib2 args, using "-d" */
+  std::string myDKey;
 
   // These work for a single match.  Multiple match callbacks this
   // will be the last matched item.  Might need more work here

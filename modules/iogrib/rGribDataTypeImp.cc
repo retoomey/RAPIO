@@ -7,35 +7,36 @@
 
 using namespace rapio;
 
-GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) : 
-  //myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false),myValidPtr(std::make_shared<int>(0))
-  myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false),myValidPtr(std::make_shared<GribPointerHolder>(this))
+GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, int mode) :
+  // myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false),myValidPtr(std::make_shared<int>(0))
+  myURL(url), myBuf(buf), myMode(mode), myHaveIDX(false), myValidPtr(std::make_shared<GribPointerHolder>(this))
 {
-    myDataType = "GribData";
+  myDataType = "GribData";
 
-    // Figure out the index name of the ".idx" file
-    // We do the 'root' to get rid of .gz suffixes for example that we auto unwrap
-    std::string root;
-    std::string ext = OS::getRootFileExtension(myURL.toString(), root);
-    myIndexURL = URL(root + "." + ext + ".idx");
+  // Figure out the index name of the ".idx" file
+  // We do the 'root' to get rid of .gz suffixes for example that we auto unwrap
+  std::string root;
+  std::string ext = OS::getRootFileExtension(myURL.toString(), root);
 
-    if (OS::isRegularFile(myIndexURL.toString())){
-      LogInfo("Located IDX file at " << myIndexURL << ".\n");
-      if (GribDatabase::readIDXFile(myIndexURL, myIDXMessages)){
-        myHaveIDX = true;
-      }else{
-        LogInfo("Couldn't parse/read IDX file, using fallback database.\n");
-      }
-    }else{
-      LogInfo("No IDX file found, using fallback database.\n");
+  myIndexURL = URL(root + "." + ext + ".idx");
+
+  if (OS::isRegularFile(myIndexURL.toString())) {
+    LogInfo("Located IDX file at " << myIndexURL << ".\n");
+    if (GribDatabase::readIDXFile(myIndexURL, myIDXMessages)) {
+      myHaveIDX = true;
+    } else {
+      LogInfo("Couldn't parse/read IDX file, using fallback database.\n");
     }
+  } else {
+    LogInfo("No IDX file found, using fallback database.\n");
+  }
 
-    // Hack to snag first time.
-    // Gonna force message mode here for the time snag
-    // Note this means direct URL reading breaks. Need field cleanup
-    GribScanFirstMessage scan(this);
+  // Hack to snag first time.
+  // Gonna force message mode here for the time snag
+  // Note this means direct URL reading breaks. Need field cleanup
+  GribScanFirstMessage scan(this);
 
-    IOGrib::scanGribDataFILE(myURL, &scan, this);
+  IOGrib::scanGribDataFILE(myURL, &scan, this);
 }
 
 void
@@ -58,7 +59,7 @@ GribDataTypeImp::printCatalog()
 } // GribDataTypeImp::printCatalog
 
 std::shared_ptr<GribMessage>
-GribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr)
+GribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr, const std::string& substr)
 {
   GribMatcher match1(key, levelstr);
 
@@ -71,7 +72,7 @@ GribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr)
 }
 
 std::shared_ptr<Array<float, 2> >
-GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr)
+GribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr, const std::string& substr)
 {
   GribMatcher match1(key, levelstr);
 
@@ -108,50 +109,51 @@ GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLe
 bool
 GribDataTypeImp::getIDXField(size_t message, size_t field, GribIDXField& out)
 {
-  if (myIDXMessages.size() < 1){ return false; }
+  if (myIDXMessages.size() < 1) { return false; }
 
   bool checkMatch = false;
 
   // If we have enough messages...
-  if ((message > 0) && (message-1 < myIDXMessages.size())){
+  if ((message > 0) && (message - 1 < myIDXMessages.size())) {
     // Access the message...
-    auto& m = myIDXMessages[message-1];
-    //...and then the field number
-    if (m.myMessageNumber == message){ // FIXME: maybe we'll remove it
-      if (field <= m.myFields.size()){ // base 1
-	 out = m.myFields[field-1];
-         return true;
+    auto& m = myIDXMessages[message - 1];
+    // ...and then the field number
+    if (m.myMessageNumber == message) { // FIXME: maybe we'll remove it
+      if (field <= m.myFields.size()) { // base 1
+        out = m.myFields[field - 1];
+        return true;
       }
     }
   }
   return false;
 }
 
-bool 
+bool
 GribDataTypeImp::getIDXProductName(size_t message, size_t field, std::string& product)
 {
   GribIDXField f;
-  if (getIDXField(message, field, f)){
+
+  if (getIDXField(message, field, f)) {
     product = f.myProduct;
     return true;
   }
   return false;
 }
 
-bool 
+bool
 GribDataTypeImp::getIDXLevelName(size_t message, size_t field, std::string& level)
 {
   GribIDXField f;
-  if (getIDXField(message, field, f)){
+
+  if (getIDXField(message, field, f)) {
     level = f.myLevel;
     return true;
   }
   return false;
 }
 
-
 std::shared_ptr<LatLonGrid>
-GribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& levelstr)
+GribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& levelstr, const std::string& substr)
 {
   LogSevere("Get LatLonGrid not implemented in iogrib2 module, try iowgrib2\n");
   return nullptr;

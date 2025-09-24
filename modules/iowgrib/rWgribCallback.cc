@@ -69,8 +69,8 @@ WgribCallback::handleSetFieldInfo(unsigned char ** sec, int msg_no, int submsg, 
   myTime = theTime;
 } // WgribCallback::handleSetFieldInfo
 
-void
-WgribCallback::execute()
+std::vector<std::string>
+WgribCallback::execute(bool print, bool capture)
 {
   RAPIOCallbackCPP catalog(this);
 
@@ -80,10 +80,12 @@ WgribCallback::execute()
   args.push_back("wgrib2");
   args.push_back(myFilename);
 
+  #if 0
   if (!myMatch.empty()) {
     args.push_back("-match");
     args.push_back(myMatch);
   }
+  #endif
 
   // Allow subclasses to add extra args
   addExtraArgs(args);
@@ -130,12 +132,14 @@ WgribCallback::execute()
   }
   LogInfo("Calling: " << param.str() << "\n");
 
-  // FIXME: Mode flag to toggle capture vs direct output
   // Execute and capture output
   std::vector<std::string> result =
-    IOWgrib::capture_vstdout_of_wgrib2(argv.size(), argv.data());
+    IOWgrib::capture_vstdout_of_wgrib2(capture, argv.size(), argv.data());
 
-  for (size_t i = 0; i < result.size(); ++i) {
-    LogInfo("[wgrib2] " << result[i] << "\n");
+  if (capture && print) {
+    for (size_t i = 0; i < result.size(); ++i) {
+      LogInfo("[wgrib2] " << result[i] << "\n");
+    }
   }
+  return result;
 } // WgribCallback::execute

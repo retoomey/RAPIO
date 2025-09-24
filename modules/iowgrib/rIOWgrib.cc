@@ -51,11 +51,9 @@ IOWgrib::initialize()
 }
 
 std::vector<std::string>
-IOWgrib::capture_vstdout_of_wgrib2(int argc, const char * argv[])
+IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[])
 {
   std::vector<std::string> voutput;
-
-  bool useCapture = true;
 
   if (useCapture) {
     int pipefd[2];

@@ -35,7 +35,7 @@ WgribMessageImp::getField(size_t fieldNumber)
       match += "." + std::to_string(fieldNumber);
     }
     match += ":";
-    CatalogCallback c(myURL, match);
+    CatalogCallback c(myURL, match, "");
     c.execute();
     auto count = c.getMatchCount();
     if (count > 1) {

@@ -60,16 +60,16 @@ GribMessageImp::getField(size_t fieldNumber)
 std::ostream&
 GribMessageImp::print(std::ostream& os)
 {
-    for(size_t fieldNumber=1; fieldNumber<=myNumberFields; ++fieldNumber) {
-      GribFieldImp theField(myBufferPtr, myMessageNumber, fieldNumber, myDataTypeValid);
-      // Message 'header'
-      os << myMessageNumber;
-      if (myNumberFields > 1) {
-        os << "." << fieldNumber;
-      }
-      os << ":" << getFileOffset() << ":";
-      // Now the field
-      theField.print(os);
+  for (size_t fieldNumber = 1; fieldNumber <= myNumberFields; ++fieldNumber) {
+    GribFieldImp theField(myBufferPtr, myMessageNumber, fieldNumber, myDataTypeValid);
+    // Message 'header'
+    os << myMessageNumber;
+    if (myNumberFields > 1) {
+      os << "." << fieldNumber;
     }
-    return os;
+    os << ":" << getFileOffset() << ":";
+    // Now the field
+    theField.print(os);
+  }
+  return os;
 }

@@ -22,7 +22,7 @@ NumberToStringLookup::add(int v, const std::string& s)
 {
   for (auto& i:myValues) {
     if (i == v) {
-      //LogSevere("-------------------->DUPLICATE ADD OF VALUE " << i << "\n");
+      // LogSevere("-------------------->DUPLICATE ADD OF VALUE " << i << "\n");
       return; // Can't duplicate
     }
   }
@@ -491,22 +491,25 @@ GribDatabase::readGribDatabase()
   }
 } // readGribDatabase
 
-void GribIDXField::print(const size_t messageNumber, bool printFieldNumber)
+void
+GribIDXField::print(const size_t messageNumber, bool printFieldNumber)
 {
-  //std::string theTime = myTime.getString("%Y%m%d%H");
+  // std::string theTime = myTime.getString("%Y%m%d%H");
   std::string theTime = myDateString;
 
   std::cout << messageNumber;
-  if (printFieldNumber){
-    std::cout <<  "."<<myFieldNumber;
+  if (printFieldNumber) {
+    std::cout << "." << myFieldNumber;
   }
-  std::cout << ":"<<myOffset <<":" << theTime << ":"<<myProduct<<":"<<myLevel<< ":"<<myType<<":\n";
+  std::cout << ":" << myOffset << ":" << theTime << ":" << myProduct << ":" << myLevel << ":" << myType << ":\n";
 }
 
-void GribIDXMessage::print()
+void
+GribIDXMessage::print()
 {
   bool printFieldNumber = (myFields.size() > 1);
-  for(auto& f:myFields){
+
+  for (auto& f:myFields) {
     f.print(myMessageNumber, printFieldNumber);
   }
 }
@@ -514,11 +517,11 @@ void GribIDXMessage::print()
 bool
 GribDatabase::parseIDXLine(const std::string& line, GribIDXField& idx, size_t& messageNumber)
 {
-    // Recover from bad data, etc.
-    try {
+  // Recover from bad data, etc.
+  try {
     // -----------------------------------
     // Now process the line fields
-    // 0    1           2        3     4     5    6 
+    // 0    1           2        3     4     5    6
     // 105:3102971:d=2024042900:RWMR:275 mb:anl:
     // message: offset: date: productname levelName type
     //
@@ -526,66 +529,66 @@ GribDatabase::parseIDXLine(const std::string& line, GribIDXField& idx, size_t& m
     Strings::split(line, ':', &out);
 
     // Size should be at least 5...
-    if (out.size() < 5){
+    if (out.size() < 5) {
       return false;
     }
-    
+
     // ---------
     // Handle the message field.. (105.1) [0]
     std::vector<std::string> message;
     Strings::split(out[0], '.', &message);
-    if (message.size() > 0){
-      messageNumber = std::stoull(message[0]);
-      idx.myFieldNumber = (message.size() > 1)? std::stoull(message[1]): 1;
-    }else{
+    if (message.size() > 0) {
+      messageNumber     = std::stoull(message[0]);
+      idx.myFieldNumber = (message.size() > 1) ? std::stoull(message[1]) : 1;
+    } else {
       return false;
     }
 
     // ---------
     // Handle the offset field.. (3102971) [1]
-       idx.myOffset = std::stol(out[1]); // can throw
+    idx.myOffset = std::stol(out[1]); // can throw
     // ---------
     // Handle the date field [2]
     // FIXME: Issue here is that wgrib2 seems to have many versions of this
     // in the field (see wgrib2/Sec1.c) So for now, we'll just store the
     // string.
-#if 0
+    #if 0
     // One format I've see is d=YYYYMMDDHH
     std::vector<std::string> outdate;
     Strings::split(out[2], '=', &outdate);
-    if ((outdate.size() == 2) && (outdate[0] == "d")){
-     //LogDebug("DATE: " << outdate[1] << "\n");
-     const std::string convert = "%Y%m%d%H"; // One of the Grib formats it seems
-     idx.myTime = Time(outdate[1], convert);
-     //LogDebug("Converted Time is " << idx.myTime.getString(convert) << "\n");
-    }else{
-	   break;
-	    // bad date?
+    if ((outdate.size() == 2) && (outdate[0] == "d")) {
+      // LogDebug("DATE: " << outdate[1] << "\n");
+      const std::string convert = "%Y%m%d%H"; // One of the Grib formats it seems
+      idx.myTime = Time(outdate[1], convert);
+      // LogDebug("Converted Time is " << idx.myTime.getString(convert) << "\n");
+    } else {
+      break;
+      // bad date?
     }
-#endif
+    #endif // if 0
     idx.myDateString = out[2];
 
     // ---------
     // Handle the product and field names [3, 4]
-    idx.myProduct = out[3]; 
-    idx.myLevel = out[4];
-    idx.myType = out[5];
-
-    }catch(const std::exception& e)
-    {
-      // Any failure, get out
-      LogSevere("Error reading IDX file:\n");
-      LogSevere(e.what());
-      LogSevere("Ignoring IDX file catalog and using internal catalog.\n");
-      return false;
-    }
-   return true;
-}
+    idx.myProduct = out[3];
+    idx.myLevel   = out[4];
+    idx.myType    = out[5];
+  }catch (const std::exception& e)
+  {
+    // Any failure, get out
+    LogSevere("Error reading IDX file:\n");
+    LogSevere(e.what());
+    LogSevere("Ignoring IDX file catalog and using internal catalog.\n");
+    return false;
+  }
+  return true;
+} // GribDatabase::parseIDXLine
 
 bool
 GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
 {
   std::vector<char> buf;
+
   IOURL::read(url, buf);
 
   if (buf.empty()) {
@@ -594,15 +597,16 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
   }
 
   bool haveAtLeastOne = false;
-  bool success = true;
-  size_t atMessage = 1;
+  bool success        = true;
+  size_t atMessage    = 1;
+
   messages.push_back(GribIDXMessage(atMessage));
 
-  auto it = buf.begin();
+  auto it  = buf.begin();
   auto end = buf.end();
   size_t lineCounter = 0;
-  while (it != end){
 
+  while (it != end) {
     // Gather a line from the char buffer
     std::string line;
     while (it != end && *it != '\n') {
@@ -614,39 +618,40 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
     // know field number until after reading it.
     GribIDXField idx;
     size_t messageNumber;
-    if (parseIDXLine(line, idx, messageNumber)){
-
+    if (parseIDXLine(line, idx, messageNumber)) {
       // Moving forward to next message, create it...
-      if (messageNumber == atMessage+1) {
-        messages.push_back(GribIDXMessage(atMessage+1));
-	atMessage++;
-      //...otherwise better match current message
-      }else if (messageNumber != atMessage){
-         LogSevere("Expected message " << atMessage << " or " << atMessage+1 << " and got " << messageNumber << " in IDX file.\n");
-	 return false;
+      if (messageNumber == atMessage + 1) {
+        messages.push_back(GribIDXMessage(atMessage + 1));
+        atMessage++;
+        // ...otherwise better match current message
+      } else if (messageNumber != atMessage) {
+        LogSevere(
+          "Expected message " << atMessage << " or " << atMessage + 1 << " and got " << messageNumber <<
+            " in IDX file.\n");
+        return false;
       }
       // Add field to the current message slot
-      messages[atMessage-1].myFields.push_back(idx);
+      messages[atMessage - 1].myFields.push_back(idx);
 
       haveAtLeastOne = true;
-    }else{
+    } else {
       LogSevere("Error reading line " << lineCounter << " of IDX file:\n");
       LogSevere("Ignoring IDX file catalog and using internal.\n");
       return false;
     }
-    
+
     // Skip the newline character if present
-    if (it != end && *it == '\n') {
-        ++it;
+    if ((it != end) && (*it == '\n')) {
+      ++it;
     }
     lineCounter++;
   }
 
   // If no errors and at least one record, we'll take it
-  if (success && haveAtLeastOne){
+  if (success && haveAtLeastOne) {
     LogInfo("Total IDX lines parsed: " << lineCounter << "\n");
-  }else{
+  } else {
     messages.clear(); // Not gonna be used
   }
   return true;
-}
+} // GribDatabase::readIDXFile

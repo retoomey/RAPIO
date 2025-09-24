@@ -10,13 +10,14 @@ using namespace rapio;
 std::shared_ptr<Array<float, 2> > Array2DCallback::myTemp2DArray;
 std::shared_ptr<Array<float, 3> > Array3DCallback::myTemp3DArray;
 
-ArrayCallback::ArrayCallback(const URL& u, const std::string& match) : WgribCallback(u, match)
+ArrayCallback::ArrayCallback(const URL& u, const std::string& match,
+  const std::string& dkey) : WgribCallback(u, match, dkey)
 { }
 
 void
 ArrayCallback::handleInitialize(int * decode, int * latlon)
 {
-  std::cout << "[C++] Initialize array\n";
+  //  std::cout << "[C++] Initialize array\n";
   // For grids, we want decoding/unpacking of data
   *decode = 1;
   // For grids, we want the lat lon values
@@ -27,7 +28,7 @@ ArrayCallback::handleInitialize(int * decode, int * latlon)
 void
 ArrayCallback::handleFinalize()
 {
-  std::cout << "[C++] Finalize array\n";
+  // std::cout << "[C++] Finalize array\n";
 }
 
 void
@@ -85,9 +86,15 @@ Array3DCallback::executeLayer(size_t layer)
 {
   std::string holdMatch = myMatch; // Original key
 
-  myMatch       = myMatch + ":" + myLayers[layer] + ":";
+  #if 0
+  myMatch = myMatch + ":" + myLayers[layer] + ":";
+  #endif
+  myMatch = ""; // deprecated I think
+  myDKey  = myLayers[layer];
+
   myLayerNumber = layer;
 
-  execute();
+  execute(false);
+  myDKey  = "";
   myMatch = holdMatch;
 }

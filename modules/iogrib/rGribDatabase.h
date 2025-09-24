@@ -14,39 +14,41 @@ extern "C" {
 }
 
 namespace rapio {
-
 /** Simple holder for field information from an idx file */
-class GribIDXField: public Data {
+class GribIDXField : public Data {
 public:
-   size_t myFieldNumber;   ///< Field number
-   size_t myOffset;        ///< Offset in the grib data
-   //Time myTime;          ///< Time unimplemented due to multiple IDX formats (for now)
-   std::string myDateString;      ///< Date string such as d=YYYYMMDDHH 
-   std::string myProduct;  ///< Product name
-   std::string myLevel;    ///< Level name
-   std::string myType;     ///< Type name such as anl
+  size_t myFieldNumber; ///< Field number
+  size_t myOffset;      ///< Offset in the grib data
+  // Time myTime;          ///< Time unimplemented due to multiple IDX formats (for now)
+  std::string myDateString; ///< Date string such as d=YYYYMMDDHH
+  std::string myProduct;    ///< Product name
+  std::string myLevel;      ///< Level name
+  std::string myType;       ///< Type name such as anl
 
-   /** Print the field */
-   void print(const size_t messageNumber, bool printFieldNumber);
+  /** Print the field */
+  void
+  print(const size_t messageNumber, bool printFieldNumber);
 };
 
 /** Simple holder for a message from an idx file.
  * Note, for lookup we want fields grouped, for example
  * the idx file can have 100.1 100.2 for multiple fields
  * of message 100 */
-class GribIDXMessage: public Data {
+class GribIDXMessage : public Data {
 public:
-   /** Create a grib IDX message.  Since we'll vector this I'm
-    * not sure we 'need' to store the message number.  We'll keep
-    * it for now, but for memory could maybe remove this */
-   GribIDXMessage(size_t m):myMessageNumber(m){}
 
-   size_t myMessageNumber; ///< Message number
+  /** Create a grib IDX message.  Since we'll vector this I'm
+   * not sure we 'need' to store the message number.  We'll keep
+   * it for now, but for memory could maybe remove this */
+  GribIDXMessage(size_t m) : myMessageNumber(m){ }
 
-   std::vector<GribIDXField> myFields; ///< Fields for thie message
+  size_t myMessageNumber; ///< Message number
 
-   /** Print the message fields */
-   void print();
+  std::vector<GribIDXField> myFields; ///< Fields for thie message
+
+  /** Print the message fields */
+  void
+  print();
 };
 
 /** A simple lookup from number to string.
@@ -68,8 +70,8 @@ public:
   add(int v, const std::string& s);
 
   /** Simple get */
-  std::string get(int v);
-
+  std::string
+  get(int v);
 };
 
 class GribLookup : public IO
@@ -103,9 +105,10 @@ public:
  */
 class GribDatabase : public Utility {
 public:
+
   /** a quick dirty wgrib2 gribtab.dat reader to make a lookup database.
    * Usually we look up by name and level and strings are easier for
-   * the user. 
+   * the user.
    */
   static void
   readGribDatabase();
@@ -119,10 +122,12 @@ public:
   getLevelName(gribfield * gfld);
 
   /** Read a line of a idx file, returning field info and the read message number */
-  static bool parseIDXLine(const std::string& line, GribIDXField& idx, size_t& messageNumber);
+  static bool
+  parseIDXLine(const std::string& line, GribIDXField& idx, size_t& messageNumber);
 
   /** Read a grib2 idx file into a GribIDXMessage ordered vector */
-  static bool readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages);
+  static bool
+  readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages);
 
 private:
 
@@ -152,6 +157,5 @@ private:
   static GribLookup *
   huntDatabase(int d, int m, int c, int l, int pc, int pn,
     const std::string& k, const std::string& des);
-
 };
 }

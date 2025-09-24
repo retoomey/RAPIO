@@ -34,11 +34,11 @@ public:
 
   /** Get matched message itself by key and level */
   std::shared_ptr<GribMessage>
-  getMessage(const std::string& key, const std::string& levelstr);
+  getMessage(const std::string& key, const std::string& levelstr, const std::string& substr = "");
 
   /** One way to get 2D data, using key and level string like our HMET library */
   std::shared_ptr<Array<float, 2> >
-  getFloat2D(const std::string& key, const std::string& levelstr);
+  getFloat2D(const std::string& key, const std::string& levelstr, const std::string& substr = "");
 
   /** Read the GRIB2 data and put it in a 3-D pointer.
    *    @param key - GRIB2 parameter "TMP"
@@ -49,24 +49,27 @@ public:
 
   /** Get a projected LatLonGrid from the grib data */
   std::shared_ptr<LatLonGrid>
-  getLatLonGrid(const std::string& key, const std::string& levelstr);
+  getLatLonGrid(const std::string& key, const std::string& levelstr, const std::string& substr = "");
 
   /** Get our validity shared_ptr (only exists if we do)  This is passed to created messages/fields
    * so they can weak reference it. */
   std::shared_ptr<GribPointerHolder> getValidityPtr(){ return myValidPtr; }
 
   // Access IDX if available
-  
+
   /** Get product name of field and message number given from our IDX database */
-  bool getIDXProductName(size_t message, size_t field, std::string& product);
+  bool
+  getIDXProductName(size_t message, size_t field, std::string& product);
 
   /** Get level name of field and message number given from our IDX database */
-  bool getIDXLevelName(size_t message, size_t field, std::string& level);
+  bool
+  getIDXLevelName(size_t message, size_t field, std::string& level);
 
 private:
 
   /** Get message/field of our IDX storage, if exists */
-  bool getIDXField(size_t message, size_t field, GribIDXField& out);
+  bool
+  getIDXField(size_t message, size_t field, GribIDXField& out);
 
   /** Store the URL to the grib2 file locationif any */
   URL myURL;

@@ -22,7 +22,7 @@ class ArrayCallback : public WgribCallback {
 public:
 
   /** Initialize a Catalog callback */
-  ArrayCallback(const URL& u, const std::string& match);
+  ArrayCallback(const URL& u, const std::string& match, const std::string& dkey);
 
   /** Initialize at the start of a grib2 catalog pass */
   void
@@ -41,7 +41,8 @@ public:
 class Array2DCallback : public ArrayCallback {
 public:
   /** Initialize a Catalog callback */
-  Array2DCallback(const URL& u, const std::string& match) : ArrayCallback(u, match){ };
+  Array2DCallback(const URL& u, const std::string& match,
+    const std::string& dkey) : ArrayCallback(u, match, dkey){ };
 
   /** Called with raw data, unprojected */
   virtual void
@@ -68,7 +69,7 @@ class Array3DCallback : public ArrayCallback {
 public:
 
   /** Initialize a Catalog callback */
-  Array3DCallback(const URL& u, const std::string& match, std::vector<std::string> z) : ArrayCallback(u, match),
+  Array3DCallback(const URL& u, const std::string& match, std::vector<std::string> z) : ArrayCallback(u, match, ""),
     myLayers(z){ };
 
   /** Called with raw data, unprojected */

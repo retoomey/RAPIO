@@ -25,7 +25,7 @@ class GridCallback : public WgribCallback {
 public:
 
   /** Initialize a Catalog callback */
-  GridCallback(const URL& u, const std::string& match);
+  GridCallback(const URL& u, const std::string& match, const std::string& dkey);
 
   /** Initialize at the start of a grib2 catalog pass */
   void

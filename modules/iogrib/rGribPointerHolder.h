@@ -10,8 +10,8 @@ class GribDataTypeImp;
  * This will work even if GribDataTypeImp is not a std::shared_ptr. */
 class GribPointerHolder : public Data {
 public:
-   GribPointerHolder(GribDataTypeImp* h):myDataType(h){}
+  GribPointerHolder(GribDataTypeImp * h) : myDataType(h){ }
 
-   GribDataTypeImp* myDataType;
+  GribDataTypeImp * myDataType;
 };
 }

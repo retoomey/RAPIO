@@ -8,7 +8,6 @@
 #include <iostream>
 
 namespace rapio {
-
 class GribMessageImp : public GribMessage {
 public:
 
@@ -20,14 +19,15 @@ public:
    * is this case will become invalid. Used when we preread entire grib2 file.
    * We use a weak reference to a dummy std::shared in our DataType class to
    * know if the DataType went out of scope. */
-  GribMessageImp(unsigned char * bufferptr, std::weak_ptr<GribPointerHolder> valid):myDataTypeValid(valid)
+  GribMessageImp(unsigned char * bufferptr, std::weak_ptr<GribPointerHolder> valid) : myDataTypeValid(valid)
   {
     myBufferPtr = bufferptr; // Store external reference
   }
 
   /** Create a GribMessage with a buffer sized to accept a Grib2 data field,
    * used when we read per field off disk. */
-  GribMessageImp(size_t bufferSize, std::weak_ptr<GribPointerHolder> valid) : myLocalBuffer(bufferSize), myDataTypeValid(valid)
+  GribMessageImp(size_t bufferSize, std::weak_ptr<GribPointerHolder> valid) : myLocalBuffer(bufferSize),
+    myDataTypeValid(valid)
   {
     myBufferPtr = &myLocalBuffer[0];
   }
@@ -47,7 +47,8 @@ public:
   readG2Info(size_t messageNum, size_t at) override;
 
   /** Print this message and N fields.  Called by base operator << virtually */
-  virtual std::ostream& print(std::ostream& os) override;
+  virtual std::ostream&
+  print(std::ostream& os) override;
 
 protected:
 

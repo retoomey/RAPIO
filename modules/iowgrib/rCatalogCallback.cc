@@ -7,7 +7,8 @@
 
 using namespace rapio;
 
-CatalogCallback::CatalogCallback(const URL& u, const std::string& match) : WgribCallback(u, match), myMatchCount(0)
+CatalogCallback::CatalogCallback(const URL& u, const std::string& match,
+  const std::string& dkey) : WgribCallback(u, match, dkey), myMatchCount(0)
 { }
 
 void
@@ -20,8 +21,6 @@ CatalogCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
 void
 CatalogCallback::handleInitialize(int * decode, int * latlon)
 {
-  std::cout << "[C++] Initialize catalog\n";
-
   // For dumping catalog, we don't want decoding/unpacking of data
   *decode = 0;
   // For dumping catalog, we don't want the lat lon values
@@ -32,6 +31,4 @@ CatalogCallback::handleInitialize(int * decode, int * latlon)
 
 void
 CatalogCallback::handleFinalize()
-{
-  std::cout << "[C++] Finalize catalog\n";
-}
+{ }

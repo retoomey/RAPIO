@@ -187,7 +187,7 @@ processGribMessage(GribAction& a, size_t fileOffset, size_t messageCount, std::s
 }
 
 bool
-IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp* o)
+IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp * o)
 {
   // For now since this can be a long operation, notify whenever we call it
   LogInfo("Scanning grib2 using per field mode (RAM per message)...\n");
@@ -276,7 +276,7 @@ IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp* o)
 } // IOGrib::scanGribDataFILE
 
 bool
-IOGrib::scanGribData(std::vector<char>& b, GribAction * ap, GribDataTypeImp* o)
+IOGrib::scanGribData(std::vector<char>& b, GribAction * ap, GribDataTypeImp * o)
 {
   // For now since this can be a long operation, notify whenever we call it
   LogInfo("Scanning grib2 using FULL buffer mode (RAM hogging)...\n");

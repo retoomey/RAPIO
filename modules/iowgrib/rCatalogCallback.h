@@ -20,7 +20,7 @@ class CatalogCallback : public WgribCallback {
 public:
 
   /** Initialize a Catalog callback */
-  CatalogCallback(const URL& u, const std::string& match);
+  CatalogCallback(const URL& u, const std::string& match, const std::string& dkey);
 
   /** Initialize at the start of a grib2 catalog pass */
   void

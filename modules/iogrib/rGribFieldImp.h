@@ -12,13 +12,15 @@ extern "C" {
 
 namespace rapio {
 class GribMessageImp;
+
 /** Field representation.  A wrapper for the gribfield.
  * Some fields overlap with GribMessage, I'm not sure if this is different data or if the
  * grib library is just copying the info from the message.  */
 class GribFieldImp : public GribField {
 public:
   /** Create an empty field */
-  GribFieldImp(unsigned char * data, size_t messageNumber, size_t fieldNumber, std::weak_ptr<GribPointerHolder> valid) : GribField(messageNumber, fieldNumber),
+  GribFieldImp(unsigned char * data, size_t messageNumber, size_t fieldNumber,
+    std::weak_ptr<GribPointerHolder> valid) : GribField(messageNumber, fieldNumber),
     myBufferPtr(data), myGribField(nullptr), myUnpacked(false), myExpanded(false), myDataTypeValid(valid){ }
 
   // Array methods (assuming grid data)
@@ -67,7 +69,8 @@ public:
   ~GribFieldImp();
 
   /** Print this message and N fields.  Called by base operator << virtually */
-  virtual std::ostream& print(std::ostream& os) override;
+  virtual std::ostream&
+  print(std::ostream& os) override;
 
 protected:
 

@@ -37,7 +37,7 @@ GribFieldImp::needsToReload(bool unpacked, bool expanded) const
 bool
 GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
 {
-  if (needsToReload(unpacked, expanded)){
+  if (needsToReload(unpacked, expanded)) {
     // Get rid of old one.
     if (myGribField != nullptr) {
       g2_free(myGribField);
@@ -47,7 +47,7 @@ GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
     // Load new one.  The myBufferPtr might need the GribDataTypeImp, but
     // not 'always'.  For now, assume if GribDataTypeImp went out of scope
     // that we cannot load.
-    if (myDataTypeValid.lock() == nullptr){
+    if (myDataTypeValid.lock() == nullptr) {
       LogSevere("GribDataType is no longer valid.  Grib fields and Grib messages require it to exist.\n");
       return false;
     }
@@ -125,7 +125,7 @@ GribFieldImp::print(std::ostream& os)
 {
   if (fieldLoaded()) {
     std::string productName = getProductName();
-    std::string levelName = getLevelName();
+    std::string levelName   = getLevelName();
     os << "d=" << getDateString() << ":" << productName << ":" << levelName << "\n";
   }
   return os;
@@ -137,8 +137,7 @@ GribFieldImp::getProductName()
   if (fieldLoaded()) {
     std::string product;
     auto data = myDataTypeValid.lock();
-    if (data && data->myDataType->getIDXProductName(myMessageNumber, myFieldNumber, product)){
-    }else{
+    if (data && data->myDataType->getIDXProductName(myMessageNumber, myFieldNumber, product)) { } else {
       product = GribDatabase::getProductName(myGribField);
     }
     return product;
@@ -153,8 +152,7 @@ GribFieldImp::getLevelName()
   if (fieldLoaded()) {
     std::string level;
     auto data = myDataTypeValid.lock();
-    if (data && data->myDataType->getIDXLevelName(myMessageNumber, myFieldNumber, level)){
-    }else{
+    if (data && data->myDataType->getIDXLevelName(myMessageNumber, myFieldNumber, level)) { } else {
       level = GribDatabase::getLevelName(myGribField);
     }
     return level;
