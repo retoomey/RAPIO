@@ -30,6 +30,12 @@ public:
   // @author John Krause, Lak and others for the logic.
   //
 
+  /** Project from a ground range up to a slant range along radar.
+   * This is a 'quick' approximation.  MRMS used this in reverse for polar
+   * algorithms.  Basically cos of the elevation angle shortens the distance */
+  static LengthKMs
+  groundToSlantRangeKMs(LengthKMs groundRangeKMs, AngleDegs elevDegs);
+
   /** Toomey: Implement radar attenuation approximation from
    * Radar Equations for Modern Radar, p. 232.  This is accurate up to
    * 0.4% at about 1000KM */

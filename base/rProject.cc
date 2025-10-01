@@ -15,6 +15,22 @@ Project::initialize()
 }
 
 LengthKMs
+Project::groundToSlantRangeKMs(
+  LengthKMs groundRangeKMs,
+  AngleDegs elevDegs)
+{
+  auto c = cos(elevDegs * DEG_TO_RAD);
+
+  // Flat Earth approximation: R = G / cos(theta)
+  if (std::abs(c) < 1e-6) {
+    // Handle near 90 degrees case to prevent division by zero
+    return groundRangeKMs;
+  }
+
+  return (groundRangeKMs / c);
+}
+
+LengthKMs
 Project::attenuationHeightKMs(
   LengthKMs stationHeightKMs,
   LengthKMs rangeKMs,
