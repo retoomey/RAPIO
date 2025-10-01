@@ -10,6 +10,7 @@
 #include "rIOXML.h"
 #include "rIOJSON.h"
 #include "rIOFile.h"
+#include "rIOFakeDataType.h"
 
 // Baseline initialize
 // A lot of these link to plugins...so do we lazy init
@@ -49,6 +50,12 @@ RAPIOProgram::initializeBaseParsers()
   Factory<IODataType>::introduce("file", file);
 
   file->initialize();
+
+  // Introduce the builder for fake DataType generation
+  std::shared_ptr<IOFakeDataType> fake = std::make_shared<IOFakeDataType>();
+  Factory<IODataType>::introduce("fake", fake);
+
+  fake->initialize();
 }
 
 void

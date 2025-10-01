@@ -13,6 +13,7 @@
 #include "rFileIndex.h"
 #include "rFMLIndex.h"
 #include "rStreamIndex.h"
+#include "rFakeIndex.h"
 
 using namespace rapio;
 using namespace std;
@@ -34,6 +35,7 @@ IOIndex::introduceSelf()
   FMLIndex::introduceSelf();    // .fml files
   WebIndex::introduceSelf();    // web connection
   StreamIndex::introduceSelf(); // Stream index
+  FakeIndex::introduceSelf();   // Fake index
 }
 
 std::string

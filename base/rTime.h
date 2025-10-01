@@ -77,8 +77,17 @@ public:
   * received.  This allows real time algorithms to run archive without
   * time jitter effects caused by a real system clock.
   * In real time, this is just the current state of the system clock. */
+  inline static Time
+  CurrentTime()
+  {
+    return (myArchiveMode ? myLastHistoryTime : ClockTime());
+  }
+
+  /** The actual system clock time. Be careful with this since you could
+   * mess up processing archive data.  Use CurrentTime in your algorithms
+   * so that your algorithm is linked to the archive data set time */
   static Time
-  CurrentTime();
+  ClockTime();
 
   /** Set the latest data time */
   static void

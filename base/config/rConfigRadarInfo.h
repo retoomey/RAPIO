@@ -97,8 +97,9 @@ public:
 
   /** Get RadarInfo given a radar name. Can also use direct but slower methods below if
    * only needing say one field of the info. */
-  static RadarInfo
-  getRadarInfo(const std::string& name);
+  // FIXME: Implement maybe.  How to handle missing radar case here?
+  // static RadarInfo
+  // getRadarInfo(const std::string& name);
 
   /** Get site given a radar name */
   static std::string

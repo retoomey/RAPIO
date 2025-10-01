@@ -23,6 +23,8 @@ std::shared_ptr<RecordQueue> rapio::Record::theRecordQueue;
 
 std::string Message::RECORD_TIMESTAMP = "%Y%m%d-%H%M%S.%/ms";
 
+Record * Record::myCreatingRecord = nullptr;
+
 std::string
 Record::getIDString() const
 {
@@ -180,7 +182,14 @@ Record::createObject() const
   // All our builders mostly use a compressed string representing a URL or file name
   // FIXME: Pass record maybe or vector, let builder determine param use.
   const std::string factoryparams = getFileName();
-  std::shared_ptr<DataType> dt    = IODataType::readDataType(factoryparams, p[0]);
+
+  // We set creating record for cases where we are creating from a record. A few
+  // places like the web gui create directly. Thought about passing it down, but
+  // the only use case at moment is for the fake builder (which needs record info)
+  myCreatingRecord = const_cast<Record *>(this);
+  std::shared_ptr<DataType> dt = IODataType::readDataType(factoryparams, p[0]);
+
+  myCreatingRecord = nullptr;
 
   return (dt);
 } // Record::createObject

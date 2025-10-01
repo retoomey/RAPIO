@@ -342,6 +342,9 @@ public:
   std::string
   getIDString() const;
 
+  /** Get the current record creating DataType, if any */
+  static Record * getCreatingRecord(){ return myCreatingRecord; }
+
   /** Sorting of records happens by time, i.e. in chronological order.  */
   friend bool
   operator < (const Record& a,
@@ -363,6 +366,9 @@ private:
 
   /** SubType */
   std::string mySubType;
+
+  /** Current record creating DataType, if any */
+  static Record * myCreatingRecord;
 
 public:
   /** Global filter used to trim records before queuing */

@@ -108,7 +108,7 @@ dump(T& strm, std::stringstream& buffer, const Log::Severity& mode, const std::s
   size_t fat = 0;
 
   // Keep time constant for entire output string
-  const auto time = Time::CurrentTime();
+  const auto time = Time::ClockTime();
 
   for (auto a:Log::outputtokensENUM) {
     switch (a) {

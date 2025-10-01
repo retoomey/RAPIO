@@ -59,6 +59,7 @@ notifier/rEXERecordNotifier.h
 watcher/rEXEWatcher.h
 rFactory.h
 watcher/rFAMWatcher.h
+index/rFakeIndex.h
 index/rFileIndex.h
 index/rFMLIndex.h
 notifier/rFMLRecordNotifier.h
@@ -70,6 +71,7 @@ rIJK.h
 datatype/rImageDataType.h
 index/rIndexType.h
 rIODataType.h
+rIOFakeDataType.h
 rIOFile.h
 rIO.h
 index/rIOIndex.h
@@ -198,6 +200,7 @@ rEventTimer.cc
 notifier/rEXERecordNotifier.cc
 watcher/rEXEWatcher.cc
 watcher/rFAMWatcher.cc
+index/rFakeIndex.cc
 index/rFileIndex.cc
 index/rFMLIndex.cc
 notifier/rFMLRecordNotifier.cc
@@ -209,6 +212,7 @@ rIJK.cc
 datatype/rImageDataType.cc
 index/rIndexType.cc
 rIODataType.cc
+rIOFakeDataType.cc
 rIOFile.cc
 index/rIOIndex.cc
 rIOJSON.cc

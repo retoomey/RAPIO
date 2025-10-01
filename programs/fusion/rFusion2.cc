@@ -175,7 +175,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   // If the queue is high we're falling behind probably.
   size_t aSize = Record::theRecordQueue->size(); // FIXME: probably hide the ->
 
-  if (aSize > 30) {
+  if (isDaemon() && (aSize > 30)) {
     LogSevere("We have " << aSize << " unprocessed records, probably lagging...\n");
   }
 
