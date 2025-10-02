@@ -10,6 +10,31 @@
 using namespace rapio;
 
 void
+PolarAlgorithm::ElevationVolumeCallback::handleBeginLoop(RadialSetIterator * i, const RadialSet& radial)
+{
+  // We need to project from ground to tilt for each radial set
+  auto const numgates = radial.getNumGates();
+  auto const gwKMs    = radial.getGateWidthKMs();
+  auto const startKMs = (radial.getDistanceToFirstGateM() / 1000.0) + (gwKMs * 0.5);
+
+  auto& pc = getPointerCache();
+
+  myRanges.resize(pc.size());
+  for (size_t i = 0; i < pc.size(); ++i) {
+    RadialSetPointerCache * rc = static_cast<RadialSetPointerCache *>(pc[i]);
+    auto * rs  = static_cast<RadialSet *>(rc->dt);
+    auto Tb    = rs->getElevationDegs();
+    auto atKMs = startKMs;
+    myRanges[i].resize(numgates);
+    for (size_t g = 0; g < numgates; ++g) {
+      auto atRangeKM = Project::groundToSlantRangeKMs(atKMs, Tb);
+      myRanges[i][g] = atRangeKM;
+      atKMs += gwKMs;
+    }
+  }
+}
+
+void
 PolarAlgorithm::initializePlugins()
 {
   // We'll use virtual volumes and terrain ability

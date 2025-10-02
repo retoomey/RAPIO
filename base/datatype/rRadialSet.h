@@ -148,7 +148,7 @@ public:
 
   /** Get an estimated gatewidth of RadialSet, this will be gatewidth of first radial, if any */
   LengthKMs
-  getGateWidthKMs()
+  getGateWidthKMs() const
   {
     LengthKMs widthKM = .250;
     auto& gw = getFloat1DRef(GateWidth);
@@ -227,14 +227,14 @@ public:
 
   /** Get number of radials for radial set */
   size_t
-  getNumRadials()
+  getNumRadials() const
   {
     return myDims.size() > 0 ? myDims[0].size() : 0;
   };
 
   /** Get number of gates for radial set */
   size_t
-  getNumGates()
+  getNumGates() const
   {
     return myDims.size() > 1 ? myDims[1].size() : 0;
   };

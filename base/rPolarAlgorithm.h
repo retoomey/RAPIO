@@ -42,13 +42,20 @@ public:
     void
     addVolume(const Volume& e)
     {
-      auto& tilts = e.getVolume();
+      auto& layers = e.getVolume();
 
-      for (size_t i = 0; i < tilts.size(); ++i) {
+      for (size_t i = 0; i < layers.size(); ++i) {
         // Scoped as long as ElevationVolume is
-        auto pc = tilts[i]->getDataTypePointerCache();
-        pointerCache.push_back(pc.get());
+        auto pc = layers[i]->getDataTypePointerCache();
+        addDataTypePointerCache(pc.get());
       }
+    }
+
+    /** Add a pointer to the pointer cache */
+    void
+    addDataTypePointerCache(DataTypePointerCache * p)
+    {
+      pointerCache.push_back(p);
     }
 
     /** Get reference to pointer cache */
@@ -58,14 +65,34 @@ public:
       return pointerCache;
     }
 
-    /** For each gate, we've gonna take the absolute max of the other gates
-     * in the volume vertically */
+    /** Get reference to the ranges */
+    inline std::vector<std::vector<float> >&
+    getRanges()
+    {
+      return myRanges;
+    }
+
+    /** At beginning of loop we create a ground range to slant range
+     * cache for each RadialSet */
+    virtual void
+    handleBeginLoop(RadialSetIterator * i, const RadialSet& radial) override;
+
+    /** Process an individual gate in the algorithm.  Most polar
+     * algorithms can do their work here */
     virtual void
     handleGate(RadialSetIterator * it) = 0;
 
 private:
     /** The pointer cache for our volume items. */
     std::vector<DataTypePointerCache *> pointerCache;
+
+    /** Store ground range to slant range lookup.  The other option
+     * is to reproject all radial sets to the final polar set.
+     * resolution and ground level (MRMS does this in w2polar).
+     * We do the opposite, projecting from the ground to the source
+     * RadialSet.
+     */
+    std::vector<std::vector<float> > myRanges;
   };
 
   // ------------------------------------

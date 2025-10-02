@@ -14,9 +14,9 @@ EchoTop::declareOptions(RAPIOOptions& o)
 void
 EchoTop::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
-  //Traditional(useTime, useElevDegs, useSubtype);
+  // Traditional(useTime, useElevDegs, useSubtype);
   Interpolated(useTime, 0.0, useSubtype); // Seems MRMS uses 0 degrees?
-  //VerticalColumnCoverage(useTime, useElevDegs, useSubtype);
+  // VerticalColumnCoverage(useTime, useElevDegs, useSubtype);
 }
 
 void
@@ -33,8 +33,8 @@ public:
     {
       // We want the current center azimuth/range of our RadialSet gate,
       // this will be used to project into the other RadialSets.
-      const auto atAzDegs  = it->getCenterAzimuthDegs();
-      const auto atRangeKM = it->getCenterRangeMeters() / 1000.0;
+      const auto atAzDegs = it->getCenterAzimuthDegs();
+      const auto g        = it->getCurrentGate();
 
       LengthKMs totalKMs = 0;
       LengthKMs prevBotKMs = 20000;
@@ -45,7 +45,7 @@ public:
 
       // Allow overlapping beam spread in the metric calculation.
       // No means union of the beam spread vs double counting.
-      bool noOverLap = true; 
+      bool noOverLap = true;
 
       // Go through the vertical column
       auto& pc = getPointerCache();
@@ -54,6 +54,7 @@ public:
         // Static casts are cheap.  Add volume should have prechecked it all
         RadialSetPointerCache * p  = static_cast<RadialSetPointerCache *>(pc[i]);
         RadialSetProjection * proj = static_cast<RadialSetProjection *>(p->project);
+        auto atRangeKM = getRanges()[i][g]; // ground to slant range cache
 
         // ...see if we hit it...
         if (proj->getValueAtAzRange(atAzDegs, atRangeKM, value, radialNo, gateNo)) {
@@ -63,33 +64,33 @@ public:
           // assume the tilts don't overlap?  Or maybe we don't care? In theory,
           // overlapping might be 'stronger' confidence so for now we'll just join
           // and not union.
-          auto * rs = static_cast<RadialSet *>(p->dt);
-          auto elevDegs = rs->getElevationDegs();
+          auto * rs             = static_cast<RadialSet *>(p->dt);
+          auto elevDegs         = rs->getElevationDegs();
           auto stationHeightKMs = rs->getLocation().getHeightKM(); // could optimize out
 
-          AngleDegs bw          = (*p->bw)[radialNo];
+          AngleDegs bw = (*p->bw)[radialNo];
           // Jitters with beamwidht but slightly more accurate. Without this each radial
           // is the exact same.
-          auto upElevDegs       = elevDegs + (0.5 * bw);
-          //auto upElevDegs       = elevDegs + (0.5);
-          auto topKMs = Project::attenuationHeightKMs(stationHeightKMs, atRangeKM, upElevDegs);
-          auto botElevDegs    = elevDegs - (0.5 * bw);
-          //auto botElevDegs    = elevDegs - (0.5);
+          auto upElevDegs = elevDegs + (0.5 * bw);
+          // auto upElevDegs       = elevDegs + (0.5);
+          auto topKMs      = Project::attenuationHeightKMs(stationHeightKMs, atRangeKM, upElevDegs);
+          auto botElevDegs = elevDegs - (0.5 * bw);
+          // auto botElevDegs    = elevDegs - (0.5);
           auto botKMs = Project::attenuationHeightKMs(stationHeightKMs, atRangeKM, botElevDegs);
 
           // This gets rid of overlapping heights.  Debating if we double count beam overlaying
           // or not.  Could be an option.
-          if (noOverLap && (topKMs > prevBotKMs)){
-             topKMs = prevBotKMs;
+          if (noOverLap && (topKMs > prevBotKMs)) {
+            topKMs = prevBotKMs;
           }
 
           // A range of hit in the vertical column;
-          if (topKMs > botKMs){ // should always be, right?
-            auto rangeKMs = topKMs-botKMs;
+          if (topKMs > botKMs) { // should always be, right?
+            auto rangeKMs = topKMs - botKMs;
             totalKMs += rangeKMs;
           }
           prevBotKMs = botKMs;
-          foundOne = true;
+          foundOne   = true;
         }
       }
 
@@ -134,7 +135,7 @@ public:
   std::map<std::string, std::string> myOverride;
 
   writeOutputProduct(set->getTypeName(), set, myOverride);
-}
+} // EchoTop::VerticalColumnCoverage
 
 void
 EchoTop::Traditional(const Time& useTime, float useElevDegs, const std::string& useSubtype)
@@ -150,8 +151,8 @@ public:
     {
       // We want the current center azimuth/range of our RadialSet gate,
       // this will be used to project into the other RadialSets.
-      const auto atAzDegs  = it->getCenterAzimuthDegs();
-      const auto atRangeKM = it->getCenterRangeMeters() / 1000.0;
+      const auto atAzDegs = it->getCenterAzimuthDegs();
+      const auto g        = it->getCurrentGate();
 
       float echoTop = 0.0;
       bool foundOne = false;
@@ -166,6 +167,7 @@ public:
         // Static casts are cheap.  Add volume should have prechecked it all
         RadialSetPointerCache * p  = static_cast<RadialSetPointerCache *>(pc[i]);
         RadialSetProjection * proj = static_cast<RadialSetProjection *>(p->project);
+        auto atRangeKM = getRanges()[i][g]; // ground to slant range cache
 
         // ...see if we hit it...
         if (proj->getValueAtAzRange(atAzDegs, atRangeKM, value, radialNo, gateNo)) {
@@ -226,7 +228,7 @@ public:
 void
 EchoTop::Interpolated(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
-  /** Callback for traditional echotop algorithm */
+  /** Callback for Lak/Kurt's interpolated 2014 paper echotop algorithm */
   class InterpolatedET : public ElevationVolumeCallback {
 public:
 
@@ -240,8 +242,8 @@ public:
 
       // We want the current center azimuth/range of our RadialSet gate,
       // this will be used to project into the other RadialSets.
-      const auto atAzDegs  = it->getCenterAzimuthDegs();
-      const auto atGroundKM = it->getCenterRangeMeters() / 1000.0;
+      const auto atAzDegs = it->getCenterAzimuthDegs();
+      const auto g        = it->getCurrentGate();
 
       float echoTop = 0.0;
       bool foundOne = false;
@@ -258,26 +260,17 @@ public:
         // Static casts are cheap.  Add volume should have prechecked it all
         RadialSetPointerCache * p  = static_cast<RadialSetPointerCache *>(pc[i]);
         RadialSetProjection * proj = static_cast<RadialSetProjection *>(p->project);
-        auto * rs = static_cast<RadialSet *>(p->dt);
-        auto Tb = rs->getElevationDegs();
+        auto * rs      = static_cast<RadialSet *>(p->dt);
+        auto Tb        = rs->getElevationDegs();
+        auto atRangeKM = getRanges()[i][g]; // ground to slant range cache
 
-        // ...see if we hit it...
-        // Humm forgot to project the 'ground' of the polar output to the tilt
-        // We could cache this per radial/tilt.  Also MRMS does this per RadialSet,
-        // which trades memory for speed.  Currently giving up speed for memory
-        //auto atRangeKM = atGroundKM;
-        // This is SLOW.  Cos is slow.  We should add api to cache this per RadialSet.
-        // Should just need one radial
-        // FIXME: Trying to get things correct, then I'll speed them up/improve
-        // iterator API.
-        auto atRangeKM = Project::groundToSlantRangeKMs(atGroundKM, Tb);
         if (proj->getValueAtAzRange(atAzDegs, atRangeKM, Zb, radialNo, gateNo)) {
           missingMask = true; // Because we 'hit' radar coverage
 
           // ...and we also hit a good dbz value
           if (Constants::isGood(Zb) && (Zb >= DBZ_THRESH)) {
             // (i) find the maximum elevation angle over threshold.
-            //auto Tb = rs->getElevationDegs();
+            // auto Tb = rs->getElevationDegs();
 
             // (ii) If we're not the highest elevation scan in the virtual volume
             float elevDegs;

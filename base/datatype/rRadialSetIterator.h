@@ -17,6 +17,14 @@ public:
   /** Called to handle a particular gate */
   virtual void
   handleGate(RadialSetIterator * it) = 0;
+
+  /** Called before any loop */
+  virtual void
+  handleBeginLoop(RadialSetIterator *, const RadialSet& rs){ };
+
+  /** Called after any loop */
+  virtual void
+  handleEndLoop(RadialSetIterator *, const RadialSet& rs){ };
 };
 
 /**.
@@ -60,6 +68,7 @@ public:
   inline void
   iterateRadialGates(RadialSetCallback& callback)
   {
+    callback.handleBeginLoop(this, set);
     for (size_t r = 0; r < myNumRadials; ++r) {
       // ------------------------------------------
       // Calculate meta data for the radial
@@ -88,6 +97,7 @@ public:
         myRangeMeters       += myGateWidthMeters;
       }
     }
+    callback.handleEndLoop(this, set);
   } // iterateRadialGates
 
   /** Set the primary data value */
