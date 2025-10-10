@@ -56,6 +56,20 @@ IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[
   std::vector<std::string> voutput;
 
   if (useCapture) {
+    // Ahh. Since we're calling a function and not spawning an external
+    // binary:
+    // 1. We need to make sure other threads don't write to our wgrib2
+    // stream while we're capturing output, or it gets corrupted.
+    // Even if we switch to asynchronous logging (eventually) we'll need
+    // to delay other threads from printing to console.
+    const std::lock_guard<std::recursive_mutex> log_lock(Log::logLock);
+
+    // 2. If any callback class (called from the wgrib2 call) in the same thread
+    // tries to log we don't want that so pause logging
+    // Note: If any callback does std::cout directly or anything this will
+    // break again.  At least we've fixed standard logging here.
+    Log::pauseLogging();
+
     int pipefd[2];
 
     pipe(pipefd); // pipefd[0] = read, pipefd[1] = write
@@ -104,6 +118,7 @@ IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[
     }
 
     close(pipefd[0]);
+    Log::restartLogging();
   } else {
     // Run wgrib2()
     wgrib2(argc, argv);
