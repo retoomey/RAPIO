@@ -78,7 +78,7 @@ public:
 
   /** Process a catalog line */
   bool
-  processLine(const std::string& s, Field& f, size_t& offset);
+  processLine(const std::string& s, Field& f, size_t& offset, int& atMessage);
 
   /** Add a message, in order */
   void

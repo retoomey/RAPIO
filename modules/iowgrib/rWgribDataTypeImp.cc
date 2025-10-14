@@ -16,8 +16,9 @@
 using namespace rapio;
 
 bool
-GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& f, size_t& offset)
+GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& f, size_t& offset, int& atMessage)
 {
+  atMessage = -1;
   try {
     // Split the line into parts on :
     std::vector<std::string> out;
@@ -25,6 +26,11 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
 
     // Size should be at least 5...
     if (out.size() < 5) {
+      LogSevere("Parse Line is '" << line << "'\n");
+      LogSevere("Found a line of size " << out.size() << "\n");
+      for (size_t i = 0; i < out.size(); ++i) {
+        LogSevere("--> " << i << "'" << out[i] << "'\n");
+      }
       return false;
     }
 
@@ -34,8 +40,11 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
     if (message.size() > 0) {
       // We assume message ordering (might bite us later)
       auto messageNumber = std::stoull(message[0]);
-      f.number = (message.size() > 1) ? std::stoull(message[1]) : 1;
+      f.number  = (message.size() > 1) ? std::stoull(message[1]) : 1;
+      atMessage = messageNumber;
     } else {
+      LogSevere("Parse Line is '" << line << "'\n");
+      LogSevere("Tried to split '" << out[0] << " and failed.\n");
       return false;
     }
 
@@ -69,6 +78,9 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
     f.type    = out[5];
   }catch (const std::exception& e)
   {
+    LogSevere("Parse Line is '" << line << "'\n");
+    LogSevere("Exception parsing: " << e.what() << "\n");
+    atMessage = -1;
     return false;
   }
   return true;
@@ -89,12 +101,14 @@ GribCatalogCache::readCatalog()
   size_t count = 0;
   size_t offset;
 
+  int atMessage = 1; // Parser found message
+
   for (auto& l:v) {
     // Read next field.  Any error we assume catalog or wgrib2 bad
-    auto f = processLine(l, buffer, offset);
+    auto f = processLine(l, buffer, offset, atMessage);
     if (!f) {
       success = false;
-      break;
+      continue; // try to recover from any bad lines in stream
     }
 
     // On first field, add a new message
@@ -103,14 +117,21 @@ GribCatalogCache::readCatalog()
       myMessages.push_back(m);
     }
 
-    // Add field to the latest message
-    myMessages[myMessages.size() - 1].offset = offset;
-    myMessages[myMessages.size() - 1].addField(buffer);
+    if (myMessages.size() == atMessage) {
+      // Add field to the latest message
+      myMessages[myMessages.size() - 1].offset = offset;
+      myMessages[myMessages.size() - 1].addField(buffer);
+    } else {
+      LogSevere("Mismatched message number " << atMessage << ", "
+                                             << "expected " << myMessages.size() << "\n");
+      break; // what to do?
+    }
     count++;
   }
 
   // Our parser should match the wgrib2 count
   if (c != count) {
+    LogSevere("Mismatch wgrib2 count vs c" << count << ", " << c << "\n");
     success = false;
   }
 
