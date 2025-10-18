@@ -7,6 +7,11 @@
 
 using namespace rapio;
 
+// NOTE:
+// We capture the output from this callback to parse the catalog
+// So Log messages here are ignored.  Do not write to std::cout
+// here or the wgrib2 catalog will error.
+//
 CatalogCallback::CatalogCallback(const URL& u, const std::string& match,
   const std::string& dkey) : WgribCallback(u, match, dkey), myMatchCount(0)
 { }

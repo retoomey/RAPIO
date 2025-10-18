@@ -54,86 +54,14 @@ IOWgrib::initialize()
 std::vector<std::string>
 IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[])
 {
-  std::vector<std::string> voutput;
+  using Wgrib2Ptr = int (*)(int, const char *[]);
+  Wgrib2Ptr wgrib2_ptr = wgrib2;
 
-  if (!useCapture) {
-    // Run wgrib2()
-    wgrib2(argc, argv);
-    return voutput;
-  }
-
-  // Ahh. Since we're calling a function and not spawning an external
-  // binary:
-  // 1. We need to make sure other threads don't write to our wgrib2
-  // stream while we're capturing output, or it gets corrupted.
-  // Even if we switch to asynchronous logging (eventually) we'll need
-  // to delay other threads from printing to console.
-  const std::lock_guard<std::recursive_mutex> log_lock(Log::logLock);
-
-  // 2. If any callback class (called from the wgrib2 call) in the same thread
-  // tries to log we don't want that so pause logging
-  // Note: If any callback does std::cout directly or anything this will
-  // break again.  At least we've fixed standard logging here.
-  Log::pauseLogging();
-
-  // 3. Flush all old stdout messages/std::cout in buffer.  Now hopefully
-  // nothing else writes from our code while we capture.  Note, if a
-  // callback class here writes to std::cout, it will go to stdout on flush
-  // and it will probably corrupt the catalog.
-  std::cout.flush();
-  fflush(stdout);
-
-  int pipefd[2];
-
-  pipe(pipefd); // pipefd[0] = read, pipefd[1] = write
-
-  // Save original stdout
-  int stdout_copy = dup(STDOUT_FILENO);
-
-  // Redirect stdout to pipe
-  dup2(pipefd[1], STDOUT_FILENO);
-  close(pipefd[1]); // We don't need the write end anymore
-
-  // Run wgrib2()
-  wgrib2(argc, argv);
-
-  // Restore stdout
-  fflush(stdout);
-  dup2(stdout_copy, STDOUT_FILENO);
-  close(stdout_copy);
-
-  std::string partial_line;
-  char buffer[4096];
-
-  ssize_t count;
-
-  while ((count = ::read(pipefd[0], buffer, sizeof(buffer))) > 0) {
-    size_t start = 0;
-    for (ssize_t i = 0; i < count; ++i) {
-      if (buffer[i] == '\n') {
-        // Append current segment to form a complete line (without '\n')
-        partial_line.append(&buffer[start], i - start);
-        voutput.push_back(std::move(partial_line));
-        partial_line.clear();
-        start = i + 1;
-      }
-    }
-
-    // Append any remaining partial content
-    if (start < count) {
-      partial_line.append(&buffer[start], count - start);
-    }
-  }
-
-  // Add final line if not newline-terminated
-  if (!partial_line.empty()) {
-    voutput.push_back(std::move(partial_line));
-  }
-
-  close(pipefd[0]);
-  Log::restartLogging();
-
-  return voutput;
+  return OS::runFunction(
+    useCapture,
+    wgrib2,
+    argc,
+    argv);
 } // IOWgrib::capture_vstdout_of_wgrib2
 
 std::shared_ptr<DataType>

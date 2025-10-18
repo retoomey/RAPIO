@@ -138,6 +138,115 @@ public:
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
 
+  /**
+   * Run a capturable function in our code.  For example, the wgrib2 c function api
+   * is built into the iowgrib module.  This captures stdout from it to a vector
+   * of strings.  It's a rare use case but 'might' happen again so we'll
+   * generalize it.
+   *
+   * @tparam Func The type of the callable (e.g., function pointer, lambda, std::function).
+   * @tparam Args The types of the arguments passed to the callable.
+   * @param func The function/callable to execute.
+   * @param args The arguments to pass to the callable.
+   * @return A vector of strings containing the captured stdout, line by line.
+   */
+
+  template <typename Func, typename ... Args>
+  static std::vector<std::string>
+  runFunction(bool capture, Func&& func, Args&&... args)
+  {
+    std::vector<std::string> voutput;
+
+    // Allow a direct call/return for convenience
+    if (!capture) {
+      std::forward<Func>(func)(std::forward<Args>(args)...);
+      return voutput;
+    }
+
+    // Ahh. Since we're calling a function and not spawning an external
+    // binary:
+    // 1. We need to make sure other threads don't write to our wgrib2
+    // stream while we're capturing output, or it gets corrupted.
+    // Even if we switch to asynchronous logging (eventually) we'll need
+    // to delay other threads from printing to console.
+    const std::lock_guard<std::recursive_mutex> log_lock(Log::logLock);
+
+    // 2. If any callback class (called from the wgrib2 call) in the same thread
+    // tries to log we don't want that so pause logging
+    // Note: If any callback does std::cout directly or anything this will
+    // break again.  At least we've fixed standard logging here.
+    Log::pauseLogging();
+
+    // 3. Flush all old stdout messages/std::cout in buffer.  Now hopefully
+    // nothing else writes from our code while we capture.  Note, if a
+    // callback class here writes to std::cout, it will go to stdout on flush
+    // and it will probably corrupt the catalog.
+    std::cout.flush();
+    fflush(stdout);
+
+    // 4. Setup Pipe and Redirection
+    int pipefd[2];
+
+    if (pipe(pipefd) == -1) {
+      Log::restartLogging();
+      return voutput;
+    }
+
+    // Save original stdout
+    int stdout_copy = dup(STDOUT_FILENO);
+
+    // Redirect stdout to pipe's write end
+    dup2(pipefd[1], STDOUT_FILENO);
+    close(pipefd[1]); // Close the redundant write end FD
+
+    // 4. Run reader thread.  Important in case buffer fills
+    // we don't want reader/writer deadlock (writer waiting on reader)
+    auto reader_func = [](int read_fd, std::vector<std::string>& output) {
+        // ... (The exact same pipe-reading loop as before) ...
+        std::string partial_line;
+        char buffer[4096];
+        ssize_t count;
+
+        while ((count = ::read(read_fd, buffer, sizeof(buffer))) > 0) {
+          size_t start = 0;
+          for (ssize_t i = 0; i < count; ++i) {
+            if (buffer[i] == '\n') {
+              partial_line.append(&buffer[start], i - start);
+              output.push_back(std::move(partial_line));
+              partial_line.clear();
+              start = i + 1;
+            }
+          }
+          if (start < count) {
+            partial_line.append(&buffer[start], count - start);
+          }
+        }
+        if (!partial_line.empty()) {
+          output.push_back(std::move(partial_line));
+        }
+        close(read_fd);
+      };
+
+    // Create and start the reader thread
+    std::thread reader_thread(reader_func, pipefd[0], std::ref(voutput));
+
+    // 4. Run the Callable Object (The 'Writer')
+    // Uses std::forward to correctly handle lvalues/rvalues for arguments
+    std::forward<Func>(func)(std::forward<Args>(args)...);
+
+    // 5. Restore and Cleanup
+    fflush(stdout);
+    dup2(stdout_copy, STDOUT_FILENO);
+    close(stdout_copy);
+
+    if (reader_thread.joinable()) {
+      reader_thread.join();
+    }
+
+    Log::restartLogging();
+    return voutput;
+  } // runFunction
+
   /** Load a dynamic module */
   template <class T> static std::shared_ptr<T>
   loadDynamic(const std::string& module, const std::string& function)
