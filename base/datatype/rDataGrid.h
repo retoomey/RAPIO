@@ -58,6 +58,12 @@ protected:
       return temp->ref(); \
     } \
   } \
+  inline boost::multi_array<TYPE, DIMENSION> * \
+    get ## TYPESTRING ## DIMENSION ## DPtr(const std::string& name = Constants::PrimaryDataName) const \
+  { \
+    auto temp = get<Array<TYPE, DIMENSION> >(name); \
+    return (temp ? temp->ptr() : nullptr); \
+  } \
   std::shared_ptr<Array<TYPE, DIMENSION> > \
   add ## TYPESTRING ## DIMENSION ## D(const std::string& name, const std::string& units, \
     const std::vector<size_t>& dimindexes, TYPE fillValue = TYPE()) \

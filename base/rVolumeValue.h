@@ -2,6 +2,8 @@
 
 #include <rUtility.h>
 
+#include <rRadialSet.h>
+
 namespace rapio {
 class RAPIOAlgorithm;
 
@@ -19,17 +21,74 @@ class LayerValue : public Utility
 {
 public:
 
-  double value;            ///< Value of data at layer
-  bool haveTerrain;        ///< Do we have terrain information?
-  float terrainCBBPercent; ///< Terrain cumulative beam blockage, if available otherwise 0
-  float terrainPBBPercent; ///< Terrain partial beam blockage, if available otherwise 0
-  bool beamHitBottom;      ///< Terrain blockage, did beam bottom hit terrain?
-  LengthKMs heightKMs;     ///< Height in kilometers at the point of interest
-  LengthKMs rangeKMs;      ///< Range in kilometers along the beampath
-  int gate;                ///< Gate number at the point of interest, or -1
-  int radial;              ///< Radial number at the point of interest, or -1
-  AngleDegs elevation;     ///< 'True' elevation angle used for this layer value
-  AngleDegs beamWidth;     ///< Beamwidth at the point of interest
+  // Filled in/copied by query
+  double value;        ///< Value of data at layer
+  LengthKMs heightKMs; ///< Height in kilometers at the point of interest
+  LengthKMs rangeKMs;  ///< Range in kilometers along the beampath
+  int gate;            ///< Gate number at the point of interest, or -1
+  int radial;          ///< Radial number at the point of interest, or -1
+  bool haveTerrain;    ///< Do we have terrain information?
+
+  DataTypePointerCache * c; ///< Cache to all the data arrays for this layer
+
+  // Eventually we might handle LatLonGrid data, so these methods would
+  // crash.  Up to higher up to validate the data.  Doing it here is a
+  // massive slowdown.
+  // FIXME: We could maybe subclass layer value but I wouldn't make it
+  // a virtual class.
+
+  // Not every resolver will want every field, so lazy grabbing here
+  // will give us a slight speed boost by avoiding copying.
+  // Static casts don't actually make any code.
+  inline float
+  getWeight()
+  {
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+
+    return (rc->weights ? (*rc->weights)[radial][gate] : 1.0);
+  }
+
+  inline float
+  getTerrainCBBPercent()
+  {
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+
+    return (rc->cbb ? (*rc->cbb)[radial][gate] : 0.0);
+  }
+
+  inline float
+  getTerrainPBBPercent()
+  {
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+
+    return (rc->pbb ? (*rc->pbb)[radial][gate] : 0.0);
+  }
+
+  inline bool
+  getTerrainBeamHitBottom()
+  {
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+
+    return (rc->bottomHit ? (*rc->bottomHit)[radial][gate] : false);
+  }
+
+  /** RadialSets: Get beamwidth angle at the point of interest */
+  inline AngleDegs
+  getBeamWidthDegs()
+  {
+    auto * rc = static_cast<RadialSetPointerCache *>(c);
+    auto * r  = static_cast<RadialSet *>(c->dt);
+
+    return ((*rc->bw)[radial]);
+  }
+
+  /** RadialSets: Get elevation angle */
+  inline AngleDegs
+  getElevationDegs()
+  {
+    // For speed, no checking types here.  Should be higher
+    return (static_cast<RadialSet *>(c->dt)->getElevationDegs());
+  }
 };
 
 /** Organizer for in/out of a VolumeValueResolver for resolving the output of
@@ -215,7 +274,6 @@ protected:
   // each time per grid point and we'd have to copy all those pointers
   // for every LayerValue output.
   // We could have a LayerInputValue or something though.
-public:
   std::array<DataTypePointerCache *, LayerCount> pc{ }; // < Four layers, 2 above, 2 below
 protected:
 

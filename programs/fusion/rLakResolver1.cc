@@ -22,7 +22,7 @@ processTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
 
   // ------------------------------------------------------------------------------
   // Discard tilts/values that hit terrain
-  if ((layer.terrainCBBPercent > TERRAIN_PERCENT) || (layer.beamHitBottom)) {
+  if ((layer.getTerrainCBBPercent() > TERRAIN_PERCENT) || (layer.getTerrainBeamHitBottom())) {
     terrainBlocked = true;
     // Note terrain blocked means isMask is false (shouldn't affect mask)
     //  countValue(ELEV_THRESH, false, lowerWt2, lValue2,
@@ -39,7 +39,7 @@ processTilt(LayerValue& layer, AngleDegs& at, AngleDegs spreadDegs,
   // Formula (6) on page 10 ----------------------------------------------
   // This formula has a alphaTop and alphaBottom to calculate delta (the weight)
   //
-  const double alphaTop = std::abs(at - layer.elevation);
+  const double alphaTop = std::abs(at - layer.getElevationDegs());
 
   inBeam = alphaTop <= BEAMWIDTH_THRESH;
 
@@ -144,7 +144,7 @@ LakResolver1::calc(VolumeValue * vvp)
   // There's not much difference between using 1 degree extrapolation
   // vs the spread for close elevations in the VCP
   const AngleDegs spread = (haveLower && haveUpper) ? std::abs(
-    vv.getUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
+    vv.getUpperValue().getElevationDegs() - vv.getLowerValue().getElevationDegs()) : 0.0;
 
   // Maskable counted location will be missing in output
   bool lMask          = false;
@@ -190,7 +190,7 @@ LakResolver1::calc(VolumeValue * vvp)
     double lValue2;
     bool terrainBlockedLower2 = false;
     const AngleDegs spread2   =
-      haveUpper ? std::abs(vv.getUpperValue().elevation - vv.get2ndLowerValue().elevation) : 0.0;
+      haveUpper ? std::abs(vv.getUpperValue().getElevationDegs() - vv.get2ndLowerValue().getElevationDegs()) : 0.0;
     processTilt(vv.get2ndLowerValue(), vv.virtualElevDegs, spread2,
       isGoodLower2, llMask, inBeamLower2, terrainBlockedLower2, lValue2, lowerWt2,
       totalWt, totalsum, count, inThreshLower2);
@@ -203,7 +203,7 @@ LakResolver1::calc(VolumeValue * vvp)
     double uValue2;
     bool terrainBlockedUpper2 = false;
     const AngleDegs spread3   =
-      haveLower ? std::abs(vv.get2ndUpperValue().elevation - vv.getLowerValue().elevation) : 0.0;
+      haveLower ? std::abs(vv.get2ndUpperValue().getElevationDegs() - vv.getLowerValue().getElevationDegs()) : 0.0;
     processTilt(vv.get2ndUpperValue(), vv.virtualElevDegs, spread3,
       isGoodUpper2, uuMask, inBeamUpper2, terrainBlockedUpper2, uValue2, upperWt2,
       totalWt, totalsum, count, inThreshUpper2);

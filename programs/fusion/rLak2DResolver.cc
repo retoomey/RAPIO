@@ -39,10 +39,12 @@ Lak2DResolver::calc(VolumeValue * vvp)
       // This weight is for merging with other radars...so still need it.
       // Well we need it for 2D distance merging, for max it will be cancelled out.
       const auto rw   = rangeToWeight(vv.virtualRangeKMs, myVarianceWeight);
+      // Polar algorithm weight, or 1.0
+      const auto aw   = vv.getUpperValue().getWeight();
       const double aV = value; // Only hit value counts, no vertical interpolation/weighting
       vv.dataValue = aV;
-      vv.topSum    = rw * aV; // Stage2 just makes v = topSum/bottomSum
-      vv.bottomSum = rw;
+      vv.topSum    = aw * rw * aV; // Stage2 just makes v = topSum/bottomSum
+      vv.bottomSum = aw * rw;
     } else {
       // Not a good data value, but we hit the product, so missing.
       vv.dataValue = myMissing;

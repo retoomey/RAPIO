@@ -182,6 +182,7 @@ protected:
     if (c == nullptr) {
       return false;
     }
+    l.c = c;
 
     // Assume RadialSet cache (FIXME: Generalize for all DataTypes)
     // Using this pointer cache increases speed massively, like 7x or more
@@ -260,20 +261,6 @@ protected:
         l.value = Constants::MissingData;
       }
       #endif // if 0
-
-      // Meta data of the 'point' is from the hit gate.
-
-      // Beamwidth/elevation info
-      l.beamWidth = (*rc->bw)[l.radial];
-      l.elevation = r->getElevationDegs();
-
-      // Terrain info
-      // FIXME:  Use the pointer cache to speed this up as well.
-      const bool t = r->haveTerrain();
-      l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
-      l.terrainCBBPercent = t ? (*rc->cbb)[l.radial][l.gate] : 0.0;
-      l.terrainPBBPercent = t ? (*rc->pbb)[l.radial][l.gate] : 0.0;
-      l.beamHitBottom     = t ? (*rc->bottomHit)[l.radial][l.gate] : 0.0;
       return true;
     }
 
@@ -288,6 +275,7 @@ protected:
     if (c == nullptr) {
       return false;
     }
+    l.c = c;
 
     // Assume RadialSet cache (FIXME: Generalize for all DataTypes)
     // Using this pointer cache increases speed massively, like 7x or more
@@ -295,7 +283,7 @@ protected:
     auto * r  = static_cast<RadialSet *>(c->dt);
     auto * p  = (RadialSetProjection *) (rc->project);
 
-    l.elevation = r->getElevationDegs();
+    // l.elevation = r->getElevationDegs();
 
     // Projection of height range using attentuation
     // Notice we cached sin and cos GCD for the grid
@@ -304,13 +292,14 @@ protected:
       vv.sinGcdIR, vv.cosGcdIR, r->getElevationTan(), r->getElevationCos(), l.heightKMs, l.rangeKMs);
 
     // If good, query more stuff
-    // FIXME: Speed up by making a pointer version of this?
     if (p->getValueAtAzRange(vv.virtualAzDegs, l.rangeKMs, l.value, l.radial, l.gate)) {
       // Data value at gate (getValueAtAzRange sets this)
       // l.value = r.getFloat2DRef()[l.radial][l.gate]; This is slow, projection has pointer
 
+      // Instead of copying fields, let resolver pull them on demand
       // Beamwidth info
-      l.beamWidth = (*rc->bw)[l.radial];
+      // l.beamWidth = (*rc->bw)[l.radial];
+
       #if 0
       AngleDegs compare = r->getBeamWidthRef()[l.radial]; // Pull the slooow way and compare
       AngleDegs compare = (*rc->bw)[l.radial];
@@ -320,13 +309,14 @@ protected:
       }
       #endif
 
-      // Terrain info
+      #if 0
       // Turns out O(CONUS) of get ref calls is slower than snails, so we cache the pointers
       const bool t = r->haveTerrain();
       l.haveTerrain       = t; // Checking t each time here results in one less jmp in assembly..crazy
       l.terrainCBBPercent = t ? (*rc->cbb)[l.radial][l.gate] : 0.0;
       l.terrainPBBPercent = t ? (*rc->pbb)[l.radial][l.gate] : 0.0;
       l.beamHitBottom     = t ? (*rc->bottomHit)[l.radial][l.gate] : 0.0;
+      #endif
 
       return true;
     }

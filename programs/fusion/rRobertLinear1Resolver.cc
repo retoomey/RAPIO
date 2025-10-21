@@ -42,7 +42,7 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
   bool inLowerBeamwidth = false;
 
   if (haveLower) { // Do we hit the valid gates of the lower tilt?
-    heightForDegreeShift(vv, vv.getLower(), vv.getLowerValue().beamWidth / 2.0, lowerHeightKMs);
+    heightForDegreeShift(vv, vv.getLower(), vv.getLowerValue().getBeamWidthDegs() * 0.5, lowerHeightKMs);
     inLowerBeamwidth = (vv.getAtHeightKMs() <= lowerHeightKMs);
   }
 
@@ -51,7 +51,7 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
   bool inUpperBeamwidth = false;
 
   if (haveUpper) { // Do we hit the valid gates of the upper tilt?
-    heightForDegreeShift(vv, vv.getUpper(), -(vv.getUpperValue().beamWidth / 2.0), upperHeightKMs);
+    heightForDegreeShift(vv, vv.getUpper(), -(vv.getUpperValue().getBeamWidthDegs() * 0.5), upperHeightKMs);
     inUpperBeamwidth = (vv.getAtHeightKMs() >= upperHeightKMs);
   }
 
@@ -81,17 +81,17 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
   }
   // Make values unavailable if cumulative blockage is over 50%
   // FIXME: Could be configurable
-  if (vv.getUpperValue().terrainCBBPercent > .50) {
+  if (vv.getUpperValue().getTerrainCBBPercent() > .50) {
     vv.getUpperValue().value = myUnavailable;
   }
-  if (vv.getLowerValue().terrainCBBPercent > .50) {
+  if (vv.getLowerValue().getTerrainCBBPercent() > .50) {
     vv.getLowerValue().value = myUnavailable;
   }
   // Make values unavailable if elevation layer bottom hits terrain
-  if (vv.getLowerValue().beamHitBottom) {
+  if (vv.getLowerValue().getTerrainBeamHitBottom()) {
     vv.getLowerValue().value = myUnavailable;
   }
-  if (vv.getUpperValue().beamHitBottom) {
+  if (vv.getUpperValue().getTerrainBeamHitBottom()) {
     vv.getUpperValue().value = myUnavailable;
   }
 
@@ -109,21 +109,21 @@ RobertLinear1Resolver::calc(VolumeValue * vvp)
     if (wt < 0) { wt = 0; } else if (wt > 1) { wt = 1; }
     const double nwt = (1.0 - wt);
 
-    const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
-    const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
+    const double lTerrain = lValue * (1 - vv.getLowerValue().getTerrainCBBPercent());
+    const double uTerrain = uValue * (1 - vv.getUpperValue().getTerrainCBBPercent());
 
     // v = (0.5 + nwt * lValue + wt * uValue);
     v = (0.5 + nwt * lTerrain + wt * uTerrain);
   } else if (inLowerBeamwidth) {
     if (Constants::isGood(lValue)) {
-      const double lTerrain = lValue * (1 - vv.getLowerValue().terrainCBBPercent);
+      const double lTerrain = lValue * (1 - vv.getLowerValue().getTerrainCBBPercent());
       v = lTerrain;
     } else {
       v = lValue; // Use the gate value even if missing, RF, unavailable, etc.
     }
   } else if (inUpperBeamwidth) {
     if (Constants::isGood(uValue)) {
-      const double uTerrain = uValue * (1 - vv.getUpperValue().terrainCBBPercent);
+      const double uTerrain = uValue * (1 - vv.getUpperValue().getTerrainCBBPercent());
       v = uTerrain;
     } else {
       v = uValue;

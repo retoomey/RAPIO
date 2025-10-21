@@ -11,7 +11,7 @@ LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid 
   auto& l = *owner;
 
   // Weak pointer to layer to use.  We only exist as long as RadialSet is valid
-  my2DLayer = l.getFloat2D(layer)->ptr();
+  my2DLayer = l.getFloat2DPtr(layer);
   // my2DLayer    = l.getFloat2D(layer.c_str());
   myLatNWDegs  = l.myLocation.getLatitudeDeg();
   myLonNWDegs  = l.myLocation.getLongitudeDeg();

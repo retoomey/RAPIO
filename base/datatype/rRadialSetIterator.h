@@ -57,19 +57,32 @@ public:
 class RadialSetIterator : public Utility {
 public:
   RadialSetIterator(RadialSet& set)
-    : set(set), myNumRadials(set.getNumRadials()), myNumGates(set.getNumGates()),
-    myFirstGateMeters(set.getDistanceToFirstGateM()),
-    myPrimaryData(set.getFloat2DRef()),
-    myAzimuths(set.getFloat1DRef(RadialSet::Azimuth)),
-    myBeamWidths(set.getFloat1DRef(RadialSet::BeamWidth)),
-    myGateWidths(set.getFloat1DRef(RadialSet::GateWidth)){ }
+    : myRadialSet(set),
+  // Use pointer so we can change which array we use
+  myOutputArray(set.getFloat2DPtr()){ }
+
+  /** Set the array for output of the iterator */
+  void
+  setOutputArray(const std::string& key = Constants::PrimaryDataName)
+  {
+    // LogSevere("Primary before  " << (void*)(myOutputArray->data()) << "\n");
+    myOutputArray = myRadialSet.getFloat2DPtr(key);
+    // LogSevere("Primary after is " << (void*)(myOutputArray->data()) << "\n");
+  }
 
   /** Iterate over radial set  */
   inline void
   iterateRadialGates(RadialSetCallback& callback)
   {
-    callback.handleBeginLoop(this, set);
-    for (size_t r = 0; r < myNumRadials; ++r) {
+    auto const radials  = myRadialSet.getNumRadials();
+    auto const gates    = myRadialSet.getNumGates();
+    auto const fgMeters = myRadialSet.getDistanceToFirstGateM();
+    auto const azDegs   = myRadialSet.getFloat1DRef(RadialSet::Azimuth);
+    auto const bwDegs   = myRadialSet.getFloat1DRef(RadialSet::BeamWidth);
+    auto const gwMeters = myRadialSet.getFloat1DRef(RadialSet::GateWidth);
+
+    callback.handleBeginLoop(this, myRadialSet);
+    for (size_t r = 0; r < radials; ++r) {
       // ------------------------------------------
       // Calculate meta data for the radial
       // This keeps users from having to do this stuff and
@@ -77,16 +90,16 @@ public:
       //
       myCurrentRadial = r;
 
-      myBeamWidthDegs     = myBeamWidths[r];
-      myAzimuthDegs       = myAzimuths[r];
-      myCenterAzimuthDegs = myAzimuths[r] + (myBeamWidthDegs / 2.0); // center
-      myGateWidthMeters   = myGateWidths[r];
-      myRangeMeters       = myFirstGateMeters;
-      myCenterRangeMeters = myFirstGateMeters + (myGateWidthMeters / 2.0);
+      myBeamWidthDegs     = bwDegs[r];
+      myAzimuthDegs       = azDegs[r];
+      myCenterAzimuthDegs = azDegs[r] + (myBeamWidthDegs * 0.5); // center
+      myGateWidthMeters   = gwMeters[r];
+      myRangeMeters       = fgMeters;
+      myCenterRangeMeters = fgMeters + (myGateWidthMeters * 0.5);
 
       // FIXME: Maybe later callback.handleRayStart(this);
 
-      for (size_t g = 0; g < myNumGates; ++g) {
+      for (size_t g = 0; g < gates; ++g) {
         myCurrentGate = g;
 
         // Invoke the callback, passing `this` to allow access to the iterator’s methods
@@ -97,14 +110,16 @@ public:
         myRangeMeters       += myGateWidthMeters;
       }
     }
-    callback.handleEndLoop(this, set);
+    callback.handleEndLoop(this, myRadialSet);
   } // iterateRadialGates
 
   /** Set the primary data value */
   inline void
   setValue(float v)
   {
-    myPrimaryData[myCurrentRadial][myCurrentGate] = v;
+    //   LogSevere("Primary on set is " << (void*)(myOutputArray->data()) << "\n");
+    // exit(1);
+    (*myOutputArray)[myCurrentRadial][myCurrentGate] = v;
   }
 
   inline size_t
@@ -133,28 +148,22 @@ public:
 
 
 private:
-  RadialSet& set;
+  /** Reference to our RadialSet */
+  RadialSet& myRadialSet;
 
-  // Constants from RadialSet, no need for access methods, these
-  // are just cached for our use.
-  const size_t myNumRadials;
-  const size_t myNumGates;
-  const float myFirstGateMeters;
-  ArrayFloat2DRef myPrimaryData;
-  ArrayFloat1DRef myAzimuths;
-  ArrayFloat1DRef myBeamWidths;
-  ArrayFloat1DRef myGateWidths;
+  // Cache for speed
+  ArrayFloat2DPtr myOutputArray;
 
   // Iterator variables
 
-  size_t myCurrentRadial;
-  size_t myCurrentGate;
+  size_t myCurrentRadial; ///< Current radial number iterating
+  size_t myCurrentGate;   ///< Current gate index iterating
 
-  float myAzimuthDegs;
-  float myBeamWidthDegs;
-  float myCenterAzimuthDegs;
-  float myRangeMeters;
-  float myCenterRangeMeters;
-  float myGateWidthMeters;
+  float myAzimuthDegs;       ///< Current start azimuth
+  float myBeamWidthDegs;     ///< Current beamwidth of the radial
+  float myCenterAzimuthDegs; ///< Current center of gate azimuth (middle of current gate)
+  float myRangeMeters;       ///< Current range in meters of the current gate
+  float myCenterRangeMeters; ///< Current center range (middle of current gate)
+  float myGateWidthMeters;   ///< Current gate width in meters
 };
 }

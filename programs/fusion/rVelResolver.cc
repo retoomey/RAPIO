@@ -36,12 +36,12 @@ analyzeTilt(VolumeValueVelGatherer& vv, LayerValue& layer, AngleDegs& at,
   // Discard tilts/values that hit terrain
   // I'm assuming we want terrain filtering for velocity, comment out if not
   // wanted
-  if ((layer.terrainCBBPercent > TERRAIN_PERCENT) || (layer.beamHitBottom)) {
+  if ((layer.getTerrainCBBPercent() > TERRAIN_PERCENT) || (layer.getTerrainBeamHitBottom())) {
     terrainBlocked = true;
   }
 
   // Get beam width distance and threshhold
-  const double centerBeamDelta = std::abs(at - layer.elevation);
+  const double centerBeamDelta = std::abs(at - layer.getElevationDegs());
 
   inBeam = centerBeamDelta <= BEAMWIDTH_THRESH;
 

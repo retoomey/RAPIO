@@ -14,7 +14,7 @@ LatLonHeightGridProjection::LatLonHeightGridProjection(const std::string& layer,
   // Note changing LatLonGrid, etc. will invalidate the projection
   auto& l = *owner;
 
-  my3DLayer = l.getFloat3D(layer)->ptr();
+  my3DLayer = l.getFloat3DPtr(layer);
   // my3DLayer    = l.getFloat3D(layer.c_str());
   myLatNWDegs  = l.myLocation.getLatitudeDeg();
   myLonNWDegs  = l.myLocation.getLongitudeDeg();

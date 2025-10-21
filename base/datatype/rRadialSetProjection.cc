@@ -93,7 +93,7 @@ RadialSetProjection::RadialSetProjection(const std::string& layer, RadialSet * o
   initToRadialSet(r);
 
   // Weak pointer to layer to use.  We only exist as long as RadialSet is valid
-  my2DLayer = r.getFloat2D(layer.c_str())->ptr();
+  my2DLayer = r.getFloat2DPtr(layer.c_str());
 
   // Cache stuff from RadialSet for speed
   const auto l = r.getLocation();

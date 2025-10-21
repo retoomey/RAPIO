@@ -12,12 +12,12 @@ namespace rapio {
 class RadialSet;
 class RadialSetPointerCache : public DataTypePointerCache {
 public:
-  ArrayFloat1DPtr bw; ///< Beamwidth reference array
-
-  // Assuming initTerrain is true, otherwise nullptr
+  // Arrays will be nullptr if they don't exist
+  ArrayFloat1DPtr bw;       ///< Beamwidth reference array
   ArrayFloat2DPtr cbb;      ///< One Terrain Cumulative beam blockage array per layer
   ArrayFloat2DPtr pbb;      ///< One Terrain Partial beam blockage array per layer
   ArrayByte2DPtr bottomHit; ///< One Terrain bottom hit array per layer
+  ArrayFloat2DPtr weights;  ///< Weight array for fusion 2
 };
 
 /** A Radial set is a collection of radials containing gates.  This makes
@@ -75,21 +75,26 @@ public:
   std::shared_ptr<DataTypePointerCache>
   getDataTypePointerCache() override
   {
+    // Cache the storage...
     if (myPointerCache == nullptr) {
-      auto newone = std::make_shared<RadialSetPointerCache>();
-
-      auto& n = *newone;
-      // All these objects are cached as shared_ptr in RadialSet
-      // So they will stay in scope.
-      n.dt      = this;
-      n.project = getProjection().get(); // Using primary (main one)
-      n.bw      = getFloat1D(BeamWidth)->ptr();
-      // FIXME: Check initterrain?
-      n.cbb          = getFloat2D(Constants::TerrainCBBPercent)->ptr();
-      n.pbb          = getFloat2D(Constants::TerrainPBBPercent)->ptr();
-      n.bottomHit    = getByte2D(Constants::TerrainBeamBottomHit)->ptr();
-      myPointerCache = newone;
+      myPointerCache     = std::make_shared<RadialSetPointerCache>();
+      myPointerCache->dt = this;
     }
+    auto p  = std::static_pointer_cast<RadialSetPointerCache>(myPointerCache);
+    auto& n = *p;
+
+    // ...But we update it in case things changed
+    // All these objects are cached as shared_ptr in RadialSet
+    // So they will stay in scope.
+    // Humm this is creating.  Do we always need it?
+    n.project = getProjection().get(); // Using primary (main one)
+
+    n.bw        = getFloat1DPtr(BeamWidth);
+    n.cbb       = getFloat2DPtr(Constants::TerrainCBBPercent);
+    n.pbb       = getFloat2DPtr(Constants::TerrainPBBPercent);
+    n.bottomHit = getByte2DPtr(Constants::TerrainBeamBottomHit);
+    n.weights   = getFloat2DPtr("Weights");
+
     return myPointerCache;
   }
 
