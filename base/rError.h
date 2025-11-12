@@ -336,4 +336,4 @@ operator << (rapio::LogCall1& l, const T& x)
         BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
     _aTempLog.dump(); }
 #define ERRNO(e) \
-  { { e; } if ((errno != 0)) { throw ErrnoException(errno, # e); } }
+  { errno = 0; { e; } if ((errno != 0)) { throw ErrnoException(errno, # e); } }

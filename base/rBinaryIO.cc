@@ -1,7 +1,7 @@
 #include "rBinaryIO.h"
 
 #include <rError.h>
-#include <rOS.h> // FIXME: temp
+#include <rOS.h>
 
 #include <algorithm>
 
@@ -12,7 +12,6 @@ bool
 FileStreamBuffer::seek(size_t position)
 {
   ERRNO(fseek(file, position, SEEK_SET));
-  marker = position;
   return true;
 }
 
@@ -20,7 +19,6 @@ bool
 GzipFileStreamBuffer::seek(size_t position)
 {
   ERRNO(gzseek(gzfile, position, SEEK_SET));
-  marker = position;
   return true;
 }
 
@@ -147,7 +145,6 @@ FileStreamBuffer::readInt()
 
   ERRNO(fread(&temp, sizeof(int), 1, file));
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
-  marker += sizeof(int); // Do we track?  FILE has it, right?
   return temp;
 }
 
@@ -158,7 +155,6 @@ FileStreamBuffer::writeInt(int i)
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   ERRNO(fwrite(&temp, sizeof(int), 1, file));
-  marker += sizeof(int);
 }
 
 short
@@ -168,8 +164,16 @@ FileStreamBuffer::readShort()
 
   ERRNO(fread(&temp, sizeof(short), 1, file));
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
-  marker += sizeof(short); // Do we track?  FILE has it, right?
   return temp;
+}
+
+void
+FileStreamBuffer::writeShort(short s)
+{
+  short temp = s;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(fwrite(&temp, sizeof(short), 1, file));
 }
 
 float
@@ -177,7 +181,7 @@ FileStreamBuffer::readFloat()
 {
   float temp;
 
-  ERRNO(fread(&temp, sizeof(short), 1, file));
+  ERRNO(fread(&temp, sizeof(float), 1, file));
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   return temp;
 }
@@ -189,7 +193,6 @@ FileStreamBuffer::writeFloat(float f)
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   ERRNO(fwrite(&temp, sizeof(float), 1, file));
-  marker += sizeof(float);
 }
 
 long
@@ -252,6 +255,15 @@ GzipFileStreamBuffer::readShort()
   return temp;
 }
 
+void
+GzipFileStreamBuffer::writeShort(short s)
+{
+  int temp = s;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  ERRNO(gzwrite(gzfile, &temp, sizeof(short)));
+}
+
 float
 GzipFileStreamBuffer::readFloat()
 {
@@ -286,7 +298,7 @@ MemoryStreamBuffer::readInt()
 void
 MemoryStreamBuffer::writeInt(int i)
 {
-  ensureAvailable(sizeof(int));
+  makeSpace(sizeof(int));
 
   int temp = i;
 
@@ -324,7 +336,7 @@ MemoryStreamBuffer::readFloat()
 void
 MemoryStreamBuffer::writeFloat(float f)
 {
-  ensureAvailable(sizeof(float));
+  makeSpace(sizeof(float));
 
   float temp = f;
 
@@ -333,15 +345,31 @@ MemoryStreamBuffer::writeFloat(float f)
   marker += sizeof(float);
 }
 
+void
+MemoryStreamBuffer::writeShort(short s)
+{
+  makeSpace(sizeof(short));
+
+  short temp = s;
+
+  ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
+  std::memcpy(&data[marker], &temp, sizeof(short));
+  marker += sizeof(short);
+}
+
 char
 FileStreamBuffer::readChar()
 {
-  // Wait, does ERRNO work here.  I think fread returns number of chars read?
-  // FIXME: Harder everything
   char ch;
 
   fread(&ch, sizeof(char), 1, file);
   return ch;
+}
+
+void
+FileStreamBuffer::writeChar(char c)
+{
+  fwrite(&c, sizeof(char), 1, file);
 }
 
 std::string
@@ -368,10 +396,8 @@ FileStreamBuffer::writeString(const std::string& c, size_t upto)
   int toWrite = std::min<int>(c.size(), upto);
 
   if (fwrite(c.data(), 1, toWrite, file) != static_cast<size_t>(toWrite)) {
-    throw std::runtime_error("Failed to write string to file");
+    throw std::runtime_error("Failed to write string data to file: Short write or I/O error.");
   }
-
-  marker += toWrite;
 
   // Pad with nulls if string is shorter than `upto`
   if (toWrite < upto) {
@@ -381,10 +407,9 @@ FileStreamBuffer::writeString(const std::string& c, size_t upto)
     while (pad > 0) {
       int chunk = std::min(pad, static_cast<int>(sizeof(zeros)));
       if (fwrite(zeros, 1, chunk, file) != static_cast<size_t>(chunk)) {
-        throw std::runtime_error("Failed to write null padding to file");
+        throw std::runtime_error("Failed to write null padding to file: Short write or I/O error.");
       }
-      marker += chunk;
-      pad    -= chunk;
+      pad -= chunk;
     }
   }
 }
@@ -410,12 +435,16 @@ FileStreamBuffer::writeVector(const void * data, size_t size)
 char
 GzipFileStreamBuffer::readChar()
 {
-  // Wait, does ERRNO work here.  I think fread returns number of chars read?
-  // FIXME: Harder everything
   char ch;
 
   gzread(gzfile, &ch, sizeof(char));
   return ch;
+}
+
+void
+GzipFileStreamBuffer::writeChar(char c)
+{
+  gzwrite(gzfile, &c, sizeof(char));
 }
 
 std::string
@@ -444,8 +473,6 @@ GzipFileStreamBuffer::writeString(const std::string& c, size_t upto)
     throw std::runtime_error("Failed to write string to gzip stream");
   }
 
-  marker += toWrite;
-
   // Optionally pad with nulls if needed
   if (toWrite < upto) {
     size_t pad = upto - toWrite;
@@ -456,8 +483,7 @@ GzipFileStreamBuffer::writeString(const std::string& c, size_t upto)
       if (gzwrite(gzfile, zeros, chunk) != static_cast<int>(chunk)) {
         throw std::runtime_error("Failed to write null padding to gzip stream");
       }
-      marker += chunk;
-      pad    -= chunk;
+      pad -= chunk;
     }
   }
 }
@@ -470,8 +496,6 @@ GzipFileStreamBuffer::readVector(void * data, size_t size)
   if (bytesRead != static_cast<int>(size)) {
     throw std::runtime_error("Failed to read vector from gzip stream");
   }
-
-  marker += bytesRead;
 }
 
 void
@@ -485,13 +509,17 @@ GzipFileStreamBuffer::writeVector(const void * data, size_t size)
 char
 MemoryStreamBuffer::readChar()
 {
-  // Check if there is enough data left to read
-  if (marker + 1 > data.size()) {
-    throw std::out_of_range("Not enough data in memory buffer to read char");
-  }
+  ensureAvailable(sizeof(char));
   char ch = data[marker++];
 
   return ch;
+}
+
+void
+MemoryStreamBuffer::writeChar(char c)
+{
+  makeSpace(sizeof(char));
+  data[marker++] = c;
 }
 
 std::string
@@ -521,6 +549,53 @@ MemoryStreamBuffer::readString(size_t length)
   }
 
   return result;
+}
+
+void
+MemoryStreamBuffer::writeString(const std::string& c, size_t length)
+{
+  makeSpace(length); // Check if we can write 'length' bytes
+
+  // 1. Determine the number of characters to copy from the string
+  size_t toCopy = std::min(c.size(), length);
+
+  // 2. Copy the string content
+  if (toCopy > 0) {
+    std::memcpy(&data[marker], c.data(), toCopy);
+  }
+
+  // 3. Pad with null characters if the string is shorter than 'length'
+  if (toCopy < length) {
+    size_t padding = length - toCopy;
+    std::memset(&data[marker + toCopy], '\0', padding);
+  }
+
+  // 4. Advance the marker by the fixed length
+  marker += length;
+}
+
+void
+MemoryStreamBuffer::readVector(void * data, size_t size)
+{
+  ensureAvailable(size); // Check if 'size' bytes are available for reading
+
+  // Copy 'size' bytes from the memory buffer at 'marker' to the external buffer 'data'
+  std::memcpy(data, &this->data[marker], size);
+
+  // Advance the marker
+  marker += size;
+}
+
+void
+MemoryStreamBuffer::writeVector(const void * data, size_t size)
+{
+  makeSpace(size); // Check if we have space to write 'size' bytes
+
+  // Copy 'size' bytes from the external buffer 'data' to the memory buffer at 'marker'
+  std::memcpy(&this->data[marker], data, size);
+
+  // Advance the marker
+  marker += size;
 }
 
 void

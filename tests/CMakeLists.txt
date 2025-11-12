@@ -19,6 +19,7 @@ endif()
 add_executable(testrapio
   rTestArray.cc
   rTestBimap.cc
+  rTestBinaryIO.cc
   rTestBitset.cc
   rTestGrid.cc
   rTestIODataType.cc
@@ -31,12 +32,6 @@ add_executable(testrapio
   rTestStage2Data.cc
   ../programs/fusion/rStage2Data.cc
 )
-
-# Link to other libraries
-#target_link_libraries(testrapio
-#  boost_unit_test_framework
-#  rapio
-#)
 
 target_link_libraries(testrapio PRIVATE
   Boost::unit_test_framework

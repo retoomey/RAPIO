@@ -63,6 +63,10 @@ public:
   virtual short
   readShort() = 0;
 
+  /** Writes a short from the stream buffer */
+  virtual void
+  writeShort(short s) = 0;
+
   /** Reads a float from the stream buffer */
   virtual float
   readFloat() = 0;
@@ -74,6 +78,10 @@ public:
   /** Read a single character */
   virtual char
   readChar() = 0;
+
+  /** Write a single character */
+  virtual void
+  writeChar(char c) = 0;
 
   /** Read a std::string from a character length */
   virtual std::string
@@ -129,7 +137,7 @@ public:
 
   /** Create a FileStreamBuffer referring to a FILE*
    * We don't own it or close it.  Up to caller */
-  explicit FileStreamBuffer(FILE * filein) : file(filein), marker(0)
+  explicit FileStreamBuffer(FILE * filein) : file(filein)
   { }
 
   /** Reads an integer from the stream buffer */
@@ -144,6 +152,10 @@ public:
   short
   readShort() override;
 
+  /** Writes a short from the stream buffer */
+  void
+  writeShort(short s) override;
+
   /** Reads a float from the stream buffer */
   float
   readFloat() override;
@@ -155,6 +167,10 @@ public:
   /** Read a single character */
   char
   readChar() override;
+
+  /** Write a single character */
+  void
+  writeChar(char c) override;
 
   /** Read a std::string from a character length */
   std::string
@@ -200,13 +216,12 @@ public:
 
 private:
   FILE * file;
-  size_t marker;
 };
 
 /** Wrap a gzfile */
 class GzipFileStreamBuffer : public StreamBuffer {
 public:
-  explicit GzipFileStreamBuffer(gzFile gzfile) : gzfile(gzfile), marker(0){ }
+  explicit GzipFileStreamBuffer(gzFile gzfile) : gzfile(gzfile){ }
 
   /** Reads an integer from the stream buffer */
   int
@@ -220,6 +235,10 @@ public:
   short
   readShort() override;
 
+  /** Writes a short from the stream buffer */
+  void
+  writeShort(short s) override;
+
   /** Reads a float from the stream buffer */
   float
   readFloat() override;
@@ -231,6 +250,10 @@ public:
   /** Read a single character */
   char
   readChar() override;
+
+  /** Write a single character */
+  void
+  writeChar(char c) override;
 
   /** Read a std::string from a character length */
   std::string
@@ -268,7 +291,6 @@ public:
   tell() const override;
 
 private:
-  size_t marker;
   gzFile gzfile;
 };
 
@@ -278,12 +300,25 @@ public:
   explicit MemoryStreamBuffer(std::vector<char>& data)
     : data(data), marker(0){ }
 
-  /** Check overflow of memory buffer */
+  /** Check overflow of memory buffer during read operations */
   inline void
   ensureAvailable(size_t bytes) const
   {
     if (marker + bytes > data.size()) {
       throw std::out_of_range("Not enough space in memory buffer");
+    }
+  }
+
+  /** Increase memory buffer during write operations */
+  inline void
+  makeSpace(size_t size)
+  {
+    // Calculate the required new size (current marker + bytes to write)
+    size_t requiredSize = marker + size;
+
+    // If the required size exceeds the current capacity, resize the vector
+    if (requiredSize > data.size()) {
+      data.resize(requiredSize);
     }
   }
 
@@ -299,6 +334,10 @@ public:
   short
   readShort() override;
 
+  /** Writes a short from the stream buffer */
+  void
+  writeShort(short s) override;
+
   /** Reads a float from the stream buffer */
   float
   readFloat() override;
@@ -311,9 +350,26 @@ public:
   char
   readChar() override;
 
+  /** Write a single character */
+  void
+  writeChar(char c) override;
+
   /** Read a std::string from a character length */
   std::string
   readString(size_t length) override;
+
+  /** Write a fixed length string from a std::string,
+   * padding with null if too short, clip if too long. */
+  void
+  writeString(const std::string& c, size_t length) override;
+
+  /** Read a vector of data */
+  void
+  readVector(void * data, size_t size) override;
+
+  /** Write a vector of data */
+  void
+  writeVector(const void * data, size_t size) override;
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -333,7 +389,10 @@ public:
   tell() const override;
 
 private:
+  /** Reference to buffer passed in by caller */
   std::vector<char>& data;
+
+  /** Location in the vector we're at */
   size_t marker;
 };
 
