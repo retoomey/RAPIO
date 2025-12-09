@@ -75,6 +75,40 @@ applyBOOSTOstream(std::vector<char>& input, std::vector<char>& output, bi::filte
   }
   return true;
 }
+
+bool
+applyBOOSTOstreamNew(
+  std::vector<char>    & input,
+  std::vector<char>    & output,
+  bi::filtering_ostream& os,
+  size_t               start_index = 0,
+  size_t               length      = 0 //  (0 means to end)
+)
+{
+  // Calculate the actual length to process
+  if ((length == 0) || ((start_index + length) > input.size())) {
+    length = input.size() - start_index;
+  }
+
+  // Check for valid range
+  if (start_index >= input.size()) {
+    // Handle error: start index is out of bounds
+    return false;
+  }
+
+  // Get the pointer to the starting element
+  const char * start_ptr = input.data() + start_index;
+
+  try{
+    os.push(bi::back_inserter(output));
+    bi::write(os, start_ptr, length);
+    os.flush();
+  }catch (const bi::gzip_error& e) {
+    LogSevere("Filter failure on stream: " << e.what() << "\n");
+    return false;
+  }
+  return true;
+}
 }
 
 void
@@ -114,7 +148,8 @@ GZIPDataFilter::introduceSelf()
 }
 
 bool
-GZIPDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
+GZIPDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
 {
   bi::filtering_ostream os;
 
@@ -157,12 +192,14 @@ BZIP2DataFilter::introduceSelf()
 }
 
 bool
-BZIP2DataFilter::apply(std::vector<char>& input, std::vector<char>& output)
+BZIP2DataFilter::apply(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
 {
   bi::filtering_ostream os;
 
   os.push(bi::bzip2_decompressor());
-  return (applyBOOSTOstream(input, output, os));
+  // return (applyBOOSTOstream(input, output, os));
+  return (applyBOOSTOstreamNew(input, output, os, startIndex, length));
 }
 
 bool
@@ -185,7 +222,8 @@ ZLIBDataFilter::introduceSelf()
 }
 
 bool
-ZLIBDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
+ZLIBDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
 {
   bi::filtering_ostream os;
 
@@ -215,7 +253,8 @@ LZMADataFilter::introduceSelf()
 }
 
 bool
-LZMADataFilter::apply(std::vector<char>& input, std::vector<char>& output)
+LZMADataFilter::apply(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
 {
   bi::filtering_ostream os;
 
@@ -245,7 +284,8 @@ SnappyDataFilter::introduceSelf()
 }
 
 bool
-SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output)
+SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
 {
   try {
     // Get the size of the uncompressed data for output buffer

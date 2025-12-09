@@ -89,6 +89,7 @@ Information needed:
     <file suffix="gb2" io="wgrib"/>
     <file suffix="grb2" io="wgrib"/>
     <file suffix="pal" io="file"/>
+    <file suffix="nids" io="nids"/>
   </suffixes>
 
 <!-- Settings for the built in XML reader --> 
@@ -196,6 +197,9 @@ Information needed:
     <output />
   </io>
 
+  <io names="nids" module="librapionids.so">
+    <output />
+  </io>
 </datatype>
 
 </settings>

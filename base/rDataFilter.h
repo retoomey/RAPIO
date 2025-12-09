@@ -43,9 +43,12 @@ public:
   // Filter methods -----------------------------------------------------
 
   /** Take input character and apply filter creating output characters,
-   * a copy is made. */
+   * a copy is made.  Option start index in the data and length.
+   * a length of 0 will go to the end.*/
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output)
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0)
   {
     return false;
   }
@@ -75,7 +78,9 @@ public:
   /** Take input character and apply filter creating output characters,
    * a copy is made. */
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output) override;
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
 
   /** Apply filter to a given URL, write to output location */
   virtual bool
@@ -98,7 +103,9 @@ public:
   /** Take input character and apply filter creating output characters,
    * a copy is made. */
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output) override;
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
 
   /** Apply filter to a given URL, write to output location */
   virtual bool
@@ -121,7 +128,9 @@ public:
   /** Take input character and apply filter creating output characters,
    * a copy is made. */
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output) override;
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
 
   /** Apply filter to a given URL, write to output location */
   virtual bool
@@ -145,7 +154,9 @@ public:
   /** Take input character and apply filter creating output characters,
    * a copy is made. */
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output) override;
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
 
   /** Apply filter to a given URL, write to output location */
   virtual bool
@@ -170,7 +181,9 @@ public:
   /** Take input character and apply filter creating output characters,
    * a copy is made. */
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output) override;
+  apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
 
   /** Apply filter to a given URL, write to output location */
   virtual bool

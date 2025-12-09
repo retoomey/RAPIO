@@ -7,6 +7,7 @@
 #include <iomanip>
 
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 using namespace rapio;
 using namespace std;

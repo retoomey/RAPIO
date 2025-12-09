@@ -1,4 +1,5 @@
 #include "rBinaryIO.h"
+#include "rDataFilter.h"
 
 #include <rError.h>
 #include <rOS.h>
@@ -596,6 +597,29 @@ MemoryStreamBuffer::writeVector(const void * data, size_t size)
 
   // Advance the marker
   marker += size;
+}
+
+MemoryStreamBuffer
+MemoryStreamBuffer::readBZIP2()
+{
+  std::vector<char> destination;
+
+  try{
+    BZIP2DataFilter bz2;
+    bz2.apply(data, destination, tell(), 0);
+  }catch (std::exception& e) {
+    LogSevere("BZIP2 Failed: " << e.what() << "\n");
+  }
+  MemoryStreamBuffer mm(std::move(destination));
+
+  setSameEndian(mm);
+  return std::move(mm);
+}
+
+void
+StreamBuffer::setSameEndian(StreamBuffer& m)
+{
+  m.myDataBigEndian = myDataBigEndian;
 }
 
 void

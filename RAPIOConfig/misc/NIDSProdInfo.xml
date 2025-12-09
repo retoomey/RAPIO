@@ -1,0 +1,409 @@
+<NIDSProdInfo>
+
+<!-- NIDS LevelIII data information file.  NIDS due to bandwidth doesn't
+     store all information in the file similar to grib, grib2 and other formats.
+
+     Toomey Dec 2025:
+        Information from the orpgprod table with mrms, though with updates
+        changes since we'll also have writing ability.
+
+     code:  The NIDS product code.  Used for lookup.
+     type:  The Typename such as "Reflectivity".
+     res:   The known resolution of the data.
+     range:  The range in meters to first gate.
+     level:  The NIDS level.
+     unit:   The units for MRMS/RAPIO output files.
+     datatype: The DataType for MRMS/RAPIO.
+     compress: The data is possibly bzip2 compressed past the first headers
+               The writer will compress.
+
+     Most NIDS products need the NIDS thresholds to be decoded.
+     Used products here are the original products in code using the various methods.
+    
+     decode: 0: No decoding. Use actual stored threshold values  (134, 135, 176)
+             1: (default when empty).  Use default NIDS decoding.
+             2: Used products: 159, 161, 163, 170, 172, 173, 174, 175, 176
+             3: Used products: 32, 94, 153, 180, 182, 186
+             4: Used products: (93), 99, 154
+             5: Used products: 155
+             6: Used products: 33
+             7: Used products: 81
+     For thresholds using scaling, min and increase is defined. 
+
+     min:       The min value when NIDS scaling thresholds, if any.
+     increase:  The delta/increase value when NIDS scaling thresholds, if any.
+-->
+
+  <info code="16" type="Reflectivity" res="0.54x1" range="124" level="8"    
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="17" type="Reflectivity" res="1.1x1"  range="248" level="8"    
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="18" type="Reflectivity" res="2.2x1"  range="248" level="8"    
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="19" type="Reflectivity" res="0.54x1" range="124" level="16"   
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="20" type="Reflectivity" res="1.1x1"  range="248" level="16"   
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="21" type="Reflectivity" res="2.2x1"  range="248" level="16"   
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="94" type="Reflectivity" res="0.54x1" range="248" level="256"  
+      units="dBZ" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <info code="153" type="Reflectivity" res="0.135x0.5" range="248" level="256"  
+      units="dBZ" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <info code="180" type="Reflectivity" res="0.08x1" range="48" level="256"  
+      units="dBZ" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <info code="181" type="Reflectivity" res="0.08x1" range="48" level="16"  
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="186" type="Reflectivity" res="0.16x1" range="225" level="256"  
+      units="dBZ" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <info code="187" type="Reflectivity" res="0.16x1" range="225" level="16"  
+      units="dBZ" datatype="RadialSet"> </info>
+
+  <info code="22" type="Velocity"     res="0.135x1" range="32" level="8"    
+      units="kt" datatype="RadialSet"> </info>
+  <info code="23" type="Velocity"     res="0.27x1" range="62" level="8"    
+      units="kt" datatype="RadialSet"> </info>
+  <info code="24" type="Velocity"     res="0.54x1" range="124" level="8"    
+      units="kt" datatype="RadialSet"> </info>
+  <info code="25" type="Velocity"     res="0.135x1" range="32" level="16"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="26" type="Velocity"     res="0.27x1" range="64" level="16"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="27" type="Velocity"     res="0.54x1" range="124" level="16"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="99" type="Velocity"     res="0.135x1" range="124" level="256"  
+      units="meters/sec" datatype="RadialSet" compress="yes" min="10" increase="10" decode="4"> </info>
+  <info code="154" type="Velocity" res="0.135x0.5" range="162" level="256"  
+      units="meters/sec" datatype="RadialSet" compress="yes" min="10" increase="10" decode="4"> </info>
+  <info code="182" type="Velocity" res="0.08x1" range="48" level="256"  
+      units="kt" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <info code="183" type="Velocity" res="0.08x1" range="48" level="16"  
+      units="kt" datatype="RadialSet"> </info>
+
+  <info code="28" type="SpectrumWidth" res="0.135x1" range="32" level="8"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="29" type="SpectrumWidth" res="0.27x1" range="62" level="8"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="30" type="SpectrumWidth" res="0.54x1" range="124" level="8"   
+      units="kt" datatype="RadialSet"> </info>
+  <info code="155" type="SpectrumWidth" res="0.135x0.5" range="162" level="256"  
+      units="meters/sec" datatype="RadialSet" compress="yes" min="10" increase="10" decode="5"> </info>
+  <info code="185" type="SpectrumWidth" res="0.08x1" range="48" level="8"  
+      units="kt" datatype="RadialSet"> </info>
+
+  <!-- User Selectable Storm Total Precipitation -->
+  <info code="31" type="USP" res="1.1x1" range="124" level="16" 
+      units="inches" datatype="Radial/GEOG/ALPH"> </info>
+
+  <!-- Digital Hybrid Scan Reflectivity -->
+  <info code="32" type="DHR" res="0.54x1" range="124" level="256" 
+      units="dBZ" datatype="RadialSet" compress="yes" min="10" increase="10" decode="3"> </info>
+  <!-- Hybrid Scan Reflectivity -->
+  <info code="33" type="HSR" res="0.54x1" range="124" level="16"  
+      units="dBZ" datatype="RadialSet" min="1000" increase="10" decode="6"> </info>
+  <!-- Clutter Filter Control -->
+  <info code="34" type="CFC" res="1x1.4" range="124" level="8" 
+      units="dimensionless" datatype="RadialSet"> </info>
+  <info code="132" type="ClutterLikelihoodReflectivity" res="0.54x1" range="248" level="256"  
+      units="dBZ" datatype="RadialSet"> </info>
+  <info code="133" type="ClutterLikelihoodVelocity"     res="0.135x1" range="124" level="256"  
+      units="kt" datatype="RadialSet"> </info>
+
+  <!-- Composite Reflectivity -->
+  <info code="35" type="CR" res="0.54x0.54" range="124" level="8"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="36" type="CR" res="2.2x2.2" range="248" level="8"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="37" type="CR" res="0.54x0.54" range="124" level="16"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="38" type="CR" res="2.2x2.2" range="248" level="16"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+
+  <!-- Composite Reflectivity Contour-->
+  <info code="39" type="CRC" res="0.54x0.54" range="124" level="NA"  
+      units="dBZ" datatype="LINKD_CONTR_VCTRS/SET_CLRS/NONGEOG/ALPH"> </info>
+  <info code="40" type="CRC" res="2.2x2.2" range="248" level="NA"  
+      units="dBZ" datatype="LINKD_CONTR_VCTRS/SET_CLRS/NONGEOG/ALPH"> </info>
+
+  <!-- Echo Tops -->
+  <info code="41" type="ET" res="2.2x2.2" range="124" level="16"
+      units="kft" datatype="Raster"> </info>
+  <info code="135" type="HREET" res="0.54x1" range="186" level="199"
+      units="kft" datatype="RadialSet" compress="yes" decode="0"> </info>
+  <!-- Echo Tops Contour-->
+  <info code="42" type="ETC" res="2.2x2.2" range="124" level="NA"
+      units="kft" datatype="LINKD_CONTR_VCTRS/SET_CLRS/NONGEOG/ALPH"> </info>
+
+  <!-- Severe Weather Reflectivity -->
+  <info code="43" type="SWR" res="0.54x1" range="27" level="16"  
+      units="dBZ" datatype="RadialSet"> </info>
+  <!-- Severe Weather Velocity -->
+  <info code="44" type="SWV" res="0.135x1" range="27" level="16" 
+      units="kt" datatype="RadialSet"> </info>
+  <!-- Severe Weather SpectrumWidth -->
+  <info code="45" type="SWW" res="0.135x1" range="27" level="8" 
+      units="kt" datatype="RadialSet"> </info>
+  <!-- Severe Weather (Shear) -->
+  <info code="46" type="SWShear" res="0.27x1" range="27" level="16" 
+      units="E-3/sec" datatype="RadialSet"> </info>
+  <!-- Severe Weather Probability -->
+  <info code="47" type="SWP" res="2.2x2.2" range="124" level="NA" 
+      units="percent" datatype="GEOG/ALPHNUM"> </info>
+
+  <!-- VAD Wind Profile -->
+  <info code="48" type="VWP" res="5" range="NA" level="5"  
+      units="kt" datatype="NON-GEOG/ALPHNUM"> </info>
+  <!-- Combined Moment -->
+  <info code="49" type="CM" res="0.27x0.27" range="13.5" level="16"  
+      units="dBZ" datatype="Raster"> </info>
+
+  <!-- Cross Section (Reflectivity) -->
+  <info code="50" type="RCS" res="0.54x0.27" range="124" level="16"  
+      units="dBZ" datatype="Raster"> </info>
+  <!-- Cross Section (Velocity) -->
+  <info code="51" type="VCS" res="0.54x0.27" range="124" level="16" 
+      units="kt" datatype="Raster"> </info>
+  <!-- Cross Section (Spectrum Width) -->
+  <info code="52" type="SCS" res="0.54x0.27" range="124" level="8" 
+      units="kt" datatype="Raster"> </info>
+
+  <!-- Weak Echo Region -->
+  <info code="53" type="WER" res="0.54x0.54" range="27" level="8"  
+      units="dBZ" datatype="Raster"> </info>
+
+  <!-- Storm Releative Mean Radial Velocity -->
+  <info code="55" type="SRR" res="0.27x1" range="27" level="16" 
+      units="kt" datatype="RadialSet"> </info>
+  <info code="56" type="SRM" res="0.54x1" range="124" level="16" 
+      units="kt" datatype="RadialSet"> </info>
+
+  <!-- Vertically Integrated Liquid -->
+  <info code="57" type="VIL" res="2.2x2.2" range="124" level="16" 
+      units="kg/m^2" datatype="Raster"> </info>
+
+  <!-- Storm Tracking Information -->
+  <info code="58" type="OrpgStormTrackInfo" res="NA" range="248" level="NA"
+      units="dimensionless" datatype="GEOG/NON/ALPH"> </info>
+  <!-- Hail Index -->
+  <info code="59" type="OrpgHailIndex" res="NA" range="124" level="NA"  
+      units="dimensionless" datatype="GEOG/NON/ALPH"> </info>
+  <!-- Mesocyclone -->
+  <info code="60" type="OrpgMeso" res="NA" range="124" level="NA"  
+      units="dimensionless" datatype="GEOG/NON/ALPH"> </info>
+  <!-- Tornado Vortex Signature -->
+  <info code="61" type="OrpgTVSTable" res="NA" range="124" level="NA"  
+      units="dimensionless" datatype="GEOG/NON/ALPH"> </info>
+  <!-- Storm Structure -->
+  <info code="62" type="OrpgStormStructure" res="NA" range="248" level="NA"  
+      units="dimensionless" datatype="ALPHNUM"> </info>
+
+  <!-- Layer Composite Reflectivity -->
+  <info code="63" type="LRA1" res="2.2x2.2" range="124" level="8"  
+      units="dBZ" datatype="Raster"> </info>
+  <info code="64" type="LRA2" res="2.2x2.2" range="124" level="8Avg"  
+      units="dBZ" datatype="Raster"> </info>
+  <info code="65" type="LRM1" res="2.2x2.2" range="124" level="8Avg"  
+      units="dBZ" datatype="Raster"> </info>
+  <info code="66" type="LRM2" res="2.2x2.2" range="124" level="8Max"  
+      units="dBZ" datatype="Raster"> </info>
+  <!-- Layer Composite Reflectivity AP removed -->
+  <info code="67" type="APR" res="2.2x2.2" range="124" level="8Max"  
+      units="dBZ" datatype="Raster"> </info>
+
+  <!-- User Alert Message -->
+  <info code="73" type="UAM" res="NA" range="NA" level="NA"  
+      units="dimensionless" datatype="ALPHNUM"> </info>
+  <!-- Radar Coded Message -->
+  <info code="74" type="RCM" res="1/16LFM" range="248" level="9"  
+      units="dimensionless" datatype="ALPHNUM"> </info>
+  <!-- Free Text Message -->
+  <info code="75" type="FTM" res="NA" range="NA" level="NA"  
+      units="dimensionless" datatype="ALPHNUM"> </info>
+  <!-- PUP Free Text Message -->
+  <info code="77" type="PUP_FTM" res="NA" range="NA" level="NA"  
+      units="dimensionless" datatype="ALPHNUM"> </info>
+
+  <!-- Surface Rainfall Accum (1hr) -->
+  <info code="78" type="OHP" res="1.1x1" range="124" level="16"  
+      units="inch" datatype="RadialSet"> </info>
+  <!-- Surface Rainfall Accum (3hr) -->
+  <info code="79" type="THP" res="1.1x1" range="124" level="16"  
+      units="inch" datatype="RadialSet"> </info>
+  <!-- Storm Total Rainfall Accum -->
+  <info code="80" type="STP" res="1.1x1" range="124" level="16"  
+      units="inch" datatype="RadialSet"> </info>
+
+  <!-- Hourly Digital Precipitation Array -->
+  <info code="81" type="DPA" res="1/40LFM" range="124" level="256/8"  
+      units="inch" datatype="Raster" min="10" increase="1000" decode="7"> </info>
+  <!-- Supplemental Precipitation Data -->
+  <info code="82" type="SPD" res="NA" range="NA" level="NA"  
+      units="inch" datatype="ALPHNUM"> </info>
+  <!-- Radar Coded Message (Unedited) -->
+  <info code="83" type="IRM" res="1/16LFM" range="248" level="9"  
+      units="dimensionless" datatype="Raster"> </info>
+  <!-- Velocity Azimuth Display -->
+  <info code="84" type="VAD" res="5" range="NA" level="8"  
+      units="kt" datatype="NON/ALPH"> </info>
+
+  <!-- Cross Section Reflectivity -->
+  <info code="85" type="RCS" res="0.54x0.27" range="124" level="8"  
+      units="dBZ" datatype="Raster"> </info>
+  <!-- Cross Section Velocity -->
+  <info code="86" type="VCS" res="0.54x0.27" range="124" level="8"  
+      units="kt" datatype="Raster"> </info>
+
+  <!-- Combined Shear -->
+  <info code="87" type="CS" res="ADAPTBL" range="62" level="16"  
+      units="E-3/sec" datatype="Raster"> </info>
+  <!-- Combined Shear Contour-->
+  <info code="88" type="CSC" res="ADAPTBL" range="62" level="ADAPTBL"  
+      units="E-3/sec" datatype="RadialSet"> </info>
+
+  <!-- Layer Composite Reflectivity -->
+  <info code="89" type="LRA3" res="2.2x2.2" range="124" level="8Avg"  
+      units="dBZ" datatype="Raster"> </info>
+  <info code="90" type="LRM3" res="2.2x2.2" range="124" level="8Max"  
+      units="dBZ" datatype="Raster"> </info>
+
+  <!-- Storm Track Alphanumetic Block -->
+  <info code="101" type="SCIT_Table" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+  <!-- Hail Index Alphanumetic Block -->
+  <info code="102" type="HailTable" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+  <!-- Mesocyclone Alphanumetic Block -->
+  <info code="103" type="MesoTable" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+  <!-- TVS Alphanumetic Block -->
+  <info code="104" type="TDA_Table" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA">  </info>
+
+  <!-- Site Adaptable Parameters for CombinedShear -->
+  <info code="105" type="APARM_CS" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+  <!-- Site Adaptable Parameters for Combined Shear Contour -->
+  <info code="106" type="APARM_CSC" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+
+  <!--PrecipOneHourTable -->
+  <info code="107" type="PCP1TABLE" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+
+  <!--PrecipThreeHourTable -->
+  <info code="108" type="PCP3TABLE" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+
+  <!--PrecipTotalTable -->
+  <info code="109" type="PCPTTABLE" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="NA"> </info>
+
+  <!-- New products -->
+
+  <!--HighResVil -->
+  <info code="134" type="HighResVIL" res="0.54x1" range="248"
+      level="256"  units="kg/m^2" datatype="RadialSet" compress="yes" decode="0"> </info>
+
+  <!--AdvectedCompRef -->
+  <info code="138"  type="ADV_COMP_REF" res="2.2x2.2" range="248" level="10"  
+      units="dBZ" datatype="Raster" compress="yes"> </info>
+  <info code="238"  type="ADV_COMP_REF" res="2.2x2.2" range="248" level="20"  
+      units="dBZ" datatype="Raster"> </info>
+  <info code="338"  type="ADV_COMP_REF" res="2.2x2.2" range="248" level="30"  
+      units="dBZ" datatype="Raster"> </info>
+
+  <!--AdvectedVIL -->
+  <info code="157"  type="ADV_VIL" res="2.2x2.2" range="124" level="10"
+      units="kg/m^2" datatype="Raster"> </info>
+  <info code="257"  type="ADV_VIL" res="2.2x2.2" range="124" level="20"
+      units="kg/m^2" datatype="Raster"> </info>
+  <info code="357"  type="ADV_VIL" res="2.2x2.2" range="124" level="30"
+      units="kg/m^2" datatype="Raster"> </info>
+
+  <!--LightningStrike -->
+  <info code="76"  type="LTG_STRK" res="2.2x2.2" range="124" level="16"
+      units="count" datatype="Raster"> </info>
+<!--  <info code="176" type="LTG_STRK" res="2.2x2.2" range="124" level="10"
+      units="count" datatype="Raster"> </info> -->
+  <info code="276" type="LTG_STRK" res="2.2x2.2" range="124" level="20"
+      units="count" datatype="Raster"> </info>
+  <info code="376" type="LTG_STRK" res="2.2x2.2" range="124" level="30"
+      units="count" datatype="Raster"> </info>
+
+  <info code="141" type="OrpgMesoDetection" res="NA" range="124" level="NA"
+      units="dimensionless" datatype="GEOG/NON/ALPH"> </info>
+  <!--LightningProbability -->
+<!--  <info code="141" type="LTG_PROB" res="2.2x2.2" range="124" level="10"
+      units="percent" datatype="Raster"> </info> -->
+  <info code="241" type="LTG_PROB" res="2.2x2.2" range="124" level="20"
+      units="percent" datatype="Raster"> </info>
+  <info code="341" type="LTG_PROB" res="2.2x2.2" range="124" level="30"
+      units="percent" datatype="Raster"> </info>
+
+  <!--CompositeReflectivity AP edited -->
+  <info code="95" type="CR" res="0.54x0.54" range="124" level="8"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="96" type="CR" res="2.2x2.2" range="248" level="8"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="97" type="CR" res="0.54x0.54" range="124" level="16"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+  <info code="98" type="CR" res="2.2x2.2" range="248" level="16"  
+      units="dBZ" datatype="Raster/NON_GEOG/ALPH"> </info>
+
+  <!--DP -->
+  <info code="158" type="ZDR" res="0.54x1" range="124" level="16"
+      units="dimensionless" datatype="RadialSet"> </info>
+  <info code="159" type="DZD" res="0.135x1" range="162" level="256"
+      units="dimensionless" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="160" type="RhoHV" res="0.54x1" range="124" level="16"
+      units="dimensionless" datatype="RadialSet"> </info>
+  <info code="161" type="RhoHV" res="0.135x1" range="162" level="256"
+      units="dimensionless" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="162" type="KDP" res="0.54x1" range="124" level="16"
+      units="degree/kilometers" datatype="RadialSet"> </info>
+  <info code="163" type="KDP" res="0.135x1" range="162" level="256"
+      units="degree/kilometers" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="164" type="HCA" res="0.54x1" range="124" level="16"
+      units="dimensionless" datatype="RadialSet"> </info>
+  <info code="165" type="DHC" res="0.135x1" range="162" level="256"
+      units="dimensionless" datatype="RadialSet" compress="yes"> </info>
+
+  <!-- Melting Layer -->
+  <info code="166" type="ML" res="0.135x1" range="124" level="NA"
+      units="dimensionless" datatype="LINKD_CONTR_VCTRS/SET_CLRS"> </info>
+
+  <!-- Accumulation -->
+  <info code="169" type="OHA" res="1.1x1" range="124" level="16"  
+      units="inch" datatype="RadialSet"> </info>
+  <info code="170" type="DAA" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="171" type="STA" res="1.1x1" range="124" level="16"  
+      units="inch" datatype="RadialSet"> </info>
+  <info code="172" type="DSA" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="173" type="DUA" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="174" type="DOD" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes" decode="2"> </info>
+  <info code="175" type="DSD" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes" decode="2"> </info>
+
+  <!-- Reused product code for 176? -->
+  <!-- <info code="176" type="LTG_STRK" res="2.2x2.2" range="124" level="10"
+      units="count" datatype="Raster"> </info> -->
+  <info code="176" type="DPR" res="0.135x1" range="124" level="65536"
+      units="inch/hour" datatype="GenericRadial" compress="yes" decode="2"> </info>
+
+  <info code="177" type="HHC" res="0.135x1" range="124" level="256"  
+      units="inch" datatype="RadialSet" compress="yes"> </info>
+
+  <info code="140" type="GFM" res="NA" range="38" level="NA"
+      units="dimensionless" datatype="LINKD_CONTR_VCTRS" compress="yes"> </info>
+
+  <info code="1941" type="AMDA" res="NA" range="38" level="NA"
+      units="dimensionless" datatype="LINKD_CONTR_VCTRS" compress="yes"> </info>
+
+  <info code="152" type="RSL" res="NA" range="NA" level="NA"
+      units="dimensionless" datatype="GenericData" compress="yes"> </info>
+
+</NIDSProdInfo>

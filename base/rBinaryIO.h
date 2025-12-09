@@ -10,6 +10,8 @@
 
 // included in .cc files that need binary IO capability
 namespace rapio {
+class MemoryStreamBuffer;
+
 /*** Class for weak wrapping a marching data source
  * using C style function calls.  Many libraries make
  * this way of calling more convenient and cleaner than
@@ -100,6 +102,10 @@ public:
   virtual void
   writeVector(const void * data, size_t size) = 0;
 
+  /** Read bzip2 to end of data */
+  virtual MemoryStreamBuffer
+  readBZIP2() = 0;
+
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
   virtual bool
@@ -124,11 +130,128 @@ public:
   /** Do we expect the data itself to be little endian? */
   void setDataLittleEndian(){ myDataBigEndian = false; }
 
+  /** Set another stream to our endian */
+  void
+  setSameEndian(StreamBuffer& m);
+
 protected:
 
   /** Set the endian of the data.  If it's opposite to the
    * system endian, we swap bytes */
   bool myDataBigEndian;
+};
+
+/** Wrap a std::vector<unsigned char> */
+class MemoryStreamBuffer : public StreamBuffer {
+public:
+
+  /** Take ownership of a passed in std::vector<char>.  This
+   * allows us to avoid copying in certain cases */
+  explicit MemoryStreamBuffer(std::vector<char>&& data)
+    : data(std::move(data)), marker(0){ }
+
+  /** Create an empry MemoryStreamBuffer, typically for
+   * writing/appending to */
+  explicit MemoryStreamBuffer() : marker(0){ }
+
+  /** Check overflow of memory buffer during read operations */
+  inline void
+  ensureAvailable(size_t bytes) const
+  {
+    if (marker + bytes > data.size()) {
+      throw std::out_of_range("Not enough space in memory buffer");
+    }
+  }
+
+  /** Increase memory buffer during write operations */
+  inline void
+  makeSpace(size_t size)
+  {
+    // Calculate the required new size (current marker + bytes to write)
+    size_t requiredSize = marker + size;
+
+    // If the required size exceeds the current capacity, resize the vector
+    if (requiredSize > data.size()) {
+      data.resize(requiredSize);
+    }
+  }
+
+  /** Reads an integer from the stream buffer */
+  int
+  readInt() override;
+
+  /** Writes an integer to the stream buffer */
+  void
+  writeInt(int i) override;
+
+  /** Reads a short from the stream buffer */
+  short
+  readShort() override;
+
+  /** Writes a short from the stream buffer */
+  void
+  writeShort(short s) override;
+
+  /** Reads a float from the stream buffer */
+  float
+  readFloat() override;
+
+  /** Write a float */
+  void
+  writeFloat(float w) override;
+
+  /** Read a single character */
+  char
+  readChar() override;
+
+  /** Write a single character */
+  void
+  writeChar(char c) override;
+
+  /** Read a std::string from a character length */
+  std::string
+  readString(size_t length) override;
+
+  /** Write a fixed length string from a std::string,
+   * padding with null if too short, clip if too long. */
+  void
+  writeString(const std::string& c, size_t length) override;
+
+  /** Read a vector of data */
+  void
+  readVector(void * data, size_t size) override;
+
+  /** Write a vector of data */
+  void
+  writeVector(const void * data, size_t size) override;
+
+  /** Read bzip2 to end of data */
+  MemoryStreamBuffer
+  readBZIP2() override;
+
+  // Movement ----------------------------
+  /** Add a method to reset or seek to a specific position */
+  bool
+  seek(size_t position) override;
+
+  /** Go backward a given number of bytes */
+  void
+  backward(size_t count) override;
+
+  /** Go forward a given number of bytes */
+  void
+  forward(size_t count) override;
+  // -------------------------------------
+
+  size_t
+  tell() const override;
+
+private:
+  /** Reference to buffer passed in by caller */
+  std::vector<char> data;
+
+  /** Location in the vector we're at */
+  size_t marker;
 };
 
 /** Wrap a FILE* */
@@ -188,6 +311,10 @@ public:
   /** Write a vector of data */
   virtual void
   writeVector(const void * data, size_t size) override;
+
+  /** Read bzip2 to end of data */
+  virtual MemoryStreamBuffer
+  readBZIP2(){ return MemoryStreamBuffer(); }
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -272,6 +399,10 @@ public:
   virtual void
   writeVector(const void * data, size_t size) override;
 
+  /** Read bzip2 to end of data */
+  virtual MemoryStreamBuffer
+  readBZIP2(){ return MemoryStreamBuffer(); }
+
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
   bool
@@ -292,108 +423,6 @@ public:
 
 private:
   gzFile gzfile;
-};
-
-/** Wrap a std::vector<unsigned char> */
-class MemoryStreamBuffer : public StreamBuffer {
-public:
-  explicit MemoryStreamBuffer(std::vector<char>& data)
-    : data(data), marker(0){ }
-
-  /** Check overflow of memory buffer during read operations */
-  inline void
-  ensureAvailable(size_t bytes) const
-  {
-    if (marker + bytes > data.size()) {
-      throw std::out_of_range("Not enough space in memory buffer");
-    }
-  }
-
-  /** Increase memory buffer during write operations */
-  inline void
-  makeSpace(size_t size)
-  {
-    // Calculate the required new size (current marker + bytes to write)
-    size_t requiredSize = marker + size;
-
-    // If the required size exceeds the current capacity, resize the vector
-    if (requiredSize > data.size()) {
-      data.resize(requiredSize);
-    }
-  }
-
-  /** Reads an integer from the stream buffer */
-  int
-  readInt() override;
-
-  /** Writes an integer to the stream buffer */
-  void
-  writeInt(int i) override;
-
-  /** Reads a short from the stream buffer */
-  short
-  readShort() override;
-
-  /** Writes a short from the stream buffer */
-  void
-  writeShort(short s) override;
-
-  /** Reads a float from the stream buffer */
-  float
-  readFloat() override;
-
-  /** Write a float */
-  void
-  writeFloat(float w) override;
-
-  /** Read a single character */
-  char
-  readChar() override;
-
-  /** Write a single character */
-  void
-  writeChar(char c) override;
-
-  /** Read a std::string from a character length */
-  std::string
-  readString(size_t length) override;
-
-  /** Write a fixed length string from a std::string,
-   * padding with null if too short, clip if too long. */
-  void
-  writeString(const std::string& c, size_t length) override;
-
-  /** Read a vector of data */
-  void
-  readVector(void * data, size_t size) override;
-
-  /** Write a vector of data */
-  void
-  writeVector(const void * data, size_t size) override;
-
-  // Movement ----------------------------
-  /** Add a method to reset or seek to a specific position */
-  bool
-  seek(size_t position) override;
-
-  /** Go backward a given number of bytes */
-  void
-  backward(size_t count) override;
-
-  /** Go forward a given number of bytes */
-  void
-  forward(size_t count) override;
-  // -------------------------------------
-
-  size_t
-  tell() const override;
-
-private:
-  /** Reference to buffer passed in by caller */
-  std::vector<char>& data;
-
-  /** Location in the vector we're at */
-  size_t marker;
 };
 
 /** This is a helper class of functions for binary IO.

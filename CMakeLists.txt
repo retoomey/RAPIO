@@ -25,6 +25,7 @@ option(BUILD_EXAMPLES "Build example directory rexample" YES)
 
 # These two for NSSL common data files
 option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
+option(BUILD_NIDS_MODULE "Build NIDS(LevelIII) module" YES)
 option(BUILD_HDF5_MODULE "Build general hdf5 module" YES)
 option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 
@@ -349,6 +350,10 @@ addRAPIONote("File format support:")
 if (BUILD_NETCDF_MODULE)
   add_subdirectory(modules/ionetcdf)
 endif (BUILD_NETCDF_MODULE)
+
+if (BUILD_NIDS_MODULE)
+  add_subdirectory(modules/ionids)
+endif (BUILD_NIDS_MODULE)
 
 if (BUILD_HDF5_MODULE)
   add_subdirectory(modules/iohdf5)
