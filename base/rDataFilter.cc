@@ -93,6 +93,7 @@ applyBOOSTOstreamNew(
   // Check for valid range
   if (start_index >= input.size()) {
     // Handle error: start index is out of bounds
+    LogSevere("FILTER OUT OF BOUNDS " << start_index << " >= " << input.size() << "\n");
     return false;
   }
 
@@ -199,6 +200,16 @@ BZIP2DataFilter::apply(std::vector<char>& input, std::vector<char>& output,
 
   os.push(bi::bzip2_decompressor());
   // return (applyBOOSTOstream(input, output, os));
+  return (applyBOOSTOstreamNew(input, output, os, startIndex, length));
+}
+
+bool
+BZIP2DataFilter::reverse(std::vector<char>& input, std::vector<char>& output,
+  size_t startIndex, size_t length)
+{
+  bi::filtering_ostream os;
+
+  os.push(bi::bzip2_compressor());
   return (applyBOOSTOstreamNew(input, output, os, startIndex, length));
 }
 

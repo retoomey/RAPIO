@@ -12,9 +12,17 @@ public:
   virtual void
   read(StreamBuffer& s) override;
 
+  /** Write ourselves to buffer */
+  virtual void
+  write(StreamBuffer& s) override;
+
   /** Debug dump */
   void
   dump();
+
+  /** Get the write size of this block.  Most are static. */
+  size_t
+  size() const { return 10; }
 
   // protected:
 public: // temp for writing alpha

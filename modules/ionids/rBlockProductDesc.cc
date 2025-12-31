@@ -1,4 +1,5 @@
 #include "rBlockProductDesc.h"
+#include "rNIDSUtil.h"
 #include <rError.h>
 
 #include "rConfigNIDSInfo.h"
@@ -33,12 +34,15 @@ BlockProductDesc::read(StreamBuffer& b)
   int genTime = b.readInt();
 
   // Get time fields
-  // FIXME: general time util maybe
-  myVolStartTime = Time::SecondsSinceEpoch(volScanStartTime + ((volScanDate - 1) * 24 * 3600));
+  // myVolStartTime = Time::SecondsSinceEpoch(volScanStartTime + ((volScanDate - 1) * 24 * 3600));
+  myVolStartTime = NIDSUtil::getTimeFromNIDSTime(volScanDate, volScanStartTime);
+
+  // Time oldmyVolStartTime = Time::SecondsSinceEpoch(volScanStartTime + ((volScanDate - 1) * 24 * 3600));
   if (genDate <= 1) {
     myGenTime = myVolStartTime;
   } else {
-    myGenTime = Time::SecondsSinceEpoch(genTime + ((genDate - 1) * 24 * 3600));
+    // myGenTime = Time::SecondsSinceEpoch(genTime + ((genDate - 1) * 24 * 3600));
+    myGenTime = NIDSUtil::getTimeFromNIDSTime(genDate, genTime);
   }
 
   // Read some more fields
@@ -151,6 +155,30 @@ BlockProductDesc::dump()
   LogInfo("Graphic OFF " << myGraphicOffset << "\n");
   LogInfo("Tab OFF " << myTabularOffset << "\n");
 } // BlockProductDesc::dump
+
+void
+BlockProductDesc::setDecodeMethod2(float scale, float offset,
+  int leading_flags, int size)
+{
+  union { uint16_t i[2];
+          float    f;
+  } u;
+
+  u.f = scale;
+  myDataThresholds[0] = u.i[1];
+  myDataThresholds[1] = u.i[0];
+
+  u.f = offset;
+  myDataThresholds[2] = u.i[1];
+  myDataThresholds[3] = u.i[0];
+
+  myDataThresholds[4] = 0;
+  myDataThresholds[5] = size;
+  myDataThresholds[6] = leading_flags;
+  for (size_t i = 7; i < 16; i++) {
+    myDataThresholds[i] = 0;
+  }
+}
 
 void
 BlockProductDesc::decodeMethod2(std::vector<float>& a) const
@@ -321,6 +349,7 @@ BlockProductDesc:: getDecodedThresholds(std::vector<float>& a) const
   const float delta = (minValue != -1) ? (float) myDataThresholds[1] / increase : 0;
   const int levels  = (minValue != -1) ? myDataThresholds[2] : 0;
 
+  LogSevere("Min, delta, levels " << min << ", " << delta << ", " << levels << "\n");
   switch (decode) {
       default:
         LogSevere("Unknown decode method " << decode << ", trying default (1)\n");

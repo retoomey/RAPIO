@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rUtility.h"
+#include "rTime.h"
 
 #include <array>
 #include <vector>
@@ -9,6 +10,17 @@ namespace rapio {
 /** Various utilities for generating color codes and mrms values. */
 class NIDSUtil : public Utility {
 public:
+
+  // ------------------------------------------------
+  // Time conversion
+
+  /** Given NIDS date and time values, convert to Time object */
+  static Time
+  getTimeFromNIDSTime(short volScanDate, int volScanStartTime);
+
+  /** Given a Time, convert to the NIDS data and time values */
+  static void
+  getNIDSTimeFromTime(const Time& t, short& volScanDate, int& volScanStartTime);
 
   // ------------------------------------------------
   // Convert raw character data into color codes
@@ -56,6 +68,14 @@ public:
     const std::vector<int>   & colors,
     const std::vector<float> & thresholds,
     std::vector<float>       & values);
+
+  /** Method D3 reverse */
+  static void
+  valueToColorD3(
+    const std::vector<float>& thresholds,
+    const float *           values, // to avoid copying things
+    const size_t            size,
+    std::vector<int>        & colors);
 
   /** Method D4 uses decoded thresholds (default product ) */
   static void

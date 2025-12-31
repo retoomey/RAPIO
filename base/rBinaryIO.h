@@ -106,6 +106,10 @@ public:
   virtual MemoryStreamBuffer
   readBZIP2() = 0;
 
+  /** Write bzip2 to end of data */
+  virtual MemoryStreamBuffer
+  writeBZIP2() = 0;
+
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
   virtual bool
@@ -229,6 +233,10 @@ public:
   MemoryStreamBuffer
   readBZIP2() override;
 
+  /** Write bzip2 to end of data */
+  MemoryStreamBuffer
+  writeBZIP2() override;
+
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
   bool
@@ -245,6 +253,9 @@ public:
 
   size_t
   tell() const override;
+
+  /** Memory buffer only, get reference to the data */
+  std::vector<char> * getData(){ return &data; }
 
 private:
   /** Reference to buffer passed in by caller */
@@ -315,6 +326,10 @@ public:
   /** Read bzip2 to end of data */
   virtual MemoryStreamBuffer
   readBZIP2(){ return MemoryStreamBuffer(); }
+
+  /** Write bzip2 to end of data */
+  MemoryStreamBuffer
+  writeBZIP2(){ return MemoryStreamBuffer(); }
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -402,6 +417,10 @@ public:
   /** Read bzip2 to end of data */
   virtual MemoryStreamBuffer
   readBZIP2(){ return MemoryStreamBuffer(); }
+
+  /** Write bzip2 to end of data */
+  MemoryStreamBuffer
+  writeBZIP2(){ return MemoryStreamBuffer(); }
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */

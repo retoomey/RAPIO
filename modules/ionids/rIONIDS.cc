@@ -116,6 +116,7 @@ IONIDS::createDataType(const std::string& params)
   try {
     // Wrap the buffer in a memory stream, allowing us to
     // read from it.  This passes ownership of buf to avoid copying
+    size_t fullSize = buf.size();
     MemoryStreamBuffer b(std::move(buf));
 
     b.setDataBigEndian(); // NIDS is in big endian
@@ -124,8 +125,20 @@ IONIDS::createDataType(const std::string& params)
 
     readHeaders(b); // Skip WMO/AWIPS headers if any
     BlockMessageHeader header;
+    const size_t dataSize = fullSize - b.tell();
+    header.read(b);
+    header.dump();
+    const auto expectedSize = header.getMsgLength();
 
-    header.read(b); // header.dump();
+    // Check the length given by message matches the full byte size.
+    // This is the number minus the headers of course
+    if (expectedSize == dataSize) {
+      LogInfo("NIDS header/size match: " << expectedSize << " bytes.\n");
+    } else {
+      LogSevere("Expected " << expectedSize << " bytes, but we have " << dataSize << "\n");
+      throw(std::runtime_error("Invalid NIDS data size."));
+    }
+
     BlockProductDesc desc;
 
     desc.read(b); // desc.dump();
@@ -138,16 +151,6 @@ IONIDS::createDataType(const std::string& params)
     std::string dataType = info.getMsgFormat();
     if (dataType == "Radial") { dataType = "RadialSet"; }
 
-    #if 0
-    BlockProductSymbology sym;
-    if (info.getChkCompression()) {
-      MemoryStreamBuffer z = b.readBZIP2();
-      sym.read(z);
-    } else {
-      sym.read(b);
-    }
-    #endif
-
     std::shared_ptr<IOSpecializer> fmt = IONIDS::getIOSpecializer(dataType);
     if (fmt != nullptr) {
       std::shared_ptr<NIDSSpecializer> nidsFmt =
@@ -159,6 +162,10 @@ IONIDS::createDataType(const std::string& params)
 
         BlockProductSymbology sym;
         if (info.getChkCompression()) {
+          // char test = b.readChar();
+          // std::cout << "CHARACTER should be 66 for 'B' IS " << (int)(test) << "\n";
+          // exit(1);
+
           MemoryStreamBuffer z = b.readBZIP2();
           sym.read(z);
           datatype = nidsFmt->readNIDS(keys, header, desc, sym, z);

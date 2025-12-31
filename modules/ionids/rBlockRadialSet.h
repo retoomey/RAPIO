@@ -60,6 +60,20 @@ public:
   /** Get the number of radials */
   size_t getNumRadials(){ return myNumRadials; }
 
+  /** Get the write size of this block.  Most are static. */
+  size_t
+  size() const
+  {
+    size_t a = 20; // Fields
+
+    // FIXME: inshorts?
+    for (int i = 0; i < myNumRadials; i++) {
+      auto& data = myRadials[i].data; // Add up sizes
+      a += data.size();
+    }
+    return a;
+  }
+
   // End Field access ----------------------------------
 
   std::vector<std::vector<char> > myRawData;
@@ -67,7 +81,8 @@ public:
   /** Store raw radial information */
   std::vector<RadialData> myRadials;
 
-protected:
+public:
+  // protected:
 
   short myPacketCode;     ///< Packet Type x'AF1F' or 16 or 28
   short myIndexFirstBin;  ///< Index of first range bin

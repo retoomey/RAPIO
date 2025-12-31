@@ -108,6 +108,10 @@ public:
   /** Set the number of maps */
   void setNumberMaps(short m){ myNumMaps = m; }
 
+  /** Get the write size of this block.  Most are static. */
+  size_t
+  size() const { return 102; }
+
 protected:
 
   LLH myLocation;      ///< Location of product
@@ -135,11 +139,16 @@ public:
   int myGraphicOffset;   ///< Offset to graphic
   int myTabularOffset;   ///< Offset to tabular
 
-private:
+public:
 
   /** Decode method 1 */
   void
   decodeMethod1(std::vector<float>& a) const;
+
+  /** Set decode method 2 for writing alpha */
+  void
+  setDecodeMethod2(float scale, float offset,
+    int leading_flags, int size);
 
   /** Decode method 2 */
   void

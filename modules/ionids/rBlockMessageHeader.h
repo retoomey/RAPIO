@@ -20,6 +20,23 @@ public:
   void
   dump();
 
+  /** Get the message code */
+  short
+  getMsgCode() const { return myMsgCode; }
+
+  /** Set the message code */
+  void setMsgCode(short m){ myMsgCode = m; }
+
+  /** Get the message length */
+  uint32_t getMsgLength(){ return myMsgLength; }
+
+  /** Set the message length */
+  void setMsgLength(uint32_t l){ myMsgLength = l; }
+
+  /** Get the write size of this block.  Most are static. */
+  size_t
+  size() const { return 18; }
+
   // protected:
 public: // temp for writer
 

@@ -53,6 +53,15 @@ public:
     return false;
   }
 
+  /** Reverse filter back to original */
+  virtual bool
+  reverse(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0)
+  {
+    return false;
+  }
+
   /** Apply filter to a given URL, write to output location */
   virtual bool
   applyURL(const URL& infile, const URL& outfile,
@@ -104,6 +113,12 @@ public:
    * a copy is made. */
   virtual bool
   apply(std::vector<char>& input, std::vector<char>& output,
+    size_t start_index = 0,
+    size_t length      = 0) override;
+
+  /** Reverse filter back to original */
+  virtual bool
+  reverse(std::vector<char>& input, std::vector<char>& output,
     size_t start_index = 0,
     size_t length      = 0) override;
 

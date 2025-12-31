@@ -105,6 +105,7 @@ public:
            (myCode == 175) );
   }
 
+  #if 0
   /** Does data need the thresholds decoded? */
   bool
   needsDecodedThresholds() const
@@ -112,6 +113,8 @@ public:
     // Currently these three don't need decoded thresholds
     return !((myCode == 134) || (myCode == 135) || (myCode == 176));
   }
+
+  #endif
 
   // RadialSet info
 

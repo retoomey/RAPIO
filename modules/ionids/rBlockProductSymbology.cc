@@ -16,6 +16,18 @@ BlockProductSymbology::read(StreamBuffer& b)
 }
 
 void
+BlockProductSymbology::write(StreamBuffer& b)
+{
+  LogInfo("Writing Product Symbology block\n");
+
+  writeDivider(b);
+
+  b.writeShort(myBlockID);
+  b.writeInt(myBlockLength);
+  b.writeShort(myNumLayers);
+}
+
+void
 BlockProductSymbology::dump()
 {
   LogInfo("Block ID " << myBlockID << " expect 1\n");              // block id

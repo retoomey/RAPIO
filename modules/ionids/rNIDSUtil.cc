@@ -5,6 +5,28 @@
 using namespace rapio;
 using namespace std;
 
+static const int SECONDS_PER_DAY = 86400;
+
+Time
+NIDSUtil::getTimeFromNIDSTime(short volScanDate, int volScanStartTime)
+{
+  // long totalSeconds = ((long)(volScanDate - 1) * SECONDS_PER_DAY) + volScanStartTime;
+  //    long totalSeconds = ((long)(volScanDate - 1) * SECONDS_PER_DAY) + volScanStartTime;
+  return Time::SecondsSinceEpoch(volScanStartTime + ((volScanDate - 1) * 24 * 3600));
+}
+
+void
+NIDSUtil::getNIDSTimeFromTime(const Time& t, short& volScanDate, int& volScanStartTime)
+{
+  long totalSeconds = t.getSecondsSinceEpoch();
+
+  // Reverse the (volScanDate - 1) logic
+  volScanDate = (short) ((totalSeconds / SECONDS_PER_DAY) + 1);
+
+  // The remainder is the start time within that day
+  volScanStartTime = (int) (totalSeconds % SECONDS_PER_DAY);
+}
+
 void
 NIDSUtil::getRLEColors(const std::vector<char> & src, std::vector<int> & data)
 {
@@ -110,6 +132,36 @@ NIDSUtil::colorToValueD3(
    * which doesn't use averaging for this product */
   for (size_t i = 0; i < colors.size(); ++i) {
     values.push_back(thresholds[ colors[i] ]);
+  }
+}
+
+void
+NIDSUtil::valueToColorD3(
+  const std::vector<float>& thresholds,
+  const float *           values,
+  const size_t            size,
+  std::vector<int>        & colors)
+{
+  // Originally for Product
+  // 94, 99, 153, 154, 155, 159, 161, 163
+
+  const bool m = (values[0] == Constants::MissingData);
+  const bool r = (values[1] == Constants::RangeFolded);
+
+  /* this is for FSI compatability with AWIPS,
+   * which doesn't use averaging for this product */
+  for (size_t i = 0; i < size; ++i) {
+    int color;
+    // Handle specials
+    if (m && (values[i] == Constants::MissingData)) {
+      color = 0;
+    } else if (values[i] == Constants::RangeFolded) {
+      color = r ? 1 : 0;
+    } else {
+      auto it = std::upper_bound(thresholds.begin(), thresholds.end(), values[i]);
+      color = (it - thresholds.begin()) - 1;
+    }
+    colors.push_back(color);
   }
 }
 

@@ -71,6 +71,7 @@ NIDSRadialSet::readNIDS(
   BlockRadialSet r;
 
   r.read(z);
+  r.dump();
 
   // Product code and packet code
   int product     = d.getProductCode();
@@ -152,6 +153,20 @@ NIDSRadialSet::readNIDS(
         (product == 159) || (product == 161) || (product == 163) )
       {
         NIDSUtil::colorToValueD3(color_codes, decoded, mvalues);
+
+        // -------
+        // Test the reverse function.  We already have the decoded thresholds
+        //   std::vector<float> mvalues;
+        std::vector<int> colors2; // write to
+        const float * p = mvalues.data();
+        NIDSUtil::valueToColorD3(decoded, p, mvalues.size(), colors2);
+
+        for (size_t i = 0; i < colors2.size(); i++) {
+          if (color_codes[i] != colors2[i]) {
+            LogSevere("Mismatch at " << i << " G:" << color_codes[i] << " != " << colors2[i] << "\n");
+          }
+        }
+        // -------
       } else {
         // Default fallback
         NIDSUtil::colorToValueD4(color_codes, decoded, mvalues);
@@ -237,10 +252,6 @@ NIDSRadialSet::writeNIDS(
 {
   auto radialsetp = std::dynamic_pointer_cast<RadialSet>(dt);
 
-  // First failing attempt at writing.  This code is broken.
-  // Switching to reading so I can understand the format well enough
-  // to write it. 8)
-
   bool success = false;
   auto& rs     = *radialsetp;
 
@@ -268,9 +279,11 @@ NIDSRadialSet::writeNIDS(
   const float minValue        = -33.0f; // dBZ;
   const float scale        = 0.5f;
   const uint8_t missingVal = 0;
-  short julianDate         = 19852;
-  int seconds = 72129;
-  // Maybe we just port the objects.  kill me
+  // Use time from radialset
+  short julianDate;
+  int seconds;
+
+  NIDSUtil::getNIDSTimeFromTime(rs.getTime(), julianDate, seconds);
 
   // --- 1. EXTRACT METADATA FROM RadialSet ---
   const size_t num_radials         = rs.getNumRadials();
@@ -292,17 +305,17 @@ NIDSRadialSet::writeNIDS(
   header.myMsgCode = MESSAGE_CODE;
   header.myMsgDate = julianDate;
   header.myMsgTime = seconds;
-  // header.myMsgLength = something;
+  // header.myMsgLength = Later.  Symbology will vary.
   header.myMsgSrcID  = 0; // What to be?
   header.myMsgDstID  = 0; // What to be?
-  header.myNumBlocks = 1; // Start with one
+  header.myNumBlocks = 3; // Header, description, symbology
 
   BlockProductDesc d;
 
   d.setLocation(rs.getCenterLocation());
   setElevationAngleDegs(d, rs.getElevationDegs());
   d.setProductCode(MESSAGE_CODE);
-  d.setOpMode(0); // no idea.  I think when we read we could store as attributes
+  d.setOpMode(2); // no idea.
   d.setVCP(rs.getVCP());
   d.setSeqNum(0);     // no idea.
   d.setVolScanNum(0); // no idea
@@ -312,8 +325,9 @@ NIDSRadialSet::writeNIDS(
   // d.myDeps[0-9] = 0;
   d.setElevationNum(0);
   // d.myDataThresholds[0-15]
-  d.setNumberMaps(0);
-  d.mySymbologyOffset = 0; // FIXME: set this right?
+  d.setNumberMaps(0); // 256 on our data but eh no idea
+  d.mySymbologyOffset = 60; // FIXME: Not sure how to calculate this.
+                            // None of the sizes seem to match up
   d.myGraphicOffset   = 0;
   d.myTabularOffset   = 0;
 
@@ -326,47 +340,115 @@ NIDSRadialSet::writeNIDS(
   // Gotta prep the BlockRadialSet for writing.
   BlockRadialSet r;
 
-  // r.read(z);
+  r.myPacketCode     = 16;        ///< Packet Type x'AF1F' or 16 or 28
+  r.myIndexFirstBin  = 0;         ///< Index of first range bin
+  r.myNumRangeBin    = num_gates; ///< Number of range bins comprising a radial
+  r.myCenterOfSweepI = 0;         ///< I coordinate of center of sweep
+  r.myCenterOfSweepJ = 0;         ///< J coordinate of center of sweep
+  r.myScaleFactor    = 999;       ///< Number of pixels per range bin.
+  r.myNumRadials = num_radials; ///< Total number of radials in products
 
-  // Write them?
-  header.write(b);
-  d.write(b);
+  ArrayFloat2DPtr myOutputArray = rs.getFloat2DPtr();
+  ArrayFloat1DPtr bwDegs        = rs.getFloat1DPtr(RadialSet::BeamWidth);
+  ArrayFloat1DPtr azDegs        = rs.getFloat1DPtr(RadialSet::Azimuth);
+  ArrayFloat1DPtr gwMeters      = rs.getFloat1DPtr(RadialSet::GateWidth);
 
-  // FIXME: if compressed?
-  // wait we have to fill it all first, then write, right?
-  // writeBZIP(b);  // write compressed set, right?
-  // Humm ok how do we 'turn on' bzip2 compression?
-  sym.write(b);
-
-  r.write(b);
-
-  #if 0
-  for (size_t r = 0; r < NUM_RADIALS; ++r) {
-    // Guess it wants the info per radial here.
-    // Per ICD, azimuths are stored as integer degrees x 10
-    float azStartDeg = azDegs[r];
-    float azDeltaDeg = bwDegs[r];
-    b.writeShort(static_cast<int16_t>(azStartDeg * 10));
-    b.writeShort(static_cast<int16_t>(azDeltaDeg * 10));
-    // Ahh so they allow variable gate lengths.  We don't though.
-    b.writeShort(static_cast<int16_t>(NUM_GATES));
-
-    for (size_t g = 0; g < NUM_GATES; ++g) {
-      auto const& v = data[r][g];
-
-      // Handle missing value case
-      if (v == -99999.0f) {
-        b.writeChar((char) (missingVal));
-        continue;
-      }
-      // Handle good data
-      int level = static_cast<int>(std::round((v - minValue) / scale));
-      if (level < 0) { level = 0; } else if (level > 255) { level = 255; }
-      uint8_t byteVal = static_cast<uint8_t>(level);
-      b.writeChar((char) (byteVal));
+  // Gate width is stored in info, there's no field in NIDS it seems.
+  // We can still check to see if we match though
+  const LengthMs gate_width = info.getGateWidthMeters();
+  bool mismatch = false;
+  int first     = -1;
+  for (size_t radial = 0; radial < num_radials; radial++) {
+    if ((*gwMeters)[radial] != gate_width) {
+      mismatch = true;
+      first    = radial;
     }
   }
-  #endif // if 0
+  if (mismatch) {
+    LogSevere("Mismatch between gate width in info table " << gate_width <<
+      " and netcdf gatewidth " << (*gwMeters)[first] << "\n");
+  }
+
+  // First need to calculate the thresholds and set the product block.
+  std::vector<float> thresholds;
+
+  // There are ultimately only 16 values, just super overloaded in meaning.
+
+  // Starting with the decode method2, since my example file uses it.
+  // FIXME: will have to add all the other methods, but I'll have to look
+  // at more file examples to tweak.  RAPIO mostly just needs to read level III,
+  // not write it.  But I'm ok adding some ability as needed for special cases.
+  // This was product 159.  We'd need to store these probably in xml.
+  // This will make the threadhold table work.
+  d.setDecodeMethod2(16, 128, 2, 255); // scale, offset, leading, numvalues
+  // Now we can create the thresholds lookup table.
+  d.decodeMethod2(thresholds);
+
+  // mrms values to colors.  We'll do the entire data set as a whole.
+  // Note colors are indexes into the true values (thresholds) similiar
+  // to space saving techniques of color indexed ancient video cards.
+  std::vector<int> colors; // write to this
+  const float * p = myOutputArray->data();
+  NIDSUtil::valueToColorD3(thresholds, p, num_gates * num_radials, colors);
+
+  // Direct color write.  FIXME: we have the different color modes
+  size_t colori = 0;
+  for (size_t radial = 0; radial < num_radials; radial++) {
+    BlockRadialSet::RadialData radialLayer;
+    radialLayer.start_angle = (*azDegs)[radial];
+    radialLayer.delta_angle = (*bwDegs)[radial];
+    radialLayer.inShorts    = true; 
+
+    for (size_t gate = 0; gate < num_gates; gate++) {
+      radialLayer.data.push_back(colors[colori++]);
+    }
+    r.myRadials.push_back(radialLayer);
+  }
+  const bool compress = info.getChkCompression();
+
+  // If compressed, first write the final stuff into a temp
+  // storage and compress it,
+  // so we can set the header length properly. Otherwise,
+  // we'll hold off writing.
+  std::vector<char> * compressedData = nullptr;
+  size_t endSize;
+  // b.writeVector(compressedData, compressedData->size());
+  MemoryStreamBuffer bz;
+  // Since we'll just compress to here, endian 'probably'
+  // doesn't matter in this case.
+  bz.setDataBigEndian();
+
+  if (compress) {
+    LogInfo("Compression is ON\n");
+    // Temp to write and compress
+    MemoryStreamBuffer temp;
+    temp.setDataBigEndian(); // NIDS big endian
+    sym.write(temp);
+    r.write(temp);
+    bz = temp.writeBZIP2();
+
+    compressedData = bz.getData();
+    endSize        = compressedData->size(); // Final compressed size
+  } else {
+    LogInfo("Compression is OFF\n");
+    endSize = sym.size() + r.size();
+  }
+  header.myMsgLength = header.size() + d.size() + endSize;
+
+  // Finally write everything...
+  header.write(b); // Block 1
+  d.write(b);      // Block 2
+  if (compress) {
+    b.writeVector(compressedData->data(), endSize);
+    // Better be '66' or 'B' for bzip2
+    //for (size_t i = 0; i < 4; i++) {
+    //  std::cout << std::hex << (int) ((*compressedData)[i]) << ", ";
+    // }
+    //std::cout << "\n";
+  } else {
+    sym.write(b); // Block 3
+    r.write(b);   // Layers part of sym block it seems
+  }
 
   return true;
 } // NIDSRadialSet::writeNIDS

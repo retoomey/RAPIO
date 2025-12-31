@@ -599,6 +599,7 @@ MemoryStreamBuffer::writeVector(const void * data, size_t size)
   marker += size;
 }
 
+// FIXME: We could generalize to take a passed filter
 MemoryStreamBuffer
 MemoryStreamBuffer::readBZIP2()
 {
@@ -607,9 +608,29 @@ MemoryStreamBuffer::readBZIP2()
   try{
     BZIP2DataFilter bz2;
     bz2.apply(data, destination, tell(), 0);
+    //LogInfo("Destination size " << data.size() << " to " << destination.size() << "\n");
   }catch (std::exception& e) {
-    LogSevere("BZIP2 Failed: " << e.what() << "\n");
+    LogSevere("BZIP2 uncompress Failed: " << e.what() << "\n");
   }
+  MemoryStreamBuffer mm(std::move(destination));
+
+  setSameEndian(mm);
+  return std::move(mm);
+}
+
+MemoryStreamBuffer
+MemoryStreamBuffer::writeBZIP2()
+{
+  std::vector<char> destination;
+
+  try{
+    BZIP2DataFilter bz2;
+    bz2.reverse(data, destination, 0, 0);
+    //LogInfo("Source size " << data.size() << " and " << destination.size() << "\n");
+  }catch (std::exception& e) {
+    LogSevere("BZIP2 compression failed: " << e.what() << "\n");
+  }
+
   MemoryStreamBuffer mm(std::move(destination));
 
   setSameEndian(mm);

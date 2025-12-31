@@ -58,6 +58,7 @@ BlockRadialSet::read(StreamBuffer& b)
   // This is the data format used to store the set of radials
   bool inShorts = (myPacketCode != 16);
 
+
   // So we loop over the number of radials
   myRadials.resize(myNumRadials);
   for (int i = 0; i < myNumRadials; i++) {
@@ -105,9 +106,27 @@ BlockRadialSet::write(StreamBuffer& b)
   // RadialSet write...
   for (int i = 0; i < myNumRadials; i++) {
     auto& r = myRadials[i];
-    LogInfo("would try to write a radial " << i << "\n");
+
+    // short numChunks = static_cast<short>(r.data.size());
+    // b.writeShort(numChunks);
+    b.writeShort(static_cast<short>(r.data.size()));
+
+    b.writeShort(static_cast<short>(std::round(r.start_angle * 10.0f)));
+
+    //    b.writeShort(r.start_angle*10.0);
+    //    float temp = r.delta_angle*10.0;
+    //    b.writeShort(temp);
+    // Force round at end or you can get clipped values
+    b.writeShort(static_cast<short>(std::round(r.delta_angle * 10.0f)));
+
+    //
+    // Humm stored as char or short, different right?
+    // for (size_t gate = 0; gate < r.data.size(); gate+=2) {
+    for (size_t gate = 0; gate < r.data.size(); gate++) {
+      b.writeChar(r.data[gate]);
+    }
   }
-}
+} // BlockRadialSet::write
 
 void
 BlockRadialSet::dump()
