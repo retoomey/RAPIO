@@ -2,6 +2,9 @@
 #include "rConstants.h"
 #include "rError.h"
 
+#include <algorithm>
+#include <cassert>
+
 using namespace rapio;
 using namespace std;
 

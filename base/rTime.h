@@ -62,6 +62,9 @@ public:
     double         fractional = 0.0
   );
 
+  /** Create a time from a time point */
+  Time(std::chrono::system_clock::time_point t) : myTimepoint(t){ }
+
   /** Create from a string pattern. Use %Y, %m, %d, etc. from man page of strftime.
    * You can also use %/ms which is our special 3 character ms extension field. */
   Time(const std::string& v, const std::string& f);

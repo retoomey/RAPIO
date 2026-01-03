@@ -3,27 +3,12 @@
 #include <rUtility.h>
 #include <rURL.h>
 #include <rEventTimer.h>
-#include <rBOOST.h>
-
-BOOST_WRAP_PUSH
-#include <boost/log/expressions.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/sinks/sync_frontend.hpp>
-#include <boost/log/sinks/text_ostream_backend.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
-#include <boost/log/utility/manipulators/add_value.hpp>
-#include <boost/filesystem.hpp>
-// On alpine at least, need this header to define BOOST_CURRENT_FUNCTION
-#include <boost/current_function.hpp>
-BOOST_WRAP_POP
+#include <rLogger.h>
 
 #include <memory>
-#include <mutex>
+#include <sstream>
 
 #include <string.h> // errno strs
-
-typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
 
 namespace rapio {
 /* Exception wrapper for any C function calls we make that return standard 0 or error code.
@@ -64,24 +49,6 @@ private:
   std::string command;
 };
 
-/** Enum class for log pattern tokens */
-enum class LogToken {
-  filler, time, timems, timec, message, file, line, function, level, ecolor, red, green, blue, yellow, cyan, off,
-  threadid
-};
-
-/** Flushes the log on a timer in main event loop */
-class LogFlusher : public EventTimer {
-public:
-
-  LogFlusher(size_t milliseconds) : EventTimer(milliseconds, "Log flusher")
-  { }
-
-  /** Fire the action of checking/flushing the log */
-  virtual void
-  action() override;
-};
-
 /** Watches a setting URL for changes and updates log severity on the fly */
 class LogSettingURLWatcher : public EventTimer {
 public:
@@ -109,13 +76,33 @@ protected:
 };
 
 /**
- * A singleton error logger class. This class will be used by all libraries.
+ * Logger class. This class will be used by all libraries.
  * Typical usage of this class is as follows:
  * <pre>
+ *
+ * fLogInfo("Hello {} and one {}", "World", 1);
+ * fLogInfo("Pi is roughly {:.2f}", 3.14159);
+ * void* some_ptr = (void*)(12345);
+ * fLogInfo("Pointer value: {}", some_ptr);
+ * fLogInfo("Boolean test: {} {}", true, false);
+ * fLogInfo("User {} logged in from {} with ID {}", "Alice", "192.168.1.1", 42);
+ * fLogInfo("{} + {} = {}", 10, 20, 10 + 20);
+ * fLogInfo("Coordinates: x={} y={} z={}", 1.0, 2.5, -0.3);
+ * fLogInfo("Name: {} Age: {} Score: {:.8f} Active: {}", "Bob", 30, 99.5, true);
+ * std::string name = "Charlie";
+ * const char* city = "Denver";
+ * fLogInfo("Name: {} City: {}", name, city);
+ * fLogInfo("Hex: {:#x} Oct: {:#o} Bin: {:#b}", 255, 255, 255);
+ * fLogInfo("Padded number: {:05}", 42);
+ * fLogInfo("Left align: {:<10} Right align: {:>10}", "left", "right");
+ *
+ * Old way of streaming is still supported at moment but not recommended.
+ * fmt/python style of logging is faster
+ *
  * LogSevere( "Error: " << file_name << " not readable.\n");
  * </pre>
  */
-class Log : public std::ostream, std::streambuf, Utility {
+class Log : public Utility {
 public:
 
   /** Severity levels in decreasing order of printing */
@@ -130,34 +117,34 @@ public:
     SEVERE = 20
   };
 
-  /** Returns the singleton instance. */
-  inline static Log *
-  instance()
-  {
-    if (mySingleton == 0) {
-      // Not using make_shared here since Log() is private.
-      mySingleton = std::shared_ptr<Log>(new Log());
-    }
-    return (mySingleton.get());
-  }
-
-  /** Lock for critical log settings/printing */
-  static std::recursive_mutex logLock;
-
-  /** Current log group severity mode */
-  // static Log::Severity mode;
+  /** Initialize logging */
+  static void
+  initialize();
 
   /** The standard format string date of form [date UTC] we use for logging. */
-  static std::string LOG_TIMESTAMP;
+  static constexpr const char * LOG_TIMESTAMP = "%Y %m/%d %H:%M:%S UTC";
 
   /** The standard format string date of form [date UTC] we use for logging with MS. */
-  static std::string LOG_TIMESTAMP_MS;
+  static constexpr const char * LOG_TIMESTAMP_MS = "%Y %m/%d %H:%M:%S.%/ms UTC";
 
   /** The standard format string date of form [date UTC] we use for logging just clock. */
-  static std::string LOG_TIMESTAMP_C;
+  static constexpr const char * LOG_TIMESTAMP_C = "%H:%M:%S.%/ms";
 
-  /** Log singleton */
-  static std::shared_ptr<Log> mySingleton;
+  /** The dynamic logger module doing the work */
+  static std::shared_ptr<Logger> myLog;
+
+  /** Flag for allowing debug (mode and pausing applied) */
+  static bool wouldDebug;
+
+  /** Flag for allowing info (mode and pausing applied) */
+  static bool wouldInfo;
+
+  /** Flag for allowing severe (mode and pausing applied) */
+  static bool wouldSevere;
+
+  /** Sync logging flags */
+  static void
+  syncFlags();
 
   /**
    * Pause logging. This is useful when calling a function that you know
@@ -185,10 +172,6 @@ public:
   /** Set the log severity level */
   static void
   setSeverity(Log::Severity severity);
-
-  /** Would we log at current settings? */
-  static bool
-  wouldLog(Log::Severity mode){ return ((mode >= Log::myCurrentLevel) && !Log::isPaused()); }
 
   /** Set the log severity level from a string which can be a level or a URL */
   static void
@@ -218,11 +201,14 @@ public:
   static void
   printCurrentLogSettings();
 
-  /** Boost severity level, call this with macros only, public only because it has to be */
-  static boost::log::sources::severity_logger<boost::log::trivial::severity_level> mySevLog;
-
+public:
   /** Color setting for basic log entries */
   static bool useColors;
+
+  /** Parsed between token filler strings for logging */
+  static std::vector<std::string> fillers;
+
+private:
 
   /** Color setting for help */
   static bool useHelpColors;
@@ -232,9 +218,6 @@ public:
 
   /** Parsed Token number list for logging */
   static std::vector<LogToken> outputtokensENUM;
-
-  /** Parsed between token filler strings for logging */
-  static std::vector<std::string> fillers;
 
   /** The current verbosity level. */
   static Severity myCurrentLevel;
@@ -246,72 +229,12 @@ public:
   /** Simple number for engine for moment, could be enum */
   static int engine;
 
-  /** Not virtual since you are not meant to derive from Log. */
-  ~Log();
-
-private:
-
-  /** The formatter callback for boost logging.
-   * Warning do not call Log functions here, you will crash. Use std::cout */
-  static void
-  BoostFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm);
-
-  // FIXME: Note, these variables are why we create a log object vs
-  // having everything static.  Maybe routines to do it indirectly?
-
-  /** Boost log sink */
-  boost::shared_ptr<text_sink> mySink;
-
-  /** Current Log flush timer, if any */
-  std::shared_ptr<LogFlusher> myLogFlusher;
+  /** Keep last set flush milliseconds for reference */
+  static int myFlushMS;
 
   /** Current URL watcher, if any */
-  std::shared_ptr<LogSettingURLWatcher> myLogURLWatcher;
-
-  /** A singleton; not meant to be instantiated by anyone else. */
-  Log();
+  static std::shared_ptr<LogSettingURLWatcher> myLogURLWatcher;
 };
-
-/** Log state object per LogInfo/etc. call.  This allows proper locking using RAII
- * even for exception cases */
-class LogCall1 {
-public:
-
-  /** Create a log call with info for one LogInfo, etc. line of output */
-  LogCall1(Log::Severity m, int l, const std::string& f, const std::string& f2)
-    : mode(m), line(l), file(f), function(f2)
-  {
-    // Not locking on this, whatever we get is fine
-    goodlog = ((mode >= Log::myCurrentLevel) && !Log::isPaused());
-  }
-
-  /** Final call to dump current buffer (thread safe) */
-  void
-  dump();
-
-  // Variables we need to maintain by call for thread safety
-
-  /** Good log command test */
-  bool goodlog;
-  /** Buffer of this log call */
-  std::stringstream buffer;
-  /** Set a log severity mode */
-  Log::Severity mode;
-  /** Set a log line number */
-  int line;
-  /** Set a log file name */
-  std::string file;
-  /** Set a log function inside name */
-  std::string function;
-};
-
-/** Templates to allow our custom log wrapper */
-template <class T> rapio::LogCall1&
-operator << (rapio::LogCall1& l, const T& x)
-{
-  l.buffer << x; // Our per thread buffer per log call
-  return l;
-}
 }
 
 // LINE_ID macro in order to simplify debugging.
@@ -319,21 +242,60 @@ operator << (rapio::LogCall1& l, const T& x)
 
 /** Would this log at this level?  Useful for turning off calculations,
  * etc. that only output at a given log level */
-#define wouldLogDebug()  rapio::Log::wouldLog(rapio::Log::Severity::DEBUG)
-#define wouldLogInfo()   rapio::Log::wouldLog(rapio::Log::Severity::INFO)
-#define wouldLogSevere() rapio::Log::wouldLog(rapio::Log::Severity::SEVERE)
+#define wouldLogDebug()  rapio::Log::wouldDebug
+#define wouldLogInfo()   rapio::Log::wouldInfo
+#define wouldLogSevere() rapio::Log::wouldSevere
 
+// -----------------------------------------------------------------------
+// @Deprecated.  Using stringstream which is relatively slow.
+// Replace logging with the new calls using format
 #define LogDebug(x) \
-  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::DEBUG, __LINE__, __FILE__, \
-        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
-    _aTempLog.dump(); }
+  do { \
+    if (rapio::Log::wouldDebug) { \
+      std::stringstream _aTempLog; \
+      _aTempLog << x; \
+      rapio::Log::myLog->debugOld(__LINE__, __FILE__, __func__, _aTempLog.str()); \
+    } \
+  } while (0)
 #define LogInfo(x) \
-  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::INFO, __LINE__, __FILE__, \
-        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
-    _aTempLog.dump(); }
+  do { \
+    if (rapio::Log::wouldInfo) { \
+      std::stringstream _aTempLog; \
+      _aTempLog << x; \
+      rapio::Log::myLog->infoOld(__LINE__, __FILE__, __func__, _aTempLog.str()); \
+    } \
+  } while (0)
 #define LogSevere(x) \
-  { auto _aTempLog = rapio::LogCall1(rapio::Log::Severity::SEVERE, __LINE__, __FILE__, \
-        BOOST_CURRENT_FUNCTION);  _aTempLog << x; \
-    _aTempLog.dump(); }
+  do { \
+    if (rapio::Log::wouldSevere) { \
+      std::stringstream _aTempLog; \
+      _aTempLog << x; \
+      rapio::Log::myLog->severeOld(__LINE__, __FILE__, __func__, _aTempLog.str()); \
+    } \
+  } while (0)
+// -----------------------------------------------------------------------
+
+// -----------------------------------------------------------------------
+// New calls using fmt which is faster
+
+#define fLogDebug(fmt, ...) \
+  do { \
+    if (rapio::Log::wouldDebug) { \
+      rapio::Log::myLog->debug(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+    } \
+  } while (0)
+#define fLogInfo(fmt, ...) \
+  do { \
+    if (rapio::Log::wouldInfo) { \
+      rapio::Log::myLog->info(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+    } \
+  } while (0)
+#define fLogSevere(fmt, ...) \
+  do { \
+    if (rapio::Log::wouldSevere) { \
+      rapio::Log::myLog->severe(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+    } \
+  } while (0)
+
 #define ERRNO(e) \
   { errno = 0; { e; } if ((errno != 0)) { throw ErrnoException(errno, # e); } }

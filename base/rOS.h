@@ -169,7 +169,8 @@ public:
     // stream while we're capturing output, or it gets corrupted.
     // Even if we switch to asynchronous logging (eventually) we'll need
     // to delay other threads from printing to console.
-    const std::lock_guard<std::recursive_mutex> log_lock(Log::logLock);
+    // const std::lock_guard<std::recursive_mutex> log_lock(Log::logLock);
+    // Update: Using asynchronous logger that doesn't use cout/etc.
 
     // 2. If any callback class (called from the wgrib2 call) in the same thread
     // tries to log we don't want that so pause logging

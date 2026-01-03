@@ -219,7 +219,7 @@ RAPIOAlgorithm::handleEndDatasetEvent()
   if (!isDaemon()) {
     // Archive empty means end it all
     // FIXME: maybe just end event loop here, do a shutdown
-    Log::setSeverity(Log::Severity::INFO);
+    // Log::setSeverity(Log::Severity::INFO);
     LogInfo(
       "End of archive data set, " << RecordQueue::poppedRecords << " of " << RecordQueue::pushedRecords
                                   << " processed.\n");

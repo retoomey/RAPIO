@@ -346,6 +346,10 @@ endif (BUILD_EXAMPLES)
 ###########################################################################
 # Independent module building
 #
+addRAPIONote("Loggers:")
+# We could add different logging systems
+add_subdirectory(modules/logspd)
+
 addRAPIONote("File format support:")
 if (BUILD_NETCDF_MODULE)
   add_subdirectory(modules/ionetcdf)

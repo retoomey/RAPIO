@@ -231,7 +231,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
     c.centerLatDegs = centerLatDegs;
     c.centerLonDegs = centerLonDegs;
   } else {
-    LogSevere("Unknown projection mode " << mode << " specified.\n")
+    LogSevere("Unknown projection mode " << mode << " specified.\n");
   }
 
   if (!optionSuccess) {

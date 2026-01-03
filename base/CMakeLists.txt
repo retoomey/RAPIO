@@ -85,6 +85,7 @@ datatype/rLatLonGridProjection.h
 datatype/rLatLonHeightGrid.h
 datatype/rLatLonHeightGridProjection.h
 rLength.h
+rLogger.h
 rLLCoverageArea.h
 rLL.h
 rLLH.h
@@ -225,6 +226,7 @@ datatype/rLatLonGridProjection.cc
 datatype/rLatLonHeightGrid.cc
 datatype/rLatLonHeightGridProjection.cc
 rLength.cc
+rLogger.cc
 rLL.cc
 rLLCoverageArea.cc
 rLLH.cc

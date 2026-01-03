@@ -302,7 +302,7 @@ public:
     for (auto i:myNodes) {
       if (i->getName() == newname) {
         LogSevere(
-          "Cannot change array from " << name << " to " << newname << " since " << newname << " already exists!\n")
+          "Cannot change array from " << name << " to " << newname << " since " << newname << " already exists!\n");
         return false;
       }
     }

@@ -216,7 +216,7 @@ IOHDF5::createDataType(const std::string& params)
       // FIXME: Could make generate HDF5 exception class
       hdfid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       if (hdfid < 0) {
-        LogSevere("Failed to HDF5 open file: " << filename << "\n")
+        LogSevere("Failed to HDF5 open file: " << filename << "\n");
       } else {
         // FIXME: We could do a general HDF5 file DataType.  Might be nice at somo point.
         // For the moment, focusing on Opera Data Information Model (ODIM)
@@ -254,7 +254,7 @@ IOHDF5::encodeDataType(std::shared_ptr<DataType> dt,
 )
 {
   // FIXME: Could generalize HDF5 output files?
-  LogSevere("Write ability not implemented currently for direct HDF5\n")
+  LogSevere("Write ability not implemented currently for direct HDF5\n");
   return false;
 } // IOHDF5::encodeDataType
 

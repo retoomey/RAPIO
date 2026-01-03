@@ -150,7 +150,7 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
 
     // ------------------------------------------------------------
     // Initial logging ability (default configured)
-    Log::instance();
+    Log::initialize();
 
     // Raw xml, json, single file ability reading, etc.
     initializeBaseParsers();

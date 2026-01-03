@@ -146,7 +146,7 @@ ODIMDataHandler::read(std::map<std::string, std::string>& keys,
     if ((odimObject == "SCAN") || (odimObject == "PVOL")) {
       return readODIM_SCANPVOL(hdf5id, beamWidth, location, sourceName);
     } else {
-      LogSevere("HDF5 ODIM is type '" << odimObject << "', which is unimplemented\n")
+      LogSevere("HDF5 ODIM is type '" << odimObject << "', which is unimplemented\n");
     }
   }catch (const std::exception& e) {
     LogSevere("HDF5 file doesn't appear to be ODIM, can't read it.\n");
