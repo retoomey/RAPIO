@@ -1,9 +1,3 @@
-# Add any definitions RAPIO might need
-add_definitions(${RAPIO_DEFINITIONS})
-
-# Let the code know we have working grib2 library
-add_definitions(-DHAVE_GRIB2C)
-
 # Toggle for using nceplibs vs trying system 
 if(${USE_NCEPLIBS_GRIB2})
 
@@ -68,7 +62,7 @@ endif()
 # Add conditional flag
 if (Grib2C_FOUND)
   # Build source as a shared library
-  add_library(rapiogrib SHARED
+  addRAPIOModule(rapiogrib SHARED
     rGribAction.cc
     rGribDatabase.cc
     rGribDataTypeImp.cc
@@ -80,7 +74,7 @@ if (Grib2C_FOUND)
   # Add dependency has to be after add_library
   if (NCEPLIBS_ADD)
     addRAPIONote("      Found: GRIB2 (NCEPLIBS-g2c github)")
-    add_dependencies(rapiogrib NCEPLIBS-g2c)
+    target_link_libraries(rapiogrib PRIVATE NCEPLIBS-g2c)
     # Explicitly force linking openjpeg or jasper libraries to the dynamic library
     if (USE_OPENJPEG_NCEPLIBS)
       target_link_libraries(rapiogrib PRIVATE openjp2)
@@ -93,24 +87,16 @@ if (Grib2C_FOUND)
   endif()
 
   # Include libraries
-  target_link_libraries(rapiogrib PRIVATE
-    # The part to g2clib for grib2 reading
-    ${GRIB2_RAPIO_LIBRARIES}
-    # We are a module so we don't link to RAPIO itself
-    ${RAPIO_THIRD_LIBRARIES}
-  )
+  target_link_libraries(rapiogrib PRIVATE ${GRIB2_RAPIO_LIBRARIES})
 
   # Include headers
   target_include_directories(rapiogrib PRIVATE
     ${GRIB2_RAPIO_INCLUDES}  # Try to get built grib2.h over any system
-    .
-    ${RAPIO_INCLUDE_DIRS}
   )
 
-  # Install the module
-  install(TARGETS rapiogrib
-    DESTINATION ${RAPIO_INSTALL_LIB}
-  )
+  target_compile_definitions(rapiogrib PRIVATE HAVE_GRIB2C)
+
+  addRAPIONote("      Found: grib")
 else()
   addRAPIONote("      missing: GRIB2")
 endif(Grib2C_FOUND)

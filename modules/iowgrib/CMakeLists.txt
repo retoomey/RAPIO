@@ -1,9 +1,3 @@
-# Add any definitions RAPIO might need
-add_definitions(${RAPIO_DEFINITIONS})
-
-# Let the code know we have working grib2 library
-add_definitions(-DHAVE_GRIB2C)
-
 include(ExternalProject)
 include(GNUInstallDirs)
 
@@ -44,7 +38,7 @@ set(WGRIB2_SRC_DIR "${CMAKE_BINARY_DIR}/external/src/wgrib2")
 set(WGRIB2_PATCH_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patch.stamp")
 set(WGRIB2_PATCH_CHECK_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patchCheck.stamp")
 
-message(STATUS "THe patch dir is ${PATCH_DIR}")
+message(STATUS "Patch dir is ${PATCH_DIR}")
 
 # This patch is called before wgrib2.  So first download the patch command below copies files over,
 # but now we're running before and can check if the files change or not and copy/notify wgrib2.
@@ -85,10 +79,23 @@ ExternalProject_Add(
 )
 addRAPIONote("      Found: WGRIB2")
 
+# Define imported targets for the external projects
+add_library(g2c_lib SHARED IMPORTED)
+set_target_properties(g2c_lib PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+add_library(wgrib2_lib SHARED IMPORTED)
+set_target_properties(wgrib2_lib PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
 ###############################################################
 # Build rapio module
 #
-add_library(rapiowgrib SHARED
+addRAPIOModule(rapiowgrib SHARED
   rWgribDataTypeImp.cc
   rWgribMessageImp.cc
   rWgribFieldImp.cc
@@ -100,12 +107,7 @@ add_library(rapiowgrib SHARED
 )
 add_dependencies(rapiowgrib g2c wgrib2)
 
-target_include_directories(rapiowgrib PRIVATE
-  #${ROOT_DIRECTORY}/${CMAKE_INSTALL_INCLUDEDIR}  # Built grib2.h
-  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR} # Built grib2.h
-  .
-  ${RAPIO_INCLUDE_DIRS}
-)
+target_compile_definitions(rapiowgrib PRIVATE HAVE_GRIB2C)
 
 # Reduce all the extra libraries we don't use.
 # Would be better to reduce the THIRD LIBRARIES or choose
@@ -113,11 +115,12 @@ target_include_directories(rapiowgrib PRIVATE
 target_link_options(rapiowgrib PRIVATE -Wl,--as-needed)
 
 target_link_libraries(rapiowgrib PRIVATE
-   #  ${RAPIO_THIRD_LIBRARIES} Don't think we need right now
+   g2c_lib
+   wgrib2_lib
    #${ROOT_DIRECTORY}/${CMAKE_INSTALL_LIBDIR}/libg2c.so
    #${ROOT_DIRECTORY}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so
-   ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so
-   ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so
+###   ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so
+###   ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so
    # Dynamic.  We'll need to deep bind load
    # Force JPEG2000 support libraries last
    png

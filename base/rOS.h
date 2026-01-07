@@ -252,7 +252,9 @@ public:
   template <class T> static std::shared_ptr<T>
   loadDynamic(const std::string& module, const std::string& function)
   {
-    void * library = dlopen(module.c_str(), RTLD_LAZY);
+    //void * library = dlopen(module.c_str(), RTLD_LAZY);
+    // Force resolving all symbols now.  Slowly, but we then know module built correctly.
+    void * library = dlopen(module.c_str(), RTLD_NOW);
 
     if (library == NULL) {
       LogSevere("Cannot load requested module: " << module << ":" << dlerror() << "\n");

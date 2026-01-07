@@ -288,39 +288,189 @@ index/rXMLIndex.cc
 rXYZ.cc
 )
 
-# Create RAPIO shared library
+##################################################################################################
+# Target: Header only interface for modules, doesn't link to the librapio
+#
+add_library(rapio_interface INTERFACE)
+
+# Resolve the ../webserver path to an absolute path
+get_filename_component(RAPIO_WEBSERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../webserver" ABSOLUTE)
+
+# Declare the RAPIO headers for installation
+target_include_directories(rapio_interface INTERFACE
+
+  # Headers during build.  We flatten them because we want
+  # the ability to change the organization without doing
+  #  say #include "config/file.h"
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/config
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/datatype
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/index
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/notifier
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/plugin
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/watcher
+
+  # Web server files
+  $<BUILD_INTERFACE:${RAPIO_WEBSERVER_DIR}>
+
+  # Get the generated config.h
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}/rapio>
+)
+
+# Definition for rapio_interface
+target_compile_definitions(rapio_interface INTERFACE BOOST_LOG_DYN_LINK)
+
+# header interface has fmt now
+target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
+
+##################################################################################################
+# Target: Create RAPIO shared library (for things linking to rapio code)
+#
 add_library(rapio SHARED
     "${SOURCE_FILES}"
 )
 
-# Add link to our custom build path.
-link_directories(${RAPIO_INSTALL_LIB})
-
-include_directories(. 
-  ${RAPIO_INCLUDE_DIRS}
-)
-
-# Need this to add the BOOST setting or the rError.cc will complain about v2
-add_definitions(-DBOOST_LOG_DYN_LINK)
-##################################################################################################
-
-# Link libraries
 target_link_libraries(rapio
   # Go ahead and make our linked libraries public for now.  In theory,
   # would be better some private
-  PUBLIC ${RAPIO_THIRD_LIBRARIES}
+  PUBLIC rapio_interface # Inherit the interface headers
   # Explicitly add public dlsys for any binaries c
   # calling dynamic loading methods.  rMakeIndex calls factory creation
   PUBLIC dl
 )
 
-# Declare the RAPIO headers for installation
-target_include_directories(rapio PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/rapio>
-)
+##################################################################################################
+# Link libraries to interface and shared targets
+#
 
-# Make absolute for top level install
+# BOOST is the big one.
+# Pretty sure boost links us to Threads::Threads, but ensure pthreads first
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+#find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
+find_package(Boost 1.66 REQUIRED COMPONENTS
+  system log log_setup thread filesystem serialization iostreams timer
+)
+# Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
+# variant of Redhat, and is therefore ancient using Boost 1.66
+# It appears at first glance that LZMA wasn't built properly in the RPM.
+# Is Boost version greater/equal to 1.71, then I'll build the LZMA
+# We 'could' do a find_package(LibLZMA OPTIONAL) as well
+
+# Older boost doesn't use the decimal version, so check for "."
+# to get correct format
+string(FIND "${Boost_VERSION}" "." dotindex)
+
+if (${dotindex} GREATER_EQUAL 0)
+  set(TEST_BOOST_VERSION "1.71.0")
+else()
+  set(TEST_BOOST_VERSION "107700")
+endif()
+
+#target_compile_definitions(rapio_interface INTERFACE HAVE_CURL)
+target_include_directories(rapio_interface INTERFACE ${Boost_INCLUDE_DIRS})
+target_link_libraries(rapio PRIVATE ${Boost_LIBRARIES})
+
+# Used by the base/rUnits for conversion, but we don't convert right now anyway
+addRAPIONote("Utility libraries:")
+
+find_package(CURL) 
+if (CURL_FOUND)
+  target_compile_definitions(rapio_interface INTERFACE HAVE_CURL)
+  target_include_directories(rapio_interface INTERFACE ${CURL_INCLUDE_DIR})
+  target_link_libraries(rapio PRIVATE ${CURL_LIBRARIES})
+  addRAPIONote("      Found: CURL")
+else()
+  addRAPIONote("      Missing: CURL.  Will use BOOST::ASIO network library for network URL (experimental).")
+endif(CURL_FOUND)
+
+find_package(UDUnits2)
+if (UDUnits2_FOUND)
+  target_compile_definitions(rapio_interface INTERFACE HAVE_UDUNITS2)
+  target_include_directories(rapio_interface INTERFACE ${UDUnits2_INCLUDE_DIR})
+  target_link_libraries(rapio PRIVATE ${UDUnits2_LIBRARIES})
+  addRAPIONote("      Found: UDUnits2")
+else()
+  addRAPIONote("      Missing: UDUnits2. Unit conversion ability disabled.  Not used 'yet'.")
+endif(UDUnits2_FOUND)
+
+# Used by AWS stuff (optional)
+find_package(OpenSSL)
+if (OPENSSL_FOUND)
+  target_compile_definitions(rapio_interface INTERFACE HAVE_OPENSSL)
+  target_include_directories(rapio_interface INTERFACE ${OPENSSL_INCLUDE_DIR})
+
+  # Public for openssl because libcurl links to it and curl target isn't working
+  # Kinda annoying curl seems to link to everything, bloats code a bit.
+  # Considering other libraries, perhaps cpp-httplib
+  target_link_libraries(rapio PUBLIC ${OPENSSL_LIBRARIES})
+  #target_link_libraries(rapio PUBLIC OpenSSL:SSL OpenSSL::Crypto)
+  addRAPIONote("      Found: OpenSSL")
+else()
+  addRAPIONote("      Missing: OpenSSL. Only matters for rAWS.cc and web AWS stuff (experimental).")
+endif(OPENSSL_FOUND)
+
+find_package(Proj)
+if (Proj_FOUND)
+  target_compile_definitions(rapio_interface INTERFACE HAVE_PROJLIB)
+  target_include_directories(rapio_interface INTERFACE ${Proj_INCLUDE_DIR})
+  target_link_libraries(rapio PRIVATE ${Proj_LIBRARIES})
+  addRAPIONote("      Found: Proj")
+else() 
+  addRAPIONote("      Missing: Proj. Needed for some projections.")
+endif(Proj_FOUND)
+
+addRAPIONote("Compression support:")
+
+find_package(ZLIB REQUIRED)
+if (ZLIB_FOUND)
+  target_include_directories(rapio_interface INTERFACE ${ZLIB_INCLUDE_DIRS})
+  target_link_libraries(rapio PRIVATE ${ZLIB_LIBRARIES})
+  addRAPIONote("      Found: (.z) ZLIB")
+else()
+  addRAPIONote("      Missing: ZLIB")
+endif(ZLIB_FOUND)
+
+if (BUILD_MRMS)
+  find_package(BZip2 REQUIRED)
+else()
+  find_package(BZip2 QUIET)
+endif(BUILD_MRMS)
+if (BZip2_FOUND)
+  target_include_directories(rapio_interface INTERFACE ${BZip2_INCLUDE_DIRS})
+  target_link_libraries(rapio PRIVATE ${BZip2_LIBRARIES})
+  addRAPIONote("      Found: (.bz2) BZIP2")
+else()
+  addRAPIONote("      Missing: (.bz2) BZIP2")
+endif(BZip2_FOUND)
+
+# Lzma support in boost
+if (${Boost_VERSION} VERSION_GREATER_EQUAL ${TEST_BOOST_VERSION})
+  add_definitions(-DHAVE_LZMA)
+  addRAPIONote("      Found: (.xz, .lzma) LZMA")
+else()
+  addRAPIONote("      Missing: (.xz, .lzma) LZMA")
+endif()
+
+# Snappy in Oracle 9 at least
+find_package(Snappy QUIET)
+if (Snappy_FOUND)
+  # At least on oracle 9 it's not setting the libraries/headers.  It should 'normally' be
+  # just snappy, so we'll do that for now.
+  target_compile_definitions(rapio_interface INTERFACE HAVE_SNAPPY)
+  target_include_directories(rapio_interface INTERFACE ${Snappy_INCLUDE_DIRS})
+  set(Snappy_LIBRARIES "-lsnappy")
+  target_link_libraries(rapio PRIVATE ${Snappy_LIBRARIES})
+  addRAPIONote("      Found: (.sz) Google Snappy ${Snappy_VERSION}")
+else()
+  addRAPIONote("      Missing: (.sz) Google Snappy")
+endif(Snappy_FOUND)
+
+##################################################################################################
+# Flatten headers in the install
+#
+
 foreach(hdr IN LISTS RELATIVE_HEADERS)
   list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${hdr}")
 endforeach()

@@ -122,5 +122,3 @@ install(FILES ${CSS_FILES}
 # A quick tool to allow quick viewing of local files
 # Currently the intention is just a tool for developers.
 #
-#link_directories(${RAPIO_INSTALL_LIB})
-#include_directories(. ${RAPIO_INCLUDE_DIRS})

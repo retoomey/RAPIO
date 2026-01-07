@@ -2,6 +2,12 @@
 # Top cmake for RAPIO building
 cmake_minimum_required (VERSION 3.10)
 
+project (RAPIO 
+    DESCRIPTION "RAPIO Real time algorithm parameter and IO"
+    HOMEPAGE_URL "https://github.com/retoomey/RAPIO"
+    LANGUAGES CXX C
+    VERSION 1.0)
+
 ###########################################################################
 # Options
 # Can use "ccmake ." in the BUILD directory to toggle, sometimes it's
@@ -36,6 +42,12 @@ option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
 option(USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
 option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
 
+# This option is for validating all symbols in modules and that 'enough' libraries
+# have been linked. To reduce size, compile time and duplication we want this off,
+# but if a module say gets an undefined symbol when running, we can turn this on to
+# see what we're missing and then fix our CMakeLists.txt for the module.
+option(RAPIO_STRICT_SYMBOL_CHECK "Link modules to librapio to verify all symbols" OFF)
+
 ###########################################################################
 
 # Set type of build.  This has effect on different os it seems based on some settings here:
@@ -52,20 +64,57 @@ endif()
 
 #add_compile_options(-ftime-report)  # For GCC, shows time per compilation unit
 
-##################################################################################################
-# Set the project info
-project (RAPIO 
-    DESCRIPTION "RAPIO Real time algorithm parameter and IO"
-    HOMEPAGE_URL "https://github.com/retoomey/RAPIO"
-    LANGUAGES CXX C
-    VERSION 1.0)
-
 # Specify the C++ standard
 # Currently tested from 11 to 23. Will avoid new features for now
 # for legacy compatibility.
 set(CMAKE_CXX_STANDARD 11)
 # Allow it to go higher to compiler default
 set(CMAKE_CXX_STANDARD_REQUIRED False)
+
+###########################################################################
+# --- Fetch and configure fmt library ---
+# We have to support older c++ versions, std::format would be nice though
+#
+include(FetchContent)
+
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        12.1.0 # Stable version
+)
+
+FetchContent_MakeAvailable(fmt)
+add_library(rapio_fmt_interface INTERFACE)
+target_link_libraries(rapio_fmt_interface INTERFACE fmt::fmt-header-only)
+###########################################################################
+
+# A function to do the basics of a dynamic module setup
+# This doesn't link extra libraries per modules, but the basics for rapio
+function(addRAPIOModule MODULE_NAME)
+    # The first argument is the module name, everything after are the source files
+    set(SOURCE_FILES ${ARGN})
+
+    # 1. Create the library
+    add_library(${MODULE_NAME} SHARED ${SOURCE_FILES})
+
+    # 2. Basic target requirements
+    target_link_libraries(${MODULE_NAME} PRIVATE rapio_interface)
+    target_include_directories(${MODULE_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+    # 3. Apply the Strict Symbol Check logic globally
+    if(RAPIO_STRICT_SYMBOL_CHECK)
+        if(NOT APPLE)
+            target_link_options(${MODULE_NAME} PRIVATE "-Wl,--no-undefined")
+        endif()
+        target_link_libraries(${MODULE_NAME} PRIVATE rapio)
+    endif()
+
+    # 4. Standard Installation
+    install(TARGETS ${MODULE_NAME}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR})
+            
+    message(STATUS "Configured RAPIO module: ${MODULE_NAME}")
+endfunction()
 
 ###########################################################################
 # Convenient add to a RAPIO note list
@@ -97,23 +146,6 @@ function(install_python SCRIPT SOURCE_DIR)
 			DESTINATION bin)
 endfunction()
 
-###########################################################################
-# Convenient add to RAPIO include and third party libraries
-#
-function(append_RAPIO dir libraries)
-  list(FIND RAPIO_INCLUDE_DIRS "${dir}" index)
-  if(index EQUAL -1) # Cut down on dups like /usr/include
-    if(NOT "${dir}" STREQUAL "") # Don't add empty items
-      list(APPEND RAPIO_INCLUDE_DIRS "${dir}")
-      set(RAPIO_INCLUDE_DIRS ${RAPIO_INCLUDE_DIRS} PARENT_SCOPE)
-    endif()
-  endif()
-  if(NOT "${libraries}" STREQUAL "") # Don't add empty items
-    list(APPEND RAPIO_THIRD_LIBRARIES "${libraries}")
-    set(RAPIO_THIRD_LIBRARIES ${RAPIO_THIRD_LIBRARIES} PARENT_SCOPE)
-  endif()
-endfunction()
-
 # Function for generating the global RAPIO.h list
 # We flatten the directories into RAPIO.h and add to RAPIO_INCLUDE_DIRS
 function(append_RAPIO_HEADERS FOLDER FILE_LIST)
@@ -129,10 +161,6 @@ function(append_RAPIO_HEADERS FOLDER FILE_LIST)
   # Expose results to parent scope
   set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
 
-  list(APPEND RAPIO_INCLUDE_DIRS "${PUBLIC_HEADER_BASE}")
-  set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
-
-message(STATUS "${RAPIO_INCLUDE_DIRS}")
 endfunction()
 
 # Add .h files in a folder to the RAPIO.h and includes
@@ -141,7 +169,7 @@ function(append_RAPIO_HEADERS_GLOB_H FOLDER)
   file(GLOB FILE_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
   append_RAPIO_HEADERS("${FOLDER}" "${FILE_LIST}")
   set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
-  set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
+  #set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
 endfunction()
 
 # Generate a config.h (note this goes into the build so it's unique per build)
@@ -179,93 +207,13 @@ else()
   # If you replace the FindNetcdf say then force the include/lib here
   # like BOOST below
   set(CUSTOM_THIRDDIR "${CMAKE_INSTALL_PREFIX}")
-
-  # Use the ZLIB built in module and tell it to hunt local
-  set(ZLIB_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
-  cmake_policy(SET CMP0074 NEW)
-  set(ZLIB_ROOT "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
-  # Use Jasper built in module
-  #set(JASPER_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include;/usr/include")
-  #set(JASPER_LIBRARY_RELEASE "${CMAKE_INSTALL_PREFIX}/lib;/usr/lib64")
-
-  # BOOST we tell directly since we got a common cmake module
-  #  set(Boost_ROOT "${CMAKE_INSTALL_PREFIX}/boost")
-  #set(Boost_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/boost/include")
-  #set(Boost_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/boost/lib")
 endif()
-
-# Pretty sure boost links us to Threads::Threads, but ensure pthreads first
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-#find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
-find_package(Boost 1.66 REQUIRED COMPONENTS
-  system log log_setup thread filesystem serialization iostreams timer
-)
-set(RAPIO_DEFINITIONS
-  -DBOOST_LOG_DYN_LINK
-)
 
 if (BUILD_MRMS)
   addRAPIONote("Stricter build requirements for MRMS Environment: ENABLED")
 else()
   addRAPIONote("Stricter build requirements for MRMS Environment: ***DISABLED***")
 endif()
-
-###########################################################################
-# Various compression/decompression libraries
-#
-
-addRAPIONote("Compression support:")
-find_package(ZLIB REQUIRED)
-addRAPIONote("      Found: (.z) ZLIB")
-
-# Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
-# variant of Redhat, and is therefore ancient using Boost 1.66
-# It appears at first glance that LZMA wasn't built properly in the RPM.
-# Is Boost version greater/equal to 1.71, then I'll build the LZMA
-# We 'could' do a find_package(LibLZMA OPTIONAL) as well
-
-# Older boost doesn't use the decimal version, so check for "."
-# to get correct format
-string(FIND "${Boost_VERSION}" "." dotindex)
-
-if (${dotindex} GREATER_EQUAL 0)
-  set(TEST_BOOST_VERSION "1.71.0")
-else()
-  set(TEST_BOOST_VERSION "107700")
-endif()
-
-if (${Boost_VERSION} VERSION_GREATER_EQUAL ${TEST_BOOST_VERSION})
-  add_definitions(-DHAVE_LZMA)
-  addRAPIONote("      Found: (.xz, .lzma) LZMA")
-else()
-  addRAPIONote("      Missing: (.xz, .lzma) LZMA")
-endif()
-
-if (BUILD_MRMS)
-  find_package(BZip2 REQUIRED)
-else()
-  # FIXME: Probably need flags/checks in code.  Have zlib I think in various places.
-  find_package(BZip2 QUIET)
-endif(BUILD_MRMS)
-if (BZip2_FOUND)
-  addRAPIONote("      Found: (.bz2) BZIP2")
-else()
-  addRAPIONote("      Missing: (.bz2) BZIP2")
-endif(BZip2_FOUND)
-
-# Snappy in Oracle 9 at least
-find_package(Snappy QUIET)
-if (Snappy_FOUND)
-  add_definitions(-DHAVE_SNAPPY)
-  # At least on oracle 9 it's not setting the libraries/headers.  It should 'normally' be
-  # just snappy, so we'll do that for now.
-  set(Snappy_LIBRARIES "-lsnappy")
-  addRAPIONote("      Found: (.sz) Google Snappy ${Snappy_VERSION}")
-  append_RAPIO("${Snappy_INCLUDE_DIRS}" "${Snappy_LIBRARIES}")
-else()
-  addRAPIONote("      Missing: (.sz) Google Snappy")
-endif(Snappy_FOUND)
 
 ###########################################################################
 # Creating RAPIO_INCLUDE_DIRS and RAPIO.h
@@ -280,60 +228,8 @@ append_RAPIO_HEADERS_GLOB_H("base/plugin/")
 # Bleh.
 append_RAPIO_HEADERS("webserver/" "server_http.hpp;asio_compatibility.hpp;mutex.hpp;utility.hpp;status_code.hpp")
 
-append_RAPIO("${ZLIB_INCLUDE_DIRS}" "${ZLIB_LIBRARIES}")
-append_RAPIO("${BZip2_INCLUDE_DIRS}" "${BZip2_LIBRARIES}")
-append_RAPIO("${Boost_INCLUDE_DIRS}" "${Boost_LIBRARIES}")
-
-# Use the generated RAPIO.h file
-append_RAPIO("${CMAKE_CURRENT_BINARY_DIR}/base" "")
-# Only would matter with third party install, but make it last
-append_RAPIO("${CMAKE_INSTALL_PREFIX}/include" "")
-
-# Debug look at the includes
-#addRAPIONote("INCLUDE:\n ${RAPIO_INCLUDE_DIRS}\n\n")
-
 # Create the RAPIO.h file (after all append_RAPIO_HEADER)
 configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
-
-###########################################################################
-# Used by tile generator and even algorithms like fusion.  Projection
-# ability.
-find_package(Proj)
-if (Proj_FOUND)
-  add_definitions(-DHAVE_PROJLIB)
-  append_RAPIO("${Proj_INCLUDE_DIR}" "${Proj_LIBRARIES}")
-else() 
-  addRAPIONote("No PROJ library.  Only matters for grib2 projection currently.")
-endif(Proj_FOUND)
-
-# Used by web pulling abilities like webindex reading or remote URL pulling
-addRAPIONote("Network support (pulling webindex data):")
-find_package(CURL) 
-if (CURL_FOUND)
-  add_definitions(-DHAVE_CURL)
-  append_RAPIO("${CURL_INCLUDE_DIR}" "${CURL_LIBRARIES}")
-  addRAPIONote("      Found: CURL")
-else()
-  addRAPIONote("      Missing: CURL.  Will use BOOST::ASIO network library for network URL (experimental).")
-endif(CURL_FOUND)
-
-# Used by AWS stuff (optional)
-find_package(OpenSSL)
-if (OPENSSL_FOUND)
-  add_definitions(-DHAVE_OPENSSL)
-  append_RAPIO("${OPENSSL_INCLUDE_DIR}" "${OPENSSL_LIBRARIES}")
-else()
-  addRAPIONote("No OpenSLL library. Only matters for rAWS.cc and web AWS stuff (experimental).")
-endif(OPENSSL_FOUND)
-
-# Used by the base/rUnits for conversion, but we don't convert right now anyway
-find_package(UDUnits2)
-if (UDUnits2_FOUND)
-  add_definitions(-DHAVE_UDUNITS2)
-  append_RAPIO("${UDUnits2_INCLUDE_DIR}" "${UDUnits2_LIBRARIES}")
-else()
-  addRAPIONote("No UDUNITS2 library. Unit conversion ability disabled.  Not used 'yet'.")
-endif(UDUnits2_FOUND)
 
 ###########################################################################
 # Directories
@@ -455,14 +351,16 @@ endif (BUILD_WEB_MODULE)
 # Install the library and headers from the base library
 # Supposedly best practice is to do it top level.
 # GNU will pick lib or lib64 for the install folder depending on OS
-install(TARGETS rapio
+install(TARGETS rapio rapio_interface rapio_fmt_interface fmt-header-only
   EXPORT rapioTargets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for static libs, if any
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}  # for Windows
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rapio
 )
-
+install(DIRECTORY "${fmt_SOURCE_DIR}/include/fmt"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/rapio"
+        FILES_MATCHING PATTERN "*.h")
 
 # ---------------------------------------------------
 # Create cmake files for find_package

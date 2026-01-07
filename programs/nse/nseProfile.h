@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <vector>
-#include "nse/nsePoint.h"
+#include "nsePoint.h"
 
 namespace rapio
 {

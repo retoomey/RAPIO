@@ -9,6 +9,9 @@
 
 #include <iostream>
 
+// Goal is for this to work
+#include <fmt/format.h>
+
 namespace rapio {
 /** Enum class for log pattern tokens */
 enum class LogToken {
