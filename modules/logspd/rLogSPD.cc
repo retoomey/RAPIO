@@ -197,48 +197,11 @@ LogSPD::setFlushMilliseconds(int ms)
 }
 
 void
-LogSPD::log(LogLevel level, const char * fmtStr, const std::vector<LogArg>& args)
+LogSPD::log(LogLevel level, const std::string& message)
 {
-  // 1. Pack generic args into fmt-specific store
-  fmt::dynamic_format_arg_store<fmt::format_context> store;
-
-  for (const auto& arg : args) {
-    switch (arg.type) {
-        case LogArg::Int:    store.push_back(arg.value.i);
-          break;
-        case LogArg::UInt:   store.push_back(arg.value.u);
-          break;
-        case LogArg::Long:   store.push_back(arg.value.i);
-          break;
-        case LogArg::ULong:  store.push_back(arg.value.u);
-          break;
-        case LogArg::Double: store.push_back(arg.value.d);
-          break;
-        case LogArg::Bool:   store.push_back(arg.value.b);
-          break;
-        case LogArg::Pointer: store.push_back(arg.value.p);
-          break;
-        case LogArg::String:
-          // CRITICAL: Convert to std::string to force a deep copy
-          // so spdlog's async worker thread doesn't use a dangling pointer.
-          store.push_back(std::string(arg.value.s));
-          break;
-    }
-  }
-
-  // 2. Map custom LogLevel to spdlog level
+  // 1. Map custom LogLevel to spdlog level
   spdlog::level::level_enum spd_level = map_level(level);
 
-  fmt::format_args argsnew = store;
-
-  // 3. Log to spd Map custom LogLevel to spdlog level
-  try {
-    std::string msg = fmt::vformat(fmtStr, argsnew);
-    mySpdLogger->log(spd_level, msg);
-  } catch (const fmt::format_error& e) {
-    // For developers.  The downside to completely decoupling all of this is
-    // we lose compile time checking.  We'd have to force fmt as a base requirement
-    // and not all OS we need to support currently have it.
-    mySpdLogger->log(spdlog::level::err, "Log formatting error: {} | fmt: '{}'", e.what(), fmtStr);
-  }
+  // 2. Log to spd Map custom LogLevel to spdlog level
+  mySpdLogger->log(spd_level, "{}", message);
 } // LogSPD::log

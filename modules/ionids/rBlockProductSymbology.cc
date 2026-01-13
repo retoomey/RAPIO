@@ -6,7 +6,7 @@ using namespace rapio;
 void
 BlockProductSymbology::read(StreamBuffer& b)
 {
-  LogInfo("Reading Product Symbology block\n");
+  fLogInfo("Reading Product Symbology block");
 
   checkDivider(b);
 
@@ -18,7 +18,7 @@ BlockProductSymbology::read(StreamBuffer& b)
 void
 BlockProductSymbology::write(StreamBuffer& b)
 {
-  LogInfo("Writing Product Symbology block\n");
+  fLogInfo("Writing Product Symbology block");
 
   writeDivider(b);
 
@@ -30,8 +30,8 @@ BlockProductSymbology::write(StreamBuffer& b)
 void
 BlockProductSymbology::dump()
 {
-  LogInfo("Block ID " << myBlockID << " expect 1\n");              // block id
-  LogInfo("Block Length " << myBlockLength << " expect 434190\n"); // block length
+  fLogInfo("Block ID {} expect 1", myBlockID);              // block id
+  fLogInfo("Block Length {} expect 434190", myBlockLength); // block length
   // Can have N layers like grib2, etc.
-  LogInfo("Num Layers " << myNumLayers << " expect 1\n"); // num layers
+  fLogInfo("Num Layers {} expect 1", myNumLayers); // num layers
 }

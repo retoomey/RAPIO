@@ -23,41 +23,6 @@ enum class LogToken {
 // to add more levels.  Right now we've been keeping it simple.
 enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical, Off };
 
-struct LogArg {
-  enum Type { Int, UInt, Long, ULong, Double, Bool, String, Pointer };
-  Type type;
-
-  union Data {
-    long long          i;
-    unsigned long long u;
-    double             d;
-    bool               b;
-    const char *       s;
-    const void *       p;
-  } value;
-
-  // Overloads for automatic type detection
-  LogArg(int v)                : type(Int){ value.i = v; }
-
-  LogArg(unsigned int v)       : type(UInt){ value.u = v; }
-
-  LogArg(long long v)          : type(Long){ value.i = v; }
-
-  LogArg(unsigned long long v) : type(ULong){ value.u = v; }
-
-  LogArg(float v)              : type(Double){ value.d = static_cast<double>(v); }
-
-  LogArg(double v)             : type(Double){ value.d = v; }
-
-  LogArg(bool v)               : type(Bool){ value.b = v; }
-
-  LogArg(const char * v)        : type(String){ value.s = v ? v : "(null)"; }
-
-  LogArg(const std::string& v) : type(String){ value.s = v.c_str(); }
-
-  LogArg(const void * v)        : type(Pointer){ value.p = v; }
-};
-
 /**
  * Logger has the ability to write log messages.
  * Making it dynamic module so we can swap different logging libraries or
@@ -74,7 +39,32 @@ public:
 
   // The Bridge: Implemented by the DLL
   virtual void
-  log(LogLevel level, const char * fmtStr, const std::vector<LogArg>& args) = 0;
+  log(LogLevel level, const std::string& message) = 0;
+
+  template <typename ... Args>
+  void
+  logFormatted(LogLevel level, fmt::format_string<Args...> fmtStr, Args&&... args)
+  {
+    fmt::memory_buffer buf;
+
+    #if __cplusplus >= 202002L
+    // C++20: The compiler validates fmtStr against Args... at the call site.
+    // No try/catch needed for the format string itself.
+    fmt::format_to(std::back_inserter(buf), fmtStr, std::forward<Args>(args)...);
+    #else
+    // Pre-C++20: fmt::format_string doesn't trigger compile errors.
+    // We MUST use fmt::runtime and a try/catch to prevent crashes.
+    try {
+      fmt::format_to(std::back_inserter(buf), fmt::runtime(fmtStr), std::forward<Args>(args)...);
+    } catch (const fmt::format_error& e) {
+      // If the format is bad, log the error so the dev can fix the code
+      log(LogLevel::Error, std::string("Format Error: ") + e.what());
+      return;
+    }
+    #endif // if __cplusplus >= 202002L
+
+    log(level, fmt::to_string(buf));
+  }
 
   /** Notify logger of token pattern change */
   virtual void
@@ -99,7 +89,7 @@ public:
   {
     std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
 
-    log(LogLevel::Debug, "{}", { LogArg(logline) });
+    log(LogLevel::Debug, logline);
   }
 
   /** Info - Single string overload for deprecated way */
@@ -111,7 +101,7 @@ public:
     // practice.
     std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
 
-    log(LogLevel::Info, "{}", { LogArg(logline) });
+    log(LogLevel::Info, logline);
   }
 
   /** Info - Single string overload for deprecated way */
@@ -120,31 +110,34 @@ public:
   {
     std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
 
-    log(LogLevel::Error, "{}", { LogArg(logline) });
+    log(LogLevel::Error, logline);
   }
 
   /** Debug */
   template <typename ... Args>
   void
-  debug(int line, const char * file, const char * function, const char * fmtStr, Args&&... args)
+  debug(int line, const char * file, const char * function,
+    fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    log(LogLevel::Debug, fmtStr, { LogArg(std::forward<Args>(args))... });
+    logFormatted(LogLevel::Debug, fmtStr, std::forward<Args>(args)...);
   }
 
   /** Info */
   template <typename ... Args>
   void
-  info(int line, const char * file, const char * function, const char * fmtStr, Args&&... args)
+  info(int line, const char * file, const char * function,
+    fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    log(LogLevel::Info, fmtStr, { LogArg(std::forward<Args>(args))... });
+    logFormatted(LogLevel::Info, fmtStr, std::forward<Args>(args)...);
   }
 
   /** Severe.  (We used severe forever, match to error) */
   template <typename ... Args>
   void
-  severe(int line, const char * file, const char * function, const char * fmtStr, Args&&... args)
+  severe(int line, const char * file, const char * function,
+    fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    log(LogLevel::Error, fmtStr, { LogArg(std::forward<Args>(args))... });
+    logFormatted(LogLevel::Error, fmtStr, std::forward<Args>(args)...);
   }
 };
 }

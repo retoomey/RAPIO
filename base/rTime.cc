@@ -220,10 +220,7 @@ Time::getString(const std::string& pattern) const
 std::ostream&
 rapio::operator << (std::ostream& os, const Time& t)
 {
-  return (os << "(" << t.getSecondsSinceEpoch() << "."
-             << (int) (1000.0 * t.getFractional() + 0.5)
-             << " epoch secs "
-             << ")");
+  return os << fmt::format("{}", t);
 }
 
 time_t

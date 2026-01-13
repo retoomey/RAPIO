@@ -197,11 +197,12 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     myMacroApplied = o.isMacroApplied();
 
     // Change final logging now to arguments passed in.
-    LogInfo("Executing " << OS::getProcessName() << "...\n");
 
     // Final configured log settings off verbose flag
     const std::string verbose = o.getString("verbose");
-    Log::setSeverityString(verbose);
+    Log::setSeverityString(verbose); // Before logs
+    // fLogInfo("Executing {}...",OS::getProcessName());
+    fLogInfo("Executing {}...", OS::getProcessName());
     Log::printCurrentLogSettings();
 
     // Final loading of validated options

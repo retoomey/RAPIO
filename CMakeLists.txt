@@ -67,7 +67,25 @@ endif()
 # Specify the C++ standard
 # Currently tested from 11 to 23. Will avoid new features for now
 # for legacy compatibility.
-set(CMAKE_CXX_STANDARD 11)
+
+include(CheckCXXCompilerFlag)
+
+set(CXX_STANDARD_FALLBACK 11)
+
+foreach(std 20 17 14 11)
+  string(CONCAT flag "-std=c++" ${std})
+  check_cxx_compiler_flag(${flag} COMPILER_SUPPORTS_CXX${std})
+  if(COMPILER_SUPPORTS_CXX${std})
+    set(CXX_STANDARD_FALLBACK ${std})
+    break()
+  endif()
+endforeach()
+
+message(STATUS "Using C++${CXX_STANDARD_FALLBACK}")
+set(CMAKE_CXX_STANDARD ${CXX_STANDARD_FALLBACK})
+
+#Force a level
+#set(CMAKE_CXX_STANDARD 11)
 # Allow it to go higher to compiler default
 set(CMAKE_CXX_STANDARD_REQUIRED False)
 

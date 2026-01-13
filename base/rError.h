@@ -10,6 +10,8 @@
 
 #include <string.h> // errno strs
 
+#include <fmt/format.h>
+
 namespace rapio {
 /* Exception wrapper for any C function calls we make that return standard 0 or error code.
  * Call using the ERRNO(function) ability */
@@ -278,22 +280,22 @@ private:
 // -----------------------------------------------------------------------
 // New calls using fmt which is faster
 
-#define fLogDebug(fmt, ...) \
+#define fLogDebug(fmtstr, ...) \
   do { \
     if (rapio::Log::wouldDebug) { \
-      rapio::Log::myLog->debug(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+      rapio::Log::myLog->debug(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
     } \
   } while (0)
-#define fLogInfo(fmt, ...) \
+#define fLogInfo(fmtstr, ...) \
   do { \
     if (rapio::Log::wouldInfo) { \
-      rapio::Log::myLog->info(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+      rapio::Log::myLog->info(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
     } \
   } while (0)
-#define fLogSevere(fmt, ...) \
+#define fLogSevere(fmtstr, ...) \
   do { \
     if (rapio::Log::wouldSevere) { \
-      rapio::Log::myLog->severe(__LINE__, __FILE__, __func__, fmt, ## __VA_ARGS__); \
+      rapio::Log::myLog->severe(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
     } \
   } while (0)
 

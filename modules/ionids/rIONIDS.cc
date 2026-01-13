@@ -102,14 +102,14 @@ IONIDS::createDataType(const std::string& params)
   // FIXME: Do we try/catch here or higher I forget
   URL url(params);
 
-  LogInfo("NIDS reader: " << url << "\n");
+  fLogInfo("NIDS reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
   std::vector<char> buf;
 
   IOURL::read(url, buf);
 
   if (buf.empty()) {
-    LogSevere("Empty data buffer from url, can't create\n");
+    fLogSevere("Empty data buffer from url, can't create.");
     return nullptr;
   }
 
@@ -121,7 +121,7 @@ IONIDS::createDataType(const std::string& params)
 
     b.setDataBigEndian(); // NIDS is in big endian
 
-    LogInfo("Processing NIDS " << url << "\n");
+    fLogInfo("Processing NIDS {}", url.toString());
 
     readHeaders(b); // Skip WMO/AWIPS headers if any
     BlockMessageHeader header;
@@ -133,9 +133,9 @@ IONIDS::createDataType(const std::string& params)
     // Check the length given by message matches the full byte size.
     // This is the number minus the headers of course
     if (expectedSize == dataSize) {
-      LogInfo("NIDS header/size match: " << expectedSize << " bytes.\n");
+      fLogInfo("NIDS header/size match: {} bytes.", expectedSize);
     } else {
-      LogSevere("Expected " << expectedSize << " bytes, but we have " << dataSize << "\n");
+      fLogSevere("Expected {} bytes, but we have {}", expectedSize, dataSize);
       throw(std::runtime_error("Invalid NIDS data size."));
     }
 
@@ -180,10 +180,10 @@ IONIDS::createDataType(const std::string& params)
         return datatype;
       }
     } else {
-      LogSevere("Couldn't find a specializer for datatype " << dataType << "\n");
+      fLogSevere("Couldn't find a specializer for datatype {}", dataType);
     }
   } catch (const std::exception& e) {
-    LogSevere("Failed to read NIDS " << e.what() << "\n");
+    fLogSevere("Failed to read NIDS {}", e.what());
   }
 
   return nullptr;
@@ -194,7 +194,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>             & keys
 )
 {
-  LogSevere("Writing NIDS probably not working.\n");
+  fLogSevere("Writing NIDS probably not working.");
   // ----------------------------------------------------------
   // Get specializer for the data type
   const std::string type = dt->getDataType();
@@ -202,7 +202,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<IOSpecializer> fmt = IONIDS::getIOSpecializer(type);
 
   if (fmt == nullptr) {
-    LogSevere("Can't create a nids IO writer for datatype " << type << "\n");
+    fLogSevere("Can't create a nids IO writer for datatype {}", type);
     return false;
   }
   std::shared_ptr<NIDSSpecializer> nidsFmt =
@@ -229,7 +229,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   try{
     fp = fopen(filename.c_str(), "wb");
     if (fp == nullptr) {
-      LogSevere("NIDS writer Couldn't open local file at " << filename << ", errno is " << errno << "\n");
+      fLogSevere("NIDS writer Couldn't open local file at {}, errno is {}", filename, errno);
       fclose(fp);
       return false;
     }
@@ -241,10 +241,10 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
       successful = nidsFmt->writeNIDS(keys, dt, g);
     } catch (...) {
       successful = false;
-      LogSevere("Failed to write nids file for DataType\n");
+      fLogSevere("Failed to write nids file for DataType.");
     }
   } catch (const ErrnoException& ex) {
-    LogSevere("Errno: " << ex.getErrnoVal() << " " << ex.getErrnoStr() << "\n");
+    fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
   fclose(fp);
 

@@ -6,41 +6,41 @@ using namespace rapio;
 void
 BlockRadialSet::read(StreamBuffer& b)
 {
-  LogInfo("Reading Radial block\n");
+  fLogInfo("Reading Radial block");
   checkDivider(b);
 
   // Check data length
   int lengthOfDataLayer = b.readInt();
 
   if (lengthOfDataLayer == 0) {
-    throw std::runtime_error("Length of Radial Data is zero\n");
+    throw std::runtime_error("Length of Radial Data is zero");
   }
-  LogInfo("length " << lengthOfDataLayer << " expect 434174\n");
+  fLogInfo("length {} expect 434174", lengthOfDataLayer);
 
   myPacketCode = b.readShort();
 
   // FIXME: Packet code info table or not?
 
-  LogInfo("RadialSet Packet Code " << myPacketCode << "\n");
+  fLogInfo("RadialSet Packet Code {}", myPacketCode);
   switch (myPacketCode) {
       case 1: {
         // Skip rest for null product
         size_t length = lengthOfDataLayer - sizeof(myPacketCode);
         b.forward(length);
-        throw std::runtime_error("Product code 1 - NULL product unimplemented.\n");
+        throw std::runtime_error("Product code 1 - NULL product unimplemented.");
       }
       break;
       case 28:
         // Skipping rpc.h products.
-        throw std::runtime_error("Product code 28 - XDR compressed product unimplemented.\n");
+        throw std::runtime_error("Product code 28 - XDR compressed product unimplemented.");
         break;
       case -20705: // eh?
       case 16:
-        LogInfo("Looks like a RadialSet NIDS product.\n");
+        LogInfo("Looks like a RadialSet NIDS product.");
         break;
       default:
-        LogSevere("Unknown packet code " << myPacketCode << "\n");
-        throw std::runtime_error("Unsupported packet code \n");
+        fLogSevere("Unknown packet code {}", myPacketCode);
+        throw std::runtime_error("Unsupported packet code");
         return;
 
         break;
@@ -89,7 +89,7 @@ BlockRadialSet::read(StreamBuffer& b)
 void
 BlockRadialSet::write(StreamBuffer& b)
 {
-  LogInfo("Writing RadialSet Description block\n");
+  fLogInfo("Writing RadialSet Description block");
 
   writeDivider(b);
   b.writeInt(10000); // length of data?
@@ -131,10 +131,10 @@ BlockRadialSet::write(StreamBuffer& b)
 void
 BlockRadialSet::dump()
 {
-  LogInfo("index first " << myIndexFirstBin << "\n");
-  LogInfo("num range first " << myNumRangeBin << "\n");
-  LogInfo("I center " << myCenterOfSweepI << "\n");
-  LogInfo("J center " << myCenterOfSweepJ << "\n");
-  LogInfo("scale " << myScaleFactor << "\n");
-  LogInfo("num_radials " << myNumRadials << "\n");
+  fLogInfo("index first {}", myIndexFirstBin);
+  fLogInfo("num range first {}", myNumRangeBin);
+  fLogInfo("I center {}", myCenterOfSweepI);
+  fLogInfo("J center {}", myCenterOfSweepJ);
+  fLogInfo("scale {}", myScaleFactor);
+  fLogInfo("num_radials {}", myNumRadials);
 }

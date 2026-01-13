@@ -30,7 +30,7 @@ ConfigNIDSInfo::readSettings(std::shared_ptr<PTreeData> d)
   // const URL loc(Config::getAbsoluteForRelative(ConfigNIDSInfoXML));
   // if (loc.empty()){
   // This is before logging initialized
-  //   LogInfo("Couldn't find " << ConfigNIDSInfoXML << "\n");
+  //   fLogInfo("Couldn't find {}", ConfigNIDSInfoXML);
   // }
 
   // Force loading at startup for testing. Typically don't do this
@@ -75,7 +75,7 @@ ConfigNIDSInfo::loadSettings()
           const auto increase = n.getAttr("increase", (int) (-1.0));
 
           if (myNIDSInfos.count(code) > 0) {
-            LogSevere("Duplicate product code found, using latest. Check xml file.\n");
+            fLogSevere("Duplicate product code found, using latest. Check xml file.");
           }
           myNIDSInfos[code] = NIDSInfo(code, site, res, range, level, units,
               datatype, c, decode, min, increase);
@@ -83,11 +83,11 @@ ConfigNIDSInfo::loadSettings()
         }
       }
     } else {
-      LogInfo("No " << ConfigNIDSInfoXML << " found, no NIDS info database support.\n");
+      fLogInfo("No {} found, no NIDS info database support.", ConfigNIDSInfoXML);
     }
-    LogInfo("Read " << count << " product codes into NIDS info database\n");
+    fLogInfo("Read {} product codes into NIDS info database", count);
   }catch (const std::exception& e) {
-    LogSevere("Error parsing XML from " << ConfigNIDSInfoXML << "\n");
+    fLogSevere("Error parsing XML from {}", ConfigNIDSInfoXML);
   }
 } // ConfigNIDSInfo::loadSettings
 
@@ -137,7 +137,7 @@ NIDSInfo::getGateWidthMeters() const
   try {
     value = std::stof(strlen);
   }catch (const std::exception& e) {
-    LogSevere("Non number in resolution?\n");
+    fLogSevere("Non number in resolution?");
     return 250.0;
   }
 

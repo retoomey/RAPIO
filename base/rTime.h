@@ -10,6 +10,8 @@
 // POSIX header for timeval (on some OS like alpine)
 #include <sys/time.h>
 
+#include <fmt/format.h>
+
 namespace rapio {
 /**
  * Simple representation of a point on the universal time-line.
@@ -71,6 +73,9 @@ public:
 
   /** Destruction doesn't need anything extra */
   ~Time(){ }
+
+  /** Default time stamp for outputting a time to stream, log, etc. */
+  static constexpr const char * DEFAULT_TIMESTAMP = "%Y %m/%d %H:%M:%S UTC";
 
   /** Return a Time explicitly defined in UTC epoch seconds. */
   static Time
@@ -184,7 +189,7 @@ public:
 
   /** Gets string output from time passing in a pattern string */
   std::string
-  getString(const std::string& key = "%Y%m%d-%H%M%S.%/ms") const;
+  getString(const std::string& key = DEFAULT_TIMESTAMP) const;
 
   /** Try to set our values from a string output and pattern string */
   bool
@@ -247,3 +252,20 @@ std::ostream&
 operator << (std::ostream&,
   const rapio::Time&);
 }
+
+/** Format library support, allows fLogInfo("Time {}", time) */
+template <>
+struct fmt::formatter<rapio::Time> {
+  constexpr auto
+  parse(format_parse_context& ctx) -> decltype(ctx.begin())
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::Time& t, FormatContext& ctx) const -> decltype(ctx.out())
+  {
+    return fmt::format_to(ctx.out(), "({})", t.getString(rapio::Time::DEFAULT_TIMESTAMP));
+  }
+};

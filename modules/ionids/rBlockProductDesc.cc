@@ -9,7 +9,7 @@ using namespace rapio;
 void
 BlockProductDesc::read(StreamBuffer& b)
 {
-  LogInfo("Reading Product Description block\n");
+  fLogInfo("Reading Product Description block");
 
   checkDivider(b);
 
@@ -66,7 +66,7 @@ BlockProductDesc::read(StreamBuffer& b)
 void
 BlockProductDesc::write(StreamBuffer& b)
 {
-  LogInfo("Writing Product Description block\n");
+  fLogInfo("Writing Product Description block");
 
   writeDivider(b);
 
@@ -112,48 +112,48 @@ BlockProductDesc::write(StreamBuffer& b)
 void
 BlockProductDesc::dump()
 {
-  LogInfo("Location: " << myLocation << "\n");
-  LogInfo("Product Code " << myProductCode << "\n");
-  LogInfo("Op mode " << myOpMode << "\n");
-  LogInfo("VCP " << myVCP << "\n");
-  LogInfo("SEQ_NUM " << mySeqNumber << "\n");
-  LogInfo("VOL_SCAN_NUM " << myVolScanNum << "\n");
+  fLogInfo("Location: {}", myLocation);
+  fLogInfo("Product Code {}", myProductCode);
+  fLogInfo("Op mode {}", myOpMode);
+  fLogInfo("VCP {}", myVCP);
+  fLogInfo("SEQ_NUM ", mySeqNumber);
+  fLogInfo("VOL_SCAN_NUM {}", myVolScanNum);
 
-  LogInfo("VOL_START_TIME " << myVolStartTime << "\n");
-  LogInfo("GEN_TIME " << myGenTime << "\n");
+  fLogInfo("VOL_START_TIME {}", myVolStartTime);
+  fLogInfo("GEN_TIME {}", myGenTime);
 
   // So these values depend on the product type, right?
   // basically specials.  So radial set could read them.
   // Basically dedicate to product code lookup.
 
-  LogInfo("DEP01 " << myDeps[0] << "\n");
-  LogInfo("DEP02 " << myDeps[1] << "\n");
-  LogInfo("DEP03 (elevAngle) " << myDeps[2] << "\n");
+  fLogInfo("DEP01 {}", myDeps[0]);
+  fLogInfo("DEP02 {}", myDeps[1]);
+  fLogInfo("DEP03 (elevAngle) {}", myDeps[2]);
 
-  LogInfo("Elevation num " << myElevNum << "\n");
+  fLogInfo("Elevation num {}", myElevNum);
 
   // 16 thresholds whatever those are.
   for (size_t i = 0; i < 16; ++i) {
-    LogInfo("Thres" << i << " " << myDataThresholds[i] << "\n");
+    fLogInfo("Thres {} = {}", i, myDataThresholds[i]);
   }
 
-  LogInfo("DEP04 " << myDeps[3] << "\n");
-  LogInfo("DEP05 " << myDeps[4] << "\n");
-  LogInfo("DEP06 " << myDeps[5] << "\n");
-  LogInfo("DEP07 " << myDeps[6] << "\n");
-  LogInfo("DEP08 " << myDeps[7] << "\n");
-  LogInfo("DEP09 " << myDeps[8] << "\n");
-  LogInfo("DEP10 " << myDeps[9] << "\n");
+  fLogInfo("DEP04 {}", myDeps[3]);
+  fLogInfo("DEP05 {}", myDeps[4]);
+  fLogInfo("DEP06 {}", myDeps[5]);
+  fLogInfo("DEP07 {}", myDeps[6]);
+  fLogInfo("DEP08 {}", myDeps[7]);
+  fLogInfo("DEP09 {}", myDeps[8]);
+  fLogInfo("DEP10 {}", myDeps[9]);
 
   uint32_t uncompBuffLen = ( myDeps[8] << 16) | (myDeps[9] & 0xffff);
 
-  LogInfo("----> Uncompressed length is " << uncompBuffLen << "\n");
-  LogInfo("NUMMAPS " << myNumMaps << "\n");
+  fLogInfo("----> Uncompressed length is {}", uncompBuffLen);
+  fLogInfo("NUMMAPS {}", myNumMaps);
 
   // These look into the file at other blocks I guess
-  LogInfo("Symbology OFF " << mySymbologyOffset << "\n");
-  LogInfo("Graphic OFF " << myGraphicOffset << "\n");
-  LogInfo("Tab OFF " << myTabularOffset << "\n");
+  fLogInfo("Symbology OFF {}", mySymbologyOffset);
+  fLogInfo("Graphic OFF {}", myGraphicOffset);
+  fLogInfo("Tab OFF {}", myTabularOffset);
 } // BlockProductDesc::dump
 
 void
@@ -186,7 +186,7 @@ BlockProductDesc::decodeMethod2(std::vector<float>& a) const
   // Method 2 no scale  required.
   // Original product 159, 161, 163, 170, 172, 173, 174, 175, 176
 
-  LogInfo("Threshold decode method 2.\n");
+  fLogInfo("Threshold decode method 2.");
   auto _code = myProductCode; // FIXME: Still some code checks here
 
   /* for these products data level codes 0 and 1 correspond to "below
@@ -257,7 +257,7 @@ BlockProductDesc::decodeMethod2(std::vector<float>& a) const
 void
 BlockProductDesc::decodeMethod3(std::vector<float>& a, int min, int delta, int num_data_level) const
 {
-  LogInfo("Threshold decode method 3.\n");
+  fLogInfo("Threshold decode method 3.");
   // Original product 32, 94, 153, 180, 182, 186
   a.push_back(Constants::MissingData); // below threshold
   a.push_back(Constants::MissingData); // missing
@@ -273,7 +273,7 @@ BlockProductDesc::decodeMethod3(std::vector<float>& a, int min, int delta, int n
 void
 BlockProductDesc::decodeMethod4(std::vector<float>& a, int min, int delta, int num_data_level) const
 {
-  LogInfo("Threshold decode method 4.\n");
+  fLogInfo("Threshold decode method 4.");
   // Original product 93, 99, 154
   a.push_back(Constants::MissingData); // below threshold
   a.push_back(Constants::RangeFolded); // range folded  (only difference from method2)
@@ -289,7 +289,7 @@ BlockProductDesc::decodeMethod4(std::vector<float>& a, int min, int delta, int n
 void
 BlockProductDesc::decodeMethod5(std::vector<float>& a, int min, int delta, int num_data_level) const
 {
-  LogInfo("Threshold decode method 5.\n");
+  fLogInfo("Threshold decode method 5.");
   // Original product 155
   a.push_back(Constants::MissingData); // below threshold
   a.push_back(Constants::RangeFolded); // range folded
@@ -306,7 +306,7 @@ BlockProductDesc::decodeMethod5(std::vector<float>& a, int min, int delta, int n
 void
 BlockProductDesc::decodeMethod6(std::vector<float>& a, int min, int delta, int num_data_level) const
 {
-  LogInfo("Threshold decode method 6.\n");
+  fLogInfo("Threshold decode method 6.");
   // Original product 33
   a.push_back(Constants::MissingData);
   for (int i = 0; i < num_data_level; i++) {
@@ -318,7 +318,7 @@ BlockProductDesc::decodeMethod6(std::vector<float>& a, int min, int delta, int n
 void
 BlockProductDesc::decodeMethod7(std::vector<float>& a, int min, int delta, int num_data_level) const
 {
-  LogInfo("Threshold decode method 7.\n");
+  fLogInfo("Threshold decode method 7.");
   // Original product 81
   a.push_back(Constants::MissingData);
   for (int i = 0; i < num_data_level; i++) {
@@ -330,7 +330,7 @@ BlockProductDesc::decodeMethod7(std::vector<float>& a, int min, int delta, int n
 void
 BlockProductDesc::decodeMethod1(std::vector<float>& a) const
 {
-  LogInfo("Threshold decode method 1, default.\n");
+  fLogInfo("Threshold decode method 1, default.");
   // Fallthrough
   for (int i = 0; i < (signed) myDataThresholds.size(); i++) {
     a.push_back(DecodeThresholds(myDataThresholds[i]));
@@ -349,10 +349,10 @@ BlockProductDesc:: getDecodedThresholds(std::vector<float>& a) const
   const float delta = (minValue != -1) ? (float) myDataThresholds[1] / increase : 0;
   const int levels  = (minValue != -1) ? myDataThresholds[2] : 0;
 
-  LogSevere("Min, delta, levels " << min << ", " << delta << ", " << levels << "\n");
+  fLogSevere("Min, delta, levels {}, {}, {}", min, delta, levels);
   switch (decode) {
       default:
-        LogSevere("Unknown decode method " << decode << ", trying default (1)\n");
+        fLogSevere("Unknown decode method {}, trying default (1)", decode);
       // fallthrough to case 1
       case 1: return decodeMethod1(a);
 

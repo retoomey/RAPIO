@@ -5,6 +5,8 @@
 
 #include <iosfwd>
 
+#include <fmt/format.h>
+
 namespace rapio {
 class LL;
 class IJK;
@@ -99,3 +101,28 @@ std::ostream&
 operator << (std::ostream&,
   const rapio::LLH&);
 }
+
+/** Format library support, allows fLogInfo("Location {}", location) */
+template <>
+struct fmt::formatter<rapio::LLH> {
+  // 1. We don't need special parsing, so we just return the end of the parse context
+  constexpr auto
+  parse(format_parse_context& ctx) -> decltype(ctx.begin())
+  {
+    return ctx.begin();
+  }
+
+  // 2. Define the format based on your existing ostream logic
+  template <typename FormatContext>
+  auto
+  format(const rapio::LLH& loc, FormatContext& ctx) const -> decltype(ctx.out())
+  {
+    return fmt::format_to(
+      ctx.out(),
+      "(latDeg={:.8g},lonDeg={:.8g},hKM={:.8g})",
+      loc.getLatitudeDeg(),
+      loc.getLongitudeDeg(),
+      loc.getHeightKM()
+    );
+  }
+};

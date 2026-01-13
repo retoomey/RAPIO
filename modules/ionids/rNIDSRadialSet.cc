@@ -80,7 +80,7 @@ NIDSRadialSet::readNIDS(
   // Check to see if this is a null product.
   if (info.isNullProduct()) {
     // FIXME: handle null product.
-    LogSevere("Null product not handled, product number: " << product << ".\n");
+    fLogSevere("Null product not handled, product number: {}", product);
     return nullptr;
   }
 
@@ -163,7 +163,7 @@ NIDSRadialSet::readNIDS(
 
         for (size_t i = 0; i < colors2.size(); i++) {
           if (color_codes[i] != colors2[i]) {
-            LogSevere("Mismatch at " << i << " G:" << color_codes[i] << " != " << colors2[i] << "\n");
+            fLogSevere("Mismatch at {} G: {} != {}", i, color_codes[i], colors2[i]);
           }
         }
         // -------
@@ -202,13 +202,13 @@ NIDSRadialSet::readNIDS(
   const std::string units       = info.getUnits();
   const LengthMs firstGateDistanceMeters = r.getFirstRangeBinIndex() * gate_width;
 
-  LogInfo("Calculated elevation angle is " << elevAngleDegs << "\n");
-  LogInfo("Calculated LLH is " << location << "\n");
-  LogInfo("Calculated time is " << time.getString() << "\n");
-  LogInfo("Gatewidth is " << gate_width << " Meters\n");
-  LogInfo("First Range is " << firstGateDistanceMeters << " Meters\n");
-  LogInfo("Units is " << units << "\n");
-  LogInfo("Name is " << aTypename << "\n");
+  fLogInfo("Calculated elevation angle is {}", elevAngleDegs);
+  fLogInfo("Calculated LLH is {}", location);
+  fLogInfo("Calculated time is {}", time.getString());
+  fLogInfo("Gatewidth is {} Meters", gate_width);
+  fLogInfo("First Range is {} Meters", firstGateDistanceMeters);
+  fLogInfo("Units is {}", units);
+  fLogInfo("Name is {}", aTypename);
 
   auto radialSetSP = RadialSet::Create(aTypename, units, location, time,
       elevAngleDegs, firstGateDistanceMeters, gate_width, num_radials, num_gates);
@@ -325,11 +325,11 @@ NIDSRadialSet::writeNIDS(
   // d.myDeps[0-9] = 0;
   d.setElevationNum(0);
   // d.myDataThresholds[0-15]
-  d.setNumberMaps(0); // 256 on our data but eh no idea
+  d.setNumberMaps(0);       // 256 on our data but eh no idea
   d.mySymbologyOffset = 60; // FIXME: Not sure how to calculate this.
                             // None of the sizes seem to match up
-  d.myGraphicOffset   = 0;
-  d.myTabularOffset   = 0;
+  d.myGraphicOffset = 0;
+  d.myTabularOffset = 0;
 
   BlockProductSymbology sym;
 
@@ -340,13 +340,13 @@ NIDSRadialSet::writeNIDS(
   // Gotta prep the BlockRadialSet for writing.
   BlockRadialSet r;
 
-  r.myPacketCode     = 16;        ///< Packet Type x'AF1F' or 16 or 28
-  r.myIndexFirstBin  = 0;         ///< Index of first range bin
-  r.myNumRangeBin    = num_gates; ///< Number of range bins comprising a radial
-  r.myCenterOfSweepI = 0;         ///< I coordinate of center of sweep
-  r.myCenterOfSweepJ = 0;         ///< J coordinate of center of sweep
-  r.myScaleFactor    = 999;       ///< Number of pixels per range bin.
-  r.myNumRadials = num_radials; ///< Total number of radials in products
+  r.myPacketCode     = 16;          ///< Packet Type x'AF1F' or 16 or 28
+  r.myIndexFirstBin  = 0;           ///< Index of first range bin
+  r.myNumRangeBin    = num_gates;   ///< Number of range bins comprising a radial
+  r.myCenterOfSweepI = 0;           ///< I coordinate of center of sweep
+  r.myCenterOfSweepJ = 0;           ///< J coordinate of center of sweep
+  r.myScaleFactor    = 999;         ///< Number of pixels per range bin.
+  r.myNumRadials     = num_radials; ///< Total number of radials in products
 
   ArrayFloat2DPtr myOutputArray = rs.getFloat2DPtr();
   ArrayFloat1DPtr bwDegs        = rs.getFloat1DPtr(RadialSet::BeamWidth);
@@ -358,6 +358,7 @@ NIDSRadialSet::writeNIDS(
   const LengthMs gate_width = info.getGateWidthMeters();
   bool mismatch = false;
   int first     = -1;
+
   for (size_t radial = 0; radial < num_radials; radial++) {
     if ((*gwMeters)[radial] != gate_width) {
       mismatch = true;
@@ -365,8 +366,8 @@ NIDSRadialSet::writeNIDS(
     }
   }
   if (mismatch) {
-    LogSevere("Mismatch between gate width in info table " << gate_width <<
-      " and netcdf gatewidth " << (*gwMeters)[first] << "\n");
+    fLogSevere("Mismatch between gate width in info table {} and netcdf gatewidth {}",
+      gate_width, (*gwMeters)[first]);
   }
 
   // First need to calculate the thresholds and set the product block.
@@ -389,15 +390,17 @@ NIDSRadialSet::writeNIDS(
   // to space saving techniques of color indexed ancient video cards.
   std::vector<int> colors; // write to this
   const float * p = myOutputArray->data();
+
   NIDSUtil::valueToColorD3(thresholds, p, num_gates * num_radials, colors);
 
   // Direct color write.  FIXME: we have the different color modes
   size_t colori = 0;
+
   for (size_t radial = 0; radial < num_radials; radial++) {
     BlockRadialSet::RadialData radialLayer;
     radialLayer.start_angle = (*azDegs)[radial];
     radialLayer.delta_angle = (*bwDegs)[radial];
-    radialLayer.inShorts    = true; 
+    radialLayer.inShorts    = true;
 
     for (size_t gate = 0; gate < num_gates; gate++) {
       radialLayer.data.push_back(colors[colori++]);
@@ -414,12 +417,13 @@ NIDSRadialSet::writeNIDS(
   size_t endSize;
   // b.writeVector(compressedData, compressedData->size());
   MemoryStreamBuffer bz;
+
   // Since we'll just compress to here, endian 'probably'
   // doesn't matter in this case.
   bz.setDataBigEndian();
 
   if (compress) {
-    LogInfo("Compression is ON\n");
+    fLogInfo("Compression is ON");
     // Temp to write and compress
     MemoryStreamBuffer temp;
     temp.setDataBigEndian(); // NIDS big endian
@@ -430,7 +434,7 @@ NIDSRadialSet::writeNIDS(
     compressedData = bz.getData();
     endSize        = compressedData->size(); // Final compressed size
   } else {
-    LogInfo("Compression is OFF\n");
+    fLogInfo("Compression is OFF");
     endSize = sym.size() + r.size();
   }
   header.myMsgLength = header.size() + d.size() + endSize;
@@ -441,10 +445,10 @@ NIDSRadialSet::writeNIDS(
   if (compress) {
     b.writeVector(compressedData->data(), endSize);
     // Better be '66' or 'B' for bzip2
-    //for (size_t i = 0; i < 4; i++) {
+    // for (size_t i = 0; i < 4; i++) {
     //  std::cout << std::hex << (int) ((*compressedData)[i]) << ", ";
     // }
-    //std::cout << "\n";
+    // std::cout << "\n";
   } else {
     sym.write(b); // Block 3
     r.write(b);   // Layers part of sym block it seems

@@ -23,13 +23,9 @@ LLH::LLH(const LL& a, const LengthKMs& height)
 { }
 
 ostream&
-rapio::operator << (ostream& output, const LLH& exp)
+rapio::operator << (ostream& output, const LLH& loc)
 {
-  output
-    << "(latDeg=" << std::setprecision(8) << exp.getLatitudeDeg() << ","
-    << "lonDeg=" << std::setprecision(8) << exp.getLongitudeDeg() << ","
-    << "hKM=" << std::setprecision(8) << exp.getHeightKM() << ")";
-
+  output << fmt::format("{}", loc);
   return (output);
 }
 

@@ -28,7 +28,7 @@ class LogSPD : public Logger {
 public:
   /** Log a message at given level */
   void
-  log(LogLevel level, const char * fmtStr, const std::vector<LogArg>& args);
+  log(LogLevel level, const std::string& message) override;
 
   /** Set the logging tokens for the log line pattern */
   void

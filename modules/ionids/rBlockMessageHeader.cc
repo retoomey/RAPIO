@@ -6,7 +6,7 @@ using namespace rapio;
 void
 BlockMessageHeader::read(StreamBuffer& b)
 {
-  LogInfo("Reading Message Header block\n");
+  fLogInfo("Reading Message Header block");
 
   // Header doesn't have divider since it's the first block
   // checkDivider(b);
@@ -23,7 +23,7 @@ BlockMessageHeader::read(StreamBuffer& b)
 void
 BlockMessageHeader::write(StreamBuffer& b)
 {
-  LogInfo("Writing Message Header block\n");
+  fLogInfo("Writing Message Header block");
   // Header doesn't have divider since it's the first block
   // b.writeDivider();
 
@@ -39,11 +39,11 @@ BlockMessageHeader::write(StreamBuffer& b)
 void
 BlockMessageHeader::dump()
 {
-  LogInfo("code " << myMsgCode << "\n");
-  LogInfo("Julian " << myMsgDate << "\n");             // Julian Date
-  LogInfo("Time seconds " << myMsgTime << "\n");       // Time of Messages (seconds)
-  LogInfo("Length " << myMsgLength << "\n");           // Length of Message
-  LogInfo("Source " << myMsgSrcID << "\n");            // Source (originators) ID of the sender
-  LogInfo("Destination " << myMsgDstID << "\n");       // Destination ID (receivers) for message transmission
-  LogInfo("Number of blocks " << myNumBlocks << "\n"); // Number of Blocks
+  fLogInfo("code {}", myMsgCode);
+  fLogInfo("Julian {}", myMsgDate);             // Julian Date
+  fLogInfo("Time seconds {}", myMsgTime);       // Time of Messages (seconds)
+  fLogInfo("Length {}", myMsgLength);           // Length of Message
+  fLogInfo("Source {}", myMsgSrcID);            // Source (originators) ID of the sender
+  fLogInfo("Destination {}", myMsgDstID);       // Destination ID (receivers) for message transmission
+  fLogInfo("Number of blocks {}", myNumBlocks); // Number of Blocks
 }
