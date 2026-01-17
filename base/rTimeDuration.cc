@@ -23,6 +23,6 @@ operator * (double s, const TimeDuration& t)
 std::ostream&
 operator << (std::ostream& os, const TimeDuration& t)
 {
-  return (os << "[" << t.milliseconds() / 1000.0 << " s]");
+  return os << fmt::format("{}", t);
 }
 }

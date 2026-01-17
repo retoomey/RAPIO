@@ -23,7 +23,7 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   std::ofstream outFile(filename, std::ios::binary);
 
   if (!outFile.is_open()) {
-    LogSevere("Can't write cache tmp file: " << filename << "\n");
+    fLogSevere("Can't write cache tmp file: {}", filename);
     return false;
   }
 
@@ -78,14 +78,14 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   // Write the array
   count = buffer.size();
   if (count != x * y * heightsKM.size()) {
-    LogSevere("Size mismatch? " << x << ", " << y << ", " << heightsKM.size() << " != " << count << "\n");
+    fLogSevere("Size mismatch? {}, {}, {} != {}", x, y, heightsKM.size(), count);
   }
   outFile.write(reinterpret_cast<char *>(&count), sizeof(count));
   outFile.write(reinterpret_cast<char *>(buffer.data()), count * sizeof(FusionRangeCache));
 
   // Extra check file wrote successfully
   if (!outFile) {
-    LogSevere("Couldn't write to tmp cache file " << filename << " for " << filefinal << "\n");
+    fLogSevere("Couldn't write to tmp cache file {} for {}", filename, filefinal);
     outFile.close();
     return false;
   }
@@ -100,11 +100,11 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
 
   while (true) {
     if (OS::moveFile(filename, filefinal, true)) {
-      LogInfo("Wrote cache file to " << filefinal << " with " << count << " points.\n");
+      fLogInfo("Wrote cache file to {} with {} points.", filefinal, count);
       break;
     } else {
       if (attemptNumber > MAX_ATTEMPTS) {
-        LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
+        fLogInfo("Couldn't move tmp {} to {}", filename, filefinal);
         OS::deleteFile(filename);
         success = false;
         break;
@@ -120,7 +120,7 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   // FIXME: Could write a unit test, but so much is required to reflect real time
   // operations, so I have a test here.
   // Read every file after writing test.
-  LogInfo("Reading back cache file to check...\n");
+  fLogInfo("Reading back cache file to check...");
   std::vector<FusionRangeCache> data2;
   size_t sx2, sy2, x2, y2;
 
@@ -128,11 +128,10 @@ FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   bool bad = ((sx != sx2) || (sy != sy2) || (x != x2) || (y != y2) || (buffer.size() != data2.size()));
 
   if (bad) {
-    LogSevere(
-      "Uh oh ...read back not correct: (" << sx << "," << sx2 << ")(" << sy << "," << sy2 << ")(" << x << "," << x2 << ")(" << y << "," << y2 << ")(" << buffer.size() << "," << data2.size() <<
-        "\n");
+    fLogSevere("Uh oh ...read back not correct: ({},{})({},{})({},{})({},{}){},{}", sx, sx2, sy, sy2, x, x2, y, y2,
+      buffer.size(), data2.size());
   } else {
-    LogInfo("...Seems ok?\n");
+    fLogInfo("...Seems ok?");
   }
   #endif // if 0
 
@@ -148,7 +147,7 @@ FusionCache::readRangeFile(const std::string& filename,
   std::ifstream infile(filename, std::ios::binary);
 
   if (!infile) {
-    LogInfo("No Cache file " << filename << " exists.\n");
+    fLogInfo("No Cache file {} exists.", filename);
     return false;
   }
 
@@ -170,13 +169,13 @@ FusionCache::readRangeFile(const std::string& filename,
       infile.read(reinterpret_cast<char *>(data.data()), count * sizeof(FusionRangeCache));
     }catch (std::bad_alloc& e) {
       // Memory check as well.
-      LogSevere("Failed to allocation space for " << count << "\n");
+      fLogSevere("Failed to allocation space for {}", count);
     }
   }
 
   if (!infile) {
     // handle error reading file
-    LogSevere("Couldn't read existing cache file " << filename << "\n");
+    fLogSevere("Couldn't read existing cache file {}", filename);
     infile.close();
     // Copy file to someplace (Debugging)
     // static size_t count = 0;
@@ -205,10 +204,10 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filefinal
     float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
     percent = 100.0 - (percent * 100.0);
 
-    // LogInfo("Wrote " << filename << " ("<< percent << ") " << on << " of " << all << "\n");
-    LogInfo("Wrote " << name << " (" << percent << " % saved) " << on << " of " << all << "\n");
+    // fLogInfo("Wrote {} ({}) {} of {}", filename, percent ,on, all);
+    fLogInfo("Wrote {} ({} % saved) {} of {}", name, percent, on, all);
   } else {
-    LogSevere("Couldn't write bitset to " << filename << "\n");
+    fLogSevere("Couldn't write bitset to {}", filename);
     success = false;
   }
   outFile.close();
@@ -216,9 +215,9 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filefinal
   // On successful write, move tmp file
   if (success) {
     if (OS::moveFile(filename, filefinal)) {
-      LogInfo("Wrote mask file to " << filefinal << "\n");
+      fLogInfo("Wrote mask file to {}", filefinal);
     } else {
-      LogInfo("Couldn't move tmp " << filename << " to " << filefinal << "\n");
+      fLogInfo("Couldn't move tmp {} to {}", filename, filefinal);
       success = false;
     }
   }
@@ -229,12 +228,12 @@ FusionCache::writeMaskFile(const std::string& name, const std::string& filefinal
   // Read every file after writing test.
   Bitset newmask;
 
-  LogInfo("Reading back mask to check...\n");
+  fLogInfo("Reading back mask to check...");
   readMaskFile(filefinal, newmask);
   if (newmask.size() != mask.size()) {
-    LogSevere("Uh oh ...read back not correct " << newmask.size() << " != " << mask.size() << "\n");
+    fLogSevere("Uh oh ...read back not correct {} != {}", newmask.size(), mask.size());
   } else {
-    LogInfo("...Seems ok?\n");
+    fLogInfo("...Seems ok?");
   }
   #endif // if 0
 
@@ -262,7 +261,7 @@ FusionCache::setRosterDir(const std::string& folder)
 {
   if (!OS::isDirectory(folder)) {
     if (!OS::ensureDirectory(folder)) {
-      LogSevere("Roster folder path '" << folder << "' can't be accessed or created.\n");
+      fLogSevere("Roster folder path '{}' can't be accessed or created.", folder);
       exit(1);
     }
   }
@@ -270,5 +269,5 @@ FusionCache::setRosterDir(const std::string& folder)
   if (!Strings::endsWith(theRosterDir, "/")) {
     theRosterDir += "/";
   }
-  LogInfo("Using roster directory: " << theRosterDir << "\n");
+  fLogInfo("Using roster directory: {}", theRosterDir);
 }

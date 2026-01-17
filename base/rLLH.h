@@ -3,10 +3,6 @@
 #include <rLL.h>
 #include <rConstants.h>
 
-#include <iosfwd>
-
-#include <fmt/format.h>
-
 namespace rapio {
 class LL;
 class IJK;
@@ -105,17 +101,11 @@ operator << (std::ostream&,
 /** Format library support, allows fLogInfo("Location {}", location) */
 template <>
 struct fmt::formatter<rapio::LLH> {
-  // 1. We don't need special parsing, so we just return the end of the parse context
-  constexpr auto
-  parse(format_parse_context& ctx) -> decltype(ctx.begin())
-  {
-    return ctx.begin();
-  }
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
 
-  // 2. Define the format based on your existing ostream logic
   template <typename FormatContext>
   auto
-  format(const rapio::LLH& loc, FormatContext& ctx) const -> decltype(ctx.out())
+  format(const rapio::LLH& loc, FormatContext& ctx) const
   {
     return fmt::format_to(
       ctx.out(),

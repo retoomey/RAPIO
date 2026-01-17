@@ -298,7 +298,7 @@ public:
   add(VolumeValue * vvp, short x, short y, short z, size_t partIndex) override
   {
     if (partIndex >= myStorage.size()) {
-      LogSevere("Index is " << partIndex << " and storage is " << myStorage.size() << "\n");
+      fLogSevere("Index is {} and storage is {}", partIndex, myStorage.size());
       exit(1);
     }
     myStorage[partIndex]->add(vvp, x, y, z);

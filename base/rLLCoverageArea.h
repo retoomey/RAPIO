@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include <fmt/format.h>
+
 namespace rapio {
 /** Represents a sector of Latitude Longitude that is broken up into a grid,
  * with the ability to mark a subset of that area.
@@ -167,6 +169,30 @@ protected:
 };
 
 std::ostream&
-operator << (std::ostream&,
-  const LLCoverageArea&);
+operator << (std::ostream&, const LLCoverageArea&);
 }
+
+/** Format library support for LLCoverageArea */
+template <>
+struct fmt::formatter<rapio::LLCoverageArea> {
+  constexpr auto
+  parse(fmt::format_parse_context& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::LLCoverageArea& g, FormatContext& ctx) const
+  {
+    return fmt::format_to(
+      ctx.out(),
+      "nw({}, {}) se({}, {}) s({}, {}) numheights({}) cells(start: {}, {}, size: {}, {})",
+      g.getNWLat(), g.getNWLon(), g.getSELat(), g.getSELon(),
+      g.getLatSpacing(), g.getLonSpacing(),
+      g.getNumZ(), // heightsKM.size()
+      g.getStartX(), g.getStartY(),
+      g.getNumX(), g.getNumY()
+    );
+  }
+};

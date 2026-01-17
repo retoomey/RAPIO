@@ -258,7 +258,7 @@ public:
       }
     }
     // for (size_t i = 0; i < myAvailableKeys.size(); ++i) {
-    //  LogInfo("Keys: " << myAvailableKeys[i] << "\n");
+    //  fLogInfo("Keys: {}", myAvailableKeys[i]);
     // }
   }
 

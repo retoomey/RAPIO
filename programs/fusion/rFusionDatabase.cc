@@ -15,7 +15,7 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
   const size_t yBase          = data.getYBase();
   const bool dataNoMissingSet = data.getNoMissingSet();
 
-  //    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
+  //    fLogInfo("Incoming stage2 data for {} {}", name, aTypeName);
 
   // Get a current source list
   // Note: This should be a reference or you'll copy
@@ -51,9 +51,8 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
       (y >= myNumY) ||
       (z >= myNumZ))
     {
-      LogSevere(
-        "Getting stage2 x,y,z values out of range of current grid: " << x << ", " << y << ", " << z << " and (" << myNumX << ", " << myNumY << ", " << myNumZ <<
-          ")\n");
+      fLogSevere("Getting stage2 x,y,z values out of range of current grid: {}, {}, {} and ({}, {}, {})", x, y, z,
+        myNumX, myNumY, myNumZ);
       break;
     }
     if (v == Constants::MissingData) {
@@ -64,12 +63,12 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
       points++;
     }
   }
-  LogInfo(timer << "\n");
+  fLogInfo("{}", timer);
 
   {
     ProcessTimer fail("Merge source");
     mergeObservations(radarPtr, newSourcePtr, cutoff);
-    LogInfo(fail << "\n");
+    fLogInfo("{}", fail);
   }
 } // FusionDatabase::ingestNewData
 
@@ -77,7 +76,7 @@ void
 FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY,
   float precision)
 {
-  ProcessTimer test("Merging XYZ tree\n");
+  ProcessTimer test("Merging XYZ tree");
 
   cache->fillPrimary(Constants::DataUnavailable);
 
@@ -174,7 +173,7 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
     }
   }
 
-  LogInfo(test);
+  fLogInfo("{}", test);
 } // FusionDatabase::mergeTo
 
 void
@@ -184,7 +183,7 @@ FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, si
   // FIXME: Maybe combine common code or something with the mergeTo..though it might
   // slow things doing that.
   //
-  ProcessTimer test("Maxing XYZ tree\n");
+  ProcessTimer test("Maxing XYZ tree");
 
   cache->fillPrimary(Constants::DataUnavailable);
 
@@ -371,9 +370,8 @@ FusionDatabase::mergeObservations(std::shared_ptr<SourceList> oldSourcePtr,
   // And make it the new one
   myObservationManager.setSourceList(newSource.myID, newSourcePtr);
 
-  LogInfo(newSource.myName << " Had: " << hadSize << " New: " <<
-    newSize << " Kept: " << oldRestore << " Expired: " <<
-    timePurged << " Final: " << newSize + oldRestore << "\n");
+  fLogInfo("{} Had: {} New: {} Kept: {} Expired: {} Final: {}",
+    newSource.myName, hadSize, newSize, oldRestore, timePurged, newSize + oldRestore);
 } // FusionDatabase::mergeObservations
 
 void
@@ -407,9 +405,7 @@ FusionDatabase::dumpSources()
       numMObsCap += r.myAMObs[l].capacity();
     }
 
-    LogInfo(
-      r.myID << ": " << r.myName << ": " << numObs <<
-        " v. " << numMObs << " m. Latest: " << r.myTime.getString("%H:%M:%S") << "\n");
+    fLogInfo("{}: {}: {} v. {} m. Latest: {}", static_cast<uint32_t>(r.myID), r.myName, numObs, numMObs, r.myTime);
     counter  += numObs;
     mcounter += numMObs;
 
@@ -427,9 +423,9 @@ FusionDatabase::dumpSources()
   vm   *= 1024;
   rssm *= 1024; // need bytes for memory print
 
-  LogDebug("Total: " << counter << " v. " << mcounter << " m. (" << counter + mcounter <<
-    ") ~RAM: " << Strings::formatBytes(sizeCounter) << " " << Strings::formatBytes(rssm)
-                     << " , VWaste: " << Strings::formatBytes(obsDelta) << "\n");
+  fLogDebug("Total: {} v. {} m. ({}) ~RAM: {} {} , VWaste: {}",
+    counter, mcounter, counter + mcounter,
+    Strings::formatBytes(sizeCounter), Strings::formatBytes(rssm), Strings::formatBytes(obsDelta));
   // Not sure how to guess this in new way yet
-  //  LogInfo("X,Y,Z Coverage: " << myXYZs.getPercentFull() << "%\n");
+  //  fLogInfo("X,Y,Z Coverage: {}", myXYZs.getPercentFull());
 } // FusionDatabase::dumpSources

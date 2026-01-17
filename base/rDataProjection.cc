@@ -15,16 +15,7 @@ std::shared_ptr<ProjLibProject> DataProjection::theWebMercToLatLon = nullptr;
 ostream&
 rapio::operator << (ostream& os, const LLCoverage& p)
 {
-  os << "mode: " << p.mode << ", cols: " << p.cols << ", rows: " << p.rows;
-  if (p.mode == "full") { } else if (p.mode == "degrees") {
-    os << ", degreeOut: " << p.degreeOut;
-  } else if (p.mode == "tile") {
-    os << ", zoomlevel: " << p.zoomlevel << ", centerLatDegs: " << p.centerLatDegs
-       << ", centerLonDegs: " << p.centerLonDegs << ", deltaLatDegs: " << p.deltaLatDegs
-       << ", deltaLonDegs: " << p.deltaLonDegs;
-  }
-
-  return (os);
+  return os << fmt::format("{}", p);
 }
 
 std::shared_ptr<ProjLibProject>

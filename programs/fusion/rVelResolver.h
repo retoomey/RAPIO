@@ -138,7 +138,7 @@ public:
     }
 
     if (alg->isProductWanted("S2")) {
-      LogSevere("Can't write raw S2.  Use S2Netcdf option to write netcdf.\n");
+      fLogSevere("Can't write raw S2.  Use S2Netcdf option to write netcdf.");
     }
   } // send
 

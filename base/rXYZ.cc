@@ -84,6 +84,5 @@ XYZ::operator -= (const IJK& v)
 ostream&
 rapio::operator << (ostream& os, const XYZ& p)
 {
-  os << "(" << p.x << "," << p.y << "," << p.z << ")" << flush;
-  return (os);
+  return os << fmt::format("{}", p);
 }

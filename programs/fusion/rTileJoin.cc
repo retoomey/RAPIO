@@ -33,16 +33,16 @@ TileJoinDatabase::add(std::shared_ptr<LatLonGrid> l, std::string& databaseKey)
 
   // Check partition number
   if (partNumber < 0) {
-    LogSevere("Couldn't find partition number for '" << key << "', ignoring. Maybe this data isn't in the grid?\n");
+    fLogSevere("Couldn't find partition number for '{}', ignoring. Maybe this data isn't in the grid?", key);
     return false;
   }
-  LogInfo("LatLonGrid '" << key << "' has partition " << partNumber << "\n");
+  fLogInfo("LatLonGrid '{}' has partition {}", key, partNumber);
 
   // Look up the entries for this key
   auto it = myEntries.find(key);
 
   if (it == myEntries.end()) {
-    LogInfo("Creating tile cache for '" << key << "'\n");
+    fLogInfo("Creating tile cache for '{}'", key);
     // myEntries[key] = TileJoinDatabaseEntry(myPartitionInfo.size(), dataTime);
     myEntries.emplace(key, TileJoinDatabaseEntry(myPartitionInfo.size(), dataTime));
   }
@@ -63,7 +63,7 @@ TileJoinDatabase::getExpiredKeys(const Time& t)
 
   for (const auto& p:myEntries) {
     if (p.second.getTime() < t) {
-      LogInfo("key '" << p.first << "' with time " << p.second.getTime().getString() << " has expired.\n");
+      fLogInfo("key '{}' with time {} has expired.", p.first, p.second.getTime());
       expiredList.push_back(p.first);
     }
   }
@@ -73,7 +73,7 @@ TileJoinDatabase::getExpiredKeys(const Time& t)
 void
 TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<LatLonGrid>& out)
 {
-  LogInfo("Generating a final grid for key '" << databaseKey << "'\n");
+  fLogInfo("Generating a final grid for key '{}'", databaseKey);
   auto it = myEntries.find(databaseKey);
 
   if (myArrayAlgorithm == nullptr) {
@@ -81,7 +81,7 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
   }
 
   if (it == myEntries.end()) {
-    LogInfo("Key missing?  Can't generate final grid '" << databaseKey << "'\n");
+    fLogInfo("Key missing?  Can't generate final grid '{}'", databaseKey);
     return;
   }
 
@@ -121,9 +121,9 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
 void
 TileJoinDatabase::printInfo() const
 {
-  LogInfo("----------------Entries----------------\n");
+  fLogInfo("----------------Entries----------------");
   for (const auto& p:myEntries) {
-    LogInfo("For key '" << p.first << "' with time " << p.second.getTime().getString() << "\n");
+    fLogInfo("For key '{}' with time {}", p.first, p.second.getTime());
     p.second.printInfo();
   }
 }
@@ -163,7 +163,7 @@ TileJoinAlg::processOptions(RAPIOOptions& o)
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
   }
   if (!success) {
-    LogSevere("Failed to load and/or parse partition information!\n");
+    fLogSevere("Failed to load and/or parse partition information!");
     exit(1);
   }
   // myPartitionInfo.printTable();
@@ -178,7 +178,7 @@ TileJoinDatabase::getPartitionNumber(std::shared_ptr<LatLonGrid>& l)
   // Right now you could mess up data in and break things.
   int partNumber = myPartitionInfo.getPartitionNumber(l->getCenterLocation());
 
-  // LogSevere("INCOMING CENTER:" << l->getCenterLocation() << ", partition is " << partNumber << "\n");
+  // fLogSevere("INCOMING CENTER: {}, partition is {}", l->getCenterLocation(), partNumber);
   return partNumber;
 }
 
@@ -225,11 +225,11 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
      * // Forced test case...
      * std::string databaseKey;
      * myTileJoinDatabase->add(l, databaseKey);
-     * LogSevere("Doing second add to check..\n");
+     * fLogSevere("Doing second add to check..");
      * myTileJoinDatabase->add(l, databaseKey);
-     * LogSevere("Doing third add to check..\n");
+     * fLogSevere("Doing third add to check..");
      * myTileJoinDatabase->add(l, databaseKey);
-     * LogSevere("Doing fourth add to check..\n");
+     * fLogSevere("Doing fourth add to check..");
      */
 
     // if full on add, we'll write it out immediately
@@ -259,7 +259,7 @@ TileJoinAlg::processHeartbeat(const Time& n, const Time& p)
   auto list = myTileJoinDatabase->getExpiredKeys(cutoffTime);
 
   if (list.size() > 0) {
-    LogInfo("We have some expired groups...writing them.\n");
+    fLogInfo("We have some expired groups...writing them.");
   }
   for (auto databaseKey:list) {
     myTileJoinDatabase->finalizeEntry(databaseKey, myLLGOutput);

@@ -34,15 +34,12 @@ Stage2Storage::RLE()
             }
             // New RLE stuff to store...
           }
-          // if (counter < 10) {
-          //    std::cout << "RLE: " << startx << ", " << starty << ", " << startz << " --> " << length << "\n";
-          // }
           myTable->addMissing(startx, starty, startz, length);
         }
       }
     }
   }
-  // LogInfo("RLE found " << counter << " start locations.  Dim size: " << myDimensions[0] << " , " << myDimensions[1] << ", " << myDimensions[2] <<  "\n");
+  // fLogInfo("RLE found {} start locations.  Dim size: {} , {}, {}", counter, myDimension[0], myDimensions[1], myDimensions[2]);
 } // Stage2Storage::RLE
 
 void
@@ -54,7 +51,7 @@ Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   size_t finalMissingSize    = 0;
   size_t count = 0;
 
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Outputting---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Outputting---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
   for (auto& s:myStorage) {
     s->send(alg, aTime, asName);
     finalValueSize      += s->getAddedValueCount();
@@ -62,9 +59,8 @@ Stage2Data::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
     finalMissingRLESize += s->getSentMissingRLECount();
     count++;
   }
-  LogInfo(
-    "Sent " << count << " total tiles, Values: " << finalValueSize << ", Missings: " << finalMissingSize << ", (RLE: " << finalMissingRLESize <<
-      ")\n");
+  fLogInfo("Sent {} total tiles, Values: {}, Missings: {}, (RLE: {})", count, finalValueSize, finalMissingSize,
+    finalMissingRLESize);
 }
 
 void
@@ -82,14 +78,13 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   myMissingRLECounter = finalSize2;
 
   if (finalSize != myAddValueCounter) {
-    LogSevere("Table size/added are different? " << finalSize << "  " << myAddValueCounter << "\n");
+    fLogSevere("Table size/added are different? {}  {}", finalSize, myAddValueCounter);
   }
   if ((finalSize < 1) && (finalSize2 < 1)) {
-    LogInfo("Skipping writing " << mySubFolder << " since we have 0 values.\n");
+    fLogInfo("Skipping writing {} since we have 0 values.", mySubFolder);
   } else {
-    LogInfo(
-      "Writing " << finalSize << " values, with " << myAddMissingCounter << " missing as " << finalSize2 <<
-        " (RLE).\n");
+    fLogInfo("Writing {} values, with {} missing as {} (RLE)", finalSize, myAddMissingCounter, finalSize2);
+
     std::map<std::string, std::string> extraParams;
     extraParams["showfilesize"]    = "yes";
     extraParams["outputsubfolder"] = mySubFolder;
@@ -182,7 +177,7 @@ Stage2Data::receive(RAPIOData& rData)
     // FIXME: we could let it be DataGrid and check fields instead.  This would stop the
     // warning we get for missing reader
     if (gsp->getDataType() == "Stage2Ingest") { // Check for ANY stage2 file
-      LogInfo("Stage2 data noticed (netcdf) record: " << rData.getDescription() << "\n");
+      fLogInfo("Stage2 data noticed (netcdf) record: {}", rData.getDescription());
       DataGrid& d = *gsp;
 
       // ---------------------------------------------------
@@ -245,15 +240,12 @@ Stage2Data::receive(RAPIOData& rData)
       for (size_t i = 0; i < aSize2; i++) {
         length += RLElengths[i];
       }
-
-      LogInfo(
-        "Size is " << aSize << " x,y,z non-missing values, and " << aSize2 << " RLE missing values expanding to " << length <<
-          " total missing.  Total: " << aSize2 + length << "\n");
+      fLogInfo(
+        "Size is {} x,y,z non-missing values, and {} RLE missing values expanding to {} total missing.  Total: {}",
+        aSize, aSize2, length, aSize2 + length);
       if (aSize > 1) { aSize = 1; }
       for (size_t i = 0; i < aSize; i++) {
-        LogInfo(
-          "   " << i << ": (" << netcdfX[i] << "," << netcdfY[i] << ") stores " << netcdfNums[i] << " with weight " <<
-            netcdfDems[i] << "\n");
+        fLogInfo("   {}: ({},{}) stores {} with weight {}", i, netcdfX[i], netcdfY[i], netcdfNums[i], netcdfDems[i]);
       }
 
       in.myTable->myXMissings.reserve(aSize2);
@@ -269,7 +261,7 @@ Stage2Data::receive(RAPIOData& rData)
 
       return insp;
     } else {
-      //   LogSevere("We got unrecognized data:" << gsp->getDataType() << "\n");
+      //   fLogSevere("We got unrecognized data: {}", gsp->getDataType());
     }
   }
 
@@ -277,9 +269,9 @@ Stage2Data::receive(RAPIOData& rData)
   auto ft = rData.datatype<FusionBinaryTable>();
 
   if (ft != nullptr) {
-    LogInfo("Stage2 data noticed (raw) record: " << rData.getDescription() << "\n");
+    fLogInfo("Stage2 data noticed (raw) record: {}", rData.getDescription());
     std::vector<size_t> dims = { ft->getValueSize(), ft->getMissingSize() };
-    LogInfo("Value/missing dims: " << ft->getValueSize() << ", " << ft->getMissingSize() << "\n");
+    fLogInfo("Value/missing dims: {}, {}", ft->getValueSize(), ft->getMissingSize());
     std::shared_ptr<Stage2Data> insp =
       std::make_shared<Stage2Data>(Stage2Data(ft, dims));
     return insp;

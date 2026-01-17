@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+#include <fmt/format.h>
+
 using namespace rapio;
 
 LL::LL() : myLatitudeDegs(0), myLongitudeDegs(0)
@@ -19,9 +21,7 @@ namespace rapio {
 std::ostream&
 operator << (std::ostream& os, const LL& latlon)
 {
-  os << "[lat=" << latlon.myLatitudeDegs << ",lon=" << latlon.myLongitudeDegs
-     << ']';
-  return (os);
+  return (os << fmt::format("{}", latlon));
 }
 }
 

@@ -5,9 +5,12 @@
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
 #include <rVolumeValue.h>
+#include <rStrings.h>
 
 #include <memory>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace rapio {
 /** Fast temp pointer cache for using the current volume information.
@@ -309,3 +312,53 @@ std::ostream&
 operator << (std::ostream&,
   const rapio::Volume&);
 }
+
+/** Format library support, allows fLogInfo("Volume {}", volume) */
+template <>
+struct fmt::formatter<rapio::Volume> {
+  // Standard parse function
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::Volume& v, FormatContext& ctx) const
+  {
+    rapio::Time latest(0);
+    std::vector<double> out1;
+    std::vector<rapio::Time> times;
+
+    // Collect data and find the latest timestamp
+    for (auto const& x : v.getVolume()) {
+      const auto os_str = rapio::Strings::removeNonNumber(x->getSubType());
+      double d = 0;
+      try {
+        d = std::stod(os_str);
+      } catch (const std::exception& e) { }
+
+      rapio::Time newer = x->getTime();
+      if (newer > latest) {
+        latest = newer;
+      }
+      out1.push_back(d);
+      times.push_back(newer);
+    }
+
+    // Start formatting to the output buffer
+    auto out = fmt::format_to(ctx.out(), "Current Virtual Volume: ");
+
+    for (size_t c = 0; c < out1.size(); c++) {
+      out = fmt::format_to(out, "{}", out1[c]);
+
+      if (times[c] == latest) {
+        out = fmt::format_to(out, " (latest)");
+      }
+
+      // Add comma separator except for the last element
+      if (c < out1.size() - 1) {
+        out = fmt::format_to(out, ", ");
+      }
+    }
+
+    return out;
+  } // format
+};

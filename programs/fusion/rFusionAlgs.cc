@@ -34,7 +34,7 @@ RAPIOFusionAlgs::firstDataSetup()
 void
 RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Stage3---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Stage3---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
   firstDataSetup();
 
   // This will read the data even it if isn't the type wanted.  Interesting.
@@ -55,8 +55,7 @@ RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
 {
   // Probably don't need heartbeat for the algorithms.  Should be one 3D cube to outputs.
   if (isDaemon()) { // just checking, don't think we get message if we're not
-    LogInfo(
-      ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
+    fLogInfo("{}{}---Heartbeat---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
   }
 }
 
@@ -79,7 +78,7 @@ VIL::firstDataSetup()
 
   if (setup) { return; }
 
-  LogInfo("Precalculating VIL weight table\n");
+  fLogInfo("Precalculating VIL weight table");
   // Precreate the vil weights.  Saves a little time on each volume
   // computes weights for each dBZ values >= 0 based on a lookup table.
   const float puissance = 4.0 / 7.0;
@@ -140,7 +139,7 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   auto create = ((myVilGrid == nullptr) || (myCachedCoverage != coverage));
 
   if (!create) {
-    LogInfo("Using cached grids at time " << forTime << "\n");
+    fLogInfo("Using cached grids at time {}", forTime);
     // Update the time to the input for output
     myVilGrid->setTime(forTime);
     myVildGrid->setTime(forTime);
@@ -154,7 +153,7 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   // Thought about using a single grid, but some fields relay on others
   // so we store all of them
   //
-  LogInfo("Coverage has changed, creating new output grids...\n");
+  fLogInfo("Coverage has changed, creating new output grids...");
   myVilGrid = LatLonGrid::Create("VIL", "kg/m^2", forTime, coverage);
   myVilGrid->setDataAttributeValue("SubType", "");
 
@@ -193,7 +192,7 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
   // cached outputs
   //
   const Time forTime = llg.getTime();
-  LogInfo("Computing VIL at " << forTime << "\n");
+  fLogInfo("Computing VIL at {}", forTime);
 
   const size_t numLats = llg.getNumLats();
   const size_t numLons = llg.getNumLons();
@@ -217,9 +216,9 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
   for (size_t h = 0; h < numHts; h++) {
     auto layerValue = llg.getLayerValue(h);
     hlevels.push_back(layerValue);
-    // LogInfo("Pushed back " << layerValue << "\n");
+    // fLogInfo("Pushed back {}", layerValue);
   }
-  // LogSevere("Done with test\n");
+  // fLogSevere("Done with test");
   // grid.setLayerValue(10, 123456); works.
   // vilgrid->setLayerValue(0, 6000); // Should change height, right?
   // p->writeOutputProduct("TESTING", vilgrid);

@@ -167,3 +167,35 @@ std::ostream      &
 operator << (std::ostream&,
   const ProcessTimer&);
 }
+
+/** Format library support, allows fLogInfo("ProcessTimer {}", processTimer) */
+template <>
+struct fmt::formatter<rapio::ProcessTimer> {
+  constexpr auto parse(format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::ProcessTimer& pt, FormatContext& ctx) const
+  {
+    std::stringstream ss; // FIXME: We shouldn't user operator, it should use us
+
+    ss << pt;
+    return fmt::format_to(ctx.out(), "{}", ss.str());
+  }
+};
+
+/** Format library support, allows fLogInfo("ProcessTimerSum {}", processTimerSum) */
+template <>
+struct fmt::formatter<rapio::ProcessTimerSum> {
+  constexpr auto parse(format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::ProcessTimerSum& pt, FormatContext& ctx) const
+  {
+    std::stringstream ss; // FIXME: We shouldn't user operator, it should use us
+
+    ss << pt;
+    return fmt::format_to(ctx.out(), "{}", ss.str());
+  }
+};

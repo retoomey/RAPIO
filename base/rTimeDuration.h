@@ -4,6 +4,8 @@
 
 #include <chrono>
 
+#include <fmt/format.h>
+
 namespace rapio {
 class Time;
 
@@ -225,3 +227,16 @@ std::ostream      &
 operator << (std::ostream&,
   const TimeDuration&);
 }
+
+/** Format library support, allows fLogInfo("TimeDuration {}", timeduration) */
+template <>
+struct fmt::formatter<rapio::TimeDuration> {
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::TimeDuration& t, FormatContext& ctx) const
+  {
+    return fmt::format_to(ctx.out(), "[ {} s]", t.milliseconds() / 1000.0);
+  }
+};

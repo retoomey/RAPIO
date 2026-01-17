@@ -74,7 +74,7 @@ RAPIOPointCloudAlg::processOptions(RAPIOOptions& o)
   } else if (myRangeKMs > 1000) {
     myRangeKMs = 1000;
   }
-  LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
+  fLogInfo("Radar range is {} Kilometers.", myRangeKMs);
   #endif // if 0
 } // RAPIOPointCloudAlg::processOptions
 
@@ -87,7 +87,7 @@ RAPIOPointCloudAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::stri
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -96,14 +96,13 @@ RAPIOPointCloudAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::stri
   const LengthKMs cHeight = center.getHeightKM();
 
   // Link to first incoming radar and moment, we will ignore any others from now on
-  LogInfo(
-    "Linking this algorithm to radar '" << radarName << "' and typename '" << typeName <<
-      "' since first pass we only handle 1\n");
+  fLogInfo("Linking this algorithm to radar '{}' and typename '{}' since first pass we only handle 1", radarName,
+    typeName);
   myTypeName    = typeName;
   myRadarName   = radarName;
   myRadarCenter = center;
 
-  LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
+  fLogInfo("Radar center: {},{} at {} KMs", cLat, cLon, cHeight);
 
   // -------------------------------------------------------------
   // Terrain blockage creation
@@ -133,7 +132,7 @@ RAPIOPointCloudAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::stri
   size_t x = myFullGrid.getNumX(); // lons
   size_t z = myFullGrid.getNumZ(); // Hts
 
-  LogInfo("Creating bin grid of size(" << x << ", " << y << ", " << z << ")\n");
+  fLogInfo("Creating bin grid of size({}, {}, {})", x, y, z);
   myGridLookup = std::make_shared<GridPointsLookup>(x, y, z);
 } // RAPIOPointCloudAlg::firstDataSetup
 
@@ -190,7 +189,7 @@ RAPIOPointCloudAlg::bufferToRadialSet(std::shared_ptr<RadialSet> r)
 void
 RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 {
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---RadialSet---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   auto& rad = *r;
 
@@ -198,7 +197,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   std::string name = "UNKNOWN";
 
   if (!rad.getString("radarName-value", name)) {
-    LogSevere("No radar name found in RadialSet, ignoring data\n");
+    fLogSevere("No radar name found in RadialSet, ignoring data");
     return;
   }
 
@@ -207,9 +206,8 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   const std::string aUnits    = rad.getUnits();
   ProcessTimer ingest("Ingest tilt");
 
-  LogInfo(
-    rad.getTypeName() << " (" << rad.getNumRadials() << " Radials * " << rad.getNumGates() << " Gates), " <<
-      rad.getElevationDegs() << ", Time: " << rad.getTime() << "\n");
+  fLogInfo("{} ({} Radials * {} Gates), {}, Time: {}", rad.getTypeName(), rad.getNumRadials(),
+    rad.getNumGates(), rad.getElevationDegs(), rad.getTime());
 
   // Initialize everything related to this radar
   firstDataSetup(r, name, aTypeName);
@@ -217,9 +215,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   // Check if incoming radar/moment matches our single setup, otherwise we'd need
   // all the setup for each radar/moment.  Which we 'could' do later maybe
   if ((myRadarName != name) || (myTypeName != aTypeName)) {
-    LogSevere(
-      "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-        "'\n");
+    fLogSevere("We are linked to '{}-{}', ignoring radar/typename '{}-{}')", myRadarName, myTypeName, name, aTypeName);
     return;
   }
 
@@ -230,12 +226,12 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   // Run a polar terrain algorithm where the results are added to the RadialSet as
   // another array.
   if (myTerrainBlockage != nullptr) {
-    ProcessTimer terrain("Applying terrain blockage\n");
+    ProcessTimer terrain("Applying terrain blockage");
     myTerrainBlockage->calculateTerrainPerGate(r);
-    LogInfo(terrain);
+    fLogInfo("{}", terrain);
   }
 
-  ProcessTimer gateProjection("Applying gate projection to RadialSet\n");
+  ProcessTimer gateProjection("Applying gate projection to RadialSet");
   // Iterate over each gate, collecting samples...
   const size_t radials   = rad.getNumRadials(); // x
   const size_t gates     = rad.getNumGates();   // y
@@ -339,7 +335,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       distanceKMs += gwKMs;
     }
   }
-  LogInfo(gateProjection);
+  fLogInfo("{}", gateProjection);
 
   // Copy the current buffer into RadialSet. We store a virtual volume of these.
   bufferToRadialSet(r);
@@ -433,7 +429,7 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
   for (size_t i = 0; i < volume.size(); ++i) {
     if (auto radialSetPtr = std::dynamic_pointer_cast<RadialSet>(volume[i])) {
       auto& rad = *radialSetPtr;
-      LogInfo("----------->Gathering RadialSet at " << rad.getSubType() << " " << rad.getTime().getString() << "\n");
+      fLogInfo("----------->Gathering RadialSet at {} {}", rad.getSubType(), rad.getTime());
 
       auto& vs   = rad.getFloat1DRef("Values");
       auto& lats = rad.getFloat1DRef("Latitude");
@@ -477,9 +473,9 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
 
   // This stuff 'could' be emcapsulated into a class probably.
   if (size < 1) {
-    LogInfo("Skipping writing since we have 0 new rows\n");
+    fLogInfo("Skipping writing since we have 0 new rows");
   } else {
-    LogInfo("Current row size is: " << size << "\n");
+    fLogInfo("Current row size is: {}", size);
   }
 
   // ----------------------------------------------------------------------------

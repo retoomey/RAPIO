@@ -61,21 +61,21 @@ RAPIOFusionRosterAlg::processOptions(RAPIOOptions& o)
   #else
   myNearestCount = o.getInteger("nearest");
   if (myNearestCount < 1) {
-    LogInfo("Setting nearest to 1\n");
+    fLogInfo("Setting nearest to 1");
     myNearestCount = 1;
   }
   if (myNearestCount > 6) {
-    LogInfo("Setting nearest to 6\n");
+    fLogInfo("Setting nearest to 6");
     myNearestCount = 6;
   }
   #endif // ifdef USE_STATIC_NEAREST
-  LogInfo(">>>>>>Using a nearest neighbor value of " << myNearestCount << "\n");
+  fLogInfo(">>>>>>Using a nearest neighbor value of {}", myNearestCount);
 
   myStatic = o.getBoolean("static");
   if (myStatic) {
-    LogInfo("Static mode on, we will use expired coverage files.\n");
+    fLogInfo("Static mode on, we will use expired coverage files.");
   } else {
-    LogInfo("Dynamic mode on, coverage files will expire.\n");
+    fLogInfo("Dynamic mode on, coverage files will expire.");
   }
 } // RAPIOFusionRosterAlg::processOptions
 
@@ -91,18 +91,18 @@ RAPIOFusionRosterAlg::firstTimeSetup()
 
   #ifdef USE_STATIC_NEAREST
   // Old way, grouped by static nearest (compile only size, probably slightly quicker)
-  LogInfo("Creating nearest array of size " << NFULL << ", each cell " << sizeof(NearestIDs) << " bytes.\n");
+  fLogInfo("Creating nearest array of size {}, each cell {} bytes.", NFULL, sizeof(NearestIDs));
   myNearest = std::vector<NearestIDs>(NFULL);
   #else
 
   // New way, grouped separately (dynamic for possible memory locality issues)
-  LogInfo("Creating nearest array of size " << NFULL << ", each cell " <<
-    (sizeof(SourceIDKey) + sizeof(float)) * (NFULL * size) << " bytes.\n");
+  fLogInfo("Creating nearest array of size {}, each cell {} bytes.", NFULL,
+    (sizeof(SourceIDKey) + sizeof(float)) * (NFULL * size));
   myNearestSourceIDKeys = std::vector<SourceIDKey>(NFULL * size, 0);
   myNearestRanges       = std::vector<float>(NFULL * size, std::numeric_limits<float>::max()); // The ranges per location
   #endif
 
-  LogInfo(createGrid << "\n");
+  fLogInfo("{}", createGrid);
 }
 
 void
@@ -128,7 +128,7 @@ RAPIOFusionRosterAlg::expiredCoverage(const std::string& sourcename, const std::
       const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
       if (fileTime.getSecondsSinceEpoch() < cutoff) {
         // File is too old so we ignore it...
-        LogInfo("Ignored '" << sourcename << "' since it is too old. " << fileTime << "\n");
+        fLogInfo("Ignored '{}' since it is too old. {}", sourcename, fileTime);
         return true;
       }
     } else {
@@ -160,7 +160,7 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
     return; // ignore it
   }
 
-  ProcessTimer merge("Reading range/merging 1 took:\n");
+  ProcessTimer merge("Reading range/merging 1 took:");
 
   size_t startX, startY, numX, numY; // subgrid coordinates
 
@@ -176,8 +176,8 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   const size_t expected = numX * numY * numZ;
 
   if (out.size() != expected) {
-    LogSevere("Expected " << expected << " points but got " << out.size() << " for " << fullpath << "\n");
-    LogSevere("EXTRA: " << numX << ", " << numY << ", " << numZ << "\n");
+    fLogSevere("Expected {} points but got {} for {}", expected, out.size(), fullpath);
+    fLogSevere("EXTRA: {}, {}, {}", numX, numY, numZ);
     return;
   }
   // FIXME: check read errors?
@@ -198,8 +198,8 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
   std::string newname = sourcename;
 
   if (infoitr != myNameToInfo.end()) {
-    info = &mySourceInfos[infoitr->second];                        // existing
-    LogInfo("Found '" << info->name << "' in source database.\n"); // This shouldn't happen anymore
+    info = &mySourceInfos[infoitr->second];                 // existing
+    fLogInfo("Found '{}' in source database.", info->name); // This shouldn't happen anymore
   } else {
     mySourceInfos.push_back(SourceInfo()); // FIXME: constructor
     info = &mySourceInfos[mySourceInfos.size() - 1];
@@ -217,14 +217,14 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
       info->mask = Bitset({ numX, numY, numZ }, 1);
       info->mask.clearAllBits();
     }catch (std::bad_alloc& e) {
-      LogSevere("We ran out of memory allocating mask. This will crash.\n");
-      LogSevere("ATTEMPTED: '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
-        numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
+      fLogSevere("We ran out of memory allocating mask. This will crash.");
+      fLogSevere("ATTEMPTED: '{}' ({}) ({},{},{},{},{}) {} points.", newname, info->id,
+        startX, startY, numX, numY, numZ, numX * numY * numZ);
       exit(1);
     }
 
-    LogInfo("Added '" << newname << "' (" << info->id << ") (" << startX << "," << startY << "," <<
-      numX << "," << numY << "," << numZ << ") " << numX * numY * numZ << " points.\n");
+    fLogInfo("Added '{}' ({}) ({},{},{},{},{}) {} points.", newname, info->id,
+      startX, startY, numX, numY, numZ, numX * numY * numZ);
   }
 
   // Nearest neighbor merge this source's info into the nearest N array...
@@ -251,10 +251,10 @@ RAPIOFusionRosterAlg::deleteMask(const std::string& sourcename, const std::strin
   }
 
   if (!found) {
-    LogInfo("Deleting mask for '" << sourcename << "', since we didn't get a good cache file for it.\n");
+    fLogInfo("Deleting mask for '{}', since we didn't get a good cache file for it.", sourcename);
 
     if (!OS::deleteFile(fullpath)) {
-      LogSevere("Unable to delete old mask file for '" << sourcename << "'\n");
+      fLogSevere("Unable to delete old mask file for '{}'", sourcename);
     }
   }
 }
@@ -264,7 +264,7 @@ RAPIOFusionRosterAlg::generateNearest()
 {
   myWalkTimer = new ProcessTimerSum();
   myWalkCount = 0;
-  LogInfo("Grid is " << myFullGrid << "\n");
+  fLogInfo("Grid is {}", myFullGrid);
   //  int NFULL = myFullGrid.getNumX() * myFullGrid.getNumY() * myFullGrid.getNumZ();
   firstTimeSetup();
 
@@ -278,7 +278,7 @@ RAPIOFusionRosterAlg::generateNearest()
 
   walk.traverse(directory);
 
-  LogInfo("Total walk/merge time " << *myWalkTimer << " (" << myWalkCount << ") sources active.\n");
+  fLogInfo("Total walk/merge time {} ({}) sources active.", *myWalkTimer, myWalkCount);
   delete myWalkTimer;
 } // RAPIOFusionRosterAlg::generateNearest
 
@@ -370,8 +370,8 @@ RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t
 void
 RAPIOFusionRosterAlg::generateMasks()
 {
-  LogInfo("Generating converage bit masks...\n");
-  ProcessTimer maskGen("Generating coverage bit masks took:\n");
+  fLogInfo("Generating converage bit masks...");
+  ProcessTimer maskGen("Generating coverage bit masks took:");
   const size_t size = myNearestCount;
 
   // Clear old bits
@@ -438,20 +438,20 @@ RAPIOFusionRosterAlg::generateMasks()
     }
   }
   #endif // if USE_STATIC_NEAREST
-  LogInfo(maskGen);
+  fLogInfo("{}", maskGen);
 } // RAPIOFusionRosterAlg::generateMasks
 
 void
 RAPIOFusionRosterAlg::writeMasks()
 {
   // Write masks to disk
-  ProcessTimer maskTimer("Writing masks took:\n");
+  ProcessTimer maskTimer("Writing masks took:");
   size_t maskCount = 0;
 
   std::string directory = FusionCache::getMaskDirectory(myFullGrid);
 
   OS::ensureDirectory(directory);
-  LogInfo("Mask directory is " << directory << "\n");
+  fLogInfo("Mask directory is {}", directory);
   size_t all = 0;
   size_t on  = 0;
 
@@ -464,19 +464,19 @@ RAPIOFusionRosterAlg::writeMasks()
     all += source.mask.size();
     maskCount++;
   }
-  LogInfo("Writing " << maskCount << " masks took: " << maskTimer << "\n");
+  fLogInfo("Writing {} masks took: {}", maskCount, maskTimer);
 
   float percent = (all > 0) ? (float) (on) / (float) (all) : 0;
 
   percent = 100.0 - (percent * 100.0);
-  LogInfo("Reduction of calculated points (higher better): " << percent << "%\n");
+  fLogInfo("Reduction of calculated points (higher better): {}", percent);
 
   // Now we need to delete masks for things we didn't have a cache file for.
   myDirWalker walk("DELETE", this, ".mask");
 
   walk.traverse(directory);
 
-  LogInfo(maskTimer);
+  fLogInfo("{}", maskTimer);
 } // RAPIOFusionRosterAlg::writeMasks
 
 void
@@ -488,14 +488,14 @@ RAPIOFusionRosterAlg::performRoster()
 
   writeMasks(); // Write bit array, for example "KTLX.mask" for stage1
 
-  LogInfo("Finished one pass...\n");
+  fLogInfo("Finished one pass...");
 } // RAPIOFusionRosterAlg::processNewData
 
 void
 RAPIOFusionRosterAlg::processHeartbeat(const Time& n, const Time& p)
 {
   if (isDaemon()) { // just checking, don't think we get message if we're not
-    LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+    fLogInfo("Received heartbeat at {} for event {}", n, p);
     performRoster();
   }
 }

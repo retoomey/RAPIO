@@ -75,7 +75,7 @@ public:
     for (size_t i = 0; i < xmax * ymax * zmax; i++) {
       const size_t ss = data[i].size();
       if (ss > 0) {
-        LogSevere(i << ": size of " << ss << "\n");
+        fLogSevere("{}: size of {}", i, ss);
       }
     }
   }

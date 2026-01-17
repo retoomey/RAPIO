@@ -3,6 +3,8 @@
 #include <rData.h>
 #include <rConstants.h>
 
+#include <fmt/format.h>
+
 namespace rapio {
 /** Store a latitude/longitude location */
 class LL : public Data {
@@ -77,3 +79,25 @@ public:
   getSurfaceDistanceToKMs(const LL& b) const;
 };
 }
+
+/** Format library support for LL */
+template <>
+struct fmt::formatter<rapio::LL> {
+  constexpr auto
+  parse(fmt::format_parse_context& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::LL& loc, FormatContext& ctx) const
+  {
+    return fmt::format_to(
+      ctx.out(),
+      "[lat={:.8g},lon={:.8g}]",
+      loc.getLatitudeDeg(),
+      loc.getLongitudeDeg()
+    );
+  }
+};

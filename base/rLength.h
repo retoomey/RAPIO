@@ -6,6 +6,8 @@
 #include <string>
 #include <rArith.h>
 
+#include <fmt/format.h>
+
 namespace rapio {
 /**
  *  Representation of a physical length (distance).
@@ -287,3 +289,16 @@ public:
     const Length     & a);
 };
 }
+
+/** Format library support, allows fLogInfo("Length {}", length) */
+template <>
+struct fmt::formatter<rapio::Length> {
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::Length& l, FormatContext& ctx) const
+  {
+    return fmt::format_to(ctx.out(), "[{} km]", l.kilometers());
+  }
+};

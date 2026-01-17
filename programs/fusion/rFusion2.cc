@@ -57,7 +57,7 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
   // Get output precision
   myPrecision = o.getFloat("p");
   if (myPrecision > 0) {
-    LogInfo("Rounding off values to nearest " << myPrecision << "\n");
+    fLogInfo("Rounding off values to nearest {}", myPrecision);
   }
 
   // ----------------------------------------
@@ -71,13 +71,13 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
     if (success) {
       // Note: 'none' returns 1 since there is a single global partition basically
       if (myPartitionInfo.getSelectedPartitionNumber() < 1) {
-        LogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.\n");
+        fLogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.");
         exit(1);
       }
     }
   }
   if (!success) {
-    LogSevere("Failed to load and/or parse partition information!\n");
+    fLogSevere("Failed to load and/or parse partition information!");
     exit(1);
   }
 } // RAPIOFusionTwoAlg::processOptions
@@ -91,7 +91,7 @@ RAPIOFusionTwoAlg::createLLGCache(
   // NOTE: Tried it as a 3D array.  Due to memory fetching, etc. having N 2D arrays
   // turns out to be faster than 1 3D array.
   if (myLLGCache == nullptr) {
-    ProcessTimer cache("Creating initial LLG value cache:\n");
+    ProcessTimer cache("Creating initial LLG value cache:");
 
     myLLGCache = LLHGridN2D::Create(outputName, outputUnits, Time(), g);
     myLLGCache->fillPrimary(Constants::DataUnavailable);
@@ -110,7 +110,7 @@ RAPIOFusionTwoAlg::createLLGCache(
       // m->fill(0);
     }
 
-    LogInfo(cache);
+    fLogInfo("{}", cache);
   }
 }
 
@@ -122,7 +122,7 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   myTypeName = data->getTypeName();
 
@@ -131,7 +131,7 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   myWriteCAPPIName   = "Fused2" + myTypeName;
   myWriteOutputUnits = data->getUnits();
   if (myWriteOutputUnits.empty()) {
-    LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
+    fLogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..");
     myWriteOutputUnits = "dBZ";
   }
 
@@ -142,16 +142,15 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
 
   // Finally, create the point cloud database with N observations per point
   myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
-  LogInfo(
-    "Created XYZ array of " << myFullGrid.getNumX() << "*" << myFullGrid.getNumY() << "*" << myFullGrid.getNumZ() <<
-      " size\n");
-  // LogInfo("DATABASE IS " << (void*)(myDatabase.get()) << "\n");
+  fLogInfo("Created XYZ array of {}*{}*{} size", myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
+  // fLogInfo("DATABASE IS {}", (void*)(myDatabase.get()));
 } // RAPIOFusionTwoAlg::firstDataSetup
 
 void
 RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Stage2---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Stage2---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
+
   // We'll check the record time before reading all the data.  This should be >= all the times
   // in the stage2, so we can pretoss out data _before_ reading it in (which is slower)
   // This means we're falling behind somewhat.
@@ -169,28 +168,28 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
   if (recTime < cutoffTime) {
-    LogSevere("Ignoring OLD record: (" << recTime.getString("%H:%M:%S") << ") " << d.getDescription() << "\n");
+    fLogSevere("Ignoring OLD record: ({}) {}", recTime, d.getDescription());
     return;
   }
   // If the queue is high we're falling behind probably.
   size_t aSize = Record::theRecordQueue->size(); // FIXME: probably hide the ->
 
   if (isDaemon() && (aSize > 30)) {
-    LogSevere("We have " << aSize << " unprocessed records, probably lagging...\n");
+    fLogSevere("We have {} unprocessed records, probably lagging...", aSize);
   }
 
-  ProcessTimer reading("Reading I/O file:\n");
+  ProcessTimer reading("Reading I/O file:");
   std::shared_ptr<Stage2Data> datasp;
 
   try{
     datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
   }catch (const std::exception& e) {
-    LogSevere("Error receiving data: " << e.what() << ", ignoring!\n");
+    fLogSevere("Error receiving data: {}, ignoring!", e.what());
     exit(1);
     return;
   }
 
-  LogInfo(reading);
+  fLogInfo("{}", reading);
 
   if (datasp) {
     auto& data            = *datasp;
@@ -198,7 +197,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     std::string aTypeName = data.getTypeName();
     Time dataTime         = data.getTime();
 
-    LogInfo("Incoming stage2 data for " << name << " " << aTypeName << "\n");
+    fLogInfo("Incoming stage2 data for {} {}", name, aTypeName);
 
     // Initialize everything related to this radar
     firstDataSetup(datasp);
@@ -211,9 +210,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     // My concern is at some point someone will misconfigure and try to merge
     // Reflectivity with Velocity or something and we get crazy output
     // if (myTypeName != aTypeName) {
-    //  LogSevere(
-    //    "We are linked to moment '" << myTypeName << "', ignoring '" << name << "-" << aTypeName <<
-    //      "'\n");
+    //  fLogSevere("We are linked to moment '{}', ignoring {}-{}", myTypeName, name, aTypeName);
     //  return;
     // }
 
@@ -223,7 +220,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     const Time cutoffTime = Time::CurrentTime() - myMaximumHistory; // FIXME: add util to time
     const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
     if (radar.myTime < cutoffTime) {
-      LogSevere("Ignoring " << radar.myName << " OLD: " << radar.myTime.getString("%H:%M:%S") << "\n");
+      fLogSevere("Ignoring {} OLD: {}", radar.myName, radar.myTime);
       return;
     }
     #endif
@@ -234,8 +231,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     size_t total = 0;
     db.ingestNewData(data, cutoff, missingcounter, points, total);
 
-    LogInfo("Final size received: " << points << " points, " << missingcounter << " missing.  Total: " << total <<
-      "\n");
+    fLogInfo("Final size received: {} points, {} missing.  Total: {}", points, missingcounter, total);
 
     //    db.dumpXYZ();
     myDirty++;
@@ -261,11 +257,10 @@ RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
 {
   // Process heartbeat called in real time or archive stimulated time.
   // so we don't check program mode here
-  // LogInfo("Received heartbeat at " << n << " for event " << p << ".\n");
+  // fLogInfo("Received heartbeat at {} for event {}", n, p);
   // Trying a slight throttle. Wait for 20 stage2 before writing
-  LogInfo(
-    ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << " (" << myDirty <<
-      " ingested since last)\n");
+  fLogInfo("{}{}---Heartbeat---{} ({} ingested since last)", ColorTerm::green(), ColorTerm::bold(),
+    ColorTerm::reset(), myDirty);
   mergeAndWriteOutput(n, p);
 
   // Dump source list (have to have at least one received source and database created)
@@ -286,7 +281,7 @@ RAPIOFusionTwoAlg::write2DLayers(const std::string& productKey,
   if (isProductWanted(productKey)) {
     auto heightsKM = myFullGrid.getHeightsKM();
     for (size_t layer = 0; layer < heightsKM.size(); layer++) {
-      LogInfo(label << layer << "\n");
+      fLogInfo("{}{}", label, layer);
 
       // Use current time for layer
       auto output = myLLGCache->get(layer);
@@ -321,11 +316,11 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // Note: firstDataSetup might not be called yet...
   // so check database, etc...
   if (myDatabase == nullptr) {
-    LogInfo("Haven't received any data yet, so nothing to merge/write.\n");
+    fLogInfo("Haven't received any data yet, so nothing to merge/write.");
     return;
   }
   if (myLLGCache == nullptr) {
-    LogInfo("We don't have an LLG cache to write to?.\n");
+    fLogInfo("We don't have an LLG cache to write to?.");
     return;
   }
 
@@ -341,10 +336,10 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   const Time cutoffTime = p - myMaximumHistory;
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
 
-  // LogSevere("Cut off epoch: " << cutoff << " vs NOW " << Time::CurrentTime().getSecondsSinceEpoch() << "\n");
+  // fLogSevere("Cut off epoch: {} vs NOW {}", cutoff, Time::CurrentTime().getSecondsSinceEpoch());
   // FIXME: Humm should this be real time or the cutoff time from above?
   myDatabase->timePurge(Time::CurrentTime(), myMaximumHistory);
-  LogInfo(timepurge << "\n");
+  fLogInfo("{}", timepurge);
 
   // ----------------
   // Alpha Merge data and write... (fun times)
@@ -388,7 +383,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   // Output stage2 again with group
   // -O="S2=GROUP1" I'm thinking here..
   if (isProductWanted("S2")) { // -O="S2"
-    LogInfo("Can't write stage2 data yet...but we will soon...");
+    fLogInfo("Can't write stage2 data yet...but we will soon...");
   }
 } // RAPIOFusionTwoAlg::processHeartbeat
 

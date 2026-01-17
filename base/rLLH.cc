@@ -23,10 +23,9 @@ LLH::LLH(const LL& a, const LengthKMs& height)
 { }
 
 ostream&
-rapio::operator << (ostream& output, const LLH& loc)
+rapio::operator << (ostream& os, const LLH& loc)
 {
-  output << fmt::format("{}", loc);
-  return (output);
+  return os << fmt::format("{}", loc);
 }
 
 LLH

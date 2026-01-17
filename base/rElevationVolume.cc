@@ -259,37 +259,5 @@ Volume::deleteSubType(const std::string& subtype)
 std::ostream&
 rapio::operator << (std::ostream& os, const Volume& v)
 {
-  std::stringstream z;
-
-  Time latest(0);
-  std::vector<double> out1;
-  std::vector<Time> times;
-
-  z << "Current Virtual Volume: ";
-  for (auto x:v.getVolume()) {
-    const auto os = Strings::removeNonNumber(x->getSubType());
-    double d      = 0;
-    try {
-      d = std::stod(os);
-    }catch (const std::exception& e) {
-      // FIXME: How to handle this data error?
-      // LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
-    }
-
-    Time newer = x->getTime();
-    if (newer > latest) {
-      latest = newer;
-    }
-    out1.push_back(d);
-    times.push_back(newer);
-  }
-
-  for (size_t c = 0; c < out1.size(); c++) {
-    z << out1[c];
-    if (times[c] == latest) {
-      z << " (latest)";
-    }
-    z << ", ";
-  }
-  return (os << z.str());
-} // <<
+  return os << fmt::format("{}", v);
+}

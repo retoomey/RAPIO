@@ -4,7 +4,7 @@
 #include <rIJK.h>
 #include <rLLH.h>
 
-// #include <iosfwd>
+#include <fmt/format.h>
 
 namespace rapio {
 class LLH;
@@ -57,3 +57,16 @@ std::ostream&
 operator << (std::ostream&,
   const XYZ&);
 }
+
+/** Format library support, allows fLogInfo("XYZ {}", xyz) */
+template <>
+struct fmt::formatter<rapio::XYZ> {
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::XYZ& p, FormatContext& ctx) const
+  {
+    return fmt::format_to(ctx.out(), "({},{},{})", p.x, p.y, p.z);
+  }
+};

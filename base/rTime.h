@@ -257,14 +257,14 @@ operator << (std::ostream&,
 template <>
 struct fmt::formatter<rapio::Time> {
   constexpr auto
-  parse(format_parse_context& ctx) -> decltype(ctx.begin())
+  parse(fmt::format_parse_context& ctx)
   {
     return ctx.begin();
   }
 
   template <typename FormatContext>
   auto
-  format(const rapio::Time& t, FormatContext& ctx) const -> decltype(ctx.out())
+  format(const rapio::Time& t, FormatContext& ctx) const
   {
     return fmt::format_to(ctx.out(), "({})", t.getString(rapio::Time::DEFAULT_TIMESTAMP));
   }

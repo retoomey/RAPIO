@@ -32,8 +32,7 @@ namespace rapio {
 std::ostream&
 operator << (std::ostream& os, const Length& l)
 {
-  os << "[" << l.kilometers() << " km]";
-  return (os);
+  return os << fmt::format("{}", l);
 }
 
 Length

@@ -90,8 +90,7 @@ IJK::IJK(
 ostream&
 rapio::operator << (ostream& os, const IJK& v)
 {
-  os << "[" << v.x << "," << v.y << "," << v.z << "]" << flush;
-  return (os);
+  return os << fmt::format("{}", v);
 }
 
 IJK

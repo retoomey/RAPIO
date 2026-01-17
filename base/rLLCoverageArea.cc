@@ -10,14 +10,9 @@ using namespace rapio;
 using namespace std;
 
 ostream&
-rapio::operator << (ostream& output, const LLCoverageArea& g)
+rapio::operator << (ostream& os, const LLCoverageArea& g)
 {
-  output << "nw(" << g.nwLat << ", " << g.nwLon << ") se(" << g.seLat << ", " << g.seLon << ") "
-         << "s(" << g.latSpacing << ", " << g.lonSpacing << ") "
-         << "numheights(" << g.heightsKM.size() << ") "
-         << "cells(start: " << g.startX << ", " << g.startY << ", size: " << g.numX << ", " << g.numY << ")";
-
-  return (output);
+  return os << fmt::format("{}", g);
 }
 
 LLCoverageArea

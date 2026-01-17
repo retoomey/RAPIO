@@ -137,14 +137,14 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
   }
   if (!success) {
-    LogSevere("Failed to load and/or parse partition information!\n");
+    fLogSevere("Failed to load and/or parse partition information!");
     exit(1);
   }
 
   myLLProjections.resize(myFullGrid.getNumZ());
   myLevelSames.resize(myFullGrid.getNumZ());
   if (myLLProjections.size() < 1) {
-    LogSevere("No height layers to process, exiting\n");
+    fLogSevere("No height layers to process, exiting");
     exit(1);
   }
 
@@ -165,14 +165,14 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
   } else if (myRangeKMs > 1000) {
     myRangeKMs = 1000;
   }
-  LogInfo("Radar range is " << myRangeKMs << " Kilometers.\n");
+  fLogInfo("Radar range is {} Kilometers.", myRangeKMs);
 
   // Weight information
   myWeight = o.getFloat("weight");
   bool goodWeight = true;
 
   if ((myWeight <= 0) || (myWeight > 10.0)) { // Some reasonable ranges?
-    LogSevere("Weight given is " << myWeight << " which seems wrong, setting to 1.0\n");
+    fLogSevere("Weight given is {} which seems wrong, setting to 1", myWeight);
     myWeight = 1.0;
   }
 
@@ -181,7 +181,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   mySigmaWeight = o.getFloat("S");
   if (mySigmaWeight <= 0) {
-    LogSevere("Sigma given is " << mySigmaWeight << " which seems wrong, setting to 50.\n");
+    fLogSevere("Sigma given is {} which seems wrong, setting to 1", mySigmaWeight);
     mySigmaWeight = 50;
   }
 
@@ -217,8 +217,8 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 {
   // We cache a bunch of repeated trig functions that save us a lot of CPU time
   if (myLLProjections[0] == nullptr) {
-    ProcessTimer projtime("Projection AzRangeElev cache generation.\n");
-    // LogInfo("Projection AzRangeElev cache generation.\n");
+    ProcessTimer projtime("Projection AzRangeElev cache generation.");
+    // fLogInfo("Projection AzRangeElev cache generation.");
     LengthKMs virtualRangeKMs;
     AngleDegs virtualAzDegs, virtualElevDegs;
 
@@ -226,12 +226,12 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
     // that is per conus layer
     mySinCosCache = std::make_shared<SinCosLatLonCache>(g.getNumX(), g.getNumY());
 
-    // LogInfo("Projection LatLonHeight to AzRangeElev cache creation...\n");
+    // fLogInfo("Projection LatLonHeight to AzRangeElev cache creation...");
     auto heightsKM = g.getHeightsKM();
     for (size_t i = 0; i < myLLProjections.size(); i++) {
       // const LengthKMs layerHeightKMs = myHeightsM[i]; //   1000.0;
       const LengthKMs layerHeightKMs = heightsKM[i]; //   1000.0;
-      // LogDebug("  Layer: " << heightsKM[i] * 1000.0 << " meters.\n");
+      // fLogDebug("  Layer: {} meters.", heightsKM[i] * 1000.0);
       myLLProjections[i] = std::make_shared<AzRanElevCache>(g.getNumX(), g.getNumY());
       // Go ahead and make this cache too
       myLevelSames[i] = std::make_shared<LevelSameCache>(g.getNumX(), g.getNumY());
@@ -271,7 +271,7 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
         }
       }
     }
-    LogInfo(projtime);
+    fLogInfo("{}", projtime);
   }
 } // RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection
 
@@ -291,7 +291,7 @@ RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
     // The web page, etc. require full conus referenced data.
     // We don't worry about height, we'll set it for each layer
     if (myFullLLG == nullptr) {
-      LogInfo("Creating a full CONUS buffer for outputting grids as full files\n");
+      fLogInfo("Creating a full CONUS buffer for outputting grids as full files");
       myFullLLG = LatLonGrid::Create(myWriteStage2Name, myWriteOutputUnits,
           LLH(myFullGrid.getNWLat(), myFullGrid.getNWLon(), 0), Time(),
           myFullGrid.getLatSpacing(), myFullGrid.getLonSpacing(),
@@ -343,7 +343,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -352,9 +352,9 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   const LengthKMs cHeight = center.getHeightKM();
 
   // Link to first incoming radar and moment, we will ignore any others from now on
-  LogInfo(
-    "Linking this algorithm to radar '" << radarName << "' and typename '" << typeName <<
-      "' since first pass we only handle 1\n");
+  fLogInfo(
+    "Linking this algorithm to radar '{}' and typename '{}' since first pass we only handle 1",
+    radarName, typeName);
   myTypeName    = typeName;
   myRadarName   = radarName;
   myRadarCenter = center;
@@ -364,11 +364,12 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   const LengthKMs fudgeKMs = 5; // Extra to include so circle is inside box a bit
 
   myRadarGrid = myFullGrid.insetRadarRange(cLat, cLon, myRangeKMs + fudgeKMs);
-  LogInfo("Radar center:" << cLat << "," << cLon << " at " << cHeight << " KMs\n");
-  LogInfo("Full coverage grid: " << myFullGrid << "\n");
+  fLogInfo("Radar center:{},{} at {} KMs", cLat, cLon, cHeight);
+  fLogInfo("Full coverage grid: {}", myFullGrid);
+
   LLCoverageArea outg = myRadarGrid;
 
-  LogInfo("Radar subgrid: " << outg << "\n");
+  fLogInfo("Radar subgrid: {}", outg);
 
   std::string key, params;
 
@@ -380,7 +381,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
     myResolver = vp->getVolumeValueResolver(); // This will exit if not available
     myResolver->setGlobalWeight(myWeight);
     if (myNoMissing) {
-      LogInfo("No missing set, turning off missing output values\n");
+      fLogInfo("No missing set, turning off missing output values");
       // myResolver->setMissingValue(Constants::DataUnavailable);
     }
 
@@ -409,7 +410,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   // {
   //   ProcessTimer rangeCache("Testing time for range cache..");
   createLLHtoAzRangeElevProjection(cLat, cLon, cHeight, outg);
-  //   LogSevere(rangeCache << "\n");
+  //   fLogSevere(rangeCache);
   //   exit(1);
   // }
 
@@ -419,7 +420,7 @@ RAPIOFusionOneAlg::firstDataSetup(std::shared_ptr<RadialSet> r, const std::strin
   myWriteCAPPIName   = "Fused1" + r->getTypeName();
   myWriteOutputUnits = r->getUnits();
   if (myWriteOutputUnits.empty()) {
-    LogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..\n");
+    fLogSevere("Units still wonky because of W2 bug, forcing dBZ at moment..");
     myWriteOutputUnits = "dBZ";
   }
 
@@ -456,8 +457,8 @@ RAPIOFusionOneAlg::updateRangeFile()
   std::string filename = FusionCache::getRangeFilename(myRadarName, myFullGrid, directory);
   std::string fullpath = directory + filename;
 
-  LogInfo("Writing roster file: " << fullpath << "\n");
-  // LogInfo("Sizes: " << myRadarGrid.getNumX() << ", " << myRadarGrid.getNumY() << "\n");
+  fLogInfo("Writing roster file: {}", fullpath);
+  // fLogInfo("Sizes: {}, {}", myRadarGrid.getNumX(), myRadarGrid.getNumY());
   OS::ensureDirectory(directory);
   FusionCache::writeRangeFile(fullpath, myRadarGrid,
     myLLProjections, myRangeKMs);
@@ -486,9 +487,9 @@ RAPIOFusionOneAlg::readCoverageMask()
     // getting it to work
     myMask.clearAllBits(); // Missing mask AND using roster then no output basically...
     myHaveMask = false;
-    LogInfo("No mask found at: " << fullpath << "\n");
+    fLogInfo("No mask found at: {}", fullpath);
   } else {
-    LogInfo("Mask found at: " << fullpath << "\n");
+    fLogInfo("Mask found at: {}", fullpath);
     myHaveMask = true;
 
     // Do a quick check on mask dimensions to match us:
@@ -498,11 +499,11 @@ RAPIOFusionOneAlg::readCoverageMask()
     { } else {
       myHaveMask = false;
       if (d.size() < 3) {
-        LogSevere("Mask does not have 3 dimensions, can't use it.  Dimensions was " << d.size() << "\n");
+        fLogSevere("Mask does not have 3 dimensions, can't use it.  Dimensions was {}", d.size());
       } else {
-        LogSevere("Mask does not match our coverage grid, can't use it: " <<
-          myRadarGrid.getNumX() << ", " << myRadarGrid.getNumY() << ", " << myRadarGrid.getNumZ() << " != " <<
-          d[0] << ", " << d[1] << ", " << d[2] << "\n");
+        fLogSevere("Mask does not match our coverage grid, can't use it: {}, {}, {} != {}, {}, {}",
+          myRadarGrid.getNumX(), myRadarGrid.getNumY(), myRadarGrid.getNumZ(),
+          d[0], d[1], d[2]);
       }
     }
   }
@@ -511,12 +512,12 @@ RAPIOFusionOneAlg::readCoverageMask()
 void
 RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 {
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---RadialSet---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
   // Need a radar name in data to handle it currently
   std::string name = "UNKNOWN";
 
   if (!r->getString("radarName-value", name)) {
-    LogSevere("No radar name found in RadialSet, ignoring data\n");
+    fLogSevere("No radar name found in RadialSet, ignoring data");
     return;
   }
 
@@ -525,9 +526,8 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   const std::string aUnits    = r->getUnits();
   ProcessTimer ingest("Ingest tilt");
 
-  LogInfo(
-    r->getTypeName() << " (" << r->getNumRadials() << " Radials * " << r->getNumGates() << " Gates), " <<
-      r->getElevationDegs() << ", Time: " << r->getTime() << "\n");
+  fLogInfo("{} ({} Radials * {} Gates), {}, Time: {}",
+    r->getTypeName(), r->getNumRadials(), r->getNumGates(), r->getElevationDegs(), r->getTime());
 
   // Initialize everything related to this radar
   firstDataSetup(r, name, aTypeName);
@@ -535,9 +535,7 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   // Check if incoming radar/moment matches our single setup, otherwise we'd need
   // all the setup for each radar/moment.  Which we 'could' do later maybe
   if ((myRadarName != name) || (myTypeName != aTypeName)) {
-    LogSevere(
-      "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-        "'\n");
+    fLogSevere("We are linked to '{}-{}', ignoring radar/typename '{}-{}'", myRadarName, myTypeName, name, aTypeName);
     return;
   }
 
@@ -554,11 +552,10 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   const int scale_factor         = int (0.5 + gridScale / radarDataScale); // Number of gates
 
   if ((scale_factor > 1) && myUseLakSmoothing) {
-    LogInfo("Applying Lak's moving average smoothing filter to RadialSet, " << scale_factor <<
-      " filter ratio scale.\n");
+    fLogInfo("Applying Lak's moving average smoothing filter to RadialSet, {} filter ratio scale", scale_factor);
     LakRadialSmoother::smooth(r, scale_factor / 2);
   } else {
-    LogInfo("Not applying smoothing since scale factor is " << scale_factor << "\n");
+    fLogInfo("Not applying smoothing since scale factor is {}", scale_factor);
   }
 
   // Assign the ID key for cache storage.  Note the size matters iff you have more
@@ -568,7 +565,7 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 
   if (++keycounter == 0) { keycounter = 1; } // skip 0 again on overflow
   r->setID(keycounter);
-  // LogDebug("RadialSet short key: " << (int) keycounter << "\n");
+  // fLogDebug("RadialSet short key: {}", (int) keycounter);
 
   // Always add to elevation volume
   myElevationVolume->addDataType(r);
@@ -582,7 +579,7 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   // Run a polar terrain algorithm where the results are added to the RadialSet as
   // another array.
   if (myTerrainBlockage != nullptr) {
-    ProcessTimer terrain("Applying terrain blockage\n");
+    ProcessTimer terrain("Applying terrain blockage");
     myTerrainBlockage->calculateTerrainPerGate(r);
     LogInfo(terrain);
   }
@@ -620,7 +617,7 @@ RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
   // Realtime/archive sends us pulses.  But if we're outputting every tilt
   // no need for doing it here.
   if (!myEveryTilt) {
-    LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Heartbeat---" << ColorTerm::reset() << "\n");
+    fLogInfo("{}{}---Heartbeat---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
     processVolume(p); // n or p is the question...?
   }
 }
@@ -857,11 +854,9 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   //
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
 
-  LogDebug("KM: " << vv.getAtLocationHeightKMs()
-                  << " Mask: " << maskSkipped
-                  << " Range: " << rangeSkipped
-                  << " Same: " << sameTiltSkip
-                  << " Resolved: " << attemptCount << " (" << percentAttempt << "%) of " << totalLayer << ".\n");
+  fLogDebug("KM: {} Mask: {} Range: {} Same: {} Resolved: {} ({}%) or {}.",
+    vv.getAtLocationHeightKMs(), maskSkipped, rangeSkipped, sameTiltSkip,
+    attemptCount, percentAttempt, totalLayer);
 
   return attemptCount;
 } // RAPIOFusionOneAlg::processHeightLayer
@@ -879,11 +874,11 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
   // The mask tells us our part of the global, we don't want to flood things,
   // we're cooperating with other radars.
   if (myUseRoster && !myHaveMask) {
-    LogInfo("Using roster but no mask, skipping output until we get one.\n");
+    fLogInfo("Using roster but no mask, skipping output until we get one.");
     return;
   }
 
-  LogInfo("Processing full volume, " << myDirty << " file(s) have been received.\n");
+  fLogInfo("Processing full volume, {} files(s) have been received", myDirty);
   myDirty = 0;
 
   // Get the elevation volume pointers and levels for speed
@@ -891,7 +886,7 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
 
   // This is a pointer cache for speed in the loop.
   myElevationVolume->getTempPointerVector(cc);
-  LogInfo(*myElevationVolume << "\n");
+  fLogInfo("{}", *myElevationVolume);
 
   // Keep stage 2 output code separate, cheap to make this if we don't use it
   LLCoverageArea& outg = myRadarGrid;
@@ -915,12 +910,12 @@ RAPIOFusionOneAlg::processVolume(const Time rTime)
 
   const double percentAttempt = (double) (attemptCount) / (double) (totalLayer) * 100.0;
 
-  LogInfo("Total all layer grid points: " << totalLayer << " (" << percentAttempt << "%).\n");
+  fLogInfo("Total all layer grid points: {} ({}%).", totalLayer, percentAttempt);
 
   // Send stage2 data (note this is a full conus volume)
   if (isProductWanted("S2") || isProductWanted("S2Netcdf")) {
     if (stage2IO) {
-      LogInfo("Sending stage2 data: " << myWriteStage2Name << " at " << rTime << "\n");
+      fLogInfo("Sending stage2 data: {} at {}", myWriteStage2Name, rTime);
       stage2IO->send(this, rTime, myWriteStage2Name);
     }
   }

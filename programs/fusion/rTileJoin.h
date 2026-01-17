@@ -37,7 +37,7 @@ public:
     const bool exists = (myLatLonGrids[partNumber] != nullptr);
 
     if (exists) {
-      LogSevere("We replaced a LatLonGrid which was unexpected?\n");
+      fLogSevere("We replaced a LatLonGrid which was unexpected?");
     }
     myLatLonGrids[partNumber] = l;
 
@@ -58,7 +58,7 @@ public:
     size_t i = 0;
 
     for (auto p:myLatLonGrids) {
-      LogInfo(i << " " << (void *) (p.get()) << "\n");
+      fLogInfo("{} {}", i, (void *) (p.get()));
       i++;
     }
   }

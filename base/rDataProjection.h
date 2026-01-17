@@ -8,6 +8,8 @@
 #include <string>
 #include <map>
 
+#include <fmt/format.h>
+
 namespace rapio
 {
 class PTreeNode;
@@ -99,3 +101,28 @@ protected:
   std::string myLayerName;
 };
 }
+
+// Specialization for fmt library
+template <>
+struct fmt::formatter<rapio::LLCoverage> {
+  constexpr auto parse(format_parse_context& ctx){ return ctx.begin(); }
+
+  // Formats the LLCoverage object
+  template <typename FormatContext>
+  auto
+  format(const rapio::LLCoverage& p, FormatContext& ctx) const
+  {
+    std::string extra;
+
+    // "full" is ignored
+    if (p.mode == "degrees") {
+      extra = fmt::format(", degreeOut: {}", p.degreeOut);
+    } else if (p.mode == "tile") {
+      extra = fmt::format(", zoomlevel: {}, centerLatDegs: {}, centerLonDegs: {}, deltaLatDegs: {}, deltaLonDegs: {}",
+          p.zoomlevel, p.centerLatDegs, p.centerLonDegs, p.deltaLatDegs, p.deltaLonDegs);
+    }
+
+    return fmt::format_to(ctx.out(), "mode: {}, cols: {}, rows: {}{}",
+             p.mode, p.cols, p.rows, extra);
+  }
+};

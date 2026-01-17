@@ -3,8 +3,6 @@
 #include <rData.h>
 #include <rLLH.h>
 
-// #include <iosfwd>
-
 namespace rapio {
 /**  Representation of a geometric vector in a 3-D cartesian space.
  *   The units of which are in kilometers
@@ -195,3 +193,16 @@ operator * (double, const IJK&);
 std::ostream&
 operator << (std::ostream&, const IJK&);
 }
+
+/** Format library support, allows fLogInfo("IJK {}", ijk) */
+template <>
+struct fmt::formatter<rapio::IJK> {
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::IJK& p, FormatContext& ctx) const
+  {
+    return fmt::format_to(ctx.out(), "({},{},{})", p.x, p.y, p.z);
+  }
+};
