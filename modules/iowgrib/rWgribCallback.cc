@@ -130,7 +130,7 @@ WgribCallback::execute(bool print, bool capture)
     if (a == "-match") { nextQuoted = true; }
     if (i < argc - 1) { param << " "; }
   }
-  LogInfo("Calling: " << param.str() << "\n");
+  fLogInfo("Calling: {}", param.str());
 
   // Execute and capture output
   std::vector<std::string> result =
@@ -138,7 +138,7 @@ WgribCallback::execute(bool print, bool capture)
 
   if (capture && print) {
     for (size_t i = 0; i < result.size(); ++i) {
-      LogInfo("[wgrib2] " << result[i] << "\n");
+      fLogInfo("[wgrib2] {}", result[i]);
     }
   }
   return result;

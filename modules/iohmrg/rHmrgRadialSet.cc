@@ -23,13 +23,13 @@ HmrgRadialSet::read(
   std::map<std::string, std::string>& keys,
   std::shared_ptr<DataType>         dt)
 {
-  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
+  StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
 
   if (g != nullptr) {
     std::string radarName = keys["RadarName"];
     return readRadialSet(*g, radarName);
   } else {
-    LogSevere("Invalid stream buffer pointer, cannot read\n");
+    fLogSevere("Invalid stream buffer pointer, cannot read");
   }
   return nullptr;
 }
@@ -39,8 +39,8 @@ HmrgRadialSet::write(
   std::shared_ptr<DataType>         dt,
   std::map<std::string, std::string>& keys)
 {
-  bool success = false;
-  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
+  bool success     = false;
+  StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
 
   if (g != nullptr) {
     auto radialSet = std::dynamic_pointer_cast<RadialSet>(dt);
@@ -48,7 +48,7 @@ HmrgRadialSet::write(
       success = writeRadialSet(*g, radialSet);
     }
   } else {
-    LogSevere("Invalid stream buffer pointer, cannot write\n");
+    fLogSevere("Invalid stream buffer pointer, cannot write");
   }
 
   return success;
@@ -57,12 +57,11 @@ HmrgRadialSet::write(
 std::shared_ptr<DataType>
 HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
 {
-
   // name passed in was used to check type
-  const int headerScale      = g.readInt();                    // 5-8
-  const float radarMSLmeters = g.readScaledInt(headerScale);   // 9-12
-  const float radarLatDegs   = g.readFloat();                  // 13-16
-  const float radarLonDegs   = g.readFloat();                  // 17-20
+  const int headerScale      = g.readInt();                  // 5-8
+  const float radarMSLmeters = g.readScaledInt(headerScale); // 9-12
+  const float radarLatDegs   = g.readFloat();                // 13-16
+  const float radarLonDegs   = g.readFloat();                // 17-20
 
   #if 0
   // Time
@@ -76,9 +75,9 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   Time dataTime = g.readTime();
 
   const float nyquest = g.readScaledInt(headerScale); // 45-48  // FIXME: Volume number?
-  const int vcp       = g.readInt();                    // 49-52
+  const int vcp       = g.readInt();                  // 49-52
 
-  const int tiltNumber      = g.readInt();                    // 53-56
+  const int tiltNumber      = g.readInt();                  // 53-56
   const float elevAngleDegs = g.readScaledInt(headerScale); // 57-60
 
   const int num_radials = g.readInt(); // 61-64
@@ -94,14 +93,14 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   // Convert HMRG names etc to w2 expected
   std::string orgName = name;
   IOHmrg::HmrgToW2Name(name, name);
-  LogInfo("Convert: " << orgName << " to " << name << "\n");
+  fLogInfo("Convert: {} to {}", orgName, name);
 
   const std::string units = g.readString(6); // 105-110
 
   int dataScale = g.readInt();
 
   if (dataScale == 0) {
-    LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
+    fLogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?");
     dataScale = 1;
   }
   const int dataMissingValue = g.readInt();
@@ -113,22 +112,20 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   const float radarMSLkm = radarMSLmeters / 1000.0;
   LLH center(radarLatDegs, radarLonDegs, radarMSLkm); // FIXME: check height MSL/ASL same as expected, easy to goof this I think
 
-#if 0
-    LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
-    LogDebug("   Radar height " << radarMSLmeters << "\n");
-    LogDebug("   Scale is " << headerScale << "\n");
-    //LogDebug("   Radar Center: " << radarName << " centered at (" << radarLatDegs << ", " << radarLonDegs << ")\n");
-    LogDebug("   Date: " << dataTime.getString("%Y %m %d %H %M %S") << "\n");
-    LogDebug("   Time: " << dataTime << "\n");
-    LogDebug(
-      "   Nyquist, VCP, tiltNumber, elevAngle:" << nyquest << ", " << vcp << ", " << tiltNumber << ", " << elevAngleDegs <<
-        "\n");
-    LogDebug("   Dimensions: " << num_radials << " radials, " << num_gates << " gates\n");
-    LogDebug("   FirstAzDegs, AzRes, distFirstGate, gateSpacing: " << firstAzimuthDegs << ", " << azimuthResDegs << ", " << distanceToFirstGateMeters << ", "
-                                                                   << gateSpacingMeters << "\n");
-    LogDebug("   Name and units: '" << name << "' and '" << units << "'\n");
-    LogDebug("   Data scale and missing value: " << dataScale << " and " << dataMissingValue << "\n");
-#endif
+  #if 0
+  fLogDebug("   Radar Center: {} centered at ({},{})", radarName, radarLatDegs, radarLonDegs);
+  fLogDebug("   Radar height {}", radarMSLmeters);
+  fLogDebug("   Scale is {}", headerScale);
+  // fLogDebug("   Radar Center: {} centered at ({}, {})", radarName, radarLatDegs, radarLonDegs << ")\n");
+  fLogDebug("   Date: {}", dataTime.getString("%Y %m %d %H %M %S"));
+  fLogDebug("   Time: {}", dataTime);
+  fLogDebug("   Nyquist, VCP, tiltNumber, elevAngle:{}, {}, {}, {}", nyquest, vcp, tiltNumber, elevAngleDegs);
+  fLogDebug("   Dimensions: {} radials, {} gates", num_radials, num_gates);
+  fLogDebug("   FirstAzDegs, AzRes, distFirstGate, gateSpacing: {}, {}, {}, {}",
+    firstAzimuthDegs, azimuthResDegs, distanceToFirstGateMeters, gateSpacingMeters);
+  fLogDebug("   Name and units: '{}' and '{}'", name, units);
+  fLogDebug("   Data scale and missing value: {} and {}", dataScale, dataMissingValue);
+  #endif // if 0
 
   // Read the data right?  Buffer the short ints we'll have to unscale them into the netcdf
   // We'll handle endian swapping in the convert loop.  So these shorts 'could' be flipped if
@@ -158,8 +155,8 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   auto& azimuths   = azimuthsA->ref();
   auto beamwidthsA = radialSet.getFloat1D(RadialSet::BeamWidth);
   auto& beamwidths = beamwidthsA->ref();
-  //auto gatewidthsA = radialSet.getFloat1D(RadialSet::GateWidth);
-  //auto& gatewidths = gatewidthsA->ref();
+  // auto gatewidthsA = radialSet.getFloat1D(RadialSet::GateWidth);
+  // auto& gatewidths = gatewidthsA->ref();
 
   auto array = radialSet.getFloat2D(Constants::PrimaryDataName);
   auto& data = array->ref();
@@ -179,7 +176,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
     // Adding would be faster.  Does it matter?
     azimuths[i]   = std::fmod(firstAzimuthDegs + (i * azimuthResDegs), 360);
     beamwidths[i] = 1; // Correct?
-    //gatewidths[i] = gateSpacingMeters;
+    // gatewidths[i] = gateSpacingMeters;
     for (size_t j = 0; j < num_gates; ++j) {
       auto old = rawBuffer[rawBufferIndex];
       data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], dataUnavailable, dataMissing,
@@ -193,7 +190,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
       #endif
     }
   }
-  // LogInfo("    Found " << countm << " missing values\n");
+  // fLogInfo("    Found {} missing values", countm);
 
   return radialSetSP;
 } // IOHmrg::readRadialSet
@@ -201,8 +198,8 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
 bool
 HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radialsetp)
 {
-  bool success = false;
-  auto& radialset        = *radialsetp;
+  bool success    = false;
+  auto& radialset = *radialsetp;
 
   // ------------------------------------------------------------------
   // Lookup table information to get scaling, etc.
@@ -210,7 +207,7 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   // This pulls from the table, but in theory we 'should' make this in
   // out parameter map to allow writers to manually override.
   // FIXME: become a function probably. Shared with radial set
-  std::string units = radialset.getUnits();
+  std::string units    = radialset.getUnits();
   std::string typeName = radialset.getTypeName();
   std::string name     = typeName; // name used
 
@@ -219,16 +216,17 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   int dataNCValue      = -999;
   int dataScale        = 10; // radial default
 
-  ProductInfo* pi = IOHmrg::getProductInfo(typeName, units);
-  if (pi != nullptr){
-     LogInfo("(Found) MRMS binary product info for " << typeName << "/" << units << "\n");
-     name = pi->varName;
-     units = pi->varUnit;
-     dataMissingValue = pi->varMissing;
-     dataNCValue = pi->varNoCoverage;
-     dataScale = pi->varScale;
-  }else{
-     LogInfo("No mrms binary product info for " << typeName << ", using defaults\n");
+  ProductInfo * pi = IOHmrg::getProductInfo(typeName, units);
+
+  if (pi != nullptr) {
+    fLogInfo("(Found) MRMS binary product info for {}/{}", typeName, units);
+    name  = pi->varName;
+    units = pi->varUnit;
+    dataMissingValue = pi->varMissing;
+    dataNCValue      = pi->varNoCoverage;
+    dataScale        = pi->varScale;
+  } else {
+    fLogInfo("No mrms binary product info for {}, using defaults", typeName);
   }
   // End field conversion
   // ------------------------------------------------------------------
@@ -261,10 +259,9 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
 
     // Check azimuth spacing is uniform for entire RadialSet
     if (newDeltaDeg != oldDeltaDeg) {
-      LogSevere("RadialSet azimuth  " << curAzimuth << " and " << prevAzimuth << "\n");
-      LogSevere(
-        "RadialSet azimuth degree gap is not uniform: " << newDeltaDeg << " != " << oldDeltaDeg <<
-          ", we can't write this.\n");
+      fLogSevere("RadialSet azimuth  {} and {}", curAzimuth, prevAzimuth);
+      fLogSevere("RadialSet azimuth degree gap is not uniform: {} != {}, we can't write this",
+        newDeltaDeg, oldDeltaDeg);
       return false;
     }
   }
@@ -278,8 +275,8 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   for (size_t i = 0; i < num_radials; ++i) {
     if (i == 0) { gateW = gatewidth[i]; continue; }
     if (gatewidth[i] != gateW) {
-      LogSevere(
-        "RadialSet gatewidth gap is not uniform: " << gatewidth[i] << " != " << gateW << ", we can't write this.\n");
+      fLogSevere("RadialSet gatewidth gap is not uniform: {} != {}, we can't write this.",
+        gatewidth[i], gateW);
       return false;
     }
   }
@@ -291,7 +288,8 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
 
   // Get radar name or set to none if missing
   std::string radarName = radialset.getRadarName();
-  if (radarName.empty()){
+
+  if (radarName.empty()) {
     radarName = "NONE";
   }
   g.writeString(radarName, 4);
@@ -301,10 +299,11 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
 
   auto loc = radialset.getLocation();
   auto radarMSLmeters = loc.getHeightKM() * 1000;
-  LogDebug("  write: radarMSLmeters = "<< radarMSLmeters<<"\n");
-  LogDebug("  write: loc.getHeightKM() = "<<loc.getHeightKM()<<"\n");
-  auto radarLatDegs   = loc.getLatitudeDeg();
-  auto radarLonDegs   = loc.getLongitudeDeg();
+
+  fLogDebug("  write: radarMSLmeters = {}", radarMSLmeters);
+  fLogDebug("  write: loc.getHeightKM() = {}", loc.getHeightKM());
+  auto radarLatDegs = loc.getLatitudeDeg();
+  auto radarLonDegs = loc.getLongitudeDeg();
 
   g.writeScaledInt(radarMSLmeters, headerScale); // 9-12
   g.writeFloat(radarLatDegs);                    // 13-16
@@ -330,8 +329,8 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   // Get data
   auto& data = radialset.getFloat2DRef();
 
-  g.writeInt(num_radials); // 61-64
-  g.writeInt(num_gates);   // 65-68
+  g.writeInt(num_radials);                         // 61-64
+  g.writeInt(num_gates);                           // 65-68
   g.writeScaledInt(firstAzimuthDegs, headerScale); // 69-72
   g.writeScaledInt(azimuthResDegs, headerScale);   // 73-76
   const float distanceToFirstGateMeters = radialset.getDistanceToFirstGateM();
@@ -347,8 +346,8 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
 
   g.writeInt(dataScale);
 
-  const int dataMissing = dataMissingValue * dataScale; // prescaled for speed
-  const int dataUnavailable = dataNCValue * dataScale;  // prescaled for speed
+  const int dataMissing     = dataMissingValue * dataScale; // prescaled for speed
+  const int dataUnavailable = dataNCValue * dataScale;      // prescaled for speed
 
   g.writeInt(dataMissing); // FIXME: missing or scaled?
 

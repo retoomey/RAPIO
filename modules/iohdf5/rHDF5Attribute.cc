@@ -58,8 +58,7 @@ getAttribute(const hid_t t_id, const std::string& t_name, T * t_value)
   }
   catch (const std::runtime_error& re)
   {
-    LogSevere("WARN: Failure getting value for Scalar Attribute: " << t_name
-                                                                   << ". Error: " << re.what() << '\n');
+    fLogSevere("WARN: Failure getting value for Scalar Attribute: {}. Error: {}", t_name, re.what());
     return false;
   }
 
@@ -90,8 +89,7 @@ getAttribute(const hid_t t_id, const std::string& t_name, std::string& t_value)
   }
   catch (const std::runtime_error& re)
   {
-    LogSevere("WARN: Failure getting value for String Attribute: " << t_name
-                                                                   << ". Error: " << re.what() << '\n');
+    fLogSevere("WARN: Failure getting value for String Attribute: {}. Error: {}", t_name, re.what());
     return false;
   }
 
@@ -117,8 +115,7 @@ getAttributeValues(const hid_t t_id,
   }
   catch (const std::runtime_error& re)
   {
-    LogSevere("WARN: Failure getting values for Array Attribute: " << t_name
-                                                                   << ". Error: " << re.what() << '\n');
+    fLogSevere("WARN: Failure getting values for Array Attribute: {}. Error: {}", t_name, re.what());
     return false;
   }
 
@@ -352,7 +349,7 @@ void
 HDF5Attribute::getVariableString(const HDF5AttrType& t_attrType,
   std::string                                      & t_value) const
 {
-  LogDebug("DEBUG: Processing Variable-length String attribute\n");
+  fLogDebug("DEBUG: Processing Variable-length String attribute");
 
   char * rawValues;
 

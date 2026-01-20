@@ -31,7 +31,7 @@ GribMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
   bool match = f->matches(myKey, myLevelStr);
 
   if (match) {
-    LogInfo("Found '" << myKey << "' and '" << myLevelStr << "' at message number: " << f->getMessageNumber() << "\n");
+    fLogInfo("Found '{}' and '{}' at message number: {}", myKey, myLevelStr, f->getMessageNumber());
     myMatchedMessages.push_back(mp);
     myMatchedFieldNumbers.push_back(fieldNumber);
 
@@ -104,13 +104,13 @@ GribNMatcher::action(std::shared_ptr<GribMessage>& mp, size_t fieldNumber)
   for (size_t i = 0; i < myLevels.size(); i++) {
     const bool match = f->matches(myKey, myLevels[i]);
     if (match) {
-      LogInfo("Found '" << myKey << "' and '" << myLevels[i] << "'\n");
+      fLogInfo("Found '{}' and '{}'", myKey, myLevels[i]);
       if (myMatchedMessages[i] == nullptr) {
         myMatchedMessages[i]     = mp; // Hold onto this message
         myMatchedFieldNumbers[i] = fieldNumber;
         myMatchedCount++;
       } else { // Double match we ignored
-        LogSevere("Double match seen for '" << myKey << "' and '" << myLevels[i] << "', ignoring.\n")
+        fLogSevere("Double match seen for '{}' and '{}', ignoring.", myKey, myLevels[i])
       }
     }
   }
@@ -128,7 +128,7 @@ GribNMatcher::checkAllLevels()
 
   for (size_t i = 0; i < mv.size(); i++) {
     if (mv[i] == nullptr) {
-      LogSevere("Couldn't find '" << myKey << "' and level '" << myLevels[i] << "'\n");
+      fLogSevere("Couldn't find '{}' and level '{}'", myKey, myLevels[i]);
       found = false;
     }
   }

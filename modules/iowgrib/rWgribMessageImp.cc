@@ -39,7 +39,7 @@ WgribMessageImp::getField(size_t fieldNumber)
     c.execute();
     auto count = c.getMatchCount();
     if (count > 1) {
-      LogSevere("Match of \"" << match << "\" matches " << count << " fields and it should be 1.\n");
+      fLogSevere("Match of \"{}\" matches {} fields and it should be 1.", match, count);
       return nullptr;
     }
 
@@ -48,8 +48,7 @@ WgribMessageImp::getField(size_t fieldNumber)
         c.getSection1());
     return newField;
   } else {
-    LogSevere("Requesting Grib field " << fieldNumber
-                                       << ", but we only have " << myNumberFields << " fields.\n");
+    fLogSevere("Requesting Grib field {}, but we only have {} fields.", fieldNumber, myNumberFields);
   }
   return nullptr;
 }

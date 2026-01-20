@@ -55,7 +55,7 @@ IOPython::~IOPython()
 std::shared_ptr<DataType>
 IOPython::createDataType(const std::string& params)
 {
-  LogSevere("Python scripts cannot currently create DataTypes.\n");
+  fLogSevere("Python scripts cannot currently create DataTypes.");
   return nullptr;
 }
 
@@ -88,7 +88,7 @@ IOPython::runDataProcess(const std::string& command,
     std::vector<char> buf; // FIXME: Buffer class instead?
     size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
-      LogSevere("DataGrid didn't generate JSON so aborting python call.\n");
+      fLogSevere("DataGrid didn't generate JSON so aborting python call.");
       return std::vector<std::string>();
     }
 
@@ -111,7 +111,7 @@ IOPython::runDataProcess(const std::string& command,
     //
     // OK we gotta make it super generic to make it work
     // for(size_t i=0; i< theDims.size(); i++){
-    //  LogSevere("DIM " << i << " size is " << theDims[i].size() << "\n");
+    //  fLogSevere("DIM {} size is {}", i, theDims[i].size());
     // }
     auto list = datagrid->getArrays();
     size_t count = 0;
@@ -144,7 +144,7 @@ IOPython::runDataProcess(const std::string& command,
       } else if (theType == INT) {
         totalBytes = totalSize * sizeof(int);
       } else {
-        LogSevere("Declaring unknown type.\n");
+        fLogSevere("Declaring unknown type.");
       }
 
       // Save array file key list
@@ -186,7 +186,7 @@ IOPython::runDataProcess(const std::string& command,
       pushCount++;
     }
   }catch (const std::exception& e) {
-    LogSevere("Failed to execute command " << command << "\n");
+    fLogSevere("Failed to execute command {}", command);
   }
 
   // Clean up all shared memory objects...
@@ -213,8 +213,8 @@ IOPython::handleCommandParam(const std::string& command,
   outputParams["scriptname"]   = (s > 0) ? pieces[0] : "";
   outputParams["outputfolder"] = (s > 1) ? pieces[1] : "./";
   if (s < 2) {
-    LogSevere("PYTHON= format should be scriptpath,outputfolder\n");
-    LogSevere("        Tried to parse from '" << command << "'\n");
+    fLogSevere("PYTHON= format should be scriptpath,outputfolder");
+    fLogSevere("        Tried to parse from '{}'", command);
   }
 }
 
@@ -231,7 +231,7 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
   std::string filename = keys["filename"];
 
   if (filename.empty()) {
-    LogSevere("Need a filename to output\n");
+    fLogSevere("Need a filename to output");
     return false;
   }
 
@@ -262,7 +262,7 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
 
   if (dataGrid != nullptr) {
     std::string pythonCommand = python + " " + pythonScript;
-    LogInfo("RUN PYTHON:" << pythonCommand << " BASEURL: " << filename << "\n");
+    fLogInfo("RUN PYTHON: {} BASEURL: {}", pythonCommand, filename);
     auto output = runDataProcess(pythonCommand, filename, dataGrid);
 
     // Hunt python output for RAPIO tags
@@ -283,20 +283,20 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
       }
       // Output lines from python if turned on
       if (outputPython) {
-        LogInfo("PYTHON:" << v << "\n");
+        fLogInfo("PYTHON: {}", v);
       }
     }
     success = haveFileBack && haveFactoryBack;
     #if 0
     if (!haveFileBack) {
-      LogSevere("Your python needs to print RAPIO_FILE_OUT: filename\n");
+      fLogSevere("Your python needs to print RAPIO_FILE_OUT: filename");
     }
     if (!haveFactoryBack) {
-      LogSevere("Your python needs to print RAPIO_FACTORY_OUT: factory\n");
+      fLogSevere("Your python needs to print RAPIO_FACTORY_OUT: factory");
     }
     #endif
   } else {
-    LogSevere("This is not a DataGrid or subclass, can't call Python yet with this\n");
+    fLogSevere("This is not a DataGrid or subclass, can't call Python yet with this");
   }
 
   return success;

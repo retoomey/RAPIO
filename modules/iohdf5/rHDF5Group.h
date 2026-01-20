@@ -99,7 +99,7 @@ public:
       attribute.getValue<T>(t_value); // Ensure this handles std::string correctly
       return;
     } else {
-      LogInfo("Attribute '" << name << "' doesn't exist, will use default value of " << *t_value << "\n");
+      fLogInfo("Attribute '{}' doesn't exist, will use default value of {}", name, *t_value);
     }
     // throw std::runtime_error("Attribute read "+name+" failed");
   }

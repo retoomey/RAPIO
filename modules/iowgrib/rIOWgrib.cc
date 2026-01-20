@@ -48,7 +48,7 @@ IOWgrib::getHelpString(const std::string& key)
 void
 IOWgrib::initialize()
 {
-  LogInfo("wgrib2 module: \"" << wgrib2api_info() << "\"\n");
+  fLogInfo("wgrib2 module: \"{}\"", wgrib2api_info());
 }
 
 std::vector<std::string>
@@ -112,7 +112,7 @@ IOWgrib::createDataType(const std::string& params)
   // copied it locally first for wgrib2
   URL url(params);
 
-  LogInfo("wgrib2 reader: " << url << "\n");
+  fLogInfo("wgrib2 reader: {}", url.toString());
 
   // virtual to static, we only handle file/url
   return (IOWgrib::readGribDataType(URL(params)));
@@ -123,7 +123,7 @@ IOWgrib::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>              & params
 )
 {
-  LogSevere("Called wgrib2 write module correctly.  Oh yay!\n");
+  fLogSevere("Called wgrib2 write module correctly.  Oh yay!");
   return false;
 }
 

@@ -72,7 +72,7 @@ IOImage::readImageDataType(const URL& url)
     std::shared_ptr<ImageDataTypeImp> g = std::make_shared<ImageDataTypeImp>(buf);
     return g;
   } else {
-    LogSevere("Couldn't read image datatype at " << url << "\n");
+    fLogSevere("Couldn't read image datatype at {}", url.toString());
   }
 
   return nullptr;
@@ -142,14 +142,14 @@ IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
   std::ofstream file(filename, std::ios::binary);
 
   if (!file) {
-    LogSevere("Failed to open file: " << filename << "\n");
+    fLogSevere("Failed to open file: {}", filename);
     return false;
   }
 
   file.write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
 
   if (!file) {
-    LogSevere("Failed to write data to file: " << filename << "\n");
+    fLogSevere("Failed to write data to file: {}", filename);
     file.close();
     return false;
   }
@@ -191,7 +191,7 @@ IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
     #if HAVE_MAGICK
     InitializeMagick(NULL);
     #else
-    LogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!\n");
+    fLogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!");
     #endif
     setup = true;
   }
@@ -347,7 +347,7 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
     }
   }catch (const Exception& e)
   {
-    LogSevere("Exception write testing image output " << e.what() << "\n");
+    fLogSevere("Exception write testing image output {}", e.what());
   }
 
   return successful;

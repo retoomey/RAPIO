@@ -22,7 +22,7 @@ NumberToStringLookup::add(int v, const std::string& s)
 {
   for (auto& i:myValues) {
     if (i == v) {
-      // LogSevere("-------------------->DUPLICATE ADD OF VALUE " << i << "\n");
+      // fLogSevere("-------------------->DUPLICATE ADD OF VALUE {}", i);
       return; // Can't duplicate
     }
   }
@@ -155,7 +155,7 @@ GribDatabase::huntDatabase(int d, int m, int c, int l, int pc, int pn,
     match &= ((pc == -1) || (pc == i.pcat));
     match &= ((pn == -1) || (pn == i.pnum));
     if (match) {
-      // LogSevere("MATCHED " << d <<", " << pc << ", " << "m in " << m << " == " << i.mtab << "\n");
+      // fLogSevere("MATCHED {}, {}, m in {}, == {}", d, pc, m, i.mtab);
       return &i;
     }
   }
@@ -195,7 +195,7 @@ GribDatabase::getProductName(gribfield * gfld)
 
   // We'll make a database.  Yay.
   // Not sure why master isn't matching..do they not match it?
-  // LogSevere("MASTER TABLE " << master << "\n");
+  // fLogSevere("MASTER TABLE {}", master);
   GribLookup * l = huntDatabase(disc, -1, cntr, localTable, pcat, pnum, "", "");
 
   std::string pn;
@@ -382,7 +382,7 @@ GribDatabase::readGribDatabase()
   const URL url = Config::getConfigFile("gribtab.dat");
 
   if (url.empty()) {
-    LogSevere("Grib2 reader requires a gribtab.dat file in your configuration\n");
+    fLogSevere("Grib2 reader requires a gribtab.dat file in your configuration");
     exit(1);
   }
   std::vector<char> buf;
@@ -390,7 +390,7 @@ GribDatabase::readGribDatabase()
   IOURL::read(url, buf);
 
   if (!buf.empty()) {
-    LogInfo("Read the gribtab.dat wgrib style file...no .idx support (todo).\n");
+    fLogInfo("Read the gribtab.dat wgrib style file...no .idx support (todo).");
 
     size_t at       = 0;
     size_t size     = buf.size();
@@ -437,7 +437,7 @@ GribDatabase::readGribDatabase()
             if (c != '"') {
               ss << c;
             } else {
-              //  LogSevere(fieldnum << ": Word: '" << ss.str() << "'\n");
+              //  fLogSevere("{}: Word: '{}'", fieldnum, ss.str());
               if (fieldnum == 6) {
                 key = ss.str();
               } else if (fieldnum == 7) {
@@ -450,8 +450,8 @@ GribDatabase::readGribDatabase()
               state = 0;
               if (++fieldnum > 8) {
                 fieldnum = 0;
-                //           LogSevere("Final: " << disc <<"," << mtab <<"," << cntr << "," << ltab << "," << pcat
-                //             << "," << pnum << " " << key << ":"<<description<<":"<<units<< "\n");
+                //           fLogSevere("Final: {}, {}, {}, {}, {}, {}, {}, {}, {}",
+                //           disc, mtab, cntr, ltab, pcat, pnum, key, description, units);
                 myLookup.push_back(GribLookup(disc, mtab, cntr, ltab, pcat, pnum, key, description, units));
               }
             }
@@ -460,7 +460,7 @@ GribDatabase::readGribDatabase()
             if (c != ',') {
               ss << c;
             } else {
-              //  LogSevere(fieldnum << ": Number: '" << ss.str() << "'\n");
+              //  fLogSevere("{}: Number: '{}'", fieldnum, ss.str());
               int f = std::stoi(ss.str());
               // int disc, mtab, cntr, ltab, pcat, pnum;
               if (fieldnum == 0) {
@@ -557,10 +557,10 @@ GribDatabase::parseIDXLine(const std::string& line, GribIDXField& idx, size_t& m
     std::vector<std::string> outdate;
     Strings::split(out[2], '=', &outdate);
     if ((outdate.size() == 2) && (outdate[0] == "d")) {
-      // LogDebug("DATE: " << outdate[1] << "\n");
+      // fLogDebug("DATE: {}", outdate[1]);
       const std::string convert = "%Y%m%d%H"; // One of the Grib formats it seems
       idx.myTime = Time(outdate[1], convert);
-      // LogDebug("Converted Time is " << idx.myTime.getString(convert) << "\n");
+      // fLogDebug("Converted Time is {}", idx.myTime.getString(convert));
     } else {
       break;
       // bad date?
@@ -576,9 +576,9 @@ GribDatabase::parseIDXLine(const std::string& line, GribIDXField& idx, size_t& m
   }catch (const std::exception& e)
   {
     // Any failure, get out
-    LogSevere("Error reading IDX file:\n");
-    LogSevere(e.what());
-    LogSevere("Ignoring IDX file catalog and using internal catalog.\n");
+    fLogSevere("Error reading IDX file:");
+    fLogSevere("{}", e.what());
+    fLogSevere("Ignoring IDX file catalog and using internal catalog.");
     return false;
   }
   return true;
@@ -592,7 +592,7 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
   IOURL::read(url, buf);
 
   if (buf.empty()) {
-    LogSevere("Couldn't read the idx file at " << url << "\n");
+    fLogSevere("Couldn't read the idx file at {}", url.toString());
     return false;
   }
 
@@ -625,9 +625,8 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
         atMessage++;
         // ...otherwise better match current message
       } else if (messageNumber != atMessage) {
-        LogSevere(
-          "Expected message " << atMessage << " or " << atMessage + 1 << " and got " << messageNumber <<
-            " in IDX file.\n");
+        fLogSevere("Expected message {} or {} and got {} in IDX file"
+          atMessage, atMessage + 1, messageNumber);
         return false;
       }
       // Add field to the current message slot
@@ -635,8 +634,8 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
 
       haveAtLeastOne = true;
     } else {
-      LogSevere("Error reading line " << lineCounter << " of IDX file:\n");
-      LogSevere("Ignoring IDX file catalog and using internal.\n");
+      fLogSevere("Error reading line {} of IDX file:", lineCounter);
+      fLogSevere("Ignoring IDX file catalog and using internal.");
       return false;
     }
 
@@ -649,7 +648,7 @@ GribDatabase::readIDXFile(const URL& url, std::vector<GribIDXMessage>& messages)
 
   // If no errors and at least one record, we'll take it
   if (success && haveAtLeastOne) {
-    LogInfo("Total IDX lines parsed: " << lineCounter << "\n");
+    fLogInfo("Total IDX lines parsed: {}", lineCounter);
   } else {
     messages.clear(); // Not gonna be used
   }

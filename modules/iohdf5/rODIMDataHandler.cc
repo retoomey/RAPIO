@@ -92,13 +92,13 @@ ODIMDataHandler::read(std::map<std::string, std::string>& keys,
     HDF5Group root(hdf5id, "/"); // throws
     std::string m_convention;
     root.getAttribute("Conventions", m_convention);
-    LogDebug("/ (Conventions): " << m_convention << "\n"); // to API?
+    fLogDebug("/ (Conventions): {}", m_convention); // to API?
 
     // Find out what we're working with
     auto what = root.getSubGroup("what");
     std::string odimObject;
     what.getAttribute("object", odimObject);
-    LogDebug("/what/object (ODIM File Object): " << odimObject << '\n');
+    fLogDebug("/what/object (ODIM File Object): {}", odimObject);
 
     // Get source
     std::string sourceName("Unknown");
@@ -111,7 +111,7 @@ ODIMDataHandler::read(std::map<std::string, std::string>& keys,
     // to hard-code the attribute.
     auto how = root.getSubGroup("how"); // no id required, maybe cleaner
     how.getAttribute("beamwidth", &beamWidth);
-    LogDebug("/how/beamwidth (Beamwidth): " << beamWidth << '\n');
+    fLogDebug("/how/beamwidth (Beamwidth): {}", beamWidth);
 
     // where
     LLH location;
@@ -146,10 +146,10 @@ ODIMDataHandler::read(std::map<std::string, std::string>& keys,
     if ((odimObject == "SCAN") || (odimObject == "PVOL")) {
       return readODIM_SCANPVOL(hdf5id, beamWidth, location, sourceName);
     } else {
-      LogSevere("HDF5 ODIM is type '" << odimObject << "', which is unimplemented\n");
+      fLogSevere("HDF5 ODIM is type '{}', which is unimplemented", odimObject);
     }
   }catch (const std::exception& e) {
-    LogSevere("HDF5 file doesn't appear to be ODIM, can't read it.\n");
+    fLogSevere("HDF5 file doesn't appear to be ODIM, can't read it.");
     return nullptr;
   }
 
@@ -213,8 +213,8 @@ ODIMDataHandler::readODIM_SCANPVOL_DATASET(std::shared_ptr<MultiDataType>& outpu
   try {
     time = Time(startDate, "%Y%m%d%H%M%S");
   }catch (const std::exception& e) {
-    LogSevere(e.what() << "\n");
-    LogSevere("Can't read date/time, using current time. \n");
+    fLogSevere("{}", e.what());
+    fLogSevere("Can't read date/time, using current time.");
     time = Time::CurrentTime();
   }
 
@@ -226,32 +226,32 @@ ODIMDataHandler::readODIM_SCANPVOL_DATASET(std::shared_ptr<MultiDataType>& outpu
   size_t m_a1gate(0); /**< Index of 1st gate radiated */
 
   where.getAttribute("a1gate", &m_a1gate);
-  LogDebug("/dataset#/where/a1gate (Index to 1st radiated gate in sweep): " << m_a1gate << '\n');
+  fLogDebug("/dataset#/where/a1gate (Index to 1st radiated gate in sweep): {}", m_a1gate);
 
   double m_elevationDegs(0); /**< Elevation (degrees) of sweep */
 
   where.getAttribute("elangle", &m_elevationDegs);
-  LogDebug("/dataset#/where/elangle (Sweep Elevation): " << m_elevationDegs << '\n');
+  fLogDebug("/dataset#/where/elangle (Sweep Elevation): {}", m_elevationDegs);
 
   size_t m_binCount(0); /**< Count of bins (Gates) in sweep */
 
   where.getAttribute("nbins", &m_binCount);
-  LogDebug("/dataset#/where/nbins (Number of bins in sweep): " << m_binCount << '\n');
+  fLogDebug("/dataset#/where/nbins (Number of bins in sweep): {}", m_binCount);
 
   size_t m_rayCount(0); /**< Count of rays (Azimuth) in sweep */
 
   where.getAttribute("nrays", &m_rayCount);
-  LogDebug("/dataset#/where/nrays (Number of rays in sweep): " << m_rayCount << '\n');
+  fLogDebug("/dataset#/where/nrays (Number of rays in sweep): {}", m_rayCount);
 
   double m_gateWidthMeters(0); /**< Range (width) between gates */
 
   where.getAttribute("rscale", &m_gateWidthMeters);
-  LogDebug("/dataset#/where/rscale (Width of gate): " << m_gateWidthMeters << '\n');
+  fLogDebug("/dataset#/where/rscale (Width of gate): {}", m_gateWidthMeters);
 
   double m_gate1RangeKMs(0); /**< Range to ray's 1st gate */
 
   where.getAttribute("rstart", &m_gate1RangeKMs);
-  LogDebug("/dataset#/where/rstart (Range to ray's 1st Gate): " << m_gate1RangeKMs << '\n');
+  fLogDebug("/dataset#/where/rstart (Range to ray's 1st Gate): {}", m_gate1RangeKMs);
 
   // --------------------------------------------------------------------
   // DATASET#/HOW
@@ -272,23 +272,23 @@ ODIMDataHandler::readODIM_SCANPVOL_DATASET(std::shared_ptr<MultiDataType>& outpu
   size_t m_scanIndex(0); /**< Temporal sequence # of scan (1-based) */
 
   how.getAttribute("scan_index", &m_scanIndex);
-  LogDebug("/dataset#/how/scan_index (Index of 1st Sweep in volume): " << m_scanIndex << '\n');
+  fLogDebug("/dataset#/how/scan_index (Index of 1st Sweep in volume): {}", m_scanIndex);
 
   size_t m_scanCount(0); /**< Number of scans  in volume */
 
   how.getAttribute("scan_count", &m_scanCount);
-  LogDebug("/dataset#/how/scan_count (Number of scans in volume): " << m_scanCount << '\n');
+  fLogDebug("/dataset#/how/scan_count (Number of scans in volume): {}", m_scanCount);
 
   // Get Azimuthal starting offset in degrees from 0 of the first ray in sweep.
   double m_azimuthStartOffset(0); /**< Starting azimuth offset from 0 */
 
   how.getAttribute("astart", &m_azimuthStartOffset);
-  LogDebug("/dataset#/how/astart (Azimuthal offset from 1st ray): " << m_azimuthStartOffset << '\n');
+  fLogDebug("/dataset#/how/astart (Azimuthal offset from 1st ray): {}", m_azimuthStartOffset);
 
   double m_nyquistVelocity(0); /**< Nyquist Velocity for sweep */
 
   how.getAttribute("NI", &m_nyquistVelocity);
-  LogDebug("/dataset#/how/NI (Nyquist Velocity): " << m_nyquistVelocity << '\n');
+  fLogDebug("/dataset#/how/NI (Nyquist Velocity): {}", m_nyquistVelocity);
 
   // Capture the radar status message.
   std::string m_radarMsg(""); /**< Status Message for sweep */
@@ -340,32 +340,32 @@ ODIMDataHandler::readODIM_MOMENT(
   double m_gainCoeff(1.0); /**< Coefficient a in y=ax+b conversion */
 
   what.getAttribute("gain", &m_gainCoeff);
-  LogDebug("ODIM_H5 gain coefficient 'a' in y=ax+b: " << m_gainCoeff << '\n');
+  fLogDebug("ODIM_H5 gain coefficient 'a' in y=ax+b: {}", m_gainCoeff);
 
   // ODIM_H5 'nodata' attribute is MRMS-equivalent of Constants::DataUnavailable
   // Typical 'nodata' value found in ODIM_H5 file is 255 or 65535
   double m_nodataValue(0.0); /**< Default value for no data in sweep */
 
   what.getAttribute("nodata", &m_nodataValue);
-  LogDebug("ODIM_H5 default value for 'nodata': " << m_nodataValue << '\n');
+  fLogDebug("ODIM_H5 default value for 'nodata': {}", m_nodataValue);
 
   // Defaulting to 0 per OIMD_H5 guidelines page 21.
   double m_offsetCoeff(0.0); /**< Coefficient b in y=ax+b conversion */
 
   what.getAttribute("offset", &m_offsetCoeff);
-  LogDebug("ODIM_H5 offset coefficient 'b' in y=ax+b: " << m_offsetCoeff << '\n');
+  fLogDebug("ODIM_H5 offset coefficient 'b' in y=ax+b: {}", m_offsetCoeff);
 
   std::string m_name(""); /**< Moment name or Product name (quantity)*/
 
   what.getAttribute("quantity", m_name);
-  LogDebug("Moment name: " << m_name << '\n');
+  fLogDebug("Moment name: {}", m_name);
 
   // ODIM_H5 'undetect' attribute is MRMS-equivalent of Constants::MissingData
   // Typical 'undetect' value found in ODIM_H5 file is 0
   double m_undetectValue(0.0); /**< Default value for undetected values */
 
   what.getAttribute("undetect", &m_undetectValue);
-  LogDebug("DEBUG: ODIM_H5 default value for 'undetect': " << m_undetectValue << '\n');
+  fLogDebug("DEBUG: ODIM_H5 default value for 'undetect': {}", m_undetectValue);
 
   // --------------------------------------------------------------------
   // Now data1/data..
@@ -385,13 +385,13 @@ ODIMDataHandler::readODIM_MOMENT(
   size_t m_dataElementCount; /**< Count of raw values in sweep */
 
   m_dataRayCount = static_cast<size_t>(dimSizes[0]); // compare to m_rayCount, right?
-  LogDebug("Number of Rays: " << m_dataRayCount << '\n');
+  fLogDebug("Number of Rays: {}", m_dataRayCount);
 
   m_dataBinCount = static_cast<size_t>(dimSizes[1]);
-  LogDebug("Number of Bins: " << m_dataBinCount << '\n');
+  fLogDebug("Number of Bins: {}", m_dataBinCount);
 
   m_dataElementCount = datasetSpace.getElementCount();
-  LogDebug("Number of Elements: " << m_dataElementCount << '\n');
+  fLogDebug("Number of Elements: {}", m_dataElementCount);
 
   if (m_dataElementCount != (m_dataRayCount * m_dataBinCount)) {
     throw std::runtime_error("Issue with dataspace (element count != dimensional space)");
@@ -484,7 +484,7 @@ ODIMDataHandler::readODIM_MOMENT(
     }
   }
   if (clipped > 0) {
-    LogSevere("Dampened " << clipped << " AzmuthSpacings values to 1 degree\n");
+    fLogSevere("Dampened {} AzmuthSpacings values to 1 degree", clipped);
   }
 
   // -------------------------------------------------------------------------

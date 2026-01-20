@@ -26,7 +26,7 @@ GribMessageImp::readG2Info(size_t messageNum, size_t at)
   int ierr = g2_info(getBufferPtr(), &section0[0], &section1[0], &numfields, &localUse);
 
   if (ierr > 0) {
-    LogSevere(IOGrib::getGrib2Error(ierr));
+    fLogSevere("{}", IOGrib::getGrib2Error(ierr));
     return false;
   }
 
@@ -51,8 +51,7 @@ GribMessageImp::getField(size_t fieldNumber)
     auto newField = std::make_shared<GribFieldImp>(myBufferPtr, myMessageNumber, fieldNumber, myDataTypeValid);
     return newField;
   } else {
-    LogSevere("Requesting Grib field " << fieldNumber
-                                       << ", but we only have " << myNumberFields << " fields.\n");
+    fLogSevere("Requesting Grib field {}, but we only have {} fields.", fieldNumber, myNumberFields);
   }
   return nullptr;
 }

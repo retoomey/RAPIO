@@ -58,9 +58,9 @@ public:
   /** Convert float to scaled compressed int. */
   static inline short int
   toHmrgValue(float v, const int dataUnavailable, const int dataMissing,
-    const float dataScale, 
-    SentinelDouble w2missing=Constants::MissingData,
-    SentinelDouble w2unavailable=Constants::DataUnavailable)
+    const float dataScale,
+    SentinelDouble w2missing     = Constants::MissingData,
+    SentinelDouble w2unavailable = Constants::DataUnavailable)
   {
     short int out;
 
@@ -83,7 +83,7 @@ public:
   isMRMSValidYear(int year);
 
   /** Give back unique product info table entry based on fields */
-  static ProductInfo*
+  static ProductInfo *
   getProductInfo(const std::string& varName, const std::string& units);
 
   /** Give back W2 info based on passed in HMRG */
@@ -92,12 +92,12 @@ public:
     std::string                 & outW2Name);
 
   /** Convert keys string to gzfile pointer in generic parameter passing */
-  static StreamBuffer*
+  static StreamBuffer *
   keyToStreamBuffer(std::map<std::string, std::string>& keys);
 
   /** Convert gzFile pointer to keys string in generic parameter passing */
   static void
-  StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer* b);
+  StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer * b);
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */

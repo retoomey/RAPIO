@@ -30,9 +30,8 @@ validateLength(const std::string& name,
   const size_t realSize = valid.size();
 
   if (realSize != aSize) {
-    LogSevere("Warning: Binary table returned a row length of "
-      << realSize << " for column " << name
-      << " so we are padding/truncating\n");
+    fLogSevere("Warning: Binary table returned a row length of {} for colume {} so we are padding/truncating",
+      realSize, name);
     valid.resize(aSize);
     return (false);
   }
@@ -56,7 +55,7 @@ NetcdfBinaryTable::read(
   std::map<std::string, std::string>& keys,
   std::shared_ptr<DataType>         dt)
 {
-  LogSevere("Unimplemented raw table, returning empty table\n");
+  fLogSevere("Unimplemented raw table, returning empty table");
 
   std::shared_ptr<BinaryTable> newOne = std::make_shared<BinaryTable>();
 
@@ -79,7 +78,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
     std::vector<BinaryTable::TableInfo> infos = binaryTable.getTableInfo();
     size_t dimCount = infos.size();
 
-    // LogDebug("---> NETCDF GOT COUNT OF " << dimCount << "\n");
+    // fLogDebug("---> NETCDF GOT COUNT OF {}", dimCount);
     if (dimCount > 0) {
       std::vector<int> dims, vars;
       int dim, varid;
@@ -91,8 +90,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
       for (size_t i = 0; i < dimCount; i++) {
         const BinaryTable::TableInfo t = infos[i];
 
-        // LogDebug("---> Adding table  "<< t.name << " with row size " <<
-        // t.size << "\n");
+        fLogDebug("---> Adding table  {} with row size {}", t.name, t.size);
         NETCDF(nc_def_dim(ncid, t.name.c_str(), t.size, &dim));
         dims.push_back(dim);
       }
@@ -108,7 +106,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
           const std::string& type = columnTypes[j];
           const std::string& name = columnNames[j];
 
-          // LogDebug("---> Adding column  "<< name << "\n");
+          // fLogDebug("---> Adding column  {}", name);
 
           int aNcType = NC_FLOAT;
 
@@ -121,9 +119,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
           } else if (type == "uchar") {
             aNcType = NC_UBYTE;
           } else {
-            LogSevere(
-              "Netcdf encoder, binary table unknown data type '" << type
-                                                                 << "'\n");
+            fLogSevere("Netcdf encoder, binary table unknown data type '{}'", type);
           }
 
           // Create and push back the new nc var
@@ -163,8 +159,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
           const std::string& name = columnNames[j];
           const std::string& unit = columnUnits[j];
 
-          // LogDebug("---> Adding data to column  "<< name << ", data type is
-          // '" << type << "'\n");
+          // fLogDebug("---> Adding data to column  {}, data type is '{}'", name, type);
           // Created in step two
           varid = vars[atVar];
           atVar++;
@@ -174,12 +169,12 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
           // probably won't add many types to this...
           if (type == "string") {
             std::vector<std::string> data = binaryTable.getStringVector(name);
-            LogSevere("Incoming string array is size " << data.size() << "\n");
+            fLogSevere("Incoming string array is size {}", data.size());
             validateLength<std::string>(name, data, t.size);
-            LogSevere("String array is now " << data.size() << "\n");
+            fLogSevere("String array is now {}", data.size());
 
             for (size_t zz = 0; zz < data.size(); zz++) {
-              LogSevere("Value " << zz << " == " << data[zz] << "\n");
+              fLogSevere("Value {} == {}", zz, data[zz]);
             }
 
             // Convert c++ string array to char* fun fun. Copies so for large
@@ -203,7 +198,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
             }
 
             if (retval) {
-              LogSevere("Netcdf write error " << nc_strerror(retval) << "\n");
+              fLogSevere("Netcdf write error {}", nc_strerror(retval));
               return (false);
             }
           } else if (type == "float") {
@@ -219,9 +214,9 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
             validateLength<unsigned char>(name, data, t.size);
             NETCDF(nc_put_var_uchar(ncid, varid, &data[0]));
           } else {
-            LogSevere(
-              "NETCDF writer, unrecognized data type defined by a binary table.  We don't know how to write type '" << type
-                                                                                                                    << "'\n");
+            fLogSevere(
+              "NETCDF writer, unrecognized data type defined by a binary table.  We don't know how to write type '{}'",
+              type);
             break;
           }
 
@@ -256,8 +251,7 @@ NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
     NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
     NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
   } catch (const NetcdfException& ex) {
-    LogSevere("Netcdf write error with BinaryTable: " << ex.getNetcdfStr()
-                                                      << "\n");
+    fLogSevere("Netcdf write error with BinaryTable: {}", ex.getNetcdfStr());
     return (false);
   }
   return (true);

@@ -36,7 +36,7 @@ BlockRadialSet::read(StreamBuffer& b)
         break;
       case -20705: // eh?
       case 16:
-        LogInfo("Looks like a RadialSet NIDS product.");
+        fLogInfo("Looks like a RadialSet NIDS product.");
         break;
       default:
         fLogSevere("Unknown packet code {}", myPacketCode);

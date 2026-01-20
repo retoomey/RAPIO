@@ -75,7 +75,7 @@ IOGDAL::readGDALDataType(const URL& url)
   //  if (!buf.empty()) {
   std::shared_ptr<GDALDataTypeImp> g = std::make_shared<GDALDataTypeImp>();
 
-  LogInfo("Sending " << url << " to GDALOpenEx...\n");
+  fLogInfo("Sending {} to GDALOpenEx...", url.toString());
   bool success = g->readGDALDataset(url.toString());
 
 
@@ -86,16 +86,16 @@ IOGDAL::readGDALDataType(const URL& url)
   // FIXME: How do we dispose of this thing?
   poDS = (GDALDataset *) GDALOpenEx(url.toString().c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
   if (poDS == NULL) {
-    LogSevere("OK it didn't read... :(\n");
+    fLogSevere("OK it didn't read... :(");
   } else {
     // If it's a raster right?  I'm getting raster size 512 * 512 for a shapefile?
     // So are all the raster bands in a GDAL file the same size?  We can use that to
     // map to DataGrid arrays...
     int xSize = poDS->GetRasterXSize();
     int ySize = poDS->GetRasterYSize();
-    LogSevere("Sizes of raster is " << xSize << ", " << ySize << "\n");
+    fLogSevere("Sizes of raster is {}, {}", xSize, ySize);
     int rcount = poDS->GetRasterCount();
-    LogSevere("Raster count is " << rcount << "\n"); // zero for shapefile...ok works
+    fLogSevere("Raster count is {}", rcount); // zero for shapefile...ok works
     for (auto&& poBand: poDS->GetBands() ) {
       //  poBand->GetDescription();
     }
@@ -105,7 +105,7 @@ IOGDAL::readGDALDataType(const URL& url)
     // but we could and probably should generally wrap a GDALDataset
     size_t numLayers = poDS->GetLayerCount();
     for (auto&& poLayer: poDS->GetLayers() ) { // from docs
-      LogSevere("Layer " << poLayer->GetName() << "\n");
+      fLogSevere("Layer {}", poLayer->GetName());
 
       // Ok features are read and created it seems...
       OGRFeature * feature = NULL;
@@ -113,14 +113,14 @@ IOGDAL::readGDALDataType(const URL& url)
       size_t i = 0;
       // In OK shapefile these are the counties...
       while ((feature = poLayer->GetNextFeature()) != NULL) {
-        LogSevere(i << " Feature...\n");
+        fLogSevere("{} Feature...", i);
 
         // Ok the fields are stuff stored per feature, like
         // phone number, etc.
         for (auto&& oField: *feature) {
           switch (oField.GetType()) {
               default:
-                LogSevere("FIELD VALUE: " << oField.GetAsString() << "\n");
+                fLogSevere("FIELD VALUE: {}", oField.GetAsString());
                 break;
           }
         }
@@ -130,11 +130,11 @@ IOGDAL::readGDALDataType(const URL& url)
         OGRGeometry * poGeometry = feature->GetGeometryRef();
 
         int geoCount = feature->GetGeomFieldCount();
-        LogSevere("FEATURE HAS " << geoCount << " geometry fields\n");
+        fLogSevere("FEATURE HAS {}", geoCount);
         // Ahh kill me there's like 10 billion types here... wkbUnknown, wkbLineString
         // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
         if (poGeometry != NULL) {
-          LogSevere("The type is " << wkbFlatten(poGeometry->getGeometryType()) << "\n");
+          fLogSevere("The type is {}", wkbFlatten(poGeometry->getGeometryType()));
         }
         // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
         if ((poGeometry != NULL) && (wkbFlatten(poGeometry->getGeometryType()) == wkbPolygon) ) {
@@ -145,7 +145,7 @@ IOGDAL::readGDALDataType(const URL& url)
           // OGRPoint *poPoint = (OGRPoint *)poGeometry;
           OGRPolygon * poPoint = (OGRPolygon *) poGeometry;
           # endif
-          //        LogSevere("POINT: " << poPoint->getX() <<  poPoint->getY() <<  "\n");
+          //        fLogSevere("POINT: {}{}", poPoint->getX(), poPoint->getY());
 
           // char * test = poGeometry->exportToJson();  Wow it works?
           ///  char * test = poGeometry->exportToKML();
@@ -153,7 +153,7 @@ IOGDAL::readGDALDataType(const URL& url)
           exit(1);
           // exportToJson()  exportToKML()  free with CPLFree()?
         } else {
-          LogSevere("No point geometry!\n");
+          fLogSevere("No point geometry!");
         }
 
 
@@ -163,7 +163,7 @@ IOGDAL::readGDALDataType(const URL& url)
 
       // FIXME: I guess layers don't get deleted?
     }
-    LogSevere(">>>>GOT BACK " << numLayers << " layers\n");
+    fLogSevere(">>>>GOT BACK {} layers", numLayers);
 
     // delete poDS; // One delete doesn't crash so guess we do it?
     // On windows they say call GDALClose()
@@ -174,7 +174,7 @@ IOGDAL::readGDALDataType(const URL& url)
 
   return success ? g : nullptr;
   // } else {
-  //   LogSevere("Couldn't read image datatype at " << url << "\n");
+  //   fLogSevere("Couldn't read image datatype at {}", url.toString());
   // }
 } // IOGDAL::readGDALDataType
 
@@ -198,7 +198,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   auto project = r.getProjection(); // primary layer
 
   if (project == nullptr) {
-    LogSevere("No projection ability for this datatype.\n");
+    fLogSevere("No projection ability for this datatype.");
     return false;
   }
   auto& p = *project;
@@ -249,7 +249,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
       driver        = output.getAttr("driver", driver);
       optionSuccess = p.getLLCoverage(output, cover);
     }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
+      fLogSevere("Unrecognized settings, using defaults");
     }
   }
 
@@ -292,7 +292,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   GDALDriver * driverGeotiff = GetGDALDriverManager()->GetDriverByName(driver.c_str());
   if (driverGeotiff == nullptr) {
     // Can't load?
-    LogSevere("Couldn't load GDAL driver for '" << driver << "', cannot write output\n");
+    fLogSevere("Couldn't load GDAL driver for '{}', connot write output", driver);
     // FIXME: Clean up GDAL stuff?
     return false;
   }
@@ -301,7 +301,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   char ** meta;
   meta = driverGeotiff->GetMetadata();
   if (CSLFetchBoolean(meta, GDAL_DCAP_CREATE, FALSE)) { } else {
-    LogSevere("GDAL Driver '" << driver << "' does not have create/output ability, cannot write output\n");
+    fLogSevere("GDAL Driver '{}' does not have create/output ability, cannot write output", driver);
     return false;
   }
 
@@ -320,7 +320,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   double geoTransform[6] = { left, deltaLon, 0, top, 0, deltaLat };
   CPLErr terr = geotiffDataset->SetGeoTransform(geoTransform);
   if (terr != 0) {
-    LogSevere("Transform failed? " << terr << "\n");
+    fLogSevere("Transform failed? {}", (int) terr);
   }
 
   // Set the geometric projection being used on this data
@@ -367,7 +367,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     // Full write final grid
     CPLErr err = band1.RasterIO(GF_Write, 0, 0, cols, rows, &rowBuff[0], cols, rows, GDT_Float32, 0, 0);
     if (err != 0) {
-      LogSevere("GDAL ERROR during write detected\n"); // fixme count and not spam
+      fLogSevere("GDAL ERROR during write detected"); // fixme count and not spam
     }
     GDALClose(geotiffDataset);
     //   CPLFree(rowBuff);
@@ -380,16 +380,16 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
     // IODataType::generateRecord(dt, aURL, "gdal", records);
     // GDALDestroyDriverManager(); leaking?
     // Standard output
-    if (successful){
+    if (successful) {
       showFileInfo("GDAL writer: ", keys);
     }
   }catch (const std::exception& e)
   {
-    LogSevere("Exception write testing image output " << e.what() << "\n");
+    fLogSevere("Exception write testing image output {}", e.what());
     successful = false;
   }
 
-  LogInfo("GDAL writer: " << keys["filename"] << "\n");
+  fLogInfo("GDAL writer: {}", keys["filename"]);
 
 
   return successful;

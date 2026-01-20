@@ -89,10 +89,10 @@ IOGrib::get3DData(std::vector<std::shared_ptr<GribMessage> >& mv, const std::vec
   for (size_t i = 0; i < numZ; i++) {
     auto field = mv[i]->getField(fieldN[i]);
     if (field == nullptr) {
-      LogSevere("Couldn't unpack level " << i << " of request 3D field.\n");
+      fLogSevere("Couldn't unpack level {} of request 3D field.", i);
       return nullptr; // Humm..could just have empty layer?
     } else {
-      LogInfo("Unpack Level '" << levels[i] << "' (" << i << ") successfully.\n");
+      fLogInfo("Unpack Level '{}' ({}) successfully.", levels[i], i);
       // Fill this level...
       newOne = field->getFloat3D(newOne, i, numZ);
     }
@@ -125,7 +125,7 @@ readAt(std::fstream& file, std::streampos at, unsigned char * buffer, std::strea
   // Note: we use unsigned char everywhere else because of bit logic
   file.read(reinterpret_cast<char *>(buffer), count);
   if (file.fail()) {
-    LogSevere("Error reading: eof? " << file.eof() << " bad? " << file.bad() << "\n");
+    fLogSevere("Error reading: eof? {} bad? {}", file.eof(), file.bad());
     return false;
   }
   return true;
@@ -190,7 +190,7 @@ bool
 IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp * o)
 {
   // For now since this can be a long operation, notify whenever we call it
-  LogInfo("Scanning grib2 using per field mode (RAM per message)...\n");
+  fLogInfo("Scanning grib2 using per field mode (RAM per message)...");
 
   // Make sure we always have an action/strategy defined to avoid checks in loop
   // It doesn't make sense to scan without doing 'something' even if just printing
@@ -202,7 +202,7 @@ IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp * o)
   std::fstream file(url.toString(), std::ios::in | std::ios::binary);
 
   if (!file) {
-    LogSevere("Unable to read local file at " << url << "\n");
+    fLogSevere("Unable to read local file at {}", url.toString());
     return false;
   }
 
@@ -257,21 +257,21 @@ IOGrib::scanGribDataFILE(const URL& url, GribAction * ap, GribDataTypeImp * o)
             return true;
           }
         } else { // footer missing.  Short file maybe
-          LogSevere("GRIB footer 7777 missing.  Short data maybe?\n");
+          fLogSevere("GRIB footer 7777 missing.  Short data maybe?");
           break;
         }
       } else {
-        LogSevere("GRIB buffer overflow. Short data maybe?\n");
+        fLogSevere("GRIB buffer overflow. Short data maybe?");
         break;
       }
     } else {
-      LogSevere("No GRIB data in buffer or unhandled GRIB version\n");
+      fLogSevere("No GRIB data in buffer or unhandled GRIB version");
       break;
     }
     k += lengrib; // next message...
   }
 
-  LogInfo("Total messages: " << messageCount << "\n");
+  fLogInfo("Total messages: {}", messageCount);
   return true;
 } // IOGrib::scanGribDataFILE
 
@@ -279,7 +279,7 @@ bool
 IOGrib::scanGribData(std::vector<char>& b, GribAction * ap, GribDataTypeImp * o)
 {
   // For now since this can be a long operation, notify whenever we call it
-  LogInfo("Scanning grib2 using FULL buffer mode (RAM hogging)...\n");
+  fLogInfo("Scanning grib2 using FULL buffer mode (RAM hogging)...");
 
   // Make sure we always have an action/strategy defined to avoid checks in loop
   // It doesn't make sense to scan without doing 'something' even if just printing
@@ -319,21 +319,21 @@ IOGrib::scanGribData(std::vector<char>& b, GribAction * ap, GribDataTypeImp * o)
           }
           // End of message match...
         } else { // footer missing.  Short file maybe
-          LogSevere("GRIB footer 7777 missing.  Short data maybe?\n");
+          fLogSevere("GRIB footer 7777 missing.  Short data maybe?");
           break;
         }
       } else {
-        LogSevere("GRIB buffer overflow. Short data maybe?\n");
+        fLogSevere("GRIB buffer overflow. Short data maybe?");
         break;
       }
     } else {
-      LogSevere("No GRIB data in buffer or unhandled GRIB version\n");
+      fLogSevere("No GRIB data in buffer or unhandled GRIB version");
       break;
     }
     k += lengrib; // next message...
   }
 
-  LogInfo("Total messages: " << messageCount << "\n");
+  fLogInfo("Total messages: {}", messageCount);
   return true;
 } // myseekgbbuf
 
@@ -349,7 +349,7 @@ IOGrib::getHelpString(const std::string& key)
 void
 IOGrib::initialize()
 {
-  LogInfo("GRIB module using grib library version: " << GRIB2_VERSION_STRING << "\n");
+  fLogInfo("GRIB module using grib library version: {}", GRIB2_VERSION_STRING);
 }
 
 std::shared_ptr<DataType>
@@ -366,7 +366,7 @@ IOGrib::readGribDataType(const URL& url, int mode)
     IOURL::read(url, buf);
 
     if (buf.empty()) {
-      LogSevere("Couldn't read data for grib2 at " << url << "\n");
+      fLogSevere("Couldn't read data for grib2 at {}", url.toString());
       return nullptr;
     }
   }

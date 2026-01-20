@@ -38,11 +38,9 @@ public:
       // Non-virtual to avoid virtual vtable overhead
       // FIXME: stream operator?
       if (grouped) {
-        LogInfo(
-          m << "." << number << ":" << offset << ":" << datestring << ":" << product << ":" << level << ":" << type <<
-            "\n");
+        fLogInfo("{}.{}:{}:{}:{}:{}:{}", m, number, offset, datestring, product, level, type);
       } else {
-        LogInfo(m << ":" << offset << ":" << datestring << ":" << product << ":" << level << ":" << type << "\n");
+        fLogInfo("{}:{}:{}:{}:{}:{}", m, offset, datestring, product, level, type);
       }
     }
   };

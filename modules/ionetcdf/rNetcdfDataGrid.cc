@@ -51,7 +51,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
     // DataGrid doesn't care, but other classes might be pickier
     if (!dataGrid.initFromGlobalAttributes()) {
-      LogSevere("Bad or missing global attributes in data.\n");
+      fLogSevere("Bad or missing global attributes in data.");
       return false;
     }
     // TypeName from WDSSII type data
@@ -139,7 +139,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
           handled = (data != nullptr);
         }
         if (!handled) {
-          LogSevere("Skipping netcdf array '" << arrayName << "' since type not yet handled.\n");
+          fLogSevere("Skipping netcdf array '{}' since type not yet handled.", arrayName);
         }
       }
       if (handled) {
@@ -159,7 +159,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 
     return (true);
   } catch (const NetcdfException& ex) {
-    LogSevere("Netcdf read error with data grid: " << ex.getNetcdfStr() << "\n");
+    fLogSevere("Netcdf read error with data grid: {}", ex.getNetcdfStr());
     return (false);
   }
   return (false);
@@ -234,12 +234,12 @@ NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
         // Woh...mind blown generically write everything
         NETCDF(nc_put_var(ncid, datavars[count], data));
       } else {
-        LogSevere("Can't write variable " << l->getName() << " because data is empty!\n");
+        fLogSevere("Can't write variable {} because data is empty!", l->getName());
       }
       count++;
     }
   } catch (const NetcdfException& ex) {
-    LogSevere("Netcdf write error with DataGrid: " << ex.getNetcdfStr() << "\n");
+    fLogSevere("Netcdf write error with DataGrid: {}", ex.getNetcdfStr());
     return (false);
   }
 

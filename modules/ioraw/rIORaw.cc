@@ -39,13 +39,13 @@ IORaw::~IORaw()
 std::shared_ptr<DataType>
 IORaw::readRawDataType(const URL& url)
 {
-  LogInfo("Raw reader: " << url << "\n");
+  fLogInfo("Raw reader: {}", url.toString());
   #if 0
   // From a buffer (web read, etc)
   std::vector<char> buf;
   IOURL::read(url, buf);
   if (buf.empty()) {
-    LogSevere("Couldn't read raw datatype at " << url << "\n");
+    fLogSevere("Couldn't read raw datatype at {}", url.toString());
     return nullptr;
   }
   #endif
@@ -53,7 +53,7 @@ IORaw::readRawDataType(const URL& url)
   FILE * fp = fopen(url.toString().c_str(), "rb");
 
   if (fp == nullptr) {
-    LogSevere("Couldn't open file at " << url << "\n");
+    fLogSevere("Couldn't open file at {}", url.toString());
     return nullptr;
   }
 
@@ -91,7 +91,7 @@ IORaw::readRawDataType(const URL& url)
   fclose(fp);
 
   if (!success) {
-    LogSevere("Couldn't read binary table from raw datatype at " << url << "\n");
+    fLogSevere("Couldn't read binary table from raw datatype at {}", url.toString());
     return nullptr;
   }
 
@@ -130,7 +130,7 @@ IORaw::encodeDataType(std::shared_ptr<DataType> dt,
     FILE * fp = fopen(filename.c_str(), "w");
     successful = output->writeBlock(fp); // write block is virtual
     if (!successful) {
-      LogSevere("Failed to write raw output file: " << keys["filename"] << "\n");
+      fLogSevere("Failed to write raw output file: {}", keys["filename"]);
     }
     fclose(fp);
 
@@ -141,7 +141,7 @@ IORaw::encodeDataType(std::shared_ptr<DataType> dt,
     }
 
     // Standard output
-    if (successful){
+    if (successful) {
       showFileInfo("Raw writer: ", keys);
     }
   }

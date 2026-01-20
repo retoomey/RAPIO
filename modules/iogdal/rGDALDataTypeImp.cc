@@ -20,7 +20,7 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
 
   poDS = (GDALDataset *) GDALOpenEx(key.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
   if (poDS == NULL) {
-    LogSevere("Failed to read " << key << "\n");
+    fLogSevere("Failed to read {}", key);
     return false;
   }
 
@@ -30,10 +30,10 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
   int xSize = poDS->GetRasterXSize();
   int ySize = poDS->GetRasterYSize();
 
-  LogSevere("Sizes of raster is " << xSize << ", " << ySize << "\n");
+  fLogSevere("Sizes of raster is {}, {}", xSize, ySize);
   int rcount = poDS->GetRasterCount();
 
-  LogSevere("Raster count is " << rcount << "\n"); // zero for shapefile...ok works
+  fLogSevere("Raster count is {}", rcount); // zero for shapefile...ok works
   for (auto&& poBand: poDS->GetBands() ) {
     //  poBand->GetDescription();
   }
@@ -44,7 +44,7 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
   size_t numLayers = poDS->GetLayerCount();
 
   for (auto&& poLayer: poDS->GetLayers() ) { // from docs
-    LogSevere("Layer " << poLayer->GetName() << "\n");
+    fLogSevere("Layer {}", poLayer->GetName());
 
     // Ok features are read and created it seems...
     OGRFeature * feature = NULL;
@@ -52,14 +52,14 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
     size_t i = 0;
     // In OK shapefile these are the counties...
     while ((feature = poLayer->GetNextFeature()) != NULL) {
-      LogSevere(i << " Feature...\n");
+      fLogSevere("{} Feature...", i);
 
       // Ok the fields are stuff stored per feature, like
       // phone number, etc.
       for (auto&& oField: *feature) {
         switch (oField.GetType()) {
             default:
-              LogSevere("FIELD VALUE: " << oField.GetAsString() << "\n");
+              fLogSevere("FIELD VALUE: {}", oField.GetAsString());
               break;
         }
       }
@@ -69,11 +69,11 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
       OGRGeometry * poGeometry = feature->GetGeometryRef();
 
       int geoCount = feature->GetGeomFieldCount();
-      LogSevere("FEATURE HAS " << geoCount << " geometry fields\n");
+      fLogSevere("FEATURE HAS {} geometry fields", geoCount);
       // Ahh kill me there's like 10 billion types here... wkbUnknown, wkbLineString
       // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
       if (poGeometry != NULL) {
-        LogSevere("The type is " << wkbFlatten(poGeometry->getGeometryType()) << "\n");
+        // fLogSevere("The type is {}", wkbFlatten(poGeometry->getGeometryType()));
       }
       // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
       if ((poGeometry != NULL) && (wkbFlatten(poGeometry->getGeometryType()) == wkbPolygon) ) {
@@ -84,7 +84,7 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
         // OGRPoint *poPoint = (OGRPoint *)poGeometry;
         OGRPolygon * poPoint = (OGRPolygon *) poGeometry;
         #endif
-        //        LogSevere("POINT: " << poPoint->getX() <<  poPoint->getY() <<  "\n");
+        //        fLogSevere("POINT: {}{}", poPoint->getX(), poPoint->getY());
 
         // char * test = poGeometry->exportToJson();  Wow it works?
         ///  char * test = poGeometry->exportToKML();
@@ -92,7 +92,7 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
         exit(1);
         // exportToJson()  exportToKML()  free with CPLFree()?
       } else {
-        LogSevere("No point geometry!\n");
+        fLogSevere("No point geometry!");
       }
 
 
@@ -102,7 +102,7 @@ GDALDataTypeImp::readGDALDataset(const std::string& key)
 
     // FIXME: I guess layers don't get deleted?
   }
-  LogSevere(">>>>GOT BACK " << numLayers << " layers\n");
+  fLogSevere(">>>>GOT BACK {} layers", numLayers);
 
   // delete poDS; // One delete doesn't crash so guess we do it?
   // On windows they say call GDALClose()

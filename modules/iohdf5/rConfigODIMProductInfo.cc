@@ -28,17 +28,17 @@ ConfigODIMProductInfo::loadSettings()
           const auto type     = r.getAttr("type", std::string(""));
           const auto unit     = r.getAttr("unit", std::string(""));
           const auto colorMap = r.getAttr("colorMap", std::string(""));
-          // LogDebug("Read " << prodName << " " << type << " " << unit << " " << colorMap << "\n");
+          // fLogDebug("Read {} {} {} {}", prodName, type, unit, colorMap);
           myProductInfos[prodName] = ODIMProductInfo(prodName, type, unit, colorMap);
           count++;
         }
       }
     } else {
-      LogInfo("No " << ConfigODIMProductInfoXML << " found, ODIM products will use default settings\n");
+      fLogInfo("No {} found, ODIM products will use default settings", ConfigODIMProductInfoXML);
     }
-    LogInfo("Read " << count << " product infos from " << ConfigODIMProductInfoXML << "\n");
+    fLogInfo("Read {} product infos from {}", count, ConfigODIMProductInfoXML);
   }catch (const std::exception& e) {
-    LogSevere("Error parsing XML from " << ConfigODIMProductInfoXML << "\n");
+    fLogSevere("Error parsing XML from {}", ConfigODIMProductInfoXML);
   }
 } // ConfigODIMProductInfo::loadSettings
 

@@ -21,14 +21,14 @@ GribDataTypeImp::GribDataTypeImp(const URL& url, const std::vector<char>& buf, i
   myIndexURL = URL(root + "." + ext + ".idx");
 
   if (OS::isRegularFile(myIndexURL.toString())) {
-    LogInfo("Located IDX file at " << myIndexURL << ".\n");
+    fLogInfo("Located IDX file at {}", myIndexURL.toString());
     if (GribDatabase::readIDXFile(myIndexURL, myIDXMessages)) {
       myHaveIDX = true;
     } else {
-      LogInfo("Couldn't parse/read IDX file, using fallback database.\n");
+      fLogInfo("Couldn't parse/read IDX file, using fallback database.");
     }
   } else {
-    LogInfo("No IDX file found, using fallback database.\n");
+    fLogInfo("No IDX file found, using fallback database.");
   }
 
   // Hack to snag first time.
@@ -92,7 +92,7 @@ GribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zLe
   size_t nz = zLevels.size();
 
   if ((nz < 1)) {
-    LogSevere("Need at least 1 z level for 3D");
+    fLogSevere("Need at least 1 z level for 3D");
     return nullptr;
   }
 
@@ -155,6 +155,6 @@ GribDataTypeImp::getIDXLevelName(size_t message, size_t field, std::string& leve
 std::shared_ptr<LatLonGrid>
 GribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& levelstr, const std::string& substr)
 {
-  LogSevere("Get LatLonGrid not implemented in iogrib2 module, try iowgrib2\n");
+  fLogSevere("Get LatLonGrid not implemented in iogrib2 module, try iowgrib2");
   return nullptr;
 }

@@ -46,7 +46,7 @@ IOText::~IOText()
 std::shared_ptr<DataType>
 IOText::readRawDataType(const URL& url)
 {
-  LogSevere("Reading text with IOTEXT unsupported, at least at the moment.\n");
+  fLogSevere("Reading text with IOTEXT unsupported, at least at the moment.");
   return nullptr;
 } // IOText::readRawDataType
 
@@ -78,7 +78,7 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   if (fmt == nullptr) {
-    LogSevere("Can't create a text IO writer for datatype " << type << "\n");
+    fLogSevere("Can't create a text IO writer for datatype {}", type);
     return false;
   }
 
@@ -110,11 +110,11 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
       successful = fmt->write(dt, keys);
       currentFile.close();
     } else {
-      LogSevere("Couldn't open " << filename << " for writing.\n");
+      fLogSevere("Couldn't open {} for writing.", filename);
       successful = false;
     }
   }catch (const std::exception& e) {
-    LogSevere("Failed to write " << filename << ", reason: " << e.what() << "\n");
+    fLogSevere("Failed to write {}, reason: {}", filename, e.what());
   }
 
   // ----------------------------------------------------------
@@ -124,7 +124,7 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // Standard output
-  if (successful){
+  if (successful) {
     showFileInfo("Text writer: ", keys);
   }
 

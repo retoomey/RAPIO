@@ -39,7 +39,7 @@ NetcdfLatLonGrid::write(std::shared_ptr<DataType> dt,
 {
   // Generalize the writer maybe...
   // if (dfs->cdmcompliance || dfs->faacompliance) {
-  //  LogSevere("Ignoring cdm/faa flags, need example files for this.\n");
+  //  fLogSevere("Ignoring cdm/faa flags, need example files for this.");
   // }
   // FIXME: Note, we might want to validate the dimensions, etc.
   // Two dimensions: "Lat", "Lon"

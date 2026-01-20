@@ -70,7 +70,8 @@ public:
   readConfigFile();
 
   /** Get the product info based on fields */
-  ProductInfo* getProductInfo(const std::string& varName, const std::string& units);
+  ProductInfo *
+  getProductInfo(const std::string& varName, const std::string& units);
 
   /** Give back W2 info based on passed in HMRG */
   bool

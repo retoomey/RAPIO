@@ -53,7 +53,7 @@ IOHmrg::initialize()
 IOHmrg::~IOHmrg()
 { }
 
-ProductInfo*
+ProductInfo *
 IOHmrg::getProductInfo(const std::string& varName, const std::string& units)
 {
   return theProductInfos.getProductInfo(varName, units);
@@ -77,7 +77,7 @@ IOHmrg::createDataType(const std::string& params)
 {
   URL url(params);
 
-  // LogInfo("HMRG reader: " << url << "\n");
+  // fLogInfo("HMRG reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
 
   gzFile fp;
@@ -89,7 +89,7 @@ IOHmrg::createDataType(const std::string& params)
     // FIXME: add a url to local temp file function to RAPIO.  We use URL's which can be remote.
     fp = gzopen(url.toString().c_str(), "rb");
     if (fp == nullptr) {
-      LogSevere("HRMG reader Couldn't open local file at " << url << ", errno is " << errno << "\n");
+      fLogSevere("HRMG reader Couldn't open local file at {}, errno is {}", url.toString(), errno);
       gzclose(fp);
       return nullptr;
     }
@@ -127,23 +127,23 @@ IOHmrg::createDataType(const std::string& params)
     StreamBufferToKey(keys, &g);
 
     if (validASCII) {
-      LogInfo("HMRG reader: " << url << " (Guess: MRMS Polar Binary)\n");
+      fLogInfo("HMRG reader: {} (Guess: MRMS Polar Binary)", url.toString());
       std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("RadialSet");
 
       std::string radarName(v.begin(), v.end());
       keys["RadarName"] = radarName;
       datatype = fmt->read(keys, nullptr);
     } else if (validYear) {
-      LogInfo("HMRG reader: " << url << " (Guess: MRMS Gridded Binary)\n");
+      fLogInfo("HMRG reader: {} (Guess: MRMS Gridded Binary)", url.toString());
       std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("LatLonGrid");
 
       keys["DataYear"] = to_string(firstYear);
       datatype         = fmt->read(keys, nullptr);
     } else {
-      LogSevere("HRMG Reader: Unrecognizable radar name or valid year, can't process " << url << "\n");
+      fLogSevere("HRMG Reader: Unrecognizable radar name or valid year, can't process {}", url.toString());
     }
   } catch (const ErrnoException& ex) {
-    LogSevere("Errno: " << ex.getErrnoVal() << " " << ex.getErrnoStr() << "\n");
+    fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
     datatype = nullptr;
   }
   gzclose(fp);
@@ -162,7 +162,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer(type);
 
   if (fmt == nullptr) {
-    LogSevere("Can't create a writer for datatype " << type << "\n");
+    fLogSevere("Can't create a writer for datatype {}", type);
     return false;
   }
 
@@ -189,7 +189,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
     // a special use case however
     fp = gzopen(filename.c_str(), "wb");
     if (fp == nullptr) {
-      LogSevere("HRMG writer Couldn't open local file at " << filename << ", errno is " << errno << "\n");
+      fLogSevere("HRMG writer Couldn't open local file at {}, errno is {}", filename, errno);
       gzclose(fp);
       return false;
     }
@@ -203,10 +203,10 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
       StreamBufferToKey(keys, nullptr);
     } catch (...) {
       successful = false;
-      LogSevere("Failed to write hmrg file for DataType\n");
+      fLogSevere("Failed to write hmrg file for DataType");
     }
   } catch (const ErrnoException& ex) {
-    LogSevere("Errno: " << ex.getErrnoVal() << " " << ex.getErrnoStr() << "\n");
+    fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
   gzclose(fp);
 
@@ -215,7 +215,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string compress = keys["compression"];
 
   if (!compress.empty()) {
-    LogDebug("Turning off compression option '" << compress << "', since hmrg uses gzip automatically\n");
+    fLogDebug("Turning off compression option '{}', since hmrg uses gzip automatically", compress);
     keys["compression"] = ""; // global for this run unless alg setting it
   }
 
@@ -224,30 +224,30 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // Standard output
-  if (successful){
+  if (successful) {
     showFileInfo("HMRG writer: ", keys);
   }
 
   return successful;
 } // IOHmrg::encodeDataType
 
-StreamBuffer*
+StreamBuffer *
 IOHmrg::keyToStreamBuffer(std::map<std::string, std::string>& keys)
 {
-  StreamBuffer* sb;
+  StreamBuffer * sb;
 
   // Make sure enough address numbers for 128 bit machines and forever hopefully
   try{
     unsigned long long rawPointer = std::stol(keys["BUFFER_ID"]);
-    sb = (StreamBuffer*) (rawPointer); // Clip down to os pointer size
-  }catch (...) {                // allow fail to nullptr
+    sb = (StreamBuffer *) (rawPointer); // Clip down to os pointer size
+  }catch (...) {                        // allow fail to nullptr
     sb = nullptr;
   }
   return sb;
 }
 
 void
-IOHmrg::StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer* sb)
+IOHmrg::StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer * sb)
 {
   keys["BUFFER_ID"] = to_string((unsigned long long) (sb));
 }

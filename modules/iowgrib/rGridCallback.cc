@@ -34,7 +34,7 @@ GridCallback::GridCallback(const URL& u, const std::string& match, const std::st
 void
 GridCallback::handleInitialize(int * decode, int * latlon)
 {
-  //std::cout << "[C++] Initialize grid\n";
+  // std::cout << "[C++] Initialize grid\n";
   // For grids, we want decoding/unpacking of data
   *decode = 1;
   // For grids, we want the lat lon values
@@ -44,7 +44,7 @@ GridCallback::handleInitialize(int * decode, int * latlon)
 void
 GridCallback::handleFinalize()
 {
-  //std::cout << "[C++] Finalize grid\n";
+  // std::cout << "[C++] Finalize grid\n";
 }
 
 void

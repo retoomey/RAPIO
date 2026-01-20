@@ -76,7 +76,7 @@ NetcdfRadialSet::getTestObject(
 
   auto& azimuths   = radialSet.getFloat1DRef(RadialSet::Azimuth);
   auto& beamwidths = radialSet.getFloat1DRef(RadialSet::BeamWidth);
-  //auto& gatewidths = radialSet.getFloat1D(RadialSet::GateWidth);
+  // auto& gatewidths = radialSet.getFloat1D(RadialSet::GateWidth);
 
   auto& data = radialSet.getFloat2DRef(Constants::PrimaryDataName);
 
@@ -84,7 +84,7 @@ NetcdfRadialSet::getTestObject(
     float start_az = i; // Each degree
     azimuths[i]   = start_az;
     beamwidths[i] = beam_width;
-    //gatewidths[i] = gate_width;
+    // gatewidths[i] = gate_width;
     for (size_t j = 0; j < num_gates; ++j) {
       data[i][j] = i;
     }

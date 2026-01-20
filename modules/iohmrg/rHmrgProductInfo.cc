@@ -57,31 +57,32 @@ ProductInfoSet::readConfigFile()
           myProductInfos.push_back(ProductInfo(varName, varUnit, varPrefix,
             varMissing, varNoCoverage, varScale, productDir, w2Name, w2Unit, w2Missing, w2NoCoverage));
         }catch (const std::exception& e) {
-          LogSevere("Error readingHMRG product info file: " << e.what() << "\n");
+          fLogSevere("Error readingHMRG product info file: {}", e.what());
           success = false;
         }
       }
     }
   }
   if (success) {
-    LogInfo("HMRG module: Successful reading of W2/HMRG product info table.\n");
+    fLogInfo("HMRG module: Successful reading of W2/HMRG product info table.");
   } else {
-    LogSevere("HMRG module: Errors reading W2/HMRG product info module.\n");
+    fLogSevere("HMRG module: Errors reading W2/HMRG product info module.");
   }
 } // ProductInfoSet::readConfigFile
 
-ProductInfo*
+ProductInfo *
 ProductInfoSet::getProductInfo(const std::string& w2Name, const std::string& w2Units)
 {
-  ProductInfo* pi;
-  for(size_t i =0; i < myProductInfos.size(); ++i){
+  ProductInfo * pi;
+
+  for (size_t i = 0; i < myProductInfos.size(); ++i) {
     // FIXME: Should we try to match more than name and units?
     // I could see cases with strange missing/unavailable values to deal with.
     // For now this 'should' get like 99% of things
     if (myProductInfos[i].w2Name == w2Name) {
-       if (myProductInfos[i].w2Unit == w2Units){
-         return &myProductInfos[i];
-       }
+      if (myProductInfos[i].w2Unit == w2Units) {
+        return &myProductInfos[i];
+      }
     }
   }
   return nullptr;
@@ -126,7 +127,7 @@ ProductInfo::ProductInfo()
 void
 ProductInfoSet::dump()
 {
-  LogInfo("There are " << myProductInfos.size() << " product infos stored:\n");
+  fLogInfo("There are {} product infos stored:", myProductInfos.size());
   for (auto& p:myProductInfos) {
     std::cout << p.varName << ", ";
     std::cout << p.varUnit << ", ";

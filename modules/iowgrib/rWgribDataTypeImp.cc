@@ -26,10 +26,10 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
 
     // Size should be at least 5...
     if (out.size() < 5) {
-      LogSevere("Parse Line is '" << line << "'\n");
-      LogSevere("Found a line of size " << out.size() << "\n");
+      fLogSevere("Parse Line is '{}'", line);
+      fLogSevere("Found a line of size {}", out.size());
       for (size_t i = 0; i < out.size(); ++i) {
-        LogSevere("--> " << i << "'" << out[i] << "'\n");
+        fLogSevere("--> {} '{}'", i, out[i]);
       }
       return false;
     }
@@ -43,8 +43,8 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
       f.number  = (message.size() > 1) ? std::stoull(message[1]) : 1;
       atMessage = messageNumber;
     } else {
-      LogSevere("Parse Line is '" << line << "'\n");
-      LogSevere("Tried to split '" << out[0] << " and failed.\n");
+      fLogSevere("Parse Line is '{}'", line);
+      fLogSevere("Tried to split '{}' and failed.", out[0]);
       return false;
     }
 
@@ -59,10 +59,10 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
     std::vector<std::string> outdate;
     Strings::split(out[2], '=', &outdate);
     if ((outdate.size() == 2) && (outdate[0] == "d")) {
-      // LogDebug("DATE: " << outdate[1] << "\n");
+      // fLogDebug("DATE: {}", outdate[1]);
       const std::string convert = "%Y%m%d%H"; // One of the Grib formats it seems
       idx.myTime = Time(outdate[1], convert);
-      // LogDebug("Converted Time is " << idx.myTime.getString(convert) << "\n");
+      // fLogDebug("Converted Time is {}", idx.myTime.getString(convert));
     } else {
       break;
       // bad date?
@@ -78,8 +78,8 @@ GribCatalogCache::processLine(const std::string& line, GribCatalogCache::Field& 
     f.type    = out[5];
   }catch (const std::exception& e)
   {
-    LogSevere("Parse Line is '" << line << "'\n");
-    LogSevere("Exception parsing: " << e.what() << "\n");
+    fLogSevere("Parse Line is '{}'", line);
+    fLogSevere("Exception parsing: {}", e.what());
     atMessage = -1;
     return false;
   }
@@ -122,8 +122,7 @@ GribCatalogCache::readCatalog()
       myMessages[myMessages.size() - 1].offset = offset;
       myMessages[myMessages.size() - 1].addField(buffer);
     } else {
-      LogSevere("Mismatched message number " << atMessage << ", "
-                                             << "expected " << myMessages.size() << "\n");
+      fLogSevere("Mismatched message number {}, expected {}", atMessage, myMessages.size());
       break; // what to do?
     }
     count++;
@@ -131,15 +130,15 @@ GribCatalogCache::readCatalog()
 
   // Our parser should match the wgrib2 count
   if (c != count) {
-    LogSevere("Mismatch wgrib2 count vs c" << count << ", " << c << "\n");
+    fLogSevere("Mismatch wgrib2 count vs c {}, {}", count, c);
     success = false;
   }
 
   if (!success) {
-    LogSevere("Error trying to read/parse catalog information\n");
+    fLogSevere("Error trying to read/parse catalog information");
   }
 
-  //  LogInfo("Catalog matched: " << c << " items\n");
+  //  fLogInfo("Catalog matched: {} items", c);
 
   myLoaded = true;
 } // GribCatalogCache::readCatalog
@@ -252,7 +251,7 @@ WgribDataTypeImp::haveSingleMatch(const std::string& match)
   auto c = catalog->getMatchCount();
 
   if (c != 1) {
-    LogSevere("\"" << match << "\" matches " << c << " field(s). You need an exact match\n");
+    fLogSevere("\"{}\" matches {} field(s). You need an exact match", match, c);
     return nullptr;
   }
   return catalog;
@@ -268,7 +267,7 @@ WgribDataTypeImp::getMessage(const std::string& key, const std::string& levelstr
   auto c = myCatalog.match(key, levelstr, subtypestr, keystr, message, field);
 
   if (c != 1) {
-    LogSevere("getFloat2D keys match " << c << " items.  Needs to be 1 unique match.\n");
+    fLogSevere("getFloat2D keys match {} items.  Needs to be 1 unique match.", c);
     return nullptr;
   }
 
@@ -295,7 +294,7 @@ WgribDataTypeImp::getFloat2D(const std::string& key, const std::string& levelstr
   auto c = myCatalog.match(key, levelstr, subtypestr, keystr, message, field);
 
   if (c != 1) {
-    LogSevere("getFloat2D keys match " << c << " items.  Needs to be 1 unique match.\n");
+    fLogSevere("getFloat2D keys match {} items.  Needs to be 1 unique match.", c);
     return nullptr;
   }
 
@@ -316,7 +315,7 @@ WgribDataTypeImp::getFloat3D(const std::string& key, std::vector<std::string> zL
   auto keys = myCatalog.match3D(key, zLevels);
 
   if (keys.size() != zLevels.size()) {
-    LogSevere("Didn't find all requested 3D levels.\n");
+    fLogSevere("Didn't find all requested 3D levels.");
     return nullptr;
   }
 
@@ -343,7 +342,7 @@ WgribDataTypeImp::getLatLonGrid(const std::string& key, const std::string& level
   auto c = myCatalog.match(key, levelstr, subtypestr, keystr, message, field);
 
   if (c != 1) {
-    LogSevere("getLatLonGrid keys match " << c << " items.  Needs to be 1 unique match.\n");
+    fLogSevere("getLatLonGrid keys match {} items.  Needs to be 1 unique match.", c);
     return nullptr;
   }
 

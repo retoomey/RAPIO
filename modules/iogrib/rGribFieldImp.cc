@@ -48,7 +48,7 @@ GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
     // not 'always'.  For now, assume if GribDataTypeImp went out of scope
     // that we cannot load.
     if (myDataTypeValid.lock() == nullptr) {
-      LogSevere("GribDataType is no longer valid.  Grib fields and Grib messages require it to exist.\n");
+      fLogSevere("GribDataType is no longer valid.  Grib fields and Grib messages require it to exist.");
       return false;
     }
     const g2int unpack = unpacked ? 1 : 0; // do/do not unpack
@@ -58,7 +58,7 @@ GribFieldImp::fieldLoaded(bool unpacked, bool expanded)
     int ierr = g2_getfld(myBufferPtr, myFieldNumber, unpack, expand, &myGribField);
 
     if (ierr > 0) {
-      LogSevere(IOGrib::getGrib2Error(ierr));
+      fLogSevere("{}", IOGrib::getGrib2Error(ierr));
       myGribField = nullptr; // Does g2_getfld delete on error?
     }
   }
@@ -165,16 +165,16 @@ std::shared_ptr<Array<float, 2> >
 GribFieldImp::getFloat2D()
 {
   if (!fieldLoaded(true, true)) { // full load
-    LogSevere("Couldn't unpack/expand field data!\n");
+    fLogSevere("Couldn't unpack/expand field data!");
     return nullptr;
   }
 
-  LogInfo("Grib2 field unpack/expand successful.\n");
+  fLogInfo("Grib2 field unpack/expand successful.");
   auto& f = *myGribField;
   g2float * g2grid = f.fld;
 
   if (g2grid == nullptr) {
-    LogSevere("Internal grid float point was nullptr, nothing read into array.\n");
+    fLogSevere("Internal grid float point was nullptr, nothing read into array.");
     return nullptr;
   }
 
@@ -185,7 +185,7 @@ GribFieldImp::getFloat2D()
   const size_t numLat = (gds[8] < 0) ? 0 : (size_t) (gds[8]); // 35-38 Ny -- Number of points along the y-axis (N-S)
 
   // Keep the dimensions
-  LogInfo("Grib2 2D field size: " << numLat << " (lat) * " << numLon << " (lon).\n");
+  fLogInfo("Grib2 2D field size: {} (lat) * {} (lon).", numLat, numLon);
 
 
   // Fill array with 2D data
@@ -205,16 +205,16 @@ std::shared_ptr<Array<float, 3> >
 GribFieldImp::getFloat3D(std::shared_ptr<Array<float, 3> > in, size_t atZ, size_t numZ)
 {
   if (!fieldLoaded(true, true)) { // full load
-    LogSevere("Couldn't unpack/expand field data!\n");
+    fLogSevere("Couldn't unpack/expand field data!");
     return in;
   }
 
-  LogInfo("Grib2 field unpack/expand successful.\n");
+  fLogInfo("Grib2 field unpack/expand successful.");
   auto& f = *myGribField;
   g2float * g2grid = f.fld;
 
   if (g2grid == nullptr) {
-    LogSevere("Internal grid float point was nullptr, nothing read into array.\n");
+    fLogSevere("Internal grid float point was nullptr, nothing read into array.");
     return nullptr;
   }
 
@@ -231,16 +231,15 @@ GribFieldImp::getFloat3D(std::shared_ptr<Array<float, 3> > in, size_t atZ, size_
 
   if (in == nullptr) {
     // We're the first, create the 3D array
-    LogInfo("Grib2 3D field size: " << numLat << " (lat) * " << numLon << " (lon) * " << numZ << " levels.\n");
+    fLogInfo("Grib2 3D field size: {} (lat) * {} (lon) * {} levels.", numLat, numLon, numZ);
     the3D = Arrays::CreateFloat3D(numLat, numLon, numZ);
   } else {
     auto& s = in->getSizes();
     // Check given old array matches our dimension, otherwise we can't append
     if ((s[0] != numLat) || (s[1] != numLon) || (s[2] != numZ)) {
-      LogSevere("Mismatch on secondary layer dimensions, can't add 2D layer (" << atZ << ")  "
-                                                                               << numLat << " != " << s[0] << " or "
-                                                                               << numLon << " != " << s[1] << " or "
-                                                                               << numZ << " != " << s[2] << "\n");
+      fLogSevere(
+        "Mismatch on secondary layer dimensions, can't add 2D layer ({})  {} != {} or {} != {} or {} != {}",
+        atZ, numLat, s[0], numLon, s[1], numZ, s[2]);
       return in;
     }
     the3D = in;

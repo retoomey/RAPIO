@@ -91,13 +91,13 @@ WgribFieldImp::getLevelName()
 std::shared_ptr<Array<float, 2> >
 WgribFieldImp::getFloat2D()
 {
-  LogSevere("getFloat2D not implemented in field class\n");
+  fLogSevere("getFloat2D not implemented in field class");
   return nullptr;
 } // WgribFieldImp::getFloat2D
 
 std::shared_ptr<Array<float, 3> >
 WgribFieldImp::getFloat3D(std::shared_ptr<Array<float, 3> > in, size_t atZ, size_t numZ)
 {
-  LogSevere("getFloat3D not implemented in field class\n");
+  fLogSevere("getFloat3D not implemented in field class");
   return nullptr;
 } // WgribFieldImp::getFloat3D

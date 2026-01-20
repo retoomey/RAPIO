@@ -44,7 +44,7 @@ TextBinaryTable::write(std::shared_ptr<DataType> dt,
   std::shared_ptr<BinaryTable> btable = std::dynamic_pointer_cast<BinaryTable>(dt);
 
   if (btable == nullptr) {
-    LogSevere("Not a BinaryTable we can't handle anything else.\n");
+    fLogSevere("Not a BinaryTable we can't handle anything else.");
     return false;
   }
 
@@ -54,7 +54,7 @@ TextBinaryTable::write(std::shared_ptr<DataType> dt,
     std::ostream& file = *IOText::theFile; // no copy constructor
     successful = btable->dumpToText(file);
   }catch (const std::exception& e) {
-    LogSevere("Error writing to IOTEXT open file\n");
+    fLogSevere("Error writing to IOTEXT open file");
   }
   return successful;
 } // TextBinaryTable::write

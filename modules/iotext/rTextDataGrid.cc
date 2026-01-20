@@ -187,7 +187,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
     // -----------------
     successful = true;
   }catch (const std::exception& e) {
-    LogSevere("Error writing to IOTEXT open file\n");
+    fLogSevere("Error writing to IOTEXT open file");
   }
   return successful;
 } // TextDataGrid::write

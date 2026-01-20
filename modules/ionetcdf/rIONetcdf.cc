@@ -70,7 +70,7 @@ IONetcdf::createDataType(const std::string& params)
 {
   URL url(params);
 
-  LogInfo("Netcdf reader: " << url << "\n");
+  fLogInfo("Netcdf reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
 
   // Note, in RAPIO we can read a netcdf file remotely too
@@ -98,14 +98,14 @@ IONetcdf::createDataType(const std::string& params)
       retval = getAtt(ncid, Constants::sDataType, type);
       if (retval != NC_NOERR) {
         // Not necessarily an error, we could have a custom format
-        LogInfo("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader\n");
+        fLogInfo("The NSSL 'DataType' netcdf attribute is not in netcdf file, trying generic reader");
         type = "DataGrid";
       }
 
       std::shared_ptr<IOSpecializer> fmt = IONetcdf::getIOSpecializer(type);
       if (fmt == nullptr) {
         // Not necessarily an error, we could have a custom format
-        LogInfo("No netcdf reader for DataType '" << type << "', using generic reader\n");
+        fLogInfo("No netcdf reader for DataType '{}', using generic reader", type);
         fmt = IONetcdf::getIOSpecializer("DataGrid");
       }
       if (fmt != nullptr) {
@@ -113,16 +113,16 @@ IONetcdf::createDataType(const std::string& params)
         keys["NETCDF_NCID"] = to_string(ncid);
         keys["NETCDF_URL"]  = url.toString();
         datatype = fmt->read(keys, nullptr);
-	if (datatype){
+        if (datatype) {
           datatype->postRead(keys);
-	}
+        }
       }
     } else {
-      LogSevere("Error reading netcdf: " << nc_strerror(retval) << "\n");
+      fLogSevere("Error reading netcdf: {}", nc_strerror(retval));
     }
     nc_close(ncid);
   } else {
-    LogSevere("Unable to pull data from " << url << "\n");
+    fLogSevere("Unable to pull data from {}", url.toString());
   }
   return (datatype);
 } // IONetcdf::readNetcdfDataType
@@ -148,7 +148,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   if (fmt == nullptr) {
-    LogSevere("Can't create a netcdf IO writer for datatype " << type << "\n");
+    fLogSevere("Can't create a netcdf IO writer for datatype {}", type);
     return false;
   }
 
@@ -190,13 +190,12 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   } catch (const NetcdfException& ex) {
     // nc_close_memio(ncid, &finalmem);
     nc_close(ncid);
-    LogSevere("Netcdf create error: "
-      << filename << " " << ex.getNetcdfStr() << "\n");
+    fLogSevere("Netcdf create error: {} {}", filename, ex.getNetcdfStr());
     return false;
   }
 
   if (ncid == -1) {
-    LogSevere("Invalid netcdf ncid, can't write\n");
+    fLogSevere("Invalid netcdf ncid, can't write");
     return false;
   }
 
@@ -209,7 +208,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     dt->postWrite(keys);
   } catch (...) {
     successful = false;
-    LogSevere("Failed to write netcdf file for DataType\n");
+    fLogSevere("Failed to write netcdf file for DataType");
   }
 
   nc_close(ncid);
@@ -221,7 +220,7 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // Standard output
-  if (successful){
+  if (successful) {
     std::stringstream s;
     s << " (cmode:" << ncflags << " deflate_level: " << IONetcdf::GZ_LEVEL << ")";
     showFileInfo("Netcdf writer: ", keys, s.str());
@@ -247,7 +246,7 @@ IONetcdf::addVar(
   retval = nc_def_var(ncid, name, xtype, ndims, dimids, varid);
   if (retval != NC_NOERR) {
     // Try again on netcdf4, etc only types...
-    LogSevere("Current netcdf format not handling " << name << ", trying again\n");
+    fLogSevere("Current netcdf format not handling {}, trying again", name);
     if (xtype == NC_UBYTE) { // netcdf4 and cdf5 only
       xtype  = NC_BYTE;
       retval = nc_def_var(ncid, name, xtype, ndims, dimids, varid);
@@ -257,7 +256,7 @@ IONetcdf::addVar(
   if (retval == NC_NOERR) {
     // Assign units string
     if (units != 0) {
-     // retval = addAtt(ncid, Constants::Units, std::string(units), *varid);
+      // retval = addAtt(ncid, Constants::Units, std::string(units), *varid);
       retval = addAtt(ncid, Constants::Units, "failure", *varid);
     }
 
@@ -650,7 +649,7 @@ IONetcdf::dataArrayTypeToNetcdf(const DataArrayType& theType, nc_type& xtype)
       case DOUBLE: xtype = NC_DOUBLE;
         break;
       default:
-        LogSevere("Trying to convert an unknown DataArrayType, using NC_Float..\n");
+        fLogSevere("Trying to convert an unknown DataArrayType, using NC_Float..");
         return false;
 
         break;
@@ -674,7 +673,7 @@ IONetcdf::netcdfToDataArrayType(const nc_type& xtype, DataArrayType& theType)
       case NC_DOUBLE: theType = DOUBLE;
         break;
       default:
-        LogSevere("Trying to convert an unhandled netcdf to DataArrayType\n");
+        fLogSevere("Trying to convert an unhandled netcdf to DataArrayType");
         return false;
 
         break;
@@ -716,9 +715,9 @@ IONetcdf::declareGridVars(
     // Determine netcdf data output type from data grid type
     nc_type xtype;
     if (!dataArrayTypeToNetcdf(l->getStorageType(), xtype)) {
-      LogSevere(
-        "Declaring unknown/unsupported DataGrid variable type for " << theName <<
-          ", using NC_FLOAT, field may corrupt in output.\n");
+      fLogSevere(
+        "Declaring unknown/unsupported DataGrid variable type for {}, using NC_FLOAT, field may corrupt in output.",
+        theName);
     }
 
     // Translate the indexes into the matching netcdf dimension
@@ -750,7 +749,7 @@ IONetcdf::getDimensions(int ncid,
   NETCDF(nc_inq_ndims(ncid, &ndimsp));
   size_t numdims = ndimsp < 0 ? 0 : (size_t) (ndimsp);
 
-  // LogSevere("Number of dimensions: " << ndimsp << "\n");
+  // fLogSevere("Number of dimensions: {}", ndimsp);
 
   // Find the dimension ids
   // std::vector<int> dimids;
@@ -762,7 +761,7 @@ IONetcdf::getDimensions(int ncid,
   // NETCDF(nc_inq_unlimdims(ncid, &nunlim, NULL));
   // std::vector<int> unlimids; unlimids.resize(numlim);
   // Netcdf(nc_inq_unlimdims(ncid, &numlim, &unlimids[0]));
-  // if (nunlim > 0){ LogSevere("Can't handle unlimited netcdf data fields at moment...\n");}
+  // if (nunlim > 0){ fLogSevere("Can't handle unlimited netcdf data fields at moment...");}
 
   // For each dimension, get the name and size
   dimsizes.resize(numdims);
@@ -770,11 +769,11 @@ IONetcdf::getDimensions(int ncid,
   char name[NC_MAX_NAME + 1];
 
   for (size_t d = 0; d < numdims; ++d) {
-    // LogSevere("For dim " << d << " value is " << dimids[d] << "\n");
+    // fLogSevere("For dim {} value is {}", d, dimids[d]);
     // NETCDF(nc_inq_dim(ncid, dimids[d], name, &length));      // id from name
     NETCDF(nc_inq_dim(ncid, dimids[d], name, &dimsizes[d])); // id from name
     dimnames[d] = std::string(name);
-    // LogSevere("--> '"<<dimnames[d]<<"' " << dimsizes[d] << "\n");
+    // fLogSevere("--> '{}' {}", dimnames[d], dimsizes[d]);
   }
   return numdims;
 } // IONetcdf::getDimensions
@@ -819,10 +818,10 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
     if (list != nullptr) {
       switch (type_in) {
           case NC_BYTE:
-            LogSevere("Unhandled NETCDF type NC_BYTE for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_BYTE for {}, ignoring read of it.", name_in);
             break;
           case NC_UBYTE:
-            LogSevere("Unhandled NETCDF type NC_UBYTE for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_UBYTE for {}, ignoring read of it.", name_in);
             break;
           case NC_CHAR: {
             std::string aString;
@@ -831,10 +830,10 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
           }
           break;
           case NC_SHORT:
-            LogSevere("Unhandled NETCDF type NC_SHORT for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_SHORT for {}, ignoring read of it.", name_in);
             break;
           case NC_USHORT:
-            LogSevere("Unhandled NETCDF type NC_USHORT for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_USHORT for {}, ignoring read of it.", name_in);
             break;
           case NC_LONG:
             long aLong;
@@ -842,7 +841,7 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
             list->put<long>(outattname, aLong);
             break; // or NC_INT
           case NC_UINT:
-            LogSevere("Unhandled NETCDF type NC_UINT for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_UINT for {}, ignoring read of it.", name_in);
             break;
           case NC_FLOAT: {
             float aFloat;
@@ -857,7 +856,7 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
           }
           break;
           case NC_STRING:
-            LogSevere("Unhandled NETCDF type NC_STRING for " << name_in << ", ignoring read of it.\n");
+            fLogSevere("Unhandled NETCDF type NC_STRING for {}, ignoring read of it.", name_in);
             break;
           default:
             break;

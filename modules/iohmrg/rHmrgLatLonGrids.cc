@@ -27,7 +27,7 @@ HmrgLatLonGrids::read(
   std::map<std::string, std::string>& keys,
   std::shared_ptr<DataType>         dt)
 {
-  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
+  StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
 
   if (g != nullptr) {
     int dataYear;
@@ -38,7 +38,7 @@ HmrgLatLonGrids::read(
     }
     return readLatLonGrids(*g, dataYear);
   } else {
-    LogSevere("Invalid stream buffer pointer, cannot read\n");
+    fLogSevere("Invalid stream buffer pointer, cannot read");
   }
   return nullptr;
 }
@@ -48,8 +48,8 @@ HmrgLatLonGrids::write(
   std::shared_ptr<DataType>         dt,
   std::map<std::string, std::string>& keys)
 {
-  bool success = false;
-  StreamBuffer* g = IOHmrg::keyToStreamBuffer(keys);
+  bool success     = false;
+  StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
 
   if (g != nullptr) {
     auto latlonarea = std::dynamic_pointer_cast<LatLonArea>(dt);
@@ -57,7 +57,7 @@ HmrgLatLonGrids::write(
       success = writeLatLonGrids(*g, latlonarea);
     }
   } else {
-    LogSevere("Invalid stream buffer pointer, cannot write\n");
+    fLogSevere("Invalid stream buffer pointer, cannot write");
   }
 
   return success;
@@ -83,7 +83,7 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   // "MERC" proj1=3;
   // "LL  " proj1=4;
 
-  const int map_scale    = g.readInt();                  // 41-44
+  const int map_scale    = g.readInt();                // 41-44
   const float lat1       = g.readScaledInt(map_scale); // 45-48
   const float lat2       = g.readScaledInt(map_scale); // 49-52
   const float lon        = g.readScaledInt(map_scale); // 53-56
@@ -132,14 +132,14 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   std::string orgName = varName;
 
   IOHmrg::HmrgToW2Name(varName, varName);
-  LogDebug("Convert: " << orgName << " to " << varName << "\n");
+  fLogDebug("Convert: {} to {}", orgName, varName);
 
   // Common code here with Radial
   // Scale for scaling data values
   int dataScale = g.readInt();
 
   if (dataScale == 0) {
-    LogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?\n");
+    fLogSevere("Data scale in hmrg is zero, forcing to 1.  Is data corrupt?");
     dataScale = 1;
   }
 
@@ -157,27 +157,26 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   // Common code here with Radial
   std::vector<short int> rawBuffer;
 
-#if 0
-    for (size_t i = 0; i < numRadars; i++) {
-      LogDebug("   Got radar '" << radars[i] << "'\n");
-    }
-    LogDebug("   LatLons: " << lonSpacingDegs << ", " << latSpacingDegs << ", " << lonNWDegs1 << ", "
-                            << latNWDegs1 << ", " << lonNWDegs << ", " << latNWDegs << "\n");
-    LogDebug("   Date: " << time.getString("%Y %m %d %H %M %S") << "\n");
-    LogDebug("   Time: " << time << "\n");
-    LogDebug("   Dimensions: " << num_x << " " << num_y << " " << num_z << "\n");
-    LogDebug("   Projection: '" << projection << "'\n"); // always "LL  "?
-    LogDebug(
-      "   Lat, lat2, lon: " << lat1 << ", " << lat2 << ", " << lon << ", nw:" << latNWDegs1 << ", " << lonNWDegs1 <<
-        "\n");
-    LogDebug("   VarNameUnit: " << varName << ", " << varUnit << "\n");
-    LogDebug("   VarScale/Missing: " << dataScale << " " << dataMissingValue << "\n");
-    if (heightMeters.size() > 0) {
-      LogDebug("  OK height Z at 0 is " << heightMeters[0] << "\n");
-      LogDebug("  Spacing is " << latSpacingDegs << ", " << lonSpacingDegs << "\n");
-    }
+  #if 0
+  for (size_t i = 0; i < numRadars; i++) {
+    fLogDebug("   Got radar '{}'", radars[i]);
   }
-#endif
+  fLogDebug("   LatLons: {}, {}, {}, {}, {}, {}",
+    lonSpacingDegs, latSpacingDegs, lonNWDegs1, latNWDegs1, lonNWDegs, latNWDegs);
+  fLogDebug("   Date: {}", << time.getString("%Y %m %d %H %M %S"));
+  fLogDebug("   Time: ", time);
+  fLogDebug("   Dimensions: {} {} {}", num_x, num_y, num_z);
+  fLogDebug("   Projection: '{}'", projection); // always "LL  "?
+  fLogDebug("   Lat, lat2, lon: {}, {}, {}, nw:{}, {}", lat1, lat2, lon, latNWDegs1, lonNWDegs1);
+  fLogDebug("   VarNameUnit: {}, {}", varName, varUnit);
+  fLogDebug("   VarScale/Missing: {} {}", dataScale, dataMissingValue);
+  if (heightMeters.size() > 0) {
+    fLogDebug("  OK height Z at 0 is {}", heightMeters[0]);
+    fLogDebug("  Spacing is {}, {}", latSpacingDegs, lonSpacingDegs);
+  }
+} // HmrgLatLonGrids::readLatLonGrids
+
+  #endif // if 0
 
   LLH location(latNWDegs, lonNWDegs, heightMeters[0] / 1000.0); // takes kilometers...
 
@@ -196,7 +195,7 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   size_t at = 0;
 
   if (num_z == 1) {
-    LogInfo("HMRG reader: --Single layer LatLonGrid--\n");
+    fLogInfo("HMRG reader: --Single layer LatLonGrid--");
 
     // Create a LatLonGrid using the data
     auto latLonGridSP = LatLonGrid::Create(
@@ -225,12 +224,12 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
           IOHmrg::fromHmrgValue(rawBuffer[at++], dataUnavailable, dataMissing, dataScale);
       }
     }
-    // LogInfo("    Found " << countm << " missing values\n");
+    // fLogInfo("    Found {} missing values", countm);
     return latLonGridSP;
 
     // Z > 1 create a LatLonHeightGrid
   } else {
-    LogInfo("HMRG reader: --Multi layer LatLonGrid--\n");
+    fLogInfo("HMRG reader: --Multi layer LatLonGrid--");
 
     // Create a LatLonGrid using the data
     auto latLonHeightGridSP = LatLonHeightGrid::Create(
@@ -268,7 +267,7 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
         }
       }
     }
-    LogInfo(">>Finished reading full LatLonHeightGrid\n");
+    fLogInfo(">>Finished reading full LatLonHeightGrid");
 
     return latLonHeightGridSP;
   }
@@ -290,37 +289,38 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   // FIXME: become a function probably. Shared with radial set
   std::string units = llg.getUnits();
   std::string typeName = llg.getTypeName();
-  std::string name     = typeName; // name used
+  std::string name = typeName; // name used
 
   // Defaults if missing in table
   int dataMissingValue = -99;
-  int dataNCValue      = -999;
-  int dataScale        = 10;
+  int dataNCValue = -999;
+  int dataScale = 10;
 
   // --------------------------
   // FIXME: Not 100% sure what these represent, we'll tweak later
-  const int map_scale        = 1000;
+  const int map_scale = 1000;
   const int z_scale = 1;
-  const float lat1 = 30;      // FIXME: what is this?  Calculate these properly
-  const float lat2 = 60;      // FIXME: what is this?
-  const float lon  = -60.005; // FIXME: what is this?
+  const float lat1 = 30;     // FIXME: what is this?  Calculate these properly
+  const float lat2 = 60;     // FIXME: what is this?
+  const float lon = -60.005; // FIXME: what is this?
 
   // Values appear fixed, not sure they matter much, they only compress a couple values
-  const int xy_scale  = 1000; // Not used?
+  const int xy_scale = 1000; // Not used?
   const int dxy_scale = 100000;
   // --------------------------
 
-  ProductInfo* pi = IOHmrg::getProductInfo(typeName, units);
-  if (pi != nullptr){
-     LogInfo("(Found) MRMS binary product info for " << typeName << "/" << units << "\n");
-     name = pi->varName;
-     units = pi->varUnit;
-     dataMissingValue = pi->varMissing;
-     dataNCValue = pi->varNoCoverage;
-     dataScale = pi->varScale;
-     // FIXME: use the w2missing and w2unavailable table values for replace?
-  }else{
-     LogInfo("No mrms binary product info for " << typeName << ", using defaults\n");
+  ProductInfo * pi = IOHmrg::getProductInfo(typeName, units);
+
+  if (pi != nullptr) {
+    fLogInfo("(Found) MRMS binary product info for {}/{}", typeName, units);
+    name = pi->varName;
+    units = pi->varUnit;
+    dataMissingValue = pi->varMissing;
+    dataNCValue = pi->varNoCoverage;
+    dataScale = pi->varScale;
+    // FIXME: use the w2missing and w2unavailable table values for replace?
+  } else {
+    fLogInfo("No mrms binary product info for {}, using defaults", typeName);
   }
   // End field conversion
   // ------------------------------------------------------------------
@@ -345,7 +345,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   // Calculate scaled lat/lon spacing values
   const float lonSpacingDegs = llg.getLonSpacing();
   const float latSpacingDegs = llg.getLatSpacing();
-  const auto aLoc       = llg.getTopLeftLocationAt(0, 0);
+  const auto aLoc = llg.getTopLeftLocationAt(0, 0);
   const float lonNWDegs = aLoc.getLongitudeDeg();
   const float latNWDegs = aLoc.getLatitudeDeg();
 
@@ -382,7 +382,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
 
   // Write the placeholder array of 10
   // I think we could use this to 'extend' the format if wanted
-  for(size_t p=0; p<10; ++p){
+  for (size_t p = 0; p < 10; ++p) {
     g.writeInt(0);
   }
 
@@ -392,12 +392,12 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   g.writeInt(dataScale);
   g.writeInt(dataMissingValue);
 
-#if 0
-  LogDebug("Convert: " << typeName << " to " << name << "\n");
-  LogDebug("Output units is " << units << "\n");
-  LogDebug("   LatLons: " << lonSpacingDegs << ", " << latSpacingDegs << ", " << lonNWDegs1 << ", "
-                          << latNWDegs1 << ", " << lonNWDegs << ", " << latNWDegs << "\n");
-#endif
+  #if 0
+  fLogDebug("Convert: {} to {}", typeName, name);
+  fLogDebug("Output units is {}", units);
+  fLogDebug("   LatLons: {}, {}, {}, {}, {}, {}",
+    lonSpacingDegs, latSpacingDegs, lonNWDegs1, latNWDegs1, lonNWDegs, latNWDegs);
+  #endif
 
   // Write number and names of contributing radars
   // Leaving this none for now.  We could use attributes in the LatLonGrid
@@ -436,7 +436,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   const int dataUnavailable = dataNCValue * dataScale;  // prescaled for speed
 
   if (auto llgptr = std::dynamic_pointer_cast<LatLonGrid>(llgp)) {
-    LogInfo("HMRG writer: --LatLonGrid--\n");
+    fLogInfo("HMRG writer: --LatLonGrid--");
     auto& data = llg.getFloat2DRef(Constants::PrimaryDataName);
 
     // NOTE: flipped order from RadialSet array if you try to merge the code
@@ -454,12 +454,12 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     }
     success = true;
   } else if (auto llnptr = std::dynamic_pointer_cast<LLHGridN2D>(llgp)) {
-    LogInfo("HMRG writer: --Multi layer N 2D layers (LLHGridN2D)--\n");
+    fLogInfo("HMRG writer: --Multi layer N 2D layers (LLHGridN2D)--");
     auto& lln = *llnptr;
 
     for (size_t z = 0; z < num_z; ++z) {
       // Each 3D is a 2N layer here
-      auto llg     = lln.get(z);
+      auto llg = lln.get(z);
       auto& data = llg->getFloat2DRef();
 
       for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
@@ -477,7 +477,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     }
     success = true;
   } else if (auto llhgptr = std::dynamic_pointer_cast<LatLonHeightGrid>(llgp)) {
-    LogInfo("HMRG writer: --Multi layer LatLonArea--\n");
+    fLogInfo("HMRG writer: --Multi layer LatLonArea--");
 
     // Only for the 3D implementation
     auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
@@ -500,7 +500,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     }
     success = true;
   } else {
-    LogSevere("HMRG: LatLonArea unsupported type, can't write this\n");
+    fLogSevere("HMRG: LatLonArea unsupported type, can't write this");
   }
 
   return success;
