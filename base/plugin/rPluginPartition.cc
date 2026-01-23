@@ -79,10 +79,10 @@ PluginPartition::processOptions(RAPIOOptions& o)
             myPartitionInfo.set2DDimensions(d1, d2);
             totalPartitions = d1 * d2;
           }catch (const std::exception& e) {
-            LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
+            fLogSevere("Couldn't parse {} dimensions: {}", myName, pieces[1]);
           }
         } else {
-          LogSevere("Couldn't parse " << myName << " dimensions: " << pieces[1] << "\n");
+          fLogSevere("Couldn't parse {} dimensions: {}", myName, pieces[1]);
           return;
         }
       }
@@ -93,20 +93,19 @@ PluginPartition::processOptions(RAPIOOptions& o)
         try{
           int partNumber = std::stoi(pieces[2]);
           if (partNumber > totalPartitions) {
-            LogSevere(
-              "Partition number for '" << myPartitionAlg << "' given '" << partNumber << "' is larger than total partitions '" << totalPartitions <<
-                "'\n");
+            fLogSevere("Partition number for '{}' given '{}' is larger than total partitions '{}'",
+              myPartitionAlg, partNumber, totalPartitions);
             return;
           }
           myPartitionInfo.setSelectedPartitionNumber(partNumber);
         }catch (const std::exception& e) {
-          LogSevere("Couldn't parse " << myName << " partition number: " << pieces[2] << "\n");
+          fLogSevere("Couldn't parse {} partition number: {}", myName, pieces[2]);
           return;
         }
       }
     }
   } else {
-    LogSevere("Couldn't parse " << myName << "\n");
+    fLogSevere("Couldn't parse {}", myName);
   }
   myValid = true;
 } // PluginPartition::processOptions
@@ -121,7 +120,7 @@ PluginPartition::getPartitionInfo(
     info.partition(grid);
     info.printTable();
   } else {
-    LogSevere("Partition info incorrect.\n");
+    fLogSevere("Partition info incorrect.");
     return false;
   }
   return true;

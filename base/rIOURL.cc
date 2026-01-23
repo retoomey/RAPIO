@@ -61,7 +61,7 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
       buf.resize(length);
       file.read(&buf[0], length);
     } else {
-      LogSevere("FAILED local file read " << url << "\n");
+      fLogSevere("FAILED local file read {}", url.toString());
     }
   }
   return (buf.size());

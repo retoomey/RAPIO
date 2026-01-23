@@ -329,7 +329,7 @@ Time::putString(const std::string& value,
         ms = std::stoi(millistr.c_str());
       }catch (const std::exception& e) {
         // allow failure, maybe warn
-        LogSevere("Failed to convert ms from string '" << millistr << "' to number\n");
+        fLogSevere("Failed to convert ms from string '{}' to number", millistr);
       }
       if (ms < 0) { ms = 0; }
       if (ms > 999) { ms = 999; }

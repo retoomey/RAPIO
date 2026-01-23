@@ -19,7 +19,7 @@ ConfigRecord::readParams(const std::string & params,
     // FIXME: Ancient indexes have this.  Might need to implement it
     static bool once = true;
     if (once) {
-      LogSevere("Can't handle a param change index at moment.  We can implement if you need this\n");
+      fLogSevere("Can't handle a param change index at moment.  We can implement if you need this");
       once = false;
     }
     return;
@@ -29,7 +29,7 @@ ConfigRecord::readParams(const std::string & params,
   Strings::split(params, &v);
 
   if (v.empty()) {
-    LogSevere("Record has empty parameter tag: " << params << '\n');
+    fLogSevere("Record has empty parameter tag: {}", params);
     return;
   }
 
@@ -195,7 +195,7 @@ ConfigRecord::readXML(Record& rec, const PTreeNode& item,
     }
     return true;
   }catch (const std::exception& e) {
-    LogSevere("Parse error on xml of record:\n " << rec << "\n");
+    fLogSevere("Parse error on xml of record: ", rec);
   }
   return false;
 } // Record::readXML

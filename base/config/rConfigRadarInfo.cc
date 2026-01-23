@@ -30,7 +30,7 @@ ConfigRadarInfo::readSettings(std::shared_ptr<PTreeData> d)
   // const URL loc(Config::getAbsoluteForRelative(ConfigRadarInfoXML));
   // if (loc.empty()){
   // This is before logging initialized
-  //   LogInfo("Couldn't find " << ConfigRadarInfoXML << "\n");
+  //   fLogInfo("Couldn't find {}", ConfigRadarInfoXML);
   // }
 
   // Force loading at startup for testing. Typically don't do this
@@ -81,11 +81,11 @@ ConfigRadarInfo::loadSettings()
         }
       }
     } else {
-      LogInfo("No " << ConfigRadarInfoXML << " found, no radar info database support.\n");
+      fLogInfo("No {} found, no radar info database support.", ConfigRadarInfoXML);
     }
-    LogInfo("Read " << count << " radars into radar info database\n");
+    fLogInfo("Read {} radars into radar info database", count);
   }catch (const std::exception& e) {
-    LogSevere("Error parsing XML from " << ConfigRadarInfoXML << "\n");
+    fLogSevere("Error parsing XML from {}", ConfigRadarInfoXML);
   }
 } // ConfigRadarInfo::loadSettings
 

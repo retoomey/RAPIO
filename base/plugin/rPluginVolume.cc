@@ -46,8 +46,7 @@ PluginVolume::getNewVolume(
   const std::string& historyKey)
 {
   // Elevation volume creation
-  LogInfo(
-    "Creating virtual volume for '" << historyKey << "\n");
+  fLogInfo("Creating virtual volume for '{}'", historyKey);
 
   // We break it up into key and the params
   std::string key, params;
@@ -59,10 +58,10 @@ PluginVolume::getNewVolume(
 
   // Stubbornly refuse to run if requested by name and not found or failed
   if (myVolume == nullptr) {
-    LogSevere("Volume '" << myVolumeAlg << "' requested, but failed to find and/or initialize.\n");
+    fLogSevere("Volume '{}' requested, but failed to find and/or initialize.", myVolumeAlg);
     exit(1);
   } else {
-    LogInfo("Using Volume algorithm: '" << myVolumeAlg << "'\n");
+    fLogInfo("Using Volume algorithm: '{}'", myVolumeAlg);
   }
   return myVolume;
 }

@@ -151,19 +151,19 @@ void nsePoint::calculatePointValues()
   //
   // check for realistic values of data:
   if ((_TempC < -273.15 || _TempC > 100) && _TempC != Constants::MissingData) {
-    LogInfo (" TempC is out of range: " << _TempC << "\n");
+    fLogInfo (" TempC is out of range: {}", _TempC);
   }
   if ((_DewPointC < -273.15 || _DewPointC > 100) && _DewPointC != Constants::MissingData) {
-    LogInfo (" DewPointC is out of range: " << _DewPointC << "\n");
+    fLogInfo (" DewPointC is out of range: {}", _DewPointC);
   }
   if ((_UWind < -100 || _UWind > 100) && _UWind != Constants::MissingData) {
-    LogInfo (" UWind is out of range: " << _UWind << "\n");
+    fLogInfo (" UWind is out of range: {}", _UWind);
   }
   if ((_VWind < -100 || _VWind > 100) && _VWind != Constants::MissingData) {
-    LogInfo (" VWind is out of range: " << _VWind << "\n");
+    fLogInfo (" VWind is out of range: {}", _VWind);
   }
   if ((_Height < -1000 || _Height > 100000) && _Height != Constants::MissingData) {
-    LogInfo (" Height is out of range: " << _Height << "\n");
+    fLogInfo (" Height is out of range: {}", _Height);
   }
 }
 

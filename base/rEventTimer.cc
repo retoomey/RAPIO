@@ -77,5 +77,5 @@ EventTimer::setTimerMilliseconds(size_t m)
 void
 EventTimer::action()
 {
-  LogSevere("Timer empty action " << (void *) (this) << " " << myName << "\n");
+  fLogSevere("Timer empty action {} {}", (void *) (this), myName);
 }

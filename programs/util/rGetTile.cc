@@ -165,7 +165,7 @@ RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
 
 
   /*if (r != nullptr) {
-    LogInfo("-->Tile: " << r->getTypeName() << "\n");
+    fLogInfo("-->Tile: {}", r->getTypeName());
     // Eh do we have to write it to disk?  Should stream it back, right?
     // We're gonna want to send it back on the command line right?
     writeOutputProduct(r->getTypeName(), r, myOverride); // Typename will be replaced by -O filters

@@ -109,7 +109,7 @@ FMLIndex::fileToRecord(const std::string& filename, Record& rec)
     auto item = tree->getChild("item");
     return (ConfigRecord::readXML(rec, item, myIndexPath, getIndexLabel()));
   }catch (const std::exception& e) {
-    LogSevere("Missing item tag in FML record\n");
+    fLogSevere("Missing item tag in FML record");
   }
   return false;
 }

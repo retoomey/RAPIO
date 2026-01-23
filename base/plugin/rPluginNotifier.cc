@@ -22,7 +22,7 @@ PluginNotifier::declare(RAPIOProgram * owner, const std::string& name)
     owner->addPlugin(new PluginNotifier(name));
     once = false;
   } else {
-    LogSevere("Code error, can only declare notifiers once\n");
+    fLogSevere("Code error, can only declare notifiers once");
     exit(1);
   }
   return true;

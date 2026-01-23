@@ -51,7 +51,7 @@ IOJSON::readPTreeDataBuffer(std::vector<char>& buffer)
     return d;
   }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
     // We catch all to recover
-    LogSevere("Exception reading JSON data..." << e.what() << " ignoring\n");
+    fLogSevere("Exception reading JSON data...{} ignoring", e.what());
   }
   return nullptr;
 }
@@ -72,7 +72,7 @@ IOJSON::createDataType(const std::string& params)
       return json;
     }
   }
-  LogSevere("Unable to create JSON from " << url << "\n");
+  fLogSevere("Unable to create JSON from {}", url.toString());
   return nullptr;
 }
 
@@ -120,7 +120,7 @@ IOJSON::writeURL(
     if (path.isLocal()) {
       boost::property_tree::write_json(path.toString(), n, std::locale(), settings);
     } else {
-      LogSevere("Can't write to a remote URL at " << path << "\n");
+      fLogSevere("Can't write to a remote URL at {}", path.toString());
       return false;
     }
   }
@@ -135,7 +135,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   // Get settings
   const bool indent = (keys["indent"] == "true");
 
-  LogInfo("JSON settings: indent: " << indent << "\n");
+  fLogInfo("JSON settings: indent: {}", indent);
   std::string filename = keys["filename"];
 
   if (keys["directfile"] == "false") {
@@ -152,8 +152,7 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
       successful = true;
     }
   }catch (const std::exception& e) {
-    LogSevere("JSON create error: "
-      << filename << " " << e.what() << "\n");
+    fLogSevere("JSON create error: {} {}", filename, e.what());
   }
   return successful;
 }

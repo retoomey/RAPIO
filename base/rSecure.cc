@@ -43,7 +43,7 @@ Secure::sign(const std::string& key, const std::string& message)
   // FIXME: Complain?
   # endif // ifdef EVP_MAX_MD_SIZE
   #else // if HAVE_OPENSSL
-  LogSevere("Compiled without openssl support.\n");
+  fLogSevere("Compiled without openssl support.");
   #endif // if HAVE_OPENSSL
   return out;
 }
@@ -85,7 +85,7 @@ Secure::decode64(const std::string& input)
   }
   BIO_free_all(b64); // this frees bmem too
   #else // if HAVE_OPENSSL
-  LogSevere("Compiled without openssl support.\n");
+  fLogSevere("Compiled without openssl support.");
   #endif // if HAVE_OPENSSL
   return outbuf;
 }
@@ -112,7 +112,7 @@ Secure::sha256(const std::string& str)
     ss << hash[i];
   }
   #else // if HAVE_OPENSSL
-  LogSevere("Compiled without openssl support.\n");
+  fLogSevere("Compiled without openssl support.");
   #endif // if HAVE_OPENSSL
   return ss.str();
 }
@@ -122,7 +122,7 @@ namespace {
 int
 opensslerror(const char * str, size_t len, void * u)
 {
-  LogSevere("OpenSSL error: " << str << "\n");
+  fLogSevere("OpenSSL error: {}", str);
   /** FIXME: Documentation can't tell what we're supposed to return here */
   return 0;
 }
@@ -151,7 +151,7 @@ Secure::validateSigned(
     // Don't free this one (will cause double free)
     EVP_PKEY * evp_key = PEM_read_bio_PUBKEY(bufio, NULL, NULL, NULL);
     if (evp_key == NULL) {
-      LogSevere("Invalid public key for signature checking\n");
+      fLogSevere("Invalid public key for signature checking");
       break;
     }
 
@@ -195,10 +195,10 @@ Secure::validateSigned(
 
     ret = EVP_DigestVerifyFinal(mdctx, ubuf, ubufsize);
     if (ret != 1) {
-      LogSevere("Signature mismatch on passed data.\n");
+      fLogSevere("Signature mismatch on passed data.");
       break;
     } else {
-      LogInfo("Signature match on passed data.\n");
+      fLogInfo("Signature match on passed data.");
       pass  = true;
       error = false;
     }
@@ -217,7 +217,7 @@ Secure::validateSigned(
   return pass;
 
   #else // if HAVE_OPENSSL
-  LogSevere("Compiled without openssl support.\n");
+  fLogSevere("Compiled without openssl support.");
   return false;
 
   #endif // if HAVE_OPENSSL

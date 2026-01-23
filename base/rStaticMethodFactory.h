@@ -40,7 +40,7 @@ public:
     if (instance != 0) {
       myLookup[name] = instance;
     } else {
-      LogSevere("invalid instance pointer for '" << name << "'\n");
+      fLogSevere("invalid instance pointer for '{}'", name);
     }
   }
 
@@ -77,8 +77,7 @@ public:
 
     // Factory failed to find or load object
     if (ret == nullptr) {
-      LogSevere("No instance available for " << info << " and '" << name
-                                             << "' size: " << myLookup.size() << "\n");
+      fLogSevere("No instance available for {} and '{}' size:{}", info, name, myLookup.size());
     }
 
     return (ret);

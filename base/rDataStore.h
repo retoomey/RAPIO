@@ -62,8 +62,8 @@ public:
       Log::bytecounter -= (sizeof(T) * v);
       pluss = " - ";
     }
-    LogSevere("BYTECHANGE: " << &Log::bytecounter << ": " << oldbyte
-                             << pluss << v << " items  == " << Log::bytecounter << "\n");
+    fLogSevere("BYTECHANGE: {}: {}{}{} items == {}",
+      &Log::bytecounter, oldbyte, pluss, v, Log::bytecounter);
   }
 
   #endif // ifdef MEM_CHECK
@@ -76,17 +76,13 @@ public:
       s = aSize;
       #ifdef MEM_CHECK
       bytechange(true, s);
-      LogSevere("D ALLOCATE " << (void *) (this)
-                              << " (" << s << ") --> " << d
-                              << " Memory: " << Log::bytecounter << "\n");
+      fLogSevere("D ALLOCATE {} ({}) --> {} Memory: {}", (void *) (this), s, Log::bytecounter);
       #endif
     } else {
       d = nullptr;
       s = 0;
       #ifdef MEM_CHECK
-      LogSevere("D ALLOCATE CHEAP " << (void *) (this)
-                                    << " (" << s << ") --> " << d
-                                    << " Memory: " << Log::bytecounter << "\n");
+      fLogSevere("D ALLOCATE CHEAP {} ({}) -->{} Memory: {}", (void *) (this), s, d, Log::bytecounter);
       #endif
     }
   }
@@ -114,8 +110,7 @@ public:
     } else {
       bytechange(false, olds - aSize);
     }
-    LogSevere("D RESIZE (" << s << ") --> " << d
-                           << " MEMORY: " << Log::bytecounter << "\n");
+    fLogSevere("D RESIZE ({}) --> {} MEMORY: {}", s, d, Log::bytecounter);
     #endif
   }
 
@@ -169,8 +164,7 @@ public:
       s = 0;
     }
     #ifdef MEM_CHECK
-    LogSevere("D ALLOCATE COPY (" << s << ") --> " << d
-                                  << " MEMORY: " << Log::bytecounter << "\n");
+    fLogSevere("D ALLOCATE COPY ({}) --> {} MEMORY: {}", s, d, Log::bytecounter);
     #endif
   }
 
@@ -186,7 +180,7 @@ public:
         resize(o.s);
 
         #ifdef MEM_CHECK
-        LogSevere("D COPY ASSIGN (" << s << ") --> " << d << "\n");
+        fLogSevere("D COPY ASSIGN ({}) --> {}", s, d);
         #endif
 
         // Make a copy into us
@@ -251,7 +245,7 @@ public:
       d = nullptr;
     }
     #ifdef MEM_CHECK
-    LogSevere("D FREE " << (void *) (this) << " (" << s << ") --> " << d << " MEMORY: " << Log::bytecounter << "\n");
+    fLogSevere("D FREE {} ({}) --> {} MEMORY: {}", (void *) (this), s, d, Log::bytecounter);
     #endif
   }
 

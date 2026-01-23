@@ -57,13 +57,12 @@ FMLRecordNotifier::makeDirectories(const std::string& outdir, const std::string&
 
   // Make sure directory created
   if (!OS::mkdirp(tempdir)) { // only one mkdirp since temp is subfolder
-    LogSevere("Couldn't access/create fml directory: "
-      << tempdir << " so we can't notify!\n");
+    fLogSevere("Couldn't access/create fml directory: {} so we can't notify!", tempdir);
     success = false;
   }
   if (!Strings::beginsWith(tempdir, outdir)) { // Not a subfolder
     if (!OS::mkdirp(outdir)) {
-      LogSevere("Couldn't access/create fml directory: " << outdir << " so we can't notify!\n");
+      fLogSevere("Couldn't access/create fml directory: {} so we can't notify!", outdir);
       success = false;
     }
   }
@@ -149,7 +148,7 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
     }
 
     if (!ofp) {
-      LogSevere("Unable to create " << tmpfilename << "\n");
+      fLogSevere("Unable to create {}", tmpfilename);
       return;
     }
   }
@@ -178,6 +177,6 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
     const std::string postCommand = outputParams["postfml"];
     OS::runCommandOnFile(postCommand, outfilename, true);
   } else {
-    LogSevere("Unable to rename tmp .fml file " << tmpfilename << " to final location " << outfilename << "\n");
+    fLogSevere("Unable to rename tmp .fml file {} to final location {}", tmpfilename, outfilename);
   }
 } // FMLRecordNotifier::writeRecord

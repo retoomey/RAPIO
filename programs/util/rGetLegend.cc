@@ -38,7 +38,7 @@ GetLegend::processNewData(rapio::RAPIOData& d)
   auto data = d.datatype<rapio::DataType>();
 
   if (data == nullptr) {
-    LogSevere("Failed to get valid DataType\n");
+    fLogSevere("Failed to get valid DataType");
     return;
   }
   // Read the color map for data, then generate SVG.

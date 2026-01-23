@@ -175,7 +175,7 @@ Record::createObject() const
   auto& p(getParams());
 
   if (p.size() < 1) {
-    LogSevere("Empty record parameters, can't create anything!\n");
+    fLogSevere("Empty record parameters, can't create anything!");
     return nullptr;
   }
 

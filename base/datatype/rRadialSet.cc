@@ -166,7 +166,7 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
 
   if (p == nullptr) {
     if (warn) {
-      LogSevere("Radial set missing primary array.\n");
+      fLogSevere("Radial set missing primary array.");
     }
     addFloat2D(Constants::PrimaryDataName, getUnits(), { 0, 1 });
   }
@@ -179,7 +179,7 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
 
   if (az == nullptr) {
     if (warn) {
-      LogSevere("Radial set missing Azimuths, guessing from number of radials\n");
+      fLogSevere("Radial set missing Azimuths, guessing from number of radials");
     }
     /** Azimuth per radial */
     auto a = addFloat1D(Azimuth, "Degrees", { 0 });
@@ -205,7 +205,7 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
 
   if (bw == nullptr) {
     if (warn) {
-      LogSevere("Radial set missing BeamWidth, guessing " << bwDegs << " degrees.\n");
+      fLogSevere("Radial set missing BeamWidth, guessing {} degrees.", bwDegs);
     }
     /** Beamwidth per radial */
     addFloat1D(BeamWidth, "Degrees", { 0 }, bwDegs);
@@ -256,21 +256,21 @@ RadialSet::initFromGlobalAttributes()
 
   // TypeName check, such as Reflectivity or Velocity
   if (myTypeName == "not set") {
-    LogSevere("Missing TypeName attribute such as Reflectivity.\n");
+    fLogSevere("Missing TypeName attribute such as Reflectivity.");
     success = false;
   }
 
   // -------------------------------------------------------
   // Elevation
   if (!getDouble("Elevation", myElevAngleDegs)) {
-    LogSevere("Missing Elevation in degrees attribute\n");
+    fLogSevere("Missing Elevation in degrees attribute");
     success = false;
   }
 
   // -------------------------------------------------------
   // Range to first gate
   if (!getDouble("RangeToFirstGate", myFirstGateDistanceM)) {
-    LogInfo("Missing RangeToFirstGate attribute, will be zero.\n");
+    fLogInfo("Missing RangeToFirstGate attribute, will be zero.");
     myFirstGateDistanceM = 0;
   }
 

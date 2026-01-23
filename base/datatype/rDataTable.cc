@@ -48,7 +48,7 @@ PTreeDataTable::read(
         const auto htMeters = lon.getAttr("value", double (0));
         xml->setLocation(LLH(latDegrees, lonDegrees, htMeters));
       }catch (const std::exception& e) {
-        LogSevere("Tried to read stref tag in datatable and failed: " << e.what() << "\n");
+        fLogSevere("Tried to read stref tag in datatable and failed: {}", e.what());
       }
     }
   }

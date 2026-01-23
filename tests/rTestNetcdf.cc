@@ -49,7 +49,7 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
     const std::string key    = r->getTypeName();
 
     // Standard echo of data to output, but for multiple
-    LogInfo("-->Writing multiple netcdf files for: " << r->getTypeName() << "\n");
+    fLogInfo("-->Writing multiple netcdf files for: {}", r->getTypeName());
 
     // -------------------------------------------------------------------------
     // Write a netcdf3 file
@@ -77,7 +77,7 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
       //  std::this_thread::sleep_for(std::chrono::milliseconds(2400));
       writeOutputProduct(key, r, flags);
       totalSums[i + 2].add(p);
-      // LogInfo(p << "\n");
+      // fLogInfo("{}", p);
     }
   }
 
@@ -98,7 +98,7 @@ RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
 
   if (myMaxCount > 0) {
     if (totalSums[0].getCount() >= myMaxCount) {
-      LogInfo("Ending test due to maxcount of " << myMaxCount << "\n");
+      fLogInfo("Ending test due to maxcount of {}", myMaxCount);
       exit(0);
     }
   }

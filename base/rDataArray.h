@@ -63,7 +63,7 @@ public:
 
     setArray(ptr, ptr);
 
-    // LogInfo("Creating " << name << " " << units << "\n");
+    // fLogInfo("Creating {} {}", name, units);
     return ptr;
   }
 

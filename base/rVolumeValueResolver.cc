@@ -97,10 +97,10 @@ VolumeValueResolver::createVolumeValueResolver(
   auto f = Factory<VolumeValueResolver>::get(key);
 
   if (f == nullptr) {
-    LogSevere("Couldn't create VolumeValueResolver from key '" << key << "', available: \n");
+    fLogSevere("Couldn't create VolumeValueResolver from key '{}', available: ", key);
     auto e = Factory<VolumeValueResolver>::getAll();
     for (auto i: e) {
-      LogSevere("  '" + i.first + "'\n"); // FIXME: help string later maybe
+      fLogSevere("  '{}'", i.first); // FIXME: help string later maybe
     }
   } else {
     // Pass onto the factory method

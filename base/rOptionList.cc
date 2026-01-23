@@ -191,7 +191,7 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
     } else {
       if (!fromiconfig) {
         // Because of macros, it's confusing to allow duplicates
-        LogSevere("Duplicated commandline option for '" << arg << "'.\n");
+        fLogSevere("Duplicated commandline option for '{}'.", arg);
         exit(1);
       }
     }
@@ -234,8 +234,7 @@ std::string
 OptionList::getString(const std::string& key)
 {
   if (!isProcessed) {
-    LogSevere(
-      "Have to call processArgs before calling getString. This is a code error\n");
+    fLogSevere("Have to call processArgs before calling getString. This is a code error");
     exit(1);
   }
   std::string s = "";
@@ -248,8 +247,7 @@ OptionList::getString(const std::string& key)
       s = have->defaultValue;
     }
   } else {
-    LogSevere(
-      "WARNING - Trying to read uninitialized parameter \"" << key << "\"\n");
+    fLogSevere("WARNING - Trying to read uninitialized parameter \"{}\"", key);
   }
   return (s);
 }

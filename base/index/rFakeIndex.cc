@@ -51,7 +51,7 @@ bool
 FakeIndex::initialRead(bool realtime, bool archive)
 {
   if (archive) {
-    LogInfo("Fake index archiving mode.  Generating.\n");
+    fLogInfo("Fake index archiving mode.  Generating.");
     // FIXME: Any 'fake data module class' will have to be callable by
     // the index here as well as the fake builder.
     // Start with real clock time (assuming no other archive indexes)

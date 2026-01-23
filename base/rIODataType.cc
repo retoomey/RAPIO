@@ -78,7 +78,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
 
   if (!alias.empty()) {
     if (factory != alias) {
-      LogInfo("Mapping builder '" << factory << "' to '" << alias << "' from configuration.\n");
+      fLogInfo("Mapping builder '{}' to '{}' from configuration.", factory, alias);
     }
     factory = alias; // map from filesuffix to found factory
   }
@@ -96,7 +96,7 @@ IODataType::getFactory(std::string& factory, const std::string& path, std::share
   // 3. If STILL empty, try the suffix as a factory...might get lucky
   if (factory.empty()) {
     factory = OS::getRootFileExtension(path);
-    LogSevere("Using file suffix '" << factory << "' as builder guess, might put this in configuration file\n");
+    fLogSevere("Using file suffix '{}' as builder guess, might put this in configuration file", factory);
   }
 
   Strings::toLower(factory);
@@ -136,7 +136,7 @@ IODataType::readBufferImp(std::vector<char>& buffer, const std::string& factory)
     checkReadFactorySet(dt, f);
     return dt;
   } else {
-    LogSevere("No builder IO module loaded for type '" << f << "'\n");
+    fLogSevere("No builder IO module loaded for type '{}'", f);
   }
   return nullptr;
 }
@@ -153,7 +153,7 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
     checkReadFactorySet(dt, f);
     return dt;
   } else {
-    LogSevere("No builder IO module loaded for type '" << f << "'\n");
+    fLogSevere("No builder IO module loaded for type '{}'", f);
   }
   return nullptr;
 }
@@ -174,7 +174,7 @@ IODataType::write1(std::shared_ptr<DataType> dt,
   auto encoder  = getFactory(f, outputinfo, dt);
 
   if (encoder == nullptr) {
-    LogSevere("Unable to write DataType using unknown factory '" << f << "'\n");
+    fLogSevere("Unable to write DataType using unknown factory '{}'", f);
   } else {
     success = encoder->writeout(dt, outputinfo, records, f, outputParams);
   }
@@ -205,7 +205,7 @@ IODataType::write(std::shared_ptr<DataType> dt,
       for (size_t i = 0; i < s; ++i) {
         success |= write1(m->getDataType(i), outputinfo, records, f, outputParams);
       }
-      LogInfo("MultiDataType attempted to write " << s << " DataTypes\n");
+      fLogInfo("MultiDataType attempted to write {} DataTypes", s);
       return success;
     }
   }
@@ -279,7 +279,7 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
     ensureDir  = true;
     directFile = true;
   } else {
-    LogSevere("Unrecognized file pathing mode: '" << filePathMode << "', cannot write output\n");
+    fLogSevere("Unrecognized file pathing mode: '{}', cannot write output", filePathMode);
     return false;
   }
 
@@ -287,7 +287,7 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   if (ensureDir) {
     std::string dirpath = aURL.getDirName();
     if (!OS::ensureDirectory(dirpath)) {
-      LogSevere("Cannot create output directory: '" << dirpath << "', cannot write output\n");
+      fLogSevere("Cannot create output directory: '{}', cannot write output", dirpath);
       return false;
     }
   }
@@ -359,7 +359,7 @@ IODataType::resolveFileName(
   std::string filename = keys["filename"];
 
   if (filename.empty()) {
-    LogSevere("Need a filename to output\n");
+    fLogSevere("Need a filename to output");
     return false;
   }
 
@@ -391,7 +391,7 @@ IODataType::showFileInfo(const std::string& prefix, std::map<std::string, std::s
   out += keys["filename"];
   out += suffix;
 
-  LogInfo(out << "\n");
+  fLogInfo("{}", out);
 }
 
 bool
@@ -414,7 +414,7 @@ IODataType::postWriteProcess(
 
       successful = f->applyURL(finalfile, tmpgz, keys);
       if (successful) {
-        LogDebug("Compress " << finalfile << " with '" << compress << "' to " << tmpgz << "\n");
+        fLogDebug("Compress {} with '{}' to {}", finalfile, compress, tmpgz);
         OS::deleteFile(finalfile);
         finalfile = tmpgz; // now use the new tmp
         // Update final filename to the compressed one
@@ -422,17 +422,17 @@ IODataType::postWriteProcess(
         // However, stuff like ioimage requires the suffix to determine what's written
         keys["filename"] = keys["filename"] + "." + compress;
       } else {
-        LogDebug("Unable to compress " << finalfile << " with '" << compress << "' to " << tmpgz << "\n");
+        fLogDebug("Unable to compress {} with '{}' to {}", finalfile, compress, tmpgz);
       }
     }
   }
 
   // -----------------------------------------------------------------------
   // Migrate file async to final location
-  LogDebug("Migrate " << finalfile << " to " << keys["filename"] << "\n");
+  fLogDebug("Migrate {} to {}", finalfile, keys["filename"]);
   successful = OS::moveFile(finalfile, keys["filename"]);
   if (!successful) {
-    LogSevere("Unable to move " << finalfile << " to " << keys["filename"] << "\n");
+    fLogSevere("Unable to move {} to {}", finalfile, keys["filename"]);
   }
 
   // -----------------------------------------------------------------------
@@ -470,9 +470,9 @@ IODataType::iPathParse(const std::string& ipath, std::string& aFileName, std::st
   } else {
     localFilename = ipath;
   }
-  // LogSevere("INCOMING FILE:"<<ipath<<"\n");
-  // LogSevere("PREFIX:"<<prefix<<"\n");
-  // LogSevere("FINAL:"<<localFilename << "\n");
+  // fLogSevere("INCOMING FILE:{}",ipath);
+  // fLogSevere("PREFIX:{}",prefix);
+  // fLogSevere("FINAL:{}",localFilename);
 
   std::vector<std::string> twoStrings;
   bool splitWorked = true;
@@ -500,7 +500,7 @@ IODataType::iPathParse(const std::string& ipath, std::string& aFileName, std::st
     // .xml.gz -> "xml", .xml --> "xml"
     aBuilder = OS::getRootFileExtension(f);
     if (aBuilder.empty()) {
-      LogInfo("No suffix or given builder for '" << ipath << "', will try netcdf.");
+      fLogInfo("No suffix or given builder for '{}', will try netcdf.", ipath);
       aBuilder = "netcdf";
     }
   }

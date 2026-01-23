@@ -170,8 +170,7 @@ Signals::setupCoreDumps(bool enable)
   // Also you can't set them above the limits.conf settings
   // See if core limits are not zero...
   if ((err != -1) && ((corelimit.rlim_cur != want) || (corelimit.rlim_max != want))) {
-    // LogInfo("Core limits (soft):" << corelimit.rlim_cur << " (hard): " <<
-    // corelimit.rlim_max << "\n");
+    // fLogInfo("Core limits (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
 
     // ... if so, try to make them 'on' or 'off'
     corelimit.rlim_cur = corelimit.rlim_max = want;
@@ -181,12 +180,10 @@ Signals::setupCoreDumps(bool enable)
     err = getrlimit(RLIMIT_CORE, &corelimit);
 
     if ((err != -1) && (corelimit.rlim_cur == want) && (corelimit.rlim_max == want)) {
-      LogInfo("Core limits set (soft):" << corelimit.rlim_cur << " (hard): "
-                                        << corelimit.rlim_max << "\n");
+      fLogInfo("Core limits set (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
     } else {
-      LogSevere("Unable to set core limits\n");
-      LogSevere("Core limits set (soft):" << corelimit.rlim_cur << " (hard): "
-                                          << corelimit.rlim_max << "\n");
+      fLogSevere("Unable to set core limits");
+      fLogSevere("Core limits set (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
     }
   }
 } // Signals::setupCoreDumps

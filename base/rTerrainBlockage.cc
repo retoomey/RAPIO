@@ -59,14 +59,14 @@ TerrainBlockage::createTerrainBlockage(
   LengthKMs         minTerrainKMs,
   AngleDegs         minAngleDegs)
 {
-  // LogSevere("Factory Terrain Blockage Create Called with key "<<key << "\n");
+  // fLogSevere("Factory Terrain Blockage Create Called with key {}", key);
   auto f = Factory<TerrainBlockage>::get(key);
 
   if (f == nullptr) {
-    LogSevere("Couldn't create TerrainBlockage from key '" << key << "', available: \n");
+    fLogSevere("Couldn't create TerrainBlockage from key '{}', available: ", key);
     auto e = Factory<TerrainBlockage>::getAll();
     for (auto i: e) {
-      LogSevere("  '" + i.first + "'\n"); // FIXME: help string later maybe
+      fLogSevere("  '{}'", i.first); // FIXME: help string later maybe
     }
   } else {
     // Pass onto the factory method

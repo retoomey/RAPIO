@@ -29,7 +29,7 @@ public:
   virtual void
   execute()
   {
-    LogInfo("--->Thread task execute that does nothing. You should be subclassing ThreadTask.\n");
+    fLogInfo("--->Thread task execute that does nothing. You should be subclassing ThreadTask.");
     // Any subclass MUST call markDone when finished, or calling thread will
     // hang waiting on you forever.
     markDone();

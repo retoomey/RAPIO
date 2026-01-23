@@ -550,23 +550,23 @@ RAPIOOptions::readConfigFile(const std::string& string)
 
   if (config->readConfigURL(aURL, options, values)) {
     if (options.size() != values.size()) {
-      LogSevere("Bad configuration file reader, options not equal to values\n");
+      fLogSevere("Bad configuration file reader, options not equal to values");
       exit(1);
     }
     // ... and store them in our options.
     for (size_t i = 0; i < options.size(); ++i) {
       if (allowInConfig(options[i])) {
-        // LogDebug("STORING " << options[i] << " == " << values[i] << "\n");
+        // fLogDebug("STORING {} == {}", options[i], values[i]);
         // Don't enforce declaration with HMET files, there are too many options
         trimArgument(options[i]);
         storeParsedArg(options[i], values[i], false, true);
       } else {
-        // LogDebug("**IGNORING*** " << options[i] << " == " << values[i] << "\n");
+        // fLogDebug("**IGNORING*** {} == {}", options[i], values[i]);
       }
     }
   } else {
     // Reader should complain already
-    // LogSevere("Couldn't read configuration file at " << aURL << "\n");
+    // fLogSevere("Couldn't read configuration file at {}", aURL.toString());
     exit(1);
   }
 } // RAPIOOptions::readConfigFile
@@ -746,6 +746,7 @@ RAPIOOptions::expandArgs(const std::vector<std::string>& args, std::string& left
   }
   // for (size_t i = 0; i < expanded.size(); i += 2) {
   //  LogSevere("Expanded to " << expanded[i] << " == '" << expanded[i + 1] << "'\n");
+  //  fLogSevere("Expanded to {} == '{}'", expanded[i], expanded[i + 1]);
   // }
   return expanded;
 } // RAPIOOptions::expandArgs

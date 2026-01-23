@@ -450,7 +450,7 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
   std::size_t found = msg.rfind("<signed>");
 
   if (found == std::string::npos) {
-    LogSevere("Missing signed tag end of file\n");
+    fLogSevere("Missing signed tag end of file");
     return false;
   }
 
@@ -461,14 +461,14 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
   // Remove the signed tags from the key
   found = keywrapped.find("<signed>\n");
   if (found == std::string::npos) {
-    LogSevere("Missing start <signed> tag end of file\n");
+    fLogSevere("Missing start <signed> tag end of file");
     return false;
   }
   keywrapped.replace(found, 9, "");
 
   found = keywrapped.find("</signed>\n");
   if (found == std::string::npos) {
-    LogSevere("Missing end </signed> tag end of file\n");
+    fLogSevere("Missing end </signed> tag end of file");
     return false;
   }
   keywrapped.replace(found, 10, "");

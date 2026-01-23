@@ -57,7 +57,7 @@ bool
 FileIndex::initialRead(bool realtime, bool archive)
 {
   if (!myURL.isLocal()) {
-    LogSevere("Can't do this index off a remote URL at moment.n");
+    fLogSevere("Can't do this index off a remote URL at moment.");
     return false;
   }
   const std::string loc = myURL.getPath();
@@ -76,7 +76,7 @@ FileIndex::initialRead(bool realtime, bool archive)
     handleFile(loc);
     return true;
   } else {
-    LogSevere("File index doesn't recognize polling protocol '" << myProtocol << "', trying inotify\n");
+    fLogSevere("File index doesn't recognize polling protocol '{}', trying inotify", myProtocol);
   }
 
   std::shared_ptr<WatcherType> watcher = IOWatcher::getIOWatcher(poll);
@@ -146,15 +146,15 @@ FileIndex::handleFile(const std::string& filename)
 void
 FileIndex::handleNewDirectory(const std::string& dirname)
 {
-  LogInfo("New directory was added: " << dirname << "\n");
+  fLogInfo("New directory was added: {}", dirname);
 }
 
 void
 FileIndex::handleUnmount(const std::string& dirname, bool willReconnect)
 {
-  LogSevere("Directory " << dirname << " was unmounted or removed.\n");
+  fLogSevere("Directory {} was unmounted or removed.", dirname);
   if (!willReconnect) {
-    LogSevere("Stopping algorithm due to lost input directory.\n");
+    fLogSevere("Stopping algorithm due to lost input directory.");
     exit(1);
   }
 }

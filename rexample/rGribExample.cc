@@ -29,39 +29,39 @@ GribExampleAlg::processOptions(RAPIOOptions& o)
 void
 GribExampleAlg::testGet2DArray(std::shared_ptr<GribDataType> grib2)
 {
-  LogInfo("-----Running get2DArray test ------------------------------------------\n");
+  fLogInfo("-----Running get2DArray test ------------------------------------------");
   // ------------------------------------------------------------------------
   // 2D test
   //
   const std::string name2D = "TMP";
   const std::string layer  = "100 mb";
 
-  LogInfo("Trying to read " << name2D << " as direct 2D from data...\n");
+  fLogInfo("Trying to read {} as direct 2D from data...", name2D);
   auto array2D = grib2->getFloat2D(name2D, layer);
 
   if (array2D != nullptr) {
-    LogInfo("Found '" << name2D << "'\n");
-    LogInfo("Dimensions: " << array2D->getX() << ", " << array2D->getY() << "\n");
+    fLogInfo("Found '{}'", name2D);
+    fLogInfo("Dimensions: {}, {}", array2D->getX(), array2D->getY());
 
     auto& ref = array2D->ref(); // or (*ref)[x][y]
-    LogInfo("First 10x10 values:\n");
-    LogInfo("----------------------------------------------------\n");
+    fLogInfo("First 10x10 values:");
+    fLogInfo("----------------------------------------------------");
     for (size_t x = 0; x < 10; ++x) {
       for (size_t y = 0; y < 10; ++y) {
         std::cout << ref[x][y] << ",  ";
       }
       std::cout << "\n";
     }
-    LogInfo("----------------------------------------------------\n");
+    fLogInfo("----------------------------------------------------");
   } else {
-    LogSevere("Couldn't getFloat2D '" << name2D << "' from grib2.\n");
+    fLogSevere("Couldn't getFloat2D '{}' from grib2.", name2D);
   }
 }
 
 void
 GribExampleAlg::testGet3DArray(std::shared_ptr<GribDataType> grib2)
 {
-  LogInfo("-----Running get3DArray test ------------------------------------------\n");
+  fLogInfo("-----Running get3DArray test ------------------------------------------");
   // ------------------------------------------------------------------------
   // 3D test
   //
@@ -73,17 +73,17 @@ GribExampleAlg::testGet3DArray(std::shared_ptr<GribDataType> grib2)
   // const std::vector<std::string> layers = { "16 hybrid level", "17 hybrid level", "18 hybrid level" };
   const std::vector<std::string> layers = { "100 mb", "125 mb", "150 mb" };
 
-  LogInfo("Trying to read '" << name3D << "' as direct 3D from data...\n");
+  fLogInfo("Trying to read '{}' as direct 3D from data...", name3D);
   auto array3D = grib2->getFloat3D(name3D, layers);
 
   if (array3D != nullptr) {
-    LogInfo("Found '" << name3D << "'\n");
-    LogInfo("Dimensions: " << array3D->getX() << ", " << array3D->getY() << ", " << array3D->getZ() << "\n");
+    fLogInfo("Found '{}'", name3D);
+    fLogInfo("Dimensions: {}, {}, {}", array3D->getX(), array3D->getY(), array3D->getZ());
 
     // Print 3D layer 0 which should match the 2D called before, right?
     auto& ref = array3D->ref(); // or (*ref)[x][y]
-    LogInfo("First 10x10 values:\n");
-    LogInfo("----------------------------------------------------\n");
+    fLogInfo("First 10x10 values:");
+    fLogInfo("----------------------------------------------------");
     for (size_t x = 0; x < 10; ++x) {
       for (size_t y = 0; y < 10; ++y) {
         // FIXME: LatLonHeightGrids store in layer, lat, lon.  But array
@@ -93,25 +93,25 @@ GribExampleAlg::testGet3DArray(std::shared_ptr<GribDataType> grib2)
       }
       std::cout << "\n";
     }
-    LogInfo("----------------------------------------------------\n");
+    fLogInfo("----------------------------------------------------");
   } else {
-    LogSevere("Couldn't get 3D '" << name3D << "' out of grib data\n");
+    fLogSevere("Couldn't get 3D '{}' out of grib data", name3D);
   }
 } // GribExampleAlg::testGet3DArray
 
 void
 GribExampleAlg::testGetMessageAndField(std::shared_ptr<GribDataType> grib2)
 {
-  LogInfo("-----Running getMessage and getField test -----------------------------\n");
+  fLogInfo("-----Running getMessage and getField test -----------------------------");
 
   const std::string name2D = "TMP";
   const std::string layer  = "surface";
 
-  LogInfo("Trying to read " << name2D << " as grib message.\n");
+  fLogInfo("Trying to read {} as grib message.", name2D);
   auto message = grib2->getMessage(name2D, layer);
 
   if (message != nullptr) {
-    LogInfo("Success with higher interface..read message '" << name2D << "'\n");
+    fLogInfo("Success with higher interface..read message '{}'", name2D);
     // FIXME: add methods for various things related to messages
     // and possibly fields.  We should be able to query a field
     // off a message at some point.
@@ -119,33 +119,33 @@ GribExampleAlg::testGetMessageAndField(std::shared_ptr<GribDataType> grib2)
     // return numbers which would make code kinda unreadable I think.
     // message->getFloat2D(optional fieldnumber == 1)
     auto& m = *message;
-    LogInfo("    Time of the message is " << m.getDateString() << "\n");
-    LogInfo("    Message in file is number " << m.getMessageNumber() << "\n");
-    LogInfo("    Message file byte offset: " << m.getFileOffset() << "\n");
-    LogInfo("    Message byte length: " << m.getMessageLength() << "\n");
+    fLogInfo("    Time of the message is {}", m.getDateString());
+    fLogInfo("    Message in file is number {}", m.getMessageNumber());
+    fLogInfo("    Message file byte offset: {}", m.getFileOffset());
+    fLogInfo("    Message byte length: {}", m.getMessageLength() );
     // Time theTime = message->getTime();
-    LogInfo("    Center ID is " << m.getCenterID() << "\n");
-    LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
+    fLogInfo("    Center ID is {}", m.getCenterID());
+    fLogInfo("    SubCenter ID is {}", m.getSubCenterID());
 
     // Messages have (n) fields each
     auto field = message->getField(1);
     if (field != nullptr) {
       auto& f = *field;
-      LogInfo("For field 1 of the message:\n");
-      LogInfo("    GRIB Version: " << f.getGRIBEditionNumber() << "\n");
-      LogInfo("    GRIB Discipline #: " << f.getDisciplineNumber() << "\n");
-      LogInfo("    Time of the field is " << f.getDateString() << "\n");
-      LogInfo("    Grid def template number is: " << f.getGridDefTemplateNumber() << "\n");
+      fLogInfo("For field 1 of the message:");
+      fLogInfo("    GRIB Version: {}", f.getGRIBEditionNumber());
+      fLogInfo("    GRIB Discipline #: {}", f.getDisciplineNumber());
+      fLogInfo("    Time of the field is {}", f.getDateString());
+      fLogInfo("    Grid def template number is: {}", f.getGridDefTemplateNumber());
     }
   }   else {
-    LogSevere("Couldn't getMessage '" << name2D << "' from grib2.\n");
+    fLogSevere("Couldn't getMessage '{}' from grib2.", name2D);
   }
 } // GribExampleAlg::testGetMessageAndField
 
 void
 GribExampleAlg::testGetLatLonGrid(std::shared_ptr<GribDataType> grib2)
 {
-  LogInfo("-----Running getLatLonGrid test ---------------------------------------\n");
+  fLogInfo("-----Running getLatLonGrid test ---------------------------------------");
   const std::string name2D = "TMP";
   const std::string layer  = "surface";
 
@@ -159,7 +159,7 @@ GribExampleAlg::testGetLatLonGrid(std::shared_ptr<GribDataType> grib2)
 
     writeOutputProduct(llg->getTypeName(), llg);
   } else {
-    LogSevere("Was unable to getLatLonGrid matching '" << name2D << " " << layer << "'\n");
+    fLogSevere("Was unable to getLatLonGrid matching '{} {}'", name2D, layer);
   }
 }
 
@@ -170,7 +170,7 @@ GribExampleAlg::processNewData(RAPIOData& d)
   auto grib2 = d.datatype<GribDataType>();
 
   if (grib2 != nullptr) {
-    LogInfo("Grib2 data incoming...testing...\n");
+    fLogInfo("Grib2 data incoming...testing...");
 
     // Dump catalog
     grib2->printCatalog();
@@ -221,7 +221,7 @@ GribExampleAlg::processNewData(RAPIOData& d)
       auto& out   = llgridsp->getFloat2DRef();
       size_t numX = array2D->getX();
       size_t numY = array2D->getY();
-      LogSevere("OUTPUT NUMX NUMY " << numX << ", " << numY << "\n");
+      fLogSevere("OUTPUT NUMX NUMY {}, {}", numX, numY);
       for (size_t x = 0; x < numX; ++x) {
         for (size_t y = 0; y < numY; ++y) {
           out[x][y] = ref[x][y];
@@ -242,19 +242,19 @@ GribExampleAlg::processNewData(RAPIOData& d)
         "+proj=lcc +axis=esu +lon_0=-98 +lat_0=38 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 +units=km +resolution=3"
       );
       bool success = project->initialize();
-      LogInfo("Created projection:  " << success << "\n");
+      fLogInfo("Created projection:  {}", success);
       // Project from source project to output
       if (success) {
         project->toLatLonGrid(array2D, llgridsp);
       } else {
-        LogSevere("Failed to create projection\n");
+        fLogSevere("Failed to create projection");
         return;
       }
     }
     // Typename will be replaced by -O filters
     writeOutputProduct(llgridsp->getTypeName(), llgridsp);
   } else {
-    LogSevere("Couldn't read 2D data '" << name2D << "' from grib2.\n");
+    fLogSevere("Couldn't read 2D data '{}' from grib2.", name2D);
   }
     #endif // if 0
   }

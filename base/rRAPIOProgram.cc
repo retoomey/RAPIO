@@ -164,7 +164,7 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
 
     // Everything should be registered, try initial start up
     if (!Config::initialize()) {
-      LogSevere("Failed to initialize.\n");
+      fLogSevere("Failed to initialize.");
       exit(1);
     }
 
@@ -240,5 +240,5 @@ RAPIOProgram::execute()
   for (auto p: myPlugins) {
     p->execute(this);
   }
-  LogInfo("This program doesn't do anything, override execute() method.\n");
+  fLogInfo("This program doesn't do anything, override execute() method.");
 }

@@ -37,12 +37,12 @@ EXERecordNotifier::initialize(const std::string& params)
   std::string checkExe = OS::validateExe(params);
 
   if (checkExe.empty()) {
-    LogSevere("Given exe at '" << params << "' does not exist or needs permissions.\n");
+    fLogSevere("Given exe at '{}' does not exist or needs permissions.", params);
     exit(1); // Abort or ignore?
   }
 
   myExe = checkExe;
-  LogInfo("Using EXE at " << checkExe << "\n");
+  fLogInfo("Using EXE at {}", checkExe);
 }
 
 EXERecordNotifier::~EXERecordNotifier()
@@ -51,7 +51,7 @@ EXERecordNotifier::~EXERecordNotifier()
 void
 EXERecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& rec)
 {
-  LogDebug("-->EXE TRYING TO WRITE MESSAGE\n");
+  fLogDebug("-->EXE TRYING TO WRITE MESSAGE");
 }
 
 void

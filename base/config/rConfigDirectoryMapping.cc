@@ -33,7 +33,7 @@ ConfigDirectoryMapping::readInSettings()
       }
     }
   }catch (const std::exception& e) {
-    LogSevere("Error parsing XML from misc/directoryMapping.xml\n");
+    fLogSevere("Error parsing XML from misc/directoryMapping.xml");
   }
   // We can work without any mappings at all
   return true;

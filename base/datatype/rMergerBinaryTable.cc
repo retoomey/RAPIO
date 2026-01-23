@@ -48,17 +48,14 @@ WObsBinaryTable::readBlock(const std::string& path, FILE * fp)
     BinaryIO::read_type<time_t>(data_time, fp);
     BinaryIO::read_type<time_t>(valid_time, fp);
 
-    LogInfo(
-      "RAW INFO: " << typeName << "/" << unit << "," << lat << "," << lon << "," << ht << "," << data_time << "," << valid_time
-                   << "\n");
-
+    fLogInfo("RAW INFO: {}/{},{},{},{},{},{}", typeName, unit, lat, lon, ht, data_time, valid_time);
     // Handle the marked lines reading in...
     BinaryIO::read_string8(markedLinesCacheFile, fp);
     std::vector<Line> markedLines;
     if (markedLinesCacheFile == "") {
       BinaryIO::read_vector(markedLines, fp);
     } else {
-      LogSevere("RAWERROR: RAW File wants us to read a cached file, not supported.\n");
+      fLogSevere("RAWERROR: RAW File wants us to read a cached file, not supported.");
     }
 
     // Read the six default arrays that always read
@@ -72,7 +69,7 @@ WObsBinaryTable::readBlock(const std::string& path, FILE * fp)
     // ----------------------------------------------------------
     return true;
   } else {
-    LogSevere("WObsBinaryTable Missing our data block in .raw file\n");
+    fLogSevere("WObsBinaryTable Missing our data block in .raw file");
   }
   return false;
 } // WObsBinaryTable::readBlock
@@ -150,7 +147,7 @@ RObsBinaryTable::readBlock(const std::string& path, FILE * fp)
     // ----------------------------------------------------------
     return true;
   } else {
-    LogSevere("RObsBinaryTable: Missing our data in .raw file\n");
+    fLogSevere("RObsBinaryTable: Missing our data in .raw file");
   }
   return false;
 }

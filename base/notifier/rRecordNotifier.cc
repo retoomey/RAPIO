@@ -40,10 +40,10 @@ RecordNotifier::createNotifiers()
   for (auto& ni:notifiers) {
     auto n = createNotifier(ni.protocol, ni.params);
     if (n != nullptr) {
-      LogDebug("Added notifier: " << ni.protocol << ":" << ni.params << "\n");
+      fLogDebug("Added notifier: {}:{}", ni.protocol, ni.params);
       v.push_back(n);
     } else {
-      LogSevere("Format of passed notifier '" << ni.protocol << " = " << ni.params << "' is wrong, see help n\n");
+      fLogSevere("Format of passed notifier '{} = {}' is wrong, see help n", ni.protocol, ni.params);
       exit(1);
     }
   }

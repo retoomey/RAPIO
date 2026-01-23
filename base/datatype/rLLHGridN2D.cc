@@ -122,7 +122,7 @@ std::shared_ptr<LatLonGrid>
 LLHGridN2D::get(size_t i)
 {
   if (i >= myGrids.size()) {
-    LogSevere("Attempting to get LatLonGrid " << i << ", but our size is " << myGrids.size() << "\n");
+    fLogSevere("Attempting to get LatLonGrid {}, but our size is {}", i, myGrids.size());
     return nullptr;
   }
 
@@ -134,11 +134,11 @@ LLHGridN2D::get(size_t i)
     l.setHeightKM(getLayerValue(i) / 1000.0); // We stored meter level resolution
     myGrids[i] = LatLonGrid::Create(myTypeName, getUnits(), l, t, getLatSpacing(), getLonSpacing(),
         getNumLats(), getNumLons());
-    // LogInfo("Lazy created LatLonGrid " << i+1 << " of " << myGrids.size() << " total layers.\n");
+    // fLogInfo("Lazy created LatLonGrid {} of {} total layers.", i+1, myGrids.size());
   }
 
   if (myGrids[i] == nullptr) {
-    LogSevere("Failed to get grid " << i << " from LLHGridN2D\n");
+    fLogSevere("Failed to get grid {} from LLHGridN2D", i);
   }
   return myGrids[i];
 }
@@ -163,7 +163,7 @@ LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
   auto pixelptr = getFloat1D("pixel_x");
 
   if (pixelptr != nullptr) {
-    LogInfo("Not making sparse since pixels already exists...\n");
+    fLogInfo("Not making sparse since pixels already exists...");
     return;
   }
 

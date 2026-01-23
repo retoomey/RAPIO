@@ -35,12 +35,12 @@ ThreadGroup::enqueueThreadTask(std::shared_ptr<ThreadTask> task)
     std::unique_lock<std::mutex> lock(myTaskQueueMutex);
     if (myTaskQueue.size() >= myMaxQueueSize) {
       // Handle queue full situation, maybe wait or drop the item
-      // LogInfo("---Queue is full. Not adding task." << "\n");
+      // fLogInfo("---Queue is full. Not adding task.");
       return false;
     }
     myTaskQueue.push(task);
     // static std::atomic<size_t> counter(0);
-    // LogInfo("---Data enqueued. Queue size: " << myTaskQueue.size() << " ID#: "<< ++counter << "\n");
+    // fLogInfo("---Data enqueued. Queue size: {} ID#: {}", myTaskQueue.size(), ++counter);
     // if (counter >= 2000){ counter = 0; }
   }
   /** Tell one of our workers to pop the queue */
@@ -67,13 +67,13 @@ ThreadGroup::workerThread()
       }
       task = myTaskQueue.front();
       myTaskQueue.pop();
-      // LogInfo("---Data dequeued. Queue size: " << myTaskQueue.size() << "\n");
+      // fLogInfo("---Data dequeued. Queue size: {}", myTaskQueue.size());
     }
 
     task->execute();
 
     // static std::atomic<size_t> counter(0);
-    // LogInfo("---Data processed." << ++counter << "\n");
+    // fLogInfo("---Data processed.{}", ++counter);
   }
 }
 
@@ -85,7 +85,7 @@ ThreadGroup::~ThreadGroup()
     // Set the stop flag to true to signal threads to stop
     myStop = true;
   } // End of inner scope: mutex is automatically unlocked when leaving this scope
-  LogInfo("Shutting down a thread group " << (void *) (this) << "\n");
+  fLogInfo("Shutting down a thread group {}", (void *) (this));
   // Notify all threads that they should wake up
   myCondition.notify_all();
   // Join all worker threads to wait for them to finish

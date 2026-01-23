@@ -22,19 +22,19 @@ Dump::processOptions(RAPIOOptions& o)
   // can show issues.
   if (!isMacroApplied()) {
     Log::restartLogging();
-    LogInfo("Reenabling logging due to non direct text command line options.\n");
+    fLogInfo("Reenabling logging due to non direct text command line options.");
   }
 }
 
 void
 Dump::processNewData(rapio::RAPIOData& d)
 {
-  LogSevere("Process called..\n");
+  fLogSevere("Process called..");
   // Look for any data the system knows how to read
   auto data = d.datatype<rapio::DataType>();
 
   if (data == nullptr) {
-    LogSevere("Failed to get valid DataType\n");
+    fLogSevere("Failed to get valid DataType");
     return;
   }
 

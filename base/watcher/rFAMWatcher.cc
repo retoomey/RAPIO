@@ -30,15 +30,14 @@ FAMWatcher::init()
 
   if (theFAMID < 0) {
     std::string errMessage(strerror(errno));
-    LogSevere("inotify_init failed with error: " << errMessage << "\n");
+    fLogSevere("inotify_init failed with error: {}", errMessage);
   } else {
     int ret = fcntl(theFAMID, F_SETFL, O_NONBLOCK);
 
     if (ret == 0) {
-      LogInfo("Successfully connected to inotify device\n");
+      fLogInfo("Successfully connected to inotify device");
     } else {
-      LogSevere(
-        "Unable to change inotify device to non-blocking mode. Programs may hang.\n");
+      fLogSevere("Unable to change inotify device to non-blocking mode. Programs may hang.");
     }
   }
 }
@@ -77,12 +76,10 @@ FAMWatcher::attach(FAMInfo * w)
   int watchID = inotify_add_watch(theFAMID, w->myDirectory.c_str(), mask);
   if (watchID < 0) {
     std::string errMessage(strerror(errno));
-    LogSevere(
-      "FAM attempt: " << w->myDirectory << ": " << errMessage
-                      << "\n");
+    fLogSevere("FAM attempt: {}: {}", w->myDirectory, errMessage);
     return false;
   } else {
-    LogInfo("FAM Attached to " << w->myDirectory << "\n");
+    fLogInfo("FAM Attached to {}", w->myDirectory);
     w->myWatchID = watchID;
     w->myTime    = Time::CurrentTime();
   }
@@ -99,7 +96,7 @@ FAMWatcher::attach(const std::string &dirname,
   if (archive) {
     DIR * dirp = opendir(dirname.c_str());
     if (dirp == 0) {
-      LogSevere("Unable to read location " << dirname << "\n");
+      fLogSevere("Unable to read location {}", dirname);
       return (false);
     }
     struct dirent * dp;
@@ -123,7 +120,7 @@ FAMWatcher::attach(const std::string &dirname,
     }
     // Push broken or successful watch for checking
     myWatches.push_back(newWatch);
-    LogDebug(dirname << " being monitored ... \n");
+    fLogDebug("{} being monitored ... ", dirname);
   }
   return true;
 } // FAMWatcher::attach
@@ -141,7 +138,7 @@ FAMWatcher::addFAMEvent(FAMInfo * w, const inotify_event * event)
   // filesystem was unmounted.
   // I think you can't get this without getting the unmount or self delete first..
   if (amask & IN_IGNORED) {
-    // LogSevere("IGNORED EVENT "<< w->myWatchID <<"\n");
+    fLogSevere("IGNORED EVENT {}", w->myWatchID);
     w->myWatchID = -1;
     deleted      = true;
   }
@@ -152,14 +149,14 @@ FAMWatcher::addFAMEvent(FAMInfo * w, const inotify_event * event)
   // The backing filesystem was unmounted
   // This is usually followed by a IN_IGNORED (watch auto remove) ?? FIXME: yes/no?
   if (amask & IN_UNMOUNT) {
-    // LogSevere("UNMOUNT EVENT\n");
+    // fLogSevere("UNMOUNT EVENT");
     deleted = false;// wait for IN_IGNORED
   }
 
   // Watched file/directory was itself deleted
   // This is usually followed by a IN_IGNORED (watch auto remove) yes
   if (amask & IN_DELETE_SELF) {
-    // LogSevere("DELETE SELF EVENT\n");
+    // fLogSevere("DELETE SELF EVENT");
     deleted = false; // wait for IN_IGNORED
   }
 
@@ -228,15 +225,15 @@ FAMWatcher::getEvents()
       if (len < 0) {
         if (errno != EAGAIN) {
           perror("inotify_read: ");
-          LogSevere("Reading inotify device failed err=" << errno << "\n");
+          fLogSevere("Reading inotify device failed err={}", errno);
         }
-        // LogSevere("No fam events I think..\n");
+        // fLogSevere("No fam events I think..");
         return;
       }
 
       if (len == 0) {
         buf.resize(buf.size() * 4);
-        LogDebug("Resized buffer to " << buf.size() << " bytes.\n");
+        fLogDebug("Resized buffer to {} bytes.", buf.size());
       }
     } while (len == 0);
     // End FAM poll -----------------------------------------------
@@ -275,8 +272,8 @@ FAMWatcher::FAMInfo::handleDetach(WatcherType * owner)
 
   if (ret < 0) {
     std::string errMessage(strerror(errno));
-    LogInfo("inotify_rm_watch on " << myDirectory << " Error: " << errMessage << "\n");
+    fLogInfo("inotify_rm_watch on {} Error: {}", myDirectory, errMessage);
   }
-  LogDebug(myDirectory << " no longer being monitored ... \n");
+  fLogDebug("{} no longer being monitored ... ", myDirectory);
   return true;
 }

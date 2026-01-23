@@ -42,8 +42,7 @@ LatLonArea::setSpacing(AngleDegs lat_spacing, AngleDegs lon_spacing)
   bool okLon = (myLonSpacing > 0);
 
   if (!(okLat && okLon)) {
-    LogSevere("*** WARNING *** non-positive element in grid spacing\n"
-      << "(" << lat_spacing << "," << lon_spacing << ")\n");
+    fLogSevere("*** WARNING *** non-positive element in grid spacing: ({}, {})", lat_spacing, lon_spacing);
   }
 }
 
@@ -56,7 +55,7 @@ LatLonArea::initFromGlobalAttributes()
 
   // TypeName check, such as Reflectivity or Velocity
   if (myTypeName == "not set") {
-    LogSevere("Missing TypeName attribute such as ReflectivityCONUS.\n");
+    fLogSevere("Missing TypeName attribute such as ReflectivityCONUS.");
     success = false;
   }
 
@@ -65,11 +64,11 @@ LatLonArea::initFromGlobalAttributes()
   double holderLat, holderLon;
 
   if (!getDouble("LatGridSpacing", holderLat)) {
-    LogSevere("Missing LatGridSpacing attribute\n");
+    fLogSevere("Missing LatGridSpacing attribute");
     success = false;
   }
   if (!getDouble("LonGridSpacing", holderLon)) {
-    LogSevere("Missing LonGridSpacing attribute\n");
+    fLogSevere("Missing LonGridSpacing attribute");
     success = false;
   }
   if (success) {

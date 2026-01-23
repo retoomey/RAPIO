@@ -19,7 +19,7 @@ Heartbeat::setCronList(const std::string& cronlist)
   myParsed = false; // In case we call it again, disable current one
   cron_parse_expr(cronlist.c_str(), &myCronExpr, &err);
   if (err) {
-    LogSevere("Failed to parse cron expression: '" << cronlist << "' Err: " << err << "\n");
+    fLogSevere("Failed to parse cron expression: '{}' Err: {}", cronlist, err);
     return false;
   }
   myParsed = true;
@@ -52,7 +52,7 @@ Heartbeat::checkForPulse()
       myProgram->processHeartbeat(n, myLastPulseTime);
     }
     myLastPulseTime = pulse;
-    // LogSevere("PULSE: " << n << " --- " << pulse << "\n");
+    // fLogSevere("PULSE: {} --- {}", n, pulse);
   }
 } // Heartbeat::checkForPulse
 

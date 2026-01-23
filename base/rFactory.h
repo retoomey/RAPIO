@@ -67,7 +67,7 @@ public:
     if (instance != 0) {
       myLookup[name] = instance;
     } else {
-      LogSevere("invalid instance pointer for '" << name << "'\n");
+      fLogSevere("invalid instance pointer for '{}'", name);
     }
   }
 
@@ -163,10 +163,10 @@ public:
           if (s == name) {
             // Try to load once if not loaded already...
             if (!f.loaded) {
-              LogInfo("Initial dynamic loading of library: " << f.module << "\n");
+              fLogInfo("Initial dynamic loading of library: {}", f.module);
               std::shared_ptr<X> dynamicLoad = OS::loadDynamic<X>(f.module, f.methodname);
               if (dynamicLoad == nullptr) {
-                LogSevere("...Unable to load dynamic library.\n");
+                fLogSevere("...Unable to load dynamic library.");
               }
               f.stored = dynamicLoad;
               f.loaded = true; // Only try once
@@ -187,8 +187,7 @@ public:
     // this can be kinda over talkative. Prefer checking nullptr yourself
     // after calling this and erroring if needed
     // if (ret == nullptr) {
-    //  LogDebug("No instance available for " << info << " and '" << name
-    //                                        << "' size: " << myLookup.size() << "\n");
+    //  fLogDebug("No instance available for {} and '{}' size: {}", info, name, myLookup.size());
     // }
 
     return (ret);

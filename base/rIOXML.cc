@@ -48,7 +48,7 @@ IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buf
   if (ptree) {
     return (writePTreeDataBuffer(ptree, buffer));
   } else {
-    LogSevere("NOT A PTREE, FAILED TO WRITE\n");
+    fLogSevere("NOT A PTREE, FAILED TO WRITE");
   }
   return 0;
 }
@@ -71,7 +71,7 @@ IOXML::readPTreeDataBuffer(std::vector<char>& buffer)
     return d;
   }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error
     // We catch all to recover
-    LogSevere("Exception reading XML data..." << e.what() << " ignoring\n");
+    fLogSevere("Exception reading XML data...{} ignoring", e.what());
   }
   return nullptr;
 }
@@ -100,14 +100,14 @@ IOXML::createDataType(const std::string& params)
         }
       }catch (const std::exception& e)
       {
-        LogSevere("Failure specializing PTreeData at " << url << ".  Class is generalized to PTreeData.\n");
+        fLogSevere("Failure specializing PTreeData at {}.  Class is generalized to PTreeData.", url.toString());
       }
 
       return xml; // unspecialized but usuable
     }
   }
 
-  LogSevere("Unable to create XML from " << url << "\n");
+  fLogSevere("Unable to create XML from {}", url.toString());
   return nullptr;
 } // IOXML::createDataType
 
@@ -155,7 +155,7 @@ IOXML::writeURL(
     if (path.isLocal()) {
       boost::property_tree::write_xml(path.toString(), n, std::locale(), settings);
     } else {
-      LogSevere("Can't write to a remote URL at " << path << "\n");
+      fLogSevere("Can't write to a remote URL at {}", path.toString());
       return false;
     }
   }
@@ -170,7 +170,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   // Get settings
   const bool indent = (keys["indent"] == "true");
 
-  LogInfo("XML settings: indent: " << indent << "\n");
+  fLogInfo("XML settings: indent: {}", indent);
   std::string filename = keys["filename"];
 
   if (keys["directfile"] == "false") {
@@ -187,8 +187,7 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
       successful = true;
     }
   }catch (std::exception& e) {
-    LogSevere("XML create error: "
-      << filename << " " << e.what() << "\n");
+    fLogSevere("XML create error: {} {}", filename, e.what());
   }
   return successful;
 }

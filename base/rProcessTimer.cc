@@ -189,7 +189,7 @@ operator << (std::ostream& os, const rapio::ProcessTimerSum& t)
       t.myMsg, t.myVM_KB, t.myRSS_KB,
       t.myHaveNewline);
   } else {
-    LogInfo(t.myMsg << " (no processes added) " << (t.myHaveNewline ? "\n" : ""));
+    fLogInfo("{} (no processes added)", t.myMsg);
   }
   return os;
 }

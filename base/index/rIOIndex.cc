@@ -80,7 +80,7 @@ IOIndex::createIndex(
 
   // If STILL empty after indexes check/update protocol...
   if (protocol.empty()) {
-    LogSevere("Unable to guess schema from '" << indexparamsin << "'\n");
+    fLogSevere("Unable to guess schema from '{}'", indexparamsin);
   } else {
     // use protocol and device to get the index.
     std::shared_ptr<IndexType> factory = Factory<IndexType>::get(protocol,
@@ -135,6 +135,6 @@ IOIndex::getIndexPath(const URL& url_in)
 
   url.setPath(p);
 
-  LogDebug("getIndexPath for [" << url_in << "] returns [" << url << "]\n");
+  fLogDebug("getIndexPath for [{}] returns [{}]", url_in.toString(), url.toString());
   return (url.toString());
 } // IOIndex::getIndexPath

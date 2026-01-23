@@ -14,18 +14,18 @@ Network::setNetworkEngine(const std::string& key)
   try{
     if (key == "CURL") {
       #ifdef HAVE_CURL
-      LogInfo("Using CURL as network engine\n");
+      fLogInfo("Using CURL as network engine");
       myConnection = std::make_shared<CurlConnection>();
       return true;
 
       #else
-      LogInfo("CURL not available...\n");
+      fLogInfo("CURL not available...");
       #endif
     }
-    LogInfo("Using BOOST::asio as network engine\n");
+    fLogInfo("Using BOOST::asio as network engine");
     myConnection = std::make_shared<BoostConnection>();
   }catch (const std::runtime_error& e) {
-    LogSevere(e.what() << "\n");
+    fLogSevere("{}", e.what());
     myConnection = nullptr; // gonna crash later
     return false;
   }

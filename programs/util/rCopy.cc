@@ -31,7 +31,7 @@ Copy::processOptions(RAPIOOptions& o)
 void
 Copy::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo("Data received: " << d.getDescription() << "\n");
+  fLogInfo("Data received: {}", d.getDescription());
 
   // Look for ANY data the system knows how to read
   auto data = d.datatype<rapio::DataType>();
@@ -40,7 +40,7 @@ Copy::processNewData(rapio::RAPIOData& d)
   if (data != nullptr) {
     // Before felay if wanted...
     if (myBeforeDelaySeconds != -1) {
-      LogInfo("Predelaying for " << myBeforeDelaySeconds << " seconds...\n");
+      fLogInfo("Predelaying for {} seconds...", myBeforeDelaySeconds);
       std::chrono::milliseconds dura((int) (myBeforeDelaySeconds * 1000.0)); // C++11 vs C sleep is a bit verbose
       std::this_thread::sleep_for(dura);
     }
@@ -55,7 +55,7 @@ Copy::processNewData(rapio::RAPIOData& d)
 
     // Delay if wanted...
     if (myAfterDelaySeconds != -1) {
-      LogInfo("Delaying for " << myAfterDelaySeconds << " seconds...\n");
+      fLogInfo("Delaying for {} seconds...", myAfterDelaySeconds);
       std::chrono::milliseconds dura((int) (myAfterDelaySeconds * 1000.0)); // C++11 vs C sleep is a bit verbose
       std::this_thread::sleep_for(dura);
     }

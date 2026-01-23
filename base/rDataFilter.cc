@@ -37,14 +37,14 @@ applyBOOSTURL(const URL& infile, const URL& outfile, bi::filtering_streambuf<bi:
   std::ifstream filein(infile.toString(), std::ios_base::in | std::ios_base::binary);
 
   if (!filein.is_open()) {
-    LogSevere("Unable to open input file: " << infile);
+    fLogSevere("Unable to open input file: {}", infile.toString());
     return false;
   }
 
   std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
 
   if (!fileout.is_open()) {
-    LogSevere("Unable to open output file: " << outfile);
+    fLogSevere("Unable to open output file: {}", outfile.toString());
     return false;
   }
 
@@ -55,7 +55,7 @@ applyBOOSTURL(const URL& infile, const URL& outfile, bi::filtering_streambuf<bi:
     out.flush();  // Ensure all data is flushed out
     outbuf.pop(); // Finalize the compression/filtering process
   } catch (const std::exception& e) {
-    LogSevere("From " << infile << " to " << outfile << " filter failed: " << e.what() << "\n");
+    fLogSevere("From {} to {} filter failed: {}", infile.toString(), outfile.toString(), e.what());
     return false;
   }
   return true;
@@ -70,7 +70,7 @@ applyBOOSTOstream(std::vector<char>& input, std::vector<char>& output, bi::filte
     bi::write(os, input.data(), input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
   }catch (const bi::gzip_error& e) {
-    LogSevere("Filter failure on stream: " << e.what() << "\n"); // Let caller notify?
+    fLogSevere("Filter failure on stream: {}", e.what()); // Let caller notify?
     return false;
   }
   return true;
@@ -93,7 +93,7 @@ applyBOOSTOstreamNew(
   // Check for valid range
   if (start_index >= input.size()) {
     // Handle error: start index is out of bounds
-    LogSevere("FILTER OUT OF BOUNDS " << start_index << " >= " << input.size() << "\n");
+    fLogSevere("FILTER OUT OF BOUNDS {} >= {}", start_index, input.size());
     return false;
   }
 
@@ -105,7 +105,7 @@ applyBOOSTOstreamNew(
     bi::write(os, start_ptr, length);
     os.flush();
   }catch (const bi::gzip_error& e) {
-    LogSevere("Filter failure on stream: " << e.what() << "\n");
+    fLogSevere("Filter failure on stream: {}", e.what());
     return false;
   }
   return true;
@@ -303,7 +303,7 @@ SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
     size_t outputsize;
     bool valid = snappy::GetUncompressedLength(input.data(), input.size(), &outputsize);
     if (!valid) {
-      LogSevere("Snappy data format not recognized.\n");
+      fLogSevere("Snappy data format not recognized.");
       return false;
     }
 
@@ -314,13 +314,13 @@ SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
 
     // Check if the decompression was successful by ensuring the output is valid
     if (output.size() != outputsize) {
-      LogSevere("Decompressed size does not match expected size.\n");
+      fLogSevere("Decompressed size does not match expected size.");
       return false;
     }
 
     return true; // Return true if everything succeeded
   } catch (const std::exception& e) {
-    LogSevere("Snappy filter failed: " << e.what() << "\n");
+    fLogSevere("Snappy filter failed: {}", e.what());
     return false;
   }
 }
@@ -346,7 +346,7 @@ SnappyDataFilter::applyURL(const URL& infile, const URL& outfile,
       // Open output file for writing compressed data
       std::ofstream fileout(outfile.toString(), std::ios_base::out | std::ios_base::binary);
       if (!fileout.is_open()) {
-        LogSevere("Unable to open output file: " << outfile);
+        fLogSevere("Unable to open output file: {}", outfile.toString());
         return false;
       }
 
@@ -356,11 +356,11 @@ SnappyDataFilter::applyURL(const URL& infile, const URL& outfile,
 
       return true;
     } catch (const std::exception& e) {
-      LogSevere("Snappy compress from " << infile << " to " << outfile << " failed: " << e.what());
+      fLogSevere("Snappy compress from {} to {} failed. {}", infile.toString(), outfile.toString(), e.what());
       return false;
     }
   } else {
-    LogSevere("Unable to read input file: " << infile);
+    fLogSevere("Unable to read input file: {}", infile.toString());
     return false;
   }
 } // SnappyDataFilter::applyURL

@@ -36,11 +36,11 @@ LLCoverageArea::insetRadarRange(
   Project::LLBearingDistance(cLat, cLon, 270, rangeKMs, outDegs, west);
 
   #if 0
-  LogInfo("For lat to lat " << nwLat << " to " << seLat << "\n");
-  LogInfo(" yields 0 degrees " << north << "\n");
-  LogInfo(" yields 90 degrees " << east << "\n");
-  LogInfo(" yields 180 degrees " << south << "\n");
-  LogInfo(" yields 270 degrees " << west << "\n");
+  fLogInfo("For lat to lat {} to {}", nwLat, seLat);
+  fLogInfo(" yields 0 degrees {}", north);
+  fLogInfo(" yields 90 degrees {}", east);
+  fLogInfo(" yields 180 degrees {}", south);
+  fLogInfo(" yields 270 degrees {}", west);
   #endif
   // Inset each side independently
   if (nwLat > north) { // Inset the top
@@ -88,22 +88,17 @@ LLCoverageArea::insetRadarRange(
   out.sync();
 
   #if 0
-  LogInfo(
-    "OK: " << nwLon << " , " << out.nwLon << " , " << out.seLon << ", " << seLon << " Spacing: " << lonSpacing <<
-      "\n");
-  LogInfo("Grid  X range is:   0 to " << numX << "\n");
-  LogInfo("Final X range is: " << out.startX << " to " << out.numX << "\n");
+  fLogInfo("OK: {} , {} , {}, {} Spacing: {}", nwLon, out.nwLon, out.seLon, seLon, lonSpacing);
 
-  LogInfo(
-    "OK: " << nwLat << " , " << out.nwLat << " , " << out.seLat << ", " << seLat << " Spacing: " << latSpacing <<
-      "\n");
-  LogInfo("Grid  Y range is:   0 to " << numY << "\n");
-  LogInfo("Final Y range is: " << out.startY << " to " << out.numY << "\n");
+  fLogInfo("Grid  X range is:   0 to {}", numX);
+  fLogInfo("Final X range is: {} to {}", out.startX, out.numX);
 
-  LogInfo(
-    "FULL COVERAGE (Not yet clipped to radar!) " << nwLat << ", " << nwLon << " to " << seLat << ", " << seLon <<
-      "\n");
-  LogInfo("Spacing " << latSpacing << ", " << lonSpacing << "\n");
+  fLogInfo("OK: {} , {} , {}, {} Spacing: {}", nwLat, out.nwLat, out.seLat, seLat, latSpacing);
+  fLogInfo("Grid  Y range is:   0 to {}", numY);
+  fLogInfo("Final Y range is: {} to {}", out.startY, out.numY);
+
+  fLogInfo("FULL COVERAGE (Not yet clipped to radar!) {}, {} to {}, {}", nwLat, nwLon, seLat, seLon);
+  fLogInfo("Spacing {}, {}", latSpacing, lonSpacing);
   #endif // if 0
 
   return out;
@@ -115,7 +110,7 @@ LLCoverageArea::tile(
 ) const
 {
   if ((x < 1) || (y < 1)) {
-    LogSevere("Refusing to sub tile since X=" << x << " Y=" << y << "\n");
+    fLogSevere("Refusing to sub tile since X={} Y={}", x, y);
     return false;
   }
 
@@ -123,8 +118,8 @@ LLCoverageArea::tile(
   const float checkyBaseSize = numY / y;
 
   if ((checkxBaseSize < 1.0) || (checkyBaseSize < 1.0)) {
-    LogSevere("Refusing to sub tile since x or y is larger than x/y of origin grid: "
-      << numX << ", " << numY << " " << x << ", " << y << "\n");
+    fLogSevere("Refusing to sub tile since x or y is larger than x/y of origin grid: {}, {} {}, {}",
+      numX, numY, x, y);
     return false;
   }
 
@@ -219,11 +214,11 @@ LLCoverageArea::set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs 
   // ---------------------------------------------------------------
   // Validate the lat, lon values
   if (north < south) {
-    LogSevere("Nw corner is south of se corner, swapping...\n");
+    fLogSevere("Nw corner is south of se corner, swapping...");
     std::swap(north, south);
   }
   if (east < west) {
-    LogSevere("Nw corner is east of se corner, swapping...\n");
+    fLogSevere("Nw corner is east of se corner, swapping...");
     std::swap(east, west);
   }
 
@@ -276,13 +271,13 @@ LLCoverageArea::parseDegrees(const std::string& label, const std::string& p, Ang
       lat = std::stof(pieces[0]);
       lon = std::stof(pieces[1]);
     }catch (const std::exception& e) {
-      LogSevere("Failed to convert to number " << pieces[0] << " and/or " << pieces[1] << "\n");
+      fLogSevere("Failed to convert to number {} and/or {}", pieces[0], pieces[1]);
       failed = true;
     }
     // FIXME: check
   }
   if (failed) {
-    LogSevere("Failed to parse '" << label << "' grid parameters: '" << p << "'\n");
+    fLogSevere("Failed to parse '{}' grid parameters: '{}'", label, p);
   }
   return failed;
 }
@@ -301,7 +296,7 @@ generateHeightList(double low, double high, std::vector<int>& incr, std::vector<
 
   while (!done) {
     if (++count >= MAX_HEIGHTS_ALLOWED) { //
-      LogSevere("Generated more than " << count << " heights from grid spec, aborting.\n");
+      fLogSevere("Generated more than {} heights from grid spec, aborting.", count);
       return false;
     }
     heights.push_back(atHeight);
@@ -347,7 +342,7 @@ LLCoverageArea::lookupIncrUpto(const std::string& key, std::vector<int>& incr, s
     found = false;
   }
   if (found) {
-    LogInfo("Found height description key '" << key << "'\n");
+    fLogInfo("Found height description key '{}'", key);
   }
   return found;
 }
@@ -371,7 +366,7 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
       low  = std::stof(pieces[0]) * 1000.0; // Meters
       high = std::stof(pieces[1]) * 1000.0;
     }catch (const std::exception& e) {
-      LogSevere("Failed to convert to number '" << pieces[0] << "' and/or '" << pieces[1] << "'\n");
+      fLogSevere("Failed to convert to number '{}' and/or '{}'", pieces[0], pieces[1]);
       failed = true;
       return failed;
     }
@@ -403,7 +398,7 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
         upto = { 99999 };
         hs << incrInt << D << 99999;
       }catch (const std::exception& e) {
-        LogSevere("Failed to find a key in heights or convert to number '" << str << "'\n");
+        fLogSevere("Failed to find a key in heights or convert to number '{}'", str);
         failed = true;
         return failed;
       }
@@ -426,11 +421,11 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
           ss << " ";
         }
       }
-      LogInfo("Generated heights (KMs): " << ss.str() << "\n");
+      fLogInfo("Generated heights (KMs): {}", ss.str());
     }
   }
   if (failed) {
-    LogSevere("Failed to parse '" << label << "' height parameters: '" << list << "'\n");
+    fLogSevere("Failed to parse '{}' height parameters: '{}'", label, list);
   }
   return failed;
 } // LLCoverageArea::parseHeights
@@ -456,7 +451,7 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
     }
     finalGrid = ss.str();
   }
-  LogInfo("Grid declared: '" << finalGrid << "'\n");
+  fLogInfo("Grid declared: '{}'", finalGrid);
 
   // --------------------------------------------------
   // Process the grid language, which consists of functions and params:
@@ -511,7 +506,7 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
   std::vector<double> theHeightsKM;
 
   if (functions.size() < 1) {
-    LogSevere("Unrecognized grid language: '" << finalGrid << "'\n");
+    fLogSevere("Unrecognized grid language: '{}'", finalGrid);
     failed = true;
   }
 
@@ -527,22 +522,22 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
     } else if (f == "h") {
       haveH = !parseHeights(f, p, theHeightsKM);
     } else {
-      LogSevere("Unrecognized grid language: '" << f << "' unrecognized.\n");
+      fLogSevere("Unrecognized grid language: '{}' unrecognized.", f);
       failed = true;
     }
   }
 
   // Have to have these to be valid. Heights are optional
   if (!haveNW) {
-    LogSevere("Missing nw() grid corner.\n");
+    fLogSevere("Missing nw() grid corner.");
     failed = true;
   }
   if (!haveSE) {
-    LogSevere("Missing se() grid corner.\n");
+    fLogSevere("Missing se() grid corner.");
     failed = true;
   }
   if (!haveS) {
-    LogSevere("Missing s() grid spacing.\n");
+    fLogSevere("Missing s() grid spacing.");
     failed = true;
   }
   if (!haveH) { // 2D
@@ -552,16 +547,16 @@ LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::
   // Check nw and se corner ordering...we could fix/flip them probably or stop
   if (!failed) {
     if (nwLatDegs <= seLatDegs) {
-      LogSevere("Grid nw latitude should be more than the se latitude\n");
+      fLogSevere("Grid nw latitude should be more than the se latitude");
       failed = true;
     }
     if (nwLonDegs >= seLonDegs) {
-      LogSevere("Grid nw longitude should be less than the se longitude\n");
+      fLogSevere("Grid nw longitude should be less than the se longitude");
       failed = true;
     }
   }
   if (failed) {
-    LogSevere("Couldn't parse grid options.\n");
+    fLogSevere("Couldn't parse grid options.");
     return false;
   }
 

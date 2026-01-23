@@ -1,6 +1,6 @@
 #include "rDirWatcher.h"
 
-#include "rError.h" // for LogInfo()
+#include "rError.h" // for fLogInfo()
 #include "rOS.h"
 
 #include <dirent.h>
@@ -37,7 +37,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lo
   DIR * dirp = opendir(dir.c_str());
 
   if (dirp == 0) {
-    LogSevere("Unable to read location " << dir << "\n");
+    fLogSevere("Unable to read location {}", dir);
     return;
   }
   struct dirent * dp;
@@ -53,7 +53,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lo
     struct stat dst;
     if (stat(full.c_str(), &dst) != 0) {
       // What to do if stat is failing?
-      LogSevere("Stat is failing, unable to poll directory.\n");
+      fLogSevere("Stat is failing, unable to poll directory.");
       return;
     }
     const auto nanos    = dst.st_ctim.tv_nsec;
@@ -66,7 +66,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lo
         scan(listener, full, lowtime, newlowtime);
       } else {
         // FIXME: Push into queue if wanted... realtime mode maybe so a skip pass at beginning
-        // LogSevere("    NEW:" << full << " " << newlowtime.st_ctim.tv_sec << "." << newlowtime.st_ctim.tv_nsec << "\n");
+        // fLogSevere("    NEW:{} {}.{}", full, newlowtime.st_ctim.tv_sec, newlowtime.st_ctim.tv_nsec);
         WatchEvent e(listener, "newfile", full);
         myEvents.push(e);
       }
@@ -77,7 +77,7 @@ DirWatcher::scan(IOListener * listener, const std::string& dir, struct stat & lo
         newlowtime.st_ctim.tv_nsec = nanos;
       }
     } else {
-      //     LogSevere("    Under:"<<full<< " " <<secs <<"." << nanos << "\n");
+      //     fLogSevere("    Under:{} {}.{}", full, secs, nanos);
     }
   }
 
@@ -98,7 +98,7 @@ DirWatcher::DirInfo::createEvents(WatcherType * w)
 
   // auto lastnanos = w.myLastStat.st_ctim.tv_nsec;
   // auto lastsecs = w.myLastStat.st_ctim.tv_sec;
-  // LogSevere("CURRENT LOW: " << lastsecs <<"."<<lastnanos<<"\n");
+  // fLogSevere("CURRENT LOW: {}.{}", lastsecs, lastnanos);
 
   // Get up to a max number of new files.  This allows
   // multiple directory watchers to share bandwidth and not hog
@@ -127,7 +127,7 @@ DirWatcher::attach(const std::string & dirname,
   // On archive do initial scan of directory for files to push into the
   // event list and get the latest creation time
   if (archive) {
-    LogInfo("Doing initial scan of directory " + dirname + "\n");
+    fLogInfo("Doing initial scan of directory {}", dirname);
     struct stat newLast = newWatch->myLastStat;
     scan(l, dirname, newWatch->myLastStat, newLast);
     newWatch->myLastStat = newLast;
@@ -138,7 +138,7 @@ DirWatcher::attach(const std::string & dirname,
     // process all others so data comes in order.  I won't implement this for now
     // since users doing archives will probably use an index anyway which solves this
     // time order issue.  Ingestors will typically process a root directory
-    LogInfo("Initial processing of all files as archive.\n");
+    fLogInfo("Initial processing of all files as archive.");
     while (!myEvents.empty()) {
       auto e = myEvents.front();
       myEvents.pop();

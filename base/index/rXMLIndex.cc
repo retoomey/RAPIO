@@ -93,7 +93,7 @@ XMLIndex::initialRead(bool realtime, bool archive)
         }
       }
     }catch (const std::exception& e) {
-      LogSevere("Error parsing codeindex XML\n");
+      fLogSevere("Error parsing codeindex XML");
       return (false);
     }
     return (true);

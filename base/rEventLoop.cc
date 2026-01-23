@@ -43,9 +43,9 @@ EventLoop::exit(int theExitCode)
 void
 EventLoop::doEventLoop()
 {
-  LogInfo("Starting MAIN loop with " << myEventHandlers.size() << " Event handlers.\n");
+  fLogInfo("Starting MAIN loop with {} Event handlers.", myEventHandlers.size());
   for (auto& i:myEventHandlers) {
-    LogDebug("  EventHandler: " << i->getName() << "\n");
+    fLogDebug("  EventHandler: {}", i->getName());
   }
 
   // Create any timer threads wanted, these will fire on timers
@@ -85,7 +85,7 @@ EventLoop::doEventLoop()
       }
     }
   }catch (const std::exception& e) {
-    LogSevere("Main loop uncaught exception: \"" << e.what() << "\", exiting\n");
+    fLogSevere("Main loop uncaught exception: \"{}\", exiting", e.what());
   }
 
   // Delete all child threads

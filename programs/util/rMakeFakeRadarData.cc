@@ -46,7 +46,7 @@ MakeFakeRadarData::processOptions(RAPIOOptions& o)
   myNumRadials = 360.0 / myAzimuthalDegs;
 
   if (myDEM == nullptr) {
-    LogSevere("Ok you need to actually have terrain for this first alpha\n");
+    fLogSevere("Ok you need to actually have terrain for this first alpha");
     exit(1);
   }
 }
@@ -54,11 +54,11 @@ MakeFakeRadarData::processOptions(RAPIOOptions& o)
 void
 MakeFakeRadarData::execute()
 {
-  LogInfo("Radarname: " << myRadarName << "\n");
-  LogInfo("BeamWidth: " << myBeamWidthDegs << "\n");
-  LogInfo("GateWidth: " << myGateWidthM << "\n");
-  LogInfo("Radar range: " << myRadarRangeKM << "\n");
-  LogInfo("Azimuthal spacing: " << myAzimuthalDegs << "\n");
+  fLogInfo("Radarname: {}", myRadarName);
+  fLogInfo("BeamWidth: {}", myBeamWidthDegs);
+  fLogInfo("GateWidth: {}", myGateWidthM);
+  fLogInfo("Radar range: {}", myRadarRangeKM);
+  fLogInfo("Azimuthal spacing: {}", myAzimuthalDegs);
 
   // We don't have vcp so what to do.  FIXME: probably new parameters right?
   // FIXME: have vcp lists?  Bleh we got into trouble because of that in first place
@@ -69,11 +69,10 @@ MakeFakeRadarData::execute()
   if (ConfigRadarInfo::haveRadar(myRadarName)) {
     myCenter = ConfigRadarInfo::getLocation(myRadarName);
   } else {
-    LogSevere(
-      "Couldn't find info for radar '" << myRadarName << "', using DEM center which is probably not what you want.\n");
+    fLogSevere( "Couldn't find info for radar '{}', using DEM center which is probably not what you want.", myRadarName);
     myCenter = myDEM->getCenterLocation();
   }
-  LogInfo("Center location: " << myCenter << "\n");
+  fLogInfo("Center location: {}", myCenter);
 
   Time myTime;
   LengthMs firstGateDistanceMeters = 0;
@@ -140,11 +139,11 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
   if (!myChart.empty()) {
     AngleDegs centerAzDegs = 315; // hit mountains KEWX hopefully or not...
     try{
-      LogInfo("Chart is '" << myChart << "'\n");
+      fLogInfo("Chart is '{}'", myChart);
       centerAzDegs = std::stoi(myChart);
     }catch (const std::exception& e)
     {
-      LogSevere("Couldn't parse azimuth angle from chart parameter, using " << centerAzDegs << "\n");
+      fLogSevere("Couldn't parse azimuth angle from chart parameter, using {}", centerAzDegs);
     }
     const AngleDegs elevDegs = rs.getElevationDegs();
 
@@ -153,9 +152,9 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
     worker << myRadarName << " az=" << centerAzDegs << ", elev=" << elevDegs << ", bw=" << myBeamWidthDegs;
     const std::string chartTitle = worker.str();
 
-    LogInfo("Create DataGrid for chart named: '" << chartTitle << "'\n");
+    fLogInfo("Create DataGrid for chart named: '{}'", chartTitle);
 
-    LogSevere("..... creating generic data grid class " << myNumGates << "\n");
+    fLogSevere("..... creating generic data grid class {}", myNumGates);
     Time aTime;
     LLH aLocation;
     auto myDataGrid = DataGrid::Create("TerrainElevationChartData", "dimensionless", aLocation, aTime, { myNumGates,
@@ -331,7 +330,8 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
         TerrainAverageKMs = TerrainAverageKMs + t1 + t2 + t3;
 
-        // LogSevere(" totalY, y current, degs , terrain " << totalY << ", " << yi << ", " << left << ", " <<  "\n");
+        // fLogSevere(" totalY, y current, degs , terrain {}, {}, {}, {}", 
+        //   totalY, yi, left);
         left += deltaDeg;
       }
       TerrainAverageKMs /= (numSamples * 3);
@@ -369,8 +369,8 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
       if (diff < 0) { diff = -diff; }
 
       if (terrain[i] != aTerrain) { // KM !=  KM
-        // LogSevere("TERRAIN? " << terrain[i] << " != " << aTerrain << "\n");
-        LogSevere("TERRAIN? " << diff << "\n");
+        // fLogSevere("TERRAIN? {} != {}", terrain[i], aTerrain);
+        fLogSevere("TERRAIN? {}",diff);
       }
       #endif
       range[i] = rangeKMs;
@@ -393,7 +393,7 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
     IODataType::write(myDataGrid, "test-grid.netcdf");
   }
-  LogSevere("EXECUTED 4  Max terrain in gate.\n");
+  fLogSevere("EXECUTED 4  Max terrain in gate.");
 } // MakeFakeRadarData::terrainAngleChart
 
 void
@@ -544,15 +544,15 @@ void
 MakeFakeRadarData::readTerrain()
 {
   if (myTerrainPath.empty()) {
-    LogInfo("No terrain path provided, running without terrain information\n");
+    fLogInfo("No terrain path provided, running without terrain information");
   } else if (myDEM == nullptr) {
     {
       auto d = IODataType::read<LatLonGrid>(myTerrainPath);
       if (d != nullptr) {
-        LogInfo("Terrain DEM read: " << myTerrainPath << "\n");
+        fLogInfo("Terrain DEM read: ", myTerrainPath);
         myDEM = d;
       } else {
-        LogSevere("Failed to read in Terrain DEM LatLonGrid at " << myTerrainPath << "\n");
+        fLogSevere("Failed to read in Terrain DEM LatLonGrid at {}", myTerrainPath);
         exit(1);
       }
     }

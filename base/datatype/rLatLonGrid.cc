@@ -92,7 +92,7 @@ LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgo
   auto& o = *out;
 
   // FIXME: Can we know name/params of the particular remapper
-  LogInfo("Remapping using matrix size of " << r.myWidth << " by " << r.myHeight << "\n");
+  fLogInfo("Remapping using matrix size of {} by {}", r.myWidth, r.myHeight);
 
   // FIXME: We're only mapping primary data array
   r.setSource(getFloat2D());
@@ -139,7 +139,7 @@ LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgo
   }   // endY
 
   if (counter > 0) {
-    LogInfo("Sample hit counter is " << counter << "\n");
+    fLogInfo("Sample hit counter is {}", counter);
   }
 } // LatLonGrid::RemapInto
 

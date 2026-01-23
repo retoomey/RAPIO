@@ -581,7 +581,7 @@ RAPIOFusionOneAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   if (myTerrainBlockage != nullptr) {
     ProcessTimer terrain("Applying terrain blockage");
     myTerrainBlockage->calculateTerrainPerGate(r);
-    LogInfo(terrain);
+    fLogInfo("{}", terrain);
   }
 } // RAPIOFusionOneAlg::processRadialSet
 

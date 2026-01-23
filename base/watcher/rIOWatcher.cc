@@ -66,10 +66,10 @@ WatcherType::queueIsThrottled()
   // we don't poll for events.
   if (myEvents.size() == myMaxQueueSize) {
     if (myWaitWhenQueueFull) {
-      LogSevere("Queue is full..waiting on creating new events.\n");
+      fLogSevere("Queue is full..waiting on creating new events.");
       return true;
     } else {
-      LogInfo("Queue size is over " << myMaxQueueSize << ", system is probably lagging.\n");
+      fLogInfo("Queue size is over {}, system is probably lagging.", myMaxQueueSize);
     }
   }
   return false;

@@ -119,7 +119,7 @@ BinaryTable::magicToBlockLevels(
   // We might read a bad file and have some crazy string...so we'll
   // do some sanity first...
   if (source.size() > 1000) {
-    LogSevere("Magic string for file seems suspicious, probably bad data...\n");
+    fLogSevere("Magic string for file seems suspicious, probably bad data...");
   } else {
     blocks.clear();
     Strings::split(source, '-', &blocks);
@@ -139,7 +139,7 @@ BinaryTable::readBlock(const std::string& path, FILE * fp)
   // every raw file MUST have our level (The "W2-" part basically)
   // and also a bad file, etc would catch here quickly
   if (!matchBlockLevel(BinaryTable::BLOCK_LEVEL)) {
-    LogSevere("This file doesn't have a marker as a WDSS2 raw file\n");
+    fLogSevere("This file doesn't have a marker as a WDSS2 raw file");
     myLastFileVersion = 0;
     return (false);
   }
@@ -153,9 +153,9 @@ BinaryTable::readBlock(const std::string& path, FILE * fp)
   // Check the file version number....
   if (!canHandleVersion(file_version)) {
     const size_t ourVersion = getVersion();
-    LogSevere("Trying to read a binary file with version number "
-      << file_version << " which is too new vs our version of " << ourVersion
-      << "You need a newer build.\n");
+    fLogSevere(
+      "Trying to read a binary file with version number {} while is too new vs our version of {}. You need a newer build", file_version,
+      ourVersion);
     return (false);
   }
 

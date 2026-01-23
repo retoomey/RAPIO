@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_READWRITE)
       outValueCount++;
     }
     if (v != outv) {
-      // LogSevere("V is " << outv << " we expected " << v << " at (" << xout << ", " << yout << " , " << zout << ")\n");
+      // fLogSevere("V is {} we expected {} at ({}, {}, {})", outv, v, xout, yout, zout);
       BOOST_CHECK_EQUAL(v, outv); // just one actual check or we'll spam
       passed = false;
       break;

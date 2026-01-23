@@ -52,9 +52,9 @@ W2SimpleAlg::processOptions(RAPIOOptions& o)
    * myX = o.getBoolean("x");
    * myZ = o.getString("Z");
    * std::string xAsString = o.getString("x");
-   * LogInfo(" ************************x IS " << myX << " (as string "<< xAsString << "\n");
-   * LogInfo(" ************************T IS " << myTest << "\n");
-   * LogInfo(" ************************Z IS " << myZ << "\n");
+   * fLogInfo(" ************************x IS {} (as string {}", myX, xAsString);
+   * fLogInfo(" ************************T IS {}", myTest);
+   * fLogInfo(" ************************Z IS {}", myZ);
    */
 }
 
@@ -71,7 +71,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
   for (auto& s1:sel) {
     s = s + s1 + " ";
   }
-  LogInfo(s << " from index " << d.matchedIndexNumber() << "\n");
+  fLogInfo("{} from index {}", s, d.matchedIndexNumber());
 
   // Example of reading data.  Typically if you know what you want,
   // you can basically:
@@ -107,9 +107,6 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     if (list.size() > 0) { // zero comes back if missing any of them.
       // Process list[0], list[1], etc.
-      LogSevere(
-        ">>>>>>>>>>>>>>>>FULL GROUP: PROCESSING REFLECTIVITY, VELOCITY AT SUBTYPE " << current
-                                                                                    << "<<<<<<<<<<<<<<<<<<<<<<\n");
       ProcessMyNewAlg(list[0], list[1], list[2]) // These will match the 'types' in.
       // If processed now you can delete that slice if you don't want to chance processing this timeset again
       DataTypeHistory::deleteSubtypeGroup(current, types);
@@ -120,7 +117,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
-      LogInfo("This is a radial set, do radial set stuff\n");
+      fLogInfo("This is a radial set, do radial set stuff");
       auto time = radialSet->getTime();
       time += TimeDuration::Days(18250);
 
@@ -148,18 +145,18 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
     }
 
     // Standard echo of data to output.  Note it's the same data out as in here
-    LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");
+    fLogInfo("--->Echoing {} product to output", r->getTypeName());
     std::map<std::string, std::string> myOverrides;
     // myOverrides["postSuccessCommand"] = "ldm";            // Do a standard pqinsert of final data file
     writeOutputProduct(r->getTypeName(), r, myOverrides); // Typename will be replaced by -O filters
-    LogInfo("--->Finished " << r->getTypeName() << " product to output\n");
+    fLogInfo("--->Finished {} product to output", r->getTypeName());
   }
 } // W2SimpleAlg::processNewData
 
 void
 W2SimpleAlg::processHeartbeat(const Time& n, const Time& p)
 {
-  LogInfo("Simple alg got a heartbeat...what do you want me to do?\n");
+  fLogInfo("Simple alg got a heartbeat...what do you want me to do?");
   // FIXME: longer example here maybe..
   // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
   // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters

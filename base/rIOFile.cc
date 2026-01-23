@@ -47,7 +47,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 
   if (factory == "file") {
     // We don't want to proxy to ourselves and make an infinite loop.
-    LogSevere("File builder cannot proxy to file builder (itself), so cannot write.\n");
+    fLogSevere("File builder cannot proxy to file builder (itself), so cannot write.");
     return false;
   }
 
@@ -62,7 +62,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 
   // Notification currently has default paths and things, if we do want notification for single
   // files we'll have to tweek that code some.  FIXME: I can see doing this
-  LogInfo("Ignoring " << records.size() << " record notifications since you're using single file builder.\n");
+  fLogInfo("Ignoring {} record notifications since you're using single file builder.", records.size());
   records.clear();
   return success;
 } // IOFile::writeout
@@ -72,7 +72,7 @@ IOFile::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>             & keys
 )
 {
-  LogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().\n");
+  fLogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().");
   return false;
 }
 

@@ -21,9 +21,7 @@ DirWalker::printPath(const std::string& prefix, const std::string& path, const s
   std::string f = path;
 
   Strings::removePrefix(f, x);
-  LogInfo(prefix << "..." << f << " " <<
-    Time(info->st_mtime, 0) << " " <<
-    Strings::formatBytes(info->st_size) << "\n");
+  fLogInfo("{}...{} {} {}", prefix, f, Time(info->st_mtime, 0), Strings::formatBytes(info->st_size));
 }
 
 int
@@ -42,14 +40,14 @@ DirWalker::traverse(const std::string& path)
   myCurrentWalker = this;
   myCurrentRoot   = path;
 
-  LogInfo("Traversing " << path << "...\n");
+  fLogInfo("Traversing {}", path);
   if (nftw(path.c_str(),
     // Compiler can link a static c++ member function to c ok,
     // Have to be careful with extern "C", etc.
     &DirWalker::nftwCallback,
     10, flags) == -1)
   {
-    LogSevere("Failed to traverse directory.\n");
+    fLogSevere("Failed to traverse directory.");
     return false;
   }
   return true;
@@ -61,7 +59,7 @@ DirWalker::process(const char * filePath, const struct stat * fileInfo, int type
   // fileInfo->st_mtime;
   // fileInfo->st_size;
   // printf("0%3o\t%s/ (Directory)\n", status->st_mode&0777, name);
-  // LogInfo("(virtual) PATH IS " << filePath << " " << fileInfo->st_mtime << " " << fileInfo->st_size << "\n");
+  // fLogInfo("(virtual) PATH IS {} {} {}", filePath, fileInfo->st_mtime, fileInfo->st_size);
   std::string aFilePath(filePath); // go back to c++ for interface consistency
 
   /** pathInfo is a FTW which contains the following.

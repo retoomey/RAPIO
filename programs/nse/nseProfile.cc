@@ -349,9 +349,7 @@ double nseProfile::getMeanValueLayer(double botHeight, double topHeight,
    const std::vector<double> &param) 
 {
   if (gridPoints.size() != param.size()) {
-    LogInfo ( "getMeanValueLayer requires that the"
-      << " nseProfile size matches the size of the vector to"
-      << " be interpolated.\n");
+    fLogInfo ( "getMeanValueLayer requires that the nseProfile size matches the size of the vector to be interpolated.");
     return (Constants::MissingData);
   }
 
@@ -403,9 +401,7 @@ double nseProfile::getMeanValueLayer(double botHeight, double topHeight,
 {
   // heights in m MSL
   if (height.size() != param.size()) {
-    LogInfo ("getMeanValueLayer requires that the"
-      << " height vector size matches the size of the vector to"
-      << " be interpolated.\n");
+    fLogInfo ("getMeanValueLayer requires that the height vector size matches the size of the vector to be interpolated.");
     return (Constants::MissingData);
   }
   if (botHeight == Constants::MissingData || 
@@ -594,8 +590,7 @@ void nseProfile::LiftParcel(nsePoint parcel,
   // if we are missing info, we can't do the calculation
   if (parcel.getLCLTemp() == Constants::MissingData ||
       parcel.getLCLPres() == Constants::MissingData ) {
-    //LogInfo ("Missing parcel info -- LCLTemp = " <<
-    //  parcel.getLCLTemp() << " LCLPres = " << parcel.getLCLPres() << "\n");
+    //fLogInfo ("Missing parcel info -- LCLTemp = {} LCLPres = {}", parcel.getLCLTemp(), parcel.getLCLPres());
     CAPE = Constants::MissingData;
     CIN = Constants::MissingData;
     return;
@@ -758,8 +753,7 @@ void nseProfile::LiftParcel(nsePoint parcel,
 //	Tv_env << " / " << Tv_parcel << " / " << energy << " / " << 
 //	( height_top - height_bot )  << "\n";
       if (energy < 0) {
-	LogInfo ("negative CAPE where there should not be...\n"
-	 << "  parcel/env  " << Tv_parcel << " / " << Tv_env << "\n");
+	fLogInfo ("negative CAPE where there should not be... parcel/env {} / {}", Tv_parcel, Tv_env);
       }
         
       CAPE += energy;
@@ -899,15 +893,18 @@ void nseProfile::LiftParcel(nsePoint parcel,
 	             * ( height_top - height_bot );
 
       if (energy > 0) {
-	LogInfo ("positive CAPE where there should not be...\n"
+#if 0
+	fLogInfo ("positive CAPE where there should not be...\n"
 	 << "  parcel/env  " << Tv_parcel << " / " << Tv_env << " ht top/bot ="
 	 << height_top << " / " << height_bot << " tdiff top/bot = " << 
 	 tv_diff_top << " / " << tv_diff_bot << " i/sfc = " << i << "/"
 	 << nearSurfaceGridPoint << "\n");
-        LogInfo ( "Tv_env 1/2 = " << gridPoints[i].getVirtualTempK()
+
+        fLogInfo ( "Tv_env 1/2 = " << gridPoints[i].getVirtualTempK()
 	  << " / " << gridPoints[i+1].getVirtualTempK()
 	  << " Tv_parc 1/2 = " << TVparcel[i] << " / " << TVparcel[i+1]
 	  << "\n");
+#endif
       }
       if (height_top < EL) CIN += energy;
       if (height_top > EL) MPL_energy -= energy;
@@ -2329,7 +2326,7 @@ double nseProfile::ConvectiveTemperature(nsePoint parcel)
 assert(startI < (int)gridPoints.size() && "Out of range");
   for (int i = startI; i >= (int) nearSurfaceGridPoint ; i--) {
     if (i < 0) {
-      LogSevere ( "index in convective temp calculation < 0!\n");
+      fLogSevere ( "index in convective temp calculation < 0!");
       return Constants::MissingData;
     }
     // FIXME: assumes that pres is found exactly -- not interpolated

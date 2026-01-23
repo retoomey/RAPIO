@@ -65,9 +65,9 @@ public:
   void
   setOutputArray(const std::string& key = Constants::PrimaryDataName)
   {
-    // LogSevere("Primary before  " << (void*)(myOutputArray->data()) << "\n");
+    // fLogSevere("Primary before  {}", (void*)(myOutputArray->data()));
     myOutputArray = myRadialSet.getFloat2DPtr(key);
-    // LogSevere("Primary after is " << (void*)(myOutputArray->data()) << "\n");
+    // fLogSevere("Primary after is {}", (void*)(myOutputArray->data()));
   }
 
   /** Iterate over radial set  */
@@ -117,7 +117,7 @@ public:
   inline void
   setValue(float v)
   {
-    //   LogSevere("Primary on set is " << (void*)(myOutputArray->data()) << "\n");
+    //   fLogSevere("Primary on set is {}", (void*)(myOutputArray->data()));
     // exit(1);
     (*myOutputArray)[myCurrentRadial][myCurrentGate] = v;
   }

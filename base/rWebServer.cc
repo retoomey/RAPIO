@@ -107,7 +107,7 @@ WebServer::handleSendFilepath(std::shared_ptr<HttpServer::Response>& response,
 
   // Handle directories
   if (OS::isDirectory(path)) {
-    LogSevere("Directory forbidden: " + path);
+    fLogSevere("Directory forbidden: {}", path);
     handleSendError(response, web, 403,
       "Directory currently forbidden: " + path);
     return;
@@ -195,7 +195,7 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
       if (web->isFile()) {
         handleSendFilepath(response, web);
       } else {
-        LogInfo("Sending text\n");
+        fLogInfo("Sending text");
 
         // Fill in header from web message
         SimpleWeb::CaseInsensitiveMultimap header;
@@ -220,7 +220,7 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
       handleSendError(response, web, 404, "Internal algorithm error\n");
     }
   }catch (const std::exception& e) {
-    LogSevere("Error handling web request: " << e.what() << "\n");
+    fLogSevere("Error handling web request: {}", e.what());
   }
 } // WebServer::handleGET
 
@@ -259,7 +259,7 @@ WebServer::startWebServer(const std::string& params, RAPIOProgram * prog)
   try{
     port = std::stoi(params);
   }catch (const std::exception& e) {
-    LogSevere("Couldn't get port from '" << params << "', exiting.\n");
+    fLogSevere("Couldn't get port from '{}', exiting.", params);
     exit(1);
   }
 
@@ -274,5 +274,5 @@ WebServer::startWebServer(const std::string& params, RAPIOProgram * prog)
 
   // Now add the webserver thread to the event loop
   EventLoop::theThreads.push_back(std::thread(&WebServer::runningWebServer));
-  LogInfo("Algorithm Web Server Initialized on port: " << WebServer::port << "\n");
+  fLogInfo("Algorithm Web Server Initialized on port: {}", WebServer::port);
 } // WebServer::startWebServer

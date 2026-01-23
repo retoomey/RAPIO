@@ -19,7 +19,7 @@ void
 ConfigParamGroupi::process1(const std::string& param)
 {
   // We don't actually create an index here...we wait until execute.
-  LogDebug("Adding source index:'" << param << "'\n");
+  fLogDebug("Adding source index:'{}'", param);
 
   std::string protocol, indexparams;
 
@@ -41,7 +41,7 @@ ConfigParamGroupi::process1(const std::string& param)
       protocol    = pieces[0];
       indexparams = pieces[1];
     } else {
-      LogSevere("Format of passed index '" << param << "' is wrong, see help i\n");
+      fLogSevere("Format of passed index '{}' is wrong, see help i", param);
       exit(1);
     }
   }
@@ -110,17 +110,15 @@ ConfigParamGroupO::process1(const std::string& param)
     subtypePattern = "NOT FOUND";
   }
 
-  //  LogInfo("Product pattern is " << productPattern << "\n");
-  //  LogInfo("Subtype pattern is " << subtypePattern << "\n");
-  //  LogInfo("Product2 pattern is " << toProductPattern << "\n");
-  //  LogInfo("Subtype2 pattern is " << toSubtypePattern << "\n");
+  //  fLogInfo("Product pattern is {}", productPattern);
+  //  fLogInfo("Subtype pattern is {}", subtypePattern);
+  //  fLogInfo("Product2 pattern is {}", toProductPattern);
+  //  fLogInfo("Subtype2 pattern is {}", toSubtypePattern);
 
   // Make sure unique enough
   for (size_t i = 0; i < myProductOutputInfo.size(); i++) {
     if (productPattern == myProductOutputInfo[i].product) {
-      LogInfo(
-        "Already added output product with pattern '" << productPattern
-                                                      << "', ignoring..\n");
+      fLogInfo("Already added output product with pattern '{}', ignoring..", productPattern);
       return;
     }
   }
@@ -129,7 +127,7 @@ ConfigParamGroupO::process1(const std::string& param)
   myProductOutputInfo.push_back(
     productOutputInfo(productPattern, subtypePattern, toProductPattern, toSubtypePattern));
 
-  LogDebug("Added output product pattern with key '" << param << "'\n");
+  fLogDebug("Added output product pattern with key '{}'", param);
 } // ConfigParamGroupO::process1
 
 void
@@ -148,7 +146,7 @@ ConfigParamGroupo::process1(const std::string& param)
     // Otherwise we have a factory attempt with this output info
     myWriters.push_back(outputInfo(pair[0], pair[1]));
   } else {
-    LogSevere("Can't understand your -o format for: '" << param << "', ignoring.\n");
+    fLogSevere("Can't understand your -o format for: '{}', ignoring.", param);
   }
 }
 
@@ -177,7 +175,7 @@ ConfigParamGroupn::process1(const std::string& param)
     protocol = pair[0];
     params   = pair[1];
   } else {
-    LogSevere("Format of passed notifier '" << param << "' is wrong, see help n\n");
+    fLogSevere("Format of passed notifier '{}' is wrong, see help n", param);
     exit(1);
   }
 
@@ -188,7 +186,7 @@ void
 ConfigParamGroupn::process(const std::string& param)
 {
   if (param == "disable") {
-    LogInfo("Notifiers disabled\n");
+    fLogInfo("Notifiers disabled");
     myDisabled = true;
   } else {
     myDisabled = false;

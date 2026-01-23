@@ -276,7 +276,7 @@ FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, si
     }
   }
 
-  LogInfo(test);
+  fLogInfo("{}", test);
 } // FusionDatabase::mergeTo
 
 void

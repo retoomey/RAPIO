@@ -18,7 +18,7 @@ PluginIngestor::declare(RAPIOProgram * owner, const std::string& name)
     owner->addPlugin(new PluginIngestor(name));
     once = false;
   } else {
-    LogSevere("Code error, can only declare ingestor once\n");
+    fLogSevere("Code error, can only declare ingestor once");
     exit(1);
   }
   return true;
@@ -96,19 +96,18 @@ PluginIngestor::execute(RAPIOProgram * callerin)
     }
 
     std::string how = success ? "Successful" : "Failed";
-    LogInfo(how << " " << what << " connection to '" << i.protocol << "-->" << i.indexparams << "'\n");
+    fLogInfo("{} {} connection to '{}-->{}'", how, what, i.protocol, i.indexparams);
   }
 
   // Failed to connect to all needed sources...
   if (count != wanted) {
-    LogSevere("Only connected to " << count << " of " << wanted
-                                   << " data sources, ending.\n");
+    fLogSevere("Only connected to {} of {} data sources, ending.", count, wanted);
     exit(1);
   }
 
   const size_t rSize = Record::theRecordQueue->size();
 
-  LogInfo(rSize << " initial records from " << wanted << " sources\n");
+  fLogInfo("{} initial records from {} sources", rSize, wanted);
 
   // After all connections/archive reading/filtering, tell
   // RecordQueue to try processing queue.  This is important for the end

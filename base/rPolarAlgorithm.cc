@@ -109,12 +109,12 @@ PolarAlgorithm::processRadialSet(std::shared_ptr<RadialSet> r)
     return false;
   }
 
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---RadialSet---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---RadialSet---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
   // Need a radar name in data to handle it currently
   std::string name = "UNKNOWN";
 
   if (!r->getString("radarName-value", name)) {
-    LogSevere("No radar name found in RadialSet, ignoring data\n");
+    fLogSevere("No radar name found in RadialSet, ignoring data");
     return false;
   }
 
@@ -125,10 +125,8 @@ PolarAlgorithm::processRadialSet(std::shared_ptr<RadialSet> r)
   const size_t numGates       = r->getNumGates();
 
   // ProcessTimer ingest("Ingest tilt");
-
-  LogInfo(
-    r->getTypeName() << " (" << numRadials << " Radials * " << numGates << " Gates), " <<
-      r->getElevationDegs() << ", Time: " << r->getTime() << "\n");
+  fLogInfo("{} ({} Radials * {} Gates), {}, Time: {}",
+    r->getTypeName(), numRadials, numGates, r->getElevationDegs(), r->getTime());
 
   // Initialize everything related to this radar
   firstDataSetup(r, name, aTypeName);
@@ -136,10 +134,9 @@ PolarAlgorithm::processRadialSet(std::shared_ptr<RadialSet> r)
   // Check if incoming radar/moment matches our single setup, otherwise we'd need
   // all the setup for each radar/moment.  Which we 'could' do later maybe
   if ((myRadarName != name) || (myTypeName != aTypeName)) {
-    // LogSevere(
-    //   "We are linked to '" << myRadarName << "-" << myTypeName << "', ignoring radar/typename '" << name << "-" << aTypeName <<
-    //     "'\n");
-    LogInfo("Ignoring radar/typename '" << name << "-" << aTypeName << "'\n");
+    // fLogSevere("We are linked to '{}-{}', ignoring radar/typename '{}-{}'",
+    //  myRadarName, myTypeName, name, aTypeName);
+    fLogInfo("Ignoring radar/typename '{}-{}'", name, aTypeName);
     return false;
   }
 
@@ -158,7 +155,7 @@ PolarAlgorithm::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& 
   if (setup) { return; }
 
   setup = true;
-  LogInfo(ColorTerm::green() << ColorTerm::bold() << "---Initial Startup---" << ColorTerm::reset() << "\n");
+  fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   // Radar center coordinates
   const LLH center        = r->getRadarLocation();
@@ -167,9 +164,8 @@ PolarAlgorithm::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& 
   const LengthKMs cHeight = center.getHeightKM();
 
   // Link to first incoming radar and moment, we will ignore any others from now on
-  LogInfo(
-    "Linking this algorithm to radar '" << radarName << "' and typename '" << typeName <<
-      "' since first pass we only handle 1\n");
+  fLogInfo("Linking this algorithm to radar '{}' and typename '{}' since first pass we only handle 1",
+    radarName, typeName);
   myTypeName  = typeName;
   myRadarName = radarName;
 
@@ -261,5 +257,5 @@ PolarAlgorithm::createOutputRadialSet(
 void
 PolarAlgorithm::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
 {
-  LogInfo("Base Algorithm does nothing\n");
+  fLogInfo("Base Algorithm does nothing");
 } // PolarAlgorithm::processVolume

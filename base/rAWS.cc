@@ -31,7 +31,7 @@ AWS::test_REST_API_Get(
   const std::string& access_key,
   const std::string& secret_key)
 {
-  LogInfo("Ok here in get REST test\n");
+  fLogInfo("Ok here in get REST test");
 
   std::string method   = "GET";
   std::string service  = "ec2";
@@ -81,7 +81,7 @@ AWS::test_REST_API_Get(
   // std::string payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
   const std::string payload_hash = Secure::hexdigest(Secure::sha256("")); // guessing here
 
-  LogInfo("Payload_hash: " << payload_hash << "\n");
+  fLogInfo("Payload_hash: {}", payload_hash);
 
   // Step 7: Combine elements to create canonical request
   std::string canonical_request = method + "\n" + canonical_uri + "\n" + canonical_querystring + "\n"
@@ -93,14 +93,14 @@ AWS::test_REST_API_Get(
   std::string algorithm        = "AWS4-HMAC-SHA256";
   std::string credential_scope = datestamp + "/" + region + "/" + service + "/" + "aws4_request";
 
-  LogInfo("SCOPE:" << credential_scope << "\n");
-  LogInfo("ALGORITHM:" << algorithm << "\n");
-  LogInfo("AMZDATE:" << amzdate << "\n");
+  fLogInfo("SCOPE:{}", credential_scope);
+  fLogInfo("ALGORITHM:{}", algorithm);
+  fLogInfo("AMZDATE:{}", amzdate);
   std::string string_to_sign = algorithm + "\n" + amzdate + "\n"
     + credential_scope + "\n" + Secure::hexdigest(Secure::sha256(canonical_request));
   std::string testcan = Secure::hexdigest(Secure::sha256(canonical_request));
 
-  LogInfo("CAN:" << testcan << "\n");
+  fLogInfo("CAN:{}", testcan);
 
   // ************* TASK 3: CALCULATE THE SIGNATURE *************
   // Create the signing key using the function defined above.
@@ -109,8 +109,8 @@ AWS::test_REST_API_Get(
   // const std::string payload_hash = sha256(""); // guessing here
 
   //   const std::string testing = aTime.getString("%8Y%m%d-%H%M%S.%/ms", true);
-  // LogInfo("Got this thing: " << amzdate << " " << datestamp << "\n");
-  //   LogInfo("Got this thing: " << testing << "\n");
+  // fLogInfo("Got this thing: {} {}", amzdate, datestamp);
+  //   fLogInfo("Got this thing: {}", testing);
   // }
   std::string signing_key = getSignatureKey(secret_key, datestamp, region, service);
 
@@ -123,7 +123,7 @@ AWS::test_REST_API_Get(
   // signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'), hashlib.sha256).hexdigest()
   std::string signature = Secure::hexdigest(Secure::sign(signing_key, string_to_sign));
 
-  LogInfo("SIGN:" << signature << "\n");
+  fLogInfo("SIGN:{}", signature);
 
   // ************* TASK 4: ADD SIGNING INFORMATION TO THE REQUEST *************
   // The signing information can be either in a query string value or in
@@ -132,7 +132,7 @@ AWS::test_REST_API_Get(
   std::string authorization_header = algorithm + " " + "Credential=" + access_key + "/" + credential_scope + ", "
     + "SignedHeaders=" + signed_headers + ", " + "Signature=" + signature;
 
-  LogInfo("AUTH:" << authorization_header << "\n");
+  fLogInfo("AUTH:{}", authorization_header);
 
   std::vector<std::string> headers;
 
@@ -145,7 +145,7 @@ AWS::test_REST_API_Get(
   int ret = Network::readH(request_url, headers, buf);
 
   if (ret < 0) {
-    LogInfo("Failed looks like\n");
+    fLogInfo("Failed looks like");
   } else {
     for (auto c:buf) {
       std::cout << c;
@@ -169,7 +169,7 @@ AWS::test_REST_API_Get(
    * }
    */
   //  signature += "*";
-  //  LogInfo(signature);
+  //  fLogInfo("{}",signature);
   //  */
-  // LogInfo(fred);
+  // fLogInfo("{}", fred);
 } // AWS::test_REST_API_Get

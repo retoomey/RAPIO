@@ -423,7 +423,7 @@ public:
   get1(size_t i) const
   {
     if (i > myBits.size()) {
-      LogSevere("BIT AT " << i << " is GREATER " << myBits.size() << "\n");
+      fLogSevere("BIT AT {} is GREATER {}", i, myBits.size());
       exit(1);
     }
     return myBits[i];

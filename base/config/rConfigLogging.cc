@@ -43,10 +43,10 @@ ConfigLogging::readSettings(std::shared_ptr<PTreeData> d)
         Log::setLogPattern(pattern);
       }
     } else {
-      LogSevere("No logging settings provided, will be using defaults\n");
+      fLogSevere("No logging settings provided, will be using defaults");
     }
   }catch (const std::exception& e) {
-    LogSevere("Error parsing logging settings\n");
+    fLogSevere("Error parsing logging settings");
   }
   return true;
 } // ConfigLogging::readSettings

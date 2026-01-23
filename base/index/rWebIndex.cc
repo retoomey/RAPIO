@@ -35,12 +35,12 @@ WebIndex::WebIndex(const URL & aURL,
   // The user needs to give us http://venus:8080/?source=KABR
   // We then add servlet relative path on the remote server
   // This keeps the datapath correct (what the user provided)
-  // LogInfo("The provided path was: " << myURL.path << "\n");
+  // fLogInfo("The provided path was: {}", myURL.path);
   myURL.setPath(myURL.getPath() + "/webindex/getxml.do");
 
-  // LogInfo("I've changed it to " << myURL.path << "\n");
+  // fLogInfo("I've changed it to {}", myURL.path);
   if (!myURL.hasQuery("source")) {
-    LogSevere("Missing 'source' in URL.\n");
+    fLogSevere("Missing 'source' in URL.");
     return;
   }
 
@@ -92,7 +92,7 @@ WebIndex::canHandle(const URL& url, std::string& protocol, std::string& indexpar
             std::string source   = pieces[1];
             std::string expanded = "http://vmrms-webserv/" + machine
               + "?source=" + source;
-            LogInfo("Web macro source sent to " << expanded << "\n");
+            fLogInfo("Web macro source sent to {}", expanded);
             //   u = URL(expanded);
             indexparams = expanded; // Change to non-macroed format
           }
@@ -139,7 +139,7 @@ WebIndex::readRemoteRecords()
   bool myFoundNew = false;
 
   if (myURL.empty()) { // Don't crash on a bad config just inform
-    LogDebug("Empty URL for web index, nothing to read or poll\n");
+    fLogDebug("Empty URL for web index, nothing to read or poll");
     return (false);
   }
 
@@ -159,7 +159,7 @@ WebIndex::readRemoteRecords()
   // XMLIndex's ctor, plus a new "lastRead" attribute in the toplevel.
   // The lastRead needs to be kept for next time to give the server a
   // point of reference of what "new" means for us.
-  LogInfo("Web:" << tmpURL << "\n");
+  fLogInfo("Web:{}", tmpURL.toString());
   auto doc = IODataType::read<PTreeData>(tmpURL.toString(), "xml");
 
   const bool myReadOK = (doc != nullptr);
@@ -168,7 +168,7 @@ WebIndex::readRemoteRecords()
     auto tree    = doc->getTree();
     auto rectest = tree->getChildOptional("records");
     if (rectest == nullptr) {
-      LogSevere("Couldn't read records tag from webindex xml return\n");
+      fLogSevere("Couldn't read records tag from webindex xml return");
       return false;
     }
     const long long lastRead = rectest->getAttr("lastRead", (long long) (-1));
@@ -208,10 +208,9 @@ WebIndex::readRemoteRecords()
           count++;
         }
 
-        LogDebug("Polled: " << tmpURL << " New:(" << count
-                            << ")\n");
+        fLogDebug("Polled: {} New:({})", tmpURL.toString(), count);
       } else {
-        LogDebug("Polled: " << tmpURL << "\n");
+        fLogDebug("Polled: {}", tmpURL.toString());
       }
       myLastRead   = lastRead;
       myLastReadNS = lastReadNS;
@@ -220,7 +219,7 @@ WebIndex::readRemoteRecords()
     } else if (lastRead == -2) {
       // End of messages
     } else {
-      LogSevere("Unhandled lastRead=" << lastRead << '\n');
+      fLogSevere("Unhandled lastRead={}", lastRead);
     }
   }
 

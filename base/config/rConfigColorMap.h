@@ -48,7 +48,8 @@ public:
   readW2ColorMap(const URL& u);
 
   /** Palette file reader */
-  SCIPalette *SCIPaletteFromFile(char *filename);
+  SCIPalette *
+  SCIPaletteFromFile(char * filename);
 
 private:
 

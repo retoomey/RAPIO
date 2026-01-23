@@ -66,10 +66,10 @@ ConfigIODataType::readSettings(std::shared_ptr<PTreeData> d)
         }
       }
     } else {
-      LogSevere("No datatype settings provided, will be using defaults for read/write\n");
+      fLogSevere("No datatype settings provided, will be using defaults for read/write");
     }
   }catch (const std::exception& e) {
-    LogSevere("Error parsing datatype settings\n");
+    fLogSevere("Error parsing datatype settings");
   }
   return true;
 } // ConfigIODataType::readSettings

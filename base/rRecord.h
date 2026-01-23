@@ -11,6 +11,8 @@
 
 #include <string>
 
+#include <fmt/format.h>
+
 namespace rapio {
 class IndexType;
 class RecordFilter;
@@ -382,3 +384,19 @@ public:
 std::ostream&
 operator << (std::ostream&, const rapio::Record& rec);
 }
+
+/** Format library support, allows fLogInfo("Record {}", record) */
+template <>
+struct fmt::formatter<rapio::Record> {
+  constexpr auto parse(fmt::format_parse_context& ctx){ return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto
+  format(const rapio::Record& r, FormatContext& ctx) const
+  {
+    std::stringstream ss; // FIXME: We shouldn't user operator, it should use us
+
+    ss << r;
+    return fmt::format_to(ctx.out(), "{}", ss.str());
+  }
+};

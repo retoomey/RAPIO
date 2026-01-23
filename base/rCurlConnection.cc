@@ -53,7 +53,7 @@ CurlConnection::init()
   bool ok = (myCurlCode == 0);
 
   if (!ok) {
-    LogSevere("Unable to initialize libcurl properly \n");
+    fLogSevere("Unable to initialize libcurl properly");
   } else {
     // Now our instance for requesting
     myCurl = curl_easy_init();
@@ -96,14 +96,14 @@ CurlConnection::read(const std::string& url, std::vector<char>& buf)
     myCurl, CURLOPT_URL, urls.c_str());
 
   if (ret != 0) {
-    LogSevere("Opening " << urls << " failed with err=" << ret << "\n");
+    fLogSevere("Opening {} failed with err={}", urls, (int) ret);
     return (-1);
   }
   curl_easy_setopt(myCurl, CURLOPT_WRITEDATA, &(buf));
   ret = curl_easy_perform(myCurl);
 
   if (ret != 0) {
-    LogSevere("Reading " << urls << " failed with err=" << ret << "\n");
+    fLogSevere("Reading {} failed with err={}", urls, (int) ret);
     return (-1);
   }
   return (buf.size());

@@ -80,7 +80,7 @@ public:
 
   if (set == nullptr) { return; }
   // set->setDataAttributeValue("ColorMap", "Max");
-  LogInfo(*myElevationVolume << "\n");
+  fLogInfo("{}", *myElevationVolume);
 
   VerticalMax myCallback;
 

@@ -27,7 +27,7 @@ BoostConnection::read(const std::string& url, std::vector<char>& buf)
     size_t level = 0;
     return readLocal(url, buf, level);
   }catch (const std::exception& e) {
-    LogSevere("Error reading " << url << " " << e.what() << "\n");
+    fLogSevere("Error reading {} {}", url, e.what());
   }
   return 0;
 }
@@ -136,7 +136,7 @@ BoostConnection::readOpenSocketT(
       // Now read the rest, placing further into the vector
       boost::asio::read(mySocket, start, err);
     } else {
-      LogSevere("No content-length header?\n");
+      fLogSevere("No content-length header?");
     }
   }
 
@@ -149,7 +149,7 @@ BoostConnection::readLocal(const std::string& url, std::vector<char>& buf, size_
   // Recursive limit for any redirects (avoid infinity)
   recursive++;
   if (recursive > 2) {
-    LogSevere("Redirect count too high for URL:" << recursive << "\n");
+    fLogSevere("Redirect count too high for URL: {}", recursive);
     return 0;
   }
 
@@ -178,7 +178,7 @@ BoostConnection::readLocal(const std::string& url, std::vector<char>& buf, size_
   boost::asio::ip::tcp::resolver::iterator end; // lists of ip:ports
 
   if (err) {
-    LogSevere("ERROR resolving host: " << err.message() << "\n");
+    fLogSevere("ERROR resolving host: {}", err.message());
     return 0;
   }
   #if 0
@@ -236,6 +236,6 @@ int
 BoostConnection::readH(const std::string& url, const std::vector<std::string>& headers,
   std::vector<char>& buf)
 {
-  LogSevere("Not implemented boost HTTP headers.\n");
+  fLogSevere("Not implemented boost HTTP headers.");
   return read(url, buf); // ignore extra headers for moment
 }

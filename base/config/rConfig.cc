@@ -55,7 +55,7 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
         break;
       }
     } else {
-      LogSevere("WEB READ?\n");
+      fLogSevere("WEB READ?");
     }
     testMe.setPath(p);
   }
@@ -64,9 +64,9 @@ Config::getAbsoluteForRelative(const std::string& relativePath)
 
   if (found) {
     ret = testMe;
-    LogDebug("Read: " << testMe.getPath() << "\n");
+    fLogDebug("Read: {}", testMe.getPath());
   } else {
-    LogDebug("WARNING! " << relativePath << " was not found.\n");
+    fLogDebug("WARNING! {} was not found.", relativePath);
   }
 
   return (ret);
@@ -87,7 +87,7 @@ Config::addSearchPath(const URL& absolutePath)
     if (!Strings::endsWith(canon, "/")) { canon += "/"; }
     mySearchPaths.push_back(canon);
     // We print them all out later anyway
-    // LogInfo("Adding search path \"" << canon << "\"\n");
+    // fLogInfo("Adding search path \"{}\"", canon);
   }
   return exists;
 }
@@ -170,8 +170,8 @@ Config::setUpSearchPaths()
   addSearchPath(home);
 
   if (mySearchPaths.size() < 1) {
-    LogSevere(
-      "No valid global configuration path found in environment variables RAPIO_CONFIG_LOCATION, W2_CONFIG_LOCATION or home directory.\n");
+    fLogSevere(
+      "No valid global configuration path found in environment variables RAPIO_CONFIG_LOCATION, W2_CONFIG_LOCATION or home directory.");
     return false;
   }
 
@@ -179,7 +179,7 @@ Config::setUpSearchPaths()
    * for (auto& it:mySearchPaths) {
    * s += "\n\t[" + it.toString() + "]";
    * }
-   * LogDebug("Global configuration search order:" << s << '\n');
+   * fLogDebug("Global configuration search order:{}", s);
    */
   return true;
 } // Config::setUpSearchPaths
@@ -196,10 +196,10 @@ Config::readGlobalConfigFile()
     s += "\n\t[" + it.toString() + "]";
   }
   if (doc == nullptr) {
-    LogSevere("Failed to find/read global configuration file: " << file << "\n");
-    LogSevere("Global configuration search order:" << s << '\n');
+    fLogSevere("Failed to find/read global configuration file: {}", file);
+    fLogSevere("Global configuration search order:{}", s);
   } else {
-    LogDebug("Global configuration search order:" << s << '\n');
+    fLogDebug("Global configuration search order:{}", s);
   }
   return doc;
 }
@@ -234,9 +234,9 @@ Config::initialize()
   }
 
   if (success == false) {
-    LogSevere("Failed to read initial configurations due to missing or bad file format.\n");
-    LogSevere(
-      "Set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION to help RAPIO find your configuration files.\n");
+    fLogSevere("Failed to read initial configurations due to missing or bad file format.");
+    fLogSevere(
+      "Set environment variable RAPIO_CONFIG_LOCATION or W2_CONFIG_LOCATION to help RAPIO find your configuration files.");
   }
   return success;
 } // Config::initialize

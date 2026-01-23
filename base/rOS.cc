@@ -119,7 +119,7 @@ OS::ensureDirectory(const std::string& dirpath)
   // Directory must exist. We need getDirName to get added subdirs
   // const std::string dir(URL(filepath).getDirName()); // isn't this dirpath??
   if (!isDirectory(dirpath) && !mkdirp(dirpath)) {
-    LogSevere("Unable to create directory: " << dirpath << "\n");
+    fLogSevere("Unable to create directory: {}", dirpath);
     return false;
   }
   return true;
@@ -150,7 +150,7 @@ OS::canonical(const std::string& path)
   }
   catch (const fs::filesystem_error &e)
   {
-    LogSevere("Couldn't convert it! " << e.what() << "\n");
+    fLogSevere("Couldn't convert it! {}", e.what());
     // Just return original, can't do anything with it
     return path;
   }
@@ -302,7 +302,7 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
     std::vector<std::string> args;
     Strings::splitWithoutEnds(commandin, ' ', &args);
     // for(size_t i=0; i< args.size(); i++){
-    //  LogDebug(i << " --> " << args[i] << "\n");
+    //  fLogDebug("{} --> {}", i, args[i]);
     // }
     if (args.size() < 1) { return -1; }
 
@@ -338,7 +338,7 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
       // int childError = c.native_exit_code();
       int childError = c.exit_code();
 
-      LogInfo("(" << childError << ") Running command '" << commandin << "'\n");
+      fLogInfo("({}) Running command '{}'", childError, commandin);
       return childError;
     }
   }catch (const std::exception& e)
@@ -348,7 +348,7 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
     error = e.what();
   }
   // Failure
-  LogSevere("Failure running command '" << commandin << "' Error: '" << error << "'\n");
+  fLogSevere("Failure running command '{}' Error: '{}'", commandin, error);
   return -1;
 } // OS::runProcess
 
@@ -369,7 +369,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     std::vector<char> buf; // FIXME: Buffer class instead?
     size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
-      LogSevere("DataGrid didn't generate JSON so aborting python call.\n");
+      fLogSevere("DataGrid didn't generate JSON so aborting python call.");
       return std::vector<std::string>();
     }
     aLength -= 1; // Remove the ending buffer 0
@@ -386,7 +386,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     auto theDims = datagrid->getDims();
     auto dataptr = datagrid->getFloat2D(Constants::PrimaryDataName);
     if (dataptr == nullptr) {
-      LogSevere("Python call only allowed on 2D LatLonGrid and RadialSet at moment :(\n");
+      fLogSevere("Python call only allowed on 2D LatLonGrid and RadialSet at moment :(");
       return std::vector<std::string>();
     }
     auto x       = theDims[0].size();
@@ -414,7 +414,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // Do we need to copy back?  Aren't we mapped to this?
     memcpy(ref2.data(), at, size * sizeof(float));
   }catch (const std::exception& e) {
-    LogSevere("Failed to execute command " << command << "\n");
+    fLogSevere("Failed to execute command {}", command);
   }
 
   // Clean up all shared memory objects...
@@ -482,7 +482,7 @@ OS::copyFile(const std::string& from, const std::string& to)
     // If from doesn't exist, give error and return
     const fs::path parentFrom = fromPath.parent_path();
     if (!fs::exists(fromPath)) {
-      LogSevere(from << " does not exist to move.\n");
+      fLogSevere("{} does not exist to move.", from);
       return false;
     }
 
@@ -500,7 +500,7 @@ OS::copyFile(const std::string& from, const std::string& to)
     ok = true;
   }catch (const fs::filesystem_error &e)
   {
-    LogSevere("Failed to copy " << from << " to " << to << ": " << e.what() << "\n");
+    fLogSevere("Failed to copy {} to {}:{}", from, to, e.what());
   }
   return ok;
 } // OS::copyFile
@@ -516,7 +516,7 @@ OS::moveFile(const std::string& from, const std::string& to, bool quiet)
   // If from doesn't exist, give error and return
   if (!fs::exists(fromPath)) {
     if (!quiet) {
-      LogSevere(from << " does not exist to move.\n");
+      fLogSevere("{} does not exist to move.", from);
     }
     return false;
   }
@@ -546,7 +546,7 @@ OS::moveFile(const std::string& from, const std::string& to, bool quiet)
     }catch (const fs::filesystem_error &e)
     {
       if (!quiet) {
-        LogSevere("Failed to move/copy " << from << " to " << to << ": " << e.what() << "\n");
+        fLogSevere("Failed to move/copy {} to {}: {}", from, to, e.what());
       }
     }
   }
@@ -618,7 +618,7 @@ void
 OS::setEnvVar(const std::string& envVarName, const std::string& value)
 {
   setenv(envVarName.c_str(), value.c_str(), 1);
-  LogDebug(envVarName << " = " << value << "\n");
+  fLogDebug("{} = {}", envVarName, value);
 }
 
 bool
@@ -644,7 +644,7 @@ OS::isContainer()
       isContainer = true;
     }
     if (isContainer) {
-      LogInfo("You appear to be running on a container.");
+      fLogInfo("You appear to be running on a container.");
     }
     check = false;
   }
@@ -691,7 +691,7 @@ OS::runCommandOnFile(const std::string& postCommandIn, const std::string& finalF
     if (captureOut) {
       if (successful) {
         for (auto& i: output) {
-          LogInfo("   " << i << "\n");
+          fLogInfo("   {}", i);
         }
       }
     }

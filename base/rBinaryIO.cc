@@ -608,9 +608,9 @@ MemoryStreamBuffer::readBZIP2()
   try{
     BZIP2DataFilter bz2;
     bz2.apply(data, destination, tell(), 0);
-    //LogInfo("Destination size " << data.size() << " to " << destination.size() << "\n");
+    // fLogInfo("Destination size {} to {}", data.size(), destination.size());
   }catch (std::exception& e) {
-    LogSevere("BZIP2 uncompress Failed: " << e.what() << "\n");
+    fLogSevere("BZIP2 uncompress Failed: {}", e.what());
   }
   MemoryStreamBuffer mm(std::move(destination));
 
@@ -626,9 +626,9 @@ MemoryStreamBuffer::writeBZIP2()
   try{
     BZIP2DataFilter bz2;
     bz2.reverse(data, destination, 0, 0);
-    //LogInfo("Source size " << data.size() << " and " << destination.size() << "\n");
+    // fLogInfo("Source size {} and {}", data.size(), destination.size());
   }catch (std::exception& e) {
-    LogSevere("BZIP2 compression failed: " << e.what() << "\n");
+    fLogSevere("BZIP2 compression failed: {}", e.what());
   }
 
   MemoryStreamBuffer mm(std::move(destination));

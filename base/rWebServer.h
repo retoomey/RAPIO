@@ -133,7 +133,7 @@ public:
     size_t enumSize = static_cast<size_t>(SimpleWeb::StatusCode::server_error_network_authentication_required);
 
     if (error > enumSize) {
-      LogSevere("Trying to set http error value to " << error << " which is out of range\n");
+      fLogSevere("Trying to set http error value to {} which is out of range", error);
       error = 0; // unknown
     }
     myErrorNumber   = error;

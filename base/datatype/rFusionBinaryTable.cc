@@ -49,7 +49,7 @@ FusionBinaryTable::readBlock(const std::string& path, FILE * fp)
     // Adding a version number for future use
     BinaryIO::read_type<size_t>(myVersionID, fp);
     if (myVersionID != Version) {
-      LogSevere("Error reading raw file.  Version is unknown " << myVersionID << "\n");
+      fLogSevere("Error reading raw file.  Version is unknown {}", myVersionID);
       return false;
     }
 
@@ -152,7 +152,7 @@ FusionBinaryTable::get(float& n, float& d, short& x, short& y, short& z)
   if (myFile == 0) {
     myFile = fopen(myFilePath.c_str(), "rb");
     if (fseek(myFile, myDataPosition, (SEEK_SET != 0))) {
-      LogSevere("Couldn't read at position " << myDataPosition << "...\n");
+      fLogSevere("Couldn't read at position {}...", myDataPosition);
       fclose(myFile);
       myFile = 0;
       return false;
@@ -327,8 +327,9 @@ FusionBinaryTable::dumpToText(std::ostream& o)
   o << i << "xBase: '" << v << "'\n";
   t.getLong("yBase", v);
   o << i << "yBase: '" << v << "'\n";
-  bool flag =t.getUseMissingAsUnavailable();
-  o << i << "NoMissing: '" << (flag? "On":"Off") << "'\n";
+  bool flag = t.getUseMissingAsUnavailable();
+
+  o << i << "NoMissing: '" << (flag ? "On" : "Off") << "'\n";
   o << i << "Time: '" << t.getTime() << "'\n";
   o << i << "Center: '" << t.getLocation() << "'\n";
   o << "Data:\n";

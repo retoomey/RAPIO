@@ -45,7 +45,7 @@ DataProjection::getBBOX(
     rows = std::stoi(keys["rows"]); // could except
     cols = std::stoi(keys["cols"]);
   }catch (const std::exception& e) {
-    LogSevere("Unrecognized rows/cols settings, using defaults\n");
+    fLogSevere("Unrecognized rows/cols settings, using defaults");
     rows = 256;
     cols = 256;
   }
@@ -69,7 +69,7 @@ DataProjection::getBBOX(
       centerLatDegs = std::stod(keys["centerLatDegs"]);
       centerLonDegs = std::stod(keys["centerLonDegs"]);
     }catch (const std::exception& e) {
-      LogSevere("Require zoom, centerLatDegs and centerLonDegs to create image.\n");
+      fLogSevere("Require zoom, centerLatDegs and centerLonDegs to create image.");
       return nullptr;
     }
 
@@ -111,7 +111,7 @@ DataProjection::getBBOX(
       right  = std::stod(pieces[2]);
       top    = std::stod(pieces[3]);
     } else {
-      LogSevere("Malformed BBOX? " << bbox << "\n");
+      fLogSevere("Malformed BBOX? {}", bbox);
       return nullptr;
     }
 
@@ -137,7 +137,7 @@ DataProjection::getBBOX(
       return theWebMercToLatLon;
     } else {
       // WMS capabilities xml we have <CRS>EPSG:3857</CRS>
-      // LogSevere("Unknown projection requested: " << bboxsr << "\n");
+      // fLogSevere("Unknown projection requested: {}", bboxsr);
       return theWebMercToLatLon;
     }
   }
@@ -165,7 +165,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
     cols   = fields.getAttr("cols", cols);
     rows   = fields.getAttr("rows", rows);
   }catch (const std::exception& e) {
-    LogSevere("Unrecognized settings, using defaults\n");
+    fLogSevere("Unrecognized settings, using defaults");
   }
 
   float top, left, deltaLat, deltaLon;
@@ -185,7 +185,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
     try{
       degreeOut = fields.getAttr("degrees", size_t(degreeOut));
     }catch (const std::exception& e) {
-      LogSevere("Missing degrees, using default of " << degreeOut << "\n");
+      fLogSevere("Missing degrees, using default of {}", degreeOut);
     }
     optionSuccess  = LLCoverageCenterDegree(degreeOut, rows, cols, top, left, deltaLat, deltaLon);
     c.rows         = rows;
@@ -206,7 +206,7 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
       centerLatDegs = fields.getAttr("centerLatDegs", float(centerLatDegs));
       centerLonDegs = fields.getAttr("centerLonDegs", float(centerLonDegs));
     }catch (const std::exception& e) {
-      LogSevere("Unrecognized settings, using defaults\n");
+      fLogSevere("Unrecognized settings, using defaults");
     }
     optionSuccess = LLCoverageTile(zoomLevel, rows, cols,
         centerLatDegs, centerLonDegs, top, left, deltaLat, deltaLon);
@@ -222,11 +222,11 @@ DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)
     c.centerLatDegs = centerLatDegs;
     c.centerLonDegs = centerLonDegs;
   } else {
-    LogSevere("Unknown projection mode " << mode << " specified.\n");
+    fLogSevere("Unknown projection mode {} specified.", mode);
   }
 
   if (!optionSuccess) {
-    LogSevere("Don't know how to create a coverage grid for this datatype using mode '" << mode << "'.\n");
+    fLogSevere("Don't know how to create a coverage grid for this datatype using mode '{}'.", mode);
   }
   return optionSuccess;
 } // DataProjection::getLLCoverage

@@ -58,7 +58,7 @@ Remap::processOptions(RAPIOOptions& o)
 void
 Remap::remap(std::shared_ptr<LatLonGrid> llg)
 {
-  LogInfo("Remapping an incoming LatLonGrid to new grid...\n");
+  fLogInfo("Remapping an incoming LatLonGrid to new grid...");
 
   // ----------------------------------------------------------------
   // Make a new LatLonGrid for output.
@@ -122,10 +122,10 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   } else if (myMode == "bilinear") {
     Remap = std::make_shared<Bilinear>(mySize, mySize);
   } else {
-    LogSevere("Can't create remapper '" << myMode << "'\n");
+    fLogSevere("Can't create remapper '{}'", myMode);
     exit(1);
   }
-  LogInfo("Created Array Algorithm '" << myMode << "' to process LatLonGrid primary array\n");
+  fLogInfo("Created Array Algorithm '{}' to process LatLonGrid primary array", myMode);
   auto& r = *Remap;
 
   llg->RemapInto(out, Remap);
@@ -141,7 +141,7 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
 void
 Remap::remap(std::shared_ptr<RadialSet> rs)
 {
-  LogInfo("Remapping an incoming RadialSet...\n");
+  fLogInfo("Remapping an incoming RadialSet...");
 
   // Use overriden settings for radial set if wanted
   auto gateWidthMeters = myGateWidthMeters;
@@ -172,7 +172,7 @@ Remap::remap(std::shared_ptr<RadialSet> rs)
 void
 Remap::processNewData(rapio::RAPIOData& d)
 {
-  LogInfo("Data received: " << d.getDescription() << "\n");
+  fLogInfo("Data received: {}", d.getDescription());
 
   auto LLG = d.datatype<rapio::LatLonGrid>();
 
@@ -183,7 +183,7 @@ Remap::processNewData(rapio::RAPIOData& d)
     if (R != nullptr) {
       remap(R);
     } else {
-      LogSevere("Unsupported remap class, can't remap at moment.\n");
+      fLogSevere("Unsupported remap class, can't remap at moment.");
     }
   }
 } // Remap::processNewData

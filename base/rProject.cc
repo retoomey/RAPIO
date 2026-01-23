@@ -470,9 +470,8 @@ Project::createLookup(
   // positive delta, so subtract mcell
   int startY = centerYKm + ((imageRows / 2.0) * mCell);
 
-  LogInfo("Projection: (" << centerXKm << ", " << centerYKm << "), ("
-                          << startX << ", " << startY << ") ("
-                          << mCell << "\n");
+  fLogInfo("Projection: ({}, {}), ({}, {}) ({})", centerXKm, centerYKm, startX, startY, mCell);
+
   // In kilometers from CENTER projected
   int currentY = startY;
 
@@ -490,8 +489,7 @@ Project::createLookup(
       int x = int( (topleftlat - inx) / latres);
       int y = int( (iny - topleftlon) / lonres);
 
-      // LogSevere("PRE: " << atX<<", " <<atY<<" == " << inx << ", " << iny << "\n");
-      //   LogSevere(atX<<", " <<atY<<" == " << inx << ", " << iny << " ("<<x <<","<<y<<") " << numlat << "< " << numlon <<"\n");
+      //   fLogSevere("{}, {} == {}, {} ({},{}) {}<  {}", atX, atY, inx, iny, x,y, numlat, numlon);
 
       if (( x >= 0) && ( y >= 0) && ( x < numlat) && ( y < numlon) ) {
         // This has to be in array order
@@ -504,8 +502,7 @@ Project::createLookup(
     }
     currentY -= mCell;
   }
-  LogInfo("Projection hit/miss % " << hits << "," << misses << " == "
-                                   << ((float) (hits)) / ((float) (misses + hits)) << "\n");
+  fLogInfo("Projection hit/miss % {},{} == {}", hits, misses, ((float) (hits)) / ((float) (misses + hits)));
 
   // Actually project.  Granted want to cache the above stuff
   //     const float* gridstart = &( grid[0][0]) ;
@@ -568,7 +565,7 @@ ProjLibProject::initialize()
       NULL);
 
   if (myP == 0) {
-    LogSevere("Couldn't create Proj Library projection.\n");
+    fLogSevere("Couldn't create Proj Library projection.");
     success = false;
   } else {
     /* For that particular use case, this is not needed.
@@ -589,7 +586,7 @@ ProjLibProject::initialize()
   }
   #else // if HAVE_PROJLIB
   success = false;
-  LogSevere("Attempted to initialize Proj library, but we weren't compiled with Proj!\n");
+  fLogSevere("Attempted to initialize Proj library, but we weren't compiled with Proj!");
   #endif // if HAVE_PROJLIB
 
   return success;
@@ -701,11 +698,11 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
   double scaleX = rangeX / (imageCols); // per cell size
   double scaleY = rangeY / (imageRows);
 
-  LogDebug("StartX StartY = " << startX << ", " << startY << "\n");
-  LogDebug("EndX EndY = " << endX << ", " << endY << "\n");
-  LogDebug("rangeX rangeY = " << rangeX << ", " << rangeY << "\n");
-  LogDebug("scaleX scaleY = " << scaleX << ", " << scaleY << "\n");
-  LogDebug("num_lat num_lon = " << num_lats << ", " << num_lons << "\n");
+  fLogDebug("StartX StartY = {}, {}", startX, startY);
+  fLogDebug("EndX EndY = {}, {}", endX, endY);
+  fLogDebug("rangeX rangeY = {}, {}", rangeX, rangeY);
+  fLogDebug("scaleX scaleY = {}, {}", scaleX, scaleY);
+  fLogDebug("num_lat num_lon = {}, {}", num_lats, num_lons);
 
   // ----------------------------------------------------------
   // destination projection information
@@ -792,8 +789,8 @@ ProjLibProject::toLatLonGrid(std::shared_ptr<Array<float, 2> > ina,
     atLat -= lat_spacing;
   }
 
-  LogInfo("FINAL STATS: " << lowestX << " " << highestX << " " << lowestY << " " << highestY << "\n");
+  fLogInfo("FINAL STATS: {} {} {} {}", lowestX, highestX, lowestY, highestY);
   #else // if HAVE_PROJLIB
-  LogSevere("Attempted to call grid projection, but we weren't compiled with Proj!\n");
+  fLogSevere("Attempted to call grid projection, but we weren't compiled with Proj!");
   #endif // if HAVE_PROJLIB
 } // ProjLibProject::toLatLonGrid

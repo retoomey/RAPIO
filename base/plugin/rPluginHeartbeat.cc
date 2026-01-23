@@ -53,7 +53,7 @@ PluginHeartbeat::execute(RAPIOProgram * caller)
     myHeartBeat = std::make_shared<Heartbeat>(caller);
 
     if (!myHeartBeat->setCronList(myCronList)) {
-      LogSevere("Bad format for -" << myName << " string, aborting\n");
+      fLogSevere("Bad format for -{} string, aborting", myName);
       exit(1);
     }
 

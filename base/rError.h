@@ -101,7 +101,7 @@ protected:
  * Old way of streaming is still supported at moment but not recommended.
  * fmt/python style of logging is faster
  *
- * LogSevere( "Error: " << file_name << " not readable.\n");
+ * fLogSevere( "Error: {} not readable.", file_name);
  * </pre>
  */
 class Log : public Utility {

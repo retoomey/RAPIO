@@ -42,7 +42,7 @@ AlgConfigFile::getConfigFileForURL(const URL& path)
   auto lastdot     = name.find_last_of(".");
 
   if (lastdot == std::string::npos) {
-    LogSevere("Configuration type for " << path << " unknown. Trying '" << type << "'\n");
+    fLogSevere("Configuration type for {} unknown. Trying '{}'", path.toString(), type);
   } else {
     type = name.substr(lastdot + 1, name.size());
     Strings::toLower(type);
@@ -50,7 +50,7 @@ AlgConfigFile::getConfigFileForURL(const URL& path)
   auto config = AlgConfigFile::getConfigFile(type);
 
   if (config == nullptr) {
-    LogSevere("Can't find a configuration file reader for '" << type << "'\n");
+    fLogSevere("Can't find a configuration file reader for '{}'", type);
   }
   return config;
 }
@@ -101,7 +101,7 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
       success = true;
     }
   }catch (const std::exception& e) {
-    LogSevere("Error parsing XML from " << path << ", " << e.what() << "\n");
+    fLogSevere("Error parsing XML from {}, {}", path.toString(), e.what());
   }
   return success;
 }
@@ -197,13 +197,13 @@ AlgFLATConfigFile::writeConfigURL(const URL& path,
       std::string filename = path.toString();
       of.open(filename.c_str());
       if (of.fail()) {
-        LogSevere("Couldn't write configuration file to " << filename << " for some reason\n");
+        fLogSevere("Couldn't write configuration file to {} for some reason", filename);
         of.close();
         return false;
       }
       buf = of.rdbuf();
     } else {
-      LogSevere("Can't write to a remote URL at " << path << "\n");
+      fLogSevere("Can't write to a remote URL at {}", path.toString());
       return false;
     }
   }

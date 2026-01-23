@@ -155,7 +155,7 @@ void
 DataGrid::resize(const std::vector<size_t>& dimsizes)
 {
   if (myDims.size() != dimsizes.size()) {
-    LogSevere("Trying to resize " << myDims.size() << " dimensions but using " << dimsizes.size() << " values.\n");
+    fLogSevere("Trying to resize {} dimensions but using {} values.", myDims.size(), dimsizes.size());
     return;
   }
 
@@ -269,7 +269,7 @@ DataGrid::createMetadata()
         case SHORT:
         case DOUBLE:
         default:
-          LogSevere("This type of data not supported, though should be easy to add.\n");
+          fLogSevere("This type of data not supported, though should be easy to add.");
           break;
     }
     anArray.put("type", typeStr);
@@ -370,7 +370,7 @@ DataGrid::unsparse2D(
 
   if (!pixelXptr) {
     // No sparse array so give up
-    // LogInfo("Data isn't sparse so we're done reading.\n");
+    // fLogInfo("Data isn't sparse so we're done reading.");
     return;
   }
 
@@ -378,7 +378,7 @@ DataGrid::unsparse2D(
     auto& pixel_x = getShort1DRef(pixelX);
     auto& pixel_y = getShort1DRef(pixelY);
   }catch (...) {
-    LogSevere("Excepted pixel_x and pixel_y arrays, can't find to unsparse.\n");
+    fLogSevere("Excepted pixel_x and pixel_y arrays, can't find to unsparse.");
     return;
   }
   auto& pixel_x = getShort1DRef(pixelX);
@@ -401,12 +401,12 @@ DataGrid::unsparse2D(
 
   // At most would expect num_pixel max_size, each with a runlength of 1
   if (num_pixels > size_t(max_size)) {
-    LogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange\n");
-    LogSevere("Corrupt?: num_pixels is " << num_pixels << " while max_size is " << max_size << " \n");
+    fLogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange");
+    fLogSevere("Corrupt?: num_pixels is {} while max_size is {}", num_pixels, max_size);
     return;
   }
 
-  LogInfo("2D Sparse Dimensions: " << num_pixels << " for (" << num_x << " * " << num_y << ")\n");
+  fLogInfo("2D Sparse Dimensions: {} for ({} * {})", num_pixels, num_x, num_y);
 
   auto dataptr = getFloat2D();
   auto& data   = dataptr->ref();
@@ -487,7 +487,7 @@ DataGrid::unsparse3D(
 
   if (!pixelXptr) {
     // No sparse array so give up
-    LogInfo("Data isn't sparse so we're done reading.\n");
+    fLogInfo("Data isn't sparse so we're done reading.");
     return;
   }
 
@@ -498,7 +498,7 @@ DataGrid::unsparse3D(
     auto& pixel_z = getShort1DRef(pixelZ);
     // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   }catch (...) {
-    LogSevere("Excepted pixel_x, pixel_y, pixel_z arrays, can't find to unsparse.\n");
+    fLogSevere("Excepted pixel_x, pixel_y, pixel_z arrays, can't find to unsparse.");
     return;
   }
 
@@ -526,12 +526,12 @@ DataGrid::unsparse3D(
 
   // At most would expect num_pixel max_size, each with a runlength of 1
   if (num_pixels > size_t(max_size)) {
-    LogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange\n");
-    LogSevere("Corrupt?: num_pixels is " << num_pixels << " while max_size is " << max_size << " \n");
+    fLogSevere("Corrupt?: Number of unique start pixels more than grid size, which seems strange");
+    fLogSevere("Corrupt?: num_pixels is {} while max_size is {}", num_pixels, max_size);
     return;
   }
 
-  LogInfo("3D Sparse Dimensions: " << num_pixels << " for (" << num_x << " * " << num_y << " * " << num_z << ")\n");
+  fLogInfo("3D Sparse Dimensions: {} for ({} * {} * {})", num_pixels, num_x, num_y, num_z);
 
   auto dataptr = getFloat3D();
   auto& data   = dataptr->ref();
@@ -592,7 +592,7 @@ DataGrid::sparse3D()
   auto pixelptr = getShort1D("pixel_x");
 
   if (pixelptr != nullptr) {
-    LogInfo("Not making sparse since pixels already exists...\n");
+    fLogInfo("Not making sparse since pixels already exists...");
     return false;
   }
 
@@ -628,7 +628,7 @@ DataGrid::sparse3D()
   // 3 shorts + 1 float are thrice the size of just a float
   float compr_ratio = float(4 * neededPixels) / (sizes[0] * sizes[1] * sizes[2]);
 
-  LogInfo("---> 3D compression of: " << int(0.5 + 100 * compr_ratio) << "% of original.\n");
+  fLogInfo("---> 3D compression of: {}% of original.", int(0.5 + 100 * compr_ratio));
 
   // ----------------------------------------------------------------------------
   // Modify ourselves to be parse.  But we need to keep our actual data (probably)
@@ -705,7 +705,7 @@ DataGrid::sparse2D()
   auto pixelptr = getShort1D("pixel_x");
 
   if (pixelptr != nullptr) {
-    LogInfo("Not making sparse since pixels already exists...\n");
+    fLogInfo("Not making sparse since pixels already exists...");
     return false;
   }
 
@@ -739,7 +739,7 @@ DataGrid::sparse2D()
   // 2 shorts + 1 float are thrice the size of just a float
   float compr_ratio = float(3 * neededPixels) / (sizes[0] * sizes[1]);
 
-  LogInfo("---> 2D compression of: " << int(0.5 + 100 * compr_ratio) << "% of original.\n");
+  fLogInfo("---> 2D compression of: {}% of original.", int(0.5 + 100 * compr_ratio));
 
   // ----------------------------------------------------------------------------
   // Modify ourselves to be parse.  But we need to keep our actual data (probably)

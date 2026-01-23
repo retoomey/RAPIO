@@ -48,7 +48,7 @@ DataTypeHistory::updateVolume(std::shared_ptr<DataType> data)
   // KTLX_Reflectivity_RadialSet for RadialSets
   std::string key = radar + '_' + typeName + '_' + dataType;
 
-  LogInfo("Adding DataType to history volume cache: " << key << "\n");
+  fLogInfo("Adding DataType to history volume cache: {}", key);
 
   // Volume
   std::shared_ptr<Volume> v;
@@ -137,9 +137,8 @@ NSEGridHistory::followGrid(const std::string& key, const std::string& aTypeName,
   myDataTypeNames.push_back(aTypeName);
   myDataTypeCache.push_back(nullptr);
   myDefaultValues.push_back(defaultValue);
-  LogInfo(
-    "Following NSE: '" << key << "' with typename '" << aTypeName << "' and default value of " << defaultValue <<
-      "\n");
+  fLogInfo("Following NSE: '{}' with typename '{}' and default value of {}",
+    key, aTypeName, defaultValue);
   return myKeys.size() - 1;
 }
 
@@ -162,7 +161,7 @@ NSEGridHistory::processNewData(RAPIOData& d)
 
   for (size_t i = 0; i < myDataTypeNames.size(); ++i) {
     if (myDataTypeNames[i] == dt) {
-      LogInfo("NSE received " << dt << ", caching.\n");
+      fLogInfo("NSE received {}, caching.", dt);
       myDataTypeCache[i] = d.datatype<DataType>();
       found = true;
       break;

@@ -47,10 +47,10 @@ PluginVolumeValueResolver::execute(RAPIOProgram * caller)
 
   // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
   if (myResolver == nullptr) {
-    LogSevere("Volume Value Resolver '" << myResolverAlg << "' requested, but failed to find and/or initialize.\n");
+    fLogSevere("Volume Value Resolver '{}' requested, but failed to find and/or initialize.", myResolverAlg);
     exit(1);
   } else {
-    LogInfo("Using Volume Value Resolver: '" << myResolverAlg << "'\n");
+    fLogInfo("Using Volume Value Resolver: '{}'", myResolverAlg);
   }
 }
 

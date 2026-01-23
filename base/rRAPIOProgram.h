@@ -44,14 +44,14 @@ public:
   virtual void
   processNewMessage(const Message& m)
   {
-    LogDebug("Received message callback, ignoring.\n");
+    fLogDebug("Received message callback, ignoring.");
   }
 
   /** Callback for data ingest */
   virtual void
   processNewData(rapio::RAPIOData& d)
   {
-    LogDebug("Received data callback, ignoring.\n");
+    fLogDebug("Received data callback, ignoring.");
   }
 
   /** Callback for heartbeat based plugins
@@ -60,7 +60,7 @@ public:
   virtual void
   processHeartbeat(const Time& n, const Time& p)
   {
-    LogDebug("Received heartbeat at " << n.getString() << " for " << p.getString() << ", ignoring\n");
+    fLogDebug("Received heartbeat at {} for {}, ignoring", n.getString(), p.getString());
   }
 
   /** Callback for web plugins. Process a web request message when
@@ -68,7 +68,7 @@ public:
   virtual void
   processWebMessage(std::shared_ptr<WebMessage> message)
   {
-    LogDebug("Received web callback, ignoring.\n");
+    fLogDebug("Received web callback, ignoring.");
   }
 
   /** Initialize program from c arguments and execute.

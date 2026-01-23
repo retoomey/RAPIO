@@ -201,9 +201,7 @@ computeTerrainPoints(
   const size_t numLats = myDEM->getNumLats();
   const size_t numLons = myDEM->getNumLons();
 
-  LogInfo("Computing blockers in "
-    << numLats << "x" << numLons
-    << " terrain grid.\n");
+  fLogInfo("Computing blockers in {}x{} terrain grid.", numLats, numLons);
   auto azimuthsArray = myDEM->addFloat2D("azimuths", "degrees", { 0, 1 });
   auto& aref         = azimuthsArray->ref(); // auto would copy, use auto&.  A bit annoying c++
   auto& href         = myDEM->getFloat2DRef();
@@ -267,16 +265,15 @@ computeTerrainPoints(
     PointBlockageLak::setAzimuthalSpread(aref, block_i[i], block_j[i],
       terrainPoints[i].minRayNumber, terrainPoints[i].maxRayNumber);
   }
-  LogInfo("Found " << terrainPoints.size() << " terrain blockers.\n");
+  fLogInfo("Found {} terrain blockers.", terrainPoints.size());
 } // TerrainBlockageLak::computeTerrainPoints
 
 void
 TerrainBlockageLak ::
 computeBeamBlockage(const std::vector<PointBlockageLak>& terrainPoints)
 {
-  LogInfo("Computing beam blockage for "
-    << myRays.size() << " rays at azimuthal resolution of "
-    << ANGULAR_RESOLUTION << "\n");
+  fLogInfo("Computing beam blockage for {} rays at azimuthal resolution of {}",
+    myRays.size(), ANGULAR_RESOLUTION);
 
   int num_beams_blocked = 0;
 
@@ -295,11 +292,8 @@ computeBeamBlockage(const std::vector<PointBlockageLak>& terrainPoints)
     }
   }
 
-  LogInfo("Of the " << NUM_RAYS << " beams, "
-                    << num_beams_blocked
-                    << " beams are blocked at an elevation above "
-                    << myMinAngleDegs << "\n");
-
+  fLogInfo("Of the {} beams, {} beams are blocked at an elevation above {}",
+    NUM_RAYS, num_beams_blocked, myMinAngleDegs);
 
   for (size_t i = 0; i < myRays.size(); ++i) {
     if (myRays[i].size() > 0) {
@@ -307,13 +301,12 @@ computeBeamBlockage(const std::vector<PointBlockageLak>& terrainPoints)
 
       #ifdef DEBUG
       if (i % 20 == 0) {
-        LogInfo("Beam blockage at: " << myRays[i].front().az);
+        fLogInfo("Beam blockage at: {}", myRays[i].front().az);
         for (size_t j = 0; j < myRays[i].size(); ++j) {
           if (myRays[i][j].elev > EFFECTIVE) { // Uggh vector of vector
-            LogInfo(" " << myRays[i][j].rn << "," << myRays[i][j].elev);
+            fLogInfo(" {},{}", myRays[i][j].rn, myRays[i][j].elev);
           }
         }
-        LogInfo("\n");
       }
       #endif
     }

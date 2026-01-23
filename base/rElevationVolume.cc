@@ -57,10 +57,10 @@ Volume::createVolume(
   auto f = Factory<Volume>::get(key);
 
   if (f == nullptr) {
-    LogSevere("Couldn't create Volume from key '" << key << "', available: \n");
+    fLogSevere("Couldn't create Volume from key '{}', available: ", key);
     auto e = Factory<Volume>::getAll();
     for (auto i: e) {
-      LogSevere("  '" + i.first + "'\n"); // FIXME: help string later maybe
+      fLogSevere("  '{}'", i.first); // FIXME: help string later maybe
     }
   } else {
     // Pass onto the factory method
@@ -148,7 +148,7 @@ VolumeOfN::addDataType(std::shared_ptr<DataType> dt)
     add(dt); // myVolume.push_back(dt);
   }
 
-  // LogInfo(*this << "\n");
+  // fLogInfo("{}", *this);
 } // Volume::addDataType
 
 void
@@ -164,7 +164,7 @@ VolumeOf1::addDataType(std::shared_ptr<DataType> dt)
   } else {
     add(dt); // Add what we got
   }
-  LogInfo(*this << "\n");
+  fLogInfo("{}", static_cast<const Volume&>(*this));
 }
 
 void
@@ -197,7 +197,7 @@ VolumeOfN::getTempPointerVector(VolumePointerCache& c)
       d = std::stod(os);
     }catch (const std::exception& e) {
       // FIXME: How to handle this data error?
-      LogSevere("Subtype non number breaks volume of N: " << v->getSubType() << "\n");
+      fLogSevere("Subtype non number breaks volume of N: {}", v->getSubType());
     }
     levels.push_back(d);
   }

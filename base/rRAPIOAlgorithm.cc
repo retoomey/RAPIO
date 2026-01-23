@@ -91,7 +91,6 @@ RAPIOAlgorithm::inTimeWindow(const Time& aTime)
 {
   const TimeDuration window = Time::CurrentTime() - aTime;
 
-  // LogSevere("WINDOW FOR TIME: " << aTime << ", " << Time::CurrentTime() << " ---> " << window << " MAX? " << myMaximumHistory << "\n");
   return (window <= myMaximumHistory);
 }
 
@@ -148,8 +147,7 @@ RAPIOAlgorithm::finalizeOptions(RAPIOOptions& o)
   // currently using it ourselves
   if (history < 0.001) {
     history = 900;
-    LogSevere(
-      "History -h value set too small, changing to " << history << "seconds.\n");
+    fLogSevere("History -h value set too small, changing to {} seconds.", history);
   }
   myMaximumHistory = TimeDuration::Seconds(history);
 
@@ -220,9 +218,7 @@ RAPIOAlgorithm::handleEndDatasetEvent()
     // Archive empty means end it all
     // FIXME: maybe just end event loop here, do a shutdown
     // Log::setSeverity(Log::Severity::INFO);
-    LogInfo(
-      "End of archive data set, " << RecordQueue::poppedRecords << " of " << RecordQueue::pushedRecords
-                                  << " processed.\n");
+    fLogInfo("End of archive data set, {} of {} processed.", RecordQueue::poppedRecords, RecordQueue::pushedRecords);
     Log::flush();
     EventLoop::exit(0);
   } else {
@@ -331,8 +327,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     // Write DataType with given typename, or optionally filtered to new typename by -O
     const bool changeProductName = (typeName != newProductName);
     if (changeProductName) {
-      LogInfo("Writing '" << typeName << "' as product name '" << newProductName
-                          << "'\n");
+      fLogInfo("Writing '{}' as product name '{}'", typeName, newProductName);
       outputData->setTypeName(newProductName);
     }
 
@@ -362,6 +357,6 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     // Restore original typename, does matter since DataType might be reused.
     outputData->setTypeName(typeName);
   } else {
-    LogInfo("Skipping write for -O unwanted product '" << key << "'\n");
+    fLogInfo("Skipping write for -O unwanted product '{}'", key);
   }
 } // RAPIOAlgorithm::writeOutputProduct

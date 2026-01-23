@@ -530,7 +530,7 @@ public:
         is);
 
     if (error != Z_OK) {
-      LogSevere("ZLIB ERROR:" << error << "\n");
+      fLogSevere("ZLIB ERROR:{}", error);
     }
     return (error == Z_OK);
   }
@@ -591,20 +591,20 @@ public:
           // Print out the saving percentage for now...
           const float percent =
             ((float) (vBYTESize - cBYTESize) / (float) (vBYTESize)) * 100.0;
-          LogDebug("ZLIB SAVED: " << label << " size percent " << percent << "% "
-                                  << vBYTESize << " --> " << cBYTESize << "\n");
+          fLogDebug("ZLIB SAVED: {} size percent {}% {} --> {}",
+            label, percent, vBYTESize, cBYTESize);
         } else {
-          LogDebug("ZLIB didn't save any space " << cBYTESize << " < " << vBYTESize
-                                                 << " skipping compression of vector\n");
+          fLogDebug("ZLIB didn't save any space {} < {} skipping compression of vector",
+            cBYTESize, vBYTESize);
           mode = 0;
         }
 
         // -----------------------------------------------------------
       } else {
-        LogSevere("ZLIB compression failure, failing back to uncompressed column\n");
+        fLogSevere("ZLIB compression failure, failing back to uncompressed column");
         mode = 0;
       }
-      LogDebug(timer << "\n");
+      fLogDebug("{}", timer);
     }
 
     /** Normal uncompressed data */
@@ -635,15 +635,14 @@ public:
 
     fread(&mode, sizeof(mode), 1, fp);
 
-    // LogSevere("Compression mode is " << mode << "\n");
+    // fLogSevere("Compression mode is {}", mode);
 
     /** Read the full length of the vector */
     size_t len;
 
     fread(&len, sizeof(len), 1, fp);
 
-    // LogSevere("Length of vector is  " << len << "units ("<<len*sizeof(T) <<"
-    // bytes)\n");
+    // fLogSevere("Length of vector is {} units ({} bytes)", len, len*sizeof(T));
 
     if (mode == 1) { // ZLIB
       // ------------------------------------------------------------
@@ -653,7 +652,7 @@ public:
       size_t csize;
       fread(&csize, sizeof(csize), 1, fp);
 
-      // LogSevere("Length of COMPRESSED vector is (" << csize << " bytes)\n");
+      // fLogSevere("Length of COMPRESSED vector is ({} bytes)", csize);
 
       /** Read the compressed vector */
       std::vector<unsigned char> compressed;
@@ -664,7 +663,7 @@ public:
       rapio::ProcessTimer timer("ZLIB UNCOMPRESSION took:");
 
       if (!uncompressZLIB<T>(compressed, vec, len)) {
-        LogSevere("ZLIB uncompress failure. Different .raw format file?\n");
+        fLogSevere("ZLIB uncompress failure. Different .raw format file?");
         vec.clear();
       }
 
@@ -673,10 +672,8 @@ public:
       vec.resize(len);
       fread(&(vec[0]), sizeof(vec[0]), len, fp);
     } else {
-      LogSevere(
-        "Storage mode unrecognized: " << mode << ", can't handle data file.\n");
-      LogSevere(
-        "This file is too probably too new or corrupted, you probably need to update your build.\n");
+      fLogSevere("Storage mode unrecognized: {}, can't handle data file.", mode);
+      fLogSevere("This file is too probably too new or corrupted, you probably need to update your build.");
       vec.clear(); // Return nothing...
     }
   } // read_vector

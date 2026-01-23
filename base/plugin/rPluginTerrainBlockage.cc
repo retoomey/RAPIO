@@ -54,7 +54,7 @@ PluginTerrainBlockage::getNewTerrainBlockage(
   // -------------------------------------------------------------
   // Terrain blockage creation
   if (myTerrainAlg.empty()) {
-    LogInfo("No terrain blockage algorithm requested.\n");
+    fLogInfo("No terrain blockage algorithm requested.");
     return nullptr;
   } else {
     std::string key, params;
@@ -66,10 +66,10 @@ PluginTerrainBlockage::getNewTerrainBlockage(
 
     // Stubbornly refuse to run if terrain requested by name and not found or failed
     if (myTerrainBlockage == nullptr) {
-      LogSevere("Terrain blockage '" << myTerrainAlg << "' requested, but failed to find and/or initialize.\n");
+      fLogSevere("Terrain blockage '{}' requested, but failed to find and/or initialize.", myTerrainAlg);
       exit(1);
     } else {
-      LogInfo("Using Terrain Blockage: '" << myTerrainBlockage << "'\n");
+      fLogInfo("Using Terrain Blockage: '{}'", myTerrainAlg);
       return myTerrainBlockage;
     }
     return nullptr;

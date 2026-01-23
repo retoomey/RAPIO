@@ -47,7 +47,7 @@ StreamIndex::initialRead(bool realtime, bool archive)
   if (archive) {
     // If we trust the external process to be a 'one-shot', we could
     // implement something here.  What if it doesn't die?
-    LogSevere("Stream index has no archive ability, use with -r realtime.\n");
+    fLogSevere("Stream index has no archive ability, use with -r realtime.");
     return false;
   }
 
@@ -93,7 +93,7 @@ StreamIndex::handleNewEvent(WatchEvent * w)
      *      }
      *
      *      if (dumpline){
-     *         LogInfo("WRITE: " << myLineCout));
+     *         fLogInfo("WRITE: {}", myLineCout));
      *         ...
      *      }
      *    }
@@ -134,10 +134,10 @@ StreamIndex::handleNewEvent(WatchEvent * w)
                     Record::theRecordQueue->addRecord(rec);
                   }
                 } else {
-                  LogSevere("Failed record XML from stream, can't parse.\n");
+                  fLogSevere("Failed record XML from stream, can't parse.");
                 }
               }catch (const std::exception& e) {
-                LogSevere("Failed record XML from stream, record invalid: " << e.what() << "\n");
+                fLogSevere("Failed record XML from stream, record invalid: {}", e.what());
               }
               myLineCout.clear();
             }

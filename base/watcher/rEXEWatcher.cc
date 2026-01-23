@@ -1,6 +1,6 @@
 #include "rEXEWatcher.h"
 
-#include "rError.h" // for LogInfo()
+#include "rError.h" // for fLogInfo()
 #include "rOS.h"
 #include "rStrings.h"
 
@@ -21,7 +21,7 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 {
   if (!myConnected) {
     // Reconnect on fail? For now I'll just warn
-    LogSevere(">>>Not connected to exe watched process\n");
+    fLogSevere(">>>Not connected to exe watched process");
     return;
   }
 
@@ -80,11 +80,11 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
 
   // This always blocks...now if we fell through it died, so ok...
   if (ended) {
-    LogInfo("Watched process external termination.\n");
+    fLogInfo("Watched process external termination.");
     // This is blocking for whole program.  Are we ok here?
     int exit_code;
     waitpid(myPid, &exit_code, 0);
-    LogInfo("--->Exit code: " << exit_code << "\n");
+    fLogInfo("--->Exit code: {}", exit_code);
     // Make sure our pipes closed
     posix_spawn_file_actions_destroy(&myFA);
     close(myCoutPipe[0]);
@@ -119,7 +119,7 @@ EXEWatcher::EXEInfo::connect()
 
   // Create our own pipes
   if (pipe(myCoutPipe) || pipe(myCerrPipe)) {
-    LogSevere("Failed to create pipes for processes\n");
+    fLogSevere("Failed to create pipes for processes");
     return false;
   }
 
@@ -156,11 +156,11 @@ EXEWatcher::EXEInfo::connect()
   // I think checking ret once at end is enough for our purposes,
   // since the final spawn should fail if anything in pipeline did.
   if (ret) {
-    LogSevere("Spawned EXE watcher failed to call external process. Is the executable in path?\n");
+    fLogSevere("Spawned EXE watcher failed to call external process. Is the executable in path?");
     return false;
   }
 
-  LogInfo("Spawned EXE watcher \n");
+  fLogInfo("Spawned EXE watcher");
   myConnected = true;
   return true;
 } // EXEWatcher::EXEInfo::connect
@@ -179,7 +179,7 @@ EXEWatcher::attach(const std::string & param,
   if (success) {
     myWatches.push_back(newWatch);
   } else {
-    LogSevere("Unable to connect to EXE watcher\n");
+    fLogSevere("Unable to connect to EXE watcher");
   }
 
   return success;

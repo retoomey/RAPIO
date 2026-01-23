@@ -70,7 +70,7 @@ public:
 
     TimeParser test;
     if (test.scan(localFile, aTime)) {
-      LogDebug("FILE:" << filePath << "has BUILDER:(" << factory << ")\n");
+      fLogDebug("FILE:{} has BUILDER:({})", filePath, factory);
       // printPath("File: ", filePath, info);
 
       // Remove begining and end of the path
@@ -135,7 +135,7 @@ public:
       // -------------------------------------------------------------------
     } else {
       // Couldn't time scan, so what next?
-      LogDebug("SKIP: Can't time parse " << localFile << ", ok if not data.\n");
+      fLogDebug("SKIP: Can't time parse {}, ok if not data.", localFile);
     }
   }
 
@@ -147,7 +147,7 @@ makeIndexDirWalker::processDirectory(const std::string& dirPath, const struct st
 {
   // How to tell the level of directory we are at?  Should be somewhere to add to API,
   // or we check the path?
-  LogDebug("DIR:" << dirPath << " " << getDepth() << "\n");
+  fLogDebug("DIR: {} {}", dirPath, getDepth());
   // printPath("Dir: ", dirPath, info);
   return DirWalker::Action::CONTINUE; // Process the root
 }
@@ -174,8 +174,8 @@ MakeIndex::processOptions(RAPIOOptions& o)
     // Make it the root directory location + code_index.xml
     myOutputFile = myRoot + "/code_index.xml";
   }
-  LogInfo("Root is " << myRoot << ", which will be {indexlocation} macro.\n");
-  LogInfo("Output file is " << myOutputFile << "\n");
+  fLogInfo("Root is {}, which will be indexlocation macro.", myRoot);
+  fLogInfo("Output file is {}", myOutputFile);
 }
 
 void
@@ -194,8 +194,8 @@ MakeIndex::execute()
   makeIndexDirWalker walk("INGEST", this, ".cache");
 
   walk.traverse(myRoot);
-  LogInfo("Processed " << walk.getFileCounter() << " total files.\n");
-  LogInfo("Gathered a total of " << myQueue.size() << " records.\n");
+  fLogInfo("Processed {} total files.", walk.getFileCounter());
+  fLogInfo("Gathered a total of {} records", myQueue.size());
 
   // --------------------------------------------------------
   // Write xml output file
@@ -204,7 +204,7 @@ MakeIndex::execute()
   std::ofstream ss(myOutputFile);
 
   if (!ss) {
-    LogSevere("Can't create/write '" << myOutputFile << "'\n");
+    fLogSevere("Can't create/write '{}'", myOutputFile);
     return;
   }
 
@@ -223,8 +223,8 @@ MakeIndex::execute()
   ss << "</codeindex>\n";
   ss.close();
 
-  LogInfo("Wrote " << myOutputFile << "\n");
-  LogInfo(timer << "\n");
+  fLogInfo("Wrote {}", myOutputFile);
+  fLogInfo("{}", timer);
 } // MakeIndex::execute
 
 int

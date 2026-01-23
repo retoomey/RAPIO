@@ -49,8 +49,8 @@ SimpleProgram::processOptions(RAPIOOptions& o)
 void
 SimpleProgram::execute()
 {
-  LogInfo("Well this program is running, what to do?\n");
-  LogInfo("Test was passed in as '" << myTest << "'\n");
+  fLogInfo("Well this program is running, what to do?");
+  fLogInfo("Test was passed in as '{}'", myTest);
 }
 
 int

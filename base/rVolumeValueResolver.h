@@ -48,7 +48,7 @@ public:
   virtual void
   send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   {
-    LogInfo("This resolver doesn't currently send stage2 data.\n");
+    fLogInfo("This resolver doesn't currently send stage2 data.");
   }
 };
 
@@ -304,7 +304,7 @@ protected:
       AngleDegs compare = r->getBeamWidthRef()[l.radial]; // Pull the slooow way and compare
       AngleDegs compare = (*rc->bw)[l.radial];
       if (l.beamWidth != compare) {
-        LogSevere("Test beamwidth crash\n");
+        fLogSevere("Test beamwidth crash");
         exit(1);
       }
       #endif

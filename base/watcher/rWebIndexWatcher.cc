@@ -1,7 +1,7 @@
 #include "rWebIndexWatcher.h"
 #include "rWebIndex.h"
 
-#include "rError.h" // for LogInfo()
+#include "rError.h" // for fLogInfo()
 
 using namespace rapio;
 

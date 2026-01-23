@@ -60,7 +60,7 @@ public:
   {
     #if 0
     if (i > myLookup.size()) {
-      LogSevere("OUT OF RANGE " << i << " > " << myLookup.size());
+      fLogSevere("OUT OF RANGE {} > {}", i, myLookup.size());
       return nullptr;
     }
     #endif
@@ -72,7 +72,7 @@ public:
     } else {
       #if 0
       if (offset > myStorage.size()) {
-        LogSevere("Detected out of bounds " << offset << " and size is " << myStorage.size() << "\n");
+        fLogSevere("Detected out of bounds {} and size is {}", offset, myStorage.size());
         exit(1);
       }
       #endif
@@ -87,7 +87,7 @@ public:
   {
     #if 0
     if (i > myLookup.size()) {
-      LogSevere("SET OUT OF RANGE " << i << " > " << myLookup.size());
+      fLogSevere("SET OUT OF RANGE {} > {}", i, myLookup.size());
       return nullptr;
     }
     #endif
@@ -102,7 +102,7 @@ public:
     }
     #if 0
     if (offset > myStorage.size()) {
-      LogSevere("Detected out of bounds " << offset << " and size is " << myStorage.size() << "\n");
+      fLogSevere("Detected out of bounds {} and size is {}", offset, myStorage.size());
       exit(1);
     }
     #endif

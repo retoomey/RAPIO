@@ -38,13 +38,13 @@ IOFakeDataType::createDataType(const std::string& params)
   auto * r = Record::getCreatingRecord();
 
   if (r == nullptr) {
-    LogSevere("No creating record available, can't create fake data.\n");
+    fLogSevere("No creating record available, can't create fake data.");
     return nullptr;
   }
   bool haveRadar = ConfigRadarInfo::haveRadar(params);
 
   if (!haveRadar) {
-    LogSevere("No radar named '" << params << "', can't create fake data.\n");
+    fLogSevere("No radar named '{}', can't create fake data.", params);
     nullptr;
   }
 
@@ -80,6 +80,6 @@ IOFakeDataType::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>                     & keys
 )
 {
-  LogSevere("Unable to write fake data directly.\n");
+  fLogSevere("Unable to write fake data directly.");
   return false;
 }

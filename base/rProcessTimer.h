@@ -23,10 +23,10 @@ class ProcessTimer;
  * for(size_t i = 0; i<10; ++i){
  *   ProcessTimer timer("Time this action\n");
  *   // Do stuff that takes CPU and/or increases RAM
- *   LogInfo(timer);
+ *   fLogInfo("{}", timer);
  *   sum.add(timer);
  * }
- * LogInfo(sum);
+ * fLogInfo("{}", sum);
  * @endcode
  *
  * @author Robert Toomey
@@ -84,13 +84,13 @@ operator << (std::ostream&,
   const ProcessTimerSum&);
 
 /**
- * The ProcessTimer object will LogInfo the msg string along with the
+ * The ProcessTimer object will fLogInfo the msg string along with the
  * time and memory information when destroyed, iff the msg is not blank
  *
  * @code
  * ProcessTimer timer("Time this action\n");
  * // Do stuff that takes CPU and/or increases RAM
- * LogInfo(timer);
+ * fLogInfo("{}", timer);
  * @endcode
  *
  * @author Robert Toomey

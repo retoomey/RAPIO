@@ -286,7 +286,7 @@ EchoTop::VerticalColumnCoverage(const Time& useTime, float useElevDegs, const st
   if (set == nullptr) { return; }
   set->setDataAttributeValue("ColorMap", "EchoTop");
   set->setUnits("Km");
-  LogInfo(*myElevationVolume << "\n");
+  fLogInfo("{}", *myElevationVolume);
 
   VCC myCallback;
 
@@ -318,7 +318,7 @@ EchoTop::Traditional(const Time& useTime, float useElevDegs, const std::string& 
   if (set == nullptr) { return; }
   set->setDataAttributeValue("ColorMap", "EchoTop");
   set->setUnits("km");
-  LogInfo(*myElevationVolume << "\n");
+  fLogInfo("{}", *myElevationVolume);
 
   TraditionalET myCallback;
 
@@ -350,7 +350,7 @@ EchoTop::Interpolated(const Time& useTime, float useElevDegs, const std::string&
   if (set == nullptr) { return; }
   set->setDataAttributeValue("ColorMap", "EchoTop");
   set->setUnits("km");
-  LogInfo(*myElevationVolume << "\n");
+  fLogInfo("{}", *myElevationVolume);
 
   // -------------------------------------
   // Echotop value
@@ -406,7 +406,7 @@ EchoTop::Interpolated(const Time& useTime, float useElevDegs, const std::string&
   iter2.iterateRadialGates(myCallback2);
   // -------------------------------------
 
-  LogSevere("-------------------->>MAX " << MAXKMS << "\n");
+  fLogSevere("-------------------->>MAX {}", MAXKMS);
   // Write product
   std::map<std::string, std::string> myOverride;
 

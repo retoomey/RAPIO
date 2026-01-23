@@ -14,9 +14,9 @@ template <typename T>
 std::unique_ptr<StaticVector>
 createSized(size_t maxSize, size_t actualSize)
 {
-  LogInfo("Created " << sizeof(T) * 8 << " bit  storage for " << actualSize << " bits.\n");
+  fLogInfo("Created {} bit  storage for {} bits.", sizeof(T), actualSize);
   if (sizeof(T) * 8 < actualSize) {
-    LogSevere("This is too small of storage it appears.\n");
+    fLogSevere("This is too small of storage it appears.");
   }
   return std::unique_ptr<StaticVector>(new StaticVectorT<T>(maxSize));
 }
@@ -39,11 +39,11 @@ StaticVector::Create(size_t maxSize, bool trim)
     } else if (size <= 64) {
       return createSized<unsigned long>(maxSize, size);
     } else {
-      LogSevere("Can't create trimmed storage size for " << size << " bits, using bitset (slower).\n");
+      fLogSevere("Can't create trimmed storage size for {} bits, using bitset (slower).", size);
     }
   }
   // We 'should' be using unique_ptr more..but it requires users know how to use them and convert to shared
-  LogSevere("Created direct bitset " << size << " storage for " << size << " bits.\n");
+  fLogSevere("Created direct bitset {} storage for {} bits.", size, size);
   return std::unique_ptr<Bitset>(new Bitset(maxSize, size));
 }
 

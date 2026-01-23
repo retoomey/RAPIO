@@ -36,7 +36,7 @@ Watch::processNewData(rapio::RAPIOData& d)
   static long counter = 0;
 
   counter++;
-  LogInfo(counter << ": (" << valid << " " << TypeName << "): " << d.getDescription() << "\n");
+  fLogInfo("{}: ({} {}): {}", counter, valid, TypeName, d.getDescription());
 } // Watch::processNewData
 
 int

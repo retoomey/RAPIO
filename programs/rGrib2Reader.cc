@@ -53,8 +53,8 @@ void
 Grib2ReaderAlg::processOptions(RAPIOOptions& o)
 { 
   ConfigModelInfoXML = "misc/model" + o.getString("model") + ".xml";
-  LogInfo("using " << ConfigModelInfoXML << "\n");
-  LogInfo("****************************PROCESSING OPTIONS**************\n");
+  fLogInfo("using {}", ConfigModelInfoXML);
+  fLogInfo("****************************PROCESSING OPTIONS**************");
 }
 
 void
@@ -115,7 +115,7 @@ Grib2ReaderAlg::getModelProjectionInfo(std::string& modeltype)
   } 
   catch(const std::exception& e)
   {
-    LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
+    fLogSevere("Error parsing XML from {}", ConfigModelInfoXML);
   }
   
 }
@@ -163,14 +163,14 @@ Grib2ReaderAlg::whichFieldsToProcess()
       }
       
     } else {
-      LogSevere(ConfigModelInfoXML << "does not exist. Exiting.\n");
+      fLogSevere("{} does not exist. Exiting.", ConfigModelInfoXML);
       exit(1);
     }
   }
   
   catch(const std::exception& e)
   {
-    LogSevere("Error parsing XML from " << ConfigModelInfoXML << "\n");
+    fLogSevere("Error parsing XML from {}", ConfigModelInfoXML);
     exit(1);
   }
   
@@ -194,14 +194,14 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
   auto grib2 = d.datatype<rapio::GribDataType>();
 
   if (grib2 != nullptr) {
-    LogInfo("Grib2 data incoming...testing...\n");
+    fLogInfo("Grib2 data incoming...testing...");
     // ------------------------------------------------------------------------
     // Catalog test doing a .idx or wgrib2 listing attempt
     //
     {
       ProcessTimer grib("Testing print catalog speed\n");
       grib2->printCatalog();
-      LogInfo("Finished in " << grib << "\n");
+      fLogInfo("Finished in {}", grib);
     }
 
     // test if we can pull the individual fields that are being asked for in 
@@ -211,28 +211,28 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 
       auto array2Da = grib2->getFloat2D(mFields[i].id, mFields[i].layer);
       if (array2Da != nullptr) {
-        LogInfo("Found '" << mFields[i].id << "'\n");
-        LogInfo("Dimensions: " << array2Da->getX() << ", " << array2Da->getY() << "\n");
-        LogInfo("Trying to read " << mFields[i].id << " as grib message.\n");
+        fLogInfo("Found '{}'", mFields[i].id);
+        fLogInfo("Dimensions: {}, {}", array2Da->getX(), array2Da->getY());
+        fLogInfo("Trying to read {} as grib message.", mFields[i].id);
         auto message = grib2->getMessage(mFields[i].id, mFields[i].layer);
         auto& m = *message;
-        LogInfo("    Time of the message is " << m.getDateString() << "\n");
-        LogInfo("    Message in file is number " << m.getMessageNumber() << "\n");
-        LogInfo("    Message file byte offset: " << m.getFileOffset() << "\n");
-        LogInfo("    Message byte length: " << m.getMessageLength() << "\n");
+        fLogInfo("    Time of the message is {}", m.getDateString());
+        fLogInfo("    Message in file is number {}", m.getMessageNumber());
+        fLogInfo("    Message file byte offset: {}", m.getFileOffset());
+        fLogInfo("    Message byte length: {}", m.getMessageLength());
         // Time theTime = message->getTime();
-        LogInfo("    Center ID is " << m.getCenterID() << "\n");
-        LogInfo("    SubCenter ID is " << m.getSubCenterID() << "\n");
+        fLogInfo("    Center ID is {}", m.getCenterID());
+        fLogInfo("    SubCenter ID is {}", m.getSubCenterID());
 
         // Messages have (n) fields each
         auto field = message->getField(1);
         if (field != nullptr) {
           auto& f = *field;
-          LogInfo("For field 1 of the message:\n");
-          LogInfo("    GRIB Version: " << f.getGRIBEditionNumber() << "\n");
-          LogInfo("    GRIB Discipline #: " << f.getDisciplineNumber() << "\n");
-          LogInfo("    Time of the field is " << f.getDateString() << "\n");
-          LogInfo("    Grid def template number is: " << f.getGridDefTemplateNumber() << "\n");
+          fLogInfo("For field 1 of the message:");
+          fLogInfo("    GRIB Version: {}", f.getGRIBEditionNumber());
+          fLogInfo("    GRIB Discipline #: {}", f.getDisciplineNumber());
+          fLogInfo("    Time of the field is {}", f.getDateString());
+          fLogInfo("    Grid def template number is: {}", f.getGridDefTemplateNumber());
         }
         auto llgridsp = LatLonGrid::Create(
           mFields[i].name,           // MRMS name and also colormap
@@ -254,7 +254,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
           proj
         );
         bool success = project->initialize();
-        LogInfo("Created projection:  " << success << "\n");
+        fLogInfo("Created projection:  {}", success);
 	//
         // Project from source project to LatLonGrid and write it out
 	//
@@ -268,20 +268,20 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 	  //
 
 	  if (mFields[i].rotateWinds == "") {
-          	  LogInfo("No winds to rotate\n");
+          	  fLogInfo("No winds to rotate");
 	  } else {
 		  std::vector<std::string> windinfo;
 		  Strings::split(mFields[i].rotateWinds, ':', &windinfo);
-        	  LogInfo("windinfo:  ");
+        	  fLogInfo("windinfo:  ");
 		  for (size_t i=0;i<windinfo.size();i++) {
-        	  	LogInfo(i << ":\"" << windinfo[i] << "\"\n");
+        	  	fLogInfo("{}:\"{}\"", i, windinfo[i]);
 		  }
-        	  LogInfo("\n");
+        	  fLogInfo("");
 		  if (windinfo.size() > 0) {
 			  if (!initWindConversion) {
 				  //first time this has been called,
 				  // so set up the arrays
-        	                   LogInfo("Initializing Wind Rotation arrays\n");
+        	                   fLogInfo("Initializing Wind Rotation arrays");
 				   initWindConversion = true;
 	                           ugrid = LatLonGrid::Create(
                                    	windinfo[3],
@@ -326,7 +326,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 	
 			  } 
 			  if (windinfo[0] == "LCC") {
-				  LogInfo("Doing Lambert Conformal\n");
+				  fLogInfo("Doing Lambert Conformal");
                                   //"LCC:38.5:-97.5:UWind:VWind"
 				  float lat = atof(windinfo[1].c_str());
 				  float lon = atof(windinfo[2].c_str());
@@ -352,18 +352,18 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
           				  writeOutputProduct(vwind->getTypeName(), vwind);
 				  }
 			  } else if (windinfo[0] == "PS") {
-				  LogInfo("Doing Polar Sterographic\n");
+				  fLogInfo("Doing Polar Sterographic");
 			  } else {
-			          LogInfo("Projection not found\n");
+			          fLogInfo("Projection not found");
 			  }
 		  } else {
-			  LogInfo("Projection not found\n");
+			  fLogInfo("Projection not found");
 		  }
 
 
 	  }
         } else {
-          LogSevere("Failed to create projection\n");
+          fLogSevere("Failed to create projection");
           return;
         }
       }

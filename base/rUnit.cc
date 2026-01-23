@@ -50,9 +50,7 @@ getUtUnit(const std::string& u, utUnit& setme)
   }
 
   if (utScan(unit.c_str(), &setme)) {
-    LogSevere(
-      "Unit '" << unit
-               << "' not found in the udunits database file(s) in misc.\n");
+    fLogSevere("Unit '{}' not found in the udunits database file(s) in misc.", unit);
     return (false);
   }
 
@@ -78,7 +76,7 @@ ConfigUnit::readSettings(std::shared_ptr<PTreeData>)
   URL url = Config::getConfigFile("misc/udunits2.xml");
 
   if (url.getPath() == "") {
-    LogSevere("Udunits2 requires a misc/udunits2.xml file and others in one of your configuration paths.\n");
+    fLogSevere("Udunits2 requires a misc/udunits2.xml file and others in one of your configuration paths.");
     return false;
   }
   // Initialize environment to xml files and udunits
@@ -141,7 +139,7 @@ Unit::getConverter(const std::string& from,
       !getUtUnit(to, t) ||
       utConvert(&f, &t, &setme.slope, &setme.intercept))
     {
-      LogSevere("Units '" << from << "' and '" << to << "' are incompatible\n");
+      fLogSevere("Units '{}' and '{}' are incompatible", from, to);
       return (false);
     }
   }
@@ -183,7 +181,7 @@ Unit::convert(const std::string& fromUnit,
   return (true);
 
   #else // if HAVE_UDUNITS
-  LogSevere("Not compiled with Udunits2 support, can't convert units!");
+  fLogSevere("Not compiled with Udunits2 support, can't convert units!");
   return false;
 
   #endif // if HAVE_UDUNITS

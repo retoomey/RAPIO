@@ -256,8 +256,8 @@ public:
     for (auto x: dimindexes) {
       if (x >= s) { // 0, 1, 2  (dim = 3)
         const std::string range = s > 0 ? "[0-" + std::to_string(s - 1) + "]" : "";
-        LogSevere("Attempting to add array using dimension index " << x <<
-          " but we have " << myDims.size() << " dimensions " << range << ".\n");
+        fLogSevere("Attempting to add array using dimension index {} but we have {} dimensions {}.",
+          x, myDims.size(), range);
         return nullptr;
       }
       sizes.push_back(myDims[x].size()); // FIXME: Could check sizes
@@ -301,8 +301,8 @@ public:
   {
     for (auto i:myNodes) {
       if (i->getName() == newname) {
-        LogSevere(
-          "Cannot change array from " << name << " to " << newname << " since " << newname << " already exists!\n");
+        fLogSevere("Cannot change array from {} to {} since {} already exists!",
+          name, newname, newname);
         return false;
       }
     }
