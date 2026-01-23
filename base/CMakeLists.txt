@@ -370,7 +370,7 @@ endif()
 
 #target_compile_definitions(rapio_interface INTERFACE HAVE_CURL)
 target_include_directories(rapio_interface INTERFACE ${Boost_INCLUDE_DIRS})
-target_link_libraries(rapio PRIVATE ${Boost_LIBRARIES})
+target_link_libraries(rapio PUBLIC ${Boost_LIBRARIES})
 
 # Used by the base/rUnits for conversion, but we don't convert right now anyway
 addRAPIONote("Utility libraries:")

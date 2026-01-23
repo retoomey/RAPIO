@@ -6,6 +6,9 @@ include(GNUInstallDirs)
 #
 set(ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external)
 
+# We define the expected library path now for use in linking later
+set(G2C_LIB_FILE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so")
+
 ExternalProject_Add(
   g2c
   GIT_REPOSITORY https://github.com/NOAA-EMC/NCEPLIBS-g2c.git
@@ -25,6 +28,8 @@ ExternalProject_Add(
              -DUSE_Jasper=${USE_JASPER_NCEPLIBS} # jasper
              -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
   INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+  # This prevents CMake from failing if the file doesn't exist yet
+  BUILD_BYPRODUCTS "${G2C_LIB_FILE}"
 )
 
 ###############################################################
@@ -35,8 +40,8 @@ ExternalProject_Add(
 # to be sneaky.  Tried configure, patch, etc.
 set(PATCH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/patch")
 set(WGRIB2_SRC_DIR "${CMAKE_BINARY_DIR}/external/src/wgrib2")
-set(WGRIB2_PATCH_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patch.stamp")
-set(WGRIB2_PATCH_CHECK_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patchCheck.stamp")
+#set(WGRIB2_PATCH_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patch.stamp")
+#set(WGRIB2_PATCH_CHECK_STAMP "${CMAKE_BINARY_DIR}/external/wgrib2_patchCheck.stamp")
 
 message(STATUS "Patch dir is ${PATCH_DIR}")
 
@@ -51,6 +56,8 @@ message(STATUS "Patch dir is ${PATCH_DIR}")
 ###############################################################
 # Build wgrib2, depends on g2c and the wgrib2_patch files
 #
+set(WGRIB2_LIB_FILE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so")
+
 ExternalProject_Add(
   wgrib2
   #DEPENDS g2c patch_wgrib2
@@ -76,21 +83,22 @@ ExternalProject_Add(
     ${CMAKE_COMMAND} -E echo "Applying update wgrib2 patch..." &&
     ${CMAKE_CURRENT_SOURCE_DIR}/patch/patch_wgrib2.sh first ${PATCH_DIR} <SOURCE_DIR>/wgrib2 
   INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+  BUILD_BYPRODUCTS "${WGRIB2_LIB_FILE}"
 )
 addRAPIONote("      Found: WGRIB2")
 
 # Define imported targets for the external projects
-add_library(g2c_lib SHARED IMPORTED)
-set_target_properties(g2c_lib PROPERTIES
-  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so"
-  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
-)
+#add_library(g2c_lib SHARED IMPORTED)
+#set_target_properties(g2c_lib PROPERTIES
+#  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so"
+#  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
+#)
 
-add_library(wgrib2_lib SHARED IMPORTED)
-set_target_properties(wgrib2_lib PROPERTIES
-  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so"
-  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
-)
+#add_library(wgrib2_lib SHARED IMPORTED)
+#set_target_properties(wgrib2_lib PROPERTIES
+#  IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so"
+#  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}"
+#)
 
 ###############################################################
 # Build rapio module
@@ -109,14 +117,19 @@ add_dependencies(rapiowgrib g2c wgrib2)
 
 target_compile_definitions(rapiowgrib PRIVATE HAVE_GRIB2C)
 
+# Use include directories from the install prefix where headers will be placed
+target_include_directories(rapiowgrib PRIVATE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
+
 # Reduce all the extra libraries we don't use.
 # Would be better to reduce the THIRD LIBRARIES or choose
 # what we need.
 target_link_options(rapiowgrib PRIVATE -Wl,--as-needed)
 
 target_link_libraries(rapiowgrib PRIVATE
-   g2c_lib
-   wgrib2_lib
+   #g2c_lib
+   #wgrib2_lib
+   "${G2C_LIB_FILE}"
+   "${WGRIB2_LIB_FILE}"
    #${ROOT_DIRECTORY}/${CMAKE_INSTALL_LIBDIR}/libg2c.so
    #${ROOT_DIRECTORY}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.so
 ###   ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so
