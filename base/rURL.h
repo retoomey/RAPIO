@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <map>
 #include <string>
 
@@ -23,8 +22,10 @@ namespace rapio {
  * \li\c fragment (here)
  *
  * @class URL
+ * @ingroup rapio_data
+ * @brief Stores a web based URL.
  */
-class URL : public Data {
+class URL {
 public:
 
   /** Guess a default port for a given scheme, return 0 if not known */

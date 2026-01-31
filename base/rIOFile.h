@@ -1,10 +1,9 @@
 #pragma once
 
-#include <rIO.h>
-#include <rData.h>
 #include <rIODataType.h>
 #include <rPTreeData.h>
 #include "rDataGrid.h"
+
 #include <memory>
 
 namespace rapio {

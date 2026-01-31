@@ -12,7 +12,7 @@ BOOST_WRAP_POP
 namespace rapio {
 /** Property Tree holder class.  This is typically used
  * for XML, JSON, YAML, etc.. We wrap BOOST here currently*/
-class PTreeNode : public Data {
+class PTreeNode {
   friend class PTreeData;
   friend class IOXML;
   friend class IOJSON;

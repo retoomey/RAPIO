@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <vector>
 
 #include <cstdio>
@@ -21,8 +19,10 @@ namespace rapio {
  * code.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Utilities dealing with security stuff.
  */
-class Secure : public Utility {
+class Secure {
 public:
 
   // Most of those uses for AWS REST call experiments

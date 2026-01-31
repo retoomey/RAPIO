@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rConfig.h>
 
 #include <iosfwd>
@@ -28,12 +27,12 @@ public:
  * Convenience wrapper around udunits2.
  *
  */
-class Unit : public Utility {
+class Unit {
 public:
 
 
   /** Store slope and intercept used by Unit */
-  class UnitConverter : public Utility {
+  class UnitConverter {
 public:
     double slope;
     double intercept;

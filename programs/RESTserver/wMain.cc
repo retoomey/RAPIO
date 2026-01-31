@@ -23,9 +23,9 @@
 #include <stdio.h>
 #include <SDL.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-#include <SDL_opengles2.h>
+# include <SDL_opengles2.h>
 #else
-#include <SDL_opengl.h>
+# include <SDL_opengl.h>
 #endif
 
 #include <iostream>
@@ -34,25 +34,25 @@
 // https://github.com/Flix01/imgui
 // has a bunchs of extra classes.  We're going to
 // have to make our own widgets at some point
-//#include "imguidatechooser.h"
+// #include "imguidatechooser.h"
 // #include "ImGuiDatePicker.hpp"
 #include "wPassthrough.h"
 
 // I just added the header directly for us
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/bind.h>
-#include <emscripten/fetch.h>
-#include <functional>
+# include <emscripten.h>
+# include <emscripten/bind.h>
+# include <emscripten/fetch.h>
+# include <functional>
 static std::function<void()> MainLoopForEmscriptenP;
 static void MainLoopForEmscripten(){ MainLoopForEmscriptenP(); }
 
-#define EMSCRIPTEN_MAINLOOP_BEGIN MainLoopForEmscriptenP = [&]()
-#define EMSCRIPTEN_MAINLOOP_END   ; emscripten_set_main_loop(MainLoopForEmscripten, 0, true)
+# define EMSCRIPTEN_MAINLOOP_BEGIN MainLoopForEmscriptenP = [&]()
+# define EMSCRIPTEN_MAINLOOP_END   ; emscripten_set_main_loop(MainLoopForEmscripten, 0, true)
 #else
-#define EMSCRIPTEN_MAINLOOP_BEGIN
-#define EMSCRIPTEN_MAINLOOP_END
-#endif
+# define EMSCRIPTEN_MAINLOOP_BEGIN
+# define EMSCRIPTEN_MAINLOOP_END
+#endif // ifdef __EMSCRIPTEN__
 
 /** Store all of the application state in a single object.
  * This wil be easier to pass around.  Also if we write
@@ -216,31 +216,31 @@ doFetchColorMap()
     // Create a new promise to handle the asynchronous fetch operation
     // Since Enscripten doesn't handle await guess we're stuck with this
     // We have a async load the module and async call the method...
-    const p = new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) = > {
       // Dynamically import the module
-      import('./js/rColorMap.js').then(module => {
+      import('./js/rColorMap.js').then(module = > {
         // Call the fetchColorMap function from the imported module
         module.fetchColorMap()
-        .then(data => {
+        .then(data = > {
           // Tell the map about new color map
           Module.map.myRAPIOLayer.setColorMap(data);
           // FIXME: Can we trigger a refresh of map..maybe in the main loop is best?
           resolve(); // Resolve the promise once fetchColorMap completes successfully
         })
-        .catch (error => {
+        .catch (error = > {
           console.error("Error calling fetchColorMap:", error);
           reject(error); // Reject the promise if there's an error
         });
-      }).catch (err => {
+      }).catch (err = > {
         console.error("Failed to import module:", err);
         reject(err); // Reject the promise if the module import fails
       });
     });
 
     // Handle the promise returned by the asynchronous operation
-    p.then(() => {
+    p.then(() = > {
       // console.log("Promise resolved in EM_ASM");
-    }).catch (error => {
+    }).catch (error = > {
       console.error("Promise rejected in EM_ASM:", error);
     });
   });
@@ -347,14 +347,14 @@ EM_JS(void, initMap, (), {
     if (Module.map.myRAPIOLayer) {
       // console.log("We have the layer!\n");
       // Try to get the tile matching coordinates
-      var tileKey    = `${zoom}_${tileX}_${tileY}`;
+      var tileKey    = ` ${ zoom } _${ tileX } _${ tileY } `;
       var cachedTile = Module.map.myRAPIOLayer.getTileFromCache(tileKey);
       if (cachedTile) {
         // console.log("Tile found:", tileKey);
         // Ok attempt to get the value in the tile at location x,y
         Module.dataValue = cachedTile.floatData[pixelY * 256 + pixelX]; // guessing
       } else {
-        //console.log("Tile NOT found:", tileKey);
+        // console.log("Tile NOT found:", tileKey);
       }
     }
 
@@ -377,8 +377,8 @@ EM_JS(void, initRAPIOLayer, (), {
   Module.mapReady = false;
 
   // Can't use 'await' in EM_JS, so here we are promising
-  const mapReady = new Promise((resolve, reject) => {
-    import('./js/rDataLayer.js').then(module => {
+  const mapReady = new Promise((resolve, reject) = > {
+    import('./js/rDataLayer.js').then(module = > {
       // ----------------------------------------------------------------------
       //
       // Data pull layer (Color map is client side)
@@ -404,7 +404,7 @@ EM_JS(void, initRAPIOLayer, (), {
       Module.mapReady = true;
       resolve();
       // ----------------------------------------------------------------------
-    }).catch (err => {
+    }).catch (err = > {
       console.error("Failed to load/create RAPIO data layer (rDataLayer.js): ", err);
       reject(err);
     });
@@ -453,8 +453,8 @@ EM_JS(void, initDebugLayer, (), {
 
 EM_JS(void, add_geojson_layer, (const char * geojson_url), {
   fetch(UTF8ToString(geojson_url))
-  .then(res  => res.json())
-  .then(data => {
+  .then(res  = > res.json())
+  .then(data = > {
     const geojsonLayer = L.geoJSON(data, {
       style: {
         color: "green",
@@ -469,7 +469,7 @@ EM_JS(void, add_geojson_layer, (const char * geojson_url), {
     });
     geojsonLayer.addTo(Module.map);
   })
-  .catch (err => console.error("Failed to load GeoJSON:", err));
+  .catch (err = > console.error("Failed to load GeoJSON:", err));
 });
 
 // Define a JavaScript function to change the tile layer of the Leaflet map
@@ -540,8 +540,8 @@ EM_JS(void, changeMapLayer, (bool backgroundMapShow, int backgroundMap, int data
   // This is working but I don't know what best practice is
   // supposed to be.
   fetch('./gz_2010_us_040_00_20m.json')
-  .then(response => response.json())
-  .then(data     => {
+  .then(response = > response.json())
+  .then(data     = > {
     L.geoJSON(data).addTo(Module.map);
   });
 });

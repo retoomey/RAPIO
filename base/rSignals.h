@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <string>
 #include <vector>
 #include <sys/types.h>
@@ -9,7 +7,11 @@
 #include <signal.h>
 
 namespace rapio {
-class Signals : public Utility {
+/**
+ * @ingroup rapio_utility
+ * @brief Handle signals and stack tracing abilities.
+ */
+class Signals {
 public:
 
   /** Initialize signal handler.

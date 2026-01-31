@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rDataType.h>
 #include <rDataGrid.h>
 #include <rLatLonGrid.h>
@@ -9,8 +8,11 @@ namespace rapio {
 /** A field of a grib2 message.
  * Note:  Noticed that here we use virtual interface and store actual values in the gribfield*
  * in the class, vs the message where we copy the section numbers.  Not sure if it matters really,
- * but might refactor at some point. */
-class GribField : public Data {
+ * but might refactor at some point.
+ * @ingroup rapio_data
+ * @brief Wrapper to a grib2 field
+ * */
+class GribField {
 public:
 
   /** Create uninitialized field */
@@ -89,8 +91,11 @@ protected:
 /** GribMessage interface, holding 1 or more fields.
  * It seems in practice the number of fields is 'usually' 1
  * Holder for grib2 field information and buffer storage information
- * that can refer to a global buffer and/or a local message buffer. */
-class GribMessage : public Data {
+ * that can refer to a global buffer and/or a local message buffer.
+ * @ingroup rapio_data
+ * @brief Wrapper to a grib2 message containing N fields
+ * */
+class GribMessage {
 public:
 
   /** Create uninitialized message */
@@ -210,7 +215,7 @@ protected:
  * is done until requested, which makes the scan fairly quick.
  *
  * @author Robert Toomey */
-class GribAction : public IO
+class GribAction
 {
 public:
   virtual bool

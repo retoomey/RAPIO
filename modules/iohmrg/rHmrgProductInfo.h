@@ -1,7 +1,5 @@
 #pragma once
 
-#include "rData.h"
-
 #include <string>
 #include <iostream>
 #include <vector>
@@ -15,7 +13,7 @@ namespace rapio {
  * @author Carrie Langston
  *
  */
-class ProductInfo : public Data
+class ProductInfo
 {
 public:
 
@@ -59,7 +57,7 @@ public:
 };
 
 /** Store a group of ProductInfos */
-class ProductInfoSet : public Data {
+class ProductInfoSet {
 public:
 
   /** Create a product info set */

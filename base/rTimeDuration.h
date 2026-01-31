@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rData.h>
-
 #include <chrono>
 
 #include <fmt/format.h>
@@ -13,8 +11,10 @@ class Time;
  * cooresponds to a chrono duration
  *
  *  @see Time
+ *  @ingroup rapio_data
+ *  @brief Stores a Time duration or range of time such as 10 seconds.
  */
-class TimeDuration : public Data {
+class TimeDuration {
   friend Time;
 
 private:

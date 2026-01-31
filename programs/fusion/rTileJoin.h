@@ -6,7 +6,7 @@
 
 namespace rapio {
 /** Database to store incoming tile data/information, from a given key to a partition list of data */
-class TileJoinDatabaseEntry : public Utility {
+class TileJoinDatabaseEntry {
 public:
   /** STL */
   TileJoinDatabaseEntry(){ }
@@ -71,7 +71,7 @@ public:
 };
 
 /** Database to store incoming tile data/information */
-class TileJoinDatabase : public Utility {
+class TileJoinDatabase {
 public:
 
   /** Create a database for storing partitions */

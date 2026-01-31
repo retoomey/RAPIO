@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rData.h>
-
 #include <cmath> // for fabs
 #include <ctime> // for time_t
 
@@ -23,8 +21,11 @@ namespace rapio {
  * </pre>
  *
  * @see Constants::MissingData
+ * @ingroup rapio_data
+ * @brief Stores a sentinel double, a double with a tolerance range.
+ *
  */
-class SentinelDouble : public Data {
+class SentinelDouble {
   int value;
   double tolerance;
 

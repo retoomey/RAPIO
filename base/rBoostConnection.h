@@ -16,6 +16,8 @@ namespace rapio {
  * CURL requirement which isn't on every distro.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Boost implementation of a network connection.
  */
 class BoostConnection : public NetworkConnection {
 public:

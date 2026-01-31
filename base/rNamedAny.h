@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rConstants.h>
 #include <rError.h>
 #include <rBOOST.h>
@@ -22,8 +21,10 @@ class LLH;
 /** Store an any object possibly as smart ptr, etc.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Stores anything abstractly.
  */
-class Any : public Data
+class Any
 {
 public:
   /** Create an Any */
@@ -101,6 +102,8 @@ protected:
 /** Store a name to std::shared_ptr OR direct of anything pair.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief An Any subclass that has a name
  */
 class NamedAny : public Any
 {
@@ -126,8 +129,10 @@ protected:
 /** A mapping class for NamedAny objects.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Stores a list of NamedAny for lookup.
  */
-class NamedAnyList : public Data
+class NamedAnyList
 {
 public:
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rURL.h>
 #include <rCurlConnection.h>
 
@@ -10,8 +9,10 @@
 namespace rapio {
 /**
  * A framework to simplify URL reading.
+ * @ingroup rapio_data
+ * @brief A framework to simplify URL reading.
  */
-class IOURL : public IO {
+class IOURL {
 public:
 
   /**

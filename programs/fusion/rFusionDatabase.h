@@ -30,7 +30,7 @@ namespace rapio {
  *
  * NOTE: Do not make these classes virtual unless you want to explode your RAM
  */
-class Observation : public Data {
+class Observation {
 public:
   /** Create an observation */
   Observation(short xin, short yin, char zin, time_t tin) :
@@ -83,7 +83,7 @@ public:
 
 /** Store a Source Observation List.  Due to the size of output CONUS we group
  * observations by source to allow quickly updating incoming data. */
-class SourceList : public Data {
+class SourceList {
 public:
   /** STL unordered map */
   SourceList(){ }
@@ -204,7 +204,7 @@ public:
  * pulling meta data for observation points during merging if
  * needed. */
 template <typename T>
-class ObservationManager : public Data {
+class ObservationManager {
 public:
 
   /** Given source information, find the already created source observation list,
@@ -291,7 +291,7 @@ protected:
 /** FusionDatabase maintains the collection of sources which store various types
  * of observations.  It also maintains a X,Y,Z grid that backreferences various
  * observations */
-class FusionDatabase : public Data {
+class FusionDatabase {
 public:
   /** The Database is for a 3D cube */
   FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z }), myHaves({ x, y,

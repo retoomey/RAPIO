@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rError.h>
 #include <rDataType.h>
 #include <rBOOST.h>
@@ -18,8 +17,11 @@ BOOST_WRAP_POP
 #include <future>
 
 namespace rapio {
-/** What we do with a worker thread?  Subclass to do more */
-class ThreadTask : public Utility {
+/** What we do with a worker thread?  Subclass to do more
+ * @ingroup rapio_utility
+ * @brief A job for a ThreadGroup to carry out.
+ * */
+class ThreadTask {
 public:
 
   /** Create a thread task with a future */
@@ -93,8 +95,10 @@ protected:
  * Using boost::thread_group, but maybe use tbb later.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief A group of worker threads.
  */
-class ThreadGroup : public Utility {
+class ThreadGroup {
 public:
   /** Create a thread pool with given number of workers, and a max number of tasks it can queue. */
   ThreadGroup(size_t maxWorkers, size_t maxQueueSize);

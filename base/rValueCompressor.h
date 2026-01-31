@@ -1,8 +1,9 @@
+#pragma once
+
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <vector>
-#include <rUtility.h>
 
 namespace rapio {
 /** (AI) Create a class that can convert values into compressed bytes using the
@@ -20,8 +21,10 @@ namespace rapio {
  * speed/ram differences.  Right now limited to double
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Compresses values using a scale/range.
  */
-class ValueCompressor : public Utility {
+class ValueCompressor {
 public:
   /** Create ValueCompressor */
   ValueCompressor(double minVal, double maxVal, int precision)

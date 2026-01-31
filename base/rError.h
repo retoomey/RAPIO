@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rURL.h>
 #include <rEventTimer.h>
 #include <rLogger.h>
@@ -15,7 +14,7 @@
 namespace rapio {
 /* Exception wrapper for any C function calls we make that return standard 0 or error code.
  * Call using the ERRNO(function) ability */
-class ErrnoException : public Utility, public std::exception
+class ErrnoException : public std::exception
 {
 public:
   ErrnoException(int err, const std::string& c) : std::exception(), retval(err),
@@ -103,8 +102,11 @@ protected:
  *
  * fLogSevere( "Error: {} not readable.", file_name);
  * </pre>
+ *
+ * @ingroup rapio_utility
+ * @brief API interface for all logging calls.
  */
-class Log : public Utility {
+class Log {
 public:
 
   /** Severity levels in decreasing order of printing */

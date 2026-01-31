@@ -21,7 +21,7 @@ typedef float FusionRangeCache;
  * calculating sin/cos is fairly slow.  We can reuse the math when doing things
  * like calculating range, etc. for converting from polar to grid.
  */
-class SinCosLatLonCache : public Utility
+class SinCosLatLonCache
 {
 public:
   SinCosLatLonCache(size_t numX, size_t numY) :
@@ -81,7 +81,7 @@ protected:
  * Tried using a 3D array of cache objects with pointer math and still slower than this,
  * interesting. It might be that a set of 2D caches better in RAM vs 3D due to L3, etc.
  */
-class AzRanElevCache : public Utility
+class AzRanElevCache
 {
 public:
 
@@ -161,7 +161,7 @@ protected:
 /** A cache for keeping track of what levels/tilts were around a given grid point.
  * This allows us to skip calling the resolver, since if the surrounding levels do
  * not change, then the value/weight shouldn't.  This won't 'always' be 100% true. */
-class LevelSameCache : public Utility
+class LevelSameCache
 {
 public:
 
@@ -239,7 +239,7 @@ protected:
 };
 
 /** Common routines for the disk/ram caching required for fusion */
-class FusionCache : public Utility
+class FusionCache
 {
 public:
 

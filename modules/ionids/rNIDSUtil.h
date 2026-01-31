@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rUtility.h"
 #include "rTime.h"
 
 #include <array>
@@ -8,7 +7,7 @@
 
 namespace rapio {
 /** Various utilities for generating color codes and mrms values. */
-class NIDSUtil : public Utility {
+class NIDSUtil {
 public:
 
   // ------------------------------------------------

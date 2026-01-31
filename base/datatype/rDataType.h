@@ -22,7 +22,7 @@ class Record;
  */
 class DataType;
 class DataProjection;
-class DataTypePointerCache : public Data {
+class DataTypePointerCache {
 public:
   /** DataType pointer*/
   DataType * dt;

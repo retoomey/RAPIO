@@ -1,8 +1,5 @@
 #pragma once
 
-#include <rIO.h>
-#include <rUtility.h>
-
 #include <string>
 #include <vector>
 #include <memory>
@@ -11,8 +8,11 @@ namespace rapio {
 /** Network connection interface implementing different libraries.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief Handle a network connection such as web page request.
+ *
  */
-class NetworkConnection : public IO {
+class NetworkConnection {
 public:
   /** Read a url */
   virtual int
@@ -32,8 +32,10 @@ public:
  * the ability to swap out network handlers.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Utilities for general network access.
  */
-class Network : public Utility {
+class Network {
 public:
 
   /** Set the network engine used such as CURL or BOOST,

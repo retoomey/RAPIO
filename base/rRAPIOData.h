@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rAlgorithm.h>
 #include <rRecord.h>
 
 #include <string>
@@ -10,8 +9,12 @@ namespace rapio {
 /** RAPIOData is an information record passed to subclasses of a stock
  * algorithm. By grouping,
  * it allows us to add more information later without changing the API.
- * @author Robert Toomey */
-class RAPIOData : public Algorithm {
+ * @author Robert Toomey
+ * @ingroup rapio_algorithm
+ * @ingroup rapio_data
+ * @brief Information passed to a RAPIOAlgorithm
+ * */
+class RAPIOData {
 public:
 
   RAPIOData(const Record& aRec);

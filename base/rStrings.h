@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <string>
 #include <vector>
 
@@ -9,8 +7,10 @@ namespace rapio {
 /** This is a helper class of functions that do commonly required stuff
  *  that is not in the Standard Library.
  *
+ *  @ingroup rapio_utility
+ *  @brief API for lots of string manipulation utilities
  */
-class Strings : public Utility {
+class Strings {
 public:
 
   /** Modify a string to remove left white space */
@@ -191,7 +191,7 @@ public:
 };
 
 /** A class for DFA parsing a word/token by character */
-class DFAWord : public Utility
+class DFAWord
 {
 public:
 

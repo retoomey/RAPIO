@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rIO.h>
-
 #include <memory>
 #include <vector>
 #include <map>
@@ -19,8 +17,10 @@ class URL;
  * here.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief A filter for data that converts it in some way.
  */
-class DataFilter : public IO {
+class DataFilter {
 public:
   /** Default create a DataFilter */
   DataFilter(){ }

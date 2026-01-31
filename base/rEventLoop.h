@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rEvent.h>
-
 #include <vector>
 #include <memory>
 #include <condition_variable>
@@ -15,8 +13,10 @@ class EventHandler;
  * which polls registered synchronous timers to do all our work.
  *
  * @author Robert Toomey
+ * @ingroup rapio_event
+ * @brief Handles main loop of running application.
  */
-class EventLoop : public Event {
+class EventLoop {
 public:
 
   /** Create an event loop */

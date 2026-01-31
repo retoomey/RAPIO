@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
 #include <rRAPIOPlugin.h>
@@ -14,9 +13,11 @@ class WebMessage;
  *  of algorithms aren't needed.
  *
  *  @author Robert Toomey
+ *  @ingroup rapio_algorithm
+ *  @brief API implementation of a standard program/util
  *
  */
-class RAPIOProgram : public Algorithm {
+class RAPIOProgram {
 public:
 
   /** Construct a stock program */

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rNamedAny.h>
 
 #include <string>
@@ -8,8 +7,11 @@
 
 namespace rapio {
 /** AttributeDataType stores a generic collection of attributes.
- * These could coorespond to a global attribute list in netcdf. */
-class AttributeDataType : public Data {
+ * These could coorespond to a global attribute list in netcdf.
+ * @include rapio_data
+ * @brief Collection of attributes or properties
+ * */
+class AttributeDataType {
 public:
 
   /** Create empty AttributeDataType */

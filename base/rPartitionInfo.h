@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rLLCoverageArea.h>
 #include <rStrings.h>
 #include <rError.h>
@@ -14,8 +13,10 @@ namespace rapio {
  * into a 2D grid of subgrids.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Stores partitions of a grid.
  */
-class PartitionInfo : public Data {
+class PartitionInfo {
 public:
 
   /** Type of partition */

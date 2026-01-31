@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <cmath> // for fabs
 #include <ctime> // for time_t
 #include <string>
@@ -31,8 +29,11 @@ namespace rapio {
  * this in order to avoid conflicts with compiler macros.  All caps is left
  * over from old days.
  *
- * @author Robert Toomey */
-class Constants : public Utility
+ * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Static utility class storing many constants needed.
+ * */
+class Constants
 {
 public:
   /** Default header for RAPIO */

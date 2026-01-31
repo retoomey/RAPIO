@@ -1,8 +1,6 @@
 #pragma once
 
 #include "rTerrainBlockage.h"
-#include "rData.h"
-#include "rUtility.h"
 #include "rFactory.h"
 
 #include "rLatLonGrid.h"
@@ -14,6 +12,8 @@ namespace rapio
 {
 /** Attempt to make a faster polar terrain blockage
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief An attempt at faster terrain blockage
  */
 class TerrainBlockage2me : public TerrainBlockage
 {

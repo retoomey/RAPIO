@@ -11,7 +11,7 @@ public:
   /** Internal NIDS storage of a radial.
    * Keeping this deliberately simple for the moment,
    * not 100% the most efficient storage yet. */
-  class RadialData : public Data {
+  class RadialData {
 public:
     float start_angle;
     float delta_angle;

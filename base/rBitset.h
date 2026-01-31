@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rData.h>
-#include <rUtility.h>
 #include <rDimensionMapper.h>
 #include <rBOOST.h>
 
@@ -499,7 +497,7 @@ protected:
  * I wouldn't recommend splitting the BitsetOutSetting and bitset call
  * on multiple lines or Log calls since you'll lose thread syncing.
  */
-class BitsetOutSettings : public Utility {
+class BitsetOutSettings {
 public:
 
   /** Create a BitsetOutSettings, intended only in a stream */

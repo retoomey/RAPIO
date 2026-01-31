@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rConstants.h>
 #include <rArray.h>
 #include <rProject.h>
@@ -14,8 +13,11 @@ namespace rapio
 {
 class PTreeNode;
 
-/** Simple storage object for getting projection info */
-class LLCoverage : public Data
+/** Simple storage object for getting projection info
+ * @ingroup rapio_data
+ * @brief Stores a Latitude, Longitude coverage area.
+ * */
+class LLCoverage
 {
 public:
   LLCoverage() : mode("full"), zoomlevel(0), rows(500), cols(500), degreeOut(10), topDegs(0),
@@ -49,8 +51,11 @@ operator << (std::ostream&,
  * shared_ptr be deleted than the projection created is also invalid.
  * We 'could' maybe use weak_ptr at some point.
  *
- * @author Robert Toomey */
-class DataProjection : public Utility
+ * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Utility class that projects data for DataType classes.
+ **/
+class DataProjection
 {
 public:
 

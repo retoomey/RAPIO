@@ -8,8 +8,10 @@ namespace rapio {
 /**
  * Provides a way to create an appropriate index object
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief API for creating an Index of Record
  */
-class IOIndex : public IO {
+class IOIndex {
 public:
 
   /**

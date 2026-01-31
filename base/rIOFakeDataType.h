@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rIO.h>
-#include <rData.h>
 #include <rIODataType.h>
 
 namespace rapio {
@@ -11,6 +9,8 @@ class URL;
  * index.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief Create fake DataType from Record made by FakeIndex
  */
 class IOFakeDataType : public IODataType {
 public:

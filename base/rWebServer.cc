@@ -17,7 +17,7 @@ std::shared_ptr<WebMessageQueue> rapio::WebMessageQueue::theWebMessageQueue;
 
 // Copying the example given in simple web server
 // FIXME: This could just be a method in the WebServer
-class FileServer : public Utility {
+class FileServer {
 public:
 
   static void

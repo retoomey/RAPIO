@@ -69,7 +69,7 @@ MakeFakeRadarData::execute()
   if (ConfigRadarInfo::haveRadar(myRadarName)) {
     myCenter = ConfigRadarInfo::getLocation(myRadarName);
   } else {
-    fLogSevere( "Couldn't find info for radar '{}', using DEM center which is probably not what you want.", myRadarName);
+    fLogSevere("Couldn't find info for radar '{}', using DEM center which is probably not what you want.", myRadarName);
     myCenter = myDEM->getCenterLocation();
   }
   fLogInfo("Center location: {}", myCenter);
@@ -330,7 +330,7 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
         TerrainAverageKMs = TerrainAverageKMs + t1 + t2 + t3;
 
-        // fLogSevere(" totalY, y current, degs , terrain {}, {}, {}, {}", 
+        // fLogSevere(" totalY, y current, degs , terrain {}, {}, {}, {}",
         //   totalY, yi, left);
         left += deltaDeg;
       }
@@ -370,7 +370,7 @@ MakeFakeRadarData::terrainAngleChart(RadialSet& rs)
 
       if (terrain[i] != aTerrain) { // KM !=  KM
         // fLogSevere("TERRAIN? {} != {}", terrain[i], aTerrain);
-        fLogSevere("TERRAIN? {}",diff);
+        fLogSevere("TERRAIN? {}", diff);
       }
       #endif
       range[i] = rangeKMs;

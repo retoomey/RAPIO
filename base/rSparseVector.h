@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rBitset.h>
 
 namespace rapio {

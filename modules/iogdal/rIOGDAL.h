@@ -2,13 +2,12 @@
 
 #include "rIODataType.h"
 #include "rDataGrid.h"
-#include "rIO.h"
 
 #include <iomanip>
 
 namespace rapio {
 /** Worker classes that handle read and write of GDAL types. */
-class GDALType : public IO {
+class GDALType {
 public:
   /** Write DataType from given ncid (subclasses) */
   virtual bool

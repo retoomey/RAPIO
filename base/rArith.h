@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <string>
 #include <cmath> // for fabs()
 #include <stdio.h>
@@ -9,8 +7,10 @@
 namespace rapio {
 /**
  * Convenience math operations
+ * @ingroup rapio_utility
+ * @brief Arithmetic math utilities.
  */
-class Arith : public Utility
+class Arith
 {
 public:
 

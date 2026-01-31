@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rDataType.h>
 #include <rConstants.h> // for SentinelDouble
 #include <rIODataType.h>
@@ -22,7 +21,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  */
-class NetcdfException : public IO, public std::exception {
+class NetcdfException : public std::exception {
 public:
 
   NetcdfException(int err, const std::string& c) : std::exception(), retval(err),

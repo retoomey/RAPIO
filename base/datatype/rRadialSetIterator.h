@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rRadialSet.h>
 
 namespace rapio {
@@ -11,8 +10,10 @@ class RadialSetIterator;
  *
  * Implement this class to handle processing of each gate within a
  * RadialSet by subclassing and defining the `handleGate` method.
+ * @ingroup rapio_utility
+ * @brief Callback for a RadialSetIterator
  */
-class RadialSetCallback : public Utility {
+class RadialSetCallback {
 public:
   /** Called to handle a particular gate */
   virtual void
@@ -53,8 +54,10 @@ public:
  * @endcode
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief An iterator class for processing a RadialSet
  */
-class RadialSetIterator : public Utility {
+class RadialSetIterator {
 public:
   RadialSetIterator(RadialSet& set)
     : myRadialSet(set),

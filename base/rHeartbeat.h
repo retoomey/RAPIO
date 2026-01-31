@@ -2,7 +2,6 @@
 
 #include <rEventTimer.h>
 #include <rTime.h>
-#include <rUtility.h>
 
 #include <string>
 #include <memory>
@@ -22,8 +21,10 @@ class RAPIOProgram;
  * accumulative non-data drive actions.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Handles a cron style heartbeat callback.
  */
-class Heartbeat : public Utility {
+class Heartbeat {
 public:
 
   /** Build the heartbeat */
@@ -60,6 +61,7 @@ protected:
  * An event timer that calls a heartbeat
  *
  * @author Robert Toomey
+ * @brief EventTimer that calls a Heartbeat periodically.
  */
 class HeartbeatTimer : public EventTimer {
 public:

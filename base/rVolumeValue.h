@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <rRadialSet.h>
 
 namespace rapio {
@@ -16,8 +14,10 @@ class RAPIOAlgorithm;
  * layer.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Stores information for a queried layer in a volume.
  */
-class LayerValue : public Utility
+class LayerValue
 {
 public:
 
@@ -99,7 +99,7 @@ public:
  *
  * @author Robert Toomey
  */
-class VolumeValue : public Utility
+class VolumeValue
 {
 public:
 

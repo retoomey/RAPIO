@@ -19,7 +19,7 @@ typedef unsigned short SourceIDKey;
 # define FUSION_MAX_CONTRIBUTING 4
 
 /** Store the nearest data.  Size matters here */
-class NearestIDs : public Data {
+class NearestIDs {
 public:
 
   /** Make sure we're set to the null id and maximum range possible
@@ -48,7 +48,7 @@ public:
 #endif // ifdef USE_STATIC_NEAREST
 
 /** Store a unique id per source and grid information when reading files from stage1 */
-class SourceInfo : public Data {
+class SourceInfo {
 public:
   SourceIDKey id;
   std::string name;

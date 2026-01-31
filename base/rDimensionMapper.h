@@ -1,14 +1,14 @@
 #pragma once
 
-#include <rData.h>
-
 #include <vector>
 
 namespace rapio {
 /** A class that maps N dimensions to a single dimension.
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Class for flattening N dimensions to a single one.
  */
-class DimensionMapper : public Data {
+class DimensionMapper {
 public:
 
   /** Empty STL dimension mapper */

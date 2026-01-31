@@ -2,14 +2,13 @@
 
 #include "rIODataType.h"
 #include "rDataGrid.h"
-#include "rIO.h"
 #include "rMultiDataType.h"
 
 #include <iomanip>
 
 namespace rapio {
 /** Worker classes that handle read and write of particular DataType */
-class ImageType : public IO {
+class ImageType {
 public:
   /** Write DataType from given ncid (subclasses) */
   virtual bool

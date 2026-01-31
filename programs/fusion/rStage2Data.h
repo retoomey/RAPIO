@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rTime.h>
 #include <rLLH.h>
 #include <rBitset.h>
@@ -16,7 +15,7 @@ namespace rapio {
 class RAPIOFusionOneAlg;
 
 /** Store a single tile or area.  Depending on our partitioning mode, we may have one or N of these. */
-class Stage2Storage : public Data {
+class Stage2Storage {
 protected:
   std::vector<size_t> myDimensions;           ///< Sizes of the grid in x,y,z (only used for RLE calculation write)
   Bitset1 myMissingSet;                       ///< Bitfield of missing values gathered during creation

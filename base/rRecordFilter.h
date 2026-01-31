@@ -1,11 +1,10 @@
 #pragma once
 
-#include <rData.h>
 #include <rRecord.h>
 
 namespace rapio {
 /** A filter of records, the default return all records */
-class RecordFilter : public Data
+class RecordFilter
 {
 public:
   virtual bool

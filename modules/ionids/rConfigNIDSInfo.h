@@ -13,7 +13,7 @@ namespace rapio {
  *
  * @author Lulin Song, Robert Toomey
  */
-class NIDSInfo : public Data {
+class NIDSInfo {
   friend class ConfigNIDSInfo;
 public:
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rDataType.h>
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
@@ -15,8 +14,11 @@
 namespace rapio {
 /** Fast temp pointer cache for using the current volume information.
  * Only good until volume changes.  Used during a single volume query
- * pass say in fusion */
-class VolumePointerCache : public Data {
+ * pass say in fusion
+ * @ingroup rapio_data
+ * @brief Caches volume data pointers for fast access in loops.
+ **/
+class VolumePointerCache {
 public:
   /** Subtypes in order */
   std::vector<double> levels;
@@ -32,8 +34,10 @@ public:
  * Note: How this collection of DataTypes is handled is determined by the subclass.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Stores a collection of space unique common DataTypes.
  */
-class Volume : public Data {
+class Volume {
 public:
 
   /** For STL use only. */

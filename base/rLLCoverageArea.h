@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rConstants.h>
 
 #include <vector>
@@ -17,7 +16,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  **/
-class LLCoverageArea : public Data
+class LLCoverageArea
 {
 public:
 

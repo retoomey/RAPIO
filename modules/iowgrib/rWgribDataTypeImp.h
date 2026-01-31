@@ -3,11 +3,9 @@
 #include <rGribDataType.h>
 #include <rCatalogCallback.h>
 
-#include <rUtility.h>
-
 namespace rapio {
 /** Store information from the entire grib2 file */
-class GribCatalogCache : public Utility {
+class GribCatalogCache {
 public:
 
   /** Create a catalog cache */

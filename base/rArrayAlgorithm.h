@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rArray.h>
 
 #include <memory>
@@ -20,8 +19,10 @@ namespace rapio {
  * FIXME: Think we could wrap opencv optionally for some things
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Algorithm API for processing our Array classes.
  */
-class ArrayAlgorithm : public Utility {
+class ArrayAlgorithm {
 public:
 
   /** Pass in two array for input/output (copy)
@@ -84,7 +85,10 @@ public:
   size_t myHeight;
 };
 
-/** a nearest neighbor value setter */
+/**
+ * @brief Perform nearest neighbor sampling on a 2D grid.
+ * @ingroup rapio_utility
+ **/
 class NearestNeighbor : public ArrayAlgorithm {
 public:
 
@@ -99,6 +103,7 @@ public:
 
 /**
  * @brief Perform Cressman interpolation on a 2D grid.
+ * @ingroup rapio_utility
  *
  * This class interpolates a value at a given point (x, y) using Cressman interpolation
  * from the surrounding grid points within an N x N neighborhood.
@@ -144,6 +149,7 @@ public:
 
 /*
  * @brief Perform bilinear interpolation on a 2D grid.
+ * @ingroup rapio_utility
  *
  * Interpolates a value at a given point (x, y) using bilinear interpolation
  * from the surrounding grid points.

@@ -1,8 +1,6 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rURL.h>
-#include <rIO.h>
 #include <rPTreeData.h>
 
 #include <vector>
@@ -11,8 +9,11 @@
 
 namespace rapio {
 /** Config types are registered with config, they handle a particular
- * group of configuration */
-class ConfigType : public IO {
+ * group of configuration
+ * @ingroup rapio_io
+ * @brief Registered with Config to handle one group of configuration
+ **/
+class ConfigType {
 public:
 
   /** Do we pre-read configuration on startup?  This is preferred if
@@ -36,9 +37,10 @@ public:
  * <ol>
  * <li>The $RAPIO_CONFIG_LOCATION and $W2_CONFIG_LOCATION environmental variables
  * </ol>
- *
+ * @ingroup rapio_utility
+ * @brief Configuration API allowing ConfigType classes
  */
-class Config : public Utility  {
+class Config {
 public:
 
   /** Introduce self and default helper classes */

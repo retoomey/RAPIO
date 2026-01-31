@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rEventTimer.h>
 #include <rRAPIOProgram.h>
 #include <rStrings.h>
@@ -15,7 +14,11 @@ using namespace std;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace rapio {
-class WebMessage : public Utility
+/*
+ * @ingroup rapio_data
+ * @brief Stores a synchronous WebMessage for handling.
+ */
+class WebMessage
 {
   friend class WebServer;
 
@@ -230,8 +233,10 @@ protected:
  * if this will become a IODataType or what here.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Handles running a small webserver.
  */
-class WebServer : public Utility {
+class WebServer {
 public:
 
   /** Thread function for running web server */

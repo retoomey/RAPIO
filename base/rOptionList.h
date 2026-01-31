@@ -14,8 +14,11 @@ namespace rapio {
  *
  * @see RAPIOOptions
  * @author Robert Toomey
+ * @ingroup rapio_algorithm
+ * @brief Stores a list or parameter options for algorithm.
+ *
  */
-class OptionList : public Algorithm {
+class OptionList {
 public:
 
   /** Create an empty option list */

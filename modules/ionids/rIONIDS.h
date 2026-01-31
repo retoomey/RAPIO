@@ -1,11 +1,10 @@
 #pragma once
 
-#include <rIO.h>
 #include <rIODataType.h>
 #include "rBinaryIO.h"
 
 namespace rapio {
-class NIDSBlock : public Data {
+class NIDSBlock {
 public:
   /** Check block divider */
   void

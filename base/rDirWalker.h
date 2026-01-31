@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rUtility.h>
+#include <string>
 
 // Use c calls in linux current (could swap out with c++17 filesystem at some point)
 extern "C" {
@@ -43,8 +43,10 @@ namespace rapio {
  *   - st_blocks: Total number of 512-byte blocks allocated to the file.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Utility for walking though a file/directory tree.
  */
-class DirWalker : public Utility {
+class DirWalker {
 public:
 
   /** @enum DirWalkerAction

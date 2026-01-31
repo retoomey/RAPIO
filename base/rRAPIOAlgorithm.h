@@ -1,7 +1,6 @@
 #pragma once
 
 #include <rRAPIOProgram.h>
-#include <rAlgorithm.h>
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
 
@@ -15,6 +14,8 @@ class WebMessage;
  *  The stock default algorithm and all its options and processing
  *
  *  @author Robert Toomey
+ *  @ingroup rapio_algorithm
+ *  @brief API implementation of a standard algorithm
  *
  */
 class RAPIOAlgorithm : public RAPIOProgram {

@@ -6,8 +6,10 @@ namespace rapio
 {
 /* A class for storage information of blockage ranges for the terrain algorithm,
  * @author Lakshman
+ * @ingroup rapio_data
+ * @brief Stores blockage ranges for Lak's terrain algorithm.
  */
-class PointBlockageLak : public Data
+class PointBlockageLak
 {
 public:
 
@@ -53,6 +55,8 @@ public:
  * Terrain blockage from MRMS
  *
  * @author Lakshman
+ * @ingroup rapio_utility
+ * @brief Original terrain blockage algorithm logic from w2merger and Lak.
  */
 class TerrainBlockageLak : public TerrainBlockage
 {

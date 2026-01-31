@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <rError.h>
 #include <rTimeDuration.h>
 #include <rColorTerm.h>
@@ -30,8 +28,11 @@ class ProcessTimer;
  * @endcode
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Handle grouping a bunch of ProcessTimer.
+ *
  */
-class ProcessTimerSum : public Utility {
+class ProcessTimerSum {
 public:
   /** Create a new process timer sum */
   ProcessTimerSum(const std::string& message = "");
@@ -94,8 +95,10 @@ operator << (std::ostream&,
  * @endcode
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Time a process.
  */
-class ProcessTimer : public Utility {
+class ProcessTimer {
 public:
   friend ProcessTimerSum;
 

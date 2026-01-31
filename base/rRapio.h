@@ -2,22 +2,53 @@
 
 #include <iosfwd>
 
-namespace rapio {
-/** Base class for all rapio objects.
- * Like Java, making everything subclass 'object' basically.
- *
- * Should be zero cost as long as we don't place
- * any virtual functions, etc. in here.
- *
- * I might remove these 'organizational' classes later
- * and just use namespaces or something else later,
- * if someone shows me a cooler trick.  This allows me
- * to create a nice full tree graph with doxygen for
- * displaying etc.  Pure c++ programmers will probably
- * chastise me on it, lol.
- *
- * @author Robert Toomey
+//
+// Doxygen groups
+// Using these will allow us to 'group' in doxygen without
+// using old Java style God classes.  This way is better
+// because it speeds compilation time.
+//
+
+/**
+ * @defgroup rapio
+ * @brief rapio core engine
+ * @{
  */
 
+/**
+ * @defgroup rapio_data
+ * @brief Used for simple data storage.
+ */
+
+/**
+ * @defgroup rapio_io
+ * @brief Used for input/output of data.
+ */
+
+/**
+ * @defgroup rapio_datatype
+ * @brief Used for more advanced/collected data storage that is typically IO from storage.
+ */
+
+/**
+ * @defgroup rapio_utility
+ * @brief Used as a utility.
+ */
+
+/**
+ * @defgroup rapio_algorithm
+ * @brief Used for controlling the running algorithm.
+ */
+
+/**
+ * @defgroup rapio_event
+ * @brief Used for callbacks, listeners, sources, etc.
+ */
+
+/** @} */ // End of RAPIO
+
+#if 0
+namespace rapio {
 class Rapio { };
 }
+#endif

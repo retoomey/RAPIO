@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <rArray.h>
 
 #include <string>
@@ -17,8 +15,10 @@ class LatLonGrid;
 /** Create a generic projection API wrapper
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Generic GIS projection API wrapper.
  */
-class Project : public Utility {
+class Project {
 public:
 
   /** Initialize the projection system for this object */

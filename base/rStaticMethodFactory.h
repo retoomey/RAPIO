@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <map>
 #include <string>
 #include <rError.h>
@@ -16,9 +14,11 @@ namespace rapio {
  * FIXME: It's possible maybe to combine with Factory
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Simplier factory to create objects statically
  *
  */
-template <class X> class StaticMethodFactory : public Utility {
+template <class X> class StaticMethodFactory {
 private:
 
   /** Define what the create function will return, a shared ptr to

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rDataGrid.h>
 
 #include <string>
@@ -31,8 +30,11 @@ namespace rapio {
 /**
  * A utility for common system calls.
  * @author Robert Toomey
+ *
+ * @ingroup rapio_utility
+ * @brief Handles routines for dealing with OS calls.
  */
-class OS : public Utility {
+class OS {
 public:
 
   /**

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rRadialSet.h>
 
 namespace rapio {
@@ -25,7 +24,7 @@ namespace rapio {
  * be needed.  This alternative method might be more akin to the horizontal
  * interpolation attempted in w2merger.
  */
-class LakRadialSmoother : public Utility {
+class LakRadialSmoother {
 public:
 
   static void

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rDataType.h>
 #include <rFactory.h>
 #include <rRAPIOOptions.h>
@@ -16,8 +15,11 @@ class RAPIOAlgorithm;
 
 /** Class responsible for inputting/outputting the results of an entire grid of VolumeValue
  * calculations.  For averaging merger, this writes raw files which are read by stage2.
- * For velocity appending this might write a different raw or netcdf file. */
-class VolumeValueIO : public Utility
+ * For velocity appending this might write a different raw or netcdf file.
+ * @ingroup rapio_data
+ * @brief Utility for reading/writing volume information
+ **/
+class VolumeValueIO
 {
 public:
   /** Create IO class */
@@ -53,7 +55,7 @@ public:
 };
 
 /** Volume value resolver */
-class VolumeValueResolver : public Utility
+class VolumeValueResolver
 {
 public:
 

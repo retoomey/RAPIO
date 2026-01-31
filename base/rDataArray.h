@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rArray.h>
 #include <rNamedAny.h>
 #include <rBOOST.h>
@@ -35,8 +34,10 @@ enum DataArrayType {
  * Treating it generic helps with reader/writer code.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief An array with an attribute/properties list
  */
-class DataArray : public Data
+class DataArray
 {
 public:
 

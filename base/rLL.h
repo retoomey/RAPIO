@@ -1,13 +1,12 @@
 #pragma once
 
-#include <rData.h>
 #include <rConstants.h>
 
 #include <fmt/format.h>
 
 namespace rapio {
 /** Store a latitude/longitude location */
-class LL : public Data {
+class LL {
 protected:
 
   /**  Latitude, [-90,90] degrees. */

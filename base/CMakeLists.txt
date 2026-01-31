@@ -10,7 +10,6 @@
 set(RELATIVE_HEADERS
 ccronexpr.h
 rAlgConfigFile.h
-rAlgorithm.h
 rArith.h
 rArray.h
 rArrayAlgorithm.h
@@ -39,11 +38,7 @@ rDataArray.h
 rDataFilter.h
 datatype/rDataGrid.h
 rBOOST.h
-rData.h
 rDataProjection.h
-rDataStore2D.h
-rDataStore3D.h
-rDataStore.h
 datatype/rDataTable.h
 datatype/rDataType.h
 rDataTypeHistory.h
@@ -52,7 +47,6 @@ rDirWalker.h
 watcher/rDirWatcher.h
 rElevationVolume.h
 rError.h
-rEvent.h
 rEventLoop.h
 rEventTimer.h
 notifier/rEXERecordNotifier.h
@@ -73,7 +67,6 @@ index/rIndexType.h
 rIODataType.h
 rIOFakeDataType.h
 rIOFile.h
-rIO.h
 index/rIOIndex.h
 rIOJSON.h
 rIOURL.h
@@ -144,7 +137,6 @@ rTimeDuration.h
 rTime.h
 rUnit.h
 rURL.h
-rUtility.h
 rValueCompressor.h
 rVolumeValue.h
 rVolumeValueResolver.h

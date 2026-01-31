@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <map>
 #include <string>
 #include <rError.h>
@@ -17,12 +15,13 @@ namespace rapio {
  * FIXME: lazy unload after so many calls?
  *
  * @author Robert Toomey
- *
+ * @ingroup rapio_utility
+ * @brief Stores created objects by type for lookup by name.
  */
-template <class X> class Factory : public Utility {
+template <class X> class Factory {
 private:
   /** Simple private lookup for late loaded dynamic factories */
-  template <class Z> class FactoryLookup : public Utility {
+  template <class Z> class FactoryLookup {
 public:
     /** Std containers */
     FactoryLookup(){ };

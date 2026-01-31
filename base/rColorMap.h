@@ -10,8 +10,13 @@
 namespace rapio
 {
 /** Store a constant or linear/gradiant color bin directly. Was subclasees, but
- * this is much faster in practice. */
-class ColorBin : public Data {
+ * this is much faster in practice.
+ *
+ * @ingroup rapio_data
+ * @brief Stores information for a single bin of a larger color map.
+ * @see ColorMap
+ * */
+class ColorBin {
 public:
   ColorBin(bool l, const std::string& label,
     double l_, double u_,
@@ -36,8 +41,12 @@ public:
 };
 
 
-/** Color map converts values to colors */
-class ColorMap : public Data
+/** Color map converts values to colors
+ *
+ * @ingroup rapio_data
+ * @brief Abstract base for storing information for a lookup of values to colors.
+ * */
+class ColorMap
 {
 public:
 
@@ -99,7 +108,11 @@ protected:
   Color myUnavailableColor;
 };
 
-/** A color map that tries to be more efficient and prepare for the web assembly equivalent */
+/** A color map that tries to be more efficient and prepare for the web assembly equivalent
+ *
+ * @ingroup rapio_data
+ * @brief The default color map implementation using a set of ColorBin.
+ * */
 class DefaultColorMap : public ColorMap
 {
 public:
@@ -137,6 +150,10 @@ protected:
   std::vector<ColorBin> myColorInfo;
 };
 
+/*
+ * @ingroup rapio_data
+ * @brief A color map to fall back to giving some static colors for debugging.
+ */
 class NullColorMap : public ColorMap
 {
   /** Given a value, return data color for it.  This ignores special data values like missing, etc. and

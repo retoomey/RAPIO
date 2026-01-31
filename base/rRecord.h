@@ -27,8 +27,10 @@ class RecordQueue;
  * Since it's small we use vectors instead o map, which is faster for small N
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Sends a message through a notifier to another algorithm
  */
-class Message : public Data {
+class Message {
 public:
 
   /** Create empty message. */
@@ -205,7 +207,10 @@ private:
  * we typically read lots of records. We have a normal record which
  * refers to a builder and data source, and a messsage record for
  * extra communication between algorithsm.*
- * @author Rorbert Toomey */
+ * @author Rorbert Toomey
+ * @ingroup rapio_data
+ * @brief Sends a message containing a data file to another algorithm
+ * */
 class Record : public Message {
 public:
 

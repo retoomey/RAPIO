@@ -1,11 +1,15 @@
 #pragma once
 
-#include <rData.h>
+#include <string>
 
 namespace rapio
 {
-/** Store a color object */
-class Color : public Data
+/** Store a color object
+ *
+ * @ingroup rapio_data
+ * @brief Stores a color such as RGB.
+ * */
+class Color
 {
 public:
   /** Construct a color with defaults */

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rData.h"
 #include "rConstants.h"
 
 #include <memory>
@@ -34,8 +33,10 @@ DeclareArrayRefs(Double, double)
 /* Base no-template typeless interface class
  * This allows some generic typeless access and convenient
  * generic vector pointer storage say in DataGrid
+ * @ingroup rapio_data
+ * @brief Internal class storing an Array non-templated base
  */
-class ArrayBase : public Data
+class ArrayBase
 {
 public:
 
@@ -316,7 +317,12 @@ operator << (std::ostream& os, Array<U, P>& obj)
   DeclareCreateArrayMethod2(TYPESTRING, TYPE) \
   DeclareCreateArrayMethod3(TYPESTRING, TYPE)
 
-class Arrays : public Data {
+/**
+ *
+ * @ingroup rapio_utility
+ * @brief Utility class for static Array routiness.
+ */
+class Arrays {
 public:
   // ----------------------------------------------------------
   // Convenience routines to keep students from doing too much templating...

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rEventTimer.h>
 
 #include <string>
@@ -20,15 +19,17 @@ namespace rapio {
  */
 class WatchInfo;
 
+class IOListener;
+
 /** Watch event.  Pretty sure 99% of situations can
  * be handled with a message string and/or data buffer.
  * This keeps us from having to generate a bunch of
  * subclasses.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
  */
-class IOListener;
-class WatchEvent : public virtual IO {
+class WatchEvent {
 public:
   /** Create empty */
   WatchEvent(){ }
@@ -54,7 +55,7 @@ public:
   std::vector<char> myBuffer;
 };
 
-class IOListener : public IO {
+class IOListener {
 public:
 
   /** Handle a poll event for your watch, basically some listeners aren't
@@ -133,7 +134,7 @@ protected:
 };
 
 /** Root class for watcher information */
-class WatchInfo : public IO {
+class WatchInfo {
 public:
   IOListener * myListener;
 
@@ -153,7 +154,7 @@ public:
   handlePoll(){ myListener->handlePoll(); }
 };
 
-class IOWatcher : public IO {
+class IOWatcher {
 public:
   IOWatcher(){ }
 

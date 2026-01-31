@@ -19,7 +19,7 @@ namespace rapio {
  *                       (grid box)    (index into original point vector)
  *  FIXME: Might be useful as a generic classed based on DimensionMapper?
  **/
-class GridPointsLookup : public Utility
+class GridPointsLookup
 {
 public:
   GridPointsLookup(size_t xdim, size_t ydim, size_t zdim)

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rEvent.h>
-
 #include <chrono>
 #include <vector>
 #include <string>
@@ -11,8 +9,12 @@
 namespace rapio {
 class EventCallback;
 
-
-class EventHandler : public Event {
+/**
+ *
+ * @ingroup rapio_event
+ * @brief Called by EventTimer, handles an event
+ */
+class EventHandler {
 public:
 
   /** Construct an event handler */
@@ -66,7 +68,11 @@ protected:
 };
 
 /** Event timer class for firing close to given ms.
- * @author Robert Toomey */
+ *
+ * @author Robert Toomey
+ * @ingroup rapio_event
+ * @brief Timers for synchronous calling in main loop.
+ */
 class EventTimer : public EventHandler {
 public:
 

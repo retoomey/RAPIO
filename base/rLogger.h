@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rIO.h>
-
 #include <string>
 #include <vector>
 #include <memory>
@@ -31,7 +29,7 @@ enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical, Off };
  *
  * @author Robert Toomey
  */
-class Logger : public IO {
+class Logger {
 public:
 
   virtual

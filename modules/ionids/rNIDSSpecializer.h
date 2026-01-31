@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rBlockMessageHeader.h>
 #include <rBlockProductDesc.h>
 #include <rBlockProductSymbology.h>

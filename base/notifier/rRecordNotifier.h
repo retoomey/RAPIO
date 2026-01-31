@@ -1,12 +1,12 @@
 #pragma once
 
-#include <rIO.h>
-
 #include <rRecord.h>
 
 namespace rapio {
-/** Record notifier types registered */
-class RecordNotifierType : public IO {
+/** Record notifier types registered
+ * @ingroup rapio_IO
+ * */
+class RecordNotifierType {
 public:
 
   /** Create a record notifier */
@@ -33,8 +33,10 @@ public:
   initialize(const std::string& params) = 0;
 };
 
-/** Factory container/helper for RecordNotifierType */
-class RecordNotifier : public IO {
+/** Factory container/helper for RecordNotifierType
+ * @ingroup rapio_io
+ * */
+class RecordNotifier {
 public:
 
   // Factory methods --------------------------------------

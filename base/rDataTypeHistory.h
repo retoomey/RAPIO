@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rDataType.h>
 #include <rRecord.h>
 #include <rElevationVolume.h>
@@ -26,9 +25,11 @@ namespace rapio {
  * FIXME: Guess we could introduce history subclasses.
  * I'm just hardcoding them for the moment...
  *
+ * @ingroup rapio_data
+ * @brief Base class for storing history of DataType.
  * @author Robert Toomey
  */
-class DataTypeHistory : public Data {
+class DataTypeHistory {
 public:
 
   #if 0
@@ -73,6 +74,8 @@ public:
  * to receive the -h time window from the algorithm.  This allows
  * volumes to expire their tilts.
  *
+ * @ingroup rapio_data
+ * @brief Base class for volume based histories of DataType.
  * @author Robert Toomey
  */
 class VolumeHistory : public DataTypeHistory {
@@ -92,7 +95,10 @@ protected:
   static std::map<std::string, std::shared_ptr<Volume> > myVolumes;
 };
 
-/** Storage of DataTypes that come in rarely, such as NSE grids*/
+/** Storage of DataTypes that come in rarely, such as NSE grids
+ * @ingroup rapio_data
+ * @brief Base class for storing NSE grid history.
+ */
 class NSEGridHistory : public DataTypeHistory {
 public:
   friend DataTypeHistory;

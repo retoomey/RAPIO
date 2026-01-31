@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rAlgorithm.h>
-
 #include <string>
 #include <vector>
 
@@ -11,8 +9,10 @@ namespace rapio {
 
 /** Suboption stores sets of valid values, such as the modes for '-verbose'.
  * @author Robert Toomey
+ * @ingroup rapio_algorithm
+ * @brief Stores a suboption choice of an Option.
  */
-class Suboption : public Algorithm {
+class Suboption {
 public:
 
   /** The option text */
@@ -25,8 +25,11 @@ public:
 /** Class storing all information for a single parameter option such as '-r' for real time.
  * This is mostly a simple storage class for RAPIOOptions, so there are no get/set here.
  * @see RAPIOOptions
- * @author Robert Toomey */
-class Option : public Algorithm {
+ * @author Robert Toomey
+ * @ingroup rapio_algorithm
+ * @brief Stores an option in parameter list.
+ * */
+class Option {
 public:
 
   bool required;                     ///< Required option or not.  Will not run
@@ -77,8 +80,10 @@ public:
 
 /** Option filters. Used to filter big lists of options for printing or processing
  * Maybe we could lamba this or use a trick to simplify it at some point.
+ * @ingroup rapio_algorithm
+ * @brief Stores a option filter for handling a matched subset of OptionList.
  */
-class OptionFilter : public Algorithm {
+class OptionFilter {
 public:
 
   virtual bool

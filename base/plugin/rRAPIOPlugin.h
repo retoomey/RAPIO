@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rRecord.h>
 
 #include <string>
@@ -18,8 +17,10 @@ class RAPIOOptions;
  * This allows algorithms/programs to declare standard parameter abilities on demand.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief API for command line options for RAPIOProgram
  */
-class RAPIOPlugin : public Utility {
+class RAPIOPlugin {
 public:
 
   /** Declare plugin with unique name */

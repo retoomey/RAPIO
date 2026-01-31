@@ -17,8 +17,11 @@ class MemoryStreamBuffer;
  * this way of calling more convenient and cleaner than
  * using C++ streams.
  * We store if the data is expected in big or little endian,
- * which is then swapped if needed for the system endian.*/
-class StreamBuffer : public Data {
+ * which is then swapped if needed for the system endian.
+ * @ingroup rapio_data
+ * @brief Base class for direct IO writing calls vs streaming
+ * */
+class StreamBuffer {
 public:
 
   /** Create a StreamBuffer.  Assuming data little endian. */
@@ -145,7 +148,10 @@ protected:
   bool myDataBigEndian;
 };
 
-/** Wrap a std::vector<unsigned char> */
+/** Wrap a std::vector<unsigned char>
+ * @ingroup rapio_data
+ * @brief Direct IO calls on a memory buffer
+ */
 class MemoryStreamBuffer : public StreamBuffer {
 public:
 
@@ -265,7 +271,10 @@ private:
   size_t marker;
 };
 
-/** Wrap a FILE* */
+/** Wrap a FILE*
+ * @ingroup rapio_data
+ * @brief Direct IO calls on a FILE* object
+ */
 class FileStreamBuffer : public StreamBuffer {
 public:
 
@@ -360,7 +369,10 @@ private:
   FILE * file;
 };
 
-/** Wrap a gzfile */
+/** Wrap a gzfile
+ * @ingroup rapio_data
+ * @brief Direct IO calls on a gzfile object
+ */
 class GzipFileStreamBuffer : public StreamBuffer {
 public:
   explicit GzipFileStreamBuffer(gzFile gzfile) : gzfile(gzfile){ }
@@ -449,8 +461,10 @@ private:
  * I find the C style can be cleaner for certain byte reading/writing,
  * partly because a lot of third party stuff does it this way with
  * FILE*, etc.
+ * @ingroup rapio_utility
+ * @brief Utilities for reading/writing binary files.
  */
-class BinaryIO : public Utility {
+class BinaryIO {
 public:
 
   /** Z compress a single vector column.  This is actually pretty

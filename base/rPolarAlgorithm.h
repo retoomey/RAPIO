@@ -27,6 +27,8 @@ namespace rapio {
  *  and gates, which simplifies iteration.
  *
  * @author Robert Toomey
+ * @ingroup rapio_algorithm
+ * @brief API implementation of a standard polar volume algorithm
  **/
 class PolarAlgorithm : public RAPIOAlgorithm {
 public:

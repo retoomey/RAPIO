@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rData.h>
-
 #include <iosfwd>
 #include <string>
 #include <rArith.h>
@@ -14,7 +12,7 @@ namespace rapio {
  *
  *  @see Speed
  */
-class Length : public Data {
+class Length {
 private:
 
   double km; // kilometers

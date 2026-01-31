@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rUtility.h>
+#include <string>
 
 namespace rapio {
 /**
@@ -16,8 +16,10 @@ namespace rapio {
  * using various AWS services.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Some AWS experiments without AWS c++ API
  */
-class AWS : public Utility {
+class AWS {
 public:
   // -----------------------------------------------
   // REST experimental interface stuff

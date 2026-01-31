@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rTimeDuration.h>
 
 // #include <ctime>
@@ -26,8 +25,10 @@ namespace rapio {
  * Currently keeping millisecond accuracy.
  *
  * @see TimeDuration
+ * @ingroup rapio_data
+ * @brief Stores a Time with epoch and string abilities.
  */
-class Time : public Data {
+class Time {
 private:
   /** Store a timepoint, size of 8 */
   std::chrono::system_clock::time_point myTimepoint;

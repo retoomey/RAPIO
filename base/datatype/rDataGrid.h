@@ -1,8 +1,6 @@
 #pragma once
 
-#include <rUtility.h>
 #include <rDataType.h>
-#include <rDataStore2D.h>
 #include <rArray.h>
 #include <rPTreeData.h>
 #include <rDataArray.h>
@@ -20,7 +18,7 @@ BOOST_WRAP_POP
 
 namespace rapio {
 /* Exception for calling any Ref function that is assuming an array exists */
-class ArrayRefException : public Utility, public std::exception
+class ArrayRefException : public std::exception
 {
 public:
   ArrayRefException(const std::string& typeString, int dimension, const std::string& name)
@@ -86,7 +84,7 @@ protected:
 
 /** Stores a dimension of the grid space,
  * curiously like a netcdf dimension. */
-class DataGridDimension : public Data {
+class DataGridDimension {
 public:
   DataGridDimension(const std::string& name, size_t aSize) : myName(name), mySize(aSize){ }
 

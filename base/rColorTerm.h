@@ -1,7 +1,5 @@
 #pragma once
 
-#include <rUtility.h>
-
 #include <iostream>
 #include <array>
 
@@ -10,8 +8,10 @@ namespace rapio {
  * Used by algorithm to do the pretty printing of algorithm help, etc.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Terminal color and padding utility
  **/
-class ColorTerm : public Utility {
+class ColorTerm {
 public:
 
   /** Standard ANSI 8+8 lookup.  Usually mapped by terminal theme. */

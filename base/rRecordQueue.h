@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rEventTimer.h>
 #include <rRAPIOAlgorithm.h>
 #include <rError.h>
@@ -11,7 +10,7 @@
 
 namespace rapio {
 /** Sort records for queue.  Usually this is in decreasing time order */
-class RecordQueueSort : public Data
+class RecordQueueSort
 {
 public:
   bool

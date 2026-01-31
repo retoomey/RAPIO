@@ -225,7 +225,7 @@ doEchoBottom(
  * and speed.
  *
  * */
-class ArrayAlgorithm3D : public Utility {
+class ArrayAlgorithm3D {
 public:
   /** Create an array algorithm 3d */
   ArrayAlgorithm3D(){ };

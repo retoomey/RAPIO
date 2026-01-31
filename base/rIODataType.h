@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rRecord.h>
 
 #include <string>
@@ -19,8 +18,11 @@ class IndexType;
  * specialize into a RadialSet, which is no longer netcdf data.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief Specializer to handle a particular class of a data format.
+ *
  */
-class IOSpecializer : public IO {
+class IOSpecializer {
 public:
   /** Write a given DataType */
   virtual bool
@@ -41,8 +43,10 @@ public:
  * the libraries, headers, initialization are common for a third party library.
  *
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief Handle data that can be read/write from disk.
  */
-class IODataType : public IO {
+class IODataType {
 public:
 
   /** Introduce dynamic help */

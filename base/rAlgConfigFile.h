@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rIO.h>
 #include <rIOURL.h>
 
 #include <memory>
@@ -13,8 +12,10 @@ namespace rapio {
  * config currently refers to the hmet .config style file passed to hmet
  * algorithms.
  * @author Robert Toomey
+ * @ingroup rapio_io
+ * @brief Helper class for RAPIOOptions to work with old w2 config xml.
  */
-class AlgConfigFile : public IO {
+class AlgConfigFile {
 public:
 
   // Factory methods --------------------------------------

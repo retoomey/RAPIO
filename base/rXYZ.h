@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rIJK.h>
 #include <rLLH.h>
 
@@ -12,8 +11,11 @@ class LLH;
 /**  Representation of a geometric point in a 3-D cartesian space
  * where we center 0,0,0 at the center of a pure spherical earth.
  *   This is our base projection used for lat lon height space.
+ *
+ *   @ingroup rapio_data
+ *   @brief Stores Cartesian 3D X,Y,Z coordinates.
  */
-class XYZ : public Data {
+class XYZ {
 public:
 
   /** Storage of coordinates */

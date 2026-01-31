@@ -96,7 +96,7 @@ public:
 
   /** Get the number of dimensions in our table data.  Typically for a 'single'
    * table this will be 1 */
-  class TableInfo : public Data {
+  class TableInfo {
 public:
     std::string name;
     size_t size;

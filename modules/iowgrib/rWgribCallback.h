@@ -1,7 +1,6 @@
 #pragma once
 
 #include "patch/f_rapio_callback.h"
-#include "rUtility.h"
 #include "rURL.h"
 #include "rTime.h"
 
@@ -21,7 +20,7 @@ namespace rapio {
  * like std::cout << "\nmymessage\n".  You'll basically
  * break into the current wgrib2 output
  */
-class WgribCallback : public Utility {
+class WgribCallback {
 public:
 
   /** Create a wgrib callback with a given URL file location */

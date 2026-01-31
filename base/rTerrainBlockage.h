@@ -1,7 +1,5 @@
 #pragma once
 
-#include "rData.h"
-#include "rUtility.h"
 #include "rFactory.h"
 #include "rLatLonGrid.h"
 #include "rRAPIOOptions.h"
@@ -28,8 +26,10 @@ public:
  * Also base factory for creating a terrain blockage by registered name.
  *
  * @author Robert Toomey
+ * @ingroup rapio_utility
+ * @brief Base class and API for all terrain blockage plugins
  */
-class TerrainBlockage : public Utility
+class TerrainBlockage
 {
 public:
   /** For STL use only. */

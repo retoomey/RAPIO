@@ -38,7 +38,7 @@ public:
 class ConfigParamGroupi : public ConfigParamGroup
 {
 public:
-  class indexInputInfo : public Data {
+  class indexInputInfo {
 public:
     /* Constructor to make sure no fields missed */
     indexInputInfo(const std::string& p, const std::string& i) : protocol(p), indexparams(i){ }
@@ -68,7 +68,7 @@ class ConfigParamGroupI : public ConfigParamGroup
 public:
 
   /** Store database of product information */
-  class productInputInfo : public Data {
+  class productInputInfo {
 public:
     /* Constructor to make sure no fields missed */
     productInputInfo(const std::string& n, const std::string& s)
@@ -99,7 +99,7 @@ class ConfigParamGroupo : public ConfigParamGroup
 public:
 
   /** Store -o output information for the writers */
-  class outputInfo : public Data {
+  class outputInfo {
 public:
     /* Constructor to make sure no fields missed */
     outputInfo(const std::string& f, const std::string& o)
@@ -130,7 +130,7 @@ class ConfigParamGroupO : public ConfigParamGroup
 public:
 
   /** Store database of output information */
-  class productOutputInfo : public Data {
+  class productOutputInfo {
 public:
     /* Constructor to make sure no fields missed */
     productOutputInfo(const std::string& p, const std::string& s,
@@ -170,7 +170,7 @@ class ConfigParamGroupn : public ConfigParamGroup
 public:
 
   /** Store -n output information for the record notifier */
-  class notifierInfo : public Data {
+  class notifierInfo {
 public:
     /* Constructor to make sure no fields missed */
     notifierInfo(const std::string& proto, const std::string& p)

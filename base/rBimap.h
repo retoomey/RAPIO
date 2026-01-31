@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rData.h>
 #include <rBOOST.h>
 
 BOOST_WRAP_PUSH
@@ -16,9 +15,11 @@ namespace rapio {
  *      in various ways.
  *
  * @author Robert Toomey
+ * @ingroup rapio_data
+ * @brief Abstract base class for storing a two directional map
  */
 template <typename Key, typename Value>
-class BimapInterface : public Data {
+class BimapInterface {
 public:
   /** Insert a key/value pair into the bimap */
   virtual void
@@ -32,7 +33,10 @@ public:
 };
 
 /** Bimap implementation using Boost.Bimap.  This should be
- * a reasonably fast two way general Key <--> Value lookup. */
+ * a reasonably fast two way general Key <--> Value lookup.
+ * @ingroup rapio_data
+ * @brief Boost implementation of a bidirectional map
+ * */
 template <typename Key, typename Value>
 class BimapBoost : public BimapInterface<Key, Value> {
 public:
@@ -73,6 +77,8 @@ private:
  * Estimated speed:
  *   Key to Value O(LogN)
  *   Value to Key O(LogN)
+ * @ingroup rapio_data
+ * @brief std::map implementation of a bidirectional map
  **/
 template <typename Key, typename Value>
 class BimapStdMap : public BimapInterface<Key, Value> {

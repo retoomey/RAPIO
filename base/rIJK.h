@@ -1,13 +1,14 @@
 #pragma once
 
-#include <rData.h>
 #include <rLLH.h>
 
 namespace rapio {
 /**  Representation of a geometric vector in a 3-D cartesian space.
  *   The units of which are in kilometers
+ * @ingroup rapio_data
+ * @brief Stores IJK for a 3D vector in Cartesian space.
  */
-class IJK : public Data {
+class IJK {
 public:
 
   /** Storage of coordinates */
