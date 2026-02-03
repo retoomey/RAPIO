@@ -3,7 +3,7 @@
 #include "rOS.h"
 #include "rIOIndex.h"
 #include "rError.h"
-#include "rStaticMethodFactory.h"
+#include "rFactory.h"
 #include "fstream"
 #include "rStrings.h"
 #include "rConfigRecord.h"
@@ -12,13 +12,22 @@
 
 using namespace rapio;
 
-/** Static factory method */
-std::shared_ptr<RecordNotifierType>
-FMLRecordNotifier::create()
-{
-  std::shared_ptr<FMLRecordNotifier> result = std::make_shared<FMLRecordNotifier>();
+namespace rapio {
+/** Create a new instance of FMLRecordNotifier.
+ * @ingroup rapio_io
+ * @brief Create a new instance of FMLRecordNotifier
+ * */
+class FMLRecordNotifierCreator : public RecordNotifierCreator {
+public:
+  std::shared_ptr<RecordNotifierType>
+  create(const std::string& params) override
+  {
+    auto ptr = std::make_shared<FMLRecordNotifier>();
 
-  return (result);
+    ptr->initialize(params); // Could pass to constructor now
+    return ptr;
+  }
+};
 }
 
 std::string
@@ -31,10 +40,9 @@ FMLRecordNotifier::getHelpString(const std::string& fkey)
 void
 FMLRecordNotifier::introduceSelf()
 {
-  // No need to store a special object here, could if wanted
-  //  std::shared_ptr<FMLRecordNotifier> newOne = std::make_shared<FMLRecordNotifier>();
-  //  Factory<RecordNotifierType>::introduce("fml", newOne);
-  StaticMethodFactory<RecordNotifierType>::introduce("fml", &FMLRecordNotifier::create);
+  // Tiny class dedicated to creating new instances, since we can have more than one
+  std::shared_ptr<FMLRecordNotifierCreator> newOne = std::make_shared<FMLRecordNotifierCreator>();
+  Factory<RecordNotifierCreator>::introduce("fml", newOne);
 }
 
 void

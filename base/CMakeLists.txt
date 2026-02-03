@@ -126,7 +126,6 @@ rSecure.h
 rSentinelDouble.h
 rSignals.h
 rSparseVector.h
-rStaticMethodFactory.h
 index/rStreamIndex.h
 rStrings.h
 rTerrainBlockage2me.h

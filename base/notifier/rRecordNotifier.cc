@@ -1,6 +1,6 @@
 #include "rRecordNotifier.h"
 
-#include "rStaticMethodFactory.h"
+#include "rFactory.h"
 #include "rStrings.h"
 #include "rColorTerm.h"
 #include "rConfigParamGroup.h"
@@ -53,15 +53,14 @@ RecordNotifier::createNotifiers()
 std::shared_ptr<RecordNotifierType>
 RecordNotifier::createNotifier(const std::string& type, const std::string& params)
 {
-  auto p = StaticMethodFactory<RecordNotifierType>::get(type, "Notifier");
+  auto p = Factory<RecordNotifierCreator>::get(type, "Notifier");
 
   if (p != nullptr) {
-    std::shared_ptr<RecordNotifierType> z = (*p)(); // Call the static method
-    if (z != nullptr) {
-      z->initialize(params);
-      return (z);
-    }
+    // Letting subclasses control how it's created/initialized
+    auto newOne = p->create(params);
+    return newOne;
   }
+
   return (nullptr);
 }
 

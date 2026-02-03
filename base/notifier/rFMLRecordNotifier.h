@@ -15,10 +15,6 @@ public:
   static void
   introduceSelf();
 
-  /** Factory creation */
-  static std::shared_ptr<RecordNotifierType>
-  create();
-
   /** Create uninitialized FML record notifier */
   FMLRecordNotifier(){ }
 

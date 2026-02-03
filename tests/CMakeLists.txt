@@ -21,6 +21,7 @@ add_executable(testrapio
   rTestBimap.cc
   rTestBinaryIO.cc
   rTestBitset.cc
+  rTestFactory.cc
   rTestGrid.cc
   rTestIODataType.cc
   rTestMain.cc
@@ -36,6 +37,7 @@ add_executable(testrapio
 target_link_libraries(testrapio PRIVATE
   Boost::unit_test_framework
   rapio
+  ZLIB::ZLIB
 )
 
 add_executable(rTestNetcdf

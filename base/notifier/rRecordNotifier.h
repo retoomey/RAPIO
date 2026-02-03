@@ -59,6 +59,18 @@ public:
   createNotifier(
     const std::string & type,
     const std::string & params);
-}
-;
+};
+
+/** Create class to create a new instance of this notifier,
+ * allowing us to use the Factory class normally
+ * @ingroup rapio_io
+ * @brief Factory to create a new instance of a RecordNotifierType */
+class RecordNotifierCreator {
+public:
+  virtual
+  ~RecordNotifierCreator() = default;
+  /** Return a new instance */
+  virtual std::shared_ptr<RecordNotifierType>
+  create(const std::string& params) = 0;
+};
 }

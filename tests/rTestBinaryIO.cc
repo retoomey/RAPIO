@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(STREAMBUFFER_ALL_FUNCTIONS)
 
   // Create an initial memory buffer (empty, will grow via ensureAvailable)
   std::vector<char> buf;
-  MemoryStreamBuffer memBuf(buf);
+  MemoryStreamBuffer memBuf(std::move(buf));
 
   BOOST_TEST_MESSAGE("Testing MemoryStreamBuffer (Write & Read)");
 

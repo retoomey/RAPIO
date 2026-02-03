@@ -4,7 +4,10 @@
 #include <string>
 #include <rError.h>
 #include <rOS.h>
+
+#include <vector>
 #include <memory>
+#include <mutex>
 
 namespace rapio {
 /**
@@ -12,14 +15,13 @@ namespace rapio {
  * It has the ability to lazy load from dynamic libraries
  * on demand to save runtime memory.
  *
- * FIXME: lazy unload after so many calls?
- *
  * @author Robert Toomey
  * @ingroup rapio_utility
  * @brief Stores created objects by type for lookup by name.
  */
 template <class X> class Factory {
 private:
+
   /** Simple private lookup for late loaded dynamic factories */
   template <class Z> class FactoryLookup {
 public:
@@ -50,12 +52,44 @@ public:
 private:
 
   /** Lookup storing key to actual object */
-  typedef typename std::map<std::string, std::shared_ptr<X> > MapType;
+  using MapType = std::map<std::string, std::shared_ptr<X> >;
   static MapType myLookup;
 
   /** Lookup storing dyanmic strings to objects */
-  typedef typename std::map<std::string, FactoryLookup<X> > MapType2;
+  using MapType2 = std::map<std::string, FactoryLookup<X> >;
   static MapType2 myDynamicInfo;
+
+  /** Mutex for thread safety */
+  static std::mutex myMutex;
+
+  /** Private Helper: Ensure the dynamic module is loaded.
+   * If loaded successfully, it registers ALL aliases into the main lookup.
+   * NOTE: This method assumes myMutex is ALREADY LOCKED by the caller.
+   */
+  static void
+  ensureLoaded(FactoryLookup<X>& f, bool verbose)
+  {
+    if (!f.loaded) {
+      if (verbose) {
+        fLogInfo("Initial dynamic loading of library: {}", f.module);
+      }
+
+      std::shared_ptr<X> dynamicLoad = OS::loadDynamic<X>(f.module, f.methodname);
+
+      f.stored = dynamicLoad;
+      f.loaded = true; // Only try once
+      if (dynamicLoad != nullptr) {
+        // Update alias
+        for (const auto& aliasName : f.alias) {
+          myLookup[aliasName] = dynamicLoad;
+        }
+      } else {
+        if (verbose) {
+          fLogSevere("...Unable to load dynamic library.");
+        }
+      }
+    }
+  }
 
 public:
 
@@ -63,7 +97,9 @@ public:
   static void
   introduce(const std::string& name, std::shared_ptr<X> instance)
   {
-    if (instance != 0) {
+    std::lock_guard<std::mutex> lock(myMutex);
+
+    if (instance != nullptr) {
       myLookup[name] = instance;
     } else {
       fLogSevere("invalid instance pointer for '{}'", name);
@@ -76,12 +112,20 @@ public:
   {
     // FIXME: Not checking double calls or anything at moment
     // Look for an existing record of this lazy loader...
+    std::lock_guard<std::mutex> lock(myMutex);
     std::string key = libname + ":" + methodname;
     auto cur        = myDynamicInfo.find(key);
 
     if (cur != myDynamicInfo.end()) {
       auto& f = cur->second;
       f.alias.push_back(name);
+
+      // Edge Case: If the module is ALREADY loaded when we add a new alias,
+      // we must manually add this new alias to myLookup now, because
+      // ensureLoaded won't run again for this module.
+      if (f.loaded && f.stored) {
+        myLookup[name] = f.stored;
+      }
     } else {
       auto z = FactoryLookup<X>(libname, methodname);
       z.alias.push_back(name);
@@ -93,6 +137,8 @@ public:
   static MapType
   getAll()
   {
+    std::lock_guard<std::mutex> lock(myMutex);
+
     return myLookup;
   }
 
@@ -102,20 +148,10 @@ public:
   static MapType2
   getAllDynamic()
   {
+    std::lock_guard<std::mutex> lock(myMutex);
+
     for (auto& ele: myDynamicInfo) {
-      auto& f = ele.second;
-      for (auto& s:f.alias) {
-        // Try to load once if not loaded already...
-        if (!f.loaded) {
-          std::shared_ptr<X> dynamicLoad = OS::loadDynamic<X>(f.module, f.methodname);
-          f.stored = dynamicLoad;
-          f.loaded = true; // Only try once
-        }
-        // ...and make sure object cached for the next call since it's not there
-        if (f.stored != nullptr) {
-          myLookup[s] = f.stored;
-        }
-      }
+      ensureLoaded(ele.second, false);
     }
     return myDynamicInfo;
   }
@@ -124,13 +160,27 @@ public:
   static bool
   exists(const std::string& name)
   {
-    return (myLookup.count(name) != 0);
+    std::lock_guard<std::mutex> lock(myMutex);
+
+    // 1. Check if it is already created/loaded
+    if (myLookup.count(name) != 0) { return true; }
+
+    // 2. Check if it is a known lazy alias (iterate because keys are lib paths)
+    for (const auto& pair : myDynamicInfo) {
+      const auto& factoryLookup = pair.second;
+      for (const auto& alias : factoryLookup.alias) {
+        if (alias == name) { return true; }
+      }
+    }
+
+    return false;
   }
 
   /** Return list of factory.  smart ptrs, so not a copy */
   static std::vector<std::shared_ptr<X> >
   toList(std::vector<std::string>& names)
   {
+    std::lock_guard<std::mutex> lock(myMutex);
     std::vector<std::shared_ptr<X> > myList;
 
     for (auto ele: myLookup) {
@@ -147,36 +197,22 @@ public:
   static std::shared_ptr<X>
   get(const std::string& name, const std::string& info = "")
   {
-    std::shared_ptr<X> ret;
+    std::lock_guard<std::mutex> lock(myMutex);
 
     typename MapType::const_iterator cur = myLookup.find(name);
 
     if (cur != myLookup.end()) { // Normally fairly quick...
-      ret = cur->second;
-    } else {
-      // Hunt in the dynamic lazy loader list...
-      for (auto& ele: myDynamicInfo) {
-        auto& f = ele.second;
-        for (auto& s:f.alias) {
-          // if asked for key is in our alias list...
-          if (s == name) {
-            // Try to load once if not loaded already...
-            if (!f.loaded) {
-              fLogInfo("Initial dynamic loading of library: {}", f.module);
-              std::shared_ptr<X> dynamicLoad = OS::loadDynamic<X>(f.module, f.methodname);
-              if (dynamicLoad == nullptr) {
-                fLogSevere("...Unable to load dynamic library.");
-              }
-              f.stored = dynamicLoad;
-              f.loaded = true; // Only try once
-            }
-            // ...and make sure object cached for the next call since it's not there
-            if (f.stored != nullptr) {
-              myLookup[name] = f.stored;
-            }
-            ret = f.stored;
-            break;
-          }
+      return cur->second;
+    }
+
+    // Hunt in the dynamic lazy loader list...
+    for (auto& ele: myDynamicInfo) {
+      auto& f = ele.second;
+      for (auto& s:f.alias) {
+        // if asked for key is in our alias list...
+        if (s == name) {
+          ensureLoaded(f, true);
+          return f.stored;
         }
       }
     }
@@ -185,11 +221,9 @@ public:
     // Lots of things optionally 'check' for a factory such as extension resolution, so
     // this can be kinda over talkative. Prefer checking nullptr yourself
     // after calling this and erroring if needed
-    // if (ret == nullptr) {
-    //  fLogDebug("No instance available for {} and '{}' size: {}", info, name, myLookup.size());
-    // }
+    // fLogDebug("No instance available for {} and '{}' size: {}", info, name, myLookup.size());
 
-    return (ret);
+    return (nullptr);
   } // get
 };
 
@@ -199,4 +233,7 @@ typename Factory<X>::MapType Factory<X>::myLookup;
 /** Define lookup from name to dynamic */
 template <class X>
 typename Factory<X>::MapType2 Factory<X>::myDynamicInfo;
+/** Define the static mutex */
+template <class X>
+std::mutex Factory<X>::myMutex;
 }

@@ -2,17 +2,26 @@
 
 #include "rOS.h"
 #include "rError.h"
-#include "rStaticMethodFactory.h"
+#include "rFactory.h"
 
 using namespace rapio;
 
-/** Static factory method */
-std::shared_ptr<RecordNotifierType>
-EXERecordNotifier::create()
-{
-  std::shared_ptr<EXERecordNotifier> result = std::make_shared<EXERecordNotifier>();
+namespace rapio {
+/** Create a new instance of EXERecordNotifier.
+ * @ingroup rapio_io
+ * @brief Create a new instance of EXERecordNotifier
+ * */
+class EXERecordNotifierCreator : public RecordNotifierCreator {
+public:
+  std::shared_ptr<RecordNotifierType>
+  create(const std::string& params) override
+  {
+    auto ptr = std::make_shared<EXERecordNotifier>();
 
-  return (result);
+    ptr->initialize(params); // Could pass to constructor now
+    return ptr;
+  }
+};
 }
 
 std::string
@@ -25,10 +34,9 @@ EXERecordNotifier::getHelpString(const std::string& fkey)
 void
 EXERecordNotifier::introduceSelf()
 {
-  // No need to store a special object here, could if wanted
-  //  std::shared_ptr<EXERecordNotifier> newOne = std::make_shared<EXERecordNotifier>();
-  //  Factory<RecordNotifierType>::introduce("fml", newOne);
-  StaticMethodFactory<RecordNotifierType>::introduce("exe", &EXERecordNotifier::create);
+  // Tiny class dedicated to creating new instances, since we can have more than one
+  std::shared_ptr<EXERecordNotifierCreator> newOne = std::make_shared<EXERecordNotifierCreator>();
+  Factory<RecordNotifierCreator>::introduce("exe", newOne);
 }
 
 void
