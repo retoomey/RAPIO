@@ -10,7 +10,7 @@ EM_JS(void, setup_mouse_event_forwarding, (), {
   Module.lastTarget = null; // New variable to track the last target
 
   ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'wheel', 'mouseleave',
-  'mousemove'].forEach(eventType = > {
+  'mousemove'].forEach(eventType => {
     canvas.addEventListener(eventType, function(e){
       if (!Module.isImGuiCapturingMouse && !Module.isForwardingEvents) {
         // Temporarily disable pointer-events to get the element underneath
@@ -21,20 +21,20 @@ EM_JS(void, setup_mouse_event_forwarding, (), {
 
         // --- Logic to handle mouseenter and mouseleave events ---
         // FIXME: Isn't working properly
-        if (e.type == = 'mousemove') {
+        if (e.type === 'mousemove') {
           // Check if the target has changed
-          if (actualTarget != = Module.lastTarget) {
+          if (actualTarget !== Module.lastTarget) {
             // Dispatch a mouseleave event to the previous target
             if (Module.lastTarget) {
               const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
-              // console.log("----mouse leave last target");
+              //console.log("----mouse leave last target");
               Module.lastTarget.dispatchEvent(leaveEvent);
             }
 
             // Dispatch a mouseenter event to the new target
             if (actualTarget) {
               const enterEvent = new MouseEvent('mouseenter', { bubbles: true });
-              // console.log("----mouse enter last target");
+              //console.log("----mouse enter last target");
               actualTarget.dispatchEvent(enterEvent);
             }
 
@@ -47,7 +47,7 @@ EM_JS(void, setup_mouse_event_forwarding, (), {
         const targetCursorStyle = actualTarget ? window.getComputedStyle(actualTarget).cursor : 'default';
         canvas.style.cursor     = targetCursorStyle;
 
-        if (e.type == = 'mouseleave') {
+        if (e.type === 'mouseleave') {
           // Special handling for the canvas-level mouseleave
           const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
           document.getElementById('map').dispatchEvent(leaveEvent);
@@ -97,7 +97,7 @@ EM_JS(void, forward_all_stored_mouse_events_to_leaflet, (), {
     if (e && target) {
       let clonedEvent;
       // Create a new event object to avoid side effects
-      if (e.type == = 'wheel') {
+      if (e.type === 'wheel') {
         clonedEvent = new WheelEvent(e.type, {
           bubbles: true, cancelable: true, composed: e.composed, detail: e.detail, view: e.view,
           screenX: e.screenX, screenY: e.screenY, clientX: e.clientX, clientY: e.clientY,
