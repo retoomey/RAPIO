@@ -1,110 +1,139 @@
 #pragma once
+#include <rEventLoop.h>
+#include <rBOOST.h>
 
-#include <chrono>
-#include <vector>
-#include <string>
-#include <thread>
+BOOST_WRAP_PUSH
+#include <boost/asio.hpp>
+BOOST_WRAP_POP
+
 #include <atomic>
+#include <string>
+#include <memory>
 
 namespace rapio {
-class EventCallback;
-
-/**
+/* Base class handles the "Manual Trigger" logic (setReady)
+ * This supports RecordQueue, WebMessageQueue, etc.
  *
+ * @author Robert Toomey
  * @ingroup rapio_event
- * @brief Called by EventTimer, handles an event
+ * @brief Handles a callable action
+ * @see EventTimer
  */
-class EventHandler {
+class EventHandler : public std::enable_shared_from_this<EventHandler> {
 public:
 
-  /** Construct an event handler */
-  EventHandler(const std::string& n) : myName(n), myIsReady(false){ }
+  /** Create an EventHandler class with a given name */
+  EventHandler(const std::string& name)
+    : myName(name), isScheduled(false){ }
 
-  /** Called by locked event loop to check if ready */
-  bool
-  isReady()
-  {
-    return myIsReady;
-  }
+  /** Default destructor */
+  virtual
+  ~EventHandler() = default;
 
-  /** Called only by locked event loop to clear ready */
-  void
-  clearReady()
-  {
-    myIsReady = false;
-  }
+  /* Called by EventLoop::doEventLoop() before running.
+   * Default is to do nothing (passive handlers).
+   */
+  virtual void start(){ }
 
-  /** Called by thread to request action */
-  void
-  setReady();
-
-  /** Action callback from the main event loop thread */
+  /** Action to take on timer pulse */
   virtual void
-  action(){ };
-
-  /** Create a std::thread iff needed/wanted by this handler */
-  virtual bool
-  createTimerThread(std::vector<std::thread>& threads){ return false; }
-
-  /** New action (taking on thread notify) */
-  virtual void
-  actionMainThread()
-  {
-    clearReady();
-    action();
-  };
+  action() = 0;
 
   /** Return name of handler */
-  std::string
-  getName(){ return myName; }
+  std::string getName(){ return myName; }
+
+  /** Called by EventHandler to request immediate action */
+  void
+  setReady()
+  {
+    bool expected = false;
+
+    // Prevent flooding: only post if not already scheduled
+    if (isScheduled.compare_exchange_strong(expected, true)) {
+      boost::asio::post(EventLoop::io_context(), [self = shared_from_this()]() {
+          self->executeAction();
+        });
+    }
+  }
 
 protected:
 
   /** Name of the timer for debugging, etc. */
   std::string myName;
 
-  /** This timer/thread ready for action */
-  std::atomic<bool> myIsReady;
+private:
+
+  /** Calls the action of the EventHandler */
+  void
+  executeAction()
+  {
+    isScheduled.store(false); // Reset flag before running so it can be re-triggered
+    action();
+  }
+
+  /** Are we scheduled to run? */
+  std::atomic<bool> isScheduled;
 };
 
-/** Event timer class for firing close to given ms.
+
+/** Periodic Timer class
+ * This adds the "Looping" logic on top of the base EventHandler
  *
  * @author Robert Toomey
  * @ingroup rapio_event
- * @brief Timers for synchronous calling in main loop.
+ * @brief An EventHandler that handles a timed event
  */
 class EventTimer : public EventHandler {
 public:
 
-  /** Millisecond accuracy timer.  Probably good enough */
-  EventTimer(size_t milliseconds, const std::string& name);
+  /** Create an EventTimer */
+  EventTimer(size_t milliseconds, const std::string& name)
+    : EventHandler(name),
+    myDelay(milliseconds),
+    myTimer(EventLoop::io_context())
+  { }
 
-  /** Local timer thread function, 'could' use a lambda */
-  void
-  localMainThread();
-
-  /** Create std::thread if needed */
-  virtual bool
-  createTimerThread(std::vector<std::thread>& threads) override;
-
-  /** Get the current timer in milliseconds */
-  size_t
-  getTimerMilliseconds(){ return myDelayMS; }
-
-  /** Change delay time, will effect next run */
-  void
-  setTimerMilliseconds(size_t m);
-
-  /** Action to take on timer pulse */
+  /** Override start to kick off the periodic timer */
   virtual void
-  action() override;
+  start() override
+  {
+    if (myDelay > 0) {
+      scheduleTick();
+    }
+  }
 
-public:
+  /** Default action logs a warning if not overridden (matches your old code) */
+  virtual void
+  action() override
+  {
+    std::cerr << "Timer empty action " << myName << std::endl;
+  }
 
-  /** Time we want to fire at (calculated from myDelayMS) */
-  std::chrono::time_point<std::chrono::high_resolution_clock> myFire;
+private:
+
+  /** Schedule the timer and refire */
+  void
+  scheduleTick()
+  {
+    myTimer.expires_after(std::chrono::milliseconds(myDelay));
+
+    myTimer.async_wait([self =
+      std::static_pointer_cast<EventTimer>(shared_from_this())](const boost::system::error_code& ec) {
+        if (!ec) {
+          // We use setReady() to actually run the action.
+          // This consolidates execution logic.
+          self->setReady();
+
+          // Re-arm the timer
+          self->scheduleTick();
+        }
+      });
+  }
 
   /** Heartbeat in milliseconds */
-  size_t myDelayMS;
+  size_t myDelay;
+
+  /** Underlaying boost timer used */
+  boost::asio::steady_timer myTimer;
 };
 }

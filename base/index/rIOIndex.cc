@@ -14,6 +14,7 @@
 #include "rFMLIndex.h"
 #include "rStreamIndex.h"
 #include "rFakeIndex.h"
+#include "rRedisIndex.h"
 
 using namespace rapio;
 using namespace std;
@@ -36,6 +37,7 @@ IOIndex::introduceSelf()
   WebIndex::introduceSelf();    // web connection
   StreamIndex::introduceSelf(); // Stream index
   FakeIndex::introduceSelf();   // Fake index
+  RedisIndex::introduceSelf();  // Redis index
 }
 
 std::string

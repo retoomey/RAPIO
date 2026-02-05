@@ -21,10 +21,6 @@ public:
   virtual
   ~EXERecordNotifier();
 
-  /** Get help for us */
-  static std::string
-  getHelpString(const std::string& fkey);
-
   /** Notify about this message. */
   virtual void
   writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) override;

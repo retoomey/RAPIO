@@ -8,6 +8,7 @@
 // Subclasses we introduce
 #include "rFMLRecordNotifier.h"
 #include "rEXERecordNotifier.h"
+#include "rRedisRecordNotifier.h"
 
 using namespace rapio;
 using namespace std;
@@ -17,6 +18,7 @@ RecordNotifier::introduceSelf()
 {
   FMLRecordNotifier::introduceSelf();
   EXERecordNotifier::introduceSelf();
+  RedisRecordNotifier::introduceSelf();
 }
 
 std::string
@@ -26,8 +28,13 @@ RecordNotifier::introduceHelp()
 
   help +=
     "If blank, set to {OutputDir}/code_index.fam, while if set to 'disable' then turned off (could speed up archive processing.)\n";
-  help += " " + ColorTerm::red() + "fml" + ColorTerm::reset() + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
-  help += " " + ColorTerm::red() + "exe" + ColorTerm::reset() + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
+  // help += " " + ColorTerm::red() + "fml" + ColorTerm::reset() + " : " + FMLRecordNotifier::getHelpString("fml") + "\n";
+  // help += " " + ColorTerm::red() + "exe" + ColorTerm::reset() + " : " + EXERecordNotifier::getHelpString("exe") + "\n";
+  auto e = Factory<RecordNotifierCreator>::getAll();
+
+  for (auto i: e) {
+    help += " " + ColorTerm::red() + i.first + ColorTerm::reset() + " : " + i.second->getHelpString(i.first) + "\n";
+  }
   return help;
 }
 

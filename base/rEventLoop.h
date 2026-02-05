@@ -1,68 +1,70 @@
 #pragma once
-
-#include <vector>
 #include <memory>
-#include <condition_variable>
-#include <mutex>
+#include <vector>
+#include <rBOOST.h>
+
+BOOST_WRAP_PUSH
+#include <boost/asio.hpp>
+BOOST_WRAP_POP
+
+#include <iostream>
 #include <thread>
 
 namespace rapio {
-class EventHandler;
+class EventHandler; // Forward declaration
 
-/** Main event loop of the running application,
- * which polls registered synchronous timers to do all our work.
+/** Main event loop of the running application.
+ * Handles timer EventHandlers for firing actions
+ * that occur in the main thread (typically).
  *
  * @author Robert Toomey
  * @ingroup rapio_event
- * @brief Handles main loop of running application.
+ * @brief Runs the main loop of the application
  */
 class EventLoop {
 public:
 
-  /** Create an event loop */
-  EventLoop(){ }
-
-  /** Add timer to list.  No mechanism for searching/replacing
-  * deleting here, but we can add that easy later if wanted */
-  static void
-  addEventHandler(std::shared_ptr<EventHandler> t)
+  /** The global io_context singleton */
+  static boost::asio::io_context&
+  io_context()
   {
-    myEventHandlers.push_back(t);
+    static boost::asio::io_context ctx;
+
+    return ctx;
   }
 
-  /** Run main event loop */
+  /** Add EventHandler to the main loop */
+  static void
+  addEventHandler(std::shared_ptr<EventHandler> t);
+
+  /** Starts timers/handlers and enters the blocking run loop */
   static void
   doEventLoop();
 
-  /** Destroy an event loop */
-  virtual ~EventLoop(){ }
-
-  // Humm maybe hide these better.  The timers will use these to
-  // sync with event loop
-
-  /** Lock for check thread variable and for pulling thread ready states */
-  static std::mutex theEventLock;
-
-  /** Conditional variable marking some thread is ready */
-  static std::condition_variable theEventCheckVariable;
-
-  /** Ready flag  */
-  static bool theReady;
-
-  /** Exit/shutdown with a exit code */
+  /** Exit/shutdown with a exit code
+   * Stores the code and stops the ASIO loop, causing doEventLoop to return.
+   */
   static void
-  exit(int theExitCode);
+  exit(int theExitCode)
+  {
+    exitCode = theExitCode;
+    io_context().stop();
+  }
 
-  /** Thread pool of all running threads */
+  /** Get the exit code we exited on */
+  static int getExitCode(){ return exitCode; }
+
+  // FIXME: Do we still need this?  This is an actual
+  // separate thread (a webserver has to be)
+  // There's probably a more BOOST way to do this
+
+  /** Kept for rWebServer compatibility */
   static std::vector<std::thread> theThreads;
 
 private:
 
   /** Exit code to use  */
   static int exitCode;
-
-  /** Boolean are we still running?  */
-  static std::atomic<bool> isRunning;
 
   /** Timer/heartbeats in main loop */
   static std::vector<std::shared_ptr<EventHandler> > myEventHandlers;

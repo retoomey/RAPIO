@@ -8,6 +8,7 @@
 #include "rWebIndexWatcher.h"
 #include "rDirWatcher.h"
 #include "rEXEWatcher.h"
+#include "rRedisWatcher.h"
 
 #include <string>
 #include <memory>
@@ -31,6 +32,7 @@ IOWatcher::introduceSelf()
   WebIndexWatcher::introduceSelf();
   DirWatcher::introduceSelf();
   EXEWatcher::introduceSelf();
+  RedisWatcher::introduceSelf();
 }
 
 std::shared_ptr<WatcherType>

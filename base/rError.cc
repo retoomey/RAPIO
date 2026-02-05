@@ -13,7 +13,6 @@
 #include <rTime.h>
 
 #include <rFactory.h>
-
 using namespace rapio;
 using namespace std;
 

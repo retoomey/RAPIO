@@ -21,14 +21,14 @@ public:
     ptr->initialize(params); // Could pass to constructor now
     return ptr;
   }
-};
-}
 
-std::string
-EXERecordNotifier::getHelpString(const std::string& fkey)
-{
-  return
-    "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with the record param list.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
+  virtual std::string
+  getHelpString(const std::string& fkey) override
+  {
+    return
+      "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with the record param list.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
+  }
+};
 }
 
 void

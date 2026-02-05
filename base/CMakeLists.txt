@@ -50,12 +50,14 @@ rError.h
 rEventLoop.h
 rEventTimer.h
 notifier/rEXERecordNotifier.h
+notifier/rRedisRecordNotifier.h
 watcher/rEXEWatcher.h
 rFactory.h
 watcher/rFAMWatcher.h
 index/rFakeIndex.h
 index/rFileIndex.h
 index/rFMLIndex.h
+index/rRedisIndex.h
 notifier/rFMLRecordNotifier.h
 datatype/rFusionBinaryTable.h
 datatype/rGDALDataType.h
@@ -71,6 +73,7 @@ index/rIOIndex.h
 rIOJSON.h
 rIOURL.h
 watcher/rIOWatcher.h
+watcher/rRedisWatcher.h
 rIOXML.h
 datatype/rLatLonArea.h
 datatype/rLatLonGrid.h
@@ -190,11 +193,13 @@ rError.cc
 rEventLoop.cc
 rEventTimer.cc
 notifier/rEXERecordNotifier.cc
+notifier/rRedisRecordNotifier.cc
 watcher/rEXEWatcher.cc
 watcher/rFAMWatcher.cc
 index/rFakeIndex.cc
 index/rFileIndex.cc
 index/rFMLIndex.cc
+index/rRedisIndex.cc
 notifier/rFMLRecordNotifier.cc
 datatype/rFusionBinaryTable.cc
 datatype/rGDALDataType.cc
@@ -210,6 +215,7 @@ index/rIOIndex.cc
 rIOJSON.cc
 rIOURL.cc
 watcher/rIOWatcher.cc
+watcher/rRedisWatcher.cc
 rIOXML.cc
 datatype/rLatLonArea.cc
 datatype/rLatLonGrid.cc
@@ -365,6 +371,18 @@ target_link_libraries(rapio PUBLIC ${Boost_LIBRARIES})
 
 # Used by the base/rUnits for conversion, but we don't convert right now anyway
 addRAPIONote("Utility libraries:")
+
+# Look for redis optional for the redis index,watcher,notifier
+find_path(HIREDIS_INCLUDE_DIR NAMES hiredis/hiredis.h)
+find_library(HIREDIS_LIB NAMES hiredis)
+if(HIREDIS_INCLUDE_DIR AND HIREDIS_LIB)
+  addRAPIONote("      Found: REDIS")
+  target_include_directories(rapio_interface INTERFACE ${HIREDIS_INCLUDE_DIRS})
+  target_link_libraries(rapio PRIVATE ${HIREDIS_LIB})
+  target_compile_definitions(rapio PUBLIC HAVE_HIREDIS)
+else()
+  addRAPIONote("      Missing: REDIS. Redis index, notifier, watcher disabled")
+endif()
 
 find_package(CURL) 
 if (CURL_FOUND)

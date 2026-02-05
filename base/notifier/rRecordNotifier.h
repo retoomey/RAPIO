@@ -15,6 +15,10 @@ public:
   /** Destory a record notifier */
   ~RecordNotifierType(){ }
 
+  /** Help function */
+  virtual std::string
+  getHelpString(const std::string& fkey){ return ""; }
+
   /** Notify about this message. */
   virtual void
   writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) = 0;
@@ -72,5 +76,9 @@ public:
   /** Return a new instance */
   virtual std::shared_ptr<RecordNotifierType>
   create(const std::string& params) = 0;
+
+  /** Return help for what we create */
+  virtual std::string
+  getHelpString(const std::string& fkey) = 0;
 };
 }

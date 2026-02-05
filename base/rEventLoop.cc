@@ -1,95 +1,44 @@
 #include "rEventLoop.h"
-
-#include "rEventTimer.h"
-#include "rOS.h"
 #include "rError.h"
-#include "rTime.h"
-#include "rURL.h"
+#include "rEventTimer.h"
 
-#include <cassert>
-#include <cmath>
-#include <thread>
-
-using namespace rapio;
-using namespace std;
-
-using namespace std::chrono;
-
-vector<std::shared_ptr<EventHandler> > EventLoop::myEventHandlers;
-
-// Thread sync to main loop
-// Would be nice to hide these with functions...maybe we can?
-std::mutex EventLoop::theEventLock;
-std::condition_variable EventLoop::theEventCheckVariable;
-bool EventLoop::theReady;
-
-// Flag to tell if we are running.  If this goes false we exit
-// I'm not bothering with atomic.  We should set exitCode and
-// the change isRunning if in another thread.
-int EventLoop::exitCode = 0;
-std::atomic<bool> EventLoop::isRunning(true);
-
-// Global pool of threads
+namespace rapio {
+std::vector<std::shared_ptr<EventHandler> > EventLoop::myEventHandlers;
 std::vector<std::thread> EventLoop::theThreads;
+int EventLoop::exitCode = 0;
 
 void
-EventLoop::exit(int theExitCode)
+EventLoop::addEventHandler(std::shared_ptr<EventHandler> t)
 {
-  // Coming from a random thread here...tell the main thread
-  exitCode  = theExitCode;
-  isRunning = false;
+  myEventHandlers.push_back(t);
 }
 
 void
 EventLoop::doEventLoop()
 {
-  fLogInfo("Starting MAIN loop with {} Event handlers.", myEventHandlers.size());
-  for (auto& i:myEventHandlers) {
-    fLogDebug("  EventHandler: {}", i->getName());
-  }
-
-  // Create any timer threads wanted, these will fire on timers
-  for (auto& i:myEventHandlers) {
-    i->createTimerThread(theThreads);
-  }
-
-  // Detach the worker threads
-  for (auto& t:theThreads) {
-    t.detach();
-  }
-
-  // While not exited, run main loop
-  try {
-    while (isRunning) {
-      std::unique_lock<std::mutex> lck(theEventLock);
-      theEventCheckVariable.wait(lck, [] {
-        return theReady;
-      });
-
-      // We're now locked, so turn off flag so another timer can trigger it again.
-      // However, we can't 'do' anything while locked or any thread trying to retrigger will
-      // deadlock. Copy the list of currently 'ready' timers.
-      theReady = false;
-      std::vector<std::shared_ptr<EventHandler> > isReady;
-      for (auto& a:myEventHandlers) {
-        if (a->isReady()) {
-          isReady.push_back(a);
-        }
-      }
-      lck.unlock(); // actions might turn on dataReady again from either the called threads,
-                    // or others that go off while we're working
-
-      // Now we can tell them all to do work.  Also, firing now will clear flags safely
-      for (auto&a:isReady) {
-        a->actionMainThread();
-      }
+  // 1. Detach auxiliary threads (e.g., WebServer) to run in background
+  for (auto& t : theThreads) {
+    if (t.joinable()) {
+      t.detach();
     }
-  }catch (const std::exception& e) {
-    fLogSevere("Main loop uncaught exception: \"{}\", exiting", e.what());
   }
 
-  // Delete all child threads
-  for (auto& t:theThreads) {
-    t.~thread();
+  // 2. Start all registered EventHandlers
+  // (Timers schedule their first tick, Queues do nothing)
+  for (auto& handler : myEventHandlers) {
+    handler->start();
   }
-} // EventLoop::doEventLoop
+
+  fLogInfo("Starting MAIN loop (Boost.Asio) with {} handlers.", myEventHandlers.size());
+
+  // 3. Create a work guard so the loop doesn't exit if the queue is temporarily empty
+  auto work_guard = boost::asio::make_work_guard(io_context());
+
+  // 4. Run the loop (Blocks here until exit() is called)
+  try {
+    io_context().run();
+  } catch (const std::exception& e) {
+    fLogSevere("Main loop uncaught exception: {}", e.what());
+  }
+}
+}

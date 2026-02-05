@@ -22,10 +22,6 @@ public:
   virtual
   ~FMLRecordNotifier();
 
-  /** Get help for us */
-  static std::string
-  getHelpString(const std::string& fkey);
-
   /** Calculate output directory and index location for FML record/message from parameters */
   void
   getOutputFolder(std::map<std::string, std::string>& outputParams,
