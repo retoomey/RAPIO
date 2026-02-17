@@ -2,6 +2,7 @@
 
 #include "rVolumeValueResolver.h"
 #include "rRAPIOAlgorithm.h"
+#include "rCressman.h"
 
 namespace rapio {
 /** Grid cell output storage for our resolver */

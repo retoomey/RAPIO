@@ -1,4 +1,5 @@
 #include "rTileJoin.h"
+#include "rNearestNeighbor.h"
 
 using namespace rapio;
 

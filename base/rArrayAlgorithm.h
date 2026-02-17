@@ -5,6 +5,27 @@
 #include <memory>
 
 namespace rapio {
+/** How to handle boundary for array edges.
+ * For example, RadialSet arrays may want to wrap in
+ * the azimuth direction
+ */
+enum class Boundary {
+  None, // Return False if OOB
+  Wrap, // Modulo
+  Clamp // Lock to edge
+};
+
+/** Interface for coordinate transformation.
+ * For example, mapping one LatLonGrid to another one requires a geometry transform. */
+class CoordMapper {
+public:
+  virtual
+  ~CoordMapper() = default;
+  /** Maps destination (i,j) to source fractional (u,v) */
+  virtual bool
+  map(int destI, int destJ, float& outU, float& outV) = 0;
+};
+
 /** ArrayAlgorithm
  *
  * Process on an Array
@@ -13,178 +34,137 @@ namespace rapio {
  * We have an advantage in RAPIO since our data arrays are
  * all Array classes.
  *
- * To start we have filter operations such as nearest neighbor,
+ * We have sampler methods such as nearest neighbor,
  * cressman, etc.
- * FIXME: Improve API over time here, add ability.
+ * We have filters such as ThresholdFilter, etc.
+ *
  * FIXME: Think we could wrap opencv optionally for some things
  *
  * @author Robert Toomey
- * @ingroup rapio_utility
+ * @ingroup rapio_image
  * @brief Algorithm API for processing our Array classes.
  */
 class ArrayAlgorithm {
 public:
 
-  /** Pass in two array for input/output (copy)
-   * Currently we're starting off with two 2D arrays.*/
-  ArrayAlgorithm(size_t width = 1, size_t height = 1) :
-    myArrayIn(nullptr), myArrayOut(nullptr),
-    myRefIn(nullptr), myRefOut(nullptr), myMaxI(0), myMaxJ(0),
-    myWidth(width), myHeight(height)
-  { }
+  /** Destroy */
+  virtual
+  ~ArrayAlgorithm() = default;
 
-  /** Apply filter to out indexes (copy from source using our technique) */
+  /** Introduce the samplers/filters */
+  static void
+  introduceSelf();
+
+  /** Return help/list of registered samplers and filters */
+  static std::string
+  introduceHelp();
+
+  /** Factory: "cressman:2", "threshold:0:50", "bilinear" */
+  static std::shared_ptr<ArrayAlgorithm>
+  create(const std::string& config);
+
+  /** Parse string options in the factory */
   virtual bool
-  remap(float inI, float inJ, float& out) = 0;
-
-  /** Set source array.  Needs to be called before direct remap */
-  void
-  setSource(std::shared_ptr<Array<float, 2> > in)
+  parseOptions(const std::vector<std::string>& part, std::shared_ptr<ArrayAlgorithm> upstream = nullptr)
   {
-    myArrayIn = in;
-    auto& i = *myArrayIn;
-
-    myRefIn = i.ptr();
-    myMaxI  = i.getX();
-    myMaxJ  = i.getY();
-    // myWidth, myHeight in constructor (param for now)
+    return true; // Default: no options to parse
   }
 
-  /** Set output array. */
-  void
-  setOutput(std::shared_ptr<Array<float, 2> > out)
+  /** Get help for us */
+  virtual std::string
+  getHelpString()
   {
-    myArrayOut = out;
-    myRefOut   = myArrayOut->ptr();
+    return "Help for array algorithm";
   }
 
-public:
+  /** Set source array.  Needs to be called before sampleAt,
+   * caches pointers and values for speed */
+  virtual void
+  setSource(std::shared_ptr<Array<float, 2> > in) = 0;
 
-  /** Array passed in shared, if any.  Shared ensures scope. */
-  std::shared_ptr<Array<float, 2> > myArrayIn;
+  /** * Centralized execution loop.
+   * Handles fast-path indexing and complex mapping.
+   */
+  void
+  process(std::shared_ptr<Array<float, 2> > source,
+    std::shared_ptr<Array<float, 2> >       dest,
+    CoordMapper *                           mapper = nullptr);
+  #if 0
+  {
+    if (!source || !dest) { return; }
+    setSource(source);
 
-  /** Array out shared, if any.  Shared ensures scope. */
-  std::shared_ptr<Array<float, 2> > myArrayOut;
+    auto srcSize  = source->getSizes();
+    auto dstSize  = dest->getSizes();
+    auto& destRef = dest->ref();
 
-  /** Keep input array reference for speed */
-  boost::multi_array<float, 2> * myRefIn;
+    // FAST PATH: Identical sizes, no mapper provided
+    // Think simple 2D array to 2D array here
+    if (!mapper && (srcSize == dstSize) ) {
+      for (int i = 0; i < (int) dstSize[0]; ++i) {
+        for (int j = 0; j < (int) dstSize[1]; ++j) {
+          float out;
+          if (sampleAtIndex(i, j, out)) {
+            destRef[i][j] = out;
+          }
+        }
+      }
+    }
+    // MAPPED PATH: Use helper or default linear stretching
+    // Think one LatLonGrid geo transforming to another LatLonGrid
+    // or linear stretching of one flat 2D array to another larger one
+    else {
+      for (int i = 0; i < (int) dstSize[0]; ++i) {
+        for (int j = 0; j < (int) dstSize[1]; ++j) {
+          float u, v, out;
+          bool valid;
 
-  /** Keep output array reference for speed */
-  boost::multi_array<float, 2> * myRefOut;
+          if (mapper) {
+            valid = mapper->map(i, j, u, v);
+          } else {
+            // Default Linear Stretching: Map [0, dst] to [0, src]
+            u     = i * ((float) srcSize[0] / dstSize[0]);
+            v     = j * ((float) srcSize[1] / dstSize[1]);
+            valid = true;
+          }
 
-  /** Max dimension for speed in remap */
-  size_t myMaxI;
+          if (valid && sampleAt(u, v, out)) {
+            destRef[i][j] = out;
+          } else {
+            destRef[i][j] = Constants::DataUnavailable;
+          }
+        }
+      }
+    }
+  } // process
+  #endif // if 0
 
-  /** Max dimension for speed in remap */
-  size_t myMaxJ;
-
-  /** Width for the submatrix (if used) */
-  size_t myWidth;
-
-  /** Height for the submatrix (if used) */
-  size_t myHeight;
-};
-
-/**
- * @brief Perform nearest neighbor sampling on a 2D grid.
- * @ingroup rapio_utility
- **/
-class NearestNeighbor : public ArrayAlgorithm {
-public:
-
-  /** create nearest neighbor from source to destination array */
-  NearestNeighbor() : ArrayAlgorithm()
-  { }
-
-  /** remap the remap */
+  /** Apply algorithm to virtual index (slower, remapping use) */
   virtual bool
-  remap(float inI, float inJ, float& out) override;
-};
+  sampleAt(float inI, float inJ, float& out) = 0;
 
-/**
- * @brief Perform Cressman interpolation on a 2D grid.
- * @ingroup rapio_utility
- *
- * This class interpolates a value at a given point (x, y) using Cressman interpolation
- * from the surrounding grid points within an N x N neighborhood.
- *
- * @note
- * Example of Cressman interpolation:
- * @code
- * // Grid values:
- * //  f(1, 1) = 10, f(2, 1) = 20
- * //  f(1, 2) = 30, f(2, 2) = 40
- * // Interpolation point: (1.5, 1.5)
- * // Neighborhood size: N = 2
- * //
- * // Euclidean distances:
- * //  d(1,1) = sqrt((1.5 - 1)^2 + (1.5 - 1)^2) ≈ 0.707
- * //  d(2,1) = sqrt((1.5 - 2)^2 + (1.5 - 1)^2) ≈ 0.707
- * //  d(1,2) = sqrt((1.5 - 1)^2 + (1.5 - 2)^2) ≈ 0.707
- * //  d(2,2) = sqrt((1.5 - 2)^2 + (1.5 - 2)^2) ≈ 0.707
- * //
- * // Weights:
- * //  Weight for (1, 1) = 1 / 0.707 ≈ 1.414
- * //  Weight for (2, 1) = 1 / 0.707 ≈ 1.414
- * //  Weight for (1, 2) = 1 / 0.707 ≈ 1.414
- * //  Weight for (2, 2) = 1 / 0.707 ≈ 1.414
- * //
- * // Interpolated value:
- * //  f(1.5, 1.5) = (10 * 1.414 + 20 * 1.414 + 30 * 1.414 + 40 * 1.414) /
- * //                (1.414 + 1.414 + 1.414 + 1.414) = 25
- * @endcode
- */
-class Cressman : public ArrayAlgorithm {
-public:
-
-  /** Create nearest neighbor from source to destination array */
-  Cressman(size_t width = 3, size_t height = 3
-  ) : ArrayAlgorithm(width, height)
-  { }
-
-  /** Remap grid location to output */
+  /** Apply algorithm to a true integer index (faster, fixed array) */
   virtual bool
-  remap(float inI, float inJ, float& out) override;
-};
+  sampleAtIndex(int inI, int inJ, float& out)
+  {
+    // Fallback to the slower way by default
+    return sampleAt(inI, inJ, out);
+  }
 
-/*
- * @brief Perform bilinear interpolation on a 2D grid.
- * @ingroup rapio_utility
- *
- * Interpolates a value at a given point (x, y) using bilinear interpolation
- * from the surrounding grid points.
- *
- * @note
- * Example of bilinear interpolation:
- * @code
- * // Grid values:
- * //  f(1, 1) = 10, f(2, 1) = 20
- * //  f(1, 2) = 30, f(2, 2) = 40
- * // Interpolation point: (1.5, 1.5)
- * //
- * // dx = 1.5 - 1 = 0.5
- * // dy = 1.5 - 1 = 0.5
- * //
- * // Weights:
- * //  Weight for (1, 1) = (1 - 0.5) * (1 - 0.5) = 0.25
- * //  Weight for (2, 1) = 0.5 * (1 - 0.5) = 0.25
- * //  Weight for (1, 2) = (1 - 0.5) * 0.5 = 0.25
- * //  Weight for (2, 2) = 0.5 * 0.5 = 0.25
- * //
- * // Interpolated value:
- * //  f(1.5, 1.5) = 10 * 0.25 + 20 * 0.25 + 30 * 0.25 + 40 * 0.25 = 25
- * @endcode
- */
-class Bilinear : public ArrayAlgorithm {
-public:
+  /** Set array wrapping function for the X/i direction */
+  virtual void
+  setBoundaryX(Boundary b) = 0;
 
-  /** Create nearest neighbor from source to destination array */
-  Bilinear(size_t width = 3, size_t height = 3
-  ) : ArrayAlgorithm(width, height)
-  { }
+  /** Set array wrapping function for the Y/j direction */
+  virtual void
+  setBoundaryY(Boundary b) = 0;
 
-  /** Remap grid location to output */
-  virtual bool
-  remap(float inI, float inJ, float& out) override;
+  /** Set both boundary wrapping functions */
+  void
+  setBoundary(Boundary a, Boundary b)
+  {
+    setBoundaryX(a);
+    setBoundaryY(b);
+  }
 };
 }

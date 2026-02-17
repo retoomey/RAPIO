@@ -20,6 +20,10 @@ public:
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;
 
+  /** Declare advanced help for options in declareOptions, if any. */
+  virtual void
+  declareAdvancedHelp(RAPIOOptions& o) override;
+
   /** Process all algorithm options */
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;

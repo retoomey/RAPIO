@@ -1,4 +1,7 @@
 #include <rRemap.h>
+#include <rNearestNeighbor.h>
+#include <rCressman.h>
+#include <rBilinear.h>
 
 #include <iostream>
 
@@ -16,10 +19,10 @@ Remap::declareOptions(RAPIOOptions& o)
 
   // Mode choice of remap technique...
   // FIXME: For cressmen we 'might' want a N parameter for size of it.
-  o.optional("mode", "nearest", "Convert mode for remapping, such as nearest neighbor.");
-  o.addSuboption("mode", "nearest", "Use nearest neighbor sampling (size is 1).");
-  o.addSuboption("mode", "cressman", "Use cressman sampling.");
-  o.addSuboption("mode", "bilinear", "Use bilinear sampling.");
+  o.optional("mode", "nearest", "Pipeline string for output generation.");
+  // o.addSuboption("mode", "nearest", "Use nearest neighbor sampling (size is 1).");
+  // o.addSuboption("mode", "cressman", "Use cressman sampling.");
+  // o.addSuboption("mode", "bilinear", "Use bilinear sampling.");
 
   o.optional("size", "3", "Size of matrix if not nearest.  For example, Cressman and bilinear");
 
@@ -35,6 +38,12 @@ Remap::declareOptions(RAPIOOptions& o)
 
   o.boolean("ground", "Project to ground..");
   o.addGroup("ground", "RadialSet");
+}
+
+void
+Remap::declareAdvancedHelp(RAPIOOptions& o)
+{
+  o.addAdvancedHelp("mode", ArrayAlgorithm::introduceHelp());
 }
 
 void
@@ -78,6 +87,10 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
       myFullGrid.getLatSpacing(), myFullGrid.getLonSpacing(),
       myFullGrid.getNumY(), myFullGrid.getNumX());
 
+  // Full llg
+  // FIXME: allow grid or flag to do grid of input right?
+  //out = llg->Clone();
+
   // Fill unavailable in the new grid
   auto fullgrid = out->getFloat2D();
 
@@ -115,16 +128,16 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   //
   std::shared_ptr<ArrayAlgorithm> Remap;
 
-  if (myMode == "nearest") {
-    Remap = std::make_shared<NearestNeighbor>();
-  } else if (myMode == "cressman") {
-    Remap = std::make_shared<Cressman>(mySize, mySize);
-  } else if (myMode == "bilinear") {
-    Remap = std::make_shared<Bilinear>(mySize, mySize);
-  } else {
-    fLogSevere("Can't create remapper '{}'", myMode);
+  // Hack into new system for moment to test chaining
+  // std::string params = "threshold:18:40";
+  // std::string params = myMode+":"+std::to_string(mySize)+":"+to_string(mySize)+",threshold:18:40";
+  // std::string params = myMode+":"+std::to_string(mySize)+":"+to_string(mySize);
+  Remap = ArrayAlgorithm::create(myMode);
+  if (Remap == nullptr) {
+    fLogSevere("Failed to create pipeline from mode '{}'", myMode);
     exit(1);
   }
+
   fLogInfo("Created Array Algorithm '{}' to process LatLonGrid primary array", myMode);
   auto& r = *Remap;
 

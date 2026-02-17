@@ -1,144 +1,189 @@
 #include <rArrayAlgorithm.h>
+#include <rFactory.h>
+#include <rColorTerm.h>
+
+// Various samplers/filters
+#include <rNearestNeighbor.h>
+#include <rBilinear.h>
+#include <rCressman.h>
+#include <rThresholdFilter.h>
+
+#include <rStrings.h>
+#include <rError.h>
 
 using namespace rapio;
-using namespace std;
 
-bool
-NearestNeighbor::remap(float inI, float inJ, float& out)
+void
+ArrayAlgorithm::introduceSelf()
 {
-  // for nearest, round to closest cell hit
-  const int i = std::round(inI);
+  static bool first = true;
 
-  if ((i < 0) || (i >= myMaxI)) {
-    return false;
-  }
-  const int j = std::round(inJ);
+  if (first) {
+    // Samplers (leafs)
+    Bilinear::introduceSelf();
+    Cressman::introduceSelf();
+    NearestNeighbor::introduceSelf();
 
-  if ((j < 0) || (j >= myMaxJ)) {
-    return false;
+    // Filters (pipelines)
+    ThresholdFilter::introduceSelf();
+    first = false;
   }
-  out = (*myRefIn)[i][j];
-  return true;
 }
 
-bool
-Cressman::remap(float inI, float inJ, float& out)
+std::string
+ArrayAlgorithm::introduceHelp()
 {
-  // Iterator over half size to center sample
-  // We could store these probably
-  const int halfNI = myWidth / 2;
-  const int halfNJ = myHeight / 2;
+  introduceSelf();
+  std::string help;
 
-  // Sum up all the weights for each sample
-  float tot_wt      = 0;
-  float tot_val     = 0;
-  float currentMask = Constants::DataUnavailable;
-  int n = 0;
+  help += "Samplers and filters can be created in a pipeline for processing/remapping arrays.\n";
+  help += "For example, 'cressman:3:3,threshold:18,50' pipeline does a valid threshold after";
+  help += "cressman interpolation of the data field. The default on a missing sampler is nearest neighbor.\n";
+  help += "The difference from WDSS2 is the addition of samplers for handling different size arrays, ";
+  help += " as well as chaining N number of filters. Chain order is left to right.\n";
 
-  for (int i = -halfNI; i <= halfNI; ++i) {
-    const int yat = static_cast<int>(inI) + i;
+  // Samplers are leaf nodes in the pipeline, interpolating data values.
+  auto samplers = Factory<ArraySampler>::getAll();
 
-    // If the lat is invalid, all the lons in the row will be invalid
-    if (!((yat < 0) || (yat >= myMaxI))) {
-      // For the change in lon row...
-      for (int j = -halfNJ; j <= halfNJ; ++j) {
-        int xat = static_cast<int>(inJ) + j;
-
-        // ...if lon valid, check if a good value
-        if (!((xat < 0) || (xat >= myMaxJ))) {
-          float& val = (*myRefIn)[yat][xat];
-
-          // ...if the data value good, add weight to total...
-          if (Constants::isGood(val)) {
-            const float jDist = (inJ - xat) * (inJ - xat);
-            const float iDist = (inI - yat) * (inI - yat);
-            const float dist  = std::sqrt(iDist + jDist);
-
-            // If the distance is extremely small, use the cell exact value
-            // to avoid division by zero
-            // This also passes on mask when close to a true cell location
-            if (dist < std::numeric_limits<float>::epsilon()) {
-              out = val;
-              goto endcressman;
-            }
-
-            float wt = 1.0 / dist;
-            tot_wt  += wt;
-            tot_val += wt * val;
-            ++n;
-          } else {
-            // If any value in our matrix sampling is missing, we'll use that as a mask
-            // if there are no good values to interpolate.  Should work
-            if (val == Constants::MissingData) {
-              currentMask = Constants::MissingData;
-            }
-          }
-        } // Valid lon
-      }   // End lon row
-    } // Valid lat
-  }   // End lat column
-
-  if (n > 0) {
-    out = tot_val / tot_wt;
-  } else {
-    out = currentMask;
+  help += "  Samplers (start of pipeline):\n";
+  for (auto a:samplers) {
+    help += "  " + ColorTerm::red() + a.first + ColorTerm::reset() + " : " + a.second->getHelpString() + "\n";
   }
-endcressman:;
-  return true;
-} // Cressman::remap
 
-bool
-Bilinear::remap(float inI, float inJ, float& out)
+  // Filters perform actions on data values.
+  help += "  Filters (pipeline):\n";
+  auto full = Factory<ArrayFilter>::getAll();
+
+  for (auto a:full) {
+    help += "  " + ColorTerm::red() + a.first + ColorTerm::reset() + " : " + a.second->getHelpString() + "\n";
+  }
+  return help;
+}
+
+std::shared_ptr<ArrayAlgorithm>
+ArrayAlgorithm::create(const std::string& config)
 {
-  // Iterator over half size to center sample
-  // We could store these probably
-  const int halfNI = myWidth / 2;
-  const int halfNJ = myHeight / 2;
+  introduceSelf();
 
-  // Sum up all the weights for each sample
-  float tot_wt      = 0;
-  float tot_val     = 0;
-  float currentMask = Constants::DataUnavailable;
-  int n = 0;
+  fLogInfo("Factory request ArrayAlgorithm '{}'", config);
+  std::vector<std::string> stages;
 
-  for (int i = -halfNI; i <= halfNI; ++i) {
-    const int yat = static_cast<int>(inI) + i;
+  // Split pipeline stages by comma: "bilinear:3:3,threshold:0:50"
+  Strings::splitWithoutEnds(config, ',', &stages);
 
-    // If the lat is invalid, all the lons in the row will be invalid
-    if (!((yat < 0) || (yat >= myMaxI))) {
-      // For the change in lon row...
-      for (int j = -halfNJ; j <= halfNJ; ++j) {
-        int xat = static_cast<int>(inJ) + j;
+  std::shared_ptr<ArrayAlgorithm> pipeline = nullptr;
 
-        // ...if lon valid, check if a good value
-        if (!((xat < 0) || (xat >= myMaxJ))) {
-          float& val = (*myRefIn)[yat][xat];
+  bool firstInPipe = true;
 
-          // ...if the data value good, add weight to total...
-          if (Constants::isGood(val)) {
-            const float dx = std::abs(inI - yat);
-            const float dy = std::abs(inJ - xat);
-            const float wt = (1 - dx) * (1 - dy);
-            tot_wt  += wt;
-            tot_val += wt * val;
-            ++n;
-          } else {
-            // If any value in our matrix sampling is missing, we'll use that as a mask
-            // if there are no good values to interpolate.  Should work
-            if (val == Constants::MissingData) {
-              currentMask = Constants::MissingData;
-            }
-          }
-        } // Valid lon
-      }   // End lon row
-    } // Valid lat
-  }   // End lat column
+  for (auto& stage : stages) {
+    /** First break up say bilinear:3:3 into three parts */
+    Strings::trim(stage);
+    std::vector<std::string> parts;
+    Strings::splitWithoutEnds(stage, ':', &parts);
 
-  if (n > 0) {
-    out = tot_val / tot_wt;
-  } else {
-    out = currentMask;
+    if (parts.empty()) {
+      continue;
+    }
+
+    std::string type = Strings::makeLower(parts[0]);
+    std::shared_ptr<ArrayAlgorithm> current = nullptr;
+
+    // First in pipe is currently only allowed sampler
+    // I tried to chain samplers but it's even more confusing,
+    // I think forcing one sampler max is more than enough ability
+    // at least for now.
+    bool handleAsFilter = true;
+    if (firstInPipe) {
+      auto sampler = Factory<ArraySampler>::get(type, "ArraySampler: " + type);
+
+      // First is a sampler...
+      if (sampler) {
+        pipeline       = sampler;
+        handleAsFilter = false; // handled
+        fLogInfo("Created sampler '{}' with '{}'", type, stage);
+        // ... or if not, make a NN and handle as a filter instead
+      } else {
+        pipeline = std::make_shared<NearestNeighbor>();
+        fLogInfo("Created sampler nearest neighbor'", type, stage);
+      }
+      if (!pipeline->parseOptions(parts)) {
+        fLogSevere("Failed to parse sampler options {}", stage);
+      }
+      firstInPipe = false;
+    }
+
+    // Try to load a filter
+    if (handleAsFilter) {
+      auto filter = Factory<ArrayFilter>::get(type, "ArrayFilter: " + type);
+      if (filter) {
+        fLogInfo("Created filter '{}' with '{}'", type, stage);
+        filter->setUpstream(pipeline);
+        if (!filter->parseOptions(parts)) {
+          fLogSevere("Failed to parse options for algorithm stage: {}", stage);
+        }
+        pipeline = filter;
+      } else {
+        fLogSevere("Failed to make filter from {}", type);
+      }
+    }
   }
-endbilinear:;
-  return true;
-} // Bilinear::remap
+
+  if (!pipeline) {
+    fLogInfo("No valid pipeline created from '{}', using Nearest Neighbor.", config);
+    pipeline = std::make_shared<NearestNeighbor>();
+  }
+
+  return pipeline;
+} // ArrayAlgorithm::create
+
+void
+ArrayAlgorithm::process(std::shared_ptr<Array<float, 2> > source,
+  std::shared_ptr<Array<float, 2> >                       dest,
+  CoordMapper *                                           mapper)
+{
+  if (!source || !dest) { return; }
+  setSource(source);
+
+  auto srcSize  = source->getSizes();
+  auto dstSize  = dest->getSizes();
+  auto& destRef = dest->ref();
+
+  // FAST PATH: Identical sizes, no mapper provided
+  // Think simple 2D array to 2D array here
+  if (!mapper && (srcSize == dstSize) ) {
+    for (int i = 0; i < (int) dstSize[0]; ++i) {
+      for (int j = 0; j < (int) dstSize[1]; ++j) {
+        float out;
+        if (sampleAtIndex(i, j, out)) {
+          destRef[i][j] = out;
+        }
+      }
+    }
+  }
+  // MAPPED PATH: Use helper or default linear stretching
+  // Think one LatLonGrid geo transforming to another LatLonGrid
+  // or linear stretching of one flat 2D array to another larger one
+  else {
+    for (int i = 0; i < (int) dstSize[0]; ++i) {
+      for (int j = 0; j < (int) dstSize[1]; ++j) {
+        float u, v, out;
+        bool valid;
+
+        if (mapper) {
+          valid = mapper->map(i, j, u, v);
+        } else {
+          // Default Linear Stretching: Map [0, dst] to [0, src]
+          u     = i * ((float) srcSize[0] / dstSize[0]);
+          v     = j * ((float) srcSize[1] / dstSize[1]);
+          valid = true;
+        }
+
+        if (valid && sampleAt(u, v, out)) {
+          destRef[i][j] = out;
+        } else {
+          destRef[i][j] = Constants::DataUnavailable;
+        }
+      }
+    }
+  }
+} // process

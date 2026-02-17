@@ -200,10 +200,13 @@ protected:
 
     // If good, query more stuff
     if (p->AzRangeToRadialGate(vv.virtualAzDegs, l.rangeKMs, l.radial, l.gate)) {
-      // Call the remapper with the current data.
+      // Call the sampler with the current data.
       m->setSource(r->getFloat2D());
       float value;
-      if (m->remap(l.radial, l.gate, value)) {
+      // FIXME: Ahh Cressman, etc take floating coordinates, so everything just
+      // becomes nearest neighbor here.  It breaks.  We'd want radial/gate to
+      // be float percentages for this to work
+      if (m->sampleAt(l.radial, l.gate, value)) {
         l.value = value;
       } else {
         l.value = Constants::MissingData;

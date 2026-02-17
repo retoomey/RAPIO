@@ -84,19 +84,69 @@ LatLonGrid::Clone()
 }
 
 void
-LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> remapper)
+LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> pipeline)
 {
-  if (out == nullptr) { return; }
+  /** * Maps geographic coordinates between two LatLonGrids.
+   * Encapsulates the logic originally found in LatLonGrid::RemapInto.
+   */
+  class LatLonGeoMapper : public CoordMapper {
+public:
+    LatLonGeoMapper(const LatLonGrid& source, const LatLonGrid& dest)
+    {
+      // Source metadata for pixel conversion
+      myInNWLat      = source.getLocation().getLatitudeDeg();
+      myInNWLon      = source.getLocation().getLongitudeDeg();
+      myInLatSpacing = source.getLatSpacing();
+      myInLonSpacing = source.getLonSpacing();
 
-  auto& r = *remapper;
-  auto& o = *out;
+      // Destination metadata for coordinate generation
+      // Note: HMRG/RAPIO uses Top-Left of the cell, so we center the sample
+      myOutStartLat   = dest.getLocation().getLatitudeDeg() - (dest.getLatSpacing() / 2.0);
+      myOutStartLon   = dest.getLocation().getLongitudeDeg() + (dest.getLonSpacing() / 2.0);
+      myOutLatSpacing = dest.getLatSpacing();
+      myOutLonSpacing = dest.getLonSpacing();
+    }
 
-  // FIXME: Can we know name/params of the particular remapper
-  fLogInfo("Remapping using matrix size of {} by {}", r.myWidth, r.myHeight);
+    bool
+    map(int destI, int destJ, float& outU, float& outV) override
+    {
+      // 1. Calculate absolute Lat/Lon for the destination pixel center
+      double atLat = myOutStartLat - (destI * myOutLatSpacing);
+      double atLon = myOutStartLon + (destJ * myOutLonSpacing);
+
+      // 2. Convert that Lat/Lon into the fractional pixel index of the source grid
+      outU = (myInNWLat - atLat) / myInLatSpacing;
+      outV = (atLon - myInNWLon) / myInLonSpacing;
+
+      // Valid if within source bounds (handled by ArrayAlgorithm::sampleAt/resolveX)
+      return true;
+    }
+
+private:
+    double myInNWLat, myInNWLon, myInLatSpacing, myInLonSpacing;
+    double myOutStartLat, myOutStartLon, myOutLatSpacing, myOutLonSpacing;
+  };
+
+  if (!out || !pipeline) { return; }
+  // Instantiate the geo-spatial helper
+  LatLonGeoMapper geoMapper(*this, *out);
+
+  // Get the underlying 2D data arrays
+  auto srcData = this->getFloat2D();
+  auto dstData = out->getFloat2D();
+
+  // Execute the unified process loop
+  pipeline->process(srcData, dstData, &geoMapper);
+
+  #if 0
+  Leaving old code for now.It makes sense to have a helper object class here,
+    which allows us to optimize the ArrayAlgorithm process call
+
+    auto& r = *remapper;
+  auto& o   = *out;
 
   // FIXME: We're only mapping primary data array
   r.setSource(getFloat2D());
-  r.setOutput(o.getFloat2D());
 
   // Input coordinates
   const LLH inCorner = getTopLeftLocationAt(0, 0); // not centered
@@ -122,7 +172,7 @@ LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgo
 
   AngleDegs atLat = startLat;
 
-  auto& array = *r.myRefOut;
+  auto& array = o.getFloat2DRef();
 
   for (size_t y = 0; y < numY; ++y, atLat -= o.getLatSpacing()) {
     const float yof = (inNWLatDegs - atLat) / inLatSpacingDegs;
@@ -131,7 +181,7 @@ LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgo
     for (size_t x = 0; x < numX; ++x, atLon += o.getLonSpacing()) {
       const float xof = (atLon - inNWLonDegs ) / inLonSpacingDegs;
       float value;
-      if (r.remap(yof, xof, value)) {
+      if (r.sampleAt(yof, xof, value)) {
         array[y][x] = value; // y/x is boost memory order for speed
         counter++;
       }
@@ -141,6 +191,7 @@ LatLonGrid::RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgo
   if (counter > 0) {
     fLogInfo("Sample hit counter is {}", counter);
   }
+  #endif // if 0
 } // LatLonGrid::RemapInto
 
 void

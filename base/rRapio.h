@@ -45,6 +45,11 @@
  * @brief Used for callbacks, listeners, sources, etc.
  */
 
+/**
+ * @defgroup rapio_image
+ * @brief Used for array/image processing effects.
+ */
+
 /** @} */ // End of RAPIO
 
 #if 0

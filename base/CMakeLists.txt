@@ -13,6 +13,12 @@ rAlgConfigFile.h
 rArith.h
 rArray.h
 rArrayAlgorithm.h
+image/rArrayFilter.h
+image/rArraySampler.h
+image/rNearestNeighbor.h
+image/rCressman.h
+image/rBilinear.h
+image/rThresholdFilter.h
 datatype/rAttributeDataType.h
 rAWS.h
 rBimap.h
@@ -156,6 +162,11 @@ ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
 rArrayAlgorithm.cc
+image/rArraySampler.cc
+image/rNearestNeighbor.cc
+image/rCressman.cc
+image/rBilinear.cc
+image/rThresholdFilter.cc
 datatype/rAttributeDataType.cc
 rAWS.cc
 rBimap.cc
@@ -306,6 +317,7 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/notifier
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/plugin
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/watcher
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/image
 
   # Web server files
   $<BUILD_INTERFACE:${RAPIO_WEBSERVER_DIR}>
