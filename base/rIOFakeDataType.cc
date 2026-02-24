@@ -41,6 +41,9 @@ IOFakeDataType::createDataType(const std::string& params)
     fLogSevere("No creating record available, can't create fake data.");
     return nullptr;
   }
+
+  // FIXME: I think we could do plugins/factory introduce based on the params.  Currently
+  // params is just the radar name.  For example -i fake=KTLX
   bool haveRadar = ConfigRadarInfo::haveRadar(params);
 
   if (!haveRadar) {
@@ -64,14 +67,49 @@ IOFakeDataType::createDataType(const std::string& params)
       numRadials, numGates);
 
   dt->setRadarName(params);
+  dt->setVCP(212);
+  const int angle = (dt->getElevationDegs() * 10.0) + 0.5; // 0.5 --> 5
   auto d = dt->getFloat2D();
 
-  // How to fill data?  For start, vcp 212 we will fill the 4.0 angle
-  if (dt->getElevationDegs() == 4.0) {
-    d->fill(20);
-  } else {
-    d->fill(Constants::MissingData);
+  // std::vector<std::string> angleDegs = {
+  //  "0.5", "0.9", "1.3", "1.8", "2.4", "3.1", "4.0", "5.1", "6.4", "8.0", "10.0", "12.5", "15.6", "19.5" };
+  float fill = Constants::MissingData;
+
+  switch (angle) {
+      case 5: fill = 5;
+        break;
+      case 9: fill = Constants::MissingData;
+        break;
+      case 13: fill = Constants::MissingData;
+        break;
+      case 18: fill = Constants::MissingData;
+        break;
+      case 24: fill = Constants::MissingData;
+        break;
+      case 31: fill = 8;
+        break;
+      case 40: fill = 10;
+        break;
+      case 51: fill = 12;
+        break;
+      case 64: fill = Constants::MissingData;
+        break;
+      case 80: fill = 15;
+        break;
+      case 100: fill = Constants::MissingData;
+        break;
+      case 125: fill = Constants::MissingData;
+        break;
+      case 156: fill = Constants::MissingData;
+        break;
+      case 195: fill = 20;
+        break;
+      default:
+        fill = Constants::MissingData;
+        break;
   }
+  fLogInfo("Angle {} filling with {}", dt->getElevationDegs(), fill);
+  d->fill(fill);
   return dt;
 } // IOFakeDataType::createDataType
 
