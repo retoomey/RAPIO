@@ -22,16 +22,15 @@ public:
   virtual std::string
   getHelpString() override;
 
-  /** Get value in source at virtual index location */
-  bool
-  sampleAt(float u, float v, float& out) override;
+  // Declares sampleAt, sampleAtIndex, and doSample
+  DECLARE_FILTER_SAMPLERS
 
 private:
 
   /** Min value of threshold, under this is missing */
-  float myMin;
+  float myMin = 0.0f;
 
   /** Max value of threshold, capping to max */
-  float myMax;
+  float myMax = 100.0f;
 };
 }

@@ -19,6 +19,7 @@ image/rNearestNeighbor.h
 image/rCressman.h
 image/rBilinear.h
 image/rThresholdFilter.h
+image/rPercentFilter.h
 datatype/rAttributeDataType.h
 rAWS.h
 rBimap.h
@@ -73,6 +74,7 @@ rIJK.h
 datatype/rImageDataType.h
 index/rIndexType.h
 rIODataType.h
+rIOFakeDataGenerator.h
 rIOFakeDataType.h
 rIOFile.h
 index/rIOIndex.h
@@ -167,6 +169,7 @@ image/rNearestNeighbor.cc
 image/rCressman.cc
 image/rBilinear.cc
 image/rThresholdFilter.cc
+image/rPercentFilter.cc
 datatype/rAttributeDataType.cc
 rAWS.cc
 rBimap.cc
@@ -220,6 +223,7 @@ rIJK.cc
 datatype/rImageDataType.cc
 index/rIndexType.cc
 rIODataType.cc
+rIOFakeDataGenerator.cc
 rIOFakeDataType.cc
 rIOFile.cc
 index/rIOIndex.cc

@@ -18,44 +18,36 @@ bool
 ThresholdFilter::parseOptions(const std::vector<std::string>& parts,
   std::shared_ptr<ArrayAlgorithm>                           upstream)
 {
-  if (parts.size() < 3) {
-    // Use defaults if not enough params
-    return true;
+  getParam<float>(parts, 1, myMin);
+  getParam<float>(parts, 2, myMax);
+
+  if (myMin > myMax) {
+    std::swap(myMin, myMax);
   }
 
-  try {
-    // Handle our params
-    myMin = std::stoul(parts[1]);
-    myMax = std::stoul(parts[2]);
-    if (myMin > myMax) { }
-
-    if (parts.size() > 3) {
-      fLogSevere("Warning: 'Threshold' expects 2 parameters (min:max). Ignoring extra {} args.",
-        parts.size() - 3);
-    }
-  } catch (const std::exception& e) {
-    fLogSevere("Threshold param error: {}", e.what());
-    return false;
-  }
   return true;
 }
 
 std::string
 ThresholdFilter::getHelpString()
 {
-  return "{minvalue=0}:{maxvalue=100} -- Threshold (< min missing, > max clamped).";
+  return fmt::format("{{minvalue={:g}}}:{{maxvalue={:g}}} -- Threshold (< min missing, > max clamped).",
+           myMin, myMax);
 }
 
+template <typename T>
 bool
-ThresholdFilter::sampleAt(float u, float v, float& out)
+ThresholdFilter::doSample(T x, T y, float& out)
 {
   float val;
 
-  if (myUpstream->sampleAt(u, v, val)) {
-    const float result = (val > myMax) ? myMax :
-      (val < myMin) ? Constants::MissingData : val;
-    out = result;
+  if (callUpstream(x, y, val)) {
+    // The threshold filter math
+    out = (val > myMax) ? myMax : (val < myMin) ? Constants::MissingData : val;
+
     return true;
   }
   return false;
-} // ThresholdFilter::remap
+}
+
+DEFINE_FILTER_SAMPLERS(ThresholdFilter)

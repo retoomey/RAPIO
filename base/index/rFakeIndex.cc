@@ -2,6 +2,9 @@
 
 #include "rError.h"
 #include "rRecordQueue.h"
+#include "rFactory.h"
+#include "rIOFakeDataGenerator.h"
+
 // Watchers usually watch and send heartbeat messages.
 // We have two choices.  Make a FakeWatcher to do all the
 // heartbeating, or just make a timer ourselves. Using
@@ -52,18 +55,17 @@ FakeIndex::initialRead(bool realtime, bool archive)
 {
   if (archive) {
     fLogInfo("Fake index archiving mode.  Generating.");
-    // FIXME: Any 'fake data module class' will have to be callable by
-    // the index here as well as the fake builder.
-    // Start with real clock time (assuming no other archive indexes)
-    Time time = Time::ClockTime();
-    size_t volumeCount = 14;
-    size_t numVols     = 10;
-    for (size_t i = 0; i < volumeCount * numVols; ++i) {
-      generateRecord(time);
-      time += TimeDuration::Seconds(21); // Average vcp 212 time
+    // FIXME: Could ask generator for suggested time gap?
+    // and maybe start time, etc.
+    Time startTime(2026, 2, 24, 21, 12, 31, 0.585);
+
+    size_t count = 140;
+    for (size_t i = 0; i < count; ++i) {
+      generateRecord(startTime);
+      startTime += TimeDuration::Seconds(21); // Average vcp 212 time
     }
   }
-  return true; // successful 'connection'
+  return true;
 }
 
 bool
@@ -78,25 +80,12 @@ FakeIndex::handlePoll()
 bool
 FakeIndex::generateRecord(const Time& time)
 {
-  std::vector<std::string> params;
-  std::string aBuilder = "fake";
+  // For the moment use the radar sim
+  auto gen = Factory<IOFakeDataGenerator>::get("radar1");
 
-  params.push_back(aBuilder);
-  params.push_back(myParams);
-
-  // Reflectivity VCP 212 to start
-  // FIXME: We probably want a class to all of this eventually
-  // to allow plugins
-  std::vector<std::string> angleDegs = {
-    "0.5", "0.9", "1.3", "1.8", "2.4", "3.1", "4.0", "5.1", "6.4", "8.0", "10.0", "12.5", "15.6", "19.5" };
-  static size_t tilt = 0;
-  Record rec(params, aBuilder, time, "Reflectivity", angleDegs[tilt]);
-
-  Record::theRecordQueue->addRecord(rec);
-
-  // if (tilt++ > angleDegs.size()){
-  if (++tilt >= angleDegs.size()) {
-    tilt = 0;
+  if (gen) {
+    auto rec = gen->generateRecord(myParams, time);
+    Record::theRecordQueue->addRecord(rec);
   }
   return true;
 } // FakeIndex::readRemoteRecords

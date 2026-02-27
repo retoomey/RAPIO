@@ -101,7 +101,7 @@ Time::Time(
   double         fractional
 )
 {
-  tm a;
+  std::tm a = { };
 
   a.tm_year  = year - 1900;
   a.tm_mon   = month - 1;

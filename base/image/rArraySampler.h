@@ -72,6 +72,19 @@ public:
   virtual bool
   sampleAt(float u, float v, float& out) = 0;
 
+  /** * @brief Fast-path for exact integer indexing (used by process()).
+   * Marked 'final' to prevent spatial interpolators from overriding it.
+   * All interpolators instantly degrade to Nearest Neighbor on exact integers.
+   */
+  inline bool
+  sampleAtIndex(int i, int j, float& out) final
+  {
+    if (!resolveX(i)) { return false; }
+    if (!resolveY(j)) { return false; }
+    out = (*myRefIn)[i][j];
+    return true;
+  }
+
 protected:
 
   /** * @brief Function pointer type for boundary resolver methods.

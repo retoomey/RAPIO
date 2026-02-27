@@ -136,7 +136,7 @@ private:
   auto dstData = out->getFloat2D();
 
   // Execute the unified process loop
-  pipeline->process(srcData, dstData, &geoMapper);
+  pipeline->remap(srcData, dstData, &geoMapper);
 
   #if 0
   Leaving old code for now.It makes sense to have a helper object class here,

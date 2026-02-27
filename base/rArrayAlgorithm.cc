@@ -7,6 +7,7 @@
 #include <rBilinear.h>
 #include <rCressman.h>
 #include <rThresholdFilter.h>
+#include <rPercentFilter.h>
 
 #include <rStrings.h>
 #include <rError.h>
@@ -26,6 +27,7 @@ ArrayAlgorithm::introduceSelf()
 
     // Filters (pipelines)
     ThresholdFilter::introduceSelf();
+    PercentFilter::introduceSelf();
     first = false;
   }
 }
@@ -38,14 +40,14 @@ ArrayAlgorithm::introduceHelp()
 
   help += "Samplers and filters can be created in a pipeline for processing/remapping arrays.\n";
   help += "For example, 'cressman:3:3,threshold:18,50' pipeline does a valid threshold after";
-  help += "cressman interpolation of the data field. The default on a missing sampler is nearest neighbor.\n";
+  help += " cressman interpolation of the data field. The default on a missing sampler is nearest neighbor.\n";
   help += "The difference from WDSS2 is the addition of samplers for handling different size arrays, ";
   help += " as well as chaining N number of filters. Chain order is left to right.\n";
 
   // Samplers are leaf nodes in the pipeline, interpolating data values.
   auto samplers = Factory<ArraySampler>::getAll();
 
-  help += "  Samplers (start of pipeline):\n";
+  help += "  Samplers (start of pipeline when remapping):\n";
   for (auto a:samplers) {
     help += "  " + ColorTerm::red() + a.first + ColorTerm::reset() + " : " + a.second->getHelpString() + "\n";
   }
@@ -138,8 +140,36 @@ ArrayAlgorithm::create(const std::string& config)
 
 void
 ArrayAlgorithm::process(std::shared_ptr<Array<float, 2> > source,
-  std::shared_ptr<Array<float, 2> >                       dest,
-  CoordMapper *                                           mapper)
+  std::shared_ptr<Array<float, 2> >                       dest)
+{
+  if (!source || !dest) { return; }
+  auto srcSize = source->getSizes();
+  auto dstSize = dest->getSizes();
+
+  if (srcSize != dstSize) {
+    fLogSevere("Process array size mismatch, use remap");
+    return;
+  }
+
+  setSource(source);
+  auto& destRef = dest->ref();
+
+  for (int i = 0; i < (int) dstSize[0]; ++i) {
+    for (int j = 0; j < (int) dstSize[1]; ++j) {
+      float out;
+      if (sampleAtIndex(i, j, out)) { // just round
+        destRef[i][j] = out;
+      } else {
+        destRef[i][j] = Constants::DataUnavailable;
+      }
+    }
+  }
+}
+
+void
+ArrayAlgorithm::remap(std::shared_ptr<Array<float, 2> > source,
+  std::shared_ptr<Array<float, 2> >                     dest,
+  CoordMapper *                                         mapper)
 {
   if (!source || !dest) { return; }
   setSource(source);
@@ -148,42 +178,25 @@ ArrayAlgorithm::process(std::shared_ptr<Array<float, 2> > source,
   auto dstSize  = dest->getSizes();
   auto& destRef = dest->ref();
 
-  // FAST PATH: Identical sizes, no mapper provided
-  // Think simple 2D array to 2D array here
-  if (!mapper && (srcSize == dstSize) ) {
-    for (int i = 0; i < (int) dstSize[0]; ++i) {
-      for (int j = 0; j < (int) dstSize[1]; ++j) {
-        float out;
-        if (sampleAtIndex(i, j, out)) {
-          destRef[i][j] = out;
-        }
+  for (int i = 0; i < (int) dstSize[0]; ++i) {
+    for (int j = 0; j < (int) dstSize[1]; ++j) {
+      float u, v, out;
+      bool valid;
+
+      if (mapper) {
+        valid = mapper->map(i, j, u, v);
+      } else {
+        // Default Linear Stretching: Map [0, dst] to [0, src]
+        u     = i * ((float) srcSize[0] / dstSize[0]);
+        v     = j * ((float) srcSize[1] / dstSize[1]);
+        valid = true;
+      }
+
+      if (valid && sampleAt(u, v, out)) {
+        destRef[i][j] = out;
+      } else {
+        destRef[i][j] = Constants::DataUnavailable;
       }
     }
   }
-  // MAPPED PATH: Use helper or default linear stretching
-  // Think one LatLonGrid geo transforming to another LatLonGrid
-  // or linear stretching of one flat 2D array to another larger one
-  else {
-    for (int i = 0; i < (int) dstSize[0]; ++i) {
-      for (int j = 0; j < (int) dstSize[1]; ++j) {
-        float u, v, out;
-        bool valid;
-
-        if (mapper) {
-          valid = mapper->map(i, j, u, v);
-        } else {
-          // Default Linear Stretching: Map [0, dst] to [0, src]
-          u     = i * ((float) srcSize[0] / dstSize[0]);
-          v     = j * ((float) srcSize[1] / dstSize[1]);
-          valid = true;
-        }
-
-        if (valid && sampleAt(u, v, out)) {
-          destRef[i][j] = out;
-        } else {
-          destRef[i][j] = Constants::DataUnavailable;
-        }
-      }
-    }
-  }
-} // process
+} // remap

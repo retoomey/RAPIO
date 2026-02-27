@@ -82,62 +82,22 @@ public:
   virtual void
   setSource(std::shared_ptr<Array<float, 2> > in) = 0;
 
+  /** Direct array to array processing.  Fastest but no
+   * remapping/scaling ability allowed.  Best for simple
+   * filters. Note that using source and dest the same will
+   * technically work, but some filters might come out bad
+   * if they are not in-place. */
+  void
+  process(std::shared_ptr<Array<float, 2> > source,
+    std::shared_ptr<Array<float, 2> >       dest);
+
   /** * Centralized execution loop.
    * Handles fast-path indexing and complex mapping.
    */
   void
-  process(std::shared_ptr<Array<float, 2> > source,
-    std::shared_ptr<Array<float, 2> >       dest,
-    CoordMapper *                           mapper = nullptr);
-  #if 0
-  {
-    if (!source || !dest) { return; }
-    setSource(source);
-
-    auto srcSize  = source->getSizes();
-    auto dstSize  = dest->getSizes();
-    auto& destRef = dest->ref();
-
-    // FAST PATH: Identical sizes, no mapper provided
-    // Think simple 2D array to 2D array here
-    if (!mapper && (srcSize == dstSize) ) {
-      for (int i = 0; i < (int) dstSize[0]; ++i) {
-        for (int j = 0; j < (int) dstSize[1]; ++j) {
-          float out;
-          if (sampleAtIndex(i, j, out)) {
-            destRef[i][j] = out;
-          }
-        }
-      }
-    }
-    // MAPPED PATH: Use helper or default linear stretching
-    // Think one LatLonGrid geo transforming to another LatLonGrid
-    // or linear stretching of one flat 2D array to another larger one
-    else {
-      for (int i = 0; i < (int) dstSize[0]; ++i) {
-        for (int j = 0; j < (int) dstSize[1]; ++j) {
-          float u, v, out;
-          bool valid;
-
-          if (mapper) {
-            valid = mapper->map(i, j, u, v);
-          } else {
-            // Default Linear Stretching: Map [0, dst] to [0, src]
-            u     = i * ((float) srcSize[0] / dstSize[0]);
-            v     = j * ((float) srcSize[1] / dstSize[1]);
-            valid = true;
-          }
-
-          if (valid && sampleAt(u, v, out)) {
-            destRef[i][j] = out;
-          } else {
-            destRef[i][j] = Constants::DataUnavailable;
-          }
-        }
-      }
-    }
-  } // process
-  #endif // if 0
+  remap(std::shared_ptr<Array<float, 2> > source,
+    std::shared_ptr<Array<float, 2> >     dest,
+    CoordMapper *                         mapper = nullptr);
 
   /** Apply algorithm to virtual index (slower, remapping use) */
   virtual bool
@@ -145,11 +105,7 @@ public:
 
   /** Apply algorithm to a true integer index (faster, fixed array) */
   virtual bool
-  sampleAtIndex(int inI, int inJ, float& out)
-  {
-    // Fallback to the slower way by default
-    return sampleAt(inI, inJ, out);
-  }
+  sampleAtIndex(int inI, int inJ, float& out) = 0;
 
   /** Set array wrapping function for the X/i direction */
   virtual void
@@ -165,6 +121,34 @@ public:
   {
     setBoundaryX(a);
     setBoundaryY(b);
+  }
+
+protected:
+
+  /** Attempt to parse a string. If successful, overwrite out_val. Otherwise, do nothing. */
+  template <typename T>
+  static void
+  parseParam(const std::string& str, T& out_val)
+  {
+    if (str.empty()) { return; }
+
+    std::istringstream iss(str);
+    T val;
+
+    // Only overwrite if the stream successfully extracted the exact type
+    if (iss >> val) {
+      out_val = val;
+    }
+  }
+
+  /** Safely extract from a vector and attempt to parse. */
+  template <typename T>
+  static void
+  getParam(const std::vector<std::string>& parts, size_t index, T& out_val)
+  {
+    if (index < parts.size()) {
+      parseParam(parts[index], out_val);
+    }
   }
 };
 }

@@ -54,9 +54,34 @@ public:
     return myUpstream->sampleAtIndex(inI, inJ, out);
   }
 
+  /** Helper to automatically route fractional coordinates down the chain */
+  inline bool
+  callUpstream(float u, float v, float& out)
+  {
+    return myUpstream->sampleAt(u, v, out);
+  }
+
+  /** Helper to automatically route integer coordinates down the chain */
+  inline bool
+  callUpstream(int i, int j, float& out)
+  {
+    return myUpstream->sampleAtIndex(i, j, out);
+  }
+
 protected:
 
   /** The previous pipeline element */
   std::shared_ptr<ArrayAlgorithm> myUpstream;
 };
 }
+
+// Placed inside the class definition in the .h file
+#define DECLARE_FILTER_SAMPLERS \
+  virtual bool sampleAt(float u, float v, float& out) override; \
+  virtual bool sampleAtIndex(int i, int j, float& out) override; \
+  template <typename T> bool doSample(T x, T y, float& out);
+
+// Placed at the bottom of your .cc file
+#define DEFINE_FILTER_SAMPLERS(ClassName) \
+  bool ClassName::sampleAt(float u, float v, float& out){ return doSample(u, v, out); } \
+  bool ClassName::sampleAtIndex(int i, int j, float& out){ return doSample(i, j, out); }
