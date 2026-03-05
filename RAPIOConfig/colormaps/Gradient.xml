@@ -1,0 +1,48 @@
+<!-- A gradient colormap for the LLSDPolar az, div, tot products -->
+<colorMap>
+ 
+     <colorBin upperBound="-99902.5" name="na">
+          <color r="200" g="0" b="200" a="0x22"></color>
+     </colorBin>
+
+     <colorBin upperBound="-0.015" name="-0.02">
+          <color r="0" g="0" b="150" a="0xff"></color>
+          <color r="0" g="100" b="255" a="0xff"></color>
+     </colorBin>
+
+     <colorBin upperBound="-0.005" name="-0.015">
+          <color r="0" g="100" b="255" a="0xff"></color>
+          <color r="0" g="255" b="255" a="0xff"></color>
+     </colorBin>
+
+     <colorBin upperBound="-0.001" name="-0.005">
+          <color r="0" g="255" b="255" a="0xff"></color>
+          <color r="0" g="0" b="0" a="0x00"></color>
+     </colorBin>
+
+     <colorBin upperBound="0.001" name="0">
+          <color r="0" g="0" b="0" a="0x00"></color>
+          <color r="0" g="0" b="0" a="0x00"></color>
+     </colorBin>
+
+     <colorBin upperBound="0.005" name="0.001">
+          <color r="0" g="0" b="0" a="0x00"></color>
+          <color r="200" g="100" b="0" a="0xff"></color>
+     </colorBin>
+
+     <colorBin upperBound="0.015" name="0.005">
+          <color r="200" g="100" b="0" a="0xff"></color>
+          <color r="255" g="0" b="0" a="0xff"></color>
+     </colorBin>
+
+     <colorBin upperBound="0.025" name="0.015">
+          <color r="255" g="0" b="0" a="0xff"></color>
+          <color r="255" g="255" b="0" a="0xff"></color>
+     </colorBin>
+
+     <colorBin upperBound="0.050" name="0.025">
+          <color r="255" g="255" b="0" a="0xff"></color>
+          <color r="255" g="255" b="255" a="0xff"></color>
+     </colorBin>
+
+</colorMap>

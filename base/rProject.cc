@@ -38,7 +38,7 @@ Project::attenuationHeightKMs(
 {
   // Radar formula approimation. p 232, Radar Equations for Modern Radar
   // this is good to 0.4% error at 1000 km.
-  constexpr double IR2 = (4. / 3.) * Constants::EarthRadiusKM; // In KMs
+  constexpr double IR2 = 2.0 * (4. / 3.) * Constants::EarthRadiusKM; // In KMs
 
   const double elevRad = elevDegs * DEG_TO_RAD;
 

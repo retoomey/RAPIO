@@ -18,3 +18,12 @@ target_include_directories(rEchoTop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 install(TARGETS rEchoTop
    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+add_executable(rLLSDPolar
+  rLLSDPolar.cc
+)
+target_link_libraries(rLLSDPolar rapio)
+target_include_directories(rLLSDPolar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+install(TARGETS rLLSDPolar
+   DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
