@@ -11,6 +11,7 @@
 
 namespace rapio
 {
+class DataType;
 class PTreeNode;
 
 /** Simple storage object for getting projection info
@@ -76,6 +77,10 @@ public:
   static std::shared_ptr<ProjLibProject>
   getBBOX(std::map<std::string, std::string>& keys,
     size_t& rows, size_t& cols, double& left, double& bottom, double& right, double& top);
+
+  /** Helper for web gui, get tile, etc. to create a sampled tile */
+  static std::shared_ptr<DataType>
+  createResampledTile(std::shared_ptr<DataType> sourceData, std::map<std::string, std::string>& settings);
 
   /** Create projection based on standard fields passed in */
   virtual bool

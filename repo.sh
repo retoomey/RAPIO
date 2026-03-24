@@ -62,7 +62,7 @@ EOF
 
 # 3. Run Repomix.  I don't use security check since we shouldn't be putting
 # passwords in our code anyway.
-repomix --include "**/*.{cc,h,txt}" --output="$OUTPUT_FILE" --no-security-check
+repomix --include "**/*.{cc,h,txt}" --output="$OUTPUT_FILE" --no-security-check --style markdown --remove-comments --remove-empty-lines --truncate-base64
 
 echo "-------------------------------------------------------"
 echo "DONE!"

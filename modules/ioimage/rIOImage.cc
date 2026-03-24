@@ -85,270 +85,282 @@ IOImage::createDataType(const std::string& params)
   return (IOImage::readImageDataType(URL(params)));
 }
 
+#if 0
 bool
-IOImage::writeMRMSTile(MultiDataType& mdt, const std::string& filename,
-  ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat,
-  double deltaLon, bool transform)
+IOImage::writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename)
 {
-  // Precache color maps and data types for speed in loop lookup.
-  // and check for null colormaps, null datatypes, etc.
-  std::vector<DataProjection *> ps;
-  size_t s = mdt.size();
-
-  for (size_t i = 0; i < s; ++i) {
-    auto aDT = mdt.getDataType(i);
-    if (aDT) {
-      auto aProjection = aDT->getProjection();
-      if (aProjection) {
-        ps.push_back(aProjection.get());
-      }
-    }
+  auto grid = std::dynamic_pointer_cast<DataGrid>(dt);
+  auto aColorMap = dt->getColorMap();
+  
+  if (!grid || !aColorMap) {
+    fLogSevere("Invalid grid or colormap for image writing.");
+    return false;
+  }
+  
+  auto array2D = grid->getFloat2D(Constants::PrimaryDataName);
+  if (!array2D) {
+    fLogSevere("Missing primary data array for image writing.");
+    return false;
   }
 
-  std::vector<float> buffer(rows * cols);
+  auto sizes = grid->getSizes();
+  if (sizes.size() < 2) return false;
+  size_t rows = sizes[0];
+  size_t cols = sizes[1];
+  
+  static bool setup = false;
+  if (!setup) {
+#if HAVE_MAGICK
+    InitializeMagick(NULL);
+#else
+    fLogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!");
+#endif
+    setup = true;
+  }
 
-  size_t index  = 0;
-  auto startLat = top;
-
+#if HAVE_MAGICK
+  Magick::Image i;
+  i.size(Magick::Geometry(cols, rows));
+  i.magick("RGBA");
+  i.opacity(false);
+  i.modifyImage();
+  
+  unsigned char r = 0, g = 0, b = 0, a = 0;
+  Magick::PixelPacket * pixel = i.getPixels(0, 0, cols, rows);
+  auto& data = array2D->ref();
+  
   for (size_t y = 0; y < rows; y++) {
-    auto startLon = left;
     for (size_t x = 0; x < cols; x++) {
-      // Transform coordinate system if wanted
-      double aLat = startLat, aLon = startLon;
-      if (transform) {
-        proj.xyToLatLon(startLon, startLat, aLat, aLon);
-      }
+      float v = data[y][x];
+      
+      // Paint the pixel based on the colormap
+      aColorMap->getColor(v, r, g, b, a);
 
-      // Loop through datatypes.
-      float v = Constants::DataUnavailable;
-      for (size_t j = 0; j < ps.size(); ++j) {
-        // Get the data value
-        v = ps[j]->getValueAtLL(aLat, aLon);
-
-        // For moment, first hit wins.  We could possible
-        // add some sort of simple 'merge' later if wanted
-        if (v != Constants::DataUnavailable) {
-          break;
-        }
-      }
-
-      buffer[index++] = v;
-      startLon       += deltaLon;
+      Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
+      cc.alpha(1.0 - (a / 255.0)); 
+      *pixel = cc;
+      pixel++;
     }
-    startLat += deltaLat;
   }
+  i.syncPixels();
+  i.write(filename);
+  return true;
+#else
+  return false;
+#endif
+}
 
-  // Write the file...
+bool
+IOImage::writeMRMSTile(std::shared_ptr<DataType> dt, const std::string& filename)
+{
+  auto grid = std::dynamic_pointer_cast<DataGrid>(dt);
+  if (!grid) return false;
+  
+  auto array2D = grid->getFloat2D(Constants::PrimaryDataName);
+  if (!array2D) return false;
+
+  auto sizes = grid->getSizes();
+  if (sizes.size() < 2) return false;
+  size_t rows = sizes[0];
+  size_t cols = sizes[1];
+  
+  auto& data = array2D->ref();
+  std::vector<float> buffer(rows * cols);
+  size_t index = 0;
+  
+  for (size_t y = 0; y < rows; y++) {
+    for (size_t x = 0; x < cols; x++) {
+      buffer[index++] = data[y][x];
+    }
+  }
+  
   std::ofstream file(filename, std::ios::binary);
-
   if (!file) {
     fLogSevere("Failed to open file: {}", filename);
     return false;
   }
-
   file.write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
-
-  if (!file) {
-    fLogSevere("Failed to write data to file: {}", filename);
-    file.close();
-    return false;
-  }
-
   file.close();
-
   return true;
-} // IOImage::writeMRMSTile
-
-bool
-IOImage::writeMAGICKTile(MultiDataType& mdt, const std::string& filename,
-  ProjLibProject& proj, size_t rows, size_t cols, double top, double left, double deltaLat,
-  double deltaLon, bool transform)
-{
-  // Precache color maps and data types for speed in loop lookup.
-  // and check for null colormaps, null datatypes, etc.
-  std::vector<DataProjection *> ps;
-  std::vector<ColorMap *> cms;
-  size_t s = mdt.size();
-
-  for (size_t i = 0; i < s; ++i) {
-    auto aDT = mdt.getDataType(i);
-    if (aDT) {
-      auto aColorMap   = aDT->getColorMap();
-      auto aProjection = aDT->getProjection();
-      if (aColorMap && aProjection) {
-        ps.push_back(aProjection.get());
-        cms.push_back(aColorMap.get());
-      }
-    }
-  }
-
-  // --------------------------------------
-  // Setup magic only if we need it
-  //
-  static bool setup = false;
-
-  if (!setup) {
-    #if HAVE_MAGICK
-    InitializeMagick(NULL);
-    #else
-    fLogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!");
-    #endif
-    setup = true;
-  }
-  #if HAVE_MAGICK
-  // --------------------------------------
-
-  // NOTE: JPEG doesn't support transparency,
-  // so if you're here to fix that give up.
-  //
-  Magick::Image i;
-  i.size(Magick::Geometry(cols, rows));
-  i.magick("RGBA");
-  i.opacity(false); // Our colormaps support alpha, so we want it
-  // image.quiet( false ); // Warning exceptions if wanted
-
-  i.modifyImage();
-
-  // Old school vslice/cappi, etc...where we hunt in the data space
-  // using the coordinate of the destination.
-  auto startLat = top;
-  unsigned char r, g, b, a;
-  Magick::PixelPacket * pixel = i.getPixels(0, 0, cols, rows);
-  for (size_t y = 0; y < rows; y++) {
-    auto startLon = left;
-    for (size_t x = 0; x < cols; x++) {
-      // Transform coordinate system if wanted
-      double aLat = startLat, aLon = startLon;
-      if (transform) {
-        proj.xyToLatLon(startLon, startLat, aLat, aLon);
-      }
-
-      // Loop through datatypes.
-      for (size_t j = 0; j < ps.size(); ++j) {
-        auto& p     = ps[j];
-        auto& color = cms[j];
-
-        // Get the data value
-        const double v = p->getValueAtLL(aLat, aLon);
-        color->getColor(v, r, g, b, a);
-
-        // For moment, first hit wins.  We could possible
-        // add some sort of simple 'merge' later if wanted
-        if (v != Constants::DataUnavailable) {
-          break;
-        }
-      }
-
-      // Convert to Magick pixel
-      Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
-      cc.alpha(1.0 - (a / 255.0));
-      *pixel    = cc;
-      startLon += deltaLon;
-      pixel++;
-    }
-    startLat += deltaLat;
-  }
-  i.syncPixels();
-
-  // Debug draw text on tile
-  // Since we can do this in leaflet directly and easy, gonna deprecate
-  // if (box) {
-  //  std::list<Drawable> text;
-  //  text.push_back(DrawablePointSize(20));
-  //  text.push_back(DrawableStrokeColor("black"));
-  //  text.push_back(DrawableText(0, rows / 2, keys["TILETEXT"]));
-  //  i.draw(text);
-  // }
-
-  i.write(filename);
-  return true;
-
-  #else // if HAVE_MAGICK
-  return false;
-
-  #endif // if HAVE_MAGICK
-} // IOImage::writeMAGICKTile
+}
 
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
   std::map<std::string, std::string>              & keys
 )
 {
-  // ----------------------------------------------------------
-  // Get the filename we should write to
   std::string suffix = keys["suffix"];
   std::string filename;
-
   if (!resolveFileName(keys, suffix, "image-", filename)) {
     return false;
   }
-
-  // ----------------------------------------------------------------------
-  // Read settings
-  //
+  
   bool successful = false;
-
-  try{
-    std::string suffix = keys["suffix"];
-
-    // A data tile attempt for 2D tabling in the imgui display.
-    // This will break up the 2D array of the data into tiles, without
-    // any projection, giving us a 2D tracking table.
-    if (suffix == "mrms2dtile") {
-      // try {
-      // I'm thinking we label 'tiles' in the data by a single id
-      // This will be 'partitioned' kinda like the grid partition, right?
-      // Maybe the code can be shared even
-      // id = std::stoi(keys["mrms2dtileid"]); // could except
-      // }
+  try {
+    // The web server or rGetTile already handed us a perfectly pre-sized LatLonGrid!
+    // Just pass it directly to the writers.
+    if (suffix == "mrmstile") {
+      successful = writeMRMSTile(dt, filename);
     } else {
-      // These tiles require projection or the BBOX
-
-      // ----------------------------------------------------------------------
-      // Bounding Box settings from given BBOX string
-      // FIXME: Could put more of this into getBBOX I think.
-      // This is also a marching box similar to the fusion/grid stuff so
-      // could combine/reduce classes at some point
-      size_t rows, cols;
-      double top           = 0;
-      double left          = 0;
-      double bottom        = 0;
-      double right         = 0;
-      auto proj            = DataProjection::getBBOX(keys, rows, cols, left, bottom, right, top);
-      const auto deltaLat  = (bottom - top) / rows; // good
-      const auto deltaLon  = (right - left) / cols;
-      const bool transform = (proj != nullptr);
-
-      // If the incoming is a MultiDataType someone has already given us
-      // a group of products to output......
-      std::shared_ptr<MultiDataType> useMe;
-
-      if (auto multiDT = std::dynamic_pointer_cast<MultiDataType>(dt)) {
-        useMe = multiDT;
-        // ... or we'll make it use a multi data type to allow combining multiple datatypes
-        // into a single image.
-      } else {
-        useMe = std::make_shared<MultiDataType>();
-        useMe->addDataType(dt);
-      }
-
-      if (suffix == "mrmstile") {
-        successful = writeMRMSTile(*useMe, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
-      } else {
-        successful =
-          writeMAGICKTile(*useMe, filename, *proj, rows, cols, top, left, deltaLat, deltaLon, transform);
-      }
+      successful = writeMAGICKTile(dt, filename);
     }
-
-    // ----------------------------------------------------------
-    // Post processing such as extra compression, ldm, etc.
+    
     if (successful) {
       successful = postWriteProcess(filename, keys);
+      showFileInfo("Image writer: ", keys);
     }
-  }catch (const Exception& e)
-  {
-    fLogSevere("Exception write testing image output {}", e.what());
+  } catch (const std::exception& e) {
+    fLogSevere("Exception during image output: {}", e.what());
+  }
+  return successful;
+}
+
+#endif
+
+bool
+IOImage::encodeDataType(std::shared_ptr<DataType> dt,
+  std::map<std::string, std::string>              & keys
+)
+{
+  std::string suffix = keys["suffix"];
+  std::string filename;
+  
+  // FIX: Hardcode "png" as the default fallback so Magick++ knows what to encode!
+  if (!resolveFileName(keys, "png", "image-", filename)) {
+    return false;
+  }
+  
+  // If the user didn't specify a suffix, default our internal router to PNG
+  if (suffix.empty()) {
+    suffix = "png";
+  }
+  
+  bool successful = false;
+  try {
+    if (suffix == "mrmstile") {
+      successful = writeMRMSTile(dt, filename);
+    } else {
+      successful = writeMAGICKTile(dt, filename);
+    }
+    
+    if (successful) {
+      successful = postWriteProcess(filename, keys);
+      showFileInfo("Image writer: ", keys);
+    } else {
+      fLogSevere("IOImage: The underlying writer (MAGICK or MRMS) failed to generate the image.");
+    }
+  } catch (const std::exception& e) {
+    fLogSevere("IOImage: Magick++ threw a fatal exception during image output: {}", e.what());
+  }
+  return successful;
+}
+
+bool
+IOImage::writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename)
+{
+  // FIX: Add loud logging so we aren't guessing why it failed
+  auto grid = std::dynamic_pointer_cast<DataGrid>(dt);
+  if (!grid) {
+    fLogSevere("IOImage requires a flattened DataGrid. Received unsupported type: {}", dt->getDataType());
+    return false;
+  }
+  
+  auto aColorMap = dt->getColorMap();
+  if (!aColorMap) {
+    fLogSevere("IOImage requires a valid ColorMap to paint pixels.");
+    return false;
+  }
+  
+  auto array2D = grid->getFloat2D(Constants::PrimaryDataName);
+  if (!array2D) {
+    fLogSevere("IOImage requires a primary 2D Float array to paint.");
+    return false;
   }
 
-  return successful;
-} // IOImage::encodeDataType
+  auto sizes = grid->getSizes();
+  if (sizes.size() < 2) return false;
+  size_t rows = sizes[0];
+  size_t cols = sizes[1];
+  
+  static bool setup = false;
+  if (!setup) {
+#if HAVE_MAGICK
+    InitializeMagick(NULL);
+#else
+    fLogSevere("GraphicsMagick-c++-devel or ImageMagick-c++-devel is not installed, can't write out!");
+    return false;
+#endif
+    setup = true;
+  }
+
+#if HAVE_MAGICK
+  Magick::Image i;
+  i.size(Magick::Geometry(cols, rows));
+  i.magick("RGBA");
+  i.opacity(false);
+  i.modifyImage();
+  
+  unsigned char r = 0, g = 0, b = 0, a = 0;
+  Magick::PixelPacket * pixel = i.getPixels(0, 0, cols, rows);
+  auto& data = array2D->ref();
+  
+  for (size_t y = 0; y < rows; y++) {
+    for (size_t x = 0; x < cols; x++) {
+      float v = data[y][x];
+      
+      // Paint the pixel based on the colormap
+      aColorMap->getColor(v, r, g, b, a);
+
+      Magick::ColorRGB cc = Magick::ColorRGB(r / 255.0, g / 255.0, b / 255.0);
+      cc.alpha(1.0 - (a / 255.0)); 
+      *pixel = cc;
+      pixel++;
+    }
+  }
+  i.syncPixels();
+  i.write(filename);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool
+IOImage::writeMRMSTile(std::shared_ptr<DataType> dt, const std::string& filename)
+{
+  auto grid = std::dynamic_pointer_cast<DataGrid>(dt);
+  if (!grid) {
+    fLogSevere("IOImage requires a flattened DataGrid for MRMS tile writing. Received unsupported type: {}", dt->getDataType());
+    return false;
+  }
+  
+  auto array2D = grid->getFloat2D(Constants::PrimaryDataName);
+  if (!array2D) {
+    fLogSevere("Missing primary data array for MRMS tile writing.");
+    return false;
+  }
+
+  auto sizes = grid->getSizes();
+  if (sizes.size() < 2) return false;
+  size_t rows = sizes[0];
+  size_t cols = sizes[1];
+  
+  auto& data = array2D->ref();
+  std::vector<float> buffer(rows * cols);
+  size_t index = 0;
+  
+  for (size_t y = 0; y < rows; y++) {
+    for (size_t x = 0; x < cols; x++) {
+      buffer[index++] = data[y][x];
+    }
+  }
+  
+  std::ofstream file(filename, std::ios::binary);
+  if (!file) {
+    fLogSevere("Failed to open file: {}", filename);
+    return false;
+  }
+  file.write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
+  file.close();
+  return true;
+}

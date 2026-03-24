@@ -26,5 +26,11 @@ protected:
 
   /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
+
+  /** Manually set colormap for output */
+  std::string myColorMap;
+
+  /** Collect DataTypes to overlay each other */
+  std::shared_ptr<MultiDataType> myMulti;
 };
 }

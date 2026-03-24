@@ -88,7 +88,7 @@ public:
 
   /** For the GUI experiment a JSON streamed color map format we can apply
    * client size using javascript. */
-  virtual void toJSON(std::ostream&){ }
+  virtual void toJSON(std::ostream&, const std::string& units = ""){ }
 
   /** For the GUI experiment a SVG color map */
   virtual void
@@ -120,7 +120,7 @@ public:
   /** For the GUI experiment a JSON streamed color map format we can apply
    * client size using javascript. */
   virtual void
-  toJSON(std::ostream&) override;
+  toJSON(std::ostream&, const std::string& units) override;
 
   /** Create SVG format */
   virtual void

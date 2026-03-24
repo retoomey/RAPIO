@@ -26,18 +26,6 @@ using namespace rapio;
  * @author Robert Toomey
  **/
 
-// FIXME: colormap test
-std::string colorm   = "";
-std::string path2    = "";
-std::string path3    = "";
-std::string filelist = "";
-bool mult      = false;
-bool mult_list = false;
-int lnum;
-
-auto myMulti = std::make_shared<MultiDataType>();
-std::vector<std::shared_ptr<DataType> > datatypes;
-
 void
 RAPIOTileAlg::declareOptions(RAPIOOptions& o)
 {
@@ -57,14 +45,6 @@ RAPIOTileAlg::declareOptions(RAPIOOptions& o)
 
   // Colormap
   o.optional("map", "", "Colormap");
-
-  /** Variables for other version of multi file read, keeping in case needed */
-  // o.boolean("multi", "Set this option on if using more than one image for a single picture.");
-  // o.boolean("multi_list", "for testing");
-  // o.optional("second_file","","If multi is turned on, enter the second file with this option.");
-  // o.optional("third_file","","If multi is turned on, enter the third file with this option.");
-  // o.optional("number_in_list", "", "number of files in the list, for testing file_list");
-  // o.optional("file_list", "", "If multi is turned on, enter a space-separated string of file names, such as 'firstfile secondfile thirdfile ...'");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -76,8 +56,7 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   // at least is enough I think.  This API might develop more later if needed.
   // "<output mode="tile" suffix="png" cols="500" rows="500" zoom="12" centerLatDegs="35.22" centerLonDegs="-97.44"/>";
 
-  // FIXME: colormap test
-  colorm = o.getString("map");
+  myColorMap = o.getString("map");
 
   myOverride["mode"] = "tile"; // We want tile mode for output
   myOverride["zoom"] = o.getString("zoom");
@@ -102,67 +81,33 @@ void
 RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
 {
   const auto& infos = ConfigParamGroupi::getIndexInputInfo();
-  // Look for any data the system knows how to read...
   auto r = d.datatype<rapio::DataType>();
 
-
-  if (datatypes.size() == infos.size()) { }
-
   if (r != nullptr) {
-    r->setDataAttributeValue("ColorMap", colorm);
-
-    datatypes.push_back(r);
-
-    if (datatypes.size() == infos.size()) {
-      for (int i = 0; i < infos.size(); i++) {
-        myMulti->addDataType(datatypes[i]);
-      }
-      myMulti->setSendToWriterAsGroup(true);
-      writeOutputProduct(r->getTypeName(), myMulti, myOverride); // Typename will be replaced by -O filters
+    if (myMulti == nullptr) {
+      myMulti = std::make_shared<MultiDataType>();
     }
-    /** Code for getting extra input files the old way, saved for testing */
 
-    /*if(mult_list == true){
-     * std::string ftemp = "";
-     * auto myMulti = std::make_shared<MultiDataType>();
-     * myMulti->addDataType(r);
-     * std::vector<std::shared_ptr<DataType>> datatypes;
-     * int count = 0;
-     * for(char & c : filelist){
-     *  if(c != ' '){
-     *    ftemp += c;
-     *  }
-     *  if(c == ' '){
-     *    datatypes.push_back(IODataType::read<DataType>(ftemp));
-     *    datatypes[count]->setDataAttributeValue("ColorMap",colorm);
-     *    myMulti->addDataType(datatypes[count]);
-     *    ftemp = "";
-     *    count++;
-     *  }
-     * }
-     * std::cout << "SIze of datatypes vector is: " << datatypes.size() << "\n";
-     * auto whats_this1 = myMulti->getDataType(0);
-     * std::cout << "TypeName: " << whats_this1->getTypeName() << "\n";
-     * auto whats_this2 = myMulti->getDataType(1);
-     * std::cout << "Size: " << myMulti->size() << "\n";
-     *
-     * myMulti->setSendToWriterAsGroup(true);
-     *
-     * writeOutputProduct(r->getTypeName(), myMulti, myOverride); // Typename will be replaced by -O filters
-     * } */
-    else {
-      // writeOutputProduct(r->getTypeName(), r, myOverride);
+    // Override color map if wanted
+    if (!myColorMap.empty()) {
+      r->setDataAttributeValue("ColorMap", myColorMap);
+    }
+    myMulti->addDataType(r);
+
+    // If we've gotten something for each file (kinda works for i file=1 file=2)
+    if (myMulti->size() == infos.size()) {
+      // Pass the MultiDataType to our helper to get a single, flattened grid
+      auto compositedGrid = DataProjection::createResampledTile(myMulti, myOverride);
+
+      // Write it out
+      if (compositedGrid) {
+        writeOutputProduct(r->getTypeName(), compositedGrid, myOverride);
+      }
+
+      myMulti = nullptr;
     }
   }
-
-
-  /*if (r != nullptr) {
-   * fLogInfo("-->Tile: {}", r->getTypeName());
-   * // Eh do we have to write it to disk?  Should stream it back, right?
-   * // We're gonna want to send it back on the command line right?
-   * writeOutputProduct(r->getTypeName(), r, myOverride); // Typename will be replaced by -O filters
-   * } */
-} // RAPIOTileAlg::processNewData
+}
 
 int
 main(int argc, char * argv[])

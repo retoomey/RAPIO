@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<colorMap>
+    <colorBin upperBound="-99902.5" name="na">
+        <color r="200" g="0" b="200" a="0x22"></color> </colorBin>
+
+    <colorBin upperBound="250" name="RiverValleys">
+        <color r="34" g="139" b="34" a="255" />   <color r="107" g="142" b="35" a="255" />  </colorBin>
+
+    <colorBin upperBound="290" name="LowerPlains">
+        <color r="107" g="142" b="35" a="255" />  <color r="154" g="205" b="50" a="255" />  </colorBin>
+
+    <colorBin upperBound="340" name="MidPlains">
+        <color r="154" g="205" b="50" a="255" />  <color r="240" g="230" b="140" a="255" /> </colorBin>
+
+    <colorBin upperBound="390" name="HighPlains">
+        <color r="240" g="230" b="140" a="255" /> <color r="210" g="180" b="140" a="255" /> </colorBin>
+
+    <colorBin upperBound="infinity" name="Hills">
+        <color r="210" g="180" b="140" a="255" /> <color r="139" g="69" b="19" a="255" />   </colorBin>
+    <unit name="m"> </unit>
+</colorMap>

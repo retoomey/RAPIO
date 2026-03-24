@@ -397,7 +397,8 @@ RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std
     // std::shared_ptr<DataType> myTileData;
     // This assumes the loaded data which at some point we're gonna have to change.
     // We might want to get color map by NAME actually.
-    auto c = myTileData->getColorMap();
+    auto c     = myTileData->getColorMap();
+    auto units = myTileData->getUnits();
     // Bleh need a json color map, right?  So we can apply it on front end side
     // Actually no, it can be a binary format.  It's just less flexible.
     // Also the web guys will want an svg generator as well.  Lots of color map work
@@ -406,7 +407,7 @@ RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std
     // w.setMessage("This should work!", "text/plain");
     // We probably want a json version and a binary version.  Hate to say it.
     //
-    c->toJSON(json);
+    c->toJSON(json, units);
     w.setMessage(json.str());
   }
 }
@@ -438,13 +439,16 @@ RAPIOWebGUI::handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map
 void
 RAPIOWebGUI::serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings)
 {
-  // Write tile to cache using all the settings
   if (!OS::isRegularFile(pathout)) {
-    writeDirectOutput(URL(pathout), myTileData, settings);
-  } else {
-    // LogInfo("IN CACHE:" << pathout << "\n");
+    // Calling the new centralized utility
+    auto tileGrid = DataProjection::createResampledTile(myTileData, settings);
+
+    if (tileGrid) {
+      writeDirectOutput(URL(pathout), tileGrid, settings);
+    }
   }
-  w.setFile(pathout); // Web server file response
+
+  w.setFile(pathout);
 }
 
 void

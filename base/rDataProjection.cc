@@ -4,6 +4,8 @@
 #include "rStrings.h"
 #include "rProject.h"
 #include "rError.h"
+#include "rMultiDataType.h"
+#include "rLatLonGrid.h"
 
 #include <iostream>
 
@@ -144,6 +146,108 @@ DataProjection::getBBOX(
 
   return nullptr;
 } // DataProjection::getBBOX
+
+std::shared_ptr<DataType>
+DataProjection::createResampledTile(std::shared_ptr<DataType> sourceData, std::map<std::string, std::string>& settings)
+{
+  size_t rows, cols;
+  double left, bottom, right, top;
+  auto proj = DataProjection::getBBOX(settings, rows, cols, left, bottom, right, top);
+
+  double deltaLat = (top - bottom) / rows;
+  double deltaLon = (right - left) / cols;
+
+  // 1. Collect all projections (handles both single layers and MultiDataTypes)
+  std::vector<std::shared_ptr<DataProjection> > projections;
+  std::string colorMapName = "Unknown";
+  std::string units        = "dimensionless";
+  std::string typeName     = "CompositeTile";
+  Time tileTime = Time::CurrentTime();
+
+  if (auto multiSource = std::dynamic_pointer_cast<MultiDataType>(sourceData)) {
+    for (size_t i = 0; i < multiSource->size(); ++i) {
+      auto singleSource = multiSource->getDataType(i);
+      if (singleSource) {
+        auto p = singleSource->getProjection();
+        if (p) { projections.push_back(p); }
+
+        // Inherit metadata from the top layer
+        if (i == 0) {
+          // FIXME: Move into core this happens a lot
+          if (!singleSource->getString("ColorMap-value", colorMapName)) {
+            colorMapName = singleSource->getTypeName();
+          }
+          units    = singleSource->getUnits();
+          typeName = singleSource->getTypeName();
+          tileTime = singleSource->getTime();
+        }
+      }
+    }
+  } else {
+    auto p = sourceData->getProjection();
+    if (p) { projections.push_back(p); }
+    if (!sourceData->getString("ColorMap-value", colorMapName)) {
+      colorMapName = sourceData->getTypeName();
+    }
+    units    = sourceData->getUnits();
+    typeName = sourceData->getTypeName();
+    tileTime = sourceData->getTime();
+  }
+
+  if (projections.empty()) {
+    fLogSevere("No valid projections found in source data! Skipping.");
+    return nullptr;
+  }
+
+  LLH nwCorner(top, left, 0.0);
+  auto tileGrid = LatLonGrid::Create(typeName, units, nwCorner, tileTime, deltaLat, deltaLon, rows, cols);
+
+  tileGrid->setDataAttributeValue("ColorMap", colorMapName);
+  auto& destData = tileGrid->getFloat2DRef();
+
+  // --------------------------------------------------------------
+  // 2. The Compositing Loop
+  // FIXME: Could make it actually mini-merge or something, or
+  // provide a visitor for doing different things
+  double atLat = top;
+
+  for (size_t y = 0; y < rows; ++y) {
+    double atLon = left;
+    for (size_t x = 0; x < cols; ++x) {
+      double queryLat = atLat, queryLon = atLon;
+      if (proj) {
+        proj->xyToLatLon(atLon, atLat, queryLat, queryLon);
+      }
+
+      // Top-down flattening: iterate backwards so the LAST added layer is ON TOP
+      float final_v = Constants::DataUnavailable;
+
+      for (auto it = projections.rbegin(); it != projections.rend(); ++it) {
+        float temp_v = (*it)->getValueAtLL(queryLat, queryLon);
+
+        if (Constants::isGood(temp_v)) {
+          final_v = temp_v;
+          break; // Found our top-most valid pixel, stop digging!
+        }
+
+        // If it's a sentinel (like MissingData), we temporarily hold onto it
+        // if we don't have anything better yet, but we KEEP SEARCHING lower
+        // layers in case they have a good pixel.
+        if (final_v == Constants::DataUnavailable) {
+          final_v = temp_v;
+        }
+      }
+
+      destData[y][x] = final_v;
+
+      atLon += deltaLon;
+    }
+    atLat -= deltaLat;
+  }
+  // --------------------------------------------------------------
+
+  return tileGrid;
+} // DataProjection::createResampledTile
 
 bool
 DataProjection::getLLCoverage(const PTreeNode& fields, LLCoverage& c)

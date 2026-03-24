@@ -92,12 +92,13 @@ NullColorMap::getColor(double v, unsigned char& r, unsigned char& g, unsigned ch
 }
 
 void
-DefaultColorMap::toJSON(std::ostream& o)
+DefaultColorMap::toJSON(std::ostream& o, const std::string& units)
 {
   std::shared_ptr<PTreeData> theJson = std::make_shared<PTreeData>();
   auto tree = theJson->getTree();
 
   tree->put("Name", myName);
+  tree->put("Units", units);
 
   // Create the array of upperbounds
   PTreeNode upperBounds;
