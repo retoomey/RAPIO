@@ -7,6 +7,7 @@
 #include "rMultiDataType.h"
 #include "rStrings.h"
 #include "rDataFilter.h"
+#include "rIOPostProcessor.h"
 #include "rOS.h"
 
 using namespace rapio;
@@ -399,51 +400,15 @@ IODataType::postWriteProcess(
   const std::string                 & outfile,
   std::map<std::string, std::string>& keys)
 {
-  bool successful = true;
+  // The 'outfile' parameter here is the temporary file the module just wrote to.
+  // keys["filename"] holds the intended final destination.
+  // Pass onto the post processor pipeline to handle
 
-  std::string finalfile = outfile;
+  IOPostProcessor postProcessor;
 
-  // -----------------------------------------------------------------------
-  // Post compression pass if wanted
-  const std::string compress = keys["compression"];
+  postProcessor.buildPipeline(keys);
 
-  if (!compress.empty()) {
-    std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(compress, "IO writer");
-    if (f != nullptr) {
-      std::string tmpgz = OS::getUniqueTemporaryFile(compress + "-");
-
-      successful = f->applyURL(finalfile, tmpgz, keys);
-      if (successful) {
-        fLogDebug("Compress {} with '{}' to {}", finalfile, compress, tmpgz);
-        OS::deleteFile(finalfile);
-        finalfile = tmpgz; // now use the new tmp
-        // Update final filename to the compressed one
-        // FIXME: Maybe directfile we don't add compression suffix?
-        // However, stuff like ioimage requires the suffix to determine what's written
-        keys["filename"] = keys["filename"] + "." + compress;
-      } else {
-        fLogDebug("Unable to compress {} with '{}' to {}", finalfile, compress, tmpgz);
-      }
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // Migrate file async to final location
-  fLogDebug("Migrate {} to {}", finalfile, keys["filename"]);
-  successful = OS::moveFile(finalfile, keys["filename"]);
-  if (!successful) {
-    fLogSevere("Unable to move {} to {}", finalfile, keys["filename"]);
-  }
-
-  // -----------------------------------------------------------------------
-  // Post write command on a written file (comes from postwrite key)
-  if (successful) {
-    const std::string postCommand = keys["postwrite"];
-    const std::string finalFile   = keys["filename"];
-    successful = OS::runCommandOnFile(postCommand, finalFile, true);
-  }
-
-  return successful;
+  return postProcessor.run(outfile, keys);
 } // IODataType::postWriteProcess
 
 void

@@ -77,6 +77,7 @@ rIODataType.h
 rIOFakeDataGenerator.h
 rIOFakeDataType.h
 rIOFile.h
+rIOPostProcessor.h
 index/rIOIndex.h
 rIOJSON.h
 rIOURL.h
@@ -226,6 +227,7 @@ rIODataType.cc
 rIOFakeDataGenerator.cc
 rIOFakeDataType.cc
 rIOFile.cc
+rIOPostProcessor.cc
 index/rIOIndex.cc
 rIOJSON.cc
 rIOURL.cc

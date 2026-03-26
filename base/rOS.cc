@@ -289,8 +289,53 @@ OS::findValidExe(const std::vector<std::string>& list)
 }
 
 int
+OS::runProcessArgs(const std::vector<std::string>& argsIn, std::vector<std::string>& data)
+{
+  data.clear();
+  std::string error = "None";
+
+  try {
+    namespace p  = boost::process;
+    namespace fs = boost::filesystem;
+
+    if (argsIn.empty()) { return -1; }
+
+    std::vector<std::string> args = argsIn; // Copy to mutate
+    std::string command = args[0];
+    args.erase(args.begin());
+
+    const std::string absolutePath = validateExe(command);
+    if (absolutePath.empty()) {
+      error = "Command not found or not executable: '" + command + "'";
+    } else {
+      const auto spath = fs::absolute(absolutePath);
+      p::ipstream is;
+      p::child c(spath, p::args(args), (p::std_out & p::std_err) > is);
+      std::string line;
+      while (c.running() && std::getline(is, line) && !line.empty()) {
+        data.push_back(line);
+      }
+      c.wait();
+      int childError = c.exit_code();
+      fLogInfo("({}) Running command '{}'", childError, command);
+      return childError;
+    }
+  } catch (const std::exception& e) {
+    error = e.what();
+  }
+  fLogSevere("Failure running command. Error: '{}'", error);
+  return -1;
+} // OS::runProcessArgs
+
+int
 OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
 {
+  std::vector<std::string> args;
+
+  Strings::splitWithoutEnds(commandin, ' ', &args);
+  return runProcessArgs(args, data);
+
+  #if 0
   data.clear();
   std::string error = "None";
 
@@ -350,6 +395,8 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
   // Failure
   fLogSevere("Failure running command '{}' Error: '{}'", commandin, error);
   return -1;
+
+  #endif // if 0
 } // OS::runProcess
 
 std::vector<std::string>
@@ -668,6 +715,48 @@ OS::runCommandOnFile(const std::string& postCommandIn, const std::string& finalF
   // Run a command with macro for %filename%.  Could generalize even more I think.
   // This is called by postwrite option for data files, and postfml for the fml notifier
   // though it is becoming more generalized
+  //
+  if (!postCommandIn.empty()) {
+    std::string postCommand = postCommandIn;
+    // ----------------------------------------------------------------
+    // Macros.  Could be in configuration file?  This is our silly standard ldm insert
+    //
+    #if 0
+    if (postCommandIn == "ldm") {
+      postCommand = "pqinsert -v -f EXP %filename%";
+    }
+    #endif
+
+    // Parse into arguments BEFORE replacing the filename
+    std::vector<std::string> args;
+    Strings::splitWithoutEnds(postCommand, ' ', &args);
+
+    // ----------------------------------------------------------------
+    // Key substitution. Usually, things like final filename would be important
+    // for post success
+    for (auto& arg : args) {
+      Strings::replace(arg, "%filename%", finalFile);
+    }
+
+
+    // ----------------------------------------------------------------
+    // Run command and log the output
+    //
+    std::vector<std::string> output;
+    bool successful = (OS::runProcessArgs(args, output) != -1);
+    if (captureOut && successful) {
+      for (const auto& i: output) {
+        fLogInfo("   {}", i);
+      }
+    }
+    return successful;
+  }
+  return true;
+
+  #if 0
+  // Run a command with macro for %filename%.  Could generalize even more I think.
+  // This is called by postwrite option for data files, and postfml for the fml notifier
+  // though it is becoming more generalized
 
   if (!postCommandIn.empty()) {
     std::string postCommand = postCommandIn;
@@ -698,4 +787,6 @@ OS::runCommandOnFile(const std::string& postCommandIn, const std::string& finalF
     return successful;
   }
   return true;
+
+  #endif // if 0
 } // OS::runCommandOnFile

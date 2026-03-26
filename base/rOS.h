@@ -126,6 +126,14 @@ public:
   findValidExe(const std::vector<std::string>& list);
 
   /**
+   * Run a OS process taking a pre-parsed argument vector,
+   * return true is successful and lines of output
+   * Returns exit code of process or -1 on general failure
+   */
+  static int
+  runProcessArgs(const std::vector<std::string>& args, std::vector<std::string>& output);
+
+  /**
    * Run a OS process, return true is successful and lines of output
    * Returns exit code of process or -1 on general failure
    */
@@ -139,6 +147,10 @@ public:
    */
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
+
+  /** Run a command on a file supporting file macros */
+  static bool
+  runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut = true);
 
   /**
    * Run a capturable function in our code.  For example, the wgrib2 c function api
@@ -349,9 +361,5 @@ public:
   /** Determine if we're running in WSL window's subsystem for linux  or not */
   static bool
   isWSL();
-
-  /** Run a command on a file supporting file macros */
-  static bool
-  runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut = true);
 };
 }

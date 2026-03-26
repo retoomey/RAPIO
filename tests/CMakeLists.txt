@@ -24,6 +24,7 @@ add_executable(testrapio
   rTestFactory.cc
   rTestGrid.cc
   rTestIODataType.cc
+  rTestIOPostProcessor.cc
   rTestMain.cc
   rTestSparseVector.cc
   rTestTime.cc
