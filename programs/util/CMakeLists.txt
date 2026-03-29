@@ -58,6 +58,17 @@ install(TARGETS rMakeFakeRadarData
 )
 
 ##################################################################
+# MakeTerrain 
+add_executable(rMakeTerrain
+  rMakeTerrain.cc
+)
+target_link_libraries(rMakeTerrain rapio)
+target_include_directories(rMakeTerrain PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+install(TARGETS rMakeTerrain
+   DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+##################################################################
 # Single tile generation 
 #
 add_executable(rGetTile

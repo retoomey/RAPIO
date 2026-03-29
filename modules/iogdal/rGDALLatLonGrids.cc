@@ -102,8 +102,8 @@ GDALLatLonGrids::readGDALGrid(const std::string& filepath)
   // FIXME: Should we pass down the name, etc.? How to get units, etc.
   // from the data.
   auto latLonGridSP = LatLonGrid::Create(
-    "TerrainHeight",       
-    "m",                   
+    "DEM",  // Make match our older files      
+    "Meters",                   
     location,
     dataTime,
     latSpacingDegs,

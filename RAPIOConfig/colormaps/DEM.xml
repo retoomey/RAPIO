@@ -1,0 +1,60 @@
+<?xml version="1.0" ?>
+<colorMap>
+    <colorBin upperBound="-99902.5" name="na">
+        <color r="200" g="0" b="200" a="0x22" /> 
+    </colorBin>
+
+    <colorBin upperBound="-500" name="-500">
+        <color r="85" g="107" b="47" a="255" />  <color r="0" g="0" b="0" a="255" /> 
+    </colorBin>
+
+    <colorBin upperBound="-100" name="-100">
+        <color r="47" g="79" b="79" a="255" />    <color r="85" g="107" b="47" a="255" />
+    </colorBin>
+
+    <colorBin upperBound="0" name="0">
+        <color r="85" g="107" b="47" a="255" />   <color r="0" g="100" b="0" a="255" />
+    </colorBin>
+
+    <colorBin upperBound="50" name="50">
+        <color r="0" g="100" b="0" a="255" />     <color r="34" g="139" b="34" a="255" />   
+    </colorBin>
+
+    <colorBin upperBound="150" name="150">
+        <color r="34" g="139" b="34" a="255" />   <color r="70" g="140" b="35" a="255" />   
+    </colorBin>
+
+    <colorBin upperBound="250" name="250">
+        <color r="70" g="140" b="35" a="255" />   <color r="107" g="142" b="35" a="255" />  
+    </colorBin>
+
+    <colorBin upperBound="340" name="340">
+        <color r="107" g="142" b="35" a="255" />  <color r="154" g="205" b="50" a="255" />  
+    </colorBin>
+
+    <colorBin upperBound="600" name="600">
+        <color r="154" g="205" b="50" a="255" />  <color r="240" g="230" b="140" a="255" /> 
+    </colorBin>
+
+    <colorBin upperBound="1000" name="1000">
+        <color r="240" g="230" b="140" a="255" /> <color r="210" g="180" b="140" a="255" /> 
+    </colorBin>
+
+    <colorBin upperBound="2000" name="2000">
+        <color r="210" g="180" b="140" a="255" /> <color r="180" g="130" b="80" a="255" />  
+    </colorBin>
+
+    <colorBin upperBound="3000" name="3000">
+        <color r="180" g="130" b="80" a="255" />  <color r="139" g="69" b="19" a="255" />   
+    </colorBin>
+
+    <colorBin upperBound="4000" name="4000">
+        <color r="139" g="69" b="19" a="255" />   <color r="160" g="150" b="150" a="255" /> 
+    </colorBin>
+
+    <colorBin upperBound="infinity" name="> 4000">
+        <color r="160" g="150" b="150" a="255" /> <color r="255" g="255" b="255" a="255" /> 
+    </colorBin>
+
+    <unit name="m"> </unit>
+</colorMap>
