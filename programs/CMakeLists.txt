@@ -30,15 +30,11 @@ endif (BUILD_WEB_MODULE)
 ##################################################################
 # Algorithms
 #
+add_subdirectory(volume) # Main focus is processVolume on 3D
+add_subdirectory(polar)  # Main focus is PolarAlgorithm radial sets
+
 add_subdirectory(fusion)
 add_subdirectory(nse)
-add_subdirectory(polar)
-
-##################################################################
-# Modular Algorithms (callable from groups such as FusionAlgs)
-#
-add_subdirectory(3DVIL)
-add_subdirectory(3DMaxAGL)
 
 ##################################################################
 # Utility/GUI stuff

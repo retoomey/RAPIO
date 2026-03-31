@@ -29,6 +29,9 @@ option(BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
 # Examples with option to turn off since it will grow probably
 option(BUILD_EXAMPLES "Build example directory rexample" YES)
 
+# Build rTest tests
+option(BUILD_TESTS "Build unit tests and testing tree" OFF)
+
 # These two for NSSL common data files
 option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
 option(BUILD_NIDS_MODULE "Build NIDS(LevelIII) module" YES)
@@ -249,6 +252,16 @@ append_RAPIO_HEADERS("webserver/" "server_http.hpp;asio_compatibility.hpp;mutex.
 # Create the RAPIO.h file (after all append_RAPIO_HEADER)
 configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
+# Tests are conditional based on the BUILD_TESTS flag.
+# Make sure enable_testing called before any add_subdirectories that have
+# possible tests in them.
+# Use this and then run "ctest -V" in the build directory to get started.
+# ctest calls all the test binaries in the system
+if(BUILD_TESTS)
+  # enable_testing() must be called at the root level so ctest works globally
+  enable_testing() 
+endif()
+
 ###########################################################################
 # Directories
 add_subdirectory(base)
@@ -346,9 +359,9 @@ endif (BUILD_HMRG_MODULE)
 # Build subprograms.
 add_subdirectory(programs)
 
-# Tests are conditional.  We 'could' make a flag...here we just have to manual
-# go into directory and make.  Not sure what the cmake community does yet
-add_subdirectory(tests EXCLUDE_FROM_ALL)
+if(BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
 
 if (BUILD_WEB_MODULE)
   ExternalProject_Add(

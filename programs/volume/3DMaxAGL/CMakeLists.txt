@@ -25,14 +25,16 @@ install(TARGETS rMaxAGL
 )
 
 ##################################################################
-# For the moment build the test always.
-# FIXME: update our code to have a test flag and ctest work, etc.
-# Going to fix that in a separate check-in
-add_executable(rTestMaxAGL
-  rTestMaxAGL.cc
-)
-target_link_libraries(rTestMaxAGL PRIVATE rapio rapioalgMaxAGL)
-install(TARGETS rTestMaxAGL
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
+# Build tests conditionally
+if(BUILD_TESTS)
+  add_executable(rTestMaxAGL
+    rTestMaxAGL.cc
+  )
+  target_link_libraries(rTestMaxAGL PRIVATE rapio rapioalgMaxAGL)
+  
+  # Register the test with CTest
+  add_test(NAME rTestMaxAGL COMMAND rTestMaxAGL)
+  
+  # Optional: Keep the install if you actually distribute the test binaries
+  # install(TARGETS rTestMaxAGL DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()

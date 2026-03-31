@@ -8,9 +8,6 @@ link_directories(../../lib)
 # Need this to add the BOOST setting or the rError.cc will complain about v2
 #add_definitions(-DBOOST_LOG_DYN_LINK)
 
-# Build source as a shared library
-enable_testing()
-
 # Guard against multiple inclusions or redundant setup
 if(NOT TARGET Boost::unit_test_framework)
   find_package(Boost 1.66 REQUIRED COMPONENTS unit_test_framework)
