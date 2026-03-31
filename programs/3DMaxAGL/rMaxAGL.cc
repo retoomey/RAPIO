@@ -103,6 +103,8 @@ MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input)
   for (size_t i = 0; i < numLats; ++i, atLat -= deltaLat) {
     AngleDegs atLon = startLon;
     for (size_t j = 0; j < numLons; ++j, atLon += deltaLon) {
+      float mask = Constants::DataUnavailable;
+
       // 1. Get Terrain MSL at this coordinate
       double terrHeightM = myTerrainProj->getValueAtLL(atLat, atLon);
       float terrHeightKm = (!Constants::isGood(terrHeightM)) ? 0.0f : (terrHeightM / 1000.0f);
@@ -126,11 +128,15 @@ MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input)
               foundValid = true;
             }
           }
+          // If even a single data value exists in column, make mask missing
+          if (v != Constants::DataUnavailable) {
+            mask = Constants::MissingData;
+          }
         }
       }
 
-      // 4. Assign the max value (or missing if column was completely empty)
-      max2D[i][j] = foundValid ? maxVal : Constants::MissingData;
+      // 4. Assign the max value (or mask if column had no contributing value)
+      max2D[i][j] = foundValid ? maxVal : mask;
     }
   }
 

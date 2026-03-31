@@ -38,6 +38,7 @@ add_subdirectory(polar)
 # Modular Algorithms (callable from groups such as FusionAlgs)
 #
 add_subdirectory(3DVIL)
+add_subdirectory(3DMaxAGL)
 
 ##################################################################
 # Utility/GUI stuff
