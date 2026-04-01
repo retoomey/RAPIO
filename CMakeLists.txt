@@ -261,6 +261,11 @@ if(BUILD_TESTS)
   # enable_testing() must be called at the root level so ctest works globally
   enable_testing() 
 endif()
+# Dump all build artifacts into a central location in the build tree
+# This mimics the install tree and solves dynamic plugin loading for CTest
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ###########################################################################
 # Directories

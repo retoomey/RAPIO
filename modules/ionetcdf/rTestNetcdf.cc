@@ -111,4 +111,7 @@ main(int argc, char * argv[])
   RAPIONetcdfTestAlg alg = RAPIONetcdfTestAlg();
 
   alg.executeFromArgs(argc, argv);
+
+  // Bubble the event loop's final status up to CTest
+  return rapio::EventLoop::getExitCode();
 }

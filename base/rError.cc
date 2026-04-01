@@ -84,6 +84,14 @@ Log::initialize()
     // Look for logging modules...
     Factory<Logger>::introduceLazy("spd", "librapiologspd.so", "createRAPIOLOG");
     myLog = Factory<Logger>::get("spd", "Logger: spd loading");
+    // We can seg fault if not installed because now we require a module
+    // logger to run.  We should make a logger class just wrapping std::cout
+    // that's built into rapio logging.  At least then we get the help and config
+    // fail messages...
+    if (myLog == nullptr){
+      std::cout << "Can't find the spd logging module, exiting.\n";
+      exit(1);
+    }
 
     // Set fallback log pattern
     setLogPattern("[%TIME%] %MESSAGE%");

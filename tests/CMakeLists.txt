@@ -13,7 +13,7 @@ if(NOT TARGET Boost::unit_test_framework)
   find_package(Boost 1.66 REQUIRED COMPONENTS unit_test_framework)
 endif()
 
-add_executable(testrapio
+add_executable(rTestRAPIO
   rTestArray.cc
   rTestBimap.cc
   rTestBinaryIO.cc
@@ -32,24 +32,14 @@ add_executable(testrapio
   ../programs/fusion/rStage2Data.cc
 )
 
-target_link_libraries(testrapio PRIVATE
+target_link_libraries(rTestRAPIO PRIVATE
   Boost::unit_test_framework
   rapio
   ZLIB::ZLIB
 )
 
-add_executable(rTestNetcdf
-  rTestNetcdf.cc
-)
-
-# Link to other libraries
-target_link_libraries(rTestNetcdf
-  rapio
-)
-
 # Files we need in the build folder
-configure_file(runtests.sh runtests.sh)
 configure_file(testxml.xml testxml.xml)
 configure_file(testjson.json testjson.json)
 
-add_test(NAME RAPIOTESTS COMMAND testrapio --log_level=test_suite)
+add_test(NAME rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)
