@@ -1,8 +1,6 @@
 #pragma once
-
-/** RAPIO API */
-#include <RAPIO.h>
-
+#include <rVolumeAlgorithm.h>
+#include <rLatLonHeightGrid.h>
 #include <vector>
 
 namespace rapio {
@@ -214,12 +212,12 @@ doEchoBottom(
  * and allow say fusion to call these as modules, OR someone to run it standalone
  * with a 3D cube archive.
  */
-class VIL : public RAPIOAlgorithm
+class VIL : public VolumeAlgorithm
 {
 public:
 
   /** Create the vil algorithm */
-  VIL(){ }
+  VIL() : VolumeAlgorithm("3DVIL"){ }
 
   /** Declare all algorithm options */
   virtual void
@@ -229,26 +227,23 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
-  /** Process a new record/datatype */
-  virtual void
-  processNewData(rapio::RAPIOData& d) override;
-
-  /** Handle 3D cube */
-  virtual void
-  processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p);
-
   /** initialize */
   void
   initialize();
 
 protected:
+
+  /** Handle 3D cube */
+  virtual void
+  processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p) override;
+
   /** Stuff on start up */
   void
   firstDataSetup();
 
   /** Checkout output grids are initialized to current coverage */
-  void
-  checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input);
+  virtual void
+  checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input) override;
 
   /** Precalculated vil weights */
   float myVilWeights[100];

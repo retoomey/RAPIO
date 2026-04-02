@@ -87,7 +87,9 @@ rIOXML.h
 datatype/rLatLonArea.h
 datatype/rLatLonGrid.h
 datatype/rLatLonGridProjection.h
+datatype/rLatLonGridIterator.h
 datatype/rLatLonHeightGrid.h
+datatype/rLatLonHeightGridIterator.h
 datatype/rLatLonHeightGridProjection.h
 rLength.h
 rLogger.h
@@ -149,6 +151,7 @@ rTime.h
 rUnit.h
 rURL.h
 rValueCompressor.h
+rVolumeAlgorithm.h
 rVolumeValue.h
 rVolumeValueResolver.h
 index/rWebIndex.h
@@ -237,7 +240,9 @@ rIOXML.cc
 datatype/rLatLonArea.cc
 datatype/rLatLonGrid.cc
 datatype/rLatLonGridProjection.cc
+datatype/rLatLonGridIterator.cc
 datatype/rLatLonHeightGrid.cc
+datatype/rLatLonHeightGridIterator.cc
 datatype/rLatLonHeightGridProjection.cc
 rLength.cc
 rLogger.cc
@@ -294,6 +299,7 @@ rTimeDuration.cc
 rUnit.cc
 rURL.cc
 rValueCompressor.cc
+rVolumeAlgorithm.cc
 rVolumeValueResolver.cc
 index/rWebIndex.cc
 watcher/rWebIndexWatcher.cc

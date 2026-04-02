@@ -1,12 +1,9 @@
 #include "r3DVil.h"
+#include "rLatLonHeightGridIterator.h"
+#include "rDataTypeHistory.h"
+#include "rLatLonGrid.h"
 
 using namespace rapio;
-
-
-// I'm going to use 3DVil to refactor/improve the alg API for dynamic modules
-//
-// FIXME: This should macro.  Also, maybe the pointer can be the base type?
-// There'a ton of cleanup I need to do.  Baby steps here.
 
 // Library dynamic link to create this factory
 extern "C"
@@ -20,12 +17,121 @@ createRAPIOAlg(void)
   return reinterpret_cast<RAPIOAlgorithm *>(z);
 }
 };
-
 // end dynamic module
+
+class VILCallback : public LatLonHeightGridCallback {
+public:
+  VILCallback(const LatLonHeightGrid& input,
+    const float * vilWeights, const std::vector<float>& hls,
+    int h263, int h233,
+    ArrayFloat2DPtr vilOut, ArrayFloat2DPtr vildOut,
+    ArrayFloat2DPtr viiOut, ArrayFloat2DPtr gustOut)
+    : inputGrid(input), myVilWeights(vilWeights), hlevels(hls),
+    myHeight263(h263), myHeight233(h233),
+    vilgrid(vilOut), vildgrid(vildOut), viigrid(viiOut), maxgust(gustOut),
+    numHts(hls.size()){ }
+
+  void
+  handleBeginColumn(LatLonHeightGridIterator * it) override
+  {
+    vil   = 0.0f;
+    vii   = 0.0f;
+    lastH = hlevels[0];
+    d     = Constants::DataUnavailable;
+
+    // Query NSE grids at the current column's coordinates
+    float atLat = it->getCurrentLatDegs();
+    float atLon = it->getCurrentLonDegs();
+
+    H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
+    H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
+  }
+
+  void
+  handleVoxel(LatLonHeightGridIterator * it) override
+  {
+    float v        = it->getValue();
+    float currentH = hlevels[it->getCurrentLayerIdx()];
+
+    if (v == Constants::DataUnavailable) {
+      lastH = currentH;
+      return;
+    }
+
+    d = Constants::MissingData; // We have at least one valid/missing voxel
+
+    if (Constants::isGood(v)) {
+      int vpos    = (int) std::fabs(v);
+      float hdiff = currentH - lastH;
+
+      int vint = std::min(vpos, vil_upper);
+      if (vint < 100) {
+        vil += myVilWeights[vint] * hdiff;
+      }
+
+      if ((vpos < 100) && ((H263K < currentH) && (currentH < H233K))) {
+        vii += myVilWeights[vpos] * hdiff;
+      }
+    }
+    lastH = currentH;
+  }
+
+  void
+  handleEndColumn(LatLonHeightGridIterator * it) override
+  {
+    size_t i = it->getCurrentLatIdx();
+    size_t j = it->getCurrentLonIdx();
+
+    // 1. Calculate EchoTop 18 using the original function
+    float et18 = doEchoTop(inputGrid, 18.0, hlevels, numHts, i, j);
+
+    // 2. Finalize VIL, VILD, and Gust calculations
+    float vild, w;
+
+    if (vil <= 0) {
+      vil  = d;
+      vild = d;
+      w    = d;
+    } else {
+      vil = 0.00000344f * vil;
+      if (et18 > 0.0f) {
+        vild = vil / et18;
+        const float et2 = et18 * et18;
+        w = std::sqrt(std::max(0.0f, (15.780608f * vil) - (0.0000023810964f * et2)));
+      } else {
+        vild = d;
+        w    = d;
+      }
+    }
+
+    vii = 0.00000607f * vii;
+    if (vii <= 0.5f) { vii = d; }
+
+    // 3. Write to the four output grids
+    (*vilgrid)[i][j]  = vil;
+    (*vildgrid)[i][j] = vild;
+    (*viigrid)[i][j]  = vii;
+    (*maxgust)[i][j]  = w;
+  } // handleEndColumn
+
+private:
+  const int vil_upper = 56;
+  const LatLonHeightGrid& inputGrid;
+  const float * myVilWeights;
+  const std::vector<float>& hlevels;
+  int myHeight263, myHeight233;
+  ArrayFloat2DPtr vilgrid, vildgrid, viigrid, maxgust;
+  size_t numHts;
+
+  float vil, vii, lastH, d;
+  float H263K, H233K;
+};
 
 void
 VIL::declareOptions(RAPIOOptions& o)
 {
+  VolumeAlgorithm::declareOptions(o); // Gets terrain, general volume alg stuff.
+
   o.setDescription(
     "RAPIO 3D VIL. Runs on 3D cubes.");
   o.setAuthors("MRMS");
@@ -33,17 +139,8 @@ VIL::declareOptions(RAPIOOptions& o)
 
 void
 VIL::processOptions(RAPIOOptions& o)
-{ }
-
-void
-VIL::processNewData(rapio::RAPIOData& d)
 {
-  // We can handle LatLonHeightGrids
-  auto llg = d.datatype<rapio::LatLonHeightGrid>();
-
-  if (llg != nullptr) {
-    processVolume(llg, this);
-  }
+  VolumeAlgorithm::processOptions(o); // Gets terrain, general volume alg stuff.
 }
 
 void
@@ -117,15 +214,11 @@ VIL::firstDataSetup()
 void
 VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
 {
-  // FIXME: Wondering if we should just have an array of output LatLonGrids
-  // and use enum
   auto& llg = *input; // assuming non-null
   const Time forTime = llg.getTime();
   const LLCoverageArea coverage = llg.getLLCoverageArea();
 
-  auto create = ((myVilGrid == nullptr) || (myCachedCoverage != coverage));
-
-  if (!create) {
+  if (!checkCoverageChange(input) && (myVilGrid != nullptr)) {
     fLogInfo("Using cached grids at time {}", forTime);
     // Update the time to the input for output
     myVilGrid->setTime(forTime);
@@ -154,191 +247,43 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   myMaxGust = LatLonGrid::Create("MaxGustEstimate", "m/s", forTime, coverage);
   myMaxGust->setDataAttributeValue("ColorMap", "WindSpeed");
   myMaxGust->setDataAttributeValue("SubType", "");
-
-  myCachedCoverage = coverage;
 } // VIL::checkOutputGrids
 
 void
-VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p)
+VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
 {
-  // Now the real question is WHY can't the VIL algorithm run standalone, taking
-  // a 3D cube input?  So it 'should' be a regular algorithm, right?
-  // In other words, this could be a processNewData within a regular algorithm
+  // Terrain and Output Grids are handled before we arrive here.
+  // We just need to make sure our static weight table is initialized.
   firstDataSetup();
 
-  auto& llg = *input; // assuming non-null
-
-  #if 0
-  myNSEGrid->updateTime(grid.getTime() );
-  #endif
-
-  constexpr int vil_upper = 56;
-
-  // --------------------------------------------
-  // Gather original grid information and check
-  // cached outputs
-  //
+  auto& llg = *input;
   const Time forTime = llg.getTime();
+
   fLogInfo("Computing VIL at {}", forTime);
 
-  const size_t numLats = llg.getNumLats();
-  const size_t numLons = llg.getNumLons();
-  const size_t numHts  = llg.getNumLayers();
-  const auto l         = llg.getLocation();
-  const LLCoverageArea coverage = llg.getLLCoverageArea();
-  checkOutputGrids(input);
-
-  // Get the primary arrays of the datatypes
-  // This differs from MRMS since we can have multiple arrays per DataType
-  auto& grid     = input->getFloat3DRef();
-  auto& vilgrid  = myVilGrid->getFloat2DRef();
-  auto& vildgrid = myVildGrid->getFloat2DRef();
-  auto& viigrid  = myViiGrid->getFloat2DRef();
-  auto& maxgust  = myMaxGust->getFloat2DRef();
-
-  // FIXME: why copying?
-  // Go through the heights and set up the height difference
-  // to the next lower level.
-  std::vector<float> hlevels; // , height_diff;
-  for (size_t h = 0; h < numHts; h++) {
-    auto layerValue = llg.getLayerValue(h);
-    hlevels.push_back(layerValue);
-    // fLogInfo("Pushed back {}", layerValue);
-  }
-  // fLogSevere("Done with test");
-  // grid.setLayerValue(10, 123456); works.
-  // vilgrid->setLayerValue(0, 6000); // Should change height, right?
-  // p->writeOutputProduct("TESTING", vilgrid);
-
   #if 0
-  const code::LatLonGrid& h263grid = myNSEGrid->getGrid(Height_263K);
-  const code::LatLonGrid& h233grid = myNSEGrid->getGrid(Height_233K);
+  const size_t numHts = llg.getNumLayers();
+  std::vector<float> hlevels(numHts);
+
+  for (size_t h = 0; h < numHts; h++) {
+    hlevels[h] = llg.getLayerValue(h);
+  }
   #endif
 
-  // MRMS maps the nse grids to conus then uses direct index.  Not sure
-  // if we'll do that or query directly...
-  // FIXME: Really feel like we need a LLG lat/lon iterator class of some sort
-  // FIXME: Having to do lat/lon iteration also seems bleh
-  AngleDegs deltaLat = llg.getLatSpacing();
-  AngleDegs deltaLon = llg.getLonSpacing();
-  LLH nw = llg.getTopLeftLocationAt(0, 0);
-  AngleDegs startLat = nw.getLatitudeDeg() - (deltaLat / 2.0);  // move south (lat decreasing)
-  AngleDegs startLon = nw.getLongitudeDeg() + (deltaLon / 2.0); // move east (lon increasing)
-  AngleDegs atLat    = startLat;
-  for (size_t i = 0; i < numLats; ++i, atLat -= deltaLat) {
-    AngleDegs atLon = startLon;
-    for (size_t j = 0; j < numLons; ++j, atLon += deltaLon) {
-      // Default data value will be unavailable unless we find a missing or data value
-      float d = Constants::DataUnavailable;
+  // Set up and run the callback
+  VILCallback myCallback(
+    llg, myVilWeights, myHLevels, myHeight263, myHeight233,
+    myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
+    myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
+  );
 
-      // Compute Echo Top Interpolated (18 dBZ) using utility function
-      // This is inline for speed here
-      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
-      // const float et18 = 20;
-      // const float et18 = doEchoTop(grid, 18.0, hlevels, numHts, i, j);
-      // FIXME: This might be slow
-      const float et18 = doEchoTop(*input, 18.0, hlevels, numHts, i, j);
+  LatLonHeightGridIterator iter(llg);
 
-      // Query values from NSE grid
-      const float H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
-      const float H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
+  iter.iterateUpColumns(myCallback);
 
-      // For each height add up the sum parts of VIL and VII
-      float vii = 0;
-      float vil = 0;
-
-      float lastH = hlevels[0];
-      for (size_t k = 0; k < numHts; ++k) {
-        // The data value we're interested in
-        const float v = grid[k][i][j];
-
-        // Skip on unavailable data...
-        if (v == Constants::DataUnavailable) {
-          lastH = hlevels[k];
-          continue;
-        }
-        // ...otherwise missing is the new default data value...
-        d = Constants::MissingData;
-
-        if (Constants::isGood(v)) {
-          const int vpos    = (int) fabs(v);
-          const float hdiff = hlevels[k] - lastH; // So k 0 always is diff of zero and no vil sum?? Hummmm
-
-          // Compute VIL sum part (constrained from 0 to the higher of vil_upper or 100)
-          int vint = vpos;
-          if (vint > vil_upper) { vint = vil_upper; }
-          if (vint < 100) {
-            vil += myVilWeights[vint] * hdiff;
-          }
-
-          // Compute VII sum part (constrained between -10C and -40C altitudes)
-          if ((vpos < 100) && ((H263K < hlevels[k]) && (hlevels[k] < H233K))) {
-            // vii+=vil_wt[vpos]*height_diff[k];
-            vii += myVilWeights[vpos] * hdiff;
-          }
-        }
-        lastH = hlevels[k];
-      } // end k loop
-
-      // Toomey: Multiplying by a positive number (..344) before the <= check wastes cycles since
-      // it will be negative before and after...so check vil <= 0 first... this also avoids checking
-      // vil <= 0 again for the vil density calculation.
-      float vild;
-      float w;
-
-      if (vil <= 0) {
-        // Actually should be unavailable unless height found one not...
-        vil  = d;
-        vild = d; // Density here is missing as well
-        w    = d;
-      } else { // vil > 0
-        // Compute final VIL (pulled multiplication out of the sum)
-        vil = 0.00000344 * vil;
-        // KCooper, per Travis - trying to match NMQ VIL?
-        // if (vil <= 1) vil = Constants::MissingData;
-
-        // Compute VIL Density.  We already know vil > 0 here, so check valid echo top
-        //
-        // VILD(g m ^ -3) = 1000 x vil (kgm ^ -2)     1000 * vil (kgm ^ -2)
-        //                  --------------------- =  --------------------------  = v/18km
-        //                     18 dbz ET (m)           1000* 18 dbz ET (Km)
-        // Our echotop is in KM.
-        // vild = (et18 > 0.)? vil/et18: d;
-        if (et18 > 0.) {
-          vild = vil / et18;
-
-          // Compute estimate of potential maximum gust with a descending downdraft
-          // NWS SR-136 Stacy R. Stewart
-          // https://docs.lib.noaa.gov/noaa_documents/NWS/NWS_SR/TM_NWS_SR_136.pdf
-          // max gust estimate = [20 m/s^2 vil - 3.125x10^-6 * et^2]^ .5
-          // Toomey: For this pass I'm assuming VIL and EchoTop should be > 0 for a valid
-          // value...
-          const float et2 = (et18) * (et18); // Kms gives us m/2 at end
-          // Stewart: w = ((20.628571 * vil) - (0.000003125*et2));
-          // Air Force Air Weather Service numbers, 1996:
-          w = ((15.780608 * vil) - (0.0000023810964 * et2));
-          w = pow((double) w, (double) 0.5);
-        } else {
-          vild = d;
-          w    = d;
-        }
-      }
-
-      // Compute VII
-      vii = 0.00000607 * vii;
-      if (vii <= 0.5) { vii = d; }
-
-      // Fill final grids with final values
-      vilgrid[i][j]  = vil;
-      vildgrid[i][j] = vild;
-      viigrid[i][j]  = vii;
-      maxgust[i][j]  = w;
-    }
-  }
-
-  // Without nse data 'yet'
-  p->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
-  p->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
-  p->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
-  p->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
+  // Write outputs
+  writer->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
+  writer->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
+  writer->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
+  writer->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
 } // VIL::processVolume

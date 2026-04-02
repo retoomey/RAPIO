@@ -194,8 +194,12 @@ ArrayAlgorithm::remap(std::shared_ptr<Array<float, 2> > source,
 
       if (valid && sampleAt(u, v, out)) {
         destRef[i][j] = out;
-      } else {
-        destRef[i][j] = Constants::DataUnavailable;
+        // This clears out the destination even if larger than
+        // the source, which we don't want for compositing say
+        // with rTileJoin.  Make sure and clear the source before
+        // starting.
+        // else
+        //  destRef[i][j] = Constants::DataUnavailable;
       }
     }
   }

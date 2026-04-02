@@ -1,5 +1,7 @@
 #pragma once
-#include <RAPIO.h>
+#include <rVolumeAlgorithm.h>
+#include <rLatLonHeightGrid.h>
+#include <rLatLonGrid.h> // terrain
 #include <vector>
 #include <string>
 #include <memory>
@@ -7,37 +9,55 @@
 namespace rapio {
 /**
  * @class MaxAGL
- * @brief Computes the maximum value in a vertical column from ground level to a specified AGL height.
- * * Takes a 3D LatLonHeightGrid (e.g., Reflectivity) and a 2D terrain LatLonGrid.
- * It determines the MSL ground height at each pixel, calculates the AGL ceiling,
- * and finds the maximum value within that vertical window.
+ * @brief Calculates the maximum value in a column from the ground to a specified Above Ground Level (AGL) height.
+ * * This algorithm takes a 3D LatLonHeightGrid (cube) and a 2D terrain grid (DEM).
+ * It iterates up the columns of the 3D grid and records the maximum value found
+ * between the terrain surface and the user-defined AGL ceiling.
  *
  * @author Robert Toomey
  */
-class MaxAGL : public RAPIOAlgorithm {
+class MaxAGL : public VolumeAlgorithm {
 public:
-  MaxAGL(){ }
 
+  /**
+   * @brief Default constructor. Initializes the algorithm with the name "MaxAGL".
+   */
+  MaxAGL() : VolumeAlgorithm("MaxAGL"){ }
+
+  /**
+   * @brief Declares command-line options specific to the MaxAGL algorithm.
+   * @param o The RAPIOOptions object to populate.
+   */
   virtual void
   declareOptions(rapio::RAPIOOptions& o) override;
+
+  /**
+   * @brief Processes the parsed command-line options.
+   * @param o The populated RAPIOOptions object.
+   */
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
-  virtual void
-  processNewData(rapio::RAPIOData& d) override;
 
 protected:
+
+  /**
+   * @brief Initializes or updates the output 2D grid based on the input cube's coverage.
+   * @param input The input 3D data cube used as a spatial reference.
+   */
+  virtual void
+  checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input) override;
+
+  /**
+   * @brief Core processing routine for the volume algorithm.
+   * * Iterates through the input 3D cube to find the maximum value in the specified AGL layer.
+   * * @param inputCube The 3D data cube to process.
+   * @param writer The RAPIOAlgorithm interface used to route and write the final output products.
+   */
   void
-  processVolume(std::shared_ptr<LatLonHeightGrid> input);
-  void
-  loadTerrainGrid();
+  processVolume(std::shared_ptr<LatLonHeightGrid> inputCube, RAPIOAlgorithm * writer) override;
 
-  std::string myTerrainFile;
-  float myTopAglKMs;
-
-  std::shared_ptr<LatLonGrid> myTerrainGrid;
-  std::shared_ptr<LatLonGridProjection> myTerrainProj;
-
-  LLCoverageArea myCachedCoverage;
-  std::shared_ptr<LatLonGrid> myMaxGrid;
+  float myTopAglKMs    = 4.0f;                     ///< The ceiling height AGL in kilometers to search up to.
+  bool myWarnedTerrain = false;                    ///< Ensures we warn once
+  std::shared_ptr<LatLonGrid> myMaxGrid = nullptr; ///< The output 2D grid storing the calculated maximums.
 };
 } // namespace rapio

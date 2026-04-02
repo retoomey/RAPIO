@@ -30,7 +30,8 @@ public:
   void
   testProcess(std::shared_ptr<LatLonHeightGrid> input)
   {
-    processVolume(input);
+    setupVolumeProcessing(input);
+    processVolume(input, this);
   }
 
   // Expose the protected output grid
