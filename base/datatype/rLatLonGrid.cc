@@ -1,5 +1,6 @@
 #include "rLatLonGrid.h"
 #include "rLatLonGridProjection.h"
+#include "rArith.h"
 
 using namespace rapio;
 using namespace std;
@@ -94,8 +95,11 @@ public:
     LatLonGeoMapper(const LatLonGrid& source, const LatLonGrid& dest)
     {
       // Source metadata for pixel conversion
-      myInNWLat      = source.getLocation().getLatitudeDeg();
-      myInNWLon      = source.getLocation().getLongitudeDeg();
+      //   myInNWLat      = source.getLocation().getLatitudeDeg();
+      //   myInNWLon      = source.getLocation().getLongitudeDeg();
+      myInNWLat = source.getLocation().getLatitudeDeg() - (source.getLatSpacing() / 2.0);
+      myInNWLon = source.getLocation().getLongitudeDeg() + (source.getLonSpacing() / 2.0);
+
       myInLatSpacing = source.getLatSpacing();
       myInLonSpacing = source.getLonSpacing();
 
@@ -193,6 +197,126 @@ private:
   }
   #endif // if 0
 } // LatLonGrid::RemapInto
+
+#if 0
+bool
+LatLonGrid::BlockCopyInto(std::shared_ptr<LatLonGrid> dest)
+{
+  if (!dest) { return false; }
+
+  // 1. Validate Resolution
+  if (!Arith::feq(getLatSpacing(), dest->getLatSpacing()) ||
+    !Arith::feq(getLonSpacing(), dest->getLonSpacing()))
+  {
+    fLogSevere("BlockCopyInto failed: Resolution mismatch. Expected spacing ({}, {}), got ({}, {})",
+      dest->getLatSpacing(), dest->getLonSpacing(), getLatSpacing(), getLonSpacing());
+    return false;
+  }
+
+  auto& srcData = getFloat2DRef();
+  auto& dstData = dest->getFloat2DRef();
+
+  const size_t srcRows = getNumLats();
+  const size_t srcCols = getNumLons();
+  const size_t dstRows = dest->getNumLats();
+  const size_t dstCols = dest->getNumLons();
+
+  // 2. Calculate destination starting indices based on coordinate offsets
+  int startDestY =
+    std::round((dest->getLocation().getLatitudeDeg() - getLocation().getLatitudeDeg()) / getLatSpacing());
+  int startDestX = std::round(
+    (getLocation().getLongitudeDeg() - dest->getLocation().getLongitudeDeg()) / getLonSpacing());
+
+  // 3. Validate Origin Bounds
+  if ((startDestY < 0) || (startDestX < 0) ||
+    (startDestY >= static_cast<int>(dstRows)) ||
+    (startDestX >= static_cast<int>(dstCols)))
+  {
+    fLogSevere(
+      "BlockCopyInto failed: Origin out of bounds. Calculated start indices: (X:{}, Y:{}) against grid size (X:{}, Y:{})",
+      startDestX, startDestY, dstCols, dstRows);
+    return false;
+  }
+
+  // 4. Tightly loop over the smaller source tile bounds
+  for (size_t y = 0; y < srcRows; ++y) {
+    size_t destY = startDestY + y;
+    if (destY >= dstRows) { continue; }
+
+    for (size_t x = 0; x < srcCols; ++x) {
+      size_t destX = startDestX + x;
+      if (destX >= dstCols) { continue; }
+
+      float val = srcData[y][x];
+      if (val != Constants::DataUnavailable) {
+        dstData[destY][destX] = val;
+      }
+    }
+  }
+  return true;
+} // LatLonGrid::BlockCopyInto
+
+#endif // if 0
+
+bool
+LatLonGrid::OverlayAligned(std::shared_ptr<LatLonGrid> dest)
+{
+  if (!dest) { return false; }
+
+  // 1. Validate Resolution matches
+  if (!Arith::feq(getLatSpacing(), dest->getLatSpacing()) ||
+    !Arith::feq(getLonSpacing(), dest->getLonSpacing()))
+  {
+    fLogSevere("BlockCopyInto failed: Resolution mismatch.");
+    return false;
+  }
+
+  auto& srcData = getFloat2DRef();
+  auto& dstData = dest->getFloat2DRef();
+
+  int dstRows = dest->getNumLats();
+  int dstCols = dest->getNumLons();
+  int srcRows = getNumLats();
+  int srcCols = getNumLons();
+
+  // 2. Calculate offsets relative to the destination grid
+  int startDestY =
+    std::round((dest->getLocation().getLatitudeDeg() - getLocation().getLatitudeDeg()) / getLatSpacing());
+  int startDestX = std::round(
+    (getLocation().getLongitudeDeg() - dest->getLocation().getLongitudeDeg()) / getLonSpacing());
+
+  // 3. Calculate the exact intersection loop bounds relative to the SOURCE grid
+  // This automatically handles clipping if the source is larger!
+  int startSrcY = std::max(0, -startDestY);
+  int startSrcX = std::max(0, -startDestX);
+  int endSrcY   = std::min(srcRows, dstRows - startDestY);
+  int endSrcX   = std::min(srcCols, dstCols - startDestX);
+
+  // 4. Check if grids actually overlap at all
+  if ((startSrcY >= endSrcY) || (startSrcX >= endSrcX)) {
+    // fLogInfo("BlockCopyInto: Grids do not overlap. Skipping.");
+    return true; // Completely disjoint but not a failure
+  }
+
+  // This should be pretty fast
+  //
+  // 5. Tightly loop ONLY over the overlapping intersection
+  for (int y = startSrcY; y < endSrcY; ++y) {
+    int destY = startDestY + y;
+
+    for (int x = startSrcX; x < endSrcX; ++x) {
+      int destX = startDestX + x;
+
+      // Only copy valid data?
+      // float val = srcData[y][x];
+      //  I don't think this matters for true intersection
+      // if (val != Constants::DataUnavailable) {
+      dstData[destY][destX] = srcData[y][x];
+      // }
+    }
+  }
+  return true;
+} // LatLonGrid::OverlayAligned
 
 void
 LatLonGrid::deep_copy(std::shared_ptr<LatLonGrid> nsp)

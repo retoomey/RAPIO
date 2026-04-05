@@ -52,6 +52,12 @@ public:
   void
   RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> remapper);
 
+  /** Overlay over another LatLonGrid of matching resolution.
+  * Cells not hit are ignored.  This method was originally intended for
+  * the tile join program putting N related tiles into one */
+  bool
+  OverlayAligned(std::shared_ptr<LatLonGrid> out);
+
   /** Get the number of latitude cells */
   virtual size_t
   getNumLats() const override

@@ -1,8 +1,8 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include "rRAPIOAlgorithm.h"
 #include "rLLCoverageArea.h"
+#include "rPartitionInfo.h"
 
 namespace rapio {
 /** Database to store incoming tile data/information, from a given key to a partition list of data */
@@ -108,9 +108,6 @@ protected:
 
   /** Map of keys to data */
   std::map<std::string, TileJoinDatabaseEntry> myEntries;
-
-  /** The remapper we use to copy tiles */
-  std::shared_ptr<ArrayAlgorithm> myArrayAlgorithm;
 };
 
 /** An algorithm to untile partitions created by rFusion2

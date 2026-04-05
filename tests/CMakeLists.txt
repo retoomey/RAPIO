@@ -29,6 +29,11 @@ add_executable(rTestRAPIO
   rTestURL.cc
   rTestValueCompressor.cc
   rTestStage2Data.cc
+# Not 100% sure where to put alg tests. Right now if
+# it uses boost test putting here. If it's
+# integration or main put with the code as
+# unique ctest -N
+  rTestTileJoin.cc
   ../programs/fusion/rStage2Data.cc
 )
 

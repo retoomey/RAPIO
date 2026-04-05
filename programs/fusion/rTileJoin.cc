@@ -1,5 +1,6 @@
 #include "rTileJoin.h"
-#include "rNearestNeighbor.h"
+#include "rLatLonGrid.h"
+#include "rPluginPartition.h"
 
 using namespace rapio;
 
@@ -77,45 +78,34 @@ TileJoinDatabase::finalizeEntry(const std::string& databaseKey, std::shared_ptr<
   fLogInfo("Generating a final grid for key '{}'", databaseKey);
   auto it = myEntries.find(databaseKey);
 
-  if (myArrayAlgorithm == nullptr) {
-    myArrayAlgorithm = std::make_shared<NearestNeighbor>();
-  }
-
   if (it == myEntries.end()) {
     fLogInfo("Key missing?  Can't generate final grid '{}'", databaseKey);
     return;
   }
 
   auto &grids = myEntries[databaseKey].myLatLonGrids;
+  bool first  = true;
 
-  bool first = true;
-
-  for (auto p:grids) {
-    if (p != nullptr) { // Missing a tile which can happen
-      // Set time, etc. to the first LatLonGrid.
+  for (auto p : grids) {
+    if (p != nullptr) {
       if (first) {
         out->setTime(p->getTime());
         out->setUnits(p->getUnits());
         out->setTypeName(p->getTypeName());
         out->setSubType(p->getSubType());
-        // Sync the height to the first tile
         LLH f = p->getLocation();
         LLH l = out->getLocation();
         l.setHeightKM(f.getHeightKM());
         out->setLocation(l);
-        auto w = out->getFloat2D();
-        w->fill(Constants::DataUnavailable);
+        out->getFloat2D()->fill(Constants::DataUnavailable);
         first = false;
       }
 
-      // Insert p into the final grid. Note, the tiles 'should' all
-      // be exact, at least for moment.  By remapping we do extra
-      // work but then we don't have to worry about exact coordinates
-      p->RemapInto(out, myArrayAlgorithm);
+      if (!p->OverlayAligned(out)) {
+        fLogSevere("TileJoin failed to copy tile into destination grid.");
+      }
     }
   }
-
-  // Finalize means remove the key, we're done.
   myEntries.erase(databaseKey);
 } // TileJoinDatabase::finalizeEntry
 
