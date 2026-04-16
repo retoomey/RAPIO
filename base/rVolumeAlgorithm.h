@@ -2,6 +2,7 @@
 #include <rLLCoverageArea.h>
 #include <rLatLonGrid.h>
 #include <rLatLonGridProjection.h>
+#include <rLatLonHeightGridIterator.h>
 
 #include <memory>
 #include <string>
@@ -10,6 +11,13 @@
 
 namespace rapio {
 class LatLonHeightGrid;
+
+/** How the iterate call works to process cells */
+enum class IterateMode {
+  Voxels,
+  ColumnsUp,
+  ColumnsDown
+};
 
 /*
  * A VolumeAlgorithm is designed to iterate over a LatLonHeightGrid
@@ -59,6 +67,18 @@ public:
   processVolume(std::shared_ptr<LatLonHeightGrid> inputCube,
     RAPIOAlgorithm *                              writer) = 0;
 
+  /** Set our current terrain lookup */
+  void
+  setTerrainData(std::shared_ptr<LatLonGrid> grid,
+    std::shared_ptr<LatLonGridProjection>    proj = nullptr);
+
+  /** Do we have valid terrain? */
+  bool haveTerrain(){ return (myTerrainProj != nullptr); }
+
+  /** Iterate a callback for our grid in a particular order */
+  void
+  iterate(std::shared_ptr<LatLonHeightGrid> input, LatLonHeightGridCallback& callback, IterateMode mode);
+
 protected:
 
   /**
@@ -81,6 +101,7 @@ protected:
   /** Remember the last coverage area for changes */
   LLCoverageArea myCachedCoverage;
 
+private:
   /** Name of the terrain file */
   std::string myTerrainFile;
 
@@ -90,12 +111,6 @@ protected:
   /** The current terrain projection (for values) */
   std::shared_ptr<LatLonGridProjection> myTerrainProj;
 
-  // Pre-computed height arrays for 3D iterations
-  // We should probably just have one of these
-  std::vector<float> myHLevels;    ///< Height levels in meters
-  std::vector<float> myHLevelsKMs; ///< Height levels in kilometers
-
-private:
   // Note: This is because Fusion might call N VolumeAlgorithms, and several
   // may want terrain.  We don't want to duplicate terrain storage per instance.
   // So we have a satic cache to share terrain data across all VolumeAlgorithm instances

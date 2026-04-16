@@ -13,36 +13,33 @@ createRAPIOAlg(void)
 {
   auto * z = new VIL();
 
-  // return reinterpret_cast<void *>(z);
   return reinterpret_cast<RAPIOAlgorithm *>(z);
 }
-};
-// end dynamic module
+}
 
 class VILCallback : public LatLonHeightGridCallback {
 public:
-  VILCallback(const LatLonHeightGrid& input,
-    const float * vilWeights, const std::vector<float>& hls,
+  VILCallback(
+    const float * vilWeights,
     int h263, int h233,
     ArrayFloat2DPtr vilOut, ArrayFloat2DPtr vildOut,
     ArrayFloat2DPtr viiOut, ArrayFloat2DPtr gustOut)
-    : inputGrid(input), myVilWeights(vilWeights), hlevels(hls),
+    : myVilWeights(vilWeights),
     myHeight263(h263), myHeight233(h233),
-    vilgrid(vilOut), vildgrid(vildOut), viigrid(viiOut), maxgust(gustOut),
-    numHts(hls.size()){ }
+    vilgrid(vilOut), vildgrid(vildOut), viigrid(viiOut), maxgust(gustOut){ }
 
   void
   handleBeginColumn(LatLonHeightGridIterator * it) override
   {
-    vil   = 0.0f;
-    vii   = 0.0f;
-    lastH = hlevels[0];
-    d     = Constants::DataUnavailable;
+    vil  = 0.0f;
+    vii  = 0.0f;
+    et18 = 0.0f; // 0 means we haven't found the echo top yet
 
-    // Query NSE grids at the current column's coordinates
     float atLat = it->getCurrentLatDegs();
     float atLon = it->getCurrentLonDegs();
 
+    // This forces a projection query vs a remap to grid,
+    // so we will probably put this into VolumeAlgorithm
     H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
     H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
   }
@@ -50,31 +47,40 @@ public:
   void
   handleVoxel(LatLonHeightGridIterator * it) override
   {
-    float v        = it->getValue();
-    float currentH = hlevels[it->getCurrentLayerIdx()];
+    float v = it->getValue();
 
-    if (v == Constants::DataUnavailable) {
-      lastH = currentH;
+    // Calculate thickness of THIS layer using the iterator's height array
+    const auto& heights = it->getHeightsKM();
+    size_t z    = it->getCurrentLayerIdx();
+    float hdiff = 0.0f;
+
+    if (z > 0) {
+      hdiff = (heights[z] - heights[z - 1]) * 1000.0f; // Thickness in meters
+    } else if (heights.size() > 1) {
+      hdiff = (heights[1] - heights[0]) * 1000.0f; // Assume bottom layer matches layer above
+    }
+
+    if ((v == Constants::DataUnavailable) || (v == Constants::MissingData)) {
       return;
     }
 
-    d = Constants::MissingData; // We have at least one valid/missing voxel
+    float currentH = heights[z] * 1000.0f; // Current layer height in meters
 
-    if (Constants::isGood(v)) {
-      int vpos    = (int) std::fabs(v);
-      float hdiff = currentH - lastH;
-
-      int vint = std::min(vpos, vil_upper);
-      if (vint < 100) {
-        vil += myVilWeights[vint] * hdiff;
-      }
-
-      if ((vpos < 100) && ((H263K < currentH) && (currentH < H233K))) {
-        vii += myVilWeights[vpos] * hdiff;
-      }
+    // Top-down Echo Top detection (nearest neighbor for now)
+    if ((et18 == 0.0f) && (v >= 18.0f)) {
+      et18 = currentH;
     }
-    lastH = currentH;
-  }
+
+    int vpos = (int) std::fabs(v);
+    int vint = std::min(vpos, vil_upper);
+
+    if (vint < 100) {
+      vil += myVilWeights[vint] * hdiff;
+    }
+    if ((vpos < 100) && ((H263K < currentH) && (currentH < H233K))) {
+      vii += myVilWeights[vpos] * hdiff;
+    }
+  } // handleVoxel
 
   void
   handleEndColumn(LatLonHeightGridIterator * it) override
@@ -82,11 +88,8 @@ public:
     size_t i = it->getCurrentLatIdx();
     size_t j = it->getCurrentLonIdx();
 
-    // 1. Calculate EchoTop 18 using the original function
-    float et18 = doEchoTop(inputGrid, 18.0, hlevels, numHts, i, j);
-
-    // 2. Finalize VIL, VILD, and Gust calculations
     float vild, w;
+    float d = Constants::MissingData;
 
     if (vil <= 0) {
       vil  = d;
@@ -94,9 +97,10 @@ public:
       w    = d;
     } else {
       vil = 0.00000344f * vil;
+
       if (et18 > 0.0f) {
-        vild = vil / et18;
-        const float et2 = et18 * et18;
+        vild = vil / (et18 / 1000.0f); // et18 in km for density
+        const float et2 = (et18 / 1000.0f) * (et18 / 1000.0f);
         w = std::sqrt(std::max(0.0f, (15.780608f * vil) - (0.0000023810964f * et2)));
       } else {
         vild = d;
@@ -116,14 +120,11 @@ public:
 
 private:
   const int vil_upper = 56;
-  const LatLonHeightGrid& inputGrid;
   const float * myVilWeights;
-  const std::vector<float>& hlevels;
   int myHeight263, myHeight233;
   ArrayFloat2DPtr vilgrid, vildgrid, viigrid, maxgust;
-  size_t numHts;
 
-  float vil, vii, lastH, d;
+  float vil, vii, et18;
   float H263K, H233K;
 };
 
@@ -261,25 +262,14 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * wri
 
   fLogInfo("Computing VIL at {}", forTime);
 
-  #if 0
-  const size_t numHts = llg.getNumLayers();
-  std::vector<float> hlevels(numHts);
-
-  for (size_t h = 0; h < numHts; h++) {
-    hlevels[h] = llg.getLayerValue(h);
-  }
-  #endif
-
   // Set up and run the callback
   VILCallback myCallback(
-    llg, myVilWeights, myHLevels, myHeight263, myHeight233,
+    myVilWeights, myHeight263, myHeight233,
     myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
     myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
   );
 
-  LatLonHeightGridIterator iter(llg);
-
-  iter.iterateUpColumns(myCallback);
+  this->iterate(input, myCallback, IterateMode::ColumnsDown);
 
   // Write outputs
   writer->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);

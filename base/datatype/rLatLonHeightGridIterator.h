@@ -1,5 +1,6 @@
 #pragma once
 #include <rLatLonHeightGrid.h>
+#include <rLatLonGridProjection.h>
 #include <rConstants.h>
 
 namespace rapio {
@@ -47,11 +48,17 @@ public:
   void
   iterateVoxels(LatLonHeightGridCallback& callback);
 
-  /** Iterate over voxels, column Z last.  For column algorithms.
+  /** Iterate over voxels, going up the vertical column.  For column algorithms.
    * This also calls the handleBeginColumn and handleEndColumn
    * methods. */
   void
   iterateUpColumns(LatLonHeightGridCallback& callback);
+
+  /** Iterate over voxels, going down the vertical column.  For column algorithms.
+   * This also calls the handleBeginColumn and handleEndColumn
+   * methods. */
+  void
+  iterateDownColumns(LatLonHeightGridCallback& callback);
 
   /** Set the primary data value */
   inline void
@@ -60,6 +67,18 @@ public:
     // Note: DataGrid 3D arrays are mapped [Z][Y][X] in memory
     (*myOutputArray)[myCurrentLayerIdx][myCurrentLatIdx][myCurrentLonIdx] = v;
   }
+
+  /** Set a terrain projection to use.  This is cpu cost over ram will project each time.
+   * We 'might' provide a pre-remapped way where terrain is provided by [Y][X] which would
+   * be ram cost over cpu */
+  void setTerrainProj(std::shared_ptr<LatLonGridProjection> terrProj){ myTerrainProj = terrProj; }
+
+  /** Do we have terrain information? */
+  bool haveTerrain(){ return (myTerrainProj != nullptr); }
+
+  /** Return terrain height in KM */
+  inline float
+  getTerrainHeightKMs() const { return myCurrentTerrainHeightKMs; }
 
   // --- Index Access ---
   inline size_t
@@ -78,8 +97,15 @@ public:
   inline float
   getCurrentLonDegs() const { return myCurrentLonDegs; }
 
+  /** The entire height array */
+  const std::vector<float>&
+  getHeightsKM() const { return myCachedHeightsKM; }
+
   inline float
   getCurrentHeightKMs() const { return myCurrentHeightKMs; }
+
+  inline float
+  getCurrentHeightMs() const { return myCurrentHeightKMs / 1000.0f; }
 
   // --- Grid Metadata ---
   inline float
@@ -127,6 +153,11 @@ public:
   }
 
 private:
+  /** Combine up/down code to not repeat */
+  template <bool IterateUp>
+  void
+  iterateColumnsImpl(LatLonHeightGridCallback& callback);
+
   LatLonHeightGrid& myGrid;
   ArrayFloat3DPtr myOutputArray;
 
@@ -136,9 +167,13 @@ private:
 
   float myCurrentLatDegs;
   float myCurrentLonDegs;
+  std::vector<float> myCachedHeightsKM;
   float myCurrentHeightKMs;
 
   float myLatSpacing;
   float myLonSpacing;
+
+  std::shared_ptr<LatLonGridProjection> myTerrainProj = nullptr;
+  float myCurrentTerrainHeightKMs = 0.0f;
 };
 } // namespace rapio

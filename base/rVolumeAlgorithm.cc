@@ -29,16 +29,7 @@ VolumeAlgorithm::setupVolumeProcessing(std::shared_ptr<LatLonHeightGrid> llg)
     // 1. Prepare shared resources (Terrain)
     loadTerrainGrid();
 
-    // 2. Pre-calculate height level arrays for subclasses
-    const size_t numHts = llg->getNumLayers();
-    myHLevels.resize(numHts);
-    myHLevelsKMs.resize(numHts);
-    for (size_t h = 0; h < numHts; h++) {
-      myHLevels[h]    = llg->getLayerValue(h);
-      myHLevelsKMs[h] = myHLevels[h] / 1000.0f;
-    }
-
-    // 3. Give the subclass a chance to prep its specific outputs
+    // 2. Give the subclass a chance to prep its specific outputs
     checkOutputGrids(llg);
   }
 }
@@ -78,22 +69,64 @@ VolumeAlgorithm::loadTerrainGrid()
   // Check if another VolumeAlgorithm already loaded this specific terrain file
   if (ourTerrainGridCache.count(myTerrainFile) > 0) {
     fLogDebug("VolumeAlgorithm: Using cached terrain grid for {}.", myTerrainFile);
-    myTerrainGrid = ourTerrainGridCache[myTerrainFile];
-    myTerrainProj = ourTerrainProjCache[myTerrainFile];
+    setTerrainData(ourTerrainGridCache[myTerrainFile], ourTerrainProjCache[myTerrainFile]);
     return;
   }
 
   // Cache miss, load from disk
   fLogInfo("VolumeAlgorithm: Loading terrain grid from {}...", myTerrainFile);
-  myTerrainGrid = IODataType::read<LatLonGrid>(myTerrainFile);
+  auto newTerrainGrid = IODataType::read<LatLonGrid>(myTerrainFile);
 
-  if (myTerrainGrid == nullptr) {
+  if (newTerrainGrid == nullptr) {
     fLogSevere("VolumeAlgorithm: Failed to load terrain grid at {}.", myTerrainFile);
   } else {
-    myTerrainProj = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myTerrainGrid.get());
+    setTerrainData(newTerrainGrid);
 
     // Store in global cache
     ourTerrainGridCache[myTerrainFile] = myTerrainGrid;
     ourTerrainProjCache[myTerrainFile] = myTerrainProj;
+  }
+}
+
+void
+VolumeAlgorithm::setTerrainData(std::shared_ptr<LatLonGrid> grid,
+  std::shared_ptr<LatLonGridProjection>                     proj)
+{
+  myTerrainGrid = grid;
+  if (proj) {
+    myTerrainProj = proj;
+  } else if (grid) {
+    myTerrainProj = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, grid.get());
+  } else {
+    myTerrainProj = nullptr;
+  }
+}
+
+void
+VolumeAlgorithm::iterate(std::shared_ptr<LatLonHeightGrid> input, LatLonHeightGridCallback& callback, IterateMode mode)
+{
+  LatLonHeightGridIterator iter(*input);
+
+  // Might have a remapped cache at some point, currently we're projecting which
+  // saves ram but increases CPU.  Part of why we hide this inside VolumeAlgorithm
+  if (myTerrainProj) {
+    iter.setTerrainProj(myTerrainProj);
+  }
+
+  // When NSE is added, it goes right here:
+  // if (myH263Proj) iter.setH263(myH263Proj);
+  // if (myH233Proj) iter.setH233(myH233Proj);
+
+  // Route to the explicit iterator methods
+  switch (mode) {
+      case IterateMode::Voxels:
+        iter.iterateVoxels(callback);
+        break;
+      case IterateMode::ColumnsUp:
+        iter.iterateUpColumns(callback);
+        break;
+      case IterateMode::ColumnsDown:
+        iter.iterateDownColumns(callback);
+        break;
   }
 }

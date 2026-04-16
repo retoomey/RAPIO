@@ -29,14 +29,14 @@ public:
    * @param o The RAPIOOptions object to populate.
    */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /**
    * @brief Processes the parsed command-line options.
    * @param o The populated RAPIOOptions object.
    */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
 protected:
 

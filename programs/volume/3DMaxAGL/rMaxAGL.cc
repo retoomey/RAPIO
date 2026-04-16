@@ -27,12 +27,12 @@ MaxAGL::processOptions(RAPIOOptions& o)
 void
 MaxAGL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
 {
-  const rapio::Time forTime = input->getTime();
+  const Time forTime = input->getTime();
 
   // Rebuild the output grid if the coverage area changes (or on first run)
   if ((myMaxGrid == nullptr) || checkCoverageChange(input)) {
     fLogInfo("Creating new output grid for MaxAGL (0-{} km AGL)...", myTopAglKMs);
-    myMaxGrid = rapio::LatLonGrid::Create("MaxAGL", input->getUnits(), forTime, input->getLLCoverageArea());
+    myMaxGrid = LatLonGrid::Create("MaxAGL", input->getUnits(), forTime, input->getLLCoverageArea());
 
     char subTypeBuf[32];
     snprintf(subTypeBuf, sizeof(subTypeBuf), "0-%.1fkm", myTopAglKMs);
@@ -49,86 +49,74 @@ MaxAGL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   myMaxGrid->setTime(forTime);
 }
 
-/**
- * This column up callback is so common it may become a
- * special class.  Lots of algorithms go through a column like this */
-class MaxAGLCallback : public rapio::LatLonHeightGridCallback {
+class MaxAGLCallback : public LatLonHeightGridCallback {
 public:
-  MaxAGLCallback(float topAglKMs, rapio::ArrayFloat2DPtr max2D,
-    std::shared_ptr<rapio::LatLonGridProjection> terrProj,
-    const std::vector<float>& hlevels)
-    : myTopAglKMs(topAglKMs), myMax2D(max2D),
-    myTerrainProj(terrProj), myHLevels(hlevels){ }
+  MaxAGLCallback(float topAGLKMs, ArrayFloat2DPtr max2D)
+    : myTopAGLKMs(topAGLKMs), myMax2D(max2D){ }
 
   // Fired once per X,Y location before iterating up the Z column
   void
-  handleBeginColumn(rapio::LatLonHeightGridIterator * it) override
+  handleBeginColumn(LatLonHeightGridIterator * it) override
   {
     // Reset our column state
-    mask       = rapio::Constants::DataUnavailable;
-    maxVal     = -999999.0f;
-    foundValid = false;
+    myMask   = Constants::DataUnavailable;
+    myMaxVal = -999999.0f;
+    myValid  = false;
 
-    // Gracefully handle missing terrain projection
-    if (myTerrainProj != nullptr) {
-      double terrHeightM = myTerrainProj->getValueAtLL(it->getCurrentLatDegs(), it->getCurrentLonDegs());
-      terrHeightKm = (!rapio::Constants::isGood(terrHeightM)) ? 0.0f : (terrHeightM / 1000.0f);
-    } else {
-      terrHeightKm = 0.0f; // Default to sea level
-    }
+    myTerrainHeightKMs = it->getTerrainHeightKMs();
+
+    // Top KMs is the terrain height + the value given
+    myCutoffKMs = myTerrainHeightKMs + myTopAGLKMs;
   }
 
   // Fired for every Z voxel in the column
   void
-  handleVoxel(rapio::LatLonHeightGridIterator * it) override
+  handleVoxel(LatLonHeightGridIterator * it) override
   {
-    float currentHtKm = myHLevels[it->getCurrentLayerIdx()];
+    float currentHtKMs = it->getCurrentHeightKMs();
 
     // Only process if we are within the AGL window
-    if ((currentHtKm >= terrHeightKm) && (currentHtKm <= topSearchHeightKm)) {
-      float v = it->getValue(); // The iterator grabs the correct 3D value for us
+    if ((currentHtKMs >= myTerrainHeightKMs) && (currentHtKMs <= myCutoffKMs)) {
+      float v = it->getValue();
 
-      if (rapio::Constants::isGood(v)) {
-        if (!foundValid || (v > maxVal)) {
-          maxVal     = v;
-          foundValid = true;
+      if (Constants::isGood(v)) {
+        if (!myValid || (v > myMaxVal)) {
+          myMaxVal = v;
+          myValid  = true;
         }
       }
 
       // Update our missing/unavailable mask tracking
-      if (v != rapio::Constants::DataUnavailable) {
-        mask = rapio::Constants::MissingData;
+      if (v != Constants::DataUnavailable) {
+        myMask = Constants::MissingData;
       }
     }
   }
 
   // Fired after the Z column finishes
   void
-  handleEndColumn(rapio::LatLonHeightGridIterator * it) override
+  handleEndColumn(LatLonHeightGridIterator * it) override
   {
     // Write the final calculated value to the 2D output grid
-    (*myMax2D)[it->getCurrentLatIdx()][it->getCurrentLonIdx()] = foundValid ? maxVal : mask;
+    (*myMax2D)[it->getCurrentLatIdx()][it->getCurrentLonIdx()] = myValid ? myMaxVal : myMask;
   }
 
 private:
-  float myTopAglKMs;
-  rapio::ArrayFloat2DPtr myMax2D;
-  std::shared_ptr<rapio::LatLonGridProjection> myTerrainProj;
-  const std::vector<float>& myHLevels;
+  const float myTopAGLKMs; ///< The AGL in kilometers we want
+  float myCutoffKMs;       ///< Cutoff at terrain + myTopAGLKMS
+  ArrayFloat2DPtr myMax2D; ///< The output array
 
-  // Column State
-  float maxVal;
-  bool foundValid;
-  float mask;
-  float terrHeightKm;
-  float topSearchHeightKm;
+  float myMaxVal;           ///< Current max value for column
+  bool myValid;             ///< Have we found at least one data value
+  float myMask;             ///< Mask when no value counts
+  float myTerrainHeightKMs; ///< Terrain height above sea level
 };
 
 void
 MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
 {
   // Issue a one-time warning if terrain is missing
-  if ((myTerrainProj == nullptr) && !myWarnedTerrain) {
+  if ((haveTerrain() == false) && !myWarnedTerrain) {
     fLogSevere("No valid terrain provided. Defaulting to 0.0 AGL (sea level) for all columns.");
     myWarnedTerrain = true;
   }
@@ -137,13 +125,11 @@ MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * 
     return;
   }
 
-  // 1. Bind our math to the target output grid and terrain projection
-  // 2. Initialize the iterator over the 3D source cube
-  // 3. March through the columns using the callback
-  MaxAGLCallback myCallback(myTopAglKMs, myMaxGrid->getFloat2DPtr(), myTerrainProj, myHLevelsKMs);
-  rapio::LatLonHeightGridIterator iter(*input);
+  // Let the VolumeAlgorithm handle terrain, etc. by calling its iterate method.
+  // Up feels more natural for this alg.
+  MaxAGLCallback myCallback(myTopAglKMs, myMaxGrid->getFloat2DPtr());
 
-  iter.iterateUpColumns(myCallback);
+  this->iterate(input, myCallback, IterateMode::ColumnsUp);
 
   // Let the orchestrator (or us if standalone) handle the file write
   std::map<std::string, std::string> extraParams;

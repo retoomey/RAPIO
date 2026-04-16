@@ -18,14 +18,6 @@ public:
     myTopAglKMs = 10.0f;
   }
 
-  // Inject our synthetic terrain grid to bypass loadTerrainGrid() file I/O
-  void
-  setTestTerrain(std::shared_ptr<LatLonGrid> terr)
-  {
-    myTerrainGrid = terr;
-    myTerrainProj = std::make_shared<LatLonGridProjection>(Constants::PrimaryDataName, myTerrainGrid.get());
-  }
-
   // Expose the protected processVolume method
   void
   testProcess(std::shared_ptr<LatLonHeightGrid> input)
@@ -91,7 +83,7 @@ public:
 };
 
 int
-main(int argc, char ** argv)
+mainold(int argc, char ** argv)
 {
   std::cout << "--- Starting MaxAGL Unit Test ---" << std::endl;
 
@@ -118,7 +110,7 @@ main(int argc, char ** argv)
   // Initialize our test algorithm
   auto maxAglAlg = std::make_shared<TestMaxAGLAlg>();
 
-  maxAglAlg->setTestTerrain(testTerr);
+  maxAglAlg->setTerrainData(testTerr);
 
   // Process the volume
   maxAglAlg->testProcess(testCube);
@@ -146,6 +138,88 @@ main(int argc, char ** argv)
 
     std::cout << "SUCCESS: All tests passed!" << std::endl;
     return 0;
+  } else {
+    std::cerr << "FAIL: No 2D grid produced." << std::endl;
+    return 1;
+  }
+} // main
+
+int
+main(int argc, char ** argv)
+{
+  std::cout << "--- Starting MaxAGL Unit Test ---" << std::endl;
+  size_t nx = 10, ny = 10, nz = 20;
+
+  auto testCube = SyntheticCube::createEmptyCube(nx, ny, nz);
+  auto testTerr = SyntheticCube::createZeroTerrain(nx, ny);
+
+  // --- Populate 3D Data ---
+  auto& data3D = testCube->getFloat3DRef();
+
+  // Point 1: [5][5]
+  data3D[5][5][5] = 50.0f; // 5 km MSL
+  data3D[8][5][5] = 45.0f; // 8 km MSL
+
+  // Point 2: [2][2]
+  data3D[3][2][2] = 40.0f; // 3 km MSL
+  data3D[9][2][2] = 10.0f; // 9 km MSL
+
+  // Point 3: [7][7]
+  data3D[2][7][7]  = 20.0f; // 2 km MSL
+  data3D[15][7][7] = 60.0f; // 15 km MSL
+
+  // --- Modify Terrain ---
+  auto& terr2D = testTerr->getFloat2DRef();
+
+  // Elevate terrain at [5][5] to 6,000 meters (6 km).
+  // The 10km AGL window is now 6 km to 16 km MSL.
+  // The 5km/50.0f value is now underground and should be ignored.
+  // The 8km/45.0f value is now at 2km AGL. Expected Max: 45.0f.
+  terr2D[5][5] = 6000.0f;
+
+  // Elevate terrain at [7][7] to 6,000 meters (6 km).
+  // The 10km AGL window is now 6 km to 16 km MSL.
+  // The 2km/20.0f value is underground.
+  // The 15km/60.0f value is now at 9km AGL and gets included! Expected Max: 60.0f.
+  terr2D[7][7] = 6000.0f;
+
+  // Terrain at [2][2] remains 0 meters.
+  // The 10km AGL window is 0 km to 10 km MSL.
+  // Both 3km and 9km are included. Expected Max: 40.0f.
+
+  auto maxAglAlg = std::make_shared<TestMaxAGLAlg>();
+
+  // Assuming you made setTerrainData public in VolumeAlgorithm as discussed
+  maxAglAlg->setTerrainData(testTerr);
+  maxAglAlg->testProcess(testCube);
+
+  auto result2D = maxAglAlg->getOutputGrid();
+
+  if (result2D) {
+    auto& outData = result2D->getFloat2DRef();
+    float h1      = outData[5][5];
+    float h2      = outData[2][2];
+    float h3      = outData[7][7];
+    float h4      = outData[0][0];
+    std::cout << "Storm 1 (Terrain 6km, Expected 45.0) : " << h1 << std::endl;
+    std::cout << "Storm 2 (Terrain 0km, Expected 40.0) : " << h2 << std::endl;
+    std::cout << "Storm 3 (Terrain 6km, Expected 60.0) : " << h3 << std::endl;
+    std::cout << "Empty   (Expected Missing)           : " << h4 << std::endl;
+
+    // FIX: Hard conditionals instead of NDEBUG-vulnerable asserts
+    bool passed = true;
+    if (h1 != 45.0f) { std::cerr << "FAIL: Storm 1 mismatch." << std::endl; passed = false; }
+    if (h2 != 40.0f) { std::cerr << "FAIL: Storm 2 mismatch." << std::endl; passed = false; }
+    if (h3 != 60.0f) { std::cerr << "FAIL: Storm 3 mismatch." << std::endl; passed = false; }
+    if (h4 != Constants::MissingData) { std::cerr << "FAIL: Empty storm mismatch." << std::endl; passed = false; }
+
+    if (passed) {
+      std::cout << "SUCCESS: All tests passed with terrain variations!" << std::endl;
+      return 0;
+    } else {
+      std::cerr << "TEST FAILED!" << std::endl;
+      return 1;
+    }
   } else {
     std::cerr << "FAIL: No 2D grid produced." << std::endl;
     return 1;

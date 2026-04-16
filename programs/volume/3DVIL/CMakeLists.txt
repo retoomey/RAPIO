@@ -25,3 +25,15 @@ target_link_libraries(r3DVil PRIVATE rapio rapioalgVIL)
 install(TARGETS r3DVil
    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+##################################################################
+# Build tests conditionally
+if(BUILD_TESTS)
+  add_executable(rTest3DVIL
+    rTest3DVIL.cc
+  )
+  target_link_libraries(rTest3DVIL PRIVATE rapio rapioalgVIL)
+  
+  # Register the test with CTest
+  add_test(NAME rTest3DVIL COMMAND rTest3DVIL)
+endif()
