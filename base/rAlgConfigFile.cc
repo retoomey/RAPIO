@@ -71,6 +71,24 @@ AlgXMLConfigFile::introduceSelf()
   Factory<AlgConfigFile>::introduce("json", newOne);
 }
 
+bool
+AlgXMLConfigFile::parseOptionsFromNode(const rapio::PTreeNode& algNode,
+  std::vector<std::string>                                   & options,
+  std::vector<std::string>                                   & values)
+{
+  auto items = algNode.getChildren("option");
+
+  for (auto r: items) {
+    const auto option = r.getAttr("letter", std::string(""));
+    const auto value  = r.getAttr("value", std::string(""));
+    if (!option.empty()) {
+      options.push_back(option);
+      values.push_back(value);
+    }
+  }
+  return true;
+}
+
 void
 AlgFLATConfigFile::introduceSelf()
 {
@@ -86,25 +104,52 @@ AlgXMLConfigFile::readConfigURL(const URL& path,
   bool success = false;
   auto conf    = IODataType::read<PTreeData>(path.toString());
 
-  try{
+  try {
     if (conf != nullptr) {
       auto rootTree = conf->getTree()->getChild("w2algxml");
-      auto items    = rootTree.getChildren("option");
-      for (auto r: items) {
-        const auto option = r.getAttr("letter", std::string(""));
-        const auto value  = r.getAttr("value", std::string(""));
-        if (!option.empty()) {
-          optionlist.push_back(option);
-          valuelist.push_back(value);
-        }
-      }
-      success = true;
+      success = parseOptionsFromNode(rootTree, optionlist, valuelist);
     }
-  }catch (const std::exception& e) {
+  } catch (const std::exception& e) {
     fLogSevere("Error parsing XML from {}, {}", path.toString(), e.what());
   }
   return success;
 }
+
+bool
+AlgXMLConfigFile::readMultiConfigURL(const URL& path, std::vector<AlgConfigNode>& nodes)
+{
+  auto conf = IODataType::read<PTreeData>(path.toString());
+
+  if (conf == nullptr) { return false; }
+
+  try {
+    auto tree     = conf->getTree();
+    auto rootTree = tree->getChildOptional("w2algxml");
+
+    if (rootTree != nullptr) {
+      // Find all nested <w2algxml> blocks (the child algorithms)
+      auto algorithms = rootTree->getChildren("w2algxml");
+
+      for (auto& alg : algorithms) {
+        AlgConfigNode node;
+        node.name = alg.getAttr("program", std::string(""));
+
+        if (!node.name.empty()) {
+          node.library = "librapioalg" + node.name + ".so";
+        }
+
+        // Parse the options inside this specific child block
+        parseOptionsFromNode(alg, node.options, node.values);
+
+        nodes.push_back(node);
+      }
+      return true;
+    }
+  } catch (const std::exception& e) {
+    fLogSevere("Error parsing multi-algorithm XML from {}, {}", path.toString(), e.what());
+  }
+  return false;
+} // AlgXMLConfigFile::readMultiConfigURL
 
 bool
 AlgXMLConfigFile::writeConfigURL(const URL& path,

@@ -38,7 +38,17 @@ public:
   virtual void
   processOptions(RAPIOOptions& o) override;
 
-protected:
+  /** Get our iteration mode */
+  virtual IterateMode
+  getIterateMode() const override { return IterateMode::ColumnsDown; }
+
+  /** Create our callback for doing work on the grid */
+  virtual std::unique_ptr<LatLonHeightGridCallback>
+  createCallback() override;
+
+  /** Write our final products */
+  virtual void
+  writeFinalProducts(RAPIOAlgorithm * writer) override;
 
   /**
    * @brief Initializes or updates the output 2D grid based on the input cube's coverage.
@@ -47,14 +57,7 @@ protected:
   virtual void
   checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input) override;
 
-  /**
-   * @brief Core processing routine for the volume algorithm.
-   * * Iterates through the input 3D cube to find the maximum value in the specified AGL layer.
-   * * @param inputCube The 3D data cube to process.
-   * @param writer The RAPIOAlgorithm interface used to route and write the final output products.
-   */
-  void
-  processVolume(std::shared_ptr<LatLonHeightGrid> inputCube, RAPIOAlgorithm * writer) override;
+protected:
 
   float myTopAglKMs    = 4.0f;                     ///< The ceiling height AGL in kilometers to search up to.
   bool myWarnedTerrain = false;                    ///< Ensures we warn once

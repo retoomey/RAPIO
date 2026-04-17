@@ -1,3 +1,5 @@
+#pragma once
+
 #include <rArrayFilter.h>
 #include <rError.h>
 

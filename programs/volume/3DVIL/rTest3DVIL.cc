@@ -13,9 +13,7 @@ using namespace rapio;
 class TestVILAlg : public VIL {
 public:
   TestVILAlg()
-  {
-    initialize(); // Sets up the NSE defaults (5000m and 8600m)
-  }
+  { }
 
   void
   testProcess(std::shared_ptr<LatLonHeightGrid> input)

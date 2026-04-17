@@ -1,3 +1,5 @@
+#pragma once
+
 #include <rRAPIOAlgorithm.h>
 #include <rLLCoverageArea.h>
 #include <rLatLonGrid.h>
@@ -64,8 +66,19 @@ public:
   /** FusionAlgs will call this directly, passing itself as the writer.
    * This is the worker for the LatLonHeightGrid */
   virtual void
-  processVolume(std::shared_ptr<LatLonHeightGrid> inputCube,
-    RAPIOAlgorithm *                              writer) = 0;
+  processVolume(std::shared_ptr<LatLonHeightGrid> inputCube, RAPIOAlgorithm * writer);
+
+  /** Get the iteration mode wanted by the algorithm */
+  virtual IterateMode
+  getIterateMode() const { return IterateMode::ColumnsDown; }
+
+  /** Generate the callback for this particular algorithm */
+  virtual std::unique_ptr<LatLonHeightGridCallback>
+  createCallback() = 0;
+
+  /** Write final products for this particular algorithm */
+  virtual void
+  writeFinalProducts(RAPIOAlgorithm * writer) = 0;
 
   /** Set our current terrain lookup */
   void
@@ -79,13 +92,13 @@ public:
   void
   iterate(std::shared_ptr<LatLonHeightGrid> input, LatLonHeightGridCallback& callback, IterateMode mode);
 
-protected:
-
   /**
    * @brief Hook for subclasses to initialize or resize their output grids.
    * Automatically called by processNewData before processVolume.
    */
   virtual void checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input){ }
+
+protected:
 
   /** @brief Utility method to check for grid changes between calls */
   bool

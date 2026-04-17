@@ -17,6 +17,17 @@ createRAPIOAlg(void)
 }
 }
 
+VIL::VIL() : VolumeAlgorithm("3DVIL")
+{
+  // Directly follow grids at moment.  Probably should call on the
+  // start up of the algorithm not at first data.
+  // FIXME: configuration at some point
+  // NSEGridHistory::followGrid("height273", "Heightof0C", 3920);
+  myHeight263 = NSEGridHistory::followGrid("height263", "Heightof-10C", 5000);
+  // NSEGridHistory::followGrid("height253", "Heightof-20C", 6200);
+  myHeight233 = NSEGridHistory::followGrid("height233", "Heightof-40C", 8600);
+}
+
 class VILCallback : public LatLonHeightGridCallback {
 public:
   VILCallback(
@@ -145,18 +156,6 @@ VIL::processOptions(RAPIOOptions& o)
 }
 
 void
-VIL::initialize()
-{
-  // Directly follow grids at moment.  Probably should call on the
-  // start up of the algorithm not at first data.
-  // FIXME: configuration at some point
-  // NSEGridHistory::followGrid("height273", "Heightof0C", 3920);
-  myHeight263 = NSEGridHistory::followGrid("height263", "Heightof-10C", 5000);
-  // NSEGridHistory::followGrid("height253", "Heightof-20C", 6200);
-  myHeight233 = NSEGridHistory::followGrid("height233", "Heightof-40C", 8600);
-}
-
-void
 VIL::firstDataSetup()
 {
   static bool setup = false;
@@ -250,6 +249,7 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   myMaxGust->setDataAttributeValue("SubType", "");
 } // VIL::checkOutputGrids
 
+#if 0
 void
 VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
 {
@@ -277,3 +277,28 @@ VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * wri
   writer->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
   writer->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
 } // VIL::processVolume
+
+#endif // if 0
+
+// ... [VILCallback definition remains exactly the same] ...
+
+std::unique_ptr<LatLonHeightGridCallback>
+VIL::createCallback()
+{
+  firstDataSetup(); // Ensure the static weight table is initialized
+
+  return std::make_unique<VILCallback>(
+    myVilWeights, myHeight263, myHeight233,
+    myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
+    myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
+  );
+}
+
+void
+VIL::writeFinalProducts(RAPIOAlgorithm * writer)
+{
+  writer->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
+  writer->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
+  writer->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
+  writer->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
+}

@@ -1,0 +1,17 @@
+<!-- An example of running volume algorithms from rFusionAlgs.
+     We might make all algorithms modules at some point -->
+<w2algxml>
+    <!-- Options for rFusionAlgs.  Remember command line overrides -->
+    <option letter="threads" value="8" />
+    <option letter="verbose" value="debug" />
+
+    <!-- Options for programs/volume modules
+         Library loaded is librapioalg+'program'+.so -->
+    <w2algxml program="VIL">
+    </w2algxml>
+
+    <w2algxml program="MaxAGL">
+        <option letter="topaglkm" value="6.0" />
+        <option letter="terrain" value="/data/dem_highres.nc" />
+    </w2algxml>
+</w2algxml>

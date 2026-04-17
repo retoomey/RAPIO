@@ -3,8 +3,20 @@
 #include <rIOURL.h>
 
 #include <memory>
+#include <vector>
+#include <string>
 
 namespace rapio {
+class PTreeNode;
+
+/** Structure to hold a single child algorithm's configuration */
+struct AlgConfigNode {
+  std::string              name;
+  std::string              library;
+  std::vector<std::string> options;
+  std::vector<std::string> values;
+};
+
 /** Base class for reading/writing parameter configuration class.
  * This is a helper class for RAPIOOptions.
  * xml currently refers to the wdssii old style .xml config file passed to
@@ -44,6 +56,12 @@ public:
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) = 0;
 
+  /** Multi-config reader with a default fallback.  Called manual by
+   * FusionAlgs and any future multi-alg algorithm */
+  virtual bool
+  readMultiConfigURL(const URL& path,
+    std::vector<AlgConfigNode>& nodes){ return false; }
+
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
@@ -70,12 +88,24 @@ public:
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) override;
 
+  /** Callback for reading a multiple/nested configuration at given URL location */
+  virtual bool
+  readMultiConfigURL(const URL& path,
+    std::vector<AlgConfigNode>& nodes) override;
+
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
     const std::string       & program,
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) override;
+
+private:
+  /** Shared helper method to extract options from any <w2algxml> node */
+  bool
+  parseOptionsFromNode(const rapio::PTreeNode& algNode,
+    std::vector<std::string>                 & options,
+    std::vector<std::string>                 & values);
 };
 
 /** Can read write a flat config file.  This matches the oldstyle

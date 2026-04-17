@@ -11,6 +11,8 @@ class LatLonHeightGridIterator;
  *
  * Implement this class to handle processing of each voxel within a
  * LatLonHeightGrid by subclassing and defining the `handleVoxel` method.
+ * The iterator can do a subset of Y which is optimized memory access for
+ * threading calls (say from FusionAlgs)
  * @ingroup rapio_utility
  * @brief Callback for a LatLonHeightGridIterator
  */
@@ -35,7 +37,7 @@ public:
  */
 class LatLonHeightGridIterator {
 public:
-  LatLonHeightGridIterator(LatLonHeightGrid& grid);
+  LatLonHeightGridIterator(LatLonHeightGrid& grid, size_t startY = 0, size_t endY = 0);
 
   /** Set the array for output of the iterator */
   void
@@ -175,5 +177,8 @@ private:
 
   std::shared_ptr<LatLonGridProjection> myTerrainProj = nullptr;
   float myCurrentTerrainHeightKMs = 0.0f;
+
+  size_t myStartY; ///< For sub grids for threads
+  size_t myEndY;   ///< For sub grids for threads
 };
 } // namespace rapio

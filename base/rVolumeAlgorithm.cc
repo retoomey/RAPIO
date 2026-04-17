@@ -130,3 +130,20 @@ VolumeAlgorithm::iterate(std::shared_ptr<LatLonHeightGrid> input, LatLonHeightGr
         break;
   }
 }
+
+void
+VolumeAlgorithm::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
+{
+  // 1. Create the algorithm-specific callback
+  auto cb = createCallback();
+
+  if (cb) {
+    // 2. Iterate using the algorithm's preferred mode
+    this->iterate(input, *cb, getIterateMode());
+
+    // 3. Write out the final 2D products
+    writeFinalProducts(writer);
+  } else {
+    fLogSevere("Failed to create LatLonHeightGridCallback for VolumeAlgorithm.");
+  }
+}

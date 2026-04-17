@@ -2,12 +2,19 @@
 
 using namespace rapio;
 
-LatLonHeightGridIterator::LatLonHeightGridIterator(LatLonHeightGrid& grid)
+LatLonHeightGridIterator::LatLonHeightGridIterator(LatLonHeightGrid& grid, size_t startY, size_t endY)
   : myGrid(grid),
-  myOutputArray(grid.getFloat3DPtr())
+  myOutputArray(grid.getFloat3DPtr()),
+  myStartY(startY),
+  myEndY(endY)
 {
   myLatSpacing = grid.getLatSpacing();
   myLonSpacing = grid.getLonSpacing();
+
+  // If endY is 0, default to the full grid height
+  if ((myEndY == 0) || (myEndY > grid.getNumLats())) {
+    myEndY = grid.getNumLats();
+  }
 
   // Create a cache (saves on /1000 in looping if working in KM)
   const size_t numLayers = grid.getNumLayers();
@@ -44,7 +51,8 @@ LatLonHeightGridIterator::iterateVoxels(LatLonHeightGridCallback& callback)
     myCurrentHeightKMs = myCachedHeightsKM[z]; // use cache
 
     myCurrentLatDegs = startLat;
-    for (size_t y = 0; y < numLats; ++y, myCurrentLatDegs -= myLatSpacing) {
+    // for (size_t y = 0; y < numLats; ++y, myCurrentLatDegs -= myLatSpacing) {
+    for (size_t y = myStartY; y < myEndY; ++y, myCurrentLatDegs -= myLatSpacing) {
       myCurrentLatIdx = y;
 
       myCurrentLonDegs = startLon;
@@ -84,7 +92,8 @@ LatLonHeightGridIterator::iterateColumnsImpl(LatLonHeightGridCallback& callback)
   callback.handleBeginLoop(this, myGrid);
 
   myCurrentLatDegs = startLat;
-  for (size_t y = 0; y < numLats; ++y, myCurrentLatDegs -= myLatSpacing) {
+  // for (size_t y = 0; y < numLats; ++y, myCurrentLatDegs -= myLatSpacing) {
+  for (size_t y = myStartY; y < myEndY; ++y, myCurrentLatDegs -= myLatSpacing) {
     myCurrentLatIdx  = y;
     myCurrentLonDegs = startLon;
     for (size_t x = 0; x < numLons; ++x, myCurrentLonDegs += myLonSpacing) {

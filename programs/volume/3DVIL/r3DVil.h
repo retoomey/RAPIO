@@ -217,7 +217,7 @@ class VIL : public VolumeAlgorithm
 public:
 
   /** Create the vil algorithm */
-  VIL() : VolumeAlgorithm("3DVIL"){ }
+  VIL();
 
   /** Declare all algorithm options */
   virtual void
@@ -227,23 +227,27 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
-  /** initialize */
-  void
-  initialize();
+  /** Our iteration mode for data ordering */
+  virtual IterateMode
+  getIterateMode() const override { return IterateMode::ColumnsDown; }
 
-protected:
+  /** Get our callback that does the work */
+  virtual std::unique_ptr<LatLonHeightGridCallback>
+  createCallback() override;
 
-  /** Handle 3D cube */
+  /** Write our final products */
   virtual void
-  processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * p) override;
-
-  /** Stuff on start up */
-  void
-  firstDataSetup();
+  writeFinalProducts(RAPIOAlgorithm * writer) override;
 
   /** Checkout output grids are initialized to current coverage */
   virtual void
   checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input) override;
+
+protected:
+
+  /** Stuff on start up */
+  void
+  firstDataSetup();
 
   /** Precalculated vil weights */
   float myVilWeights[100];

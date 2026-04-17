@@ -5,6 +5,17 @@
 
 using namespace rapio;
 
+extern "C"
+{
+RAPIOAlgorithm *
+createRAPIOAlg(void)
+{
+  auto * z = new rapio::MaxAGL();
+
+  return reinterpret_cast<rapio::RAPIOAlgorithm *>(z);
+}
+}
+
 void
 MaxAGL::declareOptions(RAPIOOptions& o)
 {
@@ -112,6 +123,7 @@ private:
   float myTerrainHeightKMs; ///< Terrain height above sea level
 };
 
+#if 0
 void
 MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
 {
@@ -136,3 +148,29 @@ MaxAGL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * 
 
   writer->writeOutputProduct("MaxAGL", myMaxGrid, extraParams);
 } // MaxAGL::processVolume
+
+#endif // if 0
+
+std::unique_ptr<LatLonHeightGridCallback>
+MaxAGL::createCallback()
+{
+  if ((haveTerrain() == false) && !myWarnedTerrain) {
+    fLogSevere("No valid terrain provided. Defaulting to 0.0 AGL (sea level) for all columns.");
+    myWarnedTerrain = true;
+  }
+
+  if (myMaxGrid == nullptr) {
+    fLogSevere("Output grid not prepared or null.");
+    return nullptr;
+  }
+
+  return std::make_unique<MaxAGLCallback>(myTopAglKMs, myMaxGrid->getFloat2DPtr());
+}
+
+void
+MaxAGL::writeFinalProducts(RAPIOAlgorithm * writer)
+{
+  std::map<std::string, std::string> extraParams;
+
+  writer->writeOutputProduct("MaxAGL", myMaxGrid, extraParams);
+}
