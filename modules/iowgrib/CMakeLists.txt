@@ -12,8 +12,7 @@ set(G2C_LIB_FILE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libg2c.so")
 ExternalProject_Add(
   g2c
   GIT_REPOSITORY https://github.com/NOAA-EMC/NCEPLIBS-g2c.git
-  GIT_TAG develop  # We need NCEPLIBS-g2c and NCEPLIBS-WGRIB2 to match
-                     # FIXME: pick a release date for both at some point
+  GIT_TAG ${G2C_GIT_TAG} # See cmake/dependencies.cmake
   GIT_SHALLOW 1  # Only latest and limited history to save clone speed
   GIT_PROGRESS 1  # Show progress display during cloning
   PREFIX ${ROOT_DIRECTORY}
@@ -27,6 +26,7 @@ ExternalProject_Add(
              -DUSE_OpenJPEG=${USE_OPENJPEG_NCEPLIBS} # openjpeg
              -DUSE_Jasper=${USE_JASPER_NCEPLIBS} # jasper
              -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
+             -DCMAKE_C_FLAGS=-w        # Suppress warnings for 3rd party
   INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
   # This prevents CMake from failing if the file doesn't exist yet
   BUILD_BYPRODUCTS "${G2C_LIB_FILE}"
@@ -60,10 +60,9 @@ set(WGRIB2_LIB_FILE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libwgrib2.s
 
 ExternalProject_Add(
   wgrib2
-  #DEPENDS g2c patch_wgrib2
   DEPENDS g2c
   GIT_REPOSITORY https://github.com/NOAA-EMC/wgrib2.git
-  GIT_TAG develop #We'll probably want a tag at some point
+  GIT_TAG ${WGRIB2_GIT_TAG} # See cmake/dependencies.cmake
   GIT_SHALLOW 1  # Only latest and limited history to save clone speed
   GIT_PROGRESS 1  # Show progress display during cloning
   PREFIX ${ROOT_DIRECTORY}
@@ -78,6 +77,7 @@ ExternalProject_Add(
              -DUSE_G2CLIB_LOW=ON      # g2clib for low level
              -DUSE_G2CLIB_HIGH=ON     # g2clib for high level
              -DBUILD_TESTING=OFF  # Test files, etc.  We trust them.
+             -DCMAKE_C_FLAGS=-w       # Suppress warnings for 3rd party
 
   UPDATE_COMMAND
     ${CMAKE_COMMAND} -E echo "Applying update wgrib2 patch..." &&

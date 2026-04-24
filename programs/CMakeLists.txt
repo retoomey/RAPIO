@@ -24,7 +24,9 @@ if (BUILD_WEB_MODULE)
   install(TARGETS rWebGUI
      DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
-  add_subdirectory(RESTserver)
+
+  # Don't build anything else or comflict with em++
+  #add_subdirectory(RESTserver)
 endif (BUILD_WEB_MODULE)
 
 ##################################################################

@@ -60,7 +60,7 @@ RAPIOPointCloudAlg::processOptions(RAPIOOptions& o)
 
   myWriteStage2Name  = "None";          // will get from first radialset typename
   myWriteOutputUnits = "Dimensionless"; // will get from first radialset units
-  myEveryTilt        = o.getOption("everytilt");
+  myEveryTilt        = o.getBoolean("everytilt");
   #if 0
   myThrottleCount = o.getInteger("throttle");
   if (myThrottleCount > 10) {

@@ -23,6 +23,7 @@ add_executable(rTestRAPIO
   rTestIODataType.cc
   rTestIOPostProcessor.cc
   rTestMain.cc
+  rTestOptions.cc
   rTestSparseVector.cc
   rTestTime.cc
   rTestNetwork.cc

@@ -19,10 +19,14 @@ set(EMSCRIPTEN_SOURCE_DIR ${ROOT_DIRECTORY}/emscripten)
 file(MAKE_DIRECTORY ${ROOT_DIRECTORY})
 
 # Clone ImGui repository if it doesn't exist
+# Make sure and fix the version here and below in emscripten and
+# not use the bleeding edge master branches.
 if(NOT EXISTS ${IMGUI_SOURCE_DIR})
     message(STATUS "Cloning ImGui repository...")
+    message(STATUS "VERSION TAG IS ${IMGUI_GIT_TAG}")
+    # see cmake/dependencies.cmake for version choice
     execute_process(
-        COMMAND git clone https://github.com/ocornut/imgui.git ${IMGUI_SOURCE_DIR}
+        COMMAND git clone --branch ${IMGUI_GIT_TAG} --depth 1 https://github.com/ocornut/imgui.git ${IMGUI_SOURCE_DIR}
         WORKING_DIRECTORY ${ROOT_DIRECTORY}
     )
 else()
@@ -46,9 +50,7 @@ ExternalProject_Add(
     emscripten
     PREFIX ${EMSCRIPTEN_SOURCE_DIR}
     GIT_REPOSITORY https://github.com/emscripten-core/emsdk.git
-    #GIT_TAG main  Using python 3.8 not there yet on Oracle 8 and others
-    GIT_TAG 3d6d8ee  # Release 3.1.74 Dec 13, 2024
-    #GIT_TAG ca7b40a  # Release 3.1.61 Jun 1, 2024
+    GIT_TAG ${EMSCRIPTEN_GIT_TAG} # see cmake/dependencies.cmake
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ./emsdk install latest && ./emsdk activate latest

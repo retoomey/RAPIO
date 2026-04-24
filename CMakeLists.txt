@@ -8,6 +8,9 @@ project (RAPIO
     LANGUAGES CXX C
     VERSION 1.0)
 
+# Load central dependency versions, git tags, etc.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
+
 ###########################################################################
 # Options
 # Can use "ccmake ." in the BUILD directory to toggle, sometimes it's
@@ -101,7 +104,7 @@ include(FetchContent)
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG        12.1.0 # Stable version
+  GIT_TAG        ${FMT_GIT_TAG} # see cmake/dependencies.cmake
 )
 
 FetchContent_MakeAvailable(fmt)
@@ -372,7 +375,10 @@ if (BUILD_WEB_MODULE)
   ExternalProject_Add(
     rapioweb
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/programs/RESTserver
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+    CMAKE_ARGS 
+      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+      -DIMGUI_GIT_TAG=${IMGUI_GIT_TAG}
+      -DEMSCRIPTEN_GIT_TAG=${EMSCRIPTEN_GIT_TAG}
     # Always build (so if we change the RESTserver/* it will catch it)
     BUILD_ALWAYS 1
   )
