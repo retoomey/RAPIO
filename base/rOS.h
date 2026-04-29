@@ -148,10 +148,6 @@ public:
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
 
-  /** Run a command on a file supporting file macros */
-  static bool
-  runCommandOnFile(const std::string& postCommandIn, const std::string& finalFile, bool captureOut = true);
-
   /**
    * Run a capturable function in our code.  For example, the wgrib2 c function api
    * is built into the iowgrib module.  This captures stdout from it to a vector

@@ -90,8 +90,10 @@ LLSDPolar::processNewData(RAPIOData& d)
 
   firstTimeData();
 
-  // Perform logical 360 remap to ensure wrap-around works
-  auto rs = rsIn->Remap(rsIn->getGateWidthKMs() * 1000.0f, 360, rsIn->getNumGates(), false);
+  // Normalize to nearest 360 multiple
+  // Important currently for wraparound/jitter removal
+  // in the filters (since we aren't using ghost cells)
+  auto rs = RadialSet::Normalize(rsIn);
 
   auto results = compute(rs);
 
@@ -99,7 +101,7 @@ LLSDPolar::processNewData(RAPIOData& d)
   writeOutputProduct("AzShear", results["Az"]);
   writeOutputProduct("DivShear", results["Div"]);
   writeOutputProduct("TotalShear", results["Tot"]);
-}
+} // LLSDPolar::processNewData
 
 std::map<std::string, std::shared_ptr<RadialSet> >
 LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)

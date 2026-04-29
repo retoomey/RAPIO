@@ -59,7 +59,21 @@ std::string
 SafeCommandStep::execute(const std::string& currentFilePath,
   std::map<std::string, std::string>      & keys)
 {
-  if (OS::runCommandOnFile(myCommandTemplate, currentFilePath, true)) {
+  std::vector<std::string> args;
+
+  Strings::splitWithoutEnds(myCommandTemplate, ' ', &args);
+
+  // SafeCommandStep owns the macro expansion now
+  for (auto& arg : args) {
+    Strings::replace(arg, "%filename%", currentFilePath);
+  }
+
+  std::vector<std::string> output;
+
+  if (OS::runProcessArgs(args, output) != -1) {
+    for (const auto& line : output) {
+      fLogInfo("   {}", line);
+    }
     return currentFilePath;
   }
 

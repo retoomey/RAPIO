@@ -7,6 +7,7 @@
 #include "fstream"
 #include "rStrings.h"
 #include "rConfigRecord.h"
+#include "rIOPostProcessor.h"
 
 #include <stdio.h>
 
@@ -176,16 +177,25 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   ofp.close();
   // End write record to tmp .fml file --------------------------
 
-  // Rename from tmp to final
   const std::string outfilename = outputDir + filename;
-  int result = rename(tmpfilename.c_str(), outfilename.c_str());
 
-  if (result == 0) {
-    // -----------------------------------------------------------------------
-    // Post write command on a written file (comes from postfml key)
-    const std::string postCommand = outputParams["postfml"];
-    OS::runCommandOnFile(postCommand, outfilename, true);
-  } else {
-    fLogSevere("Unable to rename tmp .fml file {} to final location {}", tmpfilename, outfilename);
+  // Construct a clean set of keys for the IOPostProcessor.
+  // We explicitly avoid passing outputParams so the .fml file isn't
+  // accidentally compressed if the parent data file requested compression.
+  std::map<std::string, std::string> fmlKeys;
+
+  fmlKeys["filename"] = outfilename;
+
+  // Map 'postfml' to 'postwrite' so the pipeline recognizes it
+  // and properly assigns the LDMInsertStep or SafeCommandStep.
+  fmlKeys["postwrite"] = outputParams["postfml"];
+
+  IOPostProcessor postProcessor;
+
+  postProcessor.buildPipeline(fmlKeys);
+
+  // run() executes the AtomicRenameStep followed by the post-command step
+  if (!postProcessor.run(tmpfilename, fmlKeys)) {
+    fLogSevere("Pipeline failed for .fml file {} to final location {}", tmpfilename, outfilename);
   }
 } // FMLRecordNotifier::writeRecord

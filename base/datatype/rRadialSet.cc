@@ -142,6 +142,34 @@ private:
   return R;
 } // RadialSet::Remap
 
+std::shared_ptr<RadialSet>
+RadialSet::Normalize(std::shared_ptr<RadialSet> rsIn)
+{
+  if (!rsIn) { return nullptr; }
+
+  size_t actualRadials = rsIn->getNumRadials();
+
+  // Find the nearest multiple of 360 (e.g., 360, 720, 1080, 1440...)
+  // 360 Legacy or sectors
+  // 720 Superres
+  // For future I'd expect to see integer multiples or additions of 360,
+  // or PAR with unique values.  We'd have to handle those when the time
+  // comes to ensure wraparound.
+  // The std::max clamp ensures we never drop to a 0 multiplier if actualRadials < 180
+  size_t multiplier    = std::max<size_t>(1, std::round(actualRadials / 360.0));
+  size_t targetRadials = multiplier * 360;
+
+  if (actualRadials == targetRadials) {
+    // Data is already perfectly aligned, return the exact same shared_ptr
+    return rsIn;
+  }
+
+  fLogInfo("Normalizing RadialSet from {} to {} radials", actualRadials, targetRadials);
+
+  // Return a newly allocated remapped shared_ptr
+  return rsIn->Remap(rsIn->getGateWidthKMs() * 1000.0f, targetRadials, rsIn->getNumGates(), false);
+}
+
 void
 RadialSet::deep_copy(std::shared_ptr<RadialSet> nsp)
 {

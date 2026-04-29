@@ -69,6 +69,14 @@ public:
     const size_t    num_gates,
     bool            projectToGround);
 
+  /** Normalize a RadialSet if there are non-standard azimuth patterns,
+   * typically a sector or jitter overlap in the tilt such as 362 azimuths.
+   * We pin to 360 or 720 true azimuths.  This also helps with wrap around
+   * in cases where we avoid using ghost cells.  Lak used ghost cells in
+   * his image processing so it may come to that at some point. */
+  static std::shared_ptr<RadialSet>
+  Normalize(std::shared_ptr<RadialSet> rsIn);
+
   /** Get a pointer cache to critical things.  Note, changing the RadialSet
    * massively might invalidate these pointers.  They can also go out of scope.
    */
