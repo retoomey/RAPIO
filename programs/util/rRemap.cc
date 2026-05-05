@@ -89,7 +89,7 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
 
   // Full llg
   // FIXME: allow grid or flag to do grid of input right?
-  //out = llg->Clone();
+  // out = llg->Clone();
 
   // Fill unavailable in the new grid
   auto fullgrid = out->getFloat2D();

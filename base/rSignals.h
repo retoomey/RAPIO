@@ -24,6 +24,10 @@ public:
   static void
   printTrace();
 
+  /** Get setup message back */
+  static std::string
+  getCoreStatusString();
+
 private:
 
   /** Signal callback for handling trace */
@@ -34,6 +38,9 @@ private:
    * we are crashing a lot we fill up the disks */
   static void
   setupCoreDumps(bool enable);
+
+  /** Store the wanted state of core dumps */
+  static bool myCoreDumpsRequested;
 
   Signals();
 };

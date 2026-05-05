@@ -82,7 +82,7 @@ public:
     /** Process an individual gate in the algorithm.  Most polar
      * algorithms can do their work here */
     virtual void
-    handleGate(RadialSetIterator * it) = 0;
+    handleGate(RadialSetIterator * it) override = 0;
 
 private:
     /** The pointer cache for our volume items. */

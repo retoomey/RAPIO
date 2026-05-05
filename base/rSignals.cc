@@ -13,7 +13,8 @@
 
 using namespace rapio;
 
-static bool enabledStackTrace = false;
+static bool enabledStackTrace      = false;
+bool Signals::myCoreDumpsRequested = false;
 
 /** Designed by nobar on stackoverflow,
  * doesn't work with valgrind or when running within gdb */
@@ -134,6 +135,7 @@ Signals::handleSignal(int signum)
 void
 Signals::initialize(bool enableStackTrace, bool wantCoreDumps)
 {
+  myCoreDumpsRequested = wantCoreDumps;
   auto aSignal = handleSignal;
 
   enabledStackTrace = enableStackTrace;
@@ -169,21 +171,31 @@ Signals::setupCoreDumps(bool enable)
   // but not raise them back up again, even if it's under limits.conf
   // Also you can't set them above the limits.conf settings
   // See if core limits are not zero...
-  if ((err != -1) && ((corelimit.rlim_cur != want) || (corelimit.rlim_max != want))) {
-    // fLogInfo("Core limits (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
-
+  if (err != -1) {
     // ... if so, try to make them 'on' or 'off'
     corelimit.rlim_cur = corelimit.rlim_max = want;
     setrlimit(RLIMIT_CORE, &corelimit);
-
-    // ... and then check the new setting 'took'
-    err = getrlimit(RLIMIT_CORE, &corelimit);
-
-    if ((err != -1) && (corelimit.rlim_cur == want) && (corelimit.rlim_max == want)) {
-      fLogInfo("Core limits set (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
-    } else {
-      fLogSevere("Unable to set core limits");
-      fLogSevere("Core limits set (soft):{} (hard): {}", corelimit.rlim_cur, corelimit.rlim_max);
-    }
   }
 } // Signals::setupCoreDumps
+
+std::string
+Signals::getCoreStatusString()
+{
+  // ... and then check the new setting 'took'
+  struct rlimit corelimit;
+
+  if (getrlimit(RLIMIT_CORE, &corelimit) == -1) {
+    return "Core limits: Failed to query system limits.";
+  }
+
+  const auto want = myCoreDumpsRequested ? RLIM_INFINITY : 0;
+
+  // Check if the system actually gave us what we wanted
+  if (corelimit.rlim_cur == want) {
+    return fmt::format("Core limits set (soft): {} (hard): {}",
+             corelimit.rlim_cur, corelimit.rlim_max);
+  } else {
+    return fmt::format("Core limit mismatch! Wanted {}, but system is {}",
+             want, corelimit.rlim_cur);
+  }
+}

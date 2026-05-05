@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <array>
+#include <cstdint>
 
 namespace rapio {
 /** Handles colors and terminal pretty printing abilities for terminal.

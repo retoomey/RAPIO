@@ -21,6 +21,7 @@ BOOST_WRAP_POP
 #include <iostream>
 #include <fstream>
 
+#include "config.h"
 #include <sys/statvfs.h>
 
 using namespace boost::interprocess;
@@ -707,4 +708,12 @@ OS::isWSL()
   // or checking for specific environment variables.
   // Here's a simple example:
   return std::getenv("WSL_DISTRO_NAME") != nullptr;
+}
+
+std::string
+OS::getBuildInfo()
+{
+  return fmt::format("{} {} C++{} {} {} UTC",
+           COMPILER_NAME, COMPILER_VERSION,
+           CXX_VERSION, BUILD_DATE, BUILD_TIME);
 }

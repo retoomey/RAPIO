@@ -27,7 +27,7 @@ RadarGenerator::createDataType(const Record& rec)
 
   if (!haveRadar) {
     fLogSevere("No radar named '{}', can't create fake data.", radarName);
-    nullptr;
+    return nullptr;
   }
 
   LengthKMs firstGateDistanceKMs = 0.0;

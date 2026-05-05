@@ -727,6 +727,8 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     handleColorMap(w, pieces, settings);
   } else if (type == "svg") {
     handleSVG(w, pieces, settings);
+  } else if (type == "proxy") {
+    handleProxy(w, pieces);
     // These are more experimental alpha
   } else if (type == "ui") {
     handlePathUI(w, pieces);
@@ -737,6 +739,43 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     handlePathDefault(w);
   }
 } // RAPIOWebGUI::processWebMessage
+
+void
+RAPIOWebGUI::handleProxy(WebMessage& w, std::vector<std::string>& pieces)
+{
+  auto params = w.getMap();
+
+  if (params.count("url") == 0) {
+    std::cout << "Returning on no url error\n";
+    w.setMessage("Error: No 'url' parameter provided", "text/plain");
+    w.setError(400);
+    return;
+  }
+
+  std::string targetUrl = params.at("url");
+  std::vector<char> buffer;
+
+  std::cout << "Reading '" << targetUrl << "'\n";
+  // Fetch the data server-side (bypasses browser CORS)
+  int bytesRead = Network::read(targetUrl, buffer);
+
+  std::cout << "Read '" << targetUrl << "' size is " << bytesRead << "\n";
+  if (bytesRead > 0) {
+    std::string payload(buffer.begin(), buffer.end());
+
+    // Quick MIME type guess so the browser handles the image correctly
+    std::string mime = "application/octet-stream";
+    if (Strings::endsWith(targetUrl, ".png")) {
+      mime = "image/png";
+    } else if (Strings::endsWith(targetUrl, ".jpg") || Strings::endsWith(targetUrl, ".jpeg")) { mime = "image/jpeg"; }
+
+    // setMessage ensures it goes through the CORS-friendly branch in rWebServer.cc
+    w.setMessage(payload, mime);
+  } else {
+    w.setMessage("Error: Failed to fetch target URL", "text/plain");
+    w.setError(502); // Bad Gateway
+  }
+} // RAPIOWebGUI::handleProxy
 
 void
 RAPIOWebGUI::execute()

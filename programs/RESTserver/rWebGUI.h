@@ -76,6 +76,11 @@ protected:
   void
   handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
+  /** A proxy request from our webassembly client. Every will go though us to avoid CORS, though
+   * this will require our own security measures */
+  void
+  handleProxy(WebMessage& w, std::vector<std::string>& pieces);
+
   /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
 

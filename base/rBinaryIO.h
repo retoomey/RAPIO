@@ -334,11 +334,11 @@ public:
 
   /** Read bzip2 to end of data */
   virtual MemoryStreamBuffer
-  readBZIP2(){ return MemoryStreamBuffer(); }
+  readBZIP2() override { return MemoryStreamBuffer(); }
 
   /** Write bzip2 to end of data */
   MemoryStreamBuffer
-  writeBZIP2(){ return MemoryStreamBuffer(); }
+  writeBZIP2() override { return MemoryStreamBuffer(); }
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */
@@ -428,11 +428,11 @@ public:
 
   /** Read bzip2 to end of data */
   virtual MemoryStreamBuffer
-  readBZIP2(){ return MemoryStreamBuffer(); }
+  readBZIP2() override { return MemoryStreamBuffer(); }
 
   /** Write bzip2 to end of data */
   MemoryStreamBuffer
-  writeBZIP2(){ return MemoryStreamBuffer(); }
+  writeBZIP2() override { return MemoryStreamBuffer(); }
 
   // Movement ----------------------------
   /** Add a method to reset or seek to a specific position */

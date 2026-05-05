@@ -32,19 +32,19 @@ public:
 
   /** Set the logging tokens for the log line pattern */
   void
-  setTokenPattern(const std::vector<LogToken>& tokens);
+  setTokenPattern(const std::vector<LogToken>& tokens) override;
 
   /** Set the logging level cutoff */
   void
-  setLoggingLevel(LogLevel l);
+  setLoggingLevel(LogLevel l) override;
 
   /** Flush the log */
   void
-  flush();
+  flush() override;
 
   /** Set log flush milliseconds */
   void
-  setFlushMilliseconds(int ms);
+  setFlushMilliseconds(int ms) override;
 
   /** Initialize and set up logger */
   void

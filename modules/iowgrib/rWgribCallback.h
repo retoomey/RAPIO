@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <vector>
+#include <array>
 
 namespace rapio {
 /** Root virtual class visitor for wgrib2 match callbacks.

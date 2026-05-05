@@ -1,5 +1,4 @@
 #include <rSimpleAlg.h>
-#include <boost/log/trivial.hpp>
 
 #include <iostream>
 

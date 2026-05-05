@@ -14,7 +14,9 @@
 # if __clang_major__ >= 17
 #  define BOOST_WRAP_PUSH \
   _Pragma("clang diagnostic push") \
-  _Pragma("clang diagnostic ignored \"-Wenum-constexpr-conversion\"")
+  _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
+  _Pragma("clang diagnostic ignored \"-Wenum-constexpr-conversion\"") \
+  _Pragma("clang diagnostic ignored \"-Wconstant-logical-operand\"")
 # else
 #  define BOOST_WRAP_PUSH _Pragma("clang diagnostic push")
 # endif

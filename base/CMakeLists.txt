@@ -13,6 +13,7 @@ rAlgConfigFile.h
 rArith.h
 rArray.h
 rArrayAlgorithm.h
+rHelpFormatter.h
 image/rArrayFilter.h
 image/rArraySampler.h
 image/rNearestNeighbor.h
@@ -168,6 +169,7 @@ ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
 rArrayAlgorithm.cc
+rHelpFormatter.cc
 image/rArraySampler.cc
 image/rNearestNeighbor.cc
 image/rCressman.cc

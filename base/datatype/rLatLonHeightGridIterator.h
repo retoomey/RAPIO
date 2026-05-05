@@ -18,6 +18,8 @@ class LatLonHeightGridIterator;
  */
 class LatLonHeightGridCallback {
 public:
+  virtual
+  ~LatLonHeightGridCallback() = default;
   virtual void
   handleVoxel(LatLonHeightGridIterator * it) = 0;
   virtual void handleBeginColumn(LatLonHeightGridIterator * it){ };

@@ -49,7 +49,7 @@ public:
 
   /** Apply algorithm to a true integer index (faster) */
   virtual bool
-  sampleAtIndex(int inI, int inJ, float& out)
+  sampleAtIndex(int inI, int inJ, float& out) override
   {
     return myUpstream->sampleAtIndex(inI, inJ, out);
   }

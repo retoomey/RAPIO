@@ -4,6 +4,7 @@
 #include "rOS.h"
 #include "rFactory.h"
 #include "rConfig.h"
+#include "rSignals.h"
 
 // Default always loaded datatype creation factories
 #include "rNetwork.h"
@@ -201,8 +202,13 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     // Final configured log settings off verbose flag
     const std::string verbose = o.getString("verbose");
     Log::setSeverityString(verbose); // Before logs
-    // fLogInfo("Executing {}...",OS::getProcessName());
-    fLogInfo("Executing {}...", OS::getProcessName());
+
+    // Feels silly for every run.  We have it in the help which
+    // is probably 'enough' log spamming.
+    // fLogInfo("{}", o.getHeader());
+    fLogInfo("RAPIO Executing {}...", OS::getProcessName());
+    fLogInfo("Build: ({})", OS::getBuildInfo());
+    fLogInfo("{}", Signals::getCoreStatusString());
     Log::printCurrentLogSettings();
 
     // Final loading of validated options

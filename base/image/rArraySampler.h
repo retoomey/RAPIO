@@ -70,7 +70,7 @@ public:
    * @return false if the coordinate is OOB (and Boundary is set to None).
    */
   virtual bool
-  sampleAt(float u, float v, float& out) = 0;
+  sampleAt(float u, float v, float& out) override = 0;
 
   /** * @brief Fast-path for exact integer indexing (used by process()).
    * Marked 'final' to prevent spatial interpolators from overriding it.

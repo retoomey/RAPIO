@@ -69,6 +69,11 @@ endif()
 #set(CMAKE_VERBOSE_MAKEFILE)
 
 #add_compile_options(-ftime-report)  # For GCC, shows time per compilation unit
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Tell Clang not to complain if it encounters a warning flag it doesn't recognize
+    # since a 'normal' build with g++ we have a few special flags
+    add_compile_options(-Wno-unknown-warning-option)
+endif()
 
 # Specify the C++ standard
 # Currently tested from 11 to 23. Will avoid new features for now

@@ -132,6 +132,10 @@ WebServer::handleSendFilepath(std::shared_ptr<HttpServer::Response>& response,
         header.emplace(a.first, a.second);
       }
 
+      header.emplace("Access-Control-Allow-Origin", "*");
+      header.emplace("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      header.emplace("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
       // Parse the file and replace macros...
       if (useMacros) {
         std::stringstream stream;

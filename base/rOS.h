@@ -357,5 +357,9 @@ public:
   /** Determine if we're running in WSL window's subsystem for linux  or not */
   static bool
   isWSL();
+
+  /** Return a string of the entire build information */
+  static std::string
+  getBuildInfo();
 };
 }
