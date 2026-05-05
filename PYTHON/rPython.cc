@@ -47,15 +47,15 @@ public:
     for (auto& s1:sel) {
       s = s + s1 + " ";
     }
-    LogInfo(s << " from index " << d.matchedIndexNumber() << "\n");
+    fLogInfo(s << " from index {}", d.matchedIndexNumber());
 
     // FIXME: Only handling DataGrids at moment
     auto r = d.datatype<rapio::DataGrid>();
 
     if (r != nullptr) {
-      LogInfo("Incoming data grid, sending to python...\n");
+      fLogInfo("Incoming data grid, sending to python...");
       auto output = OS::runDataProcess(myPythonPath + " " + myPythonScript + " " + myPythonArgs, r);
-      LogInfo("PYTHON: " << myPythonScript << "\n");
+      fLogInfo("PYTHON: {}", myPythonScript);
       for (auto v:output) {
         // LogInfo("PYTHON: " << v << "\n");
         std::cout << "--" << v << "\n";
@@ -64,7 +64,7 @@ public:
       // Note if python modified the grid, it will write out here
       // If your python just creates tables or something..gonna need some flag to know so we
       // just make notifications?  So much potential
-      LogInfo("--->Writing " << r->getTypeName() << " product to output\n");
+      fLogInfo("--->Writing {} product to output", r->getTypeName());
       writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
     }
   };

@@ -420,10 +420,12 @@ public:
   bool
   get1(size_t i) const
   {
+    #if 0
     if (i > myBits.size()) {
       fLogSevere("BIT AT {} is GREATER {}", i, myBits.size());
       exit(1);
     }
+    #endif
     return myBits[i];
   }
 

@@ -5,6 +5,7 @@
 #include "rError.h"
 
 #include <iostream>
+#include <map>
 
 using namespace rapio;
 using namespace std;

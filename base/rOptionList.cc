@@ -95,10 +95,9 @@ OptionList::makeOption(
   Option * have = getOption(opt);
 
   if (have) {
-    std::cout << "WARNING: Code error: Option '" << opt
-              << "' is already declared in OptionList.\n";
-    exit(1);
+    throw StartupException(fmt::format("Code error: Option '{}' is already declared in OptionList.", opt));
   }
+
   Option o; // on stack..humm damn Java, lol
 
   o.required = required;
@@ -227,8 +226,7 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
     } else {
       if (!fromiconfig) {
         // Because of macros, it's confusing to allow duplicates
-        fLogSevere("Duplicated commandline option for '{}'.", arg);
-        exit(1);
+        throw StartupException(fmt::format("Duplicated commandline option for '{}'.", arg));
       }
     }
   } else {
@@ -270,8 +268,7 @@ std::string
 OptionList::getString(const std::string& key)
 {
   if (!isProcessed) {
-    fLogSevere("Have to call processArgs before calling getString. This is a code error");
-    exit(1);
+    throw StartupException("Code error: Have to call processArgs before calling getString.");
   }
   std::string s = "";
   Option * have = getOption(key);
@@ -342,11 +339,9 @@ OptionList::addSuboption(const std::string& sourceopt, const std::string& opt,
   if (have != nullptr) {
     have->addSuboption(opt, description);
   } else {
-    std::cout << "WARNING: Code error: Trying to add suboption " << opt
-              << " to missing option '" << opt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
+    throw StartupException(fmt::format(
+              "Code error: Trying to add suboption '{}' to option '{}'. You must add the option first.", opt,
+              sourceopt));
   }
 }
 
@@ -358,11 +353,8 @@ OptionList::addGroup(const std::string& sourceopt, const std::string& group)
   if (have) {
     have->addGroup(group);
   } else {
-    std::cout << "WARNING: Code error: Trying to add group " << group
-              << " to missing option '" << sourceopt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
+    throw StartupException(fmt::format(
+              "Code error: Trying to add group '{}' to option '{}'. You must add the option first.", group, sourceopt));
   }
 }
 
@@ -374,11 +366,8 @@ OptionList::setHidden(const std::string& sourceopt)
   if (have) {
     have->hidden = true;
   } else {
-    std::cout << "WARNING: Code error: Trying to set hidden "
-              << " to missing option '" << sourceopt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
+    throw StartupException(fmt::format(
+              "Code error: Trying to set hidden to missing option '{}'. You must add the option first.", sourceopt));
   }
 }
 
@@ -413,12 +402,9 @@ OptionList::addAdvancedHelp(const std::string& sourceopt,
     have->advancedHelp = help;
     have->usage        = have->usage + " (See help " + have->opt + ")";
   } else {
-    std::cout
-      << "WARNING: Code error: Trying to add detailed help to missing option '"
-      << sourceopt << "'\n";
-    std::cout
-      << "You must add the option first with boolean, required or optional\n";
-    exit(1);
+    throw StartupException(fmt::format(
+              "Code error: Trying to add detailed help to missing option '{}'. You must add the option first.",
+              sourceopt));
   }
 }
 

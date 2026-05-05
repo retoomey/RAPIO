@@ -2,6 +2,7 @@
 
 #include "rError.h"
 #include "rStrings.h"
+#include "rURL.h"
 
 // --------------------------------------------------------------
 // Optional class for networking if CURL installed.

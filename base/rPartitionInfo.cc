@@ -1,5 +1,7 @@
 #include "rPartitionInfo.h"
 
+#include <sstream>
+
 using namespace rapio;
 using namespace std;
 

@@ -165,8 +165,7 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
 
     // Everything should be registered, try initial start up
     if (!Config::initialize()) {
-      fLogSevere("Failed to initialize.");
-      exit(1);
+      throw StartupException("Failed to initialize configuration framework (Config::initialize() failed).");
     }
 
     // ------------------------------------------------------------
@@ -193,7 +192,9 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
       exit(0);
     }
     const bool success = o.finalizeArgs(wantHelp);
-    if (!success) { exit(1); }
+    if (!success) {
+      throw StartupException("Option finalization failed due to unrecognized or invalid arguments.");
+    }
 
     myMacroApplied = o.isMacroApplied();
 
@@ -216,8 +217,18 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
 
     // Execute the algorithm
     execute();
+  } catch (const StartupException& e) {
+    // Expected user/configuration errors. Print cleanly to cerr.
+    std::cerr << "\n[RAPIO STARTUP ERROR]: " << e.what() << "\n\n";
+    exit(1);
+  } catch (const RAPIOException& e) {
+    // Other framework-level exceptions (for future expansion)
+    std::cerr << "\n[RAPIO FATAL ERROR]: " << e.what() << "\n\n";
+    exit(1);
   } catch (const std::exception& e) {
-    std::cerr << "Exception during startup: " << e.what() << "\n";
+    // Standard library exceptions (std::bad_alloc, std::out_of_range, etc.)
+    std::cerr << "\n[UNHANDLED STD EXCEPTION]: " << e.what() << "\n\n";
+    exit(1);
   }
 } // RAPIOProgram::executeFromArgs
 

@@ -178,7 +178,7 @@ getSubtypeList(const std::string& product)
       const std::string full = rootdisk + dp->d_name;
       // Always ignore files starting with . (0 terminated so don't need length check)
       if (dp->d_name[0] == '.') { continue; }
-      LogSevere("Checking subtype " << full << "\n");
+      fLogSevere("Checking subtype {}", full);
       if (OS::isDirectory(full)) { // maybe inline here faster or we go the getdents rabbithole
         subtypes.push_back(dp->d_name);
       }
@@ -197,7 +197,7 @@ getTimeList(const std::string& product, const std::string& subtype)
   if (rootdisk[rootdisk.size() - 1] != '/') {
     rootdisk += '/';
   }
-  LogSevere("Checking root: " << rootdisk << "\n");
+  fLogSevere("Checking root: {}", rootdisk);
 
   std::vector<std::string> times;
 
@@ -287,8 +287,6 @@ getJSONTimeList(const std::string& product, const std::string& subtype)
 void
 RAPIOWebGUI::handlePathUI(WebMessage& w, std::vector<std::string>& pieces)
 {
-  LogSevere("Woooh...something calling our json stuff\n");
-
   // Ok for now make json by hand.  We need to get the javascript to react
   std::stringstream json;
 
@@ -372,12 +370,12 @@ RAPIOWebGUI::handlePathData(WebMessage& w, std::vector<std::string>& pieces)
   } else {
     if (pieces.size() < 3) {
       const std::string s = pieces[1];
-      LogSevere("Getting subtypes for " << s << "\n");
+      fLogSevere("Getting subtypes for {}", s);
       w.setMessage(getJSONSubtypeList(s), "application/json");
     } else {
       const std::string s = pieces[1];
       const std::string t = pieces[2];
-      LogSevere("Getting times for " << s << "\n");
+      fLogSevere("Getting times for {}", s);
       w.setMessage(getJSONTimeList(s, t), "application/json");
     }
   }
@@ -468,14 +466,14 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
 
   Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
   if (bbox.size() != 4) {
-    LogSevere("Expected 4 parameters in BBOX for WMS server request, got " << bbox.size() << "\n");
+    fLogSevere("Expected 4 parameters in BBOX for WMS server request, got {}", bbox.size());
     return;
   }
   for (auto a:bbox) {
     try{
       std::stof(a);
     }catch (const std::exception& e) {
-      LogSevere("Non number passed for BBOX parameter? " << a << "\n");
+      fLogSevere("Non number passed for BBOX parameter? {}", a);
       return;
     }
   }
@@ -485,7 +483,7 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
   std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile."
     + suffix;
 
-  // LogInfo("WMS_BBOX:" << settings["BBOX"] << "\n");
+  // fLogInfo("WMS_BBOX:{}", settings["BBOX"]);
   settings["TILETEXT"] = "";
 
   // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
@@ -508,7 +506,7 @@ RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std:
 
   // Verify the z/y/x and that it's integers
   if (pieces.size() < 4) {
-    LogSevere("Expected http://tms/z/x/y for start of tms path\n");
+    fLogSevere("Expected http://tms/z/x/y for start of tms path");
     for (auto k:pieces) {
       std::cout << "PIECE " << k << "\n";
     }
@@ -523,7 +521,7 @@ RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std:
     // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
     y = std::stoi(pieces[3]);
   }catch (const std::exception& e) {
-    LogSevere("Non number passed for z, x or y? " << pieces[1] << ", " << pieces[2] << ", " << pieces[3] << "\n");
+    fLogSevere("Non number passed for z, x or y? {}, {}, {}", pieces[1], pieces[2], pieces[3]);
     return;
   }
 
@@ -544,7 +542,7 @@ RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std:
   settings["BBOXSR"]   = "4326"; // Lat/Lon
   settings["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
 
-  // LogInfo("TMS XYZ (" << x << ", " << y << ", " << z << ") BBOX: " << settings["BBOX"] << "\n");
+  // fLogInfo("TMS XYZ ({}, {}, {}) BBOS: {}",x,y,z, settings["BBOX"]);
 
   serveTile(w, pathout, settings);
 } // RAPIOWebGUI::handlePathTMS
@@ -579,7 +577,7 @@ RAPIOWebGUI::handlePathDefault(WebMessage& w)
     w.addMacro("WMS", "http://" + hostname + ":" + portStr + "/wms");
     w.addMacro("HOSTNAME", hostname);
     w.addMacro("PORT", portStr);
-    LogSevere("HOSTNAME is " << hostname << " and " << portStr << "\n");
+    fLogSevere("HOSTNAME is {} and {}", hostname, portStr);
   }
   #endif // if 0
 
@@ -654,7 +652,7 @@ RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
 void
 RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
 {
-  LogInfo("Request: " << wsp->getPath() << "\n");
+  fLogInfo("Request: {}", wsp->getPath());
   auto& w = *wsp;
 
   // Local settings for this call
@@ -676,11 +674,11 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     // Arcgis earth (or others) asking for WMS capabilities.
     const URL url = Config::getConfigFile("misc/webguicapabilities.xml");
     if (url.empty()) {
-      LogInfo("Received capabilities request but can't find webguicapabilities.xml\n");
+      fLogInfo("Received capabilities request but can't find webguicapabilities.xml");
       w.setMessage("Error");
       return;
     } else {
-      LogInfo("Request for capabilities succeeded.\n");
+      fLogInfo("Request for capabilities succeeded.");
     }
 
     std::ifstream file(url.toString());
@@ -690,7 +688,7 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     return;
   } else {
     bool service = (settings["service"] == "WMS");
-    // LogInfo("Settings?  " << service << "\n");
+    // fLogInfo("Settings?  {}", service);
   }
 
   // CACHE SETTING (Global/not changable)
@@ -792,7 +790,7 @@ RAPIOWebGUI::execute()
     std::string aBuilder;
     std::string aFile;
     IODataType::iPathParse(myStartUpFile, aFile, aBuilder);
-    LogInfo("Attempting to load given start up file " << aFile << "\n");
+    fLogInfo("Attempting to load given start up file {}", aFile);
     auto d = IODataType::readDataType(aFile, aBuilder);
     if (d != nullptr) {
       myTileData = d;

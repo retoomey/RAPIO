@@ -45,9 +45,9 @@ TEMPLATE::processOptions(RAPIOOptions& o)
    * myX = o.getBoolean("x");
    * myZ = o.getString("Z");
    * std::string xAsString = o.getString("x");
-   * LogInfo(" ************************x IS " << myX << " (as string "<< xAsString << "\n");
-   * LogInfo(" ************************T IS " << myTest << "\n");
-   * LogInfo(" ************************Z IS " << myZ << "\n");
+   * fLogInfo(" ************************x IS {} (as string {})", myX, xAsString);
+   * fLogInfo(" ************************T IS {}", myTest);
+   * fLogInfo(" ************************Z IS {}", myZ);
    */
 }
 
@@ -65,7 +65,7 @@ TEMPLATE::processNewData(rapio::RAPIOData& d)
   for (auto& s1:sel) {
     s = s + s1 + " ";
   }
-  LogInfo(s << " from index " << d.matchedIndexNumber() << "\n");
+  fLogInfo("{} from index {}",s,d.matchedIndexNumber());
 #endif 
 
   // Look for _any_ data the system knows how to read
@@ -77,7 +77,7 @@ TEMPLATE::processNewData(rapio::RAPIOData& d)
     // Example of in-place changing a RadialSet
     auto radialSet = d.datatype<rapio::RadialSet>();
     if (radialSet != nullptr) {
-      LogInfo("This is a radial set, do radial set stuff\n");
+      fLogInfo("This is a radial set, do radial set stuff");
       size_t radials = radialSet->getNumRadials(); // x
       size_t gates   = radialSet->getNumGates();   // y
       auto& data     = radialSet->getFloat2D()->ref();
@@ -90,16 +90,16 @@ TEMPLATE::processNewData(rapio::RAPIOData& d)
     #endif // if 0
 
     // Standard echo of data to output.  Note it's the same data out as in here
-    LogInfo("--->Echoing " << r->getTypeName() << " product to output\n");
+    fLogInfo("--->Echoing {} product to output", r->getTypeName());
     writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
-    LogInfo("--->Finished " << r->getTypeName() << " product to output\n");
+    fLogInfo("--->Finished {} product to output", r->getTypeName());
   }
 } // TEMPLATE::processNewData
 
 void
 TEMPLATE::processHeartbeat(const Time& n, const Time& p)
 {
-  LogInfo("Alg got a heartbeat...what do you want me to do?\n");
+  fLogInfo("Alg got a heartbeat...what do you want me to do?");
 }
 
 int

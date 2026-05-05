@@ -527,7 +527,6 @@ Project::createLookup(
    * std::cout << "COUNT WAS " << count << "\n";
    */
 
-  // exit(1);
   return hits;
 } // Project::createLookup
 

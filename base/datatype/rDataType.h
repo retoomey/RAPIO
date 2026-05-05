@@ -6,6 +6,7 @@
 #include <rConstants.h>
 #include <rError.h>
 #include <rDataProjection.h>
+#include <rURL.h>
 
 #include <string>
 #include <memory>

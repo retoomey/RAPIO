@@ -4,6 +4,8 @@
 
 #include <string>
 #include <vector>
+#include <thread>
+#include <functional>
 
 #include <dlfcn.h>
 

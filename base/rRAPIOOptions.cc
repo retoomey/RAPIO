@@ -171,7 +171,9 @@ RAPIOOptions::readConfigFile(const std::string& string)
   URL aURL(string);
   auto config = AlgConfigFile::getConfigFileForURL(aURL);
 
-  if (config == nullptr) { exit(1); } // Bad parameter, no reader for it
+  if (config == nullptr) {
+    throw StartupException(fmt::format("Failed to find configuration parser for URL: {}", string));
+  } // Bad parameter, no reader for it
 
   std::vector<std::string> options;
   std::vector<std::string> values;
@@ -179,7 +181,7 @@ RAPIOOptions::readConfigFile(const std::string& string)
   // Get the option/value pairs from the configuration file...
   if (config->readConfigURL(aURL, options, values)) {
     if (options.size() != values.size()) {
-      exit(1);
+      throw StartupException(fmt::format("Configuration parse error in {}: Options and values size mismatch.", string));
     }
     // ... and store them in our options.
     for (size_t i = 0; i < options.size(); ++i) {
@@ -198,9 +200,7 @@ RAPIOOptions::readConfigFile(const std::string& string)
       }
     }
   } else {
-    // Reader should complain already
-    // fLogSevere("Couldn't read configuration file at {}", aURL.toString());
-    exit(1);
+    throw StartupException(fmt::format("Failed to read configuration file at URL: {}", string));
   }
 } // RAPIOOptions::readConfigFile
 
@@ -211,7 +211,9 @@ RAPIOOptions::writeConfigFile(const std::string& string)
   URL aURL(string);
   auto config = AlgConfigFile::getConfigFileForURL(aURL);
 
-  if (config == nullptr) { exit(1); } // Bad parameter, no reader for it
+  if (config == nullptr) {
+    throw StartupException(fmt::format("Failed to find configuration parser for output URL: {}", string));
+  } // Bad parameter, no reader for it
 
   // Create a list of option/value pairs for configuration writer
   std::vector<std::string> options;
@@ -267,7 +269,7 @@ RAPIOOptions::getGrid(const std::string& name, LLCoverageArea& grid)
   std::string gridstr = getString(name);
 
   if (!grid.parse(gridstr, "", "", "")) {
-    exit(1);
+    throw StartupException(fmt::format("Failed to parse grid string '{}' for option '{}'", gridstr, name));
   }
   return true;
 }
@@ -281,7 +283,7 @@ RAPIOOptions::getLegacyGrid(LLCoverageArea& grid)
   std::string gridstr   = getString("grid");
 
   if (!grid.parse(gridstr, topcorner, botcorner, spacing)) {
-    exit(1);
+    throw StartupException("Failed to parse grid coordinates (-grid, -t, -b, -s).");
   }
   return true;
 }

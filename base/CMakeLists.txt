@@ -365,6 +365,22 @@ target_link_libraries(rapio
 )
 
 ##################################################################################################
+# Precompile some 3rd party for speed
+#
+if(RAPIO_USE_PCH)
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+    target_precompile_headers(rapio PRIVATE 
+      $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/rapio_pch.h">
+    )
+    message(STATUS "Precompiled Headers (PCH) Enabled for rapio target")
+  else()
+    message(WARNING "RAPIO_USE_PCH is ON, but CMake version is < 3.16. PCH disabled.")
+  endif()
+else()
+  message(STATUS "Precompiled Headers (PCH) Disabled")
+endif()
+
+##################################################################################################
 # Link libraries to interface and shared targets
 #
 

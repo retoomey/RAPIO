@@ -16,6 +16,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
 # Can use "ccmake ." in the BUILD directory to toggle, sometimes it's
 # convenient to just modify things here
 #
+
+# PCH toggle (Defaulting to ON because we love speed)
+# Note: You can global disable with -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+option(RAPIO_USE_PCH "Enable Precompiled Headers to accelerate build times" ON)
 # Some things like .gz support and netcdf we're dead in the water at NSSL without
 # these, though in theory you don't strictly require them.  Setting no here
 # will increase compile chances.
@@ -196,6 +200,10 @@ endfunction()
 function(append_RAPIO_HEADERS_GLOB_H FOLDER)
   set(PUBLIC_HEADER_BASE "${CMAKE_CURRENT_SOURCE_DIR}/${FOLDER}")
   file(GLOB FILE_LIST RELATIVE ${PUBLIC_HEADER_BASE} ${PUBLIC_HEADER_BASE}*.h)
+
+  # Remove precompiled from list to protect library users
+  list(REMOVE_ITEM FILE_LIST "rapio_pch.h")
+
   append_RAPIO_HEADERS("${FOLDER}" "${FILE_LIST}")
   set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
   #set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)

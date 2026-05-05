@@ -149,7 +149,7 @@ RedisWatcher::attach(const std::string & param,
   if (success) {
     myWatches.push_back(newWatch);
   } else {
-    LogSevere("Unable to connect to Redis watcher\n");
+    fLogSevere("Unable to connect to Redis watcher");
   }
 
   return success;
