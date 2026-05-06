@@ -3,6 +3,8 @@
 #include "rError.h"
 #include "rTime.h"
 
+#include <sstream>
+
 using namespace rapio;
 
 #include "spdlog/spdlog.h"
