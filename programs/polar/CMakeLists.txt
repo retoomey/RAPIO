@@ -27,3 +27,6 @@ target_include_directories(rLLSDPolar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 install(TARGETS rLLSDPolar
    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+# 3. Register Subdirectories
+add_subdirectory(rPreProAI)
+add_subdirectory(rDRradial)
