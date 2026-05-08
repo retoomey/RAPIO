@@ -5,6 +5,12 @@
 
 using namespace rapio;
 
+// Product keys, not output names.
+static const std::string PROD_MEDIAN = "Median";
+static const std::string PROD_AZ     = "AzShear";
+static const std::string PROD_DIV    = "DivShear";
+static const std::string PROD_TOT    = "TotalShear";
+
 namespace {
 static bool
 abs_compare(double a, double b)
@@ -37,10 +43,10 @@ LLSDPolar::declareOptions(RAPIOOptions& o)
 
   // Can toggle on/off if wanted. Default is all products
   // o.setDefaultValue("O", "Median AzShear DivShear TotalShear");
-  declareProduct("Median", "Median filtered product");
-  declareProduct("AzShear", "Azimuthal Shear product");
-  declareProduct("DivShear", "Divergent Shear product");
-  declareProduct("TotalShear", "Total Shear product");
+  declareProduct(PROD_MEDIAN, "Median filtered product");
+  declareProduct(PROD_AZ, "Azimuthal Shear product");
+  declareProduct(PROD_DIV, "Divergent Shear product");
+  declareProduct(PROD_TOT, "Total Shear product");
 }
 
 void
@@ -97,70 +103,65 @@ LLSDPolar::processNewData(RAPIOData& d)
 
   auto results = compute(rs);
 
-  writeOutputProduct("Median", results["Median"]);
-  writeOutputProduct("AzShear", results["Az"]);
-  writeOutputProduct("DivShear", results["Div"]);
-  writeOutputProduct("TotalShear", results["Tot"]);
+  // Note each declared product keys are != typenames
+  writeOutputProduct(PROD_MEDIAN, results[PROD_MEDIAN]);
+  writeOutputProduct(PROD_AZ, results[PROD_AZ]);
+  writeOutputProduct(PROD_DIV, results[PROD_DIV]);
+  writeOutputProduct(PROD_TOT, results[PROD_TOT]);
 } // LLSDPolar::processNewData
 
 std::map<std::string, std::shared_ptr<RadialSet> >
 LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
 {
+  // -------------------------------------------------
+  // Calculate output product names based on inputin
+  // Do it all here so easy to follow.  This is
+  // the naming classically used by w2circ
+  const std::string name = inputin->getTypeName();
+  std::string azname, ranname;
+  const std::string totname = name+"_Gradient";
+  const std::string medname = name+"_MedianFiltered";
+  // 'kinda'  Fails for different velocity names right?
+  // maybe we could look at the units instead?
+  // Velocity was original and special
+  if (Strings::makeLower(name) == "velocity"){ 
+     azname = "AzShear";
+     ranname = "DivShear";
+  }else{
+     azname = name+"_AzGradient";
+     ranname = name+"_RanGradient";
+  }
+  const std::string gradientColormap = "Gradient";
+  // -------------------------------------------------
+
   std::map<std::string, std::shared_ptr<RadialSet> > output;
 
-  // Get the input and run the median on it.
-  auto input = inputin->Clone();
+  output[PROD_MEDIAN] = inputin->Clone();
+  myMedianFilter->process(inputin->getFloat2D(), output[PROD_MEDIAN]->getFloat2D());
+  output[PROD_MEDIAN]->setTypeName(medname);
+  output[PROD_MEDIAN]->setColorMapName(inputin->getColorMapName()); 
 
-  myMedianFilter->process(inputin->getFloat2D(), input->getFloat2D());
+  output[PROD_AZ] = inputin->Clone(); 
+  output[PROD_AZ]->getFloat2D()->fill(Constants::MissingData); // Needed
+  output[PROD_AZ]->setUnits("1/m");
+  output[PROD_AZ]->setColorMapName(gradientColormap);
 
-  // Initialize outputs, start with median filtered output
-  auto gradient = input->Clone();
+  output[PROD_DIV] = output[PROD_AZ]->Clone(); // Unique DIV buffer
+  output[PROD_TOT] = output[PROD_AZ]->Clone(); // Unique TOT buffer
 
-  // We output the original median filtered as well
-  output["Median"] = input;
-  const std::string originalType = input->getTypeName();
+  output[PROD_AZ]->setTypeName(azname);
+  output[PROD_DIV]->setTypeName(ranname);
+  output[PROD_TOT]->setTypeName(totname);
 
-  input->setTypeName(originalType + "_MedianFiltered");
-  // Use color map from source product as default
-  input->setDataAttributeValue(Constants::ColorMap, inputin->getTypeName());
-
-  auto * data = input->getFloat2DPtr();
-
-  // Shared setup for all gradients
-  gradient->setDataAttributeValue(Constants::ColorMap, "Gradient");
-  gradient->setUnits("1/m");
-  gradient->getFloat2D()->fill(Constants::MissingData);
-
-  output["Az"] = gradient->Clone();
-  output["Az"]->setTypeName(originalType + "_AzGradient");
-  auto * az = output["Az"]->getFloat2DPtr();
-
-  output["Div"] = gradient->Clone();
-  output["Div"]->setTypeName(originalType + "_DivGradient");
-  auto * div = output["Div"]->getFloat2DPtr();
-
-  output["Tot"] = gradient;
-  output["Tot"]->setTypeName(originalType + "_Gradient");
-  auto * tot = output["Tot"]->getFloat2DPtr();
+  // Setup pointers to unique buffers
+  auto input = output[PROD_MEDIAN];
+  auto * data = input->getFloat2DPtr(); // Read-only source
+  auto * az   = output[PROD_AZ]->getFloat2DPtr();
+  auto * div  = output[PROD_DIV]->getFloat2DPtr();
+  auto * tot  = output[PROD_TOT]->getFloat2DPtr();
 
   const int numRadials = input->getNumRadials();
   const int numGates   = input->getNumGates();
-
-  #if 0
-  // MRMS has that median azimuth function in RadialSet
-  // maybe we should add it?
-  // SAFE MEDIAN AZIMUTH CALCULATION (Matches w2img)
-  std::vector<double> azSpacings;
-  auto azVec = input->getAzimuthVector()->ref();
-  for (int i = 0; i < numRadials; ++i) {
-    double diff = azVec[(i + 1) % numRadials] - azVec[i];
-    if (diff < -180.0) { diff += 360.0; }
-    if (diff < 0) { diff += 360.0; }
-    azSpacings.push_back(diff);
-  }
-  std::sort(azSpacings.begin(), azSpacings.end());
-  double avgAzSpacingRad = azSpacings[numRadials / 2] * DEG_TO_RAD;
-  #endif // if 0
 
   double avgAzSpacingRad = input->getAzimuthSpacingVector()->ref()[0] * DEG_TO_RAD;
   double distFirstGateM  = input->getDistanceToFirstGateM();
@@ -186,6 +187,7 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   }
 
   for (size_t iRanCurrent = startGate; iRanCurrent < (size_t) numGates; ++iRanCurrent) {
+
     double ran1         = (iRanCurrent * gateWidthM) + distFirstGateM;
     double radialWidthM = ran1 * avgAzSpacingRad;
 
@@ -282,14 +284,17 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
 
 void
 SpikeTracker::detectAndLogSpike(
-  // const std::vector<double>& velList1,
-  // const std::vector<double>& velList2,
-  // const std::vector<double>& velList3,
-  // const std::vector<int>& azList1,
   std::shared_ptr<rapio::RadialSet> input,
   int iAzCurrent, int iRanCurrent)
 {
-  if (velList1.empty() || (velList1.size() != velList2.size()) || (velList1.size() != velList3.size())) {
+  // Safety: Ensure we have at least 2 points to find a difference
+  // Didn't see this crash in w2circ or here, but it's possible in clear weather
+  if (velList1.size() < 2 || velList2.size() < 2 || velList3.size() < 2) {
+    return; 
+  }
+  // Optional but recommended: keep the size-match check if you suspect
+  // the kernel might be non-rectangular or clipped by data availability.
+  if ((velList1.size() != velList2.size()) || (velList1.size() != velList3.size())) {
     return;
   }
 

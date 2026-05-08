@@ -261,8 +261,8 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
   setString("attributes", attributes);
 } // DataType::updateGlobalAttributes
 
-std::shared_ptr<ColorMap>
-DataType::getColorMap()
+std::string
+DataType::getColorMapName()
 {
   // First try the ColorMap-value attribute...Some MRMS netcdf files have this
   // if not found use the type name such as Reflectivity
@@ -271,7 +271,19 @@ DataType::getColorMap()
   if (!getString("ColorMap-value", colormap)) {
     colormap = getTypeName();
   }
-  return ColorMap::getColorMap(colormap);
+  return colormap;
+}
+
+std::shared_ptr<ColorMap>
+DataType::getColorMap()
+{
+  return ColorMap::getColorMap(getColorMapName());
+}
+
+void
+DataType::setColorMapName(const std::string& name)
+{
+  setDataAttributeValue(Constants::ColorMap, name);
 }
 
 std::string

@@ -1,5 +1,4 @@
 #include <rDRradial.h>
-#include <boost/log/trivial.hpp>
 #include <iostream>
 #include "computeDR.h"
 #include <rConstants.h>

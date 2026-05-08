@@ -4,7 +4,6 @@
 #include "phase_computations.h"
 #include "corr_attenuation.h"
 #include "computeDR.h"
-#include <boost/log/trivial.hpp>
 #include <iostream>
 
 using namespace rapio;
