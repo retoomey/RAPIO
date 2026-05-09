@@ -1,4 +1,5 @@
 #include "rGDALDataTypeImp.h"
+#include "rGDALVectorLayerImp.h"
 #include "rIOGDAL.h"
 
 // GDAL C++ library
@@ -11,102 +12,101 @@
 
 using namespace rapio;
 
-// Experimental start of reading shapefile, other stuff...
-// I have to learn GDAL better and improve this over time
-bool
-GDALDataTypeImp::readGDALDataset(const std::string& key)
+GDALDataTypeImp::GDALDataTypeImp(const std::string& filepath)
 {
-  GDALDataset * poDS;
+  myDataType = "GDALData";
+  GDALAllRegister();
 
-  poDS = (GDALDataset *) GDALOpenEx(key.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
-  if (poDS == NULL) {
-    fLogSevere("Failed to read {}", key);
-    return false;
-  }
+  // Keep the dataset open for the lifetime of this object
+  // We're read only so this should be safe and faster
+  myContext = std::make_shared<GDALSharedContext>();
+  myContext->dataset = static_cast<GDALDataset *>(GDALOpenEx(
+      filepath.c_str(),
+      GDAL_OF_RASTER | GDAL_OF_VECTOR | GDAL_OF_READONLY,
+      nullptr, nullptr, nullptr
+  ));
+}
 
-  // If it's a raster right?  I'm getting raster size 512 * 512 for a shapefile?
-  // So are all the raster bands in a GDAL file the same size?  We can use that to
-  // map to DataGrid arrays...
-  int xSize = poDS->GetRasterXSize();
-  int ySize = poDS->GetRasterYSize();
+GDALDataTypeImp::~GDALDataTypeImp()
+{ }
 
-  fLogSevere("Sizes of raster is {}, {}", xSize, ySize);
-  int rcount = poDS->GetRasterCount();
+std::shared_ptr<VectorDataType>
+GDALDataTypeImp::getVectorLayer(const std::string& layerName)
+{
+  return std::make_shared<GDALVectorLayerImp>(myContext, layerName);
+}
 
-  fLogSevere("Raster count is {}", rcount); // zero for shapefile...ok works
-  for (auto&& poBand: poDS->GetBands() ) {
-    //  poBand->GetDescription();
-  }
+std::vector<GDALCatalogEntry>
+GDALDataTypeImp::getCatalog()
+{
+  std::vector<GDALCatalogEntry> catalog;
 
-  // Get the layers
-  // I want to read a shapefile here for first pass,
-  // but we could and probably should generally wrap a GDALDataset
-  size_t numLayers = poDS->GetLayerCount();
+  // Use myContext->mutex and myContext->dataset
+  std::lock_guard<std::mutex> lock(myContext->mutex);
 
-  for (auto&& poLayer: poDS->GetLayers() ) { // from docs
-    fLogSevere("Layer {}", poLayer->GetName());
+  if (!myContext->dataset) { return catalog; }
 
-    // Ok features are read and created it seems...
-    OGRFeature * feature = NULL;
-    poLayer->ResetReading();
-    size_t i = 0;
-    // In OK shapefile these are the counties...
-    while ((feature = poLayer->GetNextFeature()) != NULL) {
-      fLogSevere("{} Feature...", i);
+  // --- 1. Vector Layers ---
+  int numLayers = myContext->dataset->GetLayerCount();
 
-      // Ok the fields are stuff stored per feature, like
-      // phone number, etc.
-      for (auto&& oField: *feature) {
-        switch (oField.GetType()) {
-            default:
-              fLogSevere("FIELD VALUE: {}", oField.GetAsString());
-              break;
-        }
-      }
+  for (int i = 0; i < numLayers; ++i) {
+    OGRLayer * poLayer = myContext->dataset->GetLayer(i);
+    if (poLayer) {
+      GDALCatalogEntry entry;
+      entry.name = poLayer->GetName();
+      entry.type = "Vector";
 
-      // The geometry of the object. FIXME: How to project to wsr84?
-      // Each feature can have _several geometry fields..interesting
-      OGRGeometry * poGeometry = feature->GetGeometryRef();
+      OGRwkbGeometryType geomType = wkbFlatten(poLayer->GetGeomType());
+      entry.geometryType = OGRGeometryTypeToName(geomType);
+      entry.count        = poLayer->GetFeatureCount(false);
 
-      int geoCount = feature->GetGeomFieldCount();
-      fLogSevere("FEATURE HAS {} geometry fields", geoCount);
-      // Ahh kill me there's like 10 billion types here... wkbUnknown, wkbLineString
-      // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
-      if (poGeometry != NULL) {
-        // fLogSevere("The type is {}", wkbFlatten(poGeometry->getGeometryType()));
-      }
-      // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
-      if ((poGeometry != NULL) && (wkbFlatten(poGeometry->getGeometryType()) == wkbPolygon) ) {
-        #if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2, 3, 0)
-        // OGRPoint *poPoint = poGeometry->toPoint();
-        OGRPolygon * poPoint = poGeometry->toPolygon();
-        #else
-        // OGRPoint *poPoint = (OGRPoint *)poGeometry;
-        OGRPolygon * poPoint = (OGRPolygon *) poGeometry;
-        #endif
-        //        fLogSevere("POINT: {}{}", poPoint->getX(), poPoint->getY());
-
-        // char * test = poGeometry->exportToJson();  Wow it works?
-        ///  char * test = poGeometry->exportToKML();
-        // poGeometry->GetPointCount();
-        exit(1);
-        // exportToJson()  exportToKML()  free with CPLFree()?
+      OGREnvelope envelope;
+      if (poLayer->GetExtent(&envelope, false) == OGRERR_NONE) {
+        entry.hasExtent = true;
+        entry.minLon    = envelope.MinX;
+        entry.maxLon    = envelope.MaxX;
+        entry.minLat    = envelope.MinY;
+        entry.maxLat    = envelope.MaxY;
       } else {
-        fLogSevere("No point geometry!");
+        entry.hasExtent = false;
       }
 
-
-      OGRFeature::DestroyFeature(feature);
-      i++;
+      catalog.push_back(entry);
     }
-
-    // FIXME: I guess layers don't get deleted?
   }
-  fLogSevere(">>>>GOT BACK {} layers", numLayers);
 
-  // delete poDS; // One delete doesn't crash so guess we do it?
-  // On windows they say call GDALClose()
+  // --- 2. Raster Bands ---
+  double geoTransform[6];
+  bool datasetHasTransform = (myContext->dataset->GetGeoTransform(geoTransform) == CE_None);
+  int xSize = myContext->dataset->GetRasterXSize();
+  int ySize = myContext->dataset->GetRasterYSize();
 
-  GDALClose(poDS);
-  return true;
-} // GDALDataTypeImp::readGDALDataset
+  int numBands = myContext->dataset->GetRasterCount();
+
+  for (int i = 1; i <= numBands; ++i) {
+    GDALRasterBand * poBand = myContext->dataset->GetRasterBand(i);
+    if (poBand) {
+      GDALCatalogEntry entry;
+      std::string desc = poBand->GetDescription();
+      entry.name = desc.empty() ? "Band_" + std::to_string(i) : desc;
+      entry.type = "Raster";
+
+      entry.geometryType = GDALGetDataTypeName(poBand->GetRasterDataType());
+      entry.count        = i;
+
+      if (datasetHasTransform && (xSize > 0) && (ySize > 0)) {
+        entry.hasExtent = true;
+        entry.minLon    = geoTransform[0];
+        entry.maxLat    = geoTransform[3];
+        entry.maxLon    = geoTransform[0] + (xSize * geoTransform[1]) + (ySize * geoTransform[2]);
+        entry.minLat    = geoTransform[3] + (xSize * geoTransform[4]) + (ySize * geoTransform[5]);
+      } else {
+        entry.hasExtent = false;
+      }
+
+      catalog.push_back(entry);
+    }
+  }
+
+  return catalog;
+} // GDALDataTypeImp::getCatalog

@@ -1,11 +1,11 @@
 #include "rIOGDAL.h"
 
 #if 0
-#include "rFactory.h"
-#include "rIOURL.h"
-#include "rStrings.h"
-#include "rProject.h"
-#include "rColorMap.h"
+# include "rFactory.h"
+# include "rIOURL.h"
+# include "rStrings.h"
+# include "rProject.h"
+# include "rColorMap.h"
 #endif
 #include "rFactory.h"
 #include "rGDALDataTypeImp.h"
@@ -14,12 +14,7 @@
 // GDAL C++ library
 #include "gdal_priv.h"
 
-#if 0
 // GDAL simple features
-#include "ogr_api.h"
-#include "ogrsf_frmts.h"
-#include "ogr_p.h"
-#endif
 #include "ogr_api.h"
 #include "ogrsf_frmts.h"
 #include "ogr_p.h"
@@ -52,7 +47,7 @@ void
 IOGDAL::initialize()
 {
   GDALAllRegister(); // Register/introduce all GDAL drivers
-  //CPLPushErrorHandler(CPLQuietErrorHandler);
+  // CPLPushErrorHandler(CPLQuietErrorHandler);
   // Register the specializers we currently support
   GDALLatLonGrids::introduceSelf(this);
 }
@@ -91,7 +86,7 @@ IOGDAL::readGDALDataType(const URL& url)
   bool success = g->readGDALDataset(url.toString());
 
 
-  #if 0
+  # if 0
   GDALDataset * poDS;
 
   // general GDALDataTypeImp right?
@@ -150,13 +145,13 @@ IOGDAL::readGDALDataType(const URL& url)
         }
         // if (poGeometry != NULL && wkbFlatten(poGeometry->getGeometryType()) == wkbPoint )
         if ((poGeometry != NULL) && (wkbFlatten(poGeometry->getGeometryType()) == wkbPolygon) ) {
-          # if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2, 3, 0)
+          #  if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2, 3, 0)
           // OGRPoint *poPoint = poGeometry->toPoint();
           OGRPolygon * poPoint = poGeometry->toPolygon();
-          # else
+          #  else
           // OGRPoint *poPoint = (OGRPoint *)poGeometry;
           OGRPolygon * poPoint = (OGRPolygon *) poGeometry;
-          # endif
+          #  endif
           //        fLogSevere("POINT: {}{}", poPoint->getX(), poPoint->getY());
 
           // char * test = poGeometry->exportToJson();  Wow it works?
@@ -182,35 +177,82 @@ IOGDAL::readGDALDataType(const URL& url)
 
     GDALClose(poDS);
   }
-  #endif // if 0
+  # endif // if 0
 
   return success ? g : nullptr;
   // } else {
   //   fLogSevere("Couldn't read image datatype at {}", url.toString());
   // }
 } // IOGDAL::readGDALDataType
-#endif
+
+#endif // if 0
 
 std::shared_ptr<DataType>
 IOGDAL::createDataType(const std::string& params)
 {
+  URL url(params);
+  std::string filepath = url.toString();
+
+  GDALAllRegister();
+
+  // Use GDALOpenEx and explicitly allow both Rasters and Vectors
+  GDALDataset * poDataset = static_cast<GDALDataset *>(GDALOpenEx(
+      filepath.c_str(),
+      GDAL_OF_RASTER | GDAL_OF_VECTOR | GDAL_OF_READONLY,
+      nullptr,
+      nullptr,
+      nullptr
+  ));
+
+  if (poDataset == nullptr) {
+    fLogSevere("IOGdal: Failed to open dataset. Is it a valid format?");
+    return nullptr;
+  }
+
+  #if 0
+  // Open the dataset just to probe it
+  GDALDataset * poDataset = static_cast<GDALDataset *>(GDALOpen(filepath.c_str(), GA_ReadOnly));
+  if (poDataset == nullptr) {
+    return nullptr;
+  }
+  #endif
+
+  // Check if it's something GDAL can actually handle (Raster or Vector)
+  bool isSupported = (poDataset->GetRasterCount() > 0 || poDataset->GetLayerCount() > 0);
+
+  GDALClose(poDataset); // Close the probe
+
+  if (isSupported) {
+    // INSTEAD of using a specializer here, return the Wrapper directly
+    // This allows the caller (WebGUI) to cast to GDALDataType and call getCatalog()
+    return std::make_shared<GDALDataTypeImp>(filepath);
+  }
+
+  return nullptr;
+} // IOGDAL::createDataType
+
+#if 0
+std::shared_ptr<DataType>
+IOGDAL::createDataType(const std::string& params)
+{
   // virtual to static
-//  return (IOGDAL::readGDALDataType(URL(params)));
-//
+  //  return (IOGDAL::readGDALDataType(URL(params)));
+  //
 
   URL url(params);
   std::string filepath = url.toString();
-  
+
   // Strip "gdal:" prefix if present (RAPIO already did this)
- // if (filepath.rfind("gdal:", 0) == 0) {
- //     filepath = filepath.substr(5);
- // }
+  // if (filepath.rfind("gdal:", 0) == 0) {
+  //     filepath = filepath.substr(5);
+  // }
 
   // 1. Ensure GDAL is registered
   GDALAllRegister();
 
   // 2. Open the Dataset to interrogate it
-  GDALDataset* poDataset = static_cast<GDALDataset*>(GDALOpen(filepath.c_str(), GA_ReadOnly));
+  GDALDataset * poDataset = static_cast<GDALDataset *>(GDALOpen(filepath.c_str(), GA_ReadOnly));
+
   if (poDataset == nullptr) {
     fLogSevere("IOGdal: Failed to open dataset at {}, GDAL Error: {}", filepath, CPLGetLastErrorMsg());
     return nullptr;
@@ -220,28 +262,27 @@ IOGDAL::createDataType(const std::string& params)
 
   // 3. The Interrogation / Dispatch Logic
   double adfGeoTransform[6];
-  
-  if (poDataset->GetRasterCount() > 0 && poDataset->GetGeoTransform(adfGeoTransform) == CE_None) {
-      // Check for rotation/shearing (indices 2 and 4). LatLonGrid expects North-up.
-      if (adfGeoTransform[2] == 0.0 && adfGeoTransform[4] == 0.0) {
-          fLogInfo("IOGdal: Dataset identified as an unrotated 2D Grid.");
-          target_specializer = "LatLonGrid";
-      } else {
-          fLogSevere("IOGdal: Dataset is a rotated raster. Not currently supported by LatLonGrid.");
-      }
-  } 
+
+  if ((poDataset->GetRasterCount() > 0) && (poDataset->GetGeoTransform(adfGeoTransform) == CE_None)) {
+    // Check for rotation/shearing (indices 2 and 4). LatLonGrid expects North-up.
+    if ((adfGeoTransform[2] == 0.0) && (adfGeoTransform[4] == 0.0) ) {
+      fLogInfo("IOGdal: Dataset identified as an unrotated 2D Grid.");
+      target_specializer = "LatLonGrid";
+    } else {
+      fLogSevere("IOGdal: Dataset is a rotated raster. Not currently supported by LatLonGrid.");
+    }
+  }
   // Future extensibility for Vector data (Shapefiles, GeoJSON)
   else if (poDataset->GetLayerCount() > 0) {
-      fLogInfo("IOGdal: Dataset identified as Vector feature data.");
-      // target_specializer = "VectorFeatureSet"; // When you build this class
-      fLogSevere("IOGdal: Vector data routing not yet implemented.");
+    fLogInfo("IOGdal: Dataset identified as Vector feature data.");
+    // target_specializer = "VectorFeatureSet"; // When you build this class
+    fLogSevere("IOGdal: Vector data routing not yet implemented.");
   }
   // Future extensibility for Subdatasets (HDF5, complex NetCDF)
   else if (poDataset->GetMetadata("SUBDATASETS") != nullptr) {
-      fLogSevere("IOGdal: Dataset is a container of subdatasets. Routing not yet implemented.");
-  } 
-  else {
-      fLogSevere("IOGdal: Dataset format recognized by GDAL, but does not map to any known rapio DataType.");
+    fLogSevere("IOGdal: Dataset is a container of subdatasets. Routing not yet implemented.");
+  } else {
+    fLogSevere("IOGdal: Dataset format recognized by GDAL, but does not map to any known rapio DataType.");
   }
 
   // 4. Close the dataset (the specializer will reopen it, or you can pass the pointer via keys if you prefer to optimize)
@@ -249,19 +290,21 @@ IOGDAL::createDataType(const std::string& params)
 
   // 5. Dispatch to the specific specializer
   if (!target_specializer.empty()) {
-      std::map<std::string, std::string> keys;
-      keys["FilePath"] = filepath;
-      
-      std::shared_ptr<IOSpecializer> fmt = getIOSpecializer(target_specializer);
-      if (fmt != nullptr) {
-          return fmt->read(keys, nullptr);
-      } else {
-          fLogSevere("IOGdal: No specializer registered for type '{}'", target_specializer);
-      }
+    std::map<std::string, std::string> keys;
+    keys["FilePath"] = filepath;
+
+    std::shared_ptr<IOSpecializer> fmt = getIOSpecializer(target_specializer);
+    if (fmt != nullptr) {
+      return fmt->read(keys, nullptr);
+    } else {
+      fLogSevere("IOGdal: No specializer registered for type '{}'", target_specializer);
+    }
   }
 
   return nullptr;
-}
+} // IOGDAL::createDataType
+
+#endif // if 0
 
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
@@ -271,7 +314,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   const std::string type = dt->getDataType();
   std::shared_ptr<IOSpecializer> fmt = getIOSpecializer(type);
 
-  // Fallback: If it's a grid but doesn't have a direct GDAL specializer yet, 
+  // Fallback: If it's a grid but doesn't have a direct GDAL specializer yet,
   // try treating it as a generic LatLonGrid
   if (fmt == nullptr) {
     auto grid = std::dynamic_pointer_cast<LatLonGrid>(dt);
@@ -286,14 +329,16 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   std::string filename;
+
   if (!resolveFileName(keys, "tif", "gdal-", filename)) {
     return false;
   }
-  
+
   // The GDALLatLonGrids specializer expects the target path in the "FilePath" key
   keys["FilePath"] = filename;
 
   bool successful = false;
+
   try {
     // Route directly to GDALLatLonGrids::write (No BBOX, no manual looping!)
     successful = fmt->write(dt, keys);
@@ -305,13 +350,13 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   if (successful) {
     successful = postWriteProcess(filename, keys);
   }
-  
+
   if (successful) {
     showFileInfo("GDAL writer: ", keys);
   }
 
   return successful;
-}
+} // IOGDAL::encodeDataType
 
 #if 0
 bool
@@ -368,7 +413,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
 
   // std::string suffix = "tif";
   // std::string driver = "GTiff";
-  #if 0
+  # if 0
   bool optionSuccess = false;
 
   if (dfs != nullptr) {
@@ -385,7 +430,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   if (!optionSuccess) {
     return false;
   }
-  #endif // if 0
+  # endif // if 0
 
   // Pull back settings in coverage for marching
 
@@ -520,4 +565,5 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
 
   return successful;
 } // IOGDAL::encodeDataType
-#endif
+
+#endif // if 0

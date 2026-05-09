@@ -1,4 +1,6 @@
 #include "rWebGUI.h"
+#include "rGDALDataType.h"
+#include "rVectorDataType.h"
 #include <iostream>
 #include <sys/stat.h>
 
@@ -110,6 +112,58 @@ tiley2lat(int y, int z)
   double n = M_PI - 2.0 * M_PI * y / (double) (1 << z);
 
   return 180.0 / M_PI * atan(0.5 * (exp(n) - exp(-n)));
+}
+
+bool
+getTileBBoxFromPath(const std::vector<std::string>& pieces, double& minLon, double& minLat, double& maxLon,
+  double& maxLat, int& x, int& y, int& z)
+{
+  if (pieces.size() < 4) { return false; }
+  try {
+    z = std::stoi(pieces[1]);
+    x = std::stoi(pieces[2]);
+    y = std::stoi(pieces[3]);
+  } catch (const std::exception& e) {
+    return false;
+  }
+  minLon = tilex2long(x, z);
+  maxLat = tiley2lat(y, z); // Y is inverted in TMS (0 is North)
+  maxLon = tilex2long(x + 1, z);
+  minLat = tiley2lat(y + 1, z);
+  return true;
+}
+
+std::shared_ptr<VectorDataType>
+getCachedVectorLayer(std::shared_ptr<DataType> myTileData, const std::string& requestedLayerName)
+{
+  static std::shared_ptr<VectorDataType> cachedVectorData = nullptr;
+  static std::string cachedLayerName = "";
+
+  std::string layerName = requestedLayerName;
+
+  // If we haven't loaded it yet, or the requested layer changed, grab it from GDAL
+  if ((cachedVectorData == nullptr) || (cachedLayerName != layerName) ) {
+    if (auto gdalData = std::dynamic_pointer_cast<GDALDataType>(myTileData)) {
+      // Fallback to first layer if none requested
+      if (layerName.empty()) {
+        auto catalog = gdalData->getCatalog();
+        if (!catalog.empty()) {
+          layerName = catalog[0].name;
+        }
+      }
+
+      if (!layerName.empty()) {
+        cachedVectorData = gdalData->getVectorLayer(layerName);
+        cachedLayerName  = layerName;
+        fLogInfo("HACK: Statically cached Vector Layer: {}", layerName);
+      }
+    } else {
+      // Fallback if data was already a raw vector type
+      cachedVectorData = std::dynamic_pointer_cast<VectorDataType>(myTileData);
+      cachedLayerName  = layerName;
+    }
+  }
+  return cachedVectorData;
 }
 }
 
@@ -496,56 +550,105 @@ void
 RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
   std::string>& settings)
 {
-  // If our single file exists use it to make tiles
-  if (myTileData == nullptr) {
-    return; // FIXME: some sort of web error code or what?
-  }
+  if (myTileData == nullptr) { return; }
 
-  // CACHE SETTING (post handleOverrides to avoid any hack there)
-  std::string cache = settings["tilecachefolder"];
-
-  // Verify the z/y/x and that it's integers
-  if (pieces.size() < 4) {
-    fLogSevere("Expected http://tms/z/x/y for start of tms path");
-    for (auto k:pieces) {
-      std::cout << "PIECE " << k << "\n";
-    }
-    return;
-  }
+  double minLon, minLat, maxLon, maxLat;
   int x, y, z;
 
-  try{
-    z = std::stoi(pieces[1]);
-    x = std::stoi(pieces[2]);
-    // Google vs TMS can flip this.  Usually fixable with -y or y passed into URL
-    // Typically 'google' is 0,0 at top left, and 'tms' is 0,0 at bottom right
-    y = std::stoi(pieces[3]);
-  }catch (const std::exception& e) {
-    fLogSevere("Non number passed for z, x or y? {}, {}, {}", pieces[1], pieces[2], pieces[3]);
+  if (!getTileBBoxFromPath(pieces, minLon, minLat, maxLon, maxLat, x, y, z)) {
+    fLogSevere("Invalid TMS path or coordinates");
     return;
   }
 
-  // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
-  // We'll have to enhance this for time and multi product at some point
+  std::string cache   = settings["tilecachefolder"];
   std::string suffix  = settings["suffix"];
   std::string pathout = cache + "/tms/" + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y)
     + "." + suffix;
 
-  // Slippy tiles to bbox... https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-  const double lon1 = tilex2long(x, z); // Maybe it's backwards?
-  const double lat1 = tiley2lat(y, z);
-  const double lon2 = tilex2long(x + 1, z);
-  const double lat2 = tiley2lat(y + 1, z);
-
-  settings["BBOX"] = std::to_string(lon1) + "," + std::to_string(lat2) + "," + std::to_string(lon2) + ","
-    + std::to_string(lat1);
-  settings["BBOXSR"]   = "4326"; // Lat/Lon
+  settings["BBOX"] = std::to_string(minLon) + "," + std::to_string(minLat) + "," + std::to_string(maxLon) + ","
+    + std::to_string(maxLat);
+  settings["BBOXSR"]   = "4326";
   settings["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
 
-  // fLogInfo("TMS XYZ ({}, {}, {}) BBOS: {}",x,y,z, settings["BBOX"]);
-
   serveTile(w, pathout, settings);
-} // RAPIOWebGUI::handlePathTMS
+}
+
+void
+RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  if (myTileData == nullptr) {
+    fLogSevere("MVT requested, but no data loaded.");
+    w.setError(400);
+    return;
+  }
+
+  std::string layerName = w.getMap().count("layer") ? w.getMap().at("layer") : "";
+  auto vectorData       = getCachedVectorLayer(myTileData, layerName);
+
+  if (vectorData == nullptr) {
+    fLogSevere("MVT requested, but current data is not vector or layer not found.");
+    w.setError(400);
+    return;
+  }
+
+  double minLon, minLat, maxLon, maxLat;
+  int x, y, z;
+
+  if (!getTileBBoxFromPath(pieces, minLon, minLat, maxLon, maxLat, x, y, z)) {
+    w.setError(400);
+    return;
+  }
+
+  std::string payload = vectorData->getTileMVT(minLon, minLat, maxLon, maxLat, z, x, y);
+
+  // If payload is empty, the tile simply has no geometry in it (e.g. Ocean, Canada)
+  if (payload.empty()) {
+    w.setError(204); // 204 No Content
+    return;
+  }
+
+  w.setMessage(payload, "application/vnd.mapbox-vector-tile");
+  w.setError(200);
+} // RAPIOWebGUI::handlePathMVT
+
+void
+RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  if (myTileData == nullptr) {
+    fLogSevere("GeoJSON requested, but no data loaded.");
+    w.setError(400);
+    return;
+  }
+
+  std::string layerName = w.getMap().count("layer") ? w.getMap().at("layer") : "";
+  auto vectorData       = getCachedVectorLayer(myTileData, layerName);
+
+  if (vectorData == nullptr) {
+    fLogSevere("GeoJSON requested, but current data is not vector or layer not found.");
+    w.setError(400);
+    return;
+  }
+
+  double minLon, minLat, maxLon, maxLat;
+  int x, y, z;
+
+  if (!getTileBBoxFromPath(pieces, minLon, minLat, maxLon, maxLat, x, y, z)) {
+    w.setError(400);
+    return;
+  }
+
+  std::string payload = vectorData->getTileGeoJSON(minLon, minLat, maxLon, maxLat);
+
+  if (payload.empty() || (payload == "{}")) {
+    w.setError(204); // 204 No Content
+    return;
+  }
+
+  w.setMessage(payload, "application/geo+json");
+  w.setError(200);
+} // RAPIOWebGUI::handlePathGeoJSON
 
 void
 RAPIOWebGUI::handlePathDefault(WebMessage& w)
@@ -721,6 +824,11 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
   } else if (type == "tmsdata") {
     settings["suffix"] = "mrmstile";
     handlePathTMS(w, pieces, settings);
+  } else if (type == "mvt") {
+    // handlePathVectorTMS(w, pieces, settings);
+    handlePathMVT(w, pieces, settings);
+  } else if (type == "geojson") {
+    handlePathGeoJSON(w, pieces, settings);
   } else if (type == "colormap") {
     handleColorMap(w, pieces, settings);
   } else if (type == "svg") {

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAPIO Backend MVT & GeoJSON Test</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js"></script>
+
+    <style>
+        body { padding: 0; margin: 0; }
+        html, body, #map { height: 100%; width: 100vw; }
+        #tester-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(20, 20, 20, 0.9);
+            color: #00FFFF;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            border: 1px solid #00FFFF;
+            width: 300px;
+        }
+        button {
+            background: #00FFFF;
+            color: black;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button:hover { background: #FFFFFF; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div id="tester-panel">
+        <h3 style="margin-top:0;">API Endpoint Tester</h3>
+        <button onclick="testCenterTile()">Fetch Center Tile</button>
+        <div id="results">Waiting for test...</div>
+    </div>
+
+    <script>
+        var map = L.map('map').setView([38, -98], 4);
+
+        // Dark Base Map
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 19
+        }).addTo(map);
+
+        // The MVT endpoint for visual rendering
+        var mvtUrl = 'http://localhost:8080/mvt/{z}/{x}/{y}?layer=tl_2025_us_state';
+
+        // Add the Binary MVT Layer to the map
+        L.vectorGrid.protobuf(mvtUrl, {
+            vectorTileLayerStyles: {
+                'tl_2025_us_state': {
+                    weight: 2,
+                    color: '#00FFFF',
+                    opacity: 0.8,
+                    fillColor: '#00FFFF',
+                    fillOpacity: 0.2,
+                    fill: true
+                }
+            },
+            interactive: true
+        }).addTo(map);
+
+        // --- BACKEND TESTER LOGIC ---
+        function testCenterTile() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = "Fetching...";
+
+            // 1. Calculate the TMS coordinates for the center of the screen
+            const center = map.getCenter();
+            const z = map.getZoom();
+            const x = Math.floor((center.lng + 180) / 360 * Math.pow(2, z));
+            const latRad = center.lat * Math.PI / 180;
+            const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, z));
+
+            const urlMVT = `http://localhost:8080/mvt/${z}/${x}/${y}?layer=tl_2025_us_state`;
+            const urlJSON = `http://localhost:8080/geojson/${z}/${x}/${y}?layer=tl_2025_us_state`;
+
+            let sizeMVT = 0;
+            let sizeJSON = 0;
+
+            // 2. Fetch both endpoints simultaneously 
+            Promise.all([
+                fetch(urlMVT).then(res => res.arrayBuffer()).then(buf => sizeMVT = buf.byteLength),
+                fetch(urlJSON).then(res => res.text()).then(text => sizeJSON = new Blob([text]).size)
+            ]).then(() => {
+                // 3. Display the comparison
+                let savings = sizeJSON > 0 ? ((1 - (sizeMVT / sizeJSON)) * 100).toFixed(1) : 0;
+                
+                resultsDiv.innerHTML = `
+                    <strong>Tile ID:</strong> ${z}/${x}/${y}<br><br>
+                    <strong>/geojson/</strong>: ${(sizeJSON / 1024).toFixed(2)} KB<br>
+                    <strong>/mvt/</strong>: ${(sizeMVT / 1024).toFixed(2)} KB<br><br>
+                    <span style="color:#00FF00"><strong>MVT Savings: ${savings}%</strong></span>
+                `;
+            }).catch(err => {
+                resultsDiv.innerHTML = `<span style="color:red">Error: ${err.message}</span>`;
+            });
+        }
+    </script>
+</body>
+</html>

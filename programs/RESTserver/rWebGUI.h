@@ -60,6 +60,15 @@ protected:
   void
   handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
+  /** Process a "/vector" message */
+  void
+  handlePathVectorTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
+  void
+  handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  void
+  handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
   /** Process a "/DATA" message */
   void
   handlePathData(WebMessage& w, std::vector<std::string>& pieces);
