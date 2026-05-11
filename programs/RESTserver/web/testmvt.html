@@ -57,7 +57,7 @@
         }).addTo(map);
 
         // The MVT endpoint for visual rendering
-        var mvtUrl = 'http://localhost:8080/mvt/{z}/{x}/{y}?layer=tl_2025_us_state';
+        var mvtUrl = "http://localhost:8080/mvt/{z}/{x}/{y}?dataset=tl_2025_us_state.shp";
 
         // Add the Binary MVT Layer to the map
         L.vectorGrid.protobuf(mvtUrl, {

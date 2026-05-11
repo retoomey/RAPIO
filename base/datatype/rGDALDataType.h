@@ -34,11 +34,13 @@ struct GDALCatalogEntry {
  * @author Robert Toomey */
 class GDALDataType : public DataType {
 public:
+  /** Create a GDAL DataType */
   GDALDataType()
   {
     myDataType = "GDALData";
   }
 
+  /** Destroy a GDAL DataType */
   virtual
   ~GDALDataType() = default;
 
@@ -46,13 +48,8 @@ public:
   virtual std::vector<GDALCatalogEntry>
   getCatalog() = 0;
 
-  /** Get a vector layer by name */
-  virtual std::shared_ptr<VectorDataType>
-  getVectorLayer(const std::string& layerName) = 0;
-  #if 0
-  // The Query Methods
-  virtual std::shared_ptr<LatLonGrid>
-  getRasterBand(int bandIndex) = 0;
-  #endif
+  /** Get a vector layer, image or LatLonGrid, etc. (depends on geometric availability) */
+  virtual std::shared_ptr<DataType>
+  getLayer(const std::string& layerName) = 0;
 };
 }

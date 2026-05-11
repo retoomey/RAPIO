@@ -415,7 +415,8 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // Write JSON out to shared for data process/python
     std::shared_ptr<PTreeData> theJson = datagrid->createMetadata();
     std::vector<char> buf; // FIXME: Buffer class instead?
-    size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
+    std::map<std::string, std::string> keys;
+    size_t aLength = IODataType::writeBuffer(theJson, buf, keys, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
       fLogSevere("DataGrid didn't generate JSON so aborting python call.");
       return std::vector<std::string>();

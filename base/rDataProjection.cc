@@ -6,6 +6,7 @@
 #include "rError.h"
 #include "rMultiDataType.h"
 #include "rLatLonGrid.h"
+#include "rProcessTimer.h"
 
 #include <iostream>
 
@@ -150,6 +151,7 @@ DataProjection::getBBOX(
 std::shared_ptr<DataType>
 DataProjection::createResampledTile(std::shared_ptr<DataType> sourceData, std::map<std::string, std::string>& settings)
 {
+  ProcessTimer totalTimer("Total Resampled Tile Generation");
   size_t rows, cols;
   double left, bottom, right, top;
   auto proj = DataProjection::getBBOX(settings, rows, cols, left, bottom, right, top);
@@ -246,6 +248,7 @@ DataProjection::createResampledTile(std::shared_ptr<DataType> sourceData, std::m
   }
   // --------------------------------------------------------------
 
+  fLogInfo("{}", totalTimer);
   return tileGrid;
 } // DataProjection::createResampledTile
 

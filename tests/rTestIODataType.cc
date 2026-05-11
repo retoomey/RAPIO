@@ -50,7 +50,9 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
 
-  IODataType::writeBuffer(outREADFILE, bufferout, "xml");
+  std::map<std::string, std::string> keys;
+
+  IODataType::writeBuffer(outREADFILE, bufferout, keys, "xml");
   // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
   // for(auto x:bufferout){
   //  std::cerr << x;
@@ -82,7 +84,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
   // 6. Write the PTreeData out to a char buffer
   std::vector<char> bufferout2;
 
-  IODataType::writeBuffer(outREADFILE2, bufferout2, "xml");
+  IODataType::writeBuffer(outREADFILE2, bufferout2, keys, "xml");
   // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
 
   // Finally check the two buffers they should be equal size and > 0
@@ -145,7 +147,11 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
 
-  IODataType::writeBuffer(outREADFILE, bufferout, "json");
+  std::map<std::string, std::string> keys;
+
+  ;
+
+  IODataType::writeBuffer(outREADFILE, bufferout, keys, "json");
   // std::cerr << "Writing buffer to json gives -------------------------------------\n";
   // for(auto x:bufferout){
   //  std::cerr << x;
@@ -177,7 +183,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
   // 6. Write the PTreeData out to a char buffer
   std::vector<char> bufferout2;
 
-  IODataType::writeBuffer(outREADFILE2, bufferout2, "json");
+  IODataType::writeBuffer(outREADFILE2, bufferout2, keys, "json");
   // std::cerr << "Writing buffer to json gives -------------------------------------\n";
 
   // Finally check the two buffers they should be equal size and > 0

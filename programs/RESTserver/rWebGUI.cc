@@ -134,37 +134,96 @@ getTileBBoxFromPath(const std::vector<std::string>& pieces, double& minLon, doub
 }
 
 std::shared_ptr<VectorDataType>
-getCachedVectorLayer(std::shared_ptr<DataType> myTileData, const std::string& requestedLayerName)
+getCachedVectorLayer(std::shared_ptr<DataType> targetData, const std::string& requestedLayerName)
 {
-  static std::shared_ptr<VectorDataType> cachedVectorData = nullptr;
-  static std::string cachedLayerName = "";
+  if (!targetData) { return nullptr; }
 
   std::string layerName = requestedLayerName;
 
-  // If we haven't loaded it yet, or the requested layer changed, grab it from GDAL
-  if ((cachedVectorData == nullptr) || (cachedLayerName != layerName) ) {
-    if (auto gdalData = std::dynamic_pointer_cast<GDALDataType>(myTileData)) {
-      // Fallback to first layer if none requested
-      if (layerName.empty()) {
-        auto catalog = gdalData->getCatalog();
-        if (!catalog.empty()) {
-          layerName = catalog[0].name;
+  if (auto gdalData = std::dynamic_pointer_cast<GDALDataType>(targetData)) {
+    // Fallback: Find the first Vector layer if none requested
+    if (layerName.empty()) {
+      auto catalog = gdalData->getCatalog();
+      for (const auto& entry : catalog) {
+        if (entry.type == "Vector") {
+          layerName = entry.name;
+          break;
         }
       }
+    }
 
-      if (!layerName.empty()) {
-        cachedVectorData = gdalData->getVectorLayer(layerName);
-        cachedLayerName  = layerName;
-        fLogInfo("HACK: Statically cached Vector Layer: {}", layerName);
+    if (!layerName.empty()) {
+      auto genericLayer = gdalData->getLayer(layerName);
+      auto vectorData   = std::dynamic_pointer_cast<VectorDataType>(genericLayer);
+      if (!vectorData) {
+        fLogSevere("WebGUI: Requested layer '{}' is not a valid Vector layer.", layerName);
       }
-    } else {
-      // Fallback if data was already a raw vector type
-      cachedVectorData = std::dynamic_pointer_cast<VectorDataType>(myTileData);
-      cachedLayerName  = layerName;
+      return vectorData;
     }
   }
-  return cachedVectorData;
+
+  // Direct fallback if the target data IS the vector layer directly
+  return std::dynamic_pointer_cast<VectorDataType>(targetData);
 }
+
+// A tiny struct to hold our binary image and its MIME type
+struct TilePayload {
+  std::vector<char> data;
+  std::string       mimeType;
+};
+
+// Thread-Safe L1 RAM Cache
+class TileLRUCache {
+private:
+  size_t capacity;
+  std::mutex cacheMutex;
+  std::list<std::string> lruList; // Tracks the least recently used keys
+  std::unordered_map<std::string, std::pair<TilePayload, std::list<std::string>::iterator> > cacheMap;
+
+public:
+  TileLRUCache(size_t cap) : capacity(cap){ }
+
+  bool
+  get(const std::string& key, TilePayload& outPayload)
+  {
+    std::lock_guard<std::mutex> lock(cacheMutex);
+    auto it = cacheMap.find(key);
+
+    if (it == cacheMap.end()) { return false; }
+
+    // Cache Hit: Move this key to the front of the list (Most Recently Used)
+    lruList.splice(lruList.begin(), lruList, it->second.second);
+    outPayload = it->second.first;
+    return true;
+  }
+
+  void
+  put(const std::string& key, const TilePayload& payload)
+  {
+    std::lock_guard<std::mutex> lock(cacheMutex);
+    auto it = cacheMap.find(key);
+
+    if (it != cacheMap.end()) {
+      // Update existing entry and move to front
+      lruList.splice(lruList.begin(), lruList, it->second.second);
+      it->second.first = payload;
+      return;
+    }
+
+    // Add new entry. If we hit the cap, evict the oldest tile!
+    if (cacheMap.size() >= capacity) {
+      std::string oldest = lruList.back();
+      lruList.pop_back();
+      cacheMap.erase(oldest);
+    }
+
+    lruList.push_front(key);
+    cacheMap[key] = { payload, lruList.begin() };
+  }
+};
+
+// Instantiate the global RAM cache (1000 tiles is roughly 20-50MB of RAM)
+TileLRUCache g_tileCache(1000);
 }
 
 // ---------------------------------------
@@ -338,6 +397,30 @@ getJSONTimeList(const std::string& product, const std::string& subtype)
   return json.str();
 }
 
+std::string
+RAPIOWebGUI::resolveDatasetId(const WebMessage& w)
+{
+  // 1. Explicitly requested via query parameter (e.g., ?dataset=my_file.nc)
+  if (w.getMap().count("dataset") && !w.getMap().at("dataset").empty()) {
+    return w.getMap().at("dataset");
+  }
+
+  // 2. Fallback to the initial startup file (-i argument)
+  if (!myStartUpFile.empty()) {
+    return myStartUpFile;
+  }
+
+  // 3. Fallback to the first available dataset in the memory cache
+  std::lock_guard<std::mutex> lock(myCacheMutex);
+
+  if (!myDataCache.empty()) {
+    return myDataCache.begin()->first;
+  }
+
+  // No dataset found
+  return "";
+}
+
 void
 RAPIOWebGUI::handlePathUI(WebMessage& w, std::vector<std::string>& pieces)
 {
@@ -440,17 +523,15 @@ void
 RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
   std::string>& settings)
 {
-  std::stringstream json;
+  std::string datasetId = resolveDatasetId(w);
+  auto targetData       = getOrLoadDataset(datasetId);
 
-  // for moment use the single loaded datatype for color map
-  // though we should be requesting by name I think
-  // This means we will need a way to request meta information on data
-  if (myTileData != nullptr) {
-    // std::shared_ptr<DataType> myTileData;
+  if (targetData != nullptr) {
     // This assumes the loaded data which at some point we're gonna have to change.
     // We might want to get color map by NAME actually.
-    auto c     = myTileData->getColorMap();
-    auto units = myTileData->getUnits();
+    auto c     = targetData->getColorMap();
+    auto units = targetData->getUnits();
+    std::stringstream json;
     // Bleh need a json color map, right?  So we can apply it on front end side
     // Actually no, it can be a binary format.  It's just less flexible.
     // Also the web guys will want an svg generator as well.  Lots of color map work
@@ -461,6 +542,8 @@ RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std
     //
     c->toJSON(json, units);
     w.setMessage(json.str());
+  } else {
+    w.setError(400);
   }
 }
 
@@ -468,59 +551,177 @@ void
 RAPIOWebGUI::handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
   std::string>& settings)
 {
-  if (myTileData != nullptr) {
-    // std::shared_ptr<DataType> myTileData;
+  std::string datasetId = resolveDatasetId(w);
+  auto targetData       = getOrLoadDataset(datasetId);
+
+  if (targetData != nullptr) {
     // This assumes the loaded data which at some point we're gonna have to change.
     // We might want to get color map by NAME actually.
-    auto c     = myTileData->getColorMap();
-    auto units = myTileData->getUnits();
+    auto c     = targetData->getColorMap();
+    auto units = targetData->getUnits();
+    std::stringstream svg;
 
     // Creating SVG on the fly, though guess we 'could' have a writer for it and cache files of them.
-    // if (myTileData != nullptr) {
-    // std::shared_ptr<DataType> myTileData;
-    // This assumes the loaded data which at some point we're gonna have to change.
-    // We might want to get color map by NAME actually.
-    //  auto c = myTileData->getSVG();
-    // }
-    std::stringstream svg;
     c->toSVG(svg, units);
     w.setMessage(svg.str());
+  } else {
+    w.setError(400);
   }
 }
 
 void
-RAPIOWebGUI::serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings)
+RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, std::map<std::string,
+  std::string>& settings)
 {
-  if (!OS::isRegularFile(pathout)) {
-    // Calling the new centralized utility
-    auto tileGrid = DataProjection::createResampledTile(myTileData, settings);
+  TilePayload payload;
+  std::string suffix = settings["suffix"];
 
-    if (tileGrid) {
-      writeDirectOutput(URL(pathout), tileGrid, settings);
+  // Resolve MIME type
+  std::string mimeType = "image/" + suffix;
+
+  if ((suffix == "jpg") || (suffix == "jpeg")) { mimeType = "image/jpeg"; } else if (suffix == "mrmstile") {
+    mimeType = "application/octet-stream";
+  } else if ((suffix == "pbf") || (suffix == "mvt") ) {
+    mimeType = "application/vnd.mapbox-vector-tile";
+  } else if ((suffix == "geojson") || (suffix == "json") ) { mimeType = "application/geo+json"; }
+  fLogInfo("----->MIME TYPE IS {}", mimeType);
+
+  // ==========================================
+  // TIER 1: Check RAM Cache (L1)
+  // ==========================================
+  if (g_tileCache.get(pathout, payload)) {
+    w.setMessage(std::string(payload.data.begin(), payload.data.end()), payload.mimeType);
+    w.setError(200);
+    return;
+  }
+
+  // ==========================================
+  // TIER 2: Check Disk Cache (L2)
+  // ==========================================
+  if (OS::isRegularFile(pathout)) {
+    std::ifstream file(pathout, std::ios::binary);
+    if (file) {
+      payload.data.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+      payload.mimeType = mimeType;
+      g_tileCache.put(pathout, payload);
+      w.setMessage(std::string(payload.data.begin(), payload.data.end()), payload.mimeType);
+      w.setError(200);
+      return;
     }
   }
 
-  w.setFile(pathout);
-}
+  // ==========================================
+  // TIER 3: Cache Miss (Generate the Tile)
+  // ==========================================
+  std::vector<char> tileBuffer;
 
-void
-RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
-  std::map<std::string, std::string>& settings)
-{
-  // If our single file exists use it to make tiles
-  if (myTileData == nullptr) {
-    return; // FIXME: some sort of web error code or what?
+  // -- VECTOR TILE GENERATION --
+  if ((suffix == "pbf") || (suffix == "mvt") || (suffix == "geojson") || (suffix == "json")) {
+    std::string layerName = settings.count("layer") ? settings["layer"] : "";
+    auto vectorData       = getCachedVectorLayer(targetData, layerName);
+
+    // If we asked for vector data but have raster data, return gracefully
+    if (!vectorData) {
+      w.setError(204);
+      return;
+    }
+
+    double minLon = 0, minLat = 0, maxLon = 0, maxLat = 0;
+    int x = 0, y = 0, z = 0;
+
+    // Extract coordinates from settings
+    if (settings.count("x") && settings.count("y") && settings.count("z")) {
+      x      = std::stoi(settings["x"]);
+      y      = std::stoi(settings["y"]);
+      z      = std::stoi(settings["z"]);
+      minLon = tilex2long(x, z);
+      maxLat = tiley2lat(y, z);
+      maxLon = tilex2long(x + 1, z);
+      minLat = tiley2lat(y + 1, z);
+    } else if (settings.count("BBOX")) {
+      std::vector<std::string> bbox;
+      Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
+      if (bbox.size() == 4) {
+        minLon = std::stod(bbox[0]);
+        minLat = std::stod(bbox[1]);
+        maxLon = std::stod(bbox[2]);
+        maxLat = std::stod(bbox[3]);
+      }
+    }
+
+    std::string vData = (suffix == "pbf" || suffix == "mvt") ?
+      vectorData->getTileMVT(minLon, minLat, maxLon, maxLat, z, x, y) :
+      vectorData->getTileGeoJSON(minLon, minLat, maxLon, maxLat);
+
+    if (vData.empty() || (vData == "{}") ) {
+      w.setError(204); // No Content (empty tile)
+      return;
+    }
+    tileBuffer.assign(vData.begin(), vData.end());
+  }
+  // -- RASTER TILE GENERATION --
+  else {
+    auto tileGrid = DataProjection::createResampledTile(targetData, settings);
+
+    // If we asked for raster data but have vector data (or out of bounds), return gracefully
+    if (!tileGrid) {
+      w.setError(204);
+      return;
+    }
+
+    settings["index"] = "true";
+    size_t bytes = IODataType::writeBuffer(tileGrid, tileBuffer, settings, "image");
+    if (bytes == 0) {
+      w.setError(204);
+      return;
+    }
   }
 
-  // CACHE SETTING (post handleOverrides to avoid any hack there)
+  // ==========================================
+  // Finalize payload, serve to browser, and cache it
+  // ==========================================
+  payload.data     = std::move(tileBuffer);
+  payload.mimeType = mimeType;
+
+  w.setMessage(std::string(payload.data.begin(), payload.data.end()), payload.mimeType);
+  w.setError(200);
+
+  g_tileCache.put(pathout, payload);
+
+  try {
+    size_t lastSlash = pathout.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+      OS::mkdirp(pathout.substr(0, lastSlash));
+    }
+    std::ofstream outFile(pathout, std::ios::binary);
+    if (outFile) { outFile.write(payload.data.data(), payload.data.size()); }
+  } catch (const std::exception& e) {
+    fLogSevere("WebGUI: Failed to write disk cache for {}: {}", pathout, e.what());
+  }
+} // RAPIOWebGUI::serveTile
+
+void
+RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  // 1. Determine which dataset the frontend is requesting
+  std::string datasetId = resolveDatasetId(w);
+
+  // 2. Fetch it from our thread-safe cache
+  auto targetData = getOrLoadDataset(datasetId);
+
+  if (!targetData) {
+    w.setError(400); // Bad Request (Dataset not found)
+    return;
+  }
+
   std::string cache = settings["tilecachefolder"];
-  // Go through the bbox parameters, check length/type, etc.
-  // Make sure they are numbers (harden URL for security)
   std::vector<std::string> bbox;
 
   Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
   if (bbox.size() != 4) {
     fLogSevere("Expected 4 parameters in BBOX for WMS server request, got {}", bbox.size());
+    w.setError(400);
     return;
   }
   for (auto a:bbox) {
@@ -528,67 +729,37 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces,
       std::stof(a);
     }catch (const std::exception& e) {
       fLogSevere("Non number passed for BBOX parameter? {}", a);
+      w.setError(400);
       return;
     }
   }
-  // Safe now to make disk key.  Might be better to have wms/tms ultimately use the same key?
-  // We'll have to enhance this for time and multi product at some point
-  std::string suffix  = settings["suffix"];
-  std::string pathout = cache + "/wms/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T" + bbox[3] + "/tile."
-    + suffix;
 
-  // fLogInfo("WMS_BBOX:{}", settings["BBOX"]);
+  std::string suffix = settings["suffix"];
+  std::string safeDatasetName = OS::validatePathCharacters(datasetId);
+
+  // 2. Build dataset-specific WMS path
+  std::string pathout = cache + "/wms/" + safeDatasetName + "/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T"
+    + bbox[3] + "/tile." + suffix;
+
   settings["TILETEXT"] = "";
+  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
 
-  // for TMS  the {x}{y}{z} we would get boundaries from the tile number and zoom
-  // This divides the world into equal spherical mercator squares.  We'll translate to bbox
-  // for the writer
-  serveTile(w, pathout, settings);
+  // 3. Serve with target data
+  serveTile(w, targetData, pathout, settings);
 } // RAPIOWebGUI::handlePathWMS
-
-void
-RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
-{
-  if (myTileData == nullptr) { return; }
-
-  double minLon, minLat, maxLon, maxLat;
-  int x, y, z;
-
-  if (!getTileBBoxFromPath(pieces, minLon, minLat, maxLon, maxLat, x, y, z)) {
-    fLogSevere("Invalid TMS path or coordinates");
-    return;
-  }
-
-  std::string cache   = settings["tilecachefolder"];
-  std::string suffix  = settings["suffix"];
-  std::string pathout = cache + "/tms/" + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y)
-    + "." + suffix;
-
-  settings["BBOX"] = std::to_string(minLon) + "," + std::to_string(minLat) + "," + std::to_string(maxLon) + ","
-    + std::to_string(maxLat);
-  settings["BBOXSR"]   = "4326";
-  settings["TILETEXT"] = "X:" + std::to_string(x) + ",Y:" + std::to_string(y) + ",Z:" + std::to_string(z);
-
-  serveTile(w, pathout, settings);
-}
 
 void
 RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
   std::string>& settings)
 {
-  if (myTileData == nullptr) {
-    fLogSevere("MVT requested, but no data loaded.");
-    w.setError(400);
-    return;
-  }
+  // 1. Determine which dataset the frontend is requesting
+  std::string datasetId = resolveDatasetId(w);
 
-  std::string layerName = w.getMap().count("layer") ? w.getMap().at("layer") : "";
-  auto vectorData       = getCachedVectorLayer(myTileData, layerName);
+  // 2. Fetch it from our thread-safe cache
+  auto targetData = getOrLoadDataset(datasetId);
 
-  if (vectorData == nullptr) {
-    fLogSevere("MVT requested, but current data is not vector or layer not found.");
-    w.setError(400);
+  if (!targetData) {
+    w.setError(400); // Bad Request (Dataset not found)
     return;
   }
 
@@ -600,34 +771,78 @@ RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std:
     return;
   }
 
-  std::string payload = vectorData->getTileMVT(minLon, minLat, maxLon, maxLat, z, x, y);
+  settings["suffix"] = "pbf";
+  // Keep caches separated by dataset!
+  std::string pathout = settings["tilecachefolder"] + "/mvt/" + datasetId + "/"
+    + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".pbf";
 
-  // If payload is empty, the tile simply has no geometry in it (e.g. Ocean, Canada)
-  if (payload.empty()) {
-    w.setError(204); // 204 No Content
+  settings["x"] = std::to_string(x);
+  settings["y"] = std::to_string(y);
+  settings["z"] = std::to_string(z);
+  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+
+  // Pass the targetData into serveTile
+  serveTile(w, targetData, pathout, settings);
+} // RAPIOWebGUI::handlePathMVT
+
+void
+RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
+  std::string>& settings)
+{
+  // 1. Determine which dataset the frontend is requesting
+  std::string datasetId = resolveDatasetId(w);
+
+  // 2. Fetch it from our thread-safe cache
+  auto targetData = getOrLoadDataset(datasetId);
+
+  if (!targetData) {
+    w.setError(400); // Bad Request (Dataset not found)
     return;
   }
 
-  w.setMessage(payload, "application/vnd.mapbox-vector-tile");
-  w.setError(200);
-} // RAPIOWebGUI::handlePathMVT
+  double minLon, minLat, maxLon, maxLat;
+  int x, y, z;
+
+  if (!getTileBBoxFromPath(pieces, minLon, minLat, maxLon, maxLat, x, y, z)) {
+    w.setError(400); // Bad Request (Invalid tile coordinates)
+    return;
+  }
+
+  // 3. Prevent disk-cache collisions: Build a unique path per dataset.
+  // Note: If datasetId is a full absolute path (e.g., "/home/user/data.nc"),
+  // you might want to sanitize it (e.g., hash it or replace '/' with '_')
+  // so it doesn't create weird nested folders in your cache directory.
+  std::string safeDatasetName = OS::validatePathCharacters(datasetId);
+
+  std::string pathout = settings["tilecachefolder"] + "/tms/" + safeDatasetName + "/"
+    + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + "." + settings["suffix"];
+
+  settings["BBOX"] = std::to_string(minLon) + "," + std::to_string(minLat) + "," + std::to_string(maxLon) + ","
+    + std::to_string(maxLat);
+  settings["BBOXSR"] = "4326";
+  settings["x"]      = std::to_string(x);
+  settings["y"]      = std::to_string(y);
+  settings["z"]      = std::to_string(z);
+
+  // Optional: If the user requested a specific sub-layer (like a GDAL raster band)
+  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+
+  // 4. Pass the explicitly loaded dataset into the serving logic
+  serveTile(w, targetData, pathout, settings);
+} // RAPIOWebGUI::handlePathTMS
 
 void
 RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
   std::string>& settings)
 {
-  if (myTileData == nullptr) {
-    fLogSevere("GeoJSON requested, but no data loaded.");
-    w.setError(400);
-    return;
-  }
+  // 1. Determine which dataset the frontend is requesting
+  std::string datasetId = resolveDatasetId(w);
 
-  std::string layerName = w.getMap().count("layer") ? w.getMap().at("layer") : "";
-  auto vectorData       = getCachedVectorLayer(myTileData, layerName);
+  // 2. Fetch it from our thread-safe cache
+  auto targetData = getOrLoadDataset(datasetId);
 
-  if (vectorData == nullptr) {
-    fLogSevere("GeoJSON requested, but current data is not vector or layer not found.");
-    w.setError(400);
+  if (!targetData) {
+    w.setError(400); // Bad Request (Dataset not found)
     return;
   }
 
@@ -639,15 +854,20 @@ RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, 
     return;
   }
 
-  std::string payload = vectorData->getTileGeoJSON(minLon, minLat, maxLon, maxLat);
+  settings["suffix"] = "geojson";
+  std::string safeDatasetName = OS::validatePathCharacters(datasetId);
 
-  if (payload.empty() || (payload == "{}")) {
-    w.setError(204); // 204 No Content
-    return;
-  }
+  // 2. Build dataset-specific GeoJSON cache path
+  std::string pathout = settings["tilecachefolder"] + "/geojson/" + safeDatasetName + "/"
+    + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".geojson";
 
-  w.setMessage(payload, "application/geo+json");
-  w.setError(200);
+  settings["x"] = std::to_string(x);
+  settings["y"] = std::to_string(y);
+  settings["z"] = std::to_string(z);
+  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+
+  // 3. Serve with target data
+  serveTile(w, targetData, pathout, settings);
 } // RAPIOWebGUI::handlePathGeoJSON
 
 void
@@ -743,13 +963,19 @@ RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
         // are passing image/jpeg by default
         trimS = "png";
       }
+      // else if (trimS == "application/vnd.mapbox-vector-tile") trimS = "pbf"; // Vector!
+      //      else if (trimS == "application/geo+json") trimS = "geojson";
+
       Strings::removePrefix(trimS, "image/");
       settings["suffix"] = trimS;
+    } else if (a.first == "depth") {
+      settings["depth"] = a.second; // Pass the 8/16 bit depth setting along!
     }
   }
   if (settings["suffix"] == "") {
     settings["suffix"] = "png";
   }
+  if ((settings["suffix"] == "png") && (settings.count("quality") == 0)) { settings["quality"] = "10"; }
 } // RAPIOWebGUI::handleOverrides
 
 void
@@ -894,14 +1120,16 @@ RAPIOWebGUI::execute()
   // We don't use process new data since that's a callback...
   // Direct read will be synchronous.
   if (!myStartUpFile.empty()) {
-    // Handle the current -i "builder:filename" extension
     std::string aBuilder;
     std::string aFile;
     IODataType::iPathParse(myStartUpFile, aFile, aBuilder);
     fLogInfo("Attempting to load given start up file {}", aFile);
     auto d = IODataType::readDataType(aFile, aBuilder);
+
     if (d != nullptr) {
-      myTileData = d;
+      // FIX: Put it in the new cache instead of myTileData!
+      std::lock_guard<std::mutex> lock(myCacheMutex);
+      myDataCache[myStartUpFile] = d;
     }
   }
 
@@ -912,6 +1140,45 @@ RAPIOWebGUI::execute()
 
   EventLoop::doEventLoop();
 } // RAPIOWebGUI::execute
+
+std::shared_ptr<DataType>
+RAPIOWebGUI::getOrLoadDataset(const std::string& layerId)
+{
+  // 1. Guard against empty requests
+  if (layerId.empty()) {
+    fLogSevere("WebGUI: No dataset requested, no startup file, and cache is empty.");
+    return nullptr;
+  }
+
+  // 2. Check memory cache first (Thread-safe read)
+  {
+    std::lock_guard<std::mutex> lock(myCacheMutex);
+    auto it = myDataCache.find(layerId);
+    if (it != myDataCache.end()) {
+      return it->second;
+    }
+  }
+
+  // 3. If not in cache, load it from disk
+  std::string aBuilder;
+  std::string aFile;
+
+  IODataType::iPathParse(layerId, aFile, aBuilder);
+
+  fLogInfo("WebGUI: Cache miss. Lazy-loading dataset '{}'", aFile);
+  auto dataset = IODataType::readDataType(aFile, aBuilder);
+
+  // 4. Store successful loads in the cache (Thread-safe write)
+  if (dataset != nullptr) {
+    std::lock_guard<std::mutex> lock(myCacheMutex);
+    myDataCache[layerId] = dataset;
+    return dataset;
+  }
+
+  // 5. Fail gracefully
+  fLogSevere("WebGUI: Failed to load requested dataset: {}", layerId);
+  return nullptr;
+} // RAPIOWebGUI::getOrLoadDataset
 
 int
 main(int argc, char * argv[])

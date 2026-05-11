@@ -77,7 +77,9 @@ IOFile::encodeDataType(std::shared_ptr<DataType> dt,
 }
 
 size_t
-IOFile::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+IOFile::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
+  std::map<std::string, std::string>             & keys
+)
 {
   // FIXME: Do we do buffer stuff for file?  I don't think we need it at least for now.
   return 0;

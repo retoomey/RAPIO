@@ -64,18 +64,25 @@ WebMessageQueue::action()
   if (!myQueue.empty()) {
     auto r = myQueue.front();
     myQueue.pop();
+    myQueueLock.unlock();
 
-    // Process the web message within the algorithm worker thread
-    myProgram->processWebMessage(r);
+    // Process the heavy tile generation, etc. outside the lock
+    if (r) {
+      myProgram->processWebMessage(r);
 
-    // We promised to fill in the data when handled, the web thread is waiting
-    // for us.
-    r->result.set_value(true);
+      // We promised to fill in the data when handled, the web thread is waiting
+      // for us.
+      r->result.set_value(true);
+    }
   }
-  myQueueLock.unlock();
 
   // process another web message when we can
-  if (!myQueue.empty()) {
+  myQueueLock.lock();
+  bool is_empty = myQueue.empty();
+
+  myQueueLock.unlock();
+
+  if (!is_empty) {
     setReady();
   }
 }
@@ -213,11 +220,16 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
         header.emplace("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         header.emplace("Access-Control-Allow-Headers", "Content-Type, Authorization");
         header.emplace("Access-Control-Expose-Headers", "Content-Length");
-        header.emplace("Content-Type", "text/plain; charset=utf-8");
 
-        std::stringstream stream;
-        stream << web->getMessage();
-        response->write(web->getErrorInternal(), stream, header);
+        // CRITICAL FIX 1: REMOVED header.emplace("Content-Type", "text/plain; charset=utf-8");
+        //       header.emplace("Content-Type", "text/plain; charset=utf-8");
+
+        //        std::stringstream stream;
+        //        stream << web->getMessage();
+        //        response->write(web->getErrorInternal(), stream, header);
+
+        // CRITICAL FIX 2: Write the binary string directly, do NOT use std::stringstream
+        response->write(web->getErrorInternal(), web->getMessage(), header);
       }
     } else {
       // Algorithm basically reported an error maybe?

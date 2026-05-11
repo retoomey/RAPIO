@@ -52,7 +52,9 @@ public:
 
   /** Write data type to a buffer */
   virtual size_t
-  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer) override;
+  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
+    std::map<std::string, std::string>     & keys
+  ) override;
 
   /** Write property tree to a memory buffer */
   static size_t

@@ -2,6 +2,9 @@
 #include "rGDALVectorLayerImp.h"
 #include "rIOGDAL.h"
 
+#include "rLatLonGrid.h"
+#include "rImageDataType.h"
+
 // GDAL C++ library
 #include "gdal_priv.h"
 
@@ -30,11 +33,72 @@ GDALDataTypeImp::GDALDataTypeImp(const std::string& filepath)
 GDALDataTypeImp::~GDALDataTypeImp()
 { }
 
-std::shared_ptr<VectorDataType>
-GDALDataTypeImp::getVectorLayer(const std::string& layerName)
+std::shared_ptr<DataType>
+GDALDataTypeImp::getLayer(const std::string& layerName)
 {
-  return std::make_shared<GDALVectorLayerImp>(myContext, layerName);
-}
+  std::lock_guard<std::recursive_mutex> lock(myContext->mutex);
+
+  if (!myContext->dataset) { return nullptr; }
+
+  // 1. Check Vector
+  OGRLayer * poLayer = myContext->dataset->GetLayerByName(layerName.c_str());
+
+  if (poLayer != nullptr) {
+    return std::make_shared<GDALVectorLayerImp>(myContext, layerName);
+  }
+
+  // 2. Check Raster
+  int numBands = myContext->dataset->GetRasterCount();
+
+  for (int i = 1; i <= numBands; ++i) {
+    GDALRasterBand * poBand = myContext->dataset->GetRasterBand(i);
+    std::string desc        = poBand->GetDescription();
+    std::string bName       = desc.empty() ? "Band_" + std::to_string(i) : desc;
+
+    if (bName == layerName) {
+      double geoTransform[6];
+      bool hasGeo = (myContext->dataset->GetGeoTransform(geoTransform) == CE_None);
+
+      int numX = poBand->GetXSize();
+      int numY = poBand->GetYSize();
+
+      if (hasGeo) {
+        // --- GEOMETRY PRESENT: Build LatLonGrid ---
+        fLogInfo("GDAL: Returning LatLonGrid for '{}'", layerName);
+
+        // ... (Insert the LatLonGrid creation code we discussed previously) ...
+      } else {
+        // --- NO GEOMETRY: Build ImageDataType ---
+        fLogInfo("GDAL: Returning ImageDataType for '{}'", layerName);
+
+        // Create a 1-channel image grid
+        auto imageObj = ImageDataType::Create(layerName, numX, numY, 1);
+
+        // Get the underlying boost::multi_array reference
+        auto array = imageObj->getByte3D(Constants::PrimaryDataName);
+        auto& data = array->ref();
+
+        // Read directly into the contiguous memory block of the multi_array
+        // data.data() points to the raw 1D block representing [Y][X][C]
+        CPLErr err = poBand->RasterIO(GF_Read,
+            0, 0, numX, numY,
+            data.data(), numX, numY,
+            GDT_Byte, // Force byte extraction
+            0, 0);
+
+        if (err != CE_None) {
+          fLogSevere("GDAL: Failed to read image data for {}", layerName);
+          return nullptr;
+        }
+
+        return imageObj;
+      }
+    }
+  }
+
+  fLogSevere("GDAL: Layer '{}' not found in dataset.", layerName);
+  return nullptr;
+} // GDALDataTypeImp::getLayer
 
 std::vector<GDALCatalogEntry>
 GDALDataTypeImp::getCatalog()
@@ -42,7 +106,7 @@ GDALDataTypeImp::getCatalog()
   std::vector<GDALCatalogEntry> catalog;
 
   // Use myContext->mutex and myContext->dataset
-  std::lock_guard<std::mutex> lock(myContext->mutex);
+  std::lock_guard<std::recursive_mutex> lock(myContext->mutex);
 
   if (!myContext->dataset) { return catalog; }
 

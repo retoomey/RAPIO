@@ -28,9 +28,9 @@ public:
   virtual std::vector<GDALCatalogEntry>
   getCatalog() override;
 
-  /** Get vector layer from name (in the gdal layers) */
-  virtual std::shared_ptr<VectorDataType>
-  getVectorLayer(const std::string& layerName) override;
+  /** Get the gdal named layer */
+  virtual std::shared_ptr<DataType>
+  getLayer(const std::string& layerName) override;
 
 private:
   /** Stores GDAL information */

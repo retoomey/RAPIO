@@ -7,8 +7,10 @@ namespace rapio {
  * This keeps the GDAL pointer so we can subquery, allowing
  * us to do things like vector tiles */
 struct GDALSharedContext {
-  GDALDataset * dataset = nullptr;
-  std::mutex    mutex;
+  GDALDataset *        dataset = nullptr;
+
+  /** Make this recursive so nested GDAL calls on the same thread don't deadlock */
+  std::recursive_mutex mutex;
 
   ~GDALSharedContext()
   {

@@ -20,6 +20,11 @@ public:
   virtual double
   getValueAtLL(double latDegs, double lonDegs) override;
 
+  /** Batch get values for Lat Lon */
+  virtual void
+  getValuesAtLL(const double * lats, const double * lons,
+    float * out, size_t count) override;
+
   /** Calculate Lat Lon coverage marching grid from spatial center */
   virtual bool
   LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
@@ -50,8 +55,17 @@ protected:
   /** Cache Latitude spacing */
   float myLatSpacing;
 
+  /** Cache the inverse of Latitude spacing */
+  float myInvLatSpacing;
+
   /** Cache Longitude spacing */
   float myLonSpacing;
+
+  /** Cache the inverse of Longitude spacing */
+  float myInvLonSpacing;
+
+  /** Cache the longitude width */
+  double myLonWidth;
 
   /** Cache number of lats */
   size_t myNumLats;
