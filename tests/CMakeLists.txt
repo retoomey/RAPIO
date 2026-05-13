@@ -18,6 +18,7 @@ add_executable(rTestRAPIO
   rTestBimap.cc
   rTestBinaryIO.cc
   rTestBitset.cc
+  rTestColorMap.cc
   rTestFactory.cc
   rTestGrid.cc
   rTestIODataType.cc

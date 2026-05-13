@@ -150,6 +150,11 @@ public:
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
 
+  /** Spawn a background process and forget about it.  Return true if the spawn
+   * succeeded */
+  static bool
+  spawnProcessArgs(const std::vector<std::string>& args);
+
   /**
    * Run a capturable function in our code.  For example, the wgrib2 c function api
    * is built into the iowgrib module.  This captures stdout from it to a vector

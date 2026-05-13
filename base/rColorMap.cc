@@ -382,7 +382,12 @@ DefaultColorMap::getDataColor(double v, unsigned char& r, unsigned char& g, unsi
   if (z.myIsLinear) {
     // Linear bin, interpolated color
     // v has to be >= z.l and we force z.d to be positive
-    const double wt = (v - z.l) / z.d;
+    double wt = (v - z.l) / z.d;
+
+    // Clamp the weight between 0.0 and 1.0 to prevent underflow/overflow
+    // when casting out-of-bounds values to unsigned char
+    if (wt < 0.0) { wt = 0.0; }
+    if (wt > 1.0) { wt = 1.0; }
 
     // wt = 1 and nwt = 0 (special case);
     // I'm not seeing this actually happen ever? If the color map

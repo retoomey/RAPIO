@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <cmath>
 
-#include <library_sci_palette.h>
-
 using namespace rapio;
 
 std::map<std::string, std::shared_ptr<ColorMap> > ConfigColorMap::myColorMaps;
@@ -86,13 +84,9 @@ std::shared_ptr<ColorMap>
 ConfigColorMap::readParaColorMap(const std::string& key,
   std::map<std::string, std::string>              & attributes)
 {
-  std::shared_ptr<DefaultColorMap> colormap;
-  const std::string rootpath = "colormaps/"; // FIXME: const?
+  const std::string rootpath = "colormaps/";
+  std::string filename       = attributes["filename"];
 
-  // Use filename attribute if we have it, else we fail
-  std::string filename;
-
-  filename = attributes["filename"];
   if (!filename.empty()) {
     filename = rootpath + filename;
   } else {
@@ -100,114 +94,99 @@ ConfigColorMap::readParaColorMap(const std::string& key,
     return nullptr;
   }
 
-  // The 'name' key to match in file
-  const std::string name = attributes["name"];
-
-  // Now try to read it
   URL find = Config::getConfigFile(filename);
 
-  if (find.empty()) {
-    fLogSevere("Cannot read Paraview color map file {}", filename);
-  } else {
-    try{
-      auto xml = IODataType::read<PTreeData>(find.toString());
-      if (xml != nullptr) {
-        auto topTree = xml->getTree()->getChild("doc");
-        auto cm      = topTree.getChildren("ColorMap");
-        for (auto& c: cm) {
-          const auto pname = c.getAttr("name", std::string(""));
-          if (pname == name) {
-            // Getting data value range if provided
-            float minvalue = -HUGE_VAL;
-            std::string l  = attributes["lowdata"];
-            if (!l.empty()) {
-              minvalue = std::stof(l); // FIXME: exception?
-            }
-            float maxvalue = +HUGE_VAL; // this low or maybe higher?
-            std::string h  = attributes["highdata"];
-            if (!h.empty()) {
-              maxvalue = std::stof(h); // FIXME: exception?
-            }
-            if (maxvalue < minvalue) {
-              float tempvalue = minvalue;
-              minvalue = maxvalue;
-              maxvalue = tempvalue;
-            }
-
-            colormap = std::make_shared<DefaultColorMap>();
-            //   const auto pspace = c.getAttr("space", std::string(""));
-            // Ok I 'think' for paraview we stretch percentage from -1 to 1 over X which we match to our data values.
-            // So I will map -1 to 1 to minvalue to maxvalue on the data
-            // We'll use custom missing/unavailable for outside.  This is probably 'close' enough
-            float fullRange = maxvalue - minvalue; // 100% range so x * this   -1 = -30, 1 = 110;
-
-            bool firstPoint = true;
-            float x2, o2, r2, g2, b2; // The old values or 'left' of bin
-            float lower;
-            auto points = c.getChildren("Point");
-            for (auto& p: points) {
-              const auto x = p.getAttr("x", float(1.0)); // -1 to 1 over the values
-              const auto o = p.getAttr("o", float(1.0));
-              const auto r = p.getAttr("r", float(1.0));
-              const auto g = p.getAttr("g", float(1.0));
-              const auto b = p.getAttr("b", float(1.0));
-              if (firstPoint) {
-                // Keep the left side
-                x2 = x;
-                o2 = o;
-                r2 = r;
-                g2 = g;
-                b2 = b;
-                // lower = minvalue+((x+1.0f/2.0f)*fullRange);
-                lower      = minvalue; // assuming x = -1 is this always true? lol  I don't know this format well
-                firstPoint = false;
-                continue;
-              }
-              // std::cout << "POINT: " << x << ", " << o << " , " << r << " , " << g << " , " << b << "\n";
-
-              float upper = minvalue + ((x + 1.0f / 2.0f) * fullRange); // mapping -1 1 to minValue maxValue
-
-              char buf[ 64 ];
-              snprintf(buf, sizeof(buf), "%.1f", upper);
-
-              colormap->addBin(false, buf, upper, lower,
-                //  c1.r, c1.g, c1.b, c1.a,
-                //		c2.r, c2.g, c2.b, c2.a);
-
-                ((short) (r * 255.0f)),
-                ((short) (g * 255.0f)),
-                ((short) (b * 255.0f)),
-                ((short) (1.0f * 255.0f)), // alpha 1 for moment
-                                           // ((short) (o * 255.0f)), // alpha 1 for moment
-                ((short) (r2 * 255.0f)),   //
-                ((short) (g2 * 255.0f)),
-                ((short) (b2 * 255.0f)),
-                ((short) (1.0f * 255.0f)) // alpha 1 for moment
-              );
-
-              // Keep the left side
-              x2    = x;
-              o2    = o;
-              r2    = r;
-              g2    = g;
-              b2    = b;
-              lower = upper;
-            }
-
-            colormap->setSpecialColorStrings(attributes["missing"], attributes["unavailable"]);
-
-            break;
-          }
-        }
-      }
-    }catch (const std::exception& e) {
-      fLogSevere("Exception processing XML {} {}", filename, e.what());
-    }
+  if (!find.empty()) {
+    // Delegate to the URL overload
+    return readParaColorMap(find, attributes);
   }
 
-  fLogInfo("Loaded para colormap with key {}", key);
+  fLogSevere("Cannot read Paraview color map file {}", filename);
+  return nullptr;
+}
+
+std::shared_ptr<ColorMap>
+ConfigColorMap::readParaColorMap(const URL& find,
+  std::map<std::string, std::string>      & attributes)
+{
+  std::shared_ptr<DefaultColorMap> colormap;
+  const std::string name = attributes["name"];
+
+  try {
+    auto xml = IODataType::read<PTreeData>(find.toString());
+    if (xml != nullptr) {
+      auto topTree = xml->getTree()->getChild("doc");
+      auto cm      = topTree.getChildren("ColorMap");
+
+      for (auto& c: cm) {
+        const auto pname = c.getAttr("name", std::string(""));
+        if (pname == name) {
+          float minvalue = -HUGE_VAL;
+          std::string l  = attributes["lowdata"];
+          if (!l.empty()) { minvalue = std::stof(l); }
+
+          float maxvalue = +HUGE_VAL;
+          std::string h  = attributes["highdata"];
+          if (!h.empty()) { maxvalue = std::stof(h); }
+
+          if (maxvalue < minvalue) { std::swap(minvalue, maxvalue); }
+
+          colormap = std::make_shared<DefaultColorMap>();
+          float fullRange = maxvalue - minvalue;
+          bool firstPoint = true;
+
+          float prev_x, prev_r, prev_g, prev_b, prev_o;
+          float lower;
+
+          auto points = c.getChildren("Point");
+          for (auto& p: points) {
+            const auto x = p.getAttr("x", float(1.0));
+            const auto o = p.getAttr("o", float(1.0));
+            const auto r = p.getAttr("r", float(1.0));
+            const auto g = p.getAttr("g", float(1.0));
+            const auto b = p.getAttr("b", float(1.0));
+
+            if (firstPoint) {
+              prev_x = x;
+              prev_o = o;
+              prev_r = r;
+              prev_g = g;
+              prev_b = b;
+              // FIX: Just multiply x by the range! No weird fractions.
+              lower      = minvalue + (x * fullRange);
+              firstPoint = false;
+              continue;
+            }
+
+            float upper = minvalue + (x * fullRange);
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%.1f", upper);
+
+            // FIX: Linear is true, and lower colors (prev) are passed before upper colors (current)
+            colormap->addBin(true, buf, upper, lower,
+              ((short) (prev_r * 255.0f)), ((short) (prev_g * 255.0f)), ((short) (prev_b * 255.0f)),
+              ((short) (prev_o * 255.0f)),
+              ((short) (r * 255.0f)), ((short) (g * 255.0f)), ((short) (b * 255.0f)), ((short) (o * 255.0f))
+            );
+
+            prev_x = x;
+            prev_o = o;
+            prev_r = r;
+            prev_g = g;
+            prev_b = b;
+            lower  = upper;
+          }
+          colormap->setSpecialColorStrings(attributes["missing"], attributes["unavailable"]);
+          break;
+        }
+      }
+    }
+  } catch (const std::exception& e) {
+    fLogSevere("Exception processing XML {} {}", find.toString(), e.what());
+  }
+
   return colormap;
-} // ColorMap::readParaColorMap
+} // ConfigColorMap::readParaColorMap
 
 // Function for reading in .pal files
 std::shared_ptr<ColorMap>
@@ -244,162 +223,105 @@ ConfigColorMap::readPalColorMap(const std::string& key,
   return colormap;
 }
 
-// Function for reading in .pal files
 std::shared_ptr<ColorMap>
 ConfigColorMap::readPalColorMap(const URL& url)
 {
   std::shared_ptr<DefaultColorMap> colormap;
-  auto xml = IODataType::read<PTreeData>(url.toString());
+  std::string fname = url.toString();
+  std::ifstream inf(fname);
 
-  try{
-    // out = std::make_shared<ColorMap>(); GOOP
+  if (!inf.is_open()) {
+    fLogSevere("Could not open PAL file: {}", fname);
+    return nullptr;
+  }
+
+  try {
     colormap = std::make_shared<DefaultColorMap>();
-    // auto map = xml->getTree()->getChild("colorMap");
 
-    // This is old read generic ability, which is a ton of color maps
-    // but not all.
+    // Modern C++ structs to replace the legacy SCIPalette
+    struct RangeColor { short low, high; int r, g, b; };
+    struct LinearColor { int r, g, b; };
 
-    // auto bins    = map.getChildren("colorBin");
+    std::vector<RangeColor> ranges;
+    std::vector<LinearColor> linears;
+    short boundMin = 0, boundMax = 0;
 
-    SCIPalette * pal;
-    pal = new SCIPalette;
+    std::string line;
+    // Single-pass stream reading replaces the old two-pass fgets/rewind logic
+    while (std::getline(inf, line)) {
+      if (line.empty()) { continue; }
 
-    char flag[8], buffer[128];
-    FILE * inf;
+      std::istringstream iss(line);
+      std::string type;
+      iss >> type;
 
-    std::string fname = url.toString();
-
-    if ( (inf = fopen(fname.c_str(), "r")) == NULL) { return NULL; }
-
-    // count the number of range colors and linear colors in the .pal file, as these are handled differently
-    pal->number_range_colors  = 0;
-    pal->number_linear_colors = 0;
-    while (fgets(buffer, 126, inf) != NULL) {
-      if (buffer[0] == 'R') { ++pal->number_range_colors; }
-      if (buffer[0] == 'L') { ++pal->number_linear_colors; }
-    }
-
-    // Prepare to add range colors, if present
-    if (pal->number_range_colors > 0) {
-      pal->ranges        = new short int * [pal->number_range_colors];
-      pal->range_palette = new int * [pal->number_range_colors];
-
-      for (int c = 0; c < pal->number_range_colors; ++c) {
-        pal->ranges[c]        = new short int [2];
-        pal->range_palette[c] = new int [3];
-      }
-    }
-    // Prepare to add linear colors, if present
-    if (pal->number_linear_colors > 0) {
-      pal->linear_palette = new int * [pal->number_linear_colors];
-
-      for (int c = 0; c < pal->number_linear_colors; ++c) {
-        pal->linear_palette[c] = new int [3];
+      // Extract values cleanly without sscanf buffer risks
+      if (type == "R") {
+        RangeColor rc;
+        if (iss >> rc.low >> rc.high >> rc.r >> rc.g >> rc.b) {
+          ranges.push_back(rc);
+        }
+      } else if (type == "L") {
+        LinearColor lc;
+        if (iss >> lc.r >> lc.g >> lc.b) {
+          linears.push_back(lc);
+        }
+      } else if (type == "B") {
+        iss >> boundMin >> boundMax;
       }
     }
 
-    int ri = 0, li = 0;
-    rewind(inf);
-    // While there are still lines in the colormap file, read colormap data to the range colors array, linear colors array, or min/max values
-    while (fgets(buffer, 126, inf) != NULL) {
-      if (buffer[0] == 'R') {
-        sscanf(buffer, "%s %hd %hd %d %d %d", flag, &(pal->ranges[ri][LOW]), &(pal->ranges[ri][HIGH]),
-          &(pal->range_palette[ri][RED]), &(pal->range_palette[ri][GREEN]), &(pal->range_palette[ri][BLUE]));
-        ++ri;
-      }
-      if (buffer[0] == 'L') {
-        sscanf(buffer, "%s %d %d %d", flag, &(pal->linear_palette[li][RED]), &(pal->linear_palette[li][GREEN]),
-          &(pal->linear_palette[li][BLUE]));
-        ++li;
-      }
-      if (buffer[0] == 'B') {
-        sscanf(buffer, "%s %hd %hd", flag, &pal->min, &pal->max);
-      }
-    }
-    fclose(inf);
-
-    int colors   = pal->number_range_colors;
-    int colors2  = pal->number_linear_colors;
-    double lower = -HUGE_VAL;
     double upper = HUGE_VAL;
 
-    // from the B line: the minimum and maximum values for the linear section
-    int lbound = pal->min;
-    int ubound = pal->max;
-
-    float lin_spacing = 1;
-
-    // Derive the spacing for the linear colors in the colormap
-    if (colors2 > 0) {
-      lin_spacing = (float) ((ubound - lbound) / colors2);
-    }
-
-    int red, blue, green;
-    std::string redh, blueh, greenh;
-
-    std::string tname;
-
-    // Turn the colormap data from the file into colormap data that algorithms can use
-    for (int k = 0; k < colors; k++) {
-      int lrange = pal->range_palette[k][LOW];
-      int urange = pal->range_palette[k][HIGH];
-      red   = pal->range_palette[k][RED];
-      blue  = pal->range_palette[k][BLUE];
-      green = pal->range_palette[k][GREEN];
-
-      std::stringstream sstream;
-      sstream << std::hex << red;
-      redh = sstream.str();
-      sstream << std::hex << blue;
-      blueh = sstream.str();
-      sstream << std::hex << green;
-      greenh = sstream.str();
-
-      char buf[ 64 ];
+    // Process Range Colors
+    for (const auto& rc : ranges) {
+      char buf[64];
       snprintf(buf, sizeof(buf), "%.1f", upper);
-      tname = buf;
-      colormap->addBin(true, tname, urange / 10, lrange / 10, red, green, blue, 255, red, green, blue, 255);
+
+      // Converted / 10 to / 10.0 to prevent implicit integer division truncation
+      colormap->addBin(true, buf, rc.high / 10.0, rc.low / 10.0,
+        rc.r, rc.g, rc.b, 255,
+        rc.r, rc.g, rc.b, 255);
     }
 
-    for (int k = 0; k < colors2; k++) {
-      ubound = lbound + lin_spacing;
-      std::cout << "lbound " << lbound << " ubound " << ubound << "\n";
-      red   = pal->linear_palette[k][RED];
-      blue  = pal->linear_palette[k][BLUE];
-      green = pal->linear_palette[k][GREEN];
+    // Process Linear Colors
+    if (!linears.empty()) {
+      float lin_spacing = static_cast<float>(boundMax - boundMin) / linears.size();
+      float lbound      = boundMin;
 
-      std::stringstream sstream;
-      sstream << std::hex << red;
-      redh = sstream.str();
-      sstream << std::hex << blue;
-      blueh = sstream.str();
-      sstream << std::hex << green;
-      greenh = sstream.str();
-      // std::cout << "red: " << redh << " blue: " << blueh << " green: " << greenh << "\n";
-      // std::cout << "red: " << red << " blue: " << blue << " green: " << green << "\n";
+      for (const auto& lc : linears) {
+        float ubound = lbound + lin_spacing;
 
-      char buf[ 64 ];
-      snprintf(buf, sizeof(buf), "%.1f", upper);
-      tname = buf;
-      colormap->addBin(true, tname, ubound / 10, lbound / 10, red, green, blue, 255, red, green, blue, 255);
-      lbound = ubound;
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%.1f", upper);
+
+        colormap->addBin(true, buf, ubound / 10.0, lbound / 10.0,
+          lc.r, lc.g, lc.b, 255,
+          lc.r, lc.g, lc.b, 255);
+        lbound = ubound;
+      }
     }
-
-
-    // FIXME: need to read the unit right? Conversion?
-  }catch (const std::exception& e) {
+  } catch (const std::exception& e) {
     colormap = nullptr;
     fLogSevere("Tried to read color map and failed: {}", e.what());
   }
-  fLogInfo("Loaded w2 colormap at {}", url.toString());
+
+  if (colormap) {
+    fLogInfo("Loaded PAL colormap at {}", fname);
+  }
   return colormap;
-} // ColorMap::readPalColorMap
+} // ConfigColorMap::readPalColorMap
 
 std::shared_ptr<ColorMap>
 ConfigColorMap::readW2ColorMap(const URL& url)
 {
   std::shared_ptr<DefaultColorMap> colormap;
   auto xml = IODataType::read<PTreeData>(url.toString());
+
+  if (xml == nullptr) {
+    fLogSevere("Failed to read or parse W2 ColorMap XML at {}", url.toString());
+    return nullptr;
+  }
 
   try{
     // out = std::make_shared<ColorMap>(); GOOP
@@ -556,63 +478,3 @@ ConfigColorMap::getColorMap(const std::string& key)
   }
   return colormap;
 } // ColorMap::getColorMap
-
-SCIPalette *
-SCIPaletteFromFile(char * filename)
-{
-  SCIPalette * pal;
-
-  pal = new SCIPalette;
-
-  char flag[8], buffer[128];
-  FILE * inf;
-
-  if ( (inf = fopen(filename, "r")) == NULL) { return NULL; }
-
-  pal->number_range_colors  = 0;
-  pal->number_linear_colors = 0;
-  while (fgets(buffer, 126, inf) != NULL) {
-    if (buffer[0] == 'R') { ++pal->number_range_colors; }
-    if (buffer[0] == 'L') { ++pal->number_linear_colors; }
-  }
-
-  if (pal->number_range_colors > 0) {
-    pal->ranges        = new short int * [pal->number_range_colors];
-    pal->range_palette = new int * [pal->number_range_colors];
-
-    for (int c = 0; c < pal->number_range_colors; ++c) {
-      pal->ranges[c]        = new short int [2];
-      pal->range_palette[c] = new int [3];
-    }
-  }
-
-  if (pal->number_linear_colors > 0) {
-    pal->linear_palette = new int * [pal->number_linear_colors];
-
-    for (int c = 0; c < pal->number_linear_colors; ++c) {
-      pal->linear_palette[c] = new int [3];
-    }
-  }
-
-  int ri = 0, li = 0;
-
-  rewind(inf);
-  while (fgets(buffer, 126, inf) != NULL) {
-    if (buffer[0] == 'R') {
-      sscanf(buffer, "%s %hd %hd %d %d %d", flag, &(pal->ranges[ri][LOW]), &(pal->ranges[ri][HIGH]),
-        &(pal->range_palette[ri][RED]), &(pal->range_palette[ri][GREEN]), &(pal->range_palette[ri][BLUE]));
-      ++ri;
-    }
-    if (buffer[0] == 'L') {
-      sscanf(buffer, "%s %d %d %d", flag, &(pal->linear_palette[li][RED]), &(pal->linear_palette[li][GREEN]),
-        &(pal->linear_palette[li][BLUE]));
-      ++li;
-    }
-    if (buffer[0] == 'B') {
-      sscanf(buffer, "%s %hd %hd", flag, &pal->min, &pal->max);
-    }
-  }
-  fclose(inf);
-
-  return pal;
-} // SCIPaletteFromFile

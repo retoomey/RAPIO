@@ -400,6 +400,39 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
   #endif // if 0
 } // OS::runProcess
 
+bool
+OS::spawnProcessArgs(const std::vector<std::string>& argsIn)
+{
+  std::string error = "None";
+
+  try {
+    namespace p  = boost::process;
+    namespace fs = boost::filesystem;
+
+    if (argsIn.empty()) { return false; }
+
+    std::vector<std::string> args = argsIn;
+    std::string command = args[0];
+    args.erase(args.begin());
+
+    const std::string absolutePath = validateExe(command);
+    if (absolutePath.empty()) {
+      error = "Command not found or not executable: '" + command + "'";
+    } else {
+      const auto spath = fs::absolute(absolutePath);
+      // spawn detaches the process natively (background execution)
+      p::spawn(spath, p::args(args));
+      fLogInfo("Spawned background command '{}'", command);
+      return true;
+    }
+  } catch (const std::exception& e) {
+    error = e.what();
+  }
+
+  fLogSevere("Failure spawning command. Error: '{}'", error);
+  return false;
+}
+
 std::vector<std::string>
 OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid)
 {
