@@ -3,6 +3,9 @@
 #include <rCressman.h>
 #include <rBilinear.h>
 
+#include <rLatLonGrid.h>
+#include <rRadialSet.h>
+
 #include <iostream>
 
 using namespace rapio;

@@ -1,6 +1,10 @@
 #include "rFusion2.h"
 
 #include "rStage2Data.h"
+#include "rPluginPartition.h"
+#include "rProcessTimer.h"
+#include "rRecordQueue.h"
+
 #include <vector>
 
 using namespace rapio;

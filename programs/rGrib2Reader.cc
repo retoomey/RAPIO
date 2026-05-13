@@ -1,4 +1,9 @@
 #include <rGrib2Reader.h>
+#include <rConfig.h>
+#include <rGribDataType.h>
+#include <rLatLonGrid.h>
+#include <rProcessTimer.h>
+#include <rStrings.h>
 
 #include <iostream>
 
@@ -176,7 +181,7 @@ Grib2ReaderAlg::whichFieldsToProcess()
  * }
  */
 void
-Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
+Grib2ReaderAlg::processNewData(RAPIOData& d)
 {
   // test loading field data
   std::string whichModel = "RRFS";
@@ -184,7 +189,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
   getModelProjectionInfo(whichModel);
   whichFieldsToProcess();
   // Look for Grib2 data only
-  auto grib2 = d.datatype<rapio::GribDataType>();
+  auto grib2 = d.datatype<GribDataType>();
 
   if (grib2 != nullptr) {
     fLogInfo("Grib2 data incoming...testing...");
@@ -361,10 +366,10 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 } // Grib2ReaderAlg::processNewData
 
 void
-Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
-  std::shared_ptr<rapio::LatLonGrid> vgrid,
-  std::shared_ptr<rapio::LatLonGrid> &uwind,
-  std::shared_ptr<rapio::LatLonGrid> &vwind,
+Grib2ReaderAlg::convertWinds(std::shared_ptr<LatLonGrid> ugrid,
+  std::shared_ptr<LatLonGrid> vgrid,
+  std::shared_ptr<LatLonGrid> &uwind,
+  std::shared_ptr<LatLonGrid> &vwind,
   float xlat1, float cenlon)
 {
   uwind = ugrid->Clone();

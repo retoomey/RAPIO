@@ -1,8 +1,8 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include "rRAPIOAlgorithm.h"
 #include "rTerrainBlockage.h"
+#include "rElevationVolume.h"
 
 namespace rapio {
 /** Bin a Lat,Lon,Height point cloud into a X,Y,Z grid defined.

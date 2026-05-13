@@ -1,28 +1,28 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
-class Grib2ReaderAlg : public rapio::RAPIOAlgorithm {
+namespace rapio {
+class Grib2ReaderAlg : public RAPIOAlgorithm {
 public:
 
   /** Create an example simple algorithm */
   Grib2ReaderAlg()
   { };
-  std::shared_ptr<rapio::LatLonGrid> ugrid;
-  std::shared_ptr<rapio::LatLonGrid> vgrid;
-  std::shared_ptr<rapio::LatLonGrid> uwind;
-  std::shared_ptr<rapio::LatLonGrid> vwind;
+  std::shared_ptr<LatLonGrid> ugrid;
+  std::shared_ptr<LatLonGrid> vgrid;
+  std::shared_ptr<LatLonGrid> uwind;
+  std::shared_ptr<LatLonGrid> vwind;
 
   // The basic API messages from the system
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Path for our configuration file */
   // std::string ConfigModelInfoXML;
@@ -31,20 +31,20 @@ public:
   virtual void
   whichFieldsToProcess();
 
-  // ** get the model projection information and output resolution */
+  /** get the model projection information and output resolution */
   virtual void
   getModelProjectionInfo(std::string& modeltype);
 
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** convert winds from grid-relatite to earth-relative */
   virtual void
-  convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
-    std::shared_ptr<rapio::LatLonGrid> vgrid,
-    std::shared_ptr<rapio::LatLonGrid> &uwind,
-    std::shared_ptr<rapio::LatLonGrid> &vwind,
+  convertWinds(std::shared_ptr<LatLonGrid> ugrid,
+    std::shared_ptr<LatLonGrid> vgrid,
+    std::shared_ptr<LatLonGrid> &uwind,
+    std::shared_ptr<LatLonGrid> &vwind,
     float lat, float lon);
 protected:
 
@@ -62,3 +62,4 @@ private:
   float zspacing   = 0;
   std::string proj;
 };
+}

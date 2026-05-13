@@ -5,18 +5,9 @@
 
 using namespace rapio;
 
-// Your group/project/area for all of YOUR code.
-// Here we're part of wdssii or hmet or anc, etc.
-using namespace wdssii;
-
-/** A RAPIO Algorithm Example
- * Real time Algorithm Parameters and I/O
- * http://github.com/retoomey/RAPIO
+/** DRradial Algorithm
  *
- * This is an example/template of creating a RAPIO algorithm.
- * I will try to enhance this example/modify it as the API evolves.
- *
- * @author Robert Toomey
+ * @author John Krause
  **/
 void
 rDRradial::declareOptions(RAPIOOptions& o)
@@ -59,14 +50,14 @@ rDRradial::processOptions(RAPIOOptions& o)
 }
 
 void
-rDRradial::processDRradial(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & DataMap)
+rDRradial::processDRradial(std::map<std::string, std::shared_ptr<RadialSet>> & DataMap)
 {
 // Access the pointer from the map
-    std::shared_ptr<rapio::RadialSet> CC = myDataMap["RhoHV"];
-    std::shared_ptr<rapio::RadialSet> Zdr = myDataMap["Zdr"];
+    std::shared_ptr<RadialSet> CC = myDataMap["RhoHV"];
+    std::shared_ptr<RadialSet> Zdr = myDataMap["Zdr"];
 //
 //  Identify the output, to look like Zdr
-    std::shared_ptr<rapio::RadialSet> DR = Zdr->Clone();
+    std::shared_ptr<RadialSet> DR = Zdr->Clone();
      
 //Check the data for azimuthal alignment
 // Set the num_az and num_gates
@@ -164,7 +155,7 @@ rDRradial::processDRradial(std::map<std::string, std::shared_ptr<rapio::RadialSe
 }
 
 void
-rDRradial::processNewData(rapio::RAPIOData& d)
+rDRradial::processNewData(RAPIOData& d)
 {
   // Use d.record() and d.datatype() to get your wdssii information...
   // We'll probably add more helper features in the API as it grows.
@@ -189,7 +180,7 @@ rDRradial::processNewData(rapio::RAPIOData& d)
 
   // Look for any data the system knows how to read
   // convert this data to a RadialSet which we can handle
-  auto r = d.datatype<rapio::RadialSet>(); 
+  auto r = d.datatype<RadialSet>(); 
   
   if (r != nullptr) {
     // Example for processing groups of subtypes.

@@ -1,7 +1,6 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rPolarAlgorithm.h>
 
 namespace rapio {
 /*
@@ -40,7 +39,7 @@ namespace rapio {
  * for direct comparison.
  *
  **/
-class EchoTop : public rapio::PolarAlgorithm {
+class EchoTop : public PolarAlgorithm {
 public:
 
   /** Create an example simple algorithm */
@@ -48,7 +47,7 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process the virtual volume. */
   virtual void

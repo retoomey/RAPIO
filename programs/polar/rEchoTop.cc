@@ -1,6 +1,8 @@
 #include <rEchoTop.h>
 
 #include <rPolarAlgorithm.h>
+#include <rRadialSet.h>
+#include <rRadialSetProjection.h>
 
 #include <iostream>
 

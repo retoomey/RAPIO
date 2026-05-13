@@ -62,9 +62,11 @@ option(RAPIO_STRICT_SYMBOL_CHECK "Link modules to librapio to verify all symbols
 
 # Set type of build.  This has effect on different os it seems based on some settings here:
 # CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel") google these
+# We make the default RelWithDebInfo.  Larger binaries, but optimized and with
+# debug information for stack traces.
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "No build type selected, defaulting to 'Release'")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)")
+  message(STATUS "No build type selected, defaulting to 'RelWithDebInfo'")
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type (default RelWithDebInfo)")
 endif()
 
 # My force of clang compiler for me, not doing it for everyone though

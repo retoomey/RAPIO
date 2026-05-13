@@ -1,5 +1,10 @@
 #include <rSimpleAlg.h>
 
+// Since we're building as part of rapio, we'll use individual headers
+// and not RAPIO.h
+#include <rGDALDataType.h>
+#include <rRadialSet.h>
+
 #include <iostream>
 
 using namespace rapio;
@@ -58,7 +63,7 @@ W2SimpleAlg::processOptions(RAPIOOptions& o)
 }
 
 void
-W2SimpleAlg::processNewData(rapio::RAPIOData& d)
+W2SimpleAlg::processNewData(RAPIOData& d)
 {
   // Use d.record() and d.datatype() to get your wdssii information...
   // We'll probably add more helper features in the API as it grows.
@@ -83,7 +88,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
   // have RadialSet, LatLonGrid, GribDataType
 
   // Look for any data the system knows how to read
-  auto r = d.datatype<rapio::DataType>();
+  auto r = d.datatype<DataType>();
 
   if (r != nullptr) {
     #if 0
@@ -114,7 +119,7 @@ W2SimpleAlg::processNewData(rapio::RAPIOData& d)
 
     // Look for a radial set
 
-    auto radialSet = d.datatype<rapio::RadialSet>();
+    auto radialSet = d.datatype<RadialSet>();
     if (radialSet != nullptr) {
       fLogInfo("This is a radial set, do radial set stuff");
       auto time = radialSet->getTime();

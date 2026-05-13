@@ -1,7 +1,7 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOProgram.h>
+#include <rDirWalker.h>
 
 namespace rapio {
 /*
@@ -14,7 +14,7 @@ namespace rapio {
  * @author Valliappa Lakshman
  * @author Robert Toomey
  **/
-class MakeIndex : public rapio::RAPIOProgram {
+class MakeIndex : public RAPIOProgram {
 public:
 
   /** Create */
@@ -22,11 +22,11 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute */
   virtual void

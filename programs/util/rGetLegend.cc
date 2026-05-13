@@ -1,4 +1,5 @@
 #include "rGetLegend.h"
+#include "rColorMap.h"
 
 using namespace rapio;
 
@@ -30,12 +31,12 @@ GetLegend::processOptions(RAPIOOptions& o)
 }
 
 void
-GetLegend::processNewData(rapio::RAPIOData& d)
+GetLegend::processNewData(RAPIOData& d)
 {
   // The datafile should be 'cached' by linux for multiple calls,
   // so not too worried here...though if too slow we may have to
   // do some work.
-  auto data = d.datatype<rapio::DataType>();
+  auto data = d.datatype<DataType>();
 
   if (data == nullptr) {
     fLogSevere("Failed to get valid DataType");

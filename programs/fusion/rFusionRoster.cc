@@ -3,6 +3,7 @@
 #include "rError.h"
 #include "rConfigRadarInfo.h"
 #include "rDirWalker.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 

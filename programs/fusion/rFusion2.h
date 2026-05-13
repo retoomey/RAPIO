@@ -1,7 +1,6 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include "rRAPIOAlgorithm.h"
 #include "rLLCoverageArea.h"
 #include "rLLHGridN2D.h"
 #include "rStage2Data.h"

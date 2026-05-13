@@ -79,6 +79,7 @@ rIOFakeDataGenerator.h
 rIOFakeDataType.h
 rIOFile.h
 rIOPostProcessor.h
+rIOptionBackend.h
 index/rIOIndex.h
 rIOJSON.h
 rIOURL.h
@@ -343,7 +344,7 @@ target_include_directories(rapio_interface INTERFACE
 )
 
 # Definition for rapio_interface
-target_compile_definitions(rapio_interface INTERFACE BOOST_LOG_DYN_LINK)
+target_compile_definitions(rapio_interface INTERFACE BOOST_LOG_DYN_LINK BOOST_STACKTRACE_DYN_LINK)
 
 # header interface has fmt now
 target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
@@ -354,6 +355,9 @@ target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
 add_library(rapio SHARED
     "${SOURCE_FILES}"
 )
+
+# Inject the CMake build type into the C++ preprocessor
+target_compile_definitions(rapio PRIVATE RAPIO_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
 
 target_link_libraries(rapio
   # Go ahead and make our linked libraries public for now.  In theory,
@@ -388,9 +392,24 @@ endif()
 # Pretty sure boost links us to Threads::Threads, but ensure pthreads first
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 #find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
+
+
+# Add a dropdown option for the stacktrace backend (defaulting to 'basic')
+set(RAPIO_STACKTRACE_BACKEND "basic" CACHE STRING "Boost.Stacktrace backend to use (basic, addr2line, noop)")
+set_property(CACHE RAPIO_STACKTRACE_BACKEND PROPERTY STRINGS "basic" "addr2line" "noop")
+
+# Construct the exact component name CMake needs to look for
+set(STACKTRACE_COMPONENT "stacktrace_${RAPIO_STACKTRACE_BACKEND}")
+
+# Pull in Boost, appending the dynamically selected stacktrace component
 find_package(Boost 1.66 REQUIRED COMPONENTS
-  system log log_setup thread filesystem serialization iostreams timer
+  system log log_setup thread filesystem serialization iostreams timer ${STACKTRACE_COMPONENT}
 )
+
+#find_package(Boost 1.66 REQUIRED COMPONENTS
+#  system log log_setup thread filesystem serialization iostreams timer stacktrace_basic
+#)
+
 # Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
 # variant of Redhat, and is therefore ancient using Boost 1.66
 # It appears at first glance that LZMA wasn't built properly in the RPM.

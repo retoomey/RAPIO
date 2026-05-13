@@ -1,7 +1,12 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+/** RAPIO API (If your algorithm is EXTERNAL to the rapio repo,
+ * you can use this header.  If part of the repo, use the individual
+ * headers for compiling speed.  So for example, your alg is
+ * checked into WDSSII or HYDRO you should use the RAPIO.h header
+ * only in your code.  This will keep you independent of changes. */
+// #include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 namespace rapio {
 /*
@@ -15,7 +20,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  **/
-class SimpleProgram : public rapio::RAPIOProgram {
+class SimpleProgram : public RAPIOProgram {
 public:
 
   /** Create a program */
@@ -23,11 +28,11 @@ public:
 
   /** Declare all program options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all program options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Do what you want to do */
   virtual void

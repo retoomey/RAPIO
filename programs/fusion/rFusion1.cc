@@ -13,6 +13,13 @@
 // Current moving average smoother, prefilter on RadialSets
 #include "rLakRadialSmoother.h"
 
+#include "rPluginVolume.h"
+#include "rPluginVolumeValueResolver.h"
+#include "rPluginTerrainBlockage.h"
+#include "rPluginPartition.h"
+
+#include "rProcessTimer.h"
+
 using namespace rapio;
 
 /*

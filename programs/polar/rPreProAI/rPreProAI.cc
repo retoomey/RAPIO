@@ -8,18 +8,8 @@
 
 using namespace rapio;
 
-// Your group/project/area for all of YOUR code.
-// Here we're part of wdssii or hmet or anc, etc.
-using namespace wdssii;
-
-/** A RAPIO Algorithm Example
- * Real time Algorithm Parameters and I/O
- * http://github.com/retoomey/RAPIO
- *
- * This is an example/template of creating a RAPIO algorithm.
- * I will try to enhance this example/modify it as the API evolves.
- *
- * @author Robert Toomey
+/** PreProAI
+ * @author John Krause
  **/
 void
 rPreProAI::declareOptions(RAPIOOptions& o)
@@ -66,15 +56,15 @@ rPreProAI::processOptions(RAPIOOptions& o)
 }
 
 void
-rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSet> > & DataMap)
+rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & DataMap)
 {
   //
   // Check the myDataMap for azimuthal alignment
   // Access the pointer from the map
-  std::shared_ptr<rapio::RadialSet> Ref = myDataMap["Reflectivity"];
-  std::shared_ptr<rapio::RadialSet> CC    = myDataMap["RhoHV"];
-  std::shared_ptr<rapio::RadialSet> Zdr   = myDataMap["Zdr"];
-  std::shared_ptr<rapio::RadialSet> PhiDP = myDataMap["PhiDP"];
+  std::shared_ptr<RadialSet> Ref = myDataMap["Reflectivity"];
+  std::shared_ptr<RadialSet> CC    = myDataMap["RhoHV"];
+  std::shared_ptr<RadialSet> Zdr   = myDataMap["Zdr"];
+  std::shared_ptr<RadialSet> PhiDP = myDataMap["PhiDP"];
 
   size_t numRadials = Ref->getNumRadials();
   auto azRef        = Ref->getAzimuthRef();
@@ -164,32 +154,32 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
 
   //Compute KDP here:
   // 9 gate on WSR-88D
-  std::shared_ptr<rapio::RadialSet> short_PhiDP = PhiDP->Clone();
-  std::shared_ptr<rapio::RadialSet> short_Kdp   = compute_triple_median_Kdp(short_PhiDP, CC, 2250.);
+  std::shared_ptr<RadialSet> short_PhiDP = PhiDP->Clone();
+  std::shared_ptr<RadialSet> short_Kdp   = compute_triple_median_Kdp(short_PhiDP, CC, 2250.);
 
   // 25 gate on WSR-88D
-  std::shared_ptr<rapio::RadialSet> long_PhiDP = PhiDP->Clone();
-  std::shared_ptr<rapio::RadialSet> long_Kdp   = compute_triple_median_Kdp(long_PhiDP, CC, 6250.);
+  std::shared_ptr<RadialSet> long_PhiDP = PhiDP->Clone();
+  std::shared_ptr<RadialSet> long_Kdp   = compute_triple_median_Kdp(long_PhiDP, CC, 6250.);
 
   // combine the Kdp based on a Z threshold. Use short Kdp where Z > 40;
   // improve this by melding the data around the threshold rather than a simple step jump
-  std::shared_ptr<rapio::RadialSet> prepro_Kdp = combine_Kdp(short_Kdp, long_Kdp, Ref, 40.0);
+  std::shared_ptr<RadialSet> prepro_Kdp = combine_Kdp(short_Kdp, long_Kdp, Ref, 40.0);
 
   fLogInfo("-------> processPreProAI(), Kdp finished:");
 
-  std::shared_ptr<rapio::RadialSet> prepro_Ref = Ref->Clone();
+  std::shared_ptr<RadialSet> prepro_Ref = Ref->Clone();
 
   // Correct Zh for Horrizontal attenuation, using long_PhiDP
   correct_Zh_for_attenuation(prepro_Ref, long_PhiDP);
 
-  std::shared_ptr<rapio::RadialSet> prepro_Zdr = Zdr->Clone();
+  std::shared_ptr<RadialSet> prepro_Zdr = Zdr->Clone();
 
   // Correct Zh for Horrizontal attenuation, using long_PhiDP
   correct_Zdr_for_attenuation(prepro_Zdr, long_PhiDP);
 
   // create the QC map from DR and a threshold, (Kilambi et. al. 2018)
   //  https://doi.org/10.1175/JTECH-D-17-0175.1
-  std::shared_ptr<rapio::RadialSet> DR = computeDR(CC, Zdr);
+  std::shared_ptr<RadialSet> DR = computeDR(CC, Zdr);
 
   // this 2d median is very helpful in cleaning up the mask and eliminating
   // random speckling
@@ -199,14 +189,14 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   // I think -11 works better for thunderstorms, mostly in the core where CC is low and
   // a ZdrColumn has formed. You can make your own masks using Reflectivity or CC or 
   // whatever.
-  std::shared_ptr<rapio::RadialSet> QCmask = computeQCmask(DR, -11.0);
+  std::shared_ptr<RadialSet> QCmask = computeQCmask(DR, -11.0);
 
   // Smoothing to reduce variability
   applyFast2DMedian(prepro_Ref, 3, 3, 0.33);
   applyFast2DMedian(prepro_Zdr, 3, 3, 0.33);
   applyFast2DMedian(prepro_Kdp, 3, 3, 0.33);
 
-  std::shared_ptr<rapio::RadialSet> prepro_CC = CC->Clone();
+  std::shared_ptr<RadialSet> prepro_CC = CC->Clone();
 
   applyFast2DMedian(prepro_CC, 3, 3, 0.33);
   fLogInfo("-------> processPreProAI(), 2D medians complete:");
@@ -256,7 +246,7 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
 } // rPreProAI::processPreProAI
 
 void
-rPreProAI::processNewData(rapio::RAPIOData& d)
+rPreProAI::processNewData(RAPIOData& d)
 {
   // Main data collection object where we collect data we want
   // to process.
@@ -279,7 +269,7 @@ rPreProAI::processNewData(rapio::RAPIOData& d)
 
   // Look for any data the system knows how to read
   // convert this data to a RadialSet which we can handle
-  auto r = d.datatype<rapio::RadialSet>();
+  auto r = d.datatype<RadialSet>();
 
   if (r != nullptr) {
     // Example for processing groups of subtypes.

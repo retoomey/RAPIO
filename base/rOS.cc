@@ -714,7 +714,7 @@ OS::isWSL()
 std::string
 OS::getBuildInfo()
 {
-  return fmt::format("{} {} C++{} {} {} UTC",
+  return fmt::format("{} {} C++{} {} {} UTC [{}]",
            COMPILER_NAME, COMPILER_VERSION,
-           CXX_VERSION, BUILD_DATE, BUILD_TIME);
+           CXX_VERSION, BUILD_DATE, BUILD_TIME, RAPIO_BUILD_TYPE);
 }

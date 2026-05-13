@@ -1,4 +1,6 @@
 #include "rFusionDatabase.h"
+#include "rProcessTimer.h"
+#include "rArith.h"
 
 using namespace rapio;
 

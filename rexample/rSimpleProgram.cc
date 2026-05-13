@@ -51,6 +51,15 @@ SimpleProgram::execute()
 {
   fLogInfo("Well this program is running, what to do?");
   fLogInfo("Test was passed in as '{}'", myTest);
+
+  #if 0
+  // --- INTENTIONAL CRASH TEST ---
+  fLogInfo("Initiating deliberate segfault in 3... 2... 1...");
+
+  // Create a null pointer and attempt to write to it
+  volatile int * crash_ptr = nullptr;
+  *crash_ptr = 42;
+  #endif
 }
 
 int

@@ -1,6 +1,7 @@
 #include "rStage2Data.h"
 #include "rFusion1.h"
 #include "rBitset.h"
+#include "rColorTerm.h"
 
 using namespace rapio;
 

@@ -1,6 +1,10 @@
 #include "rPointCloud.h"
 
 #include "rRAPIOPlugin.h"
+#include "rPluginVolume.h"
+#include "rPluginTerrainBlockage.h"
+#include "rColorTerm.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 

@@ -1,11 +1,10 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
 #include "rTerrainBlockage.h"
 #include "rLLCoverageArea.h"
 #include "rVolumeValueResolver.h"
 #include "rLLHGridN2D.h"
+#include "rElevationVolume.h"
 
 #include "rFusionCache.h"
 

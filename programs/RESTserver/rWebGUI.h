@@ -1,10 +1,9 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOProgram.h>
 
 namespace rapio {
-class RAPIOWebGUI : public rapio::RAPIOProgram {
+class RAPIOWebGUI : public RAPIOProgram {
 public:
 
   /** Create tile algorithm */
@@ -16,15 +15,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** Process a web message */
   virtual void

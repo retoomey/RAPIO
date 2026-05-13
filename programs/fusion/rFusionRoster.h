@@ -1,15 +1,15 @@
 #pragma once
 
 #include "rFusionCache.h"
-
-/** RAPIO API */
-#include <RAPIO.h>
+#include "rDirWalker.h"
 
 // Keeping the 'static' way for now in case the dynamic nearest number way is too slow
 // #define USE_STATIC_NEAREST
 // Nearest 'n' basically.  RAM will explode with larger values
 
 namespace rapio {
+class ProcessTimerSum;
+
 /** Key to reduce size of nearest grid */
 typedef unsigned short SourceIDKey;
 

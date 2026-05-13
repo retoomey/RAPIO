@@ -1,4 +1,5 @@
 #include <rPolarVMax.h>
+#include <rRadialSetProjection.h>
 
 #include <iostream>
 

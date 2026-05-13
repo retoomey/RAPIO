@@ -1,5 +1,6 @@
 #pragma once
-#include <RAPIO.h>
+#include <rRAPIOProgram.h>
+
 #include <vector>
 #include <string>
 
@@ -21,18 +22,18 @@ namespace rapio {
  * @ingroup rapio_utility
  * @author Robert Toomey
  */
-class MakeTerrain : public rapio::RAPIOProgram {
+class MakeTerrain : public RAPIOProgram {
 public:
   /** @brief Default constructor. */
   MakeTerrain(){ };
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Do our tool's job */
   virtual void

@@ -1,4 +1,5 @@
 #include "rGetColorMap.h"
+#include "rColorMap.h"
 
 using namespace rapio;
 

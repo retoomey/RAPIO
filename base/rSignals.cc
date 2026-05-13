@@ -1,6 +1,11 @@
 #include "rSignals.h"
 #include "rError.h"
 #include "rEventLoop.h"
+#include "rOS.h"
+#include "rBOOST.h"
+BOOST_WRAP_PUSH
+#include <boost/stacktrace.hpp>
+BOOST_WRAP_POP
 
 #include <sys/resource.h> // rlimit, etc
 #include <iostream>
@@ -21,6 +26,7 @@ bool Signals::myCoreDumpsRequested = false;
 void
 Signals::printTrace()
 {
+  #if 0
   char pid_buf[30];
 
   sprintf(pid_buf, "%d", getpid());
@@ -32,11 +38,21 @@ Signals::printTrace()
   if (!child_pid) {
     dup2(2, 1); // redirect output to stderr
     fprintf(stdout, "stack trace for %s pid=%s\n", name_buf, pid_buf);
+    // Technically a security risk (gdb could be malicious)
     execlp("gdb", "gdb", "--batch", "-n", "-ex", "thread", "-ex", "bt", name_buf, pid_buf, NULL);
     abort(); /* If gdb failed to start */
   } else {
     waitpid(child_pid, NULL, 0);
   }
+  #else // if 0
+  // Note: Boost allows various stacktrace levels.
+  // For full listing need stacktrace_addr2line plus RelWithDebInfo
+  //
+  std::cerr << "\n[RAPIO CRASH] Build: " << OS::getBuildInfo() << "\n"
+            << "Stack trace:\n"
+            <<
+    boost::stacktrace::stacktrace() << "\n\n";
+  #endif // if 0
 }
 
 /*
@@ -158,10 +174,6 @@ Signals::setupCoreDumps(bool enable)
   // Remember that /etc/security/limits.conf limit our ability to set stuff
   // unless we're root
   const auto want = enable ? RLIM_INFINITY : 0;
-
-  if (enable) {
-    std::system("ulimit -c unlimited"); // try unlimiting us
-  }
 
   // Get current limits...
   struct rlimit corelimit;

@@ -1,4 +1,7 @@
 #include "rLLSDPolar.h"
+#include "rArrayAlgorithm.h"
+#include "rStrings.h"
+
 #include <numeric>
 #include <algorithm>
 #include <cmath>
@@ -119,17 +122,18 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   // the naming classically used by w2circ
   const std::string name = inputin->getTypeName();
   std::string azname, ranname;
-  const std::string totname = name+"_Gradient";
-  const std::string medname = name+"_MedianFiltered";
+  const std::string totname = name + "_Gradient";
+  const std::string medname = name + "_MedianFiltered";
+
   // 'kinda'  Fails for different velocity names right?
   // maybe we could look at the units instead?
   // Velocity was original and special
-  if (Strings::makeLower(name) == "velocity"){ 
-     azname = "AzShear";
-     ranname = "DivShear";
-  }else{
-     azname = name+"_AzGradient";
-     ranname = name+"_RanGradient";
+  if (Strings::makeLower(name) == "velocity") {
+    azname  = "AzShear";
+    ranname = "DivShear";
+  } else {
+    azname  = name + "_AzGradient";
+    ranname = name + "_RanGradient";
   }
   const std::string gradientColormap = "Gradient";
   // -------------------------------------------------
@@ -139,9 +143,9 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   output[PROD_MEDIAN] = inputin->Clone();
   myMedianFilter->process(inputin->getFloat2D(), output[PROD_MEDIAN]->getFloat2D());
   output[PROD_MEDIAN]->setTypeName(medname);
-  output[PROD_MEDIAN]->setColorMapName(inputin->getColorMapName()); 
+  output[PROD_MEDIAN]->setColorMapName(inputin->getColorMapName());
 
-  output[PROD_AZ] = inputin->Clone(); 
+  output[PROD_AZ] = inputin->Clone();
   output[PROD_AZ]->getFloat2D()->fill(Constants::MissingData); // Needed
   output[PROD_AZ]->setUnits("1/m");
   output[PROD_AZ]->setColorMapName(gradientColormap);
@@ -154,7 +158,7 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   output[PROD_TOT]->setTypeName(totname);
 
   // Setup pointers to unique buffers
-  auto input = output[PROD_MEDIAN];
+  auto input  = output[PROD_MEDIAN];
   auto * data = input->getFloat2DPtr(); // Read-only source
   auto * az   = output[PROD_AZ]->getFloat2DPtr();
   auto * div  = output[PROD_DIV]->getFloat2DPtr();
@@ -171,23 +175,25 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   size_t startGate =
     (size_t) ((myStartRangeKM * 1000.0 + std::min(myAzGradRanKernel, myDivGradRanKernel)) / gateWidthM);
   int iRanAz = (int) ((0.5 * myAzGradRanKernel) / gateWidthM);
+
   if (iRanAz < 1) {
     iRanAz = 1;
   }
 
   int iRanDiv = (int) ((0.5 * myDivGradRanKernel) / gateWidthM);
+
   if (iRanDiv < 1) {
     iRanDiv = 1;
   }
 
   // Iterate over the kernel
   SpikeTracker spikeTracker;
+
   if (myDoSpikeRemoval) {
     spikeTracker.reserve(ABSOLUTE_MAX_GATES);
   }
 
   for (size_t iRanCurrent = startGate; iRanCurrent < (size_t) numGates; ++iRanCurrent) {
-
     double ran1         = (iRanCurrent * gateWidthM) + distFirstGateM;
     double radialWidthM = ran1 * avgAzSpacingRad;
 
@@ -289,8 +295,8 @@ SpikeTracker::detectAndLogSpike(
 {
   // Safety: Ensure we have at least 2 points to find a difference
   // Didn't see this crash in w2circ or here, but it's possible in clear weather
-  if (velList1.size() < 2 || velList2.size() < 2 || velList3.size() < 2) {
-    return; 
+  if ((velList1.size() < 2) || (velList2.size() < 2) || (velList3.size() < 2)) {
+    return;
   }
   // Optional but recommended: keep the size-match check if you suspect
   // the kernel might be non-rectangular or clipped by data availability.

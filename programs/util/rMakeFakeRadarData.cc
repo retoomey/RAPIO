@@ -1,5 +1,7 @@
 #include "rMakeFakeRadarData.h"
 #include "rTerrainBlockageLak.h"
+#include "rConfigRadarInfo.h"
+#include "rIODataType.h"
 
 using namespace rapio;
 

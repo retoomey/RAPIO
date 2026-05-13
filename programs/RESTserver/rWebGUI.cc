@@ -1,6 +1,17 @@
 #include "rWebGUI.h"
 #include "rGDALDataType.h"
 #include "rVectorDataType.h"
+
+#include "rPluginWebserver.h"
+#include "rOS.h"
+#include "rStrings.h"
+#include "rWebServer.h"
+#include "rIODataType.h"
+#include "rColorMap.h"
+#include "rConfig.h"
+#include "rNetwork.h"
+#include "rProcessTimer.h"
+
 #include <iostream>
 #include <sys/stat.h>
 

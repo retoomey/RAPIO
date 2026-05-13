@@ -1,16 +1,10 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rPolarAlgorithm.h>
 
-// You 'could' declare RAPIO namespace here and
-// avoid the rapio:: stuff below, but if you're gonna mix
-// with other code such as WDSS2 might explicitly declare
-// using namespace rapio;
-
-namespace wdssii { // or whatever you want
+namespace rapio { 
 /** Create rPreProAI algorithm as a subclass of RAPIOAlgorithm */
-class rPreProAI : public rapio::PolarAlgorithm {
+class rPreProAI : public PolarAlgorithm {
 public:
 
   /** Create an example simple algorithm */
@@ -18,15 +12,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** Process heartbeat trigger from 'sync option.
    * Note: Do something on a trigger.  For example, you might gather
@@ -35,7 +29,7 @@ public:
    * @param at The actual now time triggering the event.
    * @param sync The pinned sync time we're firing for. */
   virtual void
-  processHeartbeat(const rapio::Time& n, const rapio::Time& p) override;
+  processHeartbeat(const Time& n, const Time& p) override;
 
   /** The algorithm work function */
 
@@ -43,7 +37,7 @@ public:
    * the job of processNewData() above */
   /* process this data and add new entries to the map for output products */
   void
-  processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSet> > & DataMap);
+  processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & DataMap);
 
 protected:
 
@@ -58,7 +52,7 @@ protected:
   const float MISSING_ELEV = -9999.0;
 
   /** Where we store the input data until we run */
-  std::map<std::string, std::shared_ptr<rapio::RadialSet> > myDataMap;
+  std::map<std::string, std::shared_ptr<RadialSet> > myDataMap;
 
 
 private:

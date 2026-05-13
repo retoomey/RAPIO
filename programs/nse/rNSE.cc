@@ -1,4 +1,8 @@
 #include <rNSE.h>
+#include <rConfig.h>
+#include <rGribDataType.h>
+#include <rProcessTimer.h>
+#include <rStrings.h>
 
 #include <iostream>
 
@@ -179,7 +183,7 @@ NSEAlg::whichFieldsToProcess()
  * }
  */
 void
-NSEAlg::processNewData(rapio::RAPIOData& d)
+NSEAlg::processNewData(RAPIOData& d)
 {
   // test loading field data
   std::string whichModel = "RRFS";
@@ -187,7 +191,7 @@ NSEAlg::processNewData(rapio::RAPIOData& d)
   getModelProjectionInfo(whichModel);
   whichFieldsToProcess();
   // Look for Grib2 data only
-  auto grib2 = d.datatype<rapio::GribDataType>();
+  auto grib2 = d.datatype<GribDataType>();
 
   if (grib2 != nullptr) {
     fLogInfo("Grib2 data incoming...testing...");
@@ -364,10 +368,10 @@ NSEAlg::processNewData(rapio::RAPIOData& d)
 } // NSEAlg::processNewData
 
 void
-NSEAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
-  std::shared_ptr<rapio::LatLonGrid> vgrid,
-  std::shared_ptr<rapio::LatLonGrid> &uwind,
-  std::shared_ptr<rapio::LatLonGrid> &vwind,
+NSEAlg::convertWinds(std::shared_ptr<LatLonGrid> ugrid,
+  std::shared_ptr<LatLonGrid> vgrid,
+  std::shared_ptr<LatLonGrid> &uwind,
+  std::shared_ptr<LatLonGrid> &vwind,
   float xlat1, float cenlon)
 {
   uwind = ugrid->Clone();

@@ -1,5 +1,9 @@
 #include <rGribExample.h>
 
+// Since we're building as part of rapio, we'll use individual headers
+// and not RAPIO.h
+#include <rGribDataType.h>
+
 #include <iostream>
 
 using namespace rapio;
