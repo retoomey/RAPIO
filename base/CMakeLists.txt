@@ -2,169 +2,12 @@
 # RAPIO base cmake file
 #
 
-# Set variable of all headers we use
-# We 'could' file(GLOB HEADER_FILES "*.h") but
-# this means when we add a file we have to force cmake
-# to recognize the change so for now we'll hard list the files
-# ls -1 *.h
-set(RELATIVE_HEADERS
-ccronexpr.h
-rAlgConfigFile.h
-rArith.h
-rArray.h
-rArrayAlgorithm.h
-rHelpFormatter.h
-image/rArrayFilter.h
-image/rArraySampler.h
-image/rNearestNeighbor.h
-image/rCressman.h
-image/rBilinear.h
-image/rThresholdFilter.h
-image/rPercentFilter.h
-datatype/rAttributeDataType.h
-rAWS.h
-rBimap.h
-rBinaryIO.h
-datatype/rBinaryTable.h
-rBitset.h
-rBoostConnection.h
-rColor.h
-rColorMap.h
-rColorTerm.h
-config/library_sci_palette.h
-config/rConfigColorMap.h
-config/rConfigDirectoryMapping.h
-config/rConfig.h
-config/rConfigIODataType.h
-config/rConfigLogging.h
-config/rConfigParamGroup.h
-config/rConfigRadarInfo.h
-config/rConfigRecord.h
-rConstants.h
-rCurlConnection.h
-rDataArray.h
-rDataFilter.h
-datatype/rDataGrid.h
-rBOOST.h
-rDataProjection.h
-datatype/rDataTable.h
-datatype/rDataType.h
-rDataTypeHistory.h
-rDimensionMapper.h
-rDirWalker.h
-watcher/rDirWatcher.h
-rElevationVolume.h
-rError.h
-rEventLoop.h
-rEventTimer.h
-notifier/rEXERecordNotifier.h
-notifier/rRedisRecordNotifier.h
-watcher/rEXEWatcher.h
-rFactory.h
-watcher/rFAMWatcher.h
-index/rFakeIndex.h
-index/rFileIndex.h
-index/rFMLIndex.h
-index/rRedisIndex.h
-notifier/rFMLRecordNotifier.h
-datatype/rFusionBinaryTable.h
-datatype/rGDALDataType.h
-datatype/rGribDataType.h
-rHeartbeat.h
-rIJK.h
-datatype/rImageDataType.h
-index/rIndexType.h
-rIODataType.h
-rIOFakeDataGenerator.h
-rIOFakeDataType.h
-rIOFile.h
-rIOPostProcessor.h
-rIOptionBackend.h
-index/rIOIndex.h
-rIOJSON.h
-rIOURL.h
-watcher/rIOWatcher.h
-watcher/rRedisWatcher.h
-rIOXML.h
-datatype/rLatLonArea.h
-datatype/rLatLonGrid.h
-datatype/rLatLonGridProjection.h
-datatype/rLatLonGridIterator.h
-datatype/rLatLonHeightGrid.h
-datatype/rLatLonHeightGridIterator.h
-datatype/rLatLonHeightGridProjection.h
-rLength.h
-rLogger.h
-rLLCoverageArea.h
-rLL.h
-rLLH.h
-datatype/rLLHGridN2D.h
-rNamedAny.h
-datatype/rNetcdfDataType.h
-rNetwork.h
-rOption.h
-rOptionList.h
-rOS.h
-rPartitionInfo.h
-rPolarAlgorithm.h
-rProcessTimer.h
-rProject.h
-datatype/rPTreeData.h
-datatype/rRadialSet.h
-datatype/rRadialSetIterator.h
-datatype/rRadialSetProjection.h
-rRAPIOAlgorithm.h
-rRAPIOData.h
-rRapio.h
-datatype/rMergerBinaryTable.h
-datatype/rMultiDataType.h
-datatype/rDataTable.h
-rRAPIOOptions.h
-plugin/rRAPIOPlugin.h
-plugin/rPluginHeartbeat.h
-plugin/rPluginWebserver.h
-plugin/rPluginNotifier.h
-plugin/rPluginIngestor.h
-plugin/rPluginRealTime.h
-plugin/rPluginRecordFilter.h
-plugin/rPluginProductOutput.h
-plugin/rPluginProductOutputFilter.h
-plugin/rPluginVolumeValueResolver.h
-plugin/rPluginTerrainBlockage.h
-plugin/rPluginVolume.h
-plugin/rPluginPartition.h
-rRAPIOProgram.h
-rRecordFilter.h
-rRecord.h
-notifier/rRecordNotifier.h
-rRecordQueue.h
-rSecure.h
-rSentinelDouble.h
-rSignals.h
-rSparseVector.h
-index/rStreamIndex.h
-rStrings.h
-rTerrainBlockage2me.h
-rTerrainBlockage.h
-rTerrainBlockageLak.h
-rThreadGroup.h
-rTimeDuration.h
-rTime.h
-rUnit.h
-rURL.h
-rValueCompressor.h
-rVolumeAlgorithm.h
-rVolumeValue.h
-rVolumeValueResolver.h
-index/rWebIndex.h
-watcher/rWebIndexWatcher.h
-rWebServer.h
-index/rXMLIndex.h
-rXYZ.h
-)
-
 # Set variable of all sources we use
 # ls -1 *.c *.cc
+# We 'could' generate this, but I feel
+# explicitly defining what to compile is
+# probably better. We do generate headers
+# below though.
 set(SOURCE_FILES
 ccronexpr.c
 rAlgConfigFile.cc
@@ -310,6 +153,24 @@ rWebServer.cc
 index/rXMLIndex.cc
 rXYZ.cc
 )
+
+# Glob all headers in the current directory and subdirectories
+# Note: Using RELATIVE helps keep the install paths clean
+file(GLOB_RECURSE ALL_HEADERS_ON_DISK 
+     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
+     "*.h")
+
+# Maintain a "Blacklist" of headers that should NEVER be installed
+set(PRIVATE_HEADERS
+    "rapio_pch.h"
+    "test_internal.h"   # Example of a temp/internal header
+)
+
+# Generate the actual install list by removing the blacklist from the glob
+set(RELATIVE_HEADERS ${ALL_HEADERS_ON_DISK})
+if(PRIVATE_HEADERS)
+    list(REMOVE_ITEM RELATIVE_HEADERS ${PRIVATE_HEADERS})
+endif()
 
 ##################################################################################################
 # Target: Header only interface for modules, doesn't link to the librapio
