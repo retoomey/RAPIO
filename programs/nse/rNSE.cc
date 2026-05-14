@@ -325,9 +325,24 @@ NSEAlg::processNewData(RAPIOData& d)
               }
               if (windinfo[0] == "LCC") {
                 fLogInfo("Doing Lambert Conformal");
+                if (windinfo.size() < 3) {
+                  fLogSevere("Wind rotation config '{}' is missing lat/lon parameters.",
+                    mFields[i].rotateWinds);
+                  continue; // Skip wind rotation for this field
+                }
+
                 // "LCC:38.5:-97.5:UWind:VWind"
-                float lat = atof(windinfo[1].c_str());
-                float lon = atof(windinfo[2].c_str());
+                float lat = 0.0f;
+                float lon = 0.0f;
+                try {
+                  lat = std::stof(windinfo[1]);
+                  lon = std::stof(windinfo[2]);
+                } catch (const std::exception& e) {
+                  fLogSevere("Failed to parse LCC lat/lon from '{}' and '{}': {}",
+                    windinfo[1], windinfo[2], e.what());
+                  continue; // Skip wind rotation for this field
+                }
+
                 // FIXME?: this requires that the first letter
                 // of the data field be "U" or "V"
                 if (mFields[i].name.substr(0, 1) == "U") {

@@ -5,7 +5,6 @@
 #include "rOS.h"
 
 #include <cstring>  // strlen()
-#include <cstdlib>  // atoi()
 #include <libgen.h> // dirname
 
 using namespace rapio;
@@ -74,14 +73,16 @@ URL::encodeURL(const std::string& in)
   // https://en.wikipedia.org/wiki/Percent-encoding
   std::string o;
 
+  // Pre-allocate memory to avoid reallocations in the loop.
+  // We know it will be at least in.length(), and a little extra padding helps.
+  o.reserve(in.length() * 1.5);
+
   for (auto c:in) {
     if (isalnum(c) || (c == '-') || (c == '_') || (c == '.') || (c == '~')) {
       o += c;
     } else {
-      char buf[32];
-      snprintf(buf, sizeof(buf), "%X", (int ((unsigned char) c)));
-      o += "%";
-      o += buf;
+      // Safely formats to a 2-character, uppercase hex string (e.g., "%20" for space)
+      o += fmt::format("%{:02X}", static_cast<int>(static_cast<unsigned char>(c)));
     }
   }
   return o;
@@ -112,8 +113,26 @@ URL::operator = (const std::string& s)
       user = Strings::peel(pass, ":");
     }
     host = Strings::peel(authority, ":");
-    port = authority.empty() ? URL::defaultPort(scheme) : atoi(authority.c_str());
-    w    = p == std::string::npos ? "" : w.substr(p);
+
+    // Safe port parsing (in case of malicious or bad port pass-in)
+    if (authority.empty()) {
+      port = URL::defaultPort(scheme);
+    } else {
+      try {
+        int parsed_port = std::stoi(authority);
+        // Ports must be strictly between 1 and 65535
+        if ((parsed_port > 0) && (parsed_port <= 65535)) {
+          port = static_cast<unsigned short>(parsed_port);
+        } else {
+          port = URL::defaultPort(scheme); // Out of bounds, fallback
+        }
+      } catch (const std::exception& e) {
+        // Caught std::invalid_argument or std::out_of_range
+        port = URL::defaultPort(scheme);
+      }
+    }
+
+    w = p == std::string::npos ? "" : w.substr(p);
     parseAfterHost(w);
   } else if (isalpha(s[0]) && (s[1] == ':') && ((s[2] == '\\') || (s[2] == '/'))) {
     parseAfterHost(s);
@@ -190,11 +209,7 @@ URL::toString() const
       s += URL::encodeURL(host);
 
       if ((port != 0) && (port != URL::defaultPort(scheme))) {
-        // s += ":";  Think printf is quite a bit faster actually
-        // s += std::to_string(port);
-        char buf[32];
-        snprintf(buf, sizeof(buf), ":%d", port);
-        s += buf;
+        s += fmt::format(":{}", port);
       }
 
       if (path.empty() || (path[0] != '/')) { s += '/'; }

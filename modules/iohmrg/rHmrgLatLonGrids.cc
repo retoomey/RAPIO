@@ -32,8 +32,8 @@ HmrgLatLonGrids::read(
   if (g != nullptr) {
     int dataYear;
     try{
-      dataYear = std::atoi(keys["DataYear"].c_str());
-    }catch (...) {
+      dataYear = std::stoi(keys["DataYear"].c_str());
+    } catch (const std::exception& e) {
       dataYear = Time().getYear();
     }
     return readLatLonGrids(*g, dataYear);

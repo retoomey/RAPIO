@@ -298,7 +298,13 @@ OptionList::getFloat(const std::string& opt)
 {
   const std::string s = getString(opt);
 
-  return (atof(s.c_str()));
+  if (s.empty()) { return 0.0f; }
+  try {
+    return std::stof(s);
+  } catch (const std::exception& e) {
+    // fLogSevere("Failed to parse float for option '{}': {}", opt, s);
+    return 0.0f;
+  }
 }
 
 int
@@ -306,7 +312,13 @@ OptionList::getInteger(const std::string& opt)
 {
   const std::string s = getString(opt);
 
-  return (atoi(s.c_str()));
+  if (s.empty()) { return 0; }
+  try {
+    return std::stoi(s);
+  } catch (const std::exception& e) {
+    // fLogSevere("Failed to parse integer for option '{}': {}", opt, s);
+    return 0;
+  }
 }
 
 void

@@ -127,27 +127,18 @@ DataType::generateRecord(
 } // DataType::generateRecord
 
 std::string
-DataType::formatString(float spec,
-  size_t                     tot,
-  size_t                     prec)
+DataType::formatString(float spec, size_t tot, size_t prec)
 {
-  char buf[100];
-
-  std::string format("%f");
+  // Handle the near-zero negative case (prevents "-0.00" edge cases)
+  float val = (std::fabs(spec) < 0.0001) ? std::fabs(spec) : spec;
 
   if (prec > 0) {
-    sprintf(buf, "0%d.%df", int(tot), int(prec)); // e.g:  06.3f
-    format = "%" + std::string(buf);
+    // Single pass: dynamically applies 'tot' to width and 'prec' to precision
+    return fmt::format("{:0{}.{}f}", val, tot, prec);
+  } else {
+    // Default fixed-point formatting
+    return fmt::format("{:f}", val);
   }
-
-  // unfortunately, sprintf can randomly put either -0.00 or 0.00
-  // this will cause problems to downstream applications.
-  if (fabs(spec) < 0.0001) {
-    sprintf(buf, format.c_str(), fabs(spec)); // force
-                                              // +ve
-                                              // value
-  } else { sprintf(buf, format.c_str(), spec); }
-  return (buf);
 }
 
 std::string

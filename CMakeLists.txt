@@ -211,6 +211,24 @@ function(append_RAPIO_HEADERS_GLOB_H FOLDER)
   #set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
 endfunction()
 
+# Wrapper for add_test that automatically injects our dynamic library path
+# Can run all tests with ctest -V, etc.
+function(addRAPIOTest TEST_NAME)
+    # Forward all remaining arguments (COMMAND, WORKING_DIRECTORY, etc.) to standard add_test
+    add_test(NAME ${TEST_NAME} ${ARGN})
+    
+    # Inject the runtime library path based on the OS
+    if(APPLE)
+        set_tests_properties(${TEST_NAME} PROPERTIES 
+            ENVIRONMENT "DYLD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/lib:$ENV{DYLD_LIBRARY_PATH}"
+        )
+    else()
+        set_tests_properties(${TEST_NAME} PROPERTIES 
+            ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/lib:$ENV{LD_LIBRARY_PATH}"
+        )
+    endif()
+endfunction()
+
 # Generate a config.h (note this goes into the build so it's unique per build)
 get_filename_component(SOURCE_PATH "${CMAKE_SOURCE_DIR}" ABSOLUTE)
 get_filename_component(BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)

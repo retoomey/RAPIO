@@ -45,9 +45,9 @@ ProductInfoSet::readConfigFile()
           line >> varPrefix;
           line >> productDir;
           line >> temp;
-          varMissing = (temp == "none") ? ProductInfo::UNDEFINED : atof(temp.c_str());
+          varMissing = (temp == "none") ? ProductInfo::UNDEFINED : std::stof(temp.c_str());
           line >> temp;
-          varNoCoverage = (temp == "none") ? ProductInfo::UNDEFINED : atof(temp.c_str());
+          varNoCoverage = (temp == "none") ? ProductInfo::UNDEFINED : std::stof(temp.c_str());
           line >> varScale;
           line >> w2Name;
           line >> w2Unit;

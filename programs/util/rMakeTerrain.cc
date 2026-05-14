@@ -39,16 +39,8 @@ MakeTerrain::processOptions(RAPIOOptions& o)
 std::string
 MakeTerrain::getSRTMFilename(int tileLat, int tileLon, std::string& latFolder)
 {
-  char folderBuf[16];
-
-  snprintf(folderBuf, sizeof(folderBuf), "%c%02d", (tileLat >= 0) ? 'N' : 'S', std::abs(tileLat));
-  latFolder = std::string(folderBuf);
-
-  char fileBuf[32];
-
-  snprintf(fileBuf, sizeof(fileBuf), "%s%c%03d.hgt",
-    latFolder.c_str(), (tileLon >= 0) ? 'E' : 'W', std::abs(tileLon));
-  return std::string(fileBuf);
+  latFolder = fmt::format("{}{:02d}", (tileLat >= 0) ? 'N' : 'S', std::abs(tileLat));
+  return fmt::format("{}{}{:03d}.hgt", latFolder, (tileLon >= 0) ? 'E' : 'W', std::abs(tileLon));
 }
 
 bool

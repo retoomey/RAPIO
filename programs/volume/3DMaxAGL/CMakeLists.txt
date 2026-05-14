@@ -33,8 +33,5 @@ if(BUILD_TESTS)
   target_link_libraries(rTestMaxAGL PRIVATE rapio rapioalgMaxAGL)
   
   # Register the test with CTest
-  add_test(NAME rTestMaxAGL COMMAND rTestMaxAGL)
-  
-  # Optional: Keep the install if you actually distribute the test binaries
-  # install(TARGETS rTestMaxAGL DESTINATION ${CMAKE_INSTALL_BINDIR})
+  addRAPIOTest(rTestMaxAGL COMMAND rTestMaxAGL)
 endif()

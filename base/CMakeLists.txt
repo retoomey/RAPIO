@@ -113,6 +113,7 @@ datatype/rRadialSetProjection.cc
 rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc
+rRAPIORuntime.cc
 plugin/rRAPIOPlugin.cc
 plugin/rPluginHeartbeat.cc
 plugin/rPluginWebserver.cc

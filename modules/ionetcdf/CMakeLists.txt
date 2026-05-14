@@ -34,13 +34,10 @@ if (Netcdf_FOUND)
     # Link to rapio base
     target_link_libraries(rTestNetcdf PRIVATE rapio)
     
-    # Register the test with CTest
-
     # Run the integration test using the internal Fake Data Generator
     # This actually runs the netcdf from fake data writing to
     # /tmp/NETCDFTEST and speed tests various netcdf options
-    add_test(
-      NAME rTestNetcdf_Integration
+    addRAPIOTest(rTestNetcdf_Integration
       COMMAND rTestNetcdf 
               -n=disable 
               -r old                 # Force archive mode so FakeIndex dumps records immediately
@@ -49,9 +46,6 @@ if (Netcdf_FOUND)
               -I=* -o netcdf=/tmp/NETCDFTEST
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
-
-    # Optional: Keep the install if you actually distribute the test binaries
-    # install(TARGETS rTestNetcdf DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif()
 
   addRAPIONote("      Found: NETCDF")

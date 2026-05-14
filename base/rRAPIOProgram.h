@@ -129,15 +129,6 @@ public:
 
 protected:
 
-  /** Initialize system wide base parsers like XML/JSON
-   * these are typically critical for initial setup */
-  virtual void
-  initializeBaseParsers();
-
-  /** Initialize any base modules requiring configuration */
-  virtual void
-  initializeBaseline();
-
   /** Declare all default plugins for this class layer,
    * typically you don't need to change at this level.
    * @see declarePlugins */

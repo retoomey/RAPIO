@@ -459,7 +459,12 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     shdmem2.truncate(aLength);
     mapped_region region3 { shdmem2, read_write }; // read only, read_write?
     char * at2 = static_cast<char *>(region3.get_address());
-    memcpy(at2, &buf[0], aLength);
+    if (region3.get_size() < aLength) {
+      fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
+        aLength, region3.get_size());
+      return std::vector<std::string>(); // Fail safely
+    }
+    std::copy(buf.begin(), buf.begin() + aLength, at2);
 
     // ----------------------------------------------------
     // Write the arrays to shared memory
@@ -487,14 +492,19 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // shdmem.get_size()
     mapped_region region2 { shdmem, read_write }; // read only, read_write?
     float * at = static_cast<float *>(region2.get_address());
-    memcpy(at, ref2.data(), size * sizeof(float));
+    if (region2.get_size() < memsize) {
+      fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
+        memsize, region2.get_size());
+      return std::vector<std::string>(); // Fail safely
+    }
+    std::copy(ref2.data(), ref2.data() + size, at); // std::copy respects float type
 
     // ----------------------------------------------------
     // Call the python helper.
     runProcess(command, output);
 
     // Do we need to copy back?  Aren't we mapped to this?
-    memcpy(ref2.data(), at, size * sizeof(float));
+    std::copy(at, at + size, ref2.data());
   }catch (const std::exception& e) {
     fLogSevere("Failed to execute command {}", command);
   }

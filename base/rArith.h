@@ -3,6 +3,7 @@
 #include <string>
 #include <cmath> // for fabs()
 #include <stdio.h>
+#include <fmt/format.h>
 
 namespace rapio {
 /**
@@ -85,38 +86,12 @@ public:
     return (a < b ? -1 : 1);
   }
 
+  /** Format library does it all for us */
   template <class T>
   static inline std::string
-  str(const T& x, const char * fmt)
+  str(const T& x)
   {
-    char buf[256];
-
-    snprintf(buf, sizeof(buf), fmt, x);
-    return (buf);
-  }
-
-  static inline std::string
-  str(int x)
-  {
-    return (str(x, "%d"));
-  }
-
-  static inline std::string
-  str(long x)
-  {
-    return (str(x, "%l"));
-  }
-
-  static inline std::string
-  str(unsigned long x)
-  {
-    return (str(x, "%lu"));
-  }
-
-  static inline std::string
-  str(double x)
-  {
-    return (str(x, "%f"));
+    return fmt::format("{}", x);
   }
 };
 }

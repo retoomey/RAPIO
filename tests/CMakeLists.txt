@@ -49,4 +49,4 @@ target_link_libraries(rTestRAPIO PRIVATE
 configure_file(testxml.xml testxml.xml)
 configure_file(testjson.json testjson.json)
 
-add_test(NAME rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)
+addRAPIOTest(rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)

@@ -35,5 +35,5 @@ if(BUILD_TESTS)
   target_link_libraries(rTest3DVIL PRIVATE rapio rapioalgVIL)
   
   # Register the test with CTest
-  add_test(NAME rTest3DVIL COMMAND rTest3DVIL)
+  addRAPIOTest(rTest3DVIL COMMAND rTest3DVIL) 
 endif()

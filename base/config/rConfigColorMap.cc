@@ -6,7 +6,6 @@
 #include "rColorMap.h"
 
 #include <memory>
-#include <stdlib.h>
 #include <cmath>
 
 using namespace rapio;
@@ -158,9 +157,8 @@ ConfigColorMap::readParaColorMap(const URL& find,
               continue;
             }
 
-            float upper = minvalue + (x * fullRange);
-            char buf[64];
-            snprintf(buf, sizeof(buf), "%.1f", upper);
+            float upper     = minvalue + (x * fullRange);
+            std::string buf = fmt::format("{:.1f}", upper);
 
             // FIX: Linear is true, and lower colors (prev) are passed before upper colors (current)
             colormap->addBin(true, buf, upper, lower,
@@ -275,8 +273,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
 
     // Process Range Colors
     for (const auto& rc : ranges) {
-      char buf[64];
-      snprintf(buf, sizeof(buf), "%.1f", upper);
+      std::string buf = fmt::format("{:.1f}", upper);
 
       // Converted / 10 to / 10.0 to prevent implicit integer division truncation
       colormap->addBin(true, buf, rc.high / 10.0, rc.low / 10.0,
@@ -292,8 +289,7 @@ ConfigColorMap::readPalColorMap(const URL& url)
       for (const auto& lc : linears) {
         float ubound = lbound + lin_spacing;
 
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%.1f", upper);
+        std::string buf = fmt::format("{:.1f}", upper);
 
         colormap->addBin(true, buf, ubound / 10.0, lbound / 10.0,
           lc.r, lc.g, lc.b, 255,
@@ -352,7 +348,12 @@ ConfigColorMap::readW2ColorMap(const URL& url)
       } else if (upperStr == "-infinity") {
         upper = -HUGE_VAL;
       } else {
-        upper = atof(upperStr.c_str());
+        try {
+          upper = std::stod(upperStr);
+        } catch (const std::exception& e) {
+          fLogSevere("Failed to parse upperBound '{}' as double: {}", upperStr, e.what());
+          return nullptr;
+        }
       }
 
       // colors
@@ -395,14 +396,12 @@ ConfigColorMap::readW2ColorMap(const URL& url)
       std::string name;
 
       // If no name is given for bin, use the bound to make one
-      if (label.empty()) { // This can be done better I think..
-        char buf[ 64 ];
+      if (label.empty()) {
         if (c1 == c2) {
-          snprintf(buf, sizeof(buf), "%.1f", upper);
+          name = fmt::format("{:.1f}", upper);
         } else {
-          snprintf(buf, sizeof(buf), "%.1f-%.1f", lower, upper);
+          name = fmt::format("{:.1f}-{:.1f}", lower, upper);
         }
-        name = buf;
       } else {
         name = label;
       }
