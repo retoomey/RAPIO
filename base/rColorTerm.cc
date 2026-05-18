@@ -2,6 +2,7 @@
 
 #include "rError.h"
 #include "rStrings.h"
+#include "rOS.h"
 
 #include <iostream>
 #include <iomanip>
@@ -106,29 +107,20 @@ ColorTerm::haveColorSupport()
   if (!terminal) { return false; }
 
   // Respect standard NO_COLOR env variable
-  char * nc = getenv("NO_COLOR");
+  std::string nc = OS::getEnvVar("NO_COLOR");
 
-  if (nc != NULL) {
+  if (!nc.empty()) {
     return false;
   }
 
   // Try to tell if terminal supports color output
-  bool haveColorTerms = false;
-  char * term         = getenv("TERM");
+  // If TERM is set to anything, we assume modern ANSI color support
+  // without dragging in ncurses as a dependency.
+  std::string term = OS::getEnvVar("TERM");
 
-  if (term != NULL) {
-    // std::string theTerm = term;
-    // Not wanting to add a ncurses dependency to check terminfo
-    // In RedHat Enterprise based linux (which we are most
-    // likely running on, ANSI colors 'should' be supported pretty much
-    // always...)
-    // if (false){
-    //  std::cout << "The terminal is " << theTerm << "\n";
-    // }
-    // Could do a ncurses lookup in /usr/share/terminfo...
-    haveColorTerms = true;
-  }
-  return (haveColorTerms);
+  // "dumb" is a standard TERM value for terminals that
+  // explicitly DO NOT support ANSI escape codes like CICD pipelines.
+  return !term.empty() && term != "dumb";
 } // ColorTerm::haveColorSupport
 
 size_t

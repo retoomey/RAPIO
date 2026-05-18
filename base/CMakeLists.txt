@@ -9,7 +9,6 @@
 # probably better. We do generate headers
 # below though.
 set(SOURCE_FILES
-ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
 rArrayAlgorithm.cc

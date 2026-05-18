@@ -2,9 +2,6 @@
 #include "rBOOSTTest.h"
 
 #include "rIODataType.h"
-#include "rIOXML.h"
-#include "rIOJSON.h"
-#include "rFactory.h"
 #include <iostream>
 #include <fstream> // g++ 13/14
 
@@ -14,13 +11,6 @@ BOOST_AUTO_TEST_SUITE(_IODataType_)
 
 BOOST_AUTO_TEST_CASE(_IODataType_XML)
 {
-  // Introduce the XML reader to datatype
-  // FIXME: If we make IOXML/IOJSON dynamic we'll have to
-  // init the dynamic loading at some point
-  // We'll come back add netcdf tests I think at some point
-  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xml);
-
   // 1. Test reading XML from a buffer
   // Read the raw data the hard way so we can send it
   // to the builder to parse
@@ -111,13 +101,6 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
 
 BOOST_AUTO_TEST_CASE(_IODataType_JSON)
 {
-  // Introduce the JSON reader to datatype
-  // FIXME: If we make IOXML/IOJSON dynamic we'll have to
-  // init the dynamic loading at some point
-  // We'll come back add netcdf tests I think at some point
-  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
-  Factory<IODataType>::introduce("json", json);
-
   // 1. Test reading JSON from a buffer
   // Read the raw data the hard way so we can send it
   // to the builder to parse

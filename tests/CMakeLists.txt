@@ -21,6 +21,7 @@ add_executable(rTestRAPIO
   rTestColorMap.cc
   rTestFactory.cc
   rTestGrid.cc
+  rTestHeartbeat.cc
   rTestIODataType.cc
   rTestIOPostProcessor.cc
   rTestMain.cc

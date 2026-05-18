@@ -556,13 +556,32 @@ Strings::TokenScan(
 } // Strings::TokenScan
 
 std::string
-Strings::peel(std::string& s, const char * delimiter)
+Strings::peel(std::string& s, const std::string& delimiter)
 {
-  auto p     = s.find(delimiter);
-  auto token = s.substr(0, p);
+  // Edge case: if delimiter is empty, return the whole string and clear source
+  if (delimiter.empty()) {
+    std::string token = std::move(s);
+    s.clear();
+    return token;
+  }
 
-  if (p == std::string::npos) { s.clear(); } else { s.erase(0, p + strlen(delimiter)); }
-  return (token);
+  size_t p = s.find(delimiter);
+
+  if (p == std::string::npos) {
+    // Delimiter not found: return the whole string and clear source
+    std::string token = std::move(s);
+    s.clear();
+    return token;
+  }
+
+  // Delimiter found: extract token
+  std::string token = s.substr(0, p);
+
+  // Safety check: ensure we don't erase out of bounds (though find() guarantees this)
+  // We use delimiter.length() instead of the dangerous C-style strlen()
+  s.erase(0, p + delimiter.length());
+
+  return token;
 }
 
 std::string

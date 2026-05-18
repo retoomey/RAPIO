@@ -3,8 +3,6 @@
 #include "rColorMap.h"
 #include "rOS.h"
 #include "rURL.h"
-#include "rIOXML.h"
-#include "rFactory.h"
 #include <fstream>
 #include <map>
 
@@ -68,9 +66,6 @@ BOOST_AUTO_TEST_CASE(TEST_PAL_FILE_PARSING)
 // ============================================================================
 BOOST_AUTO_TEST_CASE(TEST_W2_COLORMAP_PARSING)
 {
-  std::shared_ptr<IOXML> xmlParser = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xmlParser);
-
   std::string tempW2File = OS::getCurrentDirectory() + "/test_w2.xml";
   std::ofstream out(tempW2File);
 
@@ -109,9 +104,6 @@ BOOST_AUTO_TEST_CASE(TEST_W2_COLORMAP_PARSING)
 // ============================================================================
 BOOST_AUTO_TEST_CASE(TEST_PARA_COLORMAP_PARSING)
 {
-  std::shared_ptr<IOXML> xmlParser = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xmlParser);
-
   std::string tempParaFile = OS::getCurrentDirectory() + "/test_para.xml";
   std::ofstream out(tempParaFile);
 

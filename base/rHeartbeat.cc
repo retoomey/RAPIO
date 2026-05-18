@@ -8,7 +8,7 @@ using namespace rapio;
 using namespace std;
 
 Heartbeat::Heartbeat(RAPIOProgram * prog) : myProgram(prog),
-  myFirstPulse(true), myParsed(false), myCronExpr(cron_expr())
+  myFirstPulse(true), myParsed(false)
 { }
 
 bool
@@ -17,13 +17,15 @@ Heartbeat::setCronList(const std::string& cronlist)
   const char * err = NULL;
 
   myParsed = false; // In case we call it again, disable current one
-  cron_parse_expr(cronlist.c_str(), &myCronExpr, &err);
-  if (err) {
-    fLogSevere("Failed to parse cron expression: '{}' Err: {}", cronlist, err);
+  try {
+    // croncpp throws on bad syntax instead of using C-style error pointers
+    myCronExpr = cron::make_cron(cronlist);
+    myParsed   = true;
+    return true;
+  } catch (const cron::bad_cronexpr& e) {
+    fLogSevere("Failed to parse cron expression: '{}' Err: {}", cronlist, e.what());
     return false;
   }
-  myParsed = true;
-  return true;
 }
 
 void
@@ -41,7 +43,7 @@ Heartbeat::checkForPulse()
   // This will happen when we pass the old trigger
   // time_t cur = time(NULL); Let it grab current
   time_t cur  = n.getSecondsSinceEpoch();
-  time_t next = cron_next(&myCronExpr, cur);
+  time_t next = cron::cron_next(myCronExpr, cur);
   Time pulse(next);
 
   if (pulse != myLastPulseTime) {
