@@ -2,6 +2,20 @@
 # RAPIO base cmake file
 #
 
+# For rWebServer.h/rWebServer.cc pull a project that uses boost
+# for us.  It's a header only library, so we install with RAPIO.h
+# as well
+include(FetchContent)
+FetchContent_Declare(
+    simple-web-server
+    #GIT_REPOSITORY https://gitlab.com/eidheim/Simple-WebSocket-Server.git
+    GIT_REPOSITORY https://gitlab.com/eidheim/Simple-Web-Server.git
+    GIT_TAG        ${SIMPLE_WEB_SERVER_GIT_TAG} # From dependencies.cmake
+)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(simple-web-server)
+FetchContent_GetProperties(simple-web-server SOURCE_DIR SWS_SRC_DIR)
+
 # Set variable of all sources we use
 # ls -1 *.c *.cc
 # We 'could' generate this, but I feel
@@ -178,7 +192,7 @@ endif()
 add_library(rapio_interface INTERFACE)
 
 # Resolve the ../webserver path to an absolute path
-get_filename_component(RAPIO_WEBSERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../webserver" ABSOLUTE)
+#get_filename_component(RAPIO_WEBSERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../webserver" ABSOLUTE)
 
 # Declare the RAPIO headers for installation
 target_include_directories(rapio_interface INTERFACE
@@ -195,8 +209,8 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/watcher
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/image
 
-  # Web server files
-  $<BUILD_INTERFACE:${RAPIO_WEBSERVER_DIR}>
+  # Use the fetched directory for the web server headers
+  $<BUILD_INTERFACE:${SWS_SRC_DIR}>
 
   # Get the generated config.h
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -406,11 +420,18 @@ foreach(hdr IN LISTS RELATIVE_HEADERS)
   list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${hdr}")
 endforeach()
 # Add the webserver header from webserver
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/server_http.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/asio_compatibility.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/mutex.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/utility.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/status_code.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/server_http.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/asio_compatibility.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/mutex.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/utility.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/status_code.hpp")
+
+# Add the webserver header from webserver
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/server_http.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/asio_compatibility.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/mutex.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/utility.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/status_code.hpp")
 
 # Add the created headers
 list(APPEND HEADER_FILES "${CMAKE_CURRENT_BINARY_DIR}/RAPIO.h")
