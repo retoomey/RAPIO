@@ -30,10 +30,11 @@ class RadialSet : public DataGrid {
 public:
 
   // Constants for special fields
-  static constexpr const char * BeamWidth      = "BeamWidth";
-  static constexpr const char * Azimuth        = "Azimuth";
-  static constexpr const char * GateWidth      = "GateWidth";
-  static constexpr const char * AzimuthSpacing = "AzimuthSpacing";
+  static constexpr const char * BeamWidth       = "BeamWidth";
+  static constexpr const char * Azimuth         = "Azimuth";
+  static constexpr const char * GateWidth       = "GateWidth";
+  static constexpr const char * AzimuthSpacing  = "AzimuthSpacing";
+  static constexpr const char * NyquistVelocity = "NyquistVelocity";
 
   /** Construct uninitialized RadialSet, usually for
    * factories.  You probably want the Create method */
@@ -237,6 +238,41 @@ public:
   /** Allow reader/writer access to full vector */
   std::shared_ptr<Array<float, 1> >
   getGateWidthVector(){ return getFloat1D(GateWidth); }
+
+  // ------------------------------------------------
+  // Nyquist is optional and special. It can be global,
+  // or a dedicated array per radial
+
+  /** Get the global Nyquist Velocity (checking legacy and modern attribute names). */
+  float
+  getGlobalNyquistVelocity() const;
+
+  /** Set a single global Nyquist Velocity. This wipes any existing Nyquist arrays. */
+  void
+  setGlobalNyquistVelocity(float nyquist);
+
+  /** Check if the full 1D Array exists for Nyquist Velocity */
+  bool
+  haveNyquistArray();
+
+  /** Allow reader/writer access to full vector (call be nullptr) */
+  std::shared_ptr<Array<float, 1> >
+  getNyquistVector(){ return getFloat1D(NyquistVelocity); }
+
+  /** Return quick ref to Nyquist vector, assuming it exists.
+   * It is up to caller to call hasNyquistArray first or you will
+   * crash. */
+  ArrayFloat1DRef
+  getNyquistRef()
+  {
+    return (getFloat1D(NyquistVelocity))->ref();
+  }
+
+  /** Add a Nyquist 1D Array. This wipes any existing global Nyquist attributes. */
+  void
+  addNyquistArray(float initialValue = 0);
+
+  // ------------------------------------------------
 
   /** Get number of radials for radial set */
   size_t
