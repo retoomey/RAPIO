@@ -368,11 +368,11 @@ combine_Kdp(std::shared_ptr<RadialSet> short_Kdp,
   }
 
   const size_t num_az    = short_Kdp->getNumRadials();
-  const size_t num_gates = short_Kdp->getNumGates();
+  size_t num_gates = short_Kdp->getNumGates(); //modified to allow correction when Ref is short, which happens more than you think
 
   // Verify all input RadialSets have matching dimensions
   if ((num_az != long_Kdp->getNumRadials()) || (num_gates != long_Kdp->getNumGates()) ||
-    (num_az != Ref->getNumRadials()) || (Ref->getNumGates() < num_gates) )
+    (num_az != Ref->getNumRadials()) )
   {
     // Note: Ref  is often "long" in num_gates and that's ok don't use it there.
     fLogSevere("combine_Kdp: Dimension mismatch between input RadialSets.");
@@ -382,6 +382,13 @@ combine_Kdp(std::shared_ptr<RadialSet> short_Kdp,
     // Note: If inputs might be on different grids, a RadialSetProjection
     // approach would be needed here. For now, we enforce pre-aligned grids.
     return nullptr;
+  }
+
+  if ((Ref->getNumGates() < num_gates)) {
+      fLogSevere("combine_Kdp: Dismension mismatch between num_gates. attempting a fix: Ref: {} short_Kdp: {}", Ref->getNumGates(), num_gates);
+      if (num_gates > Ref->getNumGates() ) {
+          num_gates = Ref->getNumGates();
+      }
   }
 
   // Clone the short_Kdp to inherit base metadata, dimensions, and arrays
