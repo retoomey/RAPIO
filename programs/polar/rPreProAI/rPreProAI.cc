@@ -31,7 +31,7 @@ rPreProAI::declareOptions(RAPIOOptions& o)
 
   // A required parameter (algorithm won't run without it).  Here there is no default since it's required, instead you can provide an example of the setting
   // o.require("Z", "method1", "Set this to anything, it's just an example");
-  o.boolean("Q", "Output moments will be QC'd with a DR threshold -11");
+  o.boolean("Q", "Output moments will be QC'd (very light) with a DR threshold -11");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -224,6 +224,9 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
   QCmask->setDataAttributeValue("ColorMap", "QCMask");
 
   auto preproRefQC = prepro_Ref->Clone();
+  auto preproZdrQC = prepro_Zdr->Clone();
+  auto preproCCQC = prepro_CC->Clone();
+  auto preproKdpQC = prepro_Kdp->Clone();
 
   // check the options to decide if we apply the QCmask to the data
   // before we output it to disk.
@@ -233,6 +236,15 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
     applyQCmask(preproRefQC, QCmask);
     preproRefQC->setTypeName("PrePro" + Ref->getTypeName() + "QC");
     myDataMap["prepro_RefQC"] = preproRefQC;
+    applyQCmask(preproZdrQC, QCmask);
+    preproZdrQC->setTypeName("PrePro" + Zdr->getTypeName() + "QC");
+    myDataMap["prepro_ZdrQC"] = preproZdrQC;
+    applyQCmask(preproCCQC, QCmask);
+    preproZdrQC->setTypeName("PrePro" + CC->getTypeName() + "QC");
+    myDataMap["prepro_CCQC"] = preproCCQC;
+    applyQCmask(preproKdpQC, QCmask);
+    preproZdrQC->setTypeName("PrePro" + prepro_Kdp->getTypeName() + "QC");
+    myDataMap["prepro_KdpQC"] = preproKdpQC;
   }
 
   // add this to the DataMap
