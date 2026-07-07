@@ -31,7 +31,7 @@ rPreProAI::declareOptions(RAPIOOptions& o)
   // l --> notifier support (FAM files basically)
   // r --> realtime flag support
   // o.setDescription("WDSS2"); // Default for WDSS2/MRMS algorithms that you intend to copyright as part of WDSS2
-  o.setDescription("rPreProAI computes Kdp, DR, outputs QC'd data with -Q ");
+  o.setDescription("rPreProAI computes Kdp and DR ");
   o.setAuthors("John Krause, NSSL 2026, John.Krause@noaa.gov ");
 
   // An optional string param...default is "Test" if not set by user
@@ -42,7 +42,6 @@ rPreProAI::declareOptions(RAPIOOptions& o)
 
   // A required parameter (algorithm won't run without it).  Here there is no default since it's required, instead you can provide an example of the setting
   // o.require("Z", "method1", "Set this to anything, it's just an example");
-  o.boolean("Q", "Output moments will be QC'd with a DR threshold -11");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -52,7 +51,7 @@ rPreProAI::processOptions(RAPIOOptions& o)
   // This is an example of how to get your algorithm parameters
   // Stick them in instance variables you can use them later in processing.
 
-  qc_option = o.getBoolean("Q");
+  //qc_option = o.getBoolean("Q");
 
   /*
    * myTest = o.getString("T");
@@ -63,7 +62,7 @@ rPreProAI::processOptions(RAPIOOptions& o)
    * fLogInfo(" ************************T IS {}", myTest);
    * fLogInfo(" ************************Z IS {}", myZ);
    */
-  fLogInfo(" ************************QZ IS {}", qc_option);
+  //fLogInfo(" ************************QZ IS {}", qc_option);
 }
 
 void
@@ -77,7 +76,7 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   std::shared_ptr<rapio::RadialSet> Zdr   = myDataMap["Zdr"];
   std::shared_ptr<rapio::RadialSet> PhiDP = myDataMap["PhiDP"];
 
-  size_t numRadials = Ref->getNumRadials();
+  size_t numRadials = Ref->getNumRadials();;
   auto azRef        = Ref->getAzimuthRef();
   auto azCC         = CC->getAzimuthRef();
 
@@ -188,19 +187,13 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   // Correct Zh for Horrizontal attenuation, using long_PhiDP
   correct_Zdr_for_attenuation(prepro_Zdr, long_PhiDP);
 
-  // create the QC map from DR and a threshold, (Kilambi et. al. 2018)
+  // You can create a QC map from DR and a threshold, (Kilambi et. al. 2018)
   //  https://doi.org/10.1175/JTECH-D-17-0175.1
   std::shared_ptr<rapio::RadialSet> DR = computeDR(CC, Zdr);
 
   // this 2d median is very helpful in cleaning up the mask and eliminating
   // random speckling
   applyFast2DMedian(DR, 3, 3, 0.33);
-
-  // The QC map is simply DR > threshold = non-meteorological Kilambi suggests -12
-  // I think -11 works better for thunderstorms, mostly in the core where CC is low and
-  // a ZdrColumn has formed. You can make your own masks using Reflectivity or CC or 
-  // whatever.
-  std::shared_ptr<rapio::RadialSet> QCmask = computeQCmask(DR, -11.0);
 
   // Smoothing to reduce variability
   applyFast2DMedian(prepro_Ref, 3, 3, 0.33);
@@ -230,22 +223,6 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   DR->setUnits("dB");
   DR->setDataAttributeValue("ColorMap", "DR");
 
-  QCmask->setTypeName("QCmask");
-  QCmask->setUnits("none");
-  QCmask->setDataAttributeValue("ColorMap", "QCMask");
-
-  auto preproRefQC = prepro_Ref->Clone();
-
-  // check the options to decide if we apply the QCmask to the data
-  // before we output it to disk.
-  fLogInfo("-------> processPreProAI(), QC option {}", qc_option);
-  if (qc_option) {
-    fLogInfo("-------> processPreProAI(), QC started:");
-    applyQCmask(preproRefQC, QCmask);
-    preproRefQC->setTypeName("PrePro" + Ref->getTypeName() + "QC");
-    myDataMap["prepro_RefQC"] = preproRefQC;
-  }
-
   // add this to the DataMap
   myDataMap["prepro_Ref"]   = prepro_Ref;
   myDataMap["prepro_Zdr"]   = prepro_Zdr;
@@ -253,7 +230,6 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   myDataMap["prepro_PhiDP"] = long_PhiDP;
   myDataMap["prepro_Kdp"]   = prepro_Kdp;
   myDataMap["prepro_DR"]    = DR;
-  myDataMap["prepro_QC"]    = QCmask;
 } // rPreProAI::processPreProAI
 
 void
@@ -362,7 +338,6 @@ rPreProAI::processNewData(rapio::RAPIOData& d)
           fLogDebug("--->Echoing {} {} product to output", o->getTypeName(), o->getElevationDegs() );
 
           std::map<std::string, std::string> myOverrides;
-          // myOverrides["postwrite"] = "ldm";            // Do a standard pqinsert of final data file
           writeOutputProduct(o->getTypeName(), o, myOverrides); // Typename will be replaced by -O filters
           fLogInfo("--->Finished {} product to output", o->getTypeName());
         }
