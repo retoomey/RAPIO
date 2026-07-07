@@ -45,9 +45,10 @@ rPreProAI::declareOptions(RAPIOOptions& o)
 }
 
 /** RAPIOAlgorithms process options on start up */
-void
-rPreProAI::processOptions(RAPIOOptions& o)
-{
+
+//void
+//rPreProAI::processOptions(RAPIOOptions& o)
+//{
   // This is an example of how to get your algorithm parameters
   // Stick them in instance variables you can use them later in processing.
 
@@ -63,10 +64,11 @@ rPreProAI::processOptions(RAPIOOptions& o)
    * fLogInfo(" ************************Z IS {}", myZ);
    */
   //fLogInfo(" ************************QZ IS {}", qc_option);
-}
+//}
+
 
 void
-rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSet> > & DataMap)
+rPreProAI::processPreProAI()
 {
   //
   // Check the myDataMap for azimuthal alignment
@@ -76,7 +78,7 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSe
   std::shared_ptr<rapio::RadialSet> Zdr   = myDataMap["Zdr"];
   std::shared_ptr<rapio::RadialSet> PhiDP = myDataMap["PhiDP"];
 
-  size_t numRadials = Ref->getNumRadials();;
+  size_t numRadials = Ref->getNumRadials();
   auto azRef        = Ref->getAzimuthRef();
   auto azCC         = CC->getAzimuthRef();
 
@@ -284,6 +286,7 @@ rPreProAI::processNewData(rapio::RAPIOData& d)
     if (type_found) {
       fLogDebug("---> type_found {} elev {}:", current, current_elevation);
       if ((myDataMap.size() == 0) || (current_elevation == MISSING_ELEV)) {
+        //myDataMap is a private variable for the class, see rPreProAI.h
         myDataMap[current] = r;
         // Init the current elevation for dq checks
         current_elevation = r->getElevationDegs();
@@ -320,7 +323,7 @@ rPreProAI::processNewData(rapio::RAPIOData& d)
       fLogInfo("---> Full DataMap Collected: size:{} ", myDataMap.size());
       // We have all the moments we want, now compute the result
       // The output is adding moments (RadialSet) to the map with the "prepro" prefix:
-      processPreProAI(myDataMap);
+      processPreProAI();
 
       //   We need to output a file for each "prepro_*" subtype in the Datamap
       //   use the list processing
@@ -351,6 +354,7 @@ rPreProAI::processNewData(rapio::RAPIOData& d)
   }// if (r != nullptr)
 } // rPreProAI::processNewData
 
+/*
 void
 rPreProAI::processHeartbeat(const Time& n, const Time& p)
 {
@@ -359,6 +363,7 @@ rPreProAI::processHeartbeat(const Time& n, const Time& p)
   // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
   // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
 }
+*/
 
 int
 main(int argc, char * argv[])

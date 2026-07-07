@@ -21,8 +21,9 @@ public:
   declareOptions(rapio::RAPIOOptions& o) override;
 
   /** Process all algorithm options */
-  virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  // if you add options later use this. 
+  //virtual void
+  //processOptions(rapio::RAPIOOptions& o) override;
 
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
@@ -34,8 +35,8 @@ public:
    * minutes you write out a product of average or something.
    * @param at The actual now time triggering the event.
    * @param sync The pinned sync time we're firing for. */
-  virtual void
-  processHeartbeat(const rapio::Time& n, const rapio::Time& p) override;
+  //virtual void
+  //processHeartbeat(const rapio::Time& n, const rapio::Time& p) override;
 
   /** The algorithm work function */
 
@@ -43,7 +44,7 @@ public:
    * the job of processNewData() above */
   /* process this data and add new entries to the map for output products */
   void
-  processPreProAI(std::map<std::string, std::shared_ptr<rapio::RadialSet> > & DataMap);
+  processPreProAI();
 
 protected:
 
