@@ -49,7 +49,7 @@ protected:
 
   // Keep/set your options from processOptions if you need to use them.
   /** boolean optional string parameter */
-  bool qc_option = false;
+  //bool qc_option = false;
 
   /** Track the current elevation we are collecting */
   float current_elevation = -9999.0; // Initialize to a "missing" value
