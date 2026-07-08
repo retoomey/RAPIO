@@ -368,11 +368,11 @@ combine_Kdp(std::shared_ptr<RadialSet> short_Kdp,
   }
 
   const size_t num_az    = short_Kdp->getNumRadials();
-  const size_t num_gates = short_Kdp->getNumGates();
+  size_t num_gates = short_Kdp->getNumGates(); //modified to allow correction when Ref is short, which happens more than you think
 
   // Verify all input RadialSets have matching dimensions
   if ((num_az != long_Kdp->getNumRadials()) || (num_gates != long_Kdp->getNumGates()) ||
-    (num_az != Ref->getNumRadials()) || (Ref->getNumGates() < num_gates) )
+    (num_az != Ref->getNumRadials()) )
   {
     // Note: Ref  is often "long" in num_gates and that's ok don't use it there.
     fLogSevere("combine_Kdp: Dimension mismatch between input RadialSets.");

@@ -4,7 +4,6 @@
 #include "rLatLonGrid.h"
 
 namespace rapio {
-
 /**
  * Read/Write geospatial raster data (DEMs, GeoTIFFs, etc.) via GDAL.
  *
@@ -35,5 +34,4 @@ public:
   static void
   introduceSelf(IODataType * owner);
 };
-
 } // namespace rapio

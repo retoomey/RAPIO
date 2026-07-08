@@ -17,10 +17,7 @@ Color::Color(
 std::string
 Color::getRGBColorString() const
 {
-  char buf[8];
-
-  snprintf(buf, sizeof(buf), "#%02x%02x%02x", r, g, b);
-  return buf;
+  return fmt::format("#{:02x}{:02x}{:02x}", r, g, b);
 }
 
 bool

@@ -1,4 +1,9 @@
 #include <rGrib2Reader.h>
+#include <rConfig.h>
+#include <rGribDataType.h>
+#include <rLatLonGrid.h>
+#include <rProcessTimer.h>
+#include <rStrings.h>
 
 #include <iostream>
 
@@ -176,7 +181,7 @@ Grib2ReaderAlg::whichFieldsToProcess()
  * }
  */
 void
-Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
+Grib2ReaderAlg::processNewData(RAPIOData& d)
 {
   // test loading field data
   std::string whichModel = "RRFS";
@@ -184,7 +189,7 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
   getModelProjectionInfo(whichModel);
   whichFieldsToProcess();
   // Look for Grib2 data only
-  auto grib2 = d.datatype<rapio::GribDataType>();
+  auto grib2 = d.datatype<GribDataType>();
 
   if (grib2 != nullptr) {
     fLogInfo("Grib2 data incoming...testing...");
@@ -318,9 +323,23 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
               }
               if (windinfo[0] == "LCC") {
                 fLogInfo("Doing Lambert Conformal");
+                if (windinfo.size() < 3) {
+                  fLogSevere("Wind rotation config '{}' is missing lat/lon parameters.",
+                    mFields[i].rotateWinds);
+                  continue; // Skip wind rotation for this field
+                }
                 // "LCC:38.5:-97.5:UWind:VWind"
-                float lat = atof(windinfo[1].c_str());
-                float lon = atof(windinfo[2].c_str());
+                float lat = 0.0f;
+                float lon = 0.0f;
+                try {
+                  lat = std::stof(windinfo[1]);
+                  lon = std::stof(windinfo[2]);
+                } catch (const std::exception& e) {
+                  fLogSevere("Failed to parse LCC lat/lon from '{}' and '{}': {}",
+                    windinfo[1], windinfo[2], e.what());
+                  continue; // Skip wind rotation for this field
+                }
+
                 // FIXME?: this requires that the first letter
                 // of the data field be "U" or "V"
                 if (mFields[i].name.substr(0, 1) == "U") {
@@ -361,10 +380,10 @@ Grib2ReaderAlg::processNewData(rapio::RAPIOData& d)
 } // Grib2ReaderAlg::processNewData
 
 void
-Grib2ReaderAlg::convertWinds(std::shared_ptr<rapio::LatLonGrid> ugrid,
-  std::shared_ptr<rapio::LatLonGrid> vgrid,
-  std::shared_ptr<rapio::LatLonGrid> &uwind,
-  std::shared_ptr<rapio::LatLonGrid> &vwind,
+Grib2ReaderAlg::convertWinds(std::shared_ptr<LatLonGrid> ugrid,
+  std::shared_ptr<LatLonGrid> vgrid,
+  std::shared_ptr<LatLonGrid> &uwind,
+  std::shared_ptr<LatLonGrid> &vwind,
   float xlat1, float cenlon)
 {
   uwind = ugrid->Clone();

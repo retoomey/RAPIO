@@ -56,7 +56,7 @@ public:
   }
 
   /** @return the height (const Length& as return type) */
-  inline const LengthKMs
+  inline LengthKMs
   getHeightKM() const
   {
     return (myHeightKMs);

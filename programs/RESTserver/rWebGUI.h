@@ -1,10 +1,9 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOProgram.h>
 
 namespace rapio {
-class RAPIOWebGUI : public rapio::RAPIOProgram {
+class RAPIOWebGUI : public RAPIOProgram {
 public:
 
   /** Create tile algorithm */
@@ -16,15 +15,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** Process a web message */
   virtual void
@@ -46,7 +45,8 @@ protected:
 
   /** Serve a web tile image from a cache */
   void
-  serveTile(WebMessage& w, std::string& pathout, std::map<std::string, std::string>& settings);
+  serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, std::map<std::string,
+    std::string>& settings);
 
   /** Process a "/UI" message */
   void
@@ -59,6 +59,15 @@ protected:
   /** Process a "/TMS" message */
   void
   handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
+  /** Process a "/vector" message */
+  void
+  handlePathVectorTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+
+  void
+  handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  void
+  handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
   /** Process a "/DATA" message */
   void
@@ -81,16 +90,34 @@ protected:
   void
   handleProxy(WebMessage& w, std::vector<std::string>& pieces);
 
+protected:
+
+  /** Helper to fetch from memory or lazy-load from disk */
+  std::shared_ptr<DataType>
+  getOrLoadDataset(const std::string& layerId);
+
   /** Override output params for image output (global) */
   std::map<std::string, std::string> myOverride;
 
-  /** Most recent data for creating tiles */
-  std::shared_ptr<DataType> myTileData;
+  /** Most recent datas for creating tiles */
+  std::unordered_map<std::string, std::shared_ptr<DataType> > myDataCache;
+
+  /** Web requests are concurrent; protect the cache */
+  std::mutex myCacheMutex;
 
   /** Start up file name, if any */
   std::string myStartUpFile;
 
   /** Root of all web files */
   std::string myRoot;
+
+  /** Data directory restriction.  Root folder to look for requested dataset.
+   * Note: we'll want to chroot basically to this folder and not allow
+   * relative moves. */
+  std::string myDataDir;
+
+  /** Resolve ID for fall back data */
+  std::string
+  resolveDatasetId(const WebMessage& w);
 };
 }

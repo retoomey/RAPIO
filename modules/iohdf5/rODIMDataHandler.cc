@@ -443,16 +443,16 @@ ODIMDataHandler::readODIM_MOMENT(
   // Therefore, in order to obtain the proper temporal starting location of the
   // first ray radiated in the scan: ray count - a1gate.
   // -------------------------------------------------------------------------
-  size_t m_firstRayRadiated; /**< 1st Ray Radiated in Sweep */
-
-  m_firstRayRadiated = m_rayCount - m_a1gate;
+  // Unused currently
+  //size_t m_firstRayRadiated; //<<< 1st Ray Radiated in Sweep 
+  //m_firstRayRadiated = m_rayCount - m_a1gate;
 
   // -------------------------------------------------------------------------
   // First, do the 1D arrays in the RadialSet
   //
   auto& values = n->getFloat2DRef();
   auto& bw     = n->getFloat1DRef(RadialSet::BeamWidth);
-  auto& gw     = n->getFloat1DRef(RadialSet::GateWidth);
+  //auto& gw     = n->getFloat1DRef(RadialSet::GateWidth);
 
   // We don't have special azimuth spacing by default, it's usually
   // the beamwidth.  But we can make it.

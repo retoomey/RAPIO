@@ -172,6 +172,7 @@ public:
   static size_t
   writeBuffer(std::shared_ptr<DataType> dt,
     std::vector<char>                   & buf,
+    std::map<std::string, std::string>  & keys,
     const std::string                   & factory = "");
 
   /** Handle parsing the command line param.  For example
@@ -222,7 +223,9 @@ protected:
   /** Subclasses that can write to a character buffer can implement this.
    * Since not everything can write to a buffer, we default to nullptr */
   virtual size_t
-  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
+    std::map<std::string, std::string>     & lookup
+  )
   {
     return 0;
   }

@@ -1,9 +1,17 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+/** RAPIO API (If your algorithm is EXTERNAL to the rapio repo,
+ * you can use this header.  If part of the repo, use the individual
+ * headers for compiling speed.  So for example, your alg is
+ * checked into WDSSII or HYDRO you should use the RAPIO.h header
+ * only in your code.  This will keep you independent of changes. */
+// #include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 using namespace rapio;
+
+namespace rapio {
+class GribDataType;
 
 class GribExampleAlg : public RAPIOAlgorithm {
 public:
@@ -45,3 +53,4 @@ public:
 
 protected:
 };
+}

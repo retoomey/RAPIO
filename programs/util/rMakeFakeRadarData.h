@@ -1,8 +1,7 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
-#include "rTerrainBlockage.h"
+#include <rRAPIOProgram.h>
+#include <rTerrainBlockage.h>
 
 namespace rapio {
 /*
@@ -14,7 +13,7 @@ namespace rapio {
  * @author Valliappa Lakshman
  * @author Robert Toomey
  **/
-class MakeFakeRadarData : public rapio::RAPIOProgram {
+class MakeFakeRadarData : public RAPIOProgram {
 public:
 
   /** Create */
@@ -22,11 +21,11 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Execute */
   virtual void

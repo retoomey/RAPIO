@@ -5,82 +5,13 @@
 #include "rFactory.h"
 #include "rConfig.h"
 #include "rSignals.h"
+#include "rIODataType.h"
+#include "rRAPIORuntime.h"
 
-// Default always loaded datatype creation factories
-#include "rNetwork.h"
-#include "rIOXML.h"
-#include "rIOJSON.h"
-#include "rIOFile.h"
-#include "rIOFakeDataType.h"
-
-// Baseline initialize
-// A lot of these link to plugins...so do we lazy init
-// into the plugin model
-#include "rDataFilter.h"
-#include "rIOWatcher.h"
-#include "rIOIndex.h"
-#include "rUnit.h"
-
-#include <memory>
+// #include <memory>
 
 using namespace rapio;
 using namespace std;
-
-void
-RAPIOProgram::initializeBaseParsers()
-{
-  // We have to introduce the 'raw' builder types
-  // early since eveyrthing else will use them.
-  // More advanced stuff like netcdf, etc will be
-  // introduced later as system ramps up.
-  // Pretty much 'any' program will need to read configurations
-  // and single files so we'll always add this
-  // ability
-  std::shared_ptr<IOXML> xml = std::make_shared<IOXML>();
-  Factory<IODataType>::introduce("xml", xml);
-  Factory<IODataType>::introduce("w2algs", xml);
-
-  xml->initialize();
-
-  std::shared_ptr<IOJSON> json = std::make_shared<IOJSON>();
-  Factory<IODataType>::introduce("json", json);
-
-  json->initialize();
-
-  std::shared_ptr<IOFile> file = std::make_shared<IOFile>();
-  Factory<IODataType>::introduce("file", file);
-
-  file->initialize();
-
-  // Introduce the builder for fake DataType generation
-  std::shared_ptr<IOFakeDataType> fake = std::make_shared<IOFakeDataType>();
-  Factory<IODataType>::introduce("fake", fake);
-
-  fake->initialize();
-}
-
-void
-RAPIOProgram::initializeBaseline()
-{
-  // Many of these modules/abilities register with config to load
-  // settings
-
-  // -------------------------------------------------------------------
-  // Data filter support (compression endings)
-  DataFilter::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // IO watch support
-  IOWatcher::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // Index support
-  IOIndex::introduceSelf();
-
-  // -------------------------------------------------------------------
-  // Unit conversion support
-  Unit::initialize();
-}
 
 void
 RAPIOProgram::initializePlugins()
@@ -143,30 +74,9 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
   // Since this is called by a main function
   // wrap to catch any uncaught exception.
   try  {
-    // Default engine for URL pulling, etc.
-    // FIXME: I'm trying to eventually get rid of CURL
-    // here for one less dependency.
-    Network::setNetworkEngine("CURL");
-    // Network::setNetworkEngine("BOOST");
-
-    // ------------------------------------------------------------
-    // Initial logging ability (default configured)
-    Log::initialize();
-
-    // Raw xml, json, single file ability reading, etc.
-    initializeBaseParsers();
-
-    // ------------------------------------------------------------
-    // Load configurations
-    Config::introduceSelf();
-
-    // Initial loading of config to each module, parser, etc.
-    initializeBaseline();
-
-    // Everything should be registered, try initial start up
-    if (!Config::initialize()) {
-      throw StartupException("Failed to initialize configuration framework (Config::initialize() failed).");
-    }
+    // Fire up the environment (Loggers, Network, Factories, Config)
+    // This is 100% thread-safe and will only ever run once per process.
+    RAPIORuntime::initialize();
 
     // ------------------------------------------------------------
     // Declare plugins

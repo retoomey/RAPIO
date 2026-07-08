@@ -39,8 +39,8 @@ Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
 
   size_t i = (nlats - 1) * nlons; // Start at highest latitude row
 
-  for (size_t lat = 0; lat < nlats; ++lat) {
-    for (size_t lon = 0; lon < nlons; ++lon, ++i) {
+  for (int lat = 0; lat < nlats; ++lat) {
+    for (int lon = 0; lon < nlons; ++lon, ++i) {
       float& value = data[i];
       output[lat][lon] = std::isnan(value) ? Constants::MissingData : value;
     }
@@ -71,8 +71,8 @@ Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
     const auto layer = myLayerNumber;
 
     size_t i = (nlats - 1) * nlons; // Start at highest latitude row
-    for (size_t lat = 0; lat < nlats; ++lat) {
-      for (size_t lon = 0; lon < nlons; ++lon, ++i) {
+    for (int lat = 0; lat < nlats; ++lat) {
+      for (int lon = 0; lon < nlons; ++lon, ++i) {
         float& value = data[i];
         output[lat][lon][layer] = std::isnan(value) ? Constants::MissingData : value;
       }

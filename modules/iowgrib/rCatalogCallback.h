@@ -35,11 +35,11 @@ public:
   handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index) override;
 
   /** Get the match count from the run */
-  int getMatchCount(){ return myMatchCount; }
+  size_t getMatchCount(){ return myMatchCount; }
 
 protected:
 
   /** Match counter */
-  int myMatchCount;
+  size_t myMatchCount;
 };
 }

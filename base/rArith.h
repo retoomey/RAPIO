@@ -3,6 +3,7 @@
 #include <string>
 #include <cmath> // for fabs()
 #include <stdio.h>
+#include <fmt/format.h>
 
 namespace rapio {
 /**
@@ -13,6 +14,8 @@ namespace rapio {
 class Arith
 {
 public:
+
+  #if 0
 
   /** Compress a float percent to a char 0 to 100 with range clipping.
    * values are rounded down.  This is used for compression in
@@ -31,6 +34,8 @@ public:
     }
     return v;
   }
+
+  #endif // if 0
 
   /** Round the given number to the nearest integer. */
   static inline int
@@ -85,38 +90,12 @@ public:
     return (a < b ? -1 : 1);
   }
 
+  /** Format library does it all for us */
   template <class T>
   static inline std::string
-  str(const T& x, const char * fmt)
+  str(const T& x)
   {
-    char buf[256];
-
-    snprintf(buf, sizeof(buf), fmt, x);
-    return (buf);
-  }
-
-  static inline std::string
-  str(int x)
-  {
-    return (str(x, "%d"));
-  }
-
-  static inline std::string
-  str(long x)
-  {
-    return (str(x, "%l"));
-  }
-
-  static inline std::string
-  str(unsigned long x)
-  {
-    return (str(x, "%lu"));
-  }
-
-  static inline std::string
-  str(double x)
-  {
-    return (str(x, "%f"));
+    return fmt::format("{}", x);
   }
 };
 }

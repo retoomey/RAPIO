@@ -12,7 +12,8 @@ public:
 
   /** Create a fusion binary table */
   FusionBinaryTable()
-    : myVersionID(Version), myMissingMode(0), myValueSize(0), myMissingSize(0), myDataPosition(0), myFile(0),
+    : myVersionID(Version), myMissingMode(0), myValueSize(0), myMissingSize(0),
+    myDataPosition(0), myFilePath(""), myFile(0),
     myValueAt(0), myMissingAt(0), myRLECounter(0),
     myXBlock(0), myYBlock(0), myZBlock(0), myLengthBlock(0)
   {
@@ -109,8 +110,8 @@ protected:
   /** Current version of the Fusion Binary Table */
   static constexpr size_t Version = 1;
 
-  char myMissingMode;   ///< Current way missing handled
   size_t myVersionID;   ///< Current version ID
+  char myMissingMode;   ///< Current way missing handled
   size_t myValueSize;   ///< Sizes of X,Y,Z value storage
   size_t myMissingSize; ///< Sizes of missing value storage
 

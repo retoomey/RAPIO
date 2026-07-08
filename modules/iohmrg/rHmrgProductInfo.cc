@@ -45,9 +45,9 @@ ProductInfoSet::readConfigFile()
           line >> varPrefix;
           line >> productDir;
           line >> temp;
-          varMissing = (temp == "none") ? ProductInfo::UNDEFINED : atof(temp.c_str());
+          varMissing = (temp == "none") ? ProductInfo::UNDEFINED : std::stof(temp.c_str());
           line >> temp;
-          varNoCoverage = (temp == "none") ? ProductInfo::UNDEFINED : atof(temp.c_str());
+          varNoCoverage = (temp == "none") ? ProductInfo::UNDEFINED : std::stof(temp.c_str());
           line >> varScale;
           line >> w2Name;
           line >> w2Unit;
@@ -73,8 +73,6 @@ ProductInfoSet::readConfigFile()
 ProductInfo *
 ProductInfoSet::getProductInfo(const std::string& w2Name, const std::string& w2Units)
 {
-  ProductInfo * pi;
-
   for (size_t i = 0; i < myProductInfos.size(); ++i) {
     // FIXME: Should we try to match more than name and units?
     // I could see cases with strange missing/unavailable values to deal with.

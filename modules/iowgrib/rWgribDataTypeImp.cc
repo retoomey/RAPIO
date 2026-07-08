@@ -117,7 +117,7 @@ GribCatalogCache::readCatalog()
       myMessages.push_back(m);
     }
 
-    if (myMessages.size() == atMessage) {
+    if (myMessages.size() == static_cast<size_t>(atMessage)) {
       // Add field to the latest message
       myMessages[myMessages.size() - 1].offset = offset;
       myMessages[myMessages.size() - 1].addField(buffer);

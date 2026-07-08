@@ -54,8 +54,8 @@ IOWgrib::initialize()
 std::vector<std::string>
 IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[])
 {
-  using Wgrib2Ptr = int (*)(int, const char *[]);
-  Wgrib2Ptr wgrib2_ptr = wgrib2;
+  //using Wgrib2Ptr = int (*)(int, const char *[]);
+  //Wgrib2Ptr wgrib2_ptr = wgrib2;
 
   return OS::runFunction(
     useCapture,

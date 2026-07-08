@@ -66,17 +66,18 @@ void
 EXERecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
 {
   // const std::string outputinfo = outputParams["outputfolder"];
-
-  // FIXME: More advanced ability at some point
-  // I'm just calling system and background at moment
   auto params = rec.getParams();
 
   if (params.size() > 1) {
-    std::string command = myExe;
-    for (auto p: params) { // Let the script/exe have all the params
-      command += ' ' + p;  // FIXME: Harden..what if param has a shell character in it.
+    // Construct the argument list with the executable as the first argument
+    std::vector<std::string> args;
+    args.push_back(myExe);
+
+    for (const auto& p : params) {
+      args.push_back(p);
     }
-    command += " &"; // shell background
-    system(command.c_str());
+
+    // Safely execute the command in the background via the OS wrapper
+    OS::spawnProcessArgs(args);
   }
 } // EXERecordNotifier::writeRecord

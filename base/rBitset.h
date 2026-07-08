@@ -198,7 +198,7 @@ public:
   }
 
   /** A count of on bits, useful for debugging */
-  size_t const
+  size_t
   getAllOnBits() const
   {
     return myBits.count();

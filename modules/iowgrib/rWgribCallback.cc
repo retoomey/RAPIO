@@ -114,7 +114,7 @@ WgribCallback::execute(bool print, bool capture)
   bool nextQuoted  = false;
   bool nextIgnored = false;
 
-  for (size_t i = 0; i < argc; ++i) {
+  for (int i = 0; i < argc; ++i) {
     std::string a = argv[i];
 
     if (a == "-rapio") { nextIgnored = true; continue; }

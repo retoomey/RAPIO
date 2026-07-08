@@ -1,7 +1,5 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
 #include "rLLCoverageArea.h"
 #include "rLLHGridN2D.h"
 #include "rStage2Data.h"
@@ -67,7 +65,7 @@ public:
 class VObservation : public Observation {
 public:
   VObservation(short xin, short yin, char zin, float vin, float win, time_t tin) :
-    v(vin), w(win), Observation(xin, yin, zin, tin){ }
+    Observation(xin, yin, zin, tin), v(vin), w(win){ }
 
   // Data we store for merging.  Currently simple weight average
   float v; // 4 bytes

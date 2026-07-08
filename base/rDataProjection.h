@@ -73,6 +73,15 @@ public:
     return Constants::DataUnavailable;
   }
 
+  /** Default fallback batch just loops the single virtual call */
+  virtual void
+  getValuesAtLL(const double * lats, const double * lons, float * out, size_t count)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      out[i] = getValueAtLL(lats[i], lons[i]);
+    }
+  }
+
   /** Calculate marching box for generating square images */
   static std::shared_ptr<ProjLibProject>
   getBBOX(std::map<std::string, std::string>& keys,

@@ -30,12 +30,12 @@ public:
   double l;
   double u;
   unsigned char r;
-  unsigned char b;
   unsigned char g;
+  unsigned char b;
   unsigned char a;
   unsigned char r2;
-  unsigned char b2;
   unsigned char g2;
+  unsigned char b2;
   unsigned char a2;
   double d;
 };

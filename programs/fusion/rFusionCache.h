@@ -1,11 +1,10 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
-// #include "rTerrainBlockage.h"
+#include "rRAPIOAlgorithm.h"
 #include "rLLCoverageArea.h"
 #include "rVolumeValueResolver.h"
 #include "rLLHGridN2D.h"
+#include "rBitset.h"
 
 namespace rapio {
 /**  Use 8 bits for FusionKey, with a max value of 255.  This means our volume

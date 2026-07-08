@@ -56,7 +56,8 @@ BlockRadialSet::read(StreamBuffer& b)
   myNumRadials     = b.readShort();
 
   // This is the data format used to store the set of radials
-  bool inShorts = (myPacketCode != 16);
+  // FIXME: Looks like we read it below
+  //bool inShorts = (myPacketCode != 16);
 
 
   // So we loop over the number of radials
@@ -80,7 +81,7 @@ BlockRadialSet::read(StreamBuffer& b)
 
     // Data might be just per char, or double char (big endian shorts)
     // FIXME readChar(length) or vector maybe?
-    for (size_t j = 0; j < numChunks; j++) {
+    for (short j = 0; j < numChunks; j++) {
       r.data.push_back(b.readChar());
     }
   }

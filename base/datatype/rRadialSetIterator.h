@@ -77,12 +77,15 @@ public:
   inline void
   iterateRadialGates(RadialSetCallback& callback)
   {
-    auto const radials  = myRadialSet.getNumRadials();
-    auto const gates    = myRadialSet.getNumGates();
-    auto const fgMeters = myRadialSet.getDistanceToFirstGateM();
-    auto const azDegs   = myRadialSet.getFloat1DRef(RadialSet::Azimuth);
-    auto const bwDegs   = myRadialSet.getFloat1DRef(RadialSet::BeamWidth);
-    auto const gwMeters = myRadialSet.getFloat1DRef(RadialSet::GateWidth);
+    auto const radials     = myRadialSet.getNumRadials();
+    auto const gates       = myRadialSet.getNumGates();
+    auto const fgMeters    = myRadialSet.getDistanceToFirstGateM();
+    auto const& azDegs     = myRadialSet.getFloat1DRef(RadialSet::Azimuth);
+    auto const& bwDegs     = myRadialSet.getFloat1DRef(RadialSet::BeamWidth);
+    auto const& gwMeters   = myRadialSet.getFloat1DRef(RadialSet::GateWidth);
+    const bool hasNyquist  = myRadialSet.haveNyquistArray();
+    const float * nyqArray = hasNyquist ? myRadialSet.getNyquistRef().data() : nullptr;
+    const float globalNyq  = hasNyquist ? 0.0f : myRadialSet.getGlobalNyquistVelocity();
 
     callback.handleBeginLoop(this, myRadialSet);
     for (size_t r = 0; r < radials; ++r) {
@@ -99,6 +102,7 @@ public:
       myGateWidthMeters   = gwMeters[r];
       myRangeMeters       = fgMeters;
       myCenterRangeMeters = fgMeters + (myGateWidthMeters * 0.5);
+      myNyquistVelocity   = hasNyquist ? nyqArray[r] : globalNyq;
 
       // FIXME: Maybe later callback.handleRayStart(this);
 
@@ -149,6 +153,8 @@ public:
   inline float
   getCenterRangeMeters() const { return myCenterRangeMeters; }
 
+  inline float
+  getCurrentNyquistVelocity() const { return myNyquistVelocity; }
 
 private:
   /** Reference to our RadialSet */
@@ -168,5 +174,6 @@ private:
   float myRangeMeters;       ///< Current range in meters of the current gate
   float myCenterRangeMeters; ///< Current center range (middle of current gate)
   float myGateWidthMeters;   ///< Current gate width in meters
+  float myNyquistVelocity;   ///< Current Nyquist value or 0
 };
 }

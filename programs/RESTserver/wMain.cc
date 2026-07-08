@@ -175,7 +175,8 @@ FetchData()
   emscripten_fetch_attr_init(&attr);
 
   // Set fields after init
-  strcpy(attr.requestMethod, "GET");
+  snprintf(attr.requestMethod, sizeof(attr.requestMethod), "GET");
+
   attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY
     | EMSCRIPTEN_FETCH_REPLACE;
   attr.onsuccess = OnDataFetched;

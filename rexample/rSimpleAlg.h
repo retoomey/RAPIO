@@ -1,12 +1,12 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
-
-// You 'could' declare RAPIO namespace here and
-// avoid the rapio:: stuff below, but if you're gonna mix
-// with other code such as WDSS2 might explicitly declare
-// using namespace rapio;
+/** RAPIO API (If your algorithm is EXTERNAL to the rapio repo,
+ * you can use this header.  If part of the repo, use the individual
+ * headers for compiling speed.  So for example, your alg is
+ * checked into WDSSII or HYDRO you should use the RAPIO.h header
+ * only in your code.  This will keep you independent of changes. */
+// #include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 namespace wdssii { // or whatever you want
 /** Create your algorithm as a subclass of RAPIOAlgorithm */

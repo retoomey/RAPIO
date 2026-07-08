@@ -1,10 +1,11 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 namespace rapio {
-class RAPIOTileAlg : public rapio::RAPIOAlgorithm {
+class MultiDataType;
+
+class RAPIOTileAlg : public RAPIOAlgorithm {
 public:
 
   /** Create tile algorithm */
@@ -12,15 +13,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
 protected:
 

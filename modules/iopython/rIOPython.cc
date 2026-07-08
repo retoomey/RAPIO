@@ -13,9 +13,15 @@
 // #include "Python.h"
 // #include "numpy/arrayobject.h"
 #include "rOS.h"
+
+#include <rBOOST.h>
+BOOST_WRAP_PUSH
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
+BOOST_WRAP_POP
+
+#include <algorithm>
 
 using namespace boost::interprocess;
 
@@ -35,6 +41,41 @@ createRAPIOIO(void)
   return reinterpret_cast<void *>(z);
 }
 };
+
+namespace {
+// These put all the memory moves in one place and make them safe enough
+// to keep semgrep happy.
+
+// Helper to safely copy data TO a shared memory region
+bool
+safeCopyToRegion(boost::interprocess::mapped_region& region, const void * src, size_t size)
+{
+  if (region.get_size() < size) {
+    fLogSevere("Shared memory region too small for copy! Expected {} but got {}", size, region.get_size());
+    return false;
+  }
+  auto * dst_char = static_cast<char *>(region.get_address());
+  auto * src_char = static_cast<const char *>(src);
+
+  std::copy(src_char, src_char + size, dst_char);
+  return true;
+}
+
+// Helper to safely copy data FROM a shared memory region
+bool
+safeCopyFromRegion(const boost::interprocess::mapped_region& region, void * dst, size_t size)
+{
+  if (region.get_size() < size) {
+    fLogSevere("Shared memory region too small for extraction! Expected {} but got {}", size, region.get_size());
+    return false;
+  }
+  auto * src_char = static_cast<const char *>(region.get_address());
+  auto * dst_char = static_cast<char *>(dst);
+
+  std::copy(src_char, src_char + size, dst_char);
+  return true;
+}
+}
 
 std::string
 IOPython::getHelpString(const std::string& key)
@@ -86,7 +127,8 @@ IOPython::runDataProcess(const std::string& command,
     root->addNode("RAPIOOutput", fileinfo);
 
     std::vector<char> buf; // FIXME: Buffer class instead?
-    size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
+    std::map<std::string, std::string> keys;
+    size_t aLength = IODataType::writeBuffer(theJson, buf, keys, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
       fLogSevere("DataGrid didn't generate JSON so aborting python call.");
       return std::vector<std::string>();
@@ -96,8 +138,10 @@ IOPython::runDataProcess(const std::string& command,
     shared_memory_object shdmem2 { open_or_create, jsonName.c_str(), read_write };
     shdmem2.truncate(aLength);
     mapped_region region3 { shdmem2, read_write }; // read only, read_write?
-    char * at2 = static_cast<char *>(region3.get_address());
-    memcpy(at2, &buf[0], aLength);
+    if (!safeCopyToRegion(region3, buf.data(), aLength)) {
+      // Throw so we can cleanup the memory
+      throw std::runtime_error("Failed to copy JSON to shared memory.");
+    }
 
     // ----------------------------------------------------
     // Write the arrays to shared memory
@@ -160,11 +204,11 @@ IOPython::runDataProcess(const std::string& command,
       // m.get_name()
       // m.get_size()
       mapped_region region { m, read_write };
-
-      auto * at = region.get_address();
-      auto ref  = l->getRawDataPointer();
-      memcpy(at, ref, totalBytes); // At least it's a ram to ram copy
-      in.push_back(ref);           // should be ok to hold the pointer here, synchronous
+      auto ref = l->getRawDataPointer();
+      if (!safeCopyToRegion(region, ref, totalBytes)) {
+        throw std::runtime_error("Failed to copy array to shared memory.");
+      }
+      in.push_back(ref); // should be ok to hold the pointer here, synchronous
       moveSizes.push_back(totalBytes);
     }
     // END ARRAYS
@@ -181,8 +225,9 @@ IOPython::runDataProcess(const std::string& command,
     size_t pushCount = 0;
     for (auto l:list) {
       mapped_region region { memory[pushCount], read_only };
-      auto * at = region.get_address();
-      memcpy(in[pushCount], at, moveSizes[pushCount]); // At least it's a ram to ram copy
+      if (!safeCopyFromRegion(region, in[pushCount], moveSizes[pushCount])) {
+        throw std::runtime_error("Failed to copy array to shared memory.");
+      }
       pushCount++;
     }
   }catch (const std::exception& e) {

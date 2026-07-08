@@ -1,7 +1,6 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rPolarAlgorithm.h>
 
 namespace rapio {
 /*
@@ -10,7 +9,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  **/
-class PolarVMax : public rapio::PolarAlgorithm {
+class PolarVMax : public PolarAlgorithm {
 public:
 
   /** Create an example simple algorithm */
@@ -18,7 +17,7 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process the virtual volume. */
   virtual void

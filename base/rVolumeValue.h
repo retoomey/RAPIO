@@ -77,7 +77,6 @@ public:
   getBeamWidthDegs()
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
-    auto * r  = static_cast<RadialSet *>(c->dt);
 
     return ((*rc->bw)[radial]);
   }

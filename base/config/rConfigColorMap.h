@@ -5,8 +5,6 @@
 
 #include <string>
 
-#include <library_sci_palette.h>
-
 namespace rapio {
 /** Does the work of reading in color map configurations */
 class ConfigColorMap : public ConfigType {
@@ -27,6 +25,8 @@ public:
   static bool
   read1ColorConfig(const std::string& key, std::map<std::string, std::string> & attributes);
 
+  // PAL Color map -----------------------------------
+
   /** Read a colormap from a .pal file */
   static std::shared_ptr<ColorMap>
   readPalColorMap(const URL& url);
@@ -35,21 +35,25 @@ public:
   static std::shared_ptr<ColorMap>
   readPalColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
 
-  /** Read a W2 Color map */
-  static std::shared_ptr<ColorMap>
-  readW2ColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
-
-  /** Read a Paraview Color map */
-  static std::shared_ptr<ColorMap>
-  readParaColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+  // W2 Color map ------------------------------------
 
   /** Read a W2 color map from a given URL */
   static std::shared_ptr<ColorMap>
   readW2ColorMap(const URL& u);
 
-  /** Palette file reader */
-  SCIPalette *
-  SCIPaletteFromFile(char * filename);
+  /** Read a W2 Color map */
+  static std::shared_ptr<ColorMap>
+  readW2ColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+
+  // Paraview Color map ------------------------------
+
+  /** Read a Paraview Coloor Map from a given URL */
+  static std::shared_ptr<ColorMap>
+  readParaColorMap(const URL& url, std::map<std::string, std::string>& attributes);
+
+  /** Read a Paraview Color map */
+  static std::shared_ptr<ColorMap>
+  readParaColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
 
 private:
 

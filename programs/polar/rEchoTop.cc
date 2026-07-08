@@ -1,6 +1,8 @@
 #include <rEchoTop.h>
 
 #include <rPolarAlgorithm.h>
+#include <rRadialSet.h>
+#include <rRadialSetProjection.h>
 
 #include <iostream>
 
@@ -187,7 +189,7 @@ public:
     bool missingMask = false;
     int radialNo, gateNo;
     double Zb;
-    double Za;
+    double Za    = DBZ_MISSING;
     bool topTilt = true;
 
     // Go down the vertical column

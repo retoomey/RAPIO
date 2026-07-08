@@ -1,6 +1,10 @@
 #include "rPointCloud.h"
 
 #include "rRAPIOPlugin.h"
+#include "rPluginVolume.h"
+#include "rPluginTerrainBlockage.h"
+#include "rColorTerm.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 
@@ -265,7 +269,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
 
   // FIXME: RadialSetIterator class might make cleaner code
   // This would be good for our data types to avoid having to track everything ourselves
-  size_t at = 0;
+  // size_t at = 0;
 
   for (size_t r = 0; r < radials; ++r) {
     LengthKMs distanceKMs = firstGateKMs;

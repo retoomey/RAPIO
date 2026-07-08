@@ -1,4 +1,14 @@
 #include "rMakeIndex.h"
+#include "rOS.h"
+#include "rStrings.h"
+#include "rConfigIODataType.h"
+#include "rIODataType.h"
+#include "rFactory.h"
+#include "rRecordQueue.h"
+#include "rConfigRecord.h"
+#include "rProcessTimer.h"
+
+#include <fstream>
 
 using namespace rapio;
 

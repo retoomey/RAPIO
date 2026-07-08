@@ -168,7 +168,8 @@ DataGrid::resize(const std::vector<size_t>& dimsizes)
   for (auto l:myNodes) {
     auto i    = l->getDimIndexes();
     auto name = l->getName();
-    auto type = l->getStorageType();
+    // Unused here
+    // auto type = l->getStorageType();
     auto size = i.size();
 
     // From each index into dimension, get actual sizes
@@ -374,9 +375,9 @@ DataGrid::unsparse2D(
     return;
   }
 
-  try{
-    auto& pixel_x = getShort1DRef(pixelX);
-    auto& pixel_y = getShort1DRef(pixelY);
+  try{ // FIXME: a have method?
+    getShort1DRef(pixelX);
+    getShort1DRef(pixelY);
   }catch (...) {
     fLogSevere("Excepted pixel_x and pixel_y arrays, can't find to unsparse.");
     return;
@@ -421,10 +422,10 @@ DataGrid::unsparse2D(
   auto& counts = getInt1DRef(pixelCount);
 
   for (size_t i = 0; i < num_pixels; ++i) {
-    short x = pixel_x[i];
-    short y = pixel_y[i];
-    float v = data_val[i];
-    int c   = counts[i]; // check negative count?
+    size_t x = static_cast<size_t>(pixel_x[i]); // short
+    size_t y = static_cast<size_t>(pixel_y[i]); // short
+    float v  = data_val[i];
+    int c    = counts[i]; // check negative count?
 
     // FIXME: Not sure this is changed anywhere in MRMS. But Lak
     // obviously intended to have this ability.
@@ -492,11 +493,9 @@ DataGrid::unsparse3D(
   }
 
   try{
-    auto& pixel_x = getShort1DRef(pixelX);
-    auto& pixel_y = getShort1DRef(pixelY);
-    // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    auto& pixel_z = getShort1DRef(pixelZ);
-    // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    getShort1DRef(pixelX);
+    getShort1DRef(pixelY);
+    getShort1DRef(pixelZ);
   }catch (...) {
     fLogSevere("Excepted pixel_x, pixel_y, pixel_z arrays, can't find to unsparse.");
     return;
@@ -513,9 +512,7 @@ DataGrid::unsparse3D(
   const std::string Units = getUnits();
 
   changeArrayName(Constants::PrimaryDataName, "SparseData");
-  // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   addFloat3D(Constants::PrimaryDataName, Units, { 0, 1, 2 });
-  // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   auto& data_val = getFloat1DRef("SparseData");
 
   auto n = getDataArray("SparseData"); // get actual DataArray class
@@ -548,11 +545,11 @@ DataGrid::unsparse3D(
   // Wonder if we could 'scan' the pixels and check bounds 'first' and avoid it during the set
   // loop.  And/or we can use a flag to turn it off for speed
   for (size_t i = 0; i < num_pixels; ++i) {
-    short x = pixel_x[i];
-    short y = pixel_y[i];
-    short z = pixel_z[i];
-    float v = data_val[i];
-    int c   = counts[i]; // check negative count?
+    size_t x = static_cast<size_t>(pixel_x[i]); // short
+    size_t y = static_cast<size_t>(pixel_y[i]); // short
+    size_t z = static_cast<size_t>(pixel_z[i]); // short
+    float v  = data_val[i];
+    int c    = counts[i]; // check negative count?
 
     for (int j = 0; j < c; ++j) {
       data[z][x][y] = v;

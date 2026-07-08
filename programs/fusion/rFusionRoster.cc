@@ -3,6 +3,7 @@
 #include "rError.h"
 #include "rConfigRadarInfo.h"
 #include "rDirWalker.h"
+#include "rProcessTimer.h"
 
 using namespace rapio;
 
@@ -303,7 +304,7 @@ RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t
         auto& c = myNearest[at];
 
         // Find the correct position to insert v using linear search (small N)
-        int index = 0;
+        size_t index = 0;
         while (index < size && v >= c.range[index]) {
           ++index;
         }
@@ -351,7 +352,7 @@ RAPIOFusionRosterAlg::nearestNeighbor(std::vector<FusionRangeCache>& out, size_t
           // ...then shift elements to make room for v
           // which pushes out the largest
           if (index2 < size - 1) {
-            for (int i = size - 1; i > index2; --i) {
+            for (int i = size - 1; i > static_cast<int>(index2); --i) {
               r[atr + i] = r[atr + i - 1];
               k[atr + i] = k[atr + i - 1];
             }
@@ -411,7 +412,7 @@ RAPIOFusionRosterAlg::generateMasks()
 
   // Mask generation algorithm
   auto& k = myNearestSourceIDKeys;
-  auto& r = myNearestRanges;
+  // auto& r = myNearestRanges;
   for (size_t z = 0; z < myFullGrid.getNumZ(); ++z) {
     for (size_t y = 0; y < myFullGrid.getNumY(); ++y) {
       for (size_t x = 0; x < myFullGrid.getNumX(); ++x) {

@@ -6,11 +6,7 @@
 #include <string>
 #include <memory>
 
-// Apache 2.0 license
-// Think this is ok here, including license for it
-extern "C" {
-#include "ccronexpr.h"
-}
+#include "croncpp.h"
 
 namespace rapio {
 class RAPIOProgram;
@@ -54,7 +50,7 @@ protected:
   bool myParsed;
 
   /** Cron expression if successfully parsed */
-  cron_expr myCronExpr;
+  cron::cronexpr myCronExpr;
 };
 
 /**

@@ -330,7 +330,9 @@ IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, c
 
 size_t
 IODataType::writeBuffer(std::shared_ptr<DataType> dt,
-  std::vector<char>& buffer, const std::string& factory)
+  std::vector<char>                               & buffer,
+  std::map<std::string, std::string>              & keys,
+  const std::string                               & factory)
 {
   // 1. Get the factory for this output
   std::string f = factory;
@@ -339,7 +341,9 @@ IODataType::writeBuffer(std::shared_ptr<DataType> dt,
   // FIXME: Pass settings?  For now just XML/JSON use I'll skip it
   if (encoder == nullptr) { return 0; }
   // 2. Output file and generate records
-  return (encoder->encodeDataTypeBuffer(dt, buffer));
+  std::map<std::string, std::string> outputParams;
+
+  return (encoder->encodeDataTypeBuffer(dt, buffer, outputParams));
 }
 
 bool

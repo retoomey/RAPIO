@@ -26,7 +26,9 @@ IOJSON::createDataTypeFromBuffer(std::vector<char>& buffer)
 }
 
 size_t
-IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer)
+IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
+  std::map<std::string, std::string>     & keys
+)
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
 

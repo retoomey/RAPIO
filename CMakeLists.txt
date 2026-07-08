@@ -62,9 +62,11 @@ option(RAPIO_STRICT_SYMBOL_CHECK "Link modules to librapio to verify all symbols
 
 # Set type of build.  This has effect on different os it seems based on some settings here:
 # CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel") google these
+# We make the default RelWithDebInfo.  Larger binaries, but optimized and with
+# debug information for stack traces.
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "No build type selected, defaulting to 'Release'")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)")
+  message(STATUS "No build type selected, defaulting to 'RelWithDebInfo'")
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type (default RelWithDebInfo)")
 endif()
 
 # My force of clang compiler for me, not doing it for everyone though
@@ -103,6 +105,9 @@ set(CMAKE_CXX_STANDARD ${CXX_STANDARD_FALLBACK})
 #set(CMAKE_CXX_STANDARD 11)
 # Allow it to go higher to compiler default
 set(CMAKE_CXX_STANDARD_REQUIRED False)
+
+# Occasionally turn on to purge warnings
+#add_compile_options(-Wall -Werror)
 
 ###########################################################################
 # --- Fetch and configure fmt library ---
@@ -207,6 +212,24 @@ function(append_RAPIO_HEADERS_GLOB_H FOLDER)
   append_RAPIO_HEADERS("${FOLDER}" "${FILE_LIST}")
   set(PUBLIC_HEADERS ${PUBLIC_HEADERS} PARENT_SCOPE)
   #set(RAPIO_INCLUDE_DIRS "${RAPIO_INCLUDE_DIRS}" PARENT_SCOPE)
+endfunction()
+
+# Wrapper for add_test that automatically injects our dynamic library path
+# Can run all tests with ctest -V, etc.
+function(addRAPIOTest TEST_NAME)
+    # Forward all remaining arguments (COMMAND, WORKING_DIRECTORY, etc.) to standard add_test
+    add_test(NAME ${TEST_NAME} ${ARGN})
+    
+    # Inject the runtime library path based on the OS
+    if(APPLE)
+        set_tests_properties(${TEST_NAME} PROPERTIES 
+            ENVIRONMENT "DYLD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/lib:$ENV{DYLD_LIBRARY_PATH}"
+        )
+    else()
+        set_tests_properties(${TEST_NAME} PROPERTIES 
+            ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/lib:$ENV{LD_LIBRARY_PATH}"
+        )
+    endif()
 endfunction()
 
 # Generate a config.h (note this goes into the build so it's unique per build)

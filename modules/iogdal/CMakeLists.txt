@@ -40,6 +40,7 @@ endif()
 if (GDAL_FOUND)
   addRAPIOModule(rapiogdal SHARED
     rGDALDataTypeImp.cc
+    rGDALVectorLayerImp.cc
     rGDALLatLonGrids.cc
     rIOGDAL.cc
   )

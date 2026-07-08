@@ -51,6 +51,6 @@ private:
   getFillValueForAngle(float angle);
 
   /** Location in the volume */
-  int myAtElevation = 0;
+  size_t myAtElevation = 0;
 };
 }

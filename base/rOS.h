@@ -150,6 +150,11 @@ public:
   static std::vector<std::string>
   runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid);
 
+  /** Spawn a background process and forget about it.  Return true if the spawn
+   * succeeded */
+  static bool
+  spawnProcessArgs(const std::vector<std::string>& args);
+
   /**
    * Run a capturable function in our code.  For example, the wgrib2 c function api
    * is built into the iowgrib module.  This captures stdout from it to a vector
@@ -218,26 +223,32 @@ public:
         // ... (The exact same pipe-reading loop as before) ...
         std::string partial_line;
         char buffer[4096];
-        ssize_t count;
+        ssize_t signed_count; // Keep this signed because read() can return -1
 
-        while ((count = ::read(read_fd, buffer, sizeof(buffer))) > 0) {
+        while ((signed_count = ::read(read_fd, buffer, sizeof(buffer))) > 0) {
+          size_t count = static_cast<size_t>(signed_count);
           size_t start = 0;
-          for (ssize_t i = 0; i < count; ++i) {
+
+          for (size_t i = 0; i < count; ++i) {
             if (buffer[i] == '\n') {
+              // i and start are both size_t, so (i - start) is perfectly safe
               partial_line.append(&buffer[start], i - start);
               output.push_back(std::move(partial_line));
               partial_line.clear();
               start = i + 1;
             }
           }
+
+          // start and count are both size_t
           if (start < count) {
             partial_line.append(&buffer[start], count - start);
           }
         }
+
         if (!partial_line.empty()) {
           output.push_back(std::move(partial_line));
         }
-        close(read_fd);
+        ::close(read_fd);
       };
 
     // Create and start the reader thread

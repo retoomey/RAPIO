@@ -63,17 +63,27 @@ public:
 
   // WRITING ------------------------------------------------------------
 
-  /** Write our raw mrms data tile (for the imgui) */
+  /** Write our raw mrms data tile (for the imgui)
+   * FIXME: to be honest it doesn't use the library, it's just here for
+   * convenience from rWebGUI.  Probably should move into rWebGUI or
+   * be a special module.  This is for our experimental data tiles */
   bool
   writeMRMSTile(std::shared_ptr<DataType> dt, const std::string& filename);
 
   /** Write a png, jpeg, etc. depending on filename suffix using Magick */
   bool
-  writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename);
+  writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename,
+    std::map<std::string, std::string> & keys);
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
+    std::map<std::string, std::string>     & keys
+  ) override;
+
+  /** Allow writing image into RAM. */
+  virtual size_t
+  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
     std::map<std::string, std::string>     & keys
   ) override;
 

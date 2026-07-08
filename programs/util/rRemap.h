@@ -1,16 +1,18 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 namespace rapio {
+class RadialSet;
+class LatLonGrid;
+
 /*
  *  Remap tool designed for remapping grid classes such
  *  as LatLonGrid to another grid
  *
  * @author Robert Toomey
  **/
-class Remap : public rapio::RAPIOAlgorithm {
+class Remap : public RAPIOAlgorithm {
 public:
 
   /** Create an example simple algorithm */
@@ -18,7 +20,7 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Declare advanced help for options in declareOptions, if any. */
   virtual void
@@ -26,11 +28,11 @@ public:
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** Remap in the algorithm for moment */
   void

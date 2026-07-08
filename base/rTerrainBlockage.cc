@@ -197,7 +197,7 @@ TerrainBlockage::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
 
   bool hitBottom;
 
-  for (int r = 0; r < numRadials; ++r) {
+  for (size_t r = 0; r < numRadials; ++r) {
     const AngleDegs azDeg           = azDegs[r];
     const AngleDegs centerAzDegs    = azDeg + (.5 * azSpaceDegs[r]);
     const LengthKMs gwKMs           = gwMs[r] / 1000.0; // Constant per radial
@@ -205,7 +205,7 @@ TerrainBlockage::calculateTerrainPerGate(std::shared_ptr<RadialSet> rptr)
     LengthKMs rangeKMs = startKMs;
 
     float cbb = 0; // Terrain Blockage alg should increase cbb values
-    for (int g = 0; g < numGates; ++g) {
+    for (size_t g = 0; g < numGates; ++g) {
       LengthKMs centerRangeKMs = rangeKMs + (.5 * gwKMs);
 
       terrainPBBPercent[r][g] = 0;

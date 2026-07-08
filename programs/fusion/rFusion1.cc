@@ -13,6 +13,13 @@
 // Current moving average smoother, prefilter on RadialSets
 #include "rLakRadialSmoother.h"
 
+#include "rPluginVolume.h"
+#include "rPluginVolumeValueResolver.h"
+#include "rPluginTerrainBlockage.h"
+#include "rPluginPartition.h"
+
+#include "rProcessTimer.h"
+
 using namespace rapio;
 
 /*
@@ -169,7 +176,7 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
 
   // Weight information
   myWeight = o.getFloat("weight");
-  bool goodWeight = true;
+  // bool goodWeight = true;
 
   if ((myWeight <= 0) || (myWeight > 10.0)) { // Some reasonable ranges?
     fLogSevere("Weight given is {} which seems wrong, setting to 1", myWeight);
@@ -842,7 +849,7 @@ RAPIOFusionOneAlg::processHeightLayer(size_t layer,
   //
   if (writeLLG) {
     static int writeCount = 0;
-    if (++writeCount >= myThrottleCount) {
+    if (++writeCount >= static_cast<int>(myThrottleCount)) {
       output->setTime(rTime);
       writeOutputCAPPI(output);
     }

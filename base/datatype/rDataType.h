@@ -234,6 +234,14 @@ public:
   virtual std::shared_ptr<DataProjection>
   getProjection(const std::string& layer = "primary"){ return nullptr; }
 
+  /** Get the ColorMap name for this DataType */
+  virtual std::string
+  getColorMapName();
+
+  /** Set the ColorMap name for this DataType */
+  virtual void
+  setColorMapName(const std::string& name);
+
   /** Get the ColorMap for converting values to colors */
   virtual std::shared_ptr<ColorMap>
   getColorMap();

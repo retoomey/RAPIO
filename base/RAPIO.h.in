@@ -5,4 +5,19 @@
  */
 #pragma once
 
+// RAPIO Semantic Version parts
+#define RAPIO_VERSION_MAJOR @RAPIO_VERSION_MAJOR@
+#define RAPIO_VERSION_MINOR @RAPIO_VERSION_MINOR@
+#define RAPIO_VERSION_PATCH @RAPIO_VERSION_PATCH@
+
+// Helper macro to create a comparable integer: (Major * 10000 + Minor * 100 + Patch)
+// Example: 1.0.0 becomes 10000
+#define RAPIO_VERSION_CHECK(major, minor, patch) ((major * 10000) + (minor * 100) + (patch))
+
+// The current version as a single comparable integer
+#define RAPIO_VERSION_NUMBER RAPIO_VERSION_CHECK(RAPIO_VERSION_MAJOR, RAPIO_VERSION_MINOR, RAPIO_VERSION_PATCH)
+
+// The current version as a string literal
+#define RAPIO_VERSION_STRING "@RAPIO_VERSION@"
+
 @PUBLIC_HEADERS@

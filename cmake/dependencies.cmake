@@ -18,6 +18,7 @@
 # "find" without first downloading the broader history to locate it.
 
 # Web GUI
+set(SIMPLE_WEB_SERVER_GIT_TAG "v3.1.1") # Release Oct 21, 2020
 set(IMGUI_GIT_TAG      "v1.90.4")
 set(EMSCRIPTEN_GIT_TAG "3d6d8ee") # Release 3.1.74 Dec 13, 2024
 

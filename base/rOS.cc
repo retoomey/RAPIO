@@ -31,19 +31,6 @@ using namespace rapio;
 namespace fs = boost::filesystem;
 // namespace pt = boost::posix_time;
 
-namespace {
-static bool
-isWSL()
-{
-  // Implement a function to detect if running in WSL
-  // You can use any method that reliably detects WSL
-  // For example, checking the existence of "/proc/sys/kernel/osrelease" file
-  // or checking for specific environment variables.
-  // Here's a simple example:
-  return std::getenv("WSL_DISTRO_NAME") != nullptr;
-}
-}
-
 const std::string&
 OS::getHostName()
 {
@@ -400,6 +387,39 @@ OS::runProcess(const std::string& commandin, std::vector<std::string>& data)
   #endif // if 0
 } // OS::runProcess
 
+bool
+OS::spawnProcessArgs(const std::vector<std::string>& argsIn)
+{
+  std::string error = "None";
+
+  try {
+    namespace p  = boost::process;
+    namespace fs = boost::filesystem;
+
+    if (argsIn.empty()) { return false; }
+
+    std::vector<std::string> args = argsIn;
+    std::string command = args[0];
+    args.erase(args.begin());
+
+    const std::string absolutePath = validateExe(command);
+    if (absolutePath.empty()) {
+      error = "Command not found or not executable: '" + command + "'";
+    } else {
+      const auto spath = fs::absolute(absolutePath);
+      // spawn detaches the process natively (background execution)
+      p::spawn(spath, p::args(args));
+      fLogInfo("Spawned background command '{}'", command);
+      return true;
+    }
+  } catch (const std::exception& e) {
+    error = e.what();
+  }
+
+  fLogSevere("Failure spawning command. Error: '{}'", error);
+  return false;
+}
+
 std::vector<std::string>
 OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagrid)
 {
@@ -415,7 +435,8 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // Write JSON out to shared for data process/python
     std::shared_ptr<PTreeData> theJson = datagrid->createMetadata();
     std::vector<char> buf; // FIXME: Buffer class instead?
-    size_t aLength = IODataType::writeBuffer(theJson, buf, "json");
+    std::map<std::string, std::string> keys;
+    size_t aLength = IODataType::writeBuffer(theJson, buf, keys, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
       fLogSevere("DataGrid didn't generate JSON so aborting python call.");
       return std::vector<std::string>();
@@ -425,7 +446,12 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     shdmem2.truncate(aLength);
     mapped_region region3 { shdmem2, read_write }; // read only, read_write?
     char * at2 = static_cast<char *>(region3.get_address());
-    memcpy(at2, &buf[0], aLength);
+    if (region3.get_size() < aLength) {
+      fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
+        aLength, region3.get_size());
+      return std::vector<std::string>(); // Fail safely
+    }
+    std::copy(buf.begin(), buf.begin() + aLength, at2);
 
     // ----------------------------------------------------
     // Write the arrays to shared memory
@@ -453,14 +479,19 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     // shdmem.get_size()
     mapped_region region2 { shdmem, read_write }; // read only, read_write?
     float * at = static_cast<float *>(region2.get_address());
-    memcpy(at, ref2.data(), size * sizeof(float));
+    if (region2.get_size() < memsize) {
+      fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
+        memsize, region2.get_size());
+      return std::vector<std::string>(); // Fail safely
+    }
+    std::copy(ref2.data(), ref2.data() + size, at); // std::copy respects float type
 
     // ----------------------------------------------------
     // Call the python helper.
     runProcess(command, output);
 
     // Do we need to copy back?  Aren't we mapped to this?
-    memcpy(ref2.data(), at, size * sizeof(float));
+    std::copy(at, at + size, ref2.data());
   }catch (const std::exception& e) {
     fLogSevere("Failed to execute command {}", command);
   }
@@ -713,7 +744,7 @@ OS::isWSL()
 std::string
 OS::getBuildInfo()
 {
-  return fmt::format("{} {} C++{} {} {} UTC",
+  return fmt::format("{} {} C++{} {} {} UTC [{}]",
            COMPILER_NAME, COMPILER_VERSION,
-           CXX_VERSION, BUILD_DATE, BUILD_TIME);
+           CXX_VERSION, BUILD_DATE, BUILD_TIME, RAPIO_BUILD_TYPE);
 }

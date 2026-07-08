@@ -1,6 +1,7 @@
 #include "rStage2Data.h"
 #include "rFusion1.h"
 #include "rBitset.h"
+#include "rColorTerm.h"
 
 using namespace rapio;
 
@@ -172,7 +173,7 @@ Stage2Data::receive(RAPIOData& rData)
   auto gsp = rData.datatype<rapio::DataGrid>(); // netcdf
 
   if (gsp != nullptr) {
-    auto& d = *gsp;
+    // auto& d = *gsp;
     // if (gsp->getTypeName() == "check for reflectivity, etc" if subgrouping
     // FIXME: we could let it be DataGrid and check fields instead.  This would stop the
     // warning we get for missing reader
@@ -232,7 +233,6 @@ Stage2Data::receive(RAPIOData& rData)
       auto& netcdfXM   = d.getShort1DRef("Xm");
       auto& netcdfYM   = d.getShort1DRef("Ym");
       auto& netcdfZM   = d.getByte1DRef("Zm");
-      auto& netcdfLM   = d.getShort1DRef("Lm");
       auto& RLElengths = d.getShort1DRef("Lm");
 
       // Get the RLE total size and dump for debugging

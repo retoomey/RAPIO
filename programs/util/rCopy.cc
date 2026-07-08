@@ -1,6 +1,7 @@
 #include <rCopy.h>
 
 #include <iostream>
+#include <thread>
 
 using namespace rapio;
 

@@ -394,20 +394,20 @@ FileStreamBuffer::readString(size_t length)
 void
 FileStreamBuffer::writeString(const std::string& c, size_t upto)
 {
-  int toWrite = std::min<int>(c.size(), upto);
+  size_t toWrite = std::min<size_t>(c.size(), upto);
 
-  if (fwrite(c.data(), 1, toWrite, file) != static_cast<size_t>(toWrite)) {
+  if (fwrite(c.data(), 1, toWrite, file) != toWrite) {
     throw std::runtime_error("Failed to write string data to file: Short write or I/O error.");
   }
 
   // Pad with nulls if string is shorter than `upto`
   if (toWrite < upto) {
-    int pad = upto - toWrite;
+    size_t pad = upto - toWrite;
     static const char zeros[16] = { }; // small zero buffer
 
     while (pad > 0) {
-      int chunk = std::min(pad, static_cast<int>(sizeof(zeros)));
-      if (fwrite(zeros, 1, chunk, file) != static_cast<size_t>(chunk)) {
+      size_t chunk = std::min<size_t>(pad, sizeof(zeros));
+      if (fwrite(zeros, 1, chunk, file) != chunk) {
         throw std::runtime_error("Failed to write null padding to file: Short write or I/O error.");
       }
       pad -= chunk;
@@ -615,7 +615,7 @@ MemoryStreamBuffer::readBZIP2()
   MemoryStreamBuffer mm(std::move(destination));
 
   setSameEndian(mm);
-  return std::move(mm);
+  return mm; // Removed std::move to allow copy elision / NRVO
 }
 
 MemoryStreamBuffer
@@ -634,7 +634,7 @@ MemoryStreamBuffer::writeBZIP2()
   MemoryStreamBuffer mm(std::move(destination));
 
   setSameEndian(mm);
-  return std::move(mm);
+  return mm; // Removed std::move to allow copy elision / NRVO
 }
 
 void

@@ -1,12 +1,15 @@
 #pragma once
 
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
+#include <rRadialSet.h>
 
 #include <map>
 #include <vector>
 #include <string>
 
 namespace rapio {
+class ArrayAlgorithm;
+
 /**
  * @class SpikeTracker
  * @brief Detects and removes anomalous radial spikes in radar data, typically caused by velocity dealiasing errors.
@@ -64,15 +67,15 @@ public:
 
   /** Perform statistical math and detect radial spikes */
   void
-  detectAndLogSpike(std::shared_ptr<rapio::RadialSet> input,
-    int                                               iAzCurrent,
-    int                                               iRanCurrent);
+  detectAndLogSpike(std::shared_ptr<RadialSet> input,
+    int                                        iAzCurrent,
+    int                                        iRanCurrent);
 
   /** Apply RangeFolded masks to the detected spike table */
   void
-  applySpikeBlankout(rapio::ArrayFloat2DPtr az,
-    rapio::ArrayFloat2DPtr                  div,
-    rapio::ArrayFloat2DPtr                  tot);
+  applySpikeBlankout(ArrayFloat2DPtr az,
+    ArrayFloat2DPtr                  div,
+    ArrayFloat2DPtr                  tot);
 
 private:
   using GatePair    = std::pair<int, int>;
@@ -197,7 +200,7 @@ public:
  * @author Robert Toomey
  *
  */
-class LLSDPolar : public rapio::RAPIOAlgorithm {
+class LLSDPolar : public RAPIOAlgorithm {
 public:
 
   /** Hard cap on the azimutal kernel half-width to prevent runaway processing
@@ -216,15 +219,15 @@ public:
 
   /** Declare program options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process and validate program options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process new data coming in */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
 protected:
 

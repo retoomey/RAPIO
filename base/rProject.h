@@ -245,6 +245,10 @@ public:
   virtual bool
   initialize() override;
 
+  /** Bulk conversion for speed */
+  virtual bool
+  bulkXyToLatLon(double * x_lon, double * y_lat, size_t count);
+
   /** Get the X/Y kilometer coordinate origin for the raster grid center */
   virtual bool
   getXYCenter(double& centerXKm, double& centerYKm) override;

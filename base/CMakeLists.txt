@@ -2,170 +2,27 @@
 # RAPIO base cmake file
 #
 
-# Set variable of all headers we use
-# We 'could' file(GLOB HEADER_FILES "*.h") but
-# this means when we add a file we have to force cmake
-# to recognize the change so for now we'll hard list the files
-# ls -1 *.h
-set(RELATIVE_HEADERS
-ccronexpr.h
-rAlgConfigFile.h
-rArith.h
-rArray.h
-rArrayAlgorithm.h
-rHelpFormatter.h
-image/rArrayFilter.h
-image/rArraySampler.h
-image/rNearestNeighbor.h
-image/rCressman.h
-image/rBilinear.h
-image/rThresholdFilter.h
-image/rPercentFilter.h
-datatype/rAttributeDataType.h
-rAWS.h
-rBimap.h
-rBinaryIO.h
-datatype/rBinaryTable.h
-rBitset.h
-rBoostConnection.h
-rColor.h
-rColorMap.h
-rColorTerm.h
-config/library_sci_palette.h
-config/rConfigColorMap.h
-config/rConfigDirectoryMapping.h
-config/rConfig.h
-config/rConfigIODataType.h
-config/rConfigLogging.h
-config/rConfigParamGroup.h
-config/rConfigRadarInfo.h
-config/rConfigRecord.h
-rConstants.h
-rCurlConnection.h
-rDataArray.h
-rDataFilter.h
-datatype/rDataGrid.h
-rBOOST.h
-rDataProjection.h
-datatype/rDataTable.h
-datatype/rDataType.h
-rDataTypeHistory.h
-rDimensionMapper.h
-rDirWalker.h
-watcher/rDirWatcher.h
-rElevationVolume.h
-rError.h
-rEventLoop.h
-rEventTimer.h
-notifier/rEXERecordNotifier.h
-notifier/rRedisRecordNotifier.h
-watcher/rEXEWatcher.h
-rFactory.h
-watcher/rFAMWatcher.h
-index/rFakeIndex.h
-index/rFileIndex.h
-index/rFMLIndex.h
-index/rRedisIndex.h
-notifier/rFMLRecordNotifier.h
-datatype/rFusionBinaryTable.h
-datatype/rGDALDataType.h
-datatype/rGribDataType.h
-rHeartbeat.h
-rIJK.h
-datatype/rImageDataType.h
-index/rIndexType.h
-rIODataType.h
-rIOFakeDataGenerator.h
-rIOFakeDataType.h
-rIOFile.h
-rIOPostProcessor.h
-index/rIOIndex.h
-rIOJSON.h
-rIOURL.h
-watcher/rIOWatcher.h
-watcher/rRedisWatcher.h
-rIOXML.h
-datatype/rLatLonArea.h
-datatype/rLatLonGrid.h
-datatype/rLatLonGridProjection.h
-datatype/rLatLonGridIterator.h
-datatype/rLatLonHeightGrid.h
-datatype/rLatLonHeightGridIterator.h
-datatype/rLatLonHeightGridProjection.h
-rLength.h
-rLogger.h
-rLLCoverageArea.h
-rLL.h
-rLLH.h
-datatype/rLLHGridN2D.h
-rNamedAny.h
-datatype/rNetcdfDataType.h
-rNetwork.h
-rOption.h
-rOptionList.h
-rOS.h
-rPartitionInfo.h
-rPolarAlgorithm.h
-rProcessTimer.h
-rProject.h
-datatype/rPTreeData.h
-datatype/rRadialSet.h
-datatype/rRadialSetIterator.h
-datatype/rRadialSetProjection.h
-rRAPIOAlgorithm.h
-rRAPIOData.h
-rRapio.h
-datatype/rMergerBinaryTable.h
-datatype/rMultiDataType.h
-datatype/rDataTable.h
-rRAPIOOptions.h
-plugin/rRAPIOPlugin.h
-plugin/rPluginHeartbeat.h
-plugin/rPluginWebserver.h
-plugin/rPluginNotifier.h
-plugin/rPluginIngestor.h
-plugin/rPluginRealTime.h
-plugin/rPluginRecordFilter.h
-plugin/rPluginProductOutput.h
-plugin/rPluginProductOutputFilter.h
-plugin/rPluginVolumeValueResolver.h
-plugin/rPluginTerrainBlockage.h
-plugin/rPluginVolume.h
-plugin/rPluginPartition.h
-rRAPIOProgram.h
-rRecordFilter.h
-rRecord.h
-notifier/rRecordNotifier.h
-rRecordQueue.h
-rSecure.h
-rSentinelDouble.h
-rSignals.h
-rSparseVector.h
-index/rStreamIndex.h
-rStrings.h
-rTerrainBlockage2me.h
-rTerrainBlockage.h
-rTerrainBlockageLak.h
-rThreadGroup.h
-rTimeDuration.h
-rTime.h
-rUnit.h
-rURL.h
-rValueCompressor.h
-rVolumeAlgorithm.h
-rVolumeValue.h
-rVolumeValueResolver.h
-index/rWebIndex.h
-watcher/rWebIndexWatcher.h
-rWebServer.h
-index/rXMLIndex.h
-rXYZ.h
+# For rWebServer.h/rWebServer.cc pull a project that uses boost
+# for us.  It's a header only library, so we install with RAPIO.h
+# as well
+include(FetchContent)
+FetchContent_Declare(
+    simple-web-server
+    #GIT_REPOSITORY https://gitlab.com/eidheim/Simple-WebSocket-Server.git
+    GIT_REPOSITORY https://gitlab.com/eidheim/Simple-Web-Server.git
+    GIT_TAG        ${SIMPLE_WEB_SERVER_GIT_TAG} # From dependencies.cmake
 )
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(simple-web-server)
+FetchContent_GetProperties(simple-web-server SOURCE_DIR SWS_SRC_DIR)
 
 # Set variable of all sources we use
 # ls -1 *.c *.cc
+# We 'could' generate this, but I feel
+# explicitly defining what to compile is
+# probably better. We do generate headers
+# below though.
 set(SOURCE_FILES
-ccronexpr.c
 rAlgConfigFile.cc
 rArray.cc
 rArrayAlgorithm.cc
@@ -269,6 +126,7 @@ datatype/rRadialSetProjection.cc
 rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc
+rRAPIORuntime.cc
 plugin/rRAPIOPlugin.cc
 plugin/rPluginHeartbeat.cc
 plugin/rPluginWebserver.cc
@@ -310,13 +168,31 @@ index/rXMLIndex.cc
 rXYZ.cc
 )
 
+# Glob all headers in the current directory and subdirectories
+# Note: Using RELATIVE helps keep the install paths clean
+file(GLOB_RECURSE ALL_HEADERS_ON_DISK 
+     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
+     "*.h")
+
+# Maintain a "Blacklist" of headers that should NEVER be installed
+set(PRIVATE_HEADERS
+    "rapio_pch.h"
+    "test_internal.h"   # Example of a temp/internal header
+)
+
+# Generate the actual install list by removing the blacklist from the glob
+set(RELATIVE_HEADERS ${ALL_HEADERS_ON_DISK})
+if(PRIVATE_HEADERS)
+    list(REMOVE_ITEM RELATIVE_HEADERS ${PRIVATE_HEADERS})
+endif()
+
 ##################################################################################################
 # Target: Header only interface for modules, doesn't link to the librapio
 #
 add_library(rapio_interface INTERFACE)
 
 # Resolve the ../webserver path to an absolute path
-get_filename_component(RAPIO_WEBSERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../webserver" ABSOLUTE)
+#get_filename_component(RAPIO_WEBSERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../webserver" ABSOLUTE)
 
 # Declare the RAPIO headers for installation
 target_include_directories(rapio_interface INTERFACE
@@ -333,8 +209,8 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/watcher
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/image
 
-  # Web server files
-  $<BUILD_INTERFACE:${RAPIO_WEBSERVER_DIR}>
+  # Use the fetched directory for the web server headers
+  $<BUILD_INTERFACE:${SWS_SRC_DIR}>
 
   # Get the generated config.h
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -343,7 +219,7 @@ target_include_directories(rapio_interface INTERFACE
 )
 
 # Definition for rapio_interface
-target_compile_definitions(rapio_interface INTERFACE BOOST_LOG_DYN_LINK)
+target_compile_definitions(rapio_interface INTERFACE BOOST_LOG_DYN_LINK BOOST_STACKTRACE_DYN_LINK)
 
 # header interface has fmt now
 target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
@@ -354,6 +230,9 @@ target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
 add_library(rapio SHARED
     "${SOURCE_FILES}"
 )
+
+# Inject the CMake build type into the C++ preprocessor
+target_compile_definitions(rapio PRIVATE RAPIO_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
 
 target_link_libraries(rapio
   # Go ahead and make our linked libraries public for now.  In theory,
@@ -388,9 +267,24 @@ endif()
 # Pretty sure boost links us to Threads::Threads, but ensure pthreads first
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 #find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
+
+
+# Add a dropdown option for the stacktrace backend (defaulting to 'basic')
+set(RAPIO_STACKTRACE_BACKEND "basic" CACHE STRING "Boost.Stacktrace backend to use (basic, addr2line, noop)")
+set_property(CACHE RAPIO_STACKTRACE_BACKEND PROPERTY STRINGS "basic" "addr2line" "noop")
+
+# Construct the exact component name CMake needs to look for
+set(STACKTRACE_COMPONENT "stacktrace_${RAPIO_STACKTRACE_BACKEND}")
+
+# Pull in Boost, appending the dynamically selected stacktrace component
 find_package(Boost 1.66 REQUIRED COMPONENTS
-  system log log_setup thread filesystem serialization iostreams timer
+  system log log_setup thread filesystem serialization iostreams timer ${STACKTRACE_COMPONENT}
 )
+
+#find_package(Boost 1.66 REQUIRED COMPONENTS
+#  system log log_setup thread filesystem serialization iostreams timer stacktrace_basic
+#)
+
 # Oracle 8 unfortunately will be used at NSSL, which is a 'attempt to be stable'
 # variant of Redhat, and is therefore ancient using Boost 1.66
 # It appears at first glance that LZMA wasn't built properly in the RPM.
@@ -526,11 +420,18 @@ foreach(hdr IN LISTS RELATIVE_HEADERS)
   list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${hdr}")
 endforeach()
 # Add the webserver header from webserver
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/server_http.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/asio_compatibility.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/mutex.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/utility.hpp")
-list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/status_code.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/server_http.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/asio_compatibility.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/mutex.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/utility.hpp")
+#list(APPEND HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../webserver/status_code.hpp")
+
+# Add the webserver header from webserver
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/server_http.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/asio_compatibility.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/mutex.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/utility.hpp")
+list(APPEND HEADER_FILES "${SWS_SRC_DIR}/status_code.hpp")
 
 # Add the created headers
 list(APPEND HEADER_FILES "${CMAKE_CURRENT_BINARY_DIR}/RAPIO.h")

@@ -1,10 +1,10 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
+#include <rProcessTimer.h>
 
 namespace rapio {
-class RAPIONetcdfTestAlg : public rapio::RAPIOAlgorithm {
+class RAPIONetcdfTestAlg : public RAPIOAlgorithm {
 public:
 
   /** Create netcdf testing algorithm */
@@ -12,15 +12,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
   /** Summeries of process times */
   ProcessTimerSum totalSums[12];

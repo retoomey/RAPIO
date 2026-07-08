@@ -64,7 +64,7 @@ public:
    * @return number of strings added to `setme'
    */
   static size_t
-  split(const std::string      & in,
+  split(const std::string         & in,
     std::vector<std::string> * setme);
 
   /** Split a string on a character and put the pieces into a vector.
@@ -97,7 +97,7 @@ public:
    *  @see splitWithoutEnds to avoid getting these empty strings
    */
   static size_t
-  split(const std::string      & in,
+  split(const std::string         & in,
     char                       delimiter,
     std::vector<std::string> * setme);
 
@@ -111,8 +111,8 @@ public:
    */
   static bool
   splitOnFirst(const std::string & in,
-    const std::string       delimiter,
-    std::vector<std::string>& setme);
+    const std::string        delimiter,
+    std::vector<std::string> & setme);
 
   /** Replace all occurences of `from' with `to' in string `s'. */
   static void
@@ -160,14 +160,14 @@ public:
    * @param outputtokens A number list where each number references the token number, or -1 if a filler string (non token match)
    * @param outputfillers A list of non-matched strings represented by the ordered -1s in the outputtoken list */
   static void
-  TokenScan(const std::string& pattern,
-    std::vector<std::string> & tokens,
-    std::vector<int>         & outputtokens,
-    std::vector<std::string> & outputfillers);
+  TokenScan(const std::string & pattern,
+    std::vector<std::string>  & tokens,
+    std::vector<int>          & outputtokens,
+    std::vector<std::string>  & outputfillers);
 
   /** Remove up to a prefix off a source string */
   static std::string
-  peel(std::string& s, const char * delimiter);
+  peel(std::string& s, const std::string& delimiter);
 
   /** Scan a single string for a give list of replacement strings
    * @param pattern The string we are scanning.

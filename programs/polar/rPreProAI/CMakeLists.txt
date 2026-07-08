@@ -23,6 +23,7 @@ target_include_directories(rPreProAI SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/wat
 target_link_libraries(rPreProAI PRIVATE rapio)
 
 # Standard CMake practice uses RUNTIME DESTINATION bin
-install(TARGETS rPreProAI
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS rPreProAI RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+target_link_libraries(rPreProAI PRIVATE rapio)
+
 

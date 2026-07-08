@@ -209,7 +209,7 @@ RObsBinaryTable::dumpToText(std::ostream& o)
 
   o << i << "Marked line array size: " << aSize << "\n";
   if (aSize > 5) { aSize = 5; }
-  for (int i = 0; i < aSize; i++) {
+  for (size_t i = 0; i < aSize; i++) {
     o << "  Line: " << i << "(" << markedLines[i].len << ") ( " << markedLines[i].x << ","
       << markedLines[i].y << "," << markedLines[i].z << ")\n";
   }

@@ -1,4 +1,7 @@
 #include "rTestNetcdf.h"
+#include "rOS.h"
+#include "rEventLoop.h"
+
 #include <iostream>
 #include <sys/stat.h>
 
@@ -35,10 +38,10 @@ RAPIONetcdfTestAlg::processOptions(RAPIOOptions& o)
 }
 
 void
-RAPIONetcdfTestAlg::processNewData(rapio::RAPIOData& d)
+RAPIONetcdfTestAlg::processNewData(RAPIOData& d)
 {
   // Look for any data the system knows how to read...
-  auto r = d.datatype<rapio::DataType>();
+  auto r = d.datatype<DataType>();
 
   if (r != nullptr) {
     // Override output params for image output
@@ -113,5 +116,5 @@ main(int argc, char * argv[])
   alg.executeFromArgs(argc, argv);
 
   // Bubble the event loop's final status up to CTest
-  return rapio::EventLoop::getExitCode();
+  return EventLoop::getExitCode();
 }

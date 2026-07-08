@@ -74,10 +74,13 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   #endif
   Time dataTime = g.readTime();
 
-  const float nyquest = g.readScaledInt(headerScale); // 45-48  // FIXME: Volume number?
+  // FIXME: We can store in the newer RadialSet API now
+  //const float nyquist = g.readScaledInt(headerScale); // 45-48 
+  g.readScaledInt(headerScale); // 45-48
   const int vcp       = g.readInt();                  // 49-52
 
-  const int tiltNumber      = g.readInt();                  // 53-56
+  //const int tiltNumber      = g.readInt();                  // 53-56
+  g.readInt();                  // 53-56
   const float elevAngleDegs = g.readScaledInt(headerScale); // 57-60
 
   const int num_radials = g.readInt(); // 61-64
@@ -169,16 +172,16 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   const int dataMissing     = dataMissingValue * dataScale;
   const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
 
-  for (size_t i = 0; i < num_radials; ++i) {
-    float start_az = i; // Each degree
+  for (int i = 0; i < num_radials; ++i) {
+    //float start_az = i; // Each degree
 
     // We could add each time but that might accumulate drift error
     // Adding would be faster.  Does it matter?
     azimuths[i]   = std::fmod(firstAzimuthDegs + (i * azimuthResDegs), 360);
     beamwidths[i] = 1; // Correct?
     // gatewidths[i] = gateSpacingMeters;
-    for (size_t j = 0; j < num_gates; ++j) {
-      auto old = rawBuffer[rawBufferIndex];
+    for (int j = 0; j < num_gates; ++j) {
+      //auto old = rawBuffer[rawBufferIndex];
       data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], dataUnavailable, dataMissing,
           dataScale);
       #if 0
@@ -198,7 +201,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
 bool
 HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radialsetp)
 {
-  bool success    = false;
+  //bool success    = false;
   auto& radialset = *radialsetp;
 
   // ------------------------------------------------------------------
@@ -352,7 +355,7 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   g.writeInt(dataMissing); // FIXME: missing or scaled?
 
   // The placeholder.. 8 ints
-  int fill = 0;
+  //int fill = 0;
 
   for (size_t i = 0; i < 8; i++) {
     g.writeInt(0);

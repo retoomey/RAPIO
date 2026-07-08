@@ -592,6 +592,30 @@ ProjLibProject::initialize()
 } // ProjLibProject::initialize
 
 bool
+ProjLibProject::bulkXyToLatLon(double * x_lon, double * y_lat, size_t count)
+{
+  #if HAVE_PROJLIB
+  // proj_trans_generic handles arrays directly.
+  // It transforms in place, so the input arrays get overwritten with the output.
+  // 1 = x/lon, 2 = y/lat. Strides are sizeof(double).
+  size_t n = proj_trans_generic(
+    myP,
+    PJ_FWD,
+    x_lon, sizeof(double), count,
+    y_lat, sizeof(double), count,
+    nullptr, 0, 0, // Z (not needed)
+    nullptr, 0, 0  // Time (not needed)
+  );
+
+  return (n == count);
+
+  #else // if HAVE_PROJLIB
+  return false;
+
+  #endif // if HAVE_PROJLIB
+}
+
+bool
 ProjLibProject::getXYCenter(double& centerXKm, double& centerYKm)
 {
   //  We're storing the center shift in the proj4 x, y.  So our center is 0,0

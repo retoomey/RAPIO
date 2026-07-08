@@ -8,7 +8,9 @@
 #include <fstream>
 
 #include "rDataType.h"
+#include "rMultiDataType.h"
 #include "rAttributeDataType.h"
+#include "rConfigParamGroup.h"
 
 
 using namespace rapio;

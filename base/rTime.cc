@@ -9,6 +9,7 @@
 #include <rError.h>
 #include <rSignals.h>
 #include <rStrings.h>
+#include <fmt/format.h>
 
 using namespace rapio;
 
@@ -204,14 +205,10 @@ Time::getString(const std::string& pattern) const
   // We use %/ms for our special legacy 3 millisecond number
   // NOTE: since we do this last here, make sure % symbol isn't in
   // strftime, think / is safe from any implementation.
-  std::string newoutput = output;
-
-  Strings::replace(newoutput, "%/ms", "%03d");
-  if (newoutput != output) { // Only if found to prevent snprintf error
+  if (output.find("%/ms") != std::string::npos) {
     int millisec = (int) (1000.0 * getFractional() + 0.5);
-    if (millisec == 1000) { millisec = 999; } // possible???
-    std::snprintf(buf, sizeof(buf), newoutput.c_str(), millisec);
-    output = std::string(buf);
+    if (millisec == 1000) { millisec = 999; }
+    Strings::replace(output, "%/ms", fmt::format("{:03d}", millisec));
   }
 
   return output;

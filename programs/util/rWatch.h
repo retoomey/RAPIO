@@ -1,7 +1,6 @@
 #pragma once
 
-/** RAPIO API */
-#include <RAPIO.h>
+#include <rRAPIOAlgorithm.h>
 
 namespace rapio {
 /*
@@ -9,7 +8,7 @@ namespace rapio {
  *
  * @author Robert Toomey
  **/
-class Watch : public rapio::RAPIOAlgorithm {
+class Watch : public RAPIOAlgorithm {
 public:
 
   /** Create an example simple algorithm */
@@ -17,15 +16,15 @@ public:
 
   /** Declare all algorithm options */
   virtual void
-  declareOptions(rapio::RAPIOOptions& o) override;
+  declareOptions(RAPIOOptions& o) override;
 
   /** Process all algorithm options */
   virtual void
-  processOptions(rapio::RAPIOOptions& o) override;
+  processOptions(RAPIOOptions& o) override;
 
   /** Process a new record/datatype.  See the .cc for RAPIOData info */
   virtual void
-  processNewData(rapio::RAPIOData& d) override;
+  processNewData(RAPIOData& d) override;
 
 protected:
 };

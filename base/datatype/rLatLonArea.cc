@@ -118,7 +118,7 @@ LatLonArea::getCenterLocation() const
 LLH
 LatLonArea::getTopLeftLocationAt(size_t i, size_t j)
 {
-  if (i == j == 0) { return myLocation; }
+  if ((i == 0) && (j == 0)) { return myLocation; }
   const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
   const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * j);
 

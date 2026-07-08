@@ -18,8 +18,10 @@ add_executable(rTestRAPIO
   rTestBimap.cc
   rTestBinaryIO.cc
   rTestBitset.cc
+  rTestColorMap.cc
   rTestFactory.cc
   rTestGrid.cc
+  rTestHeartbeat.cc
   rTestIODataType.cc
   rTestIOPostProcessor.cc
   rTestMain.cc
@@ -48,4 +50,4 @@ target_link_libraries(rTestRAPIO PRIVATE
 configure_file(testxml.xml testxml.xml)
 configure_file(testjson.json testjson.json)
 
-add_test(NAME rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)
+addRAPIOTest(rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)

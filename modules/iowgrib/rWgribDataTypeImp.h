@@ -9,7 +9,7 @@ class GribCatalogCache {
 public:
 
   /** Create a catalog cache */
-  GribCatalogCache(URL url) : myURL(url), myLoaded(false){ }
+  GribCatalogCache(URL url) : myLoaded(false), myURL(url){ }
 
   /** Field in the cache */
   class Field {
@@ -48,7 +48,7 @@ public:
 public:
 
     /** Offset of message */
-    size_t offset;
+    size_t offset = 0;
 
     // We're going to assume sorted order for now on
     // a successful parse

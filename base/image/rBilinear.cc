@@ -104,6 +104,5 @@ Bilinear::sampleAt(float inI, float inJ, float& out)
   } else {
     out = currentMask;
   }
-endbilinear:;
   return true;
 } // Bilinear::remap

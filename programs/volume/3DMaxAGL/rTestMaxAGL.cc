@@ -5,6 +5,7 @@
 #include "rLatLonGrid.h"
 #include "rConstants.h"
 #include "rTime.h"
+#include "rRAPIORuntime.h"
 #include <memory>
 
 using namespace rapio;
@@ -83,70 +84,10 @@ public:
 };
 
 int
-mainold(int argc, char ** argv)
-{
-  std::cout << "--- Starting MaxAGL Unit Test ---" << std::endl;
-
-  size_t nx = 10, ny = 10, nz = 20;
-  auto testCube = SyntheticCube::createEmptyCube(nx, ny, nz);
-  auto testTerr = SyntheticCube::createZeroTerrain(nx, ny);
-
-  auto& data3D = testCube->getFloat3DRef();
-
-  // Plant values. Note dimensions for RAPIO are [z][y][x] where y=lat, x=lon
-
-  // Storm 1 at (y=5, x=5)
-  data3D[5][5][5] = 50.0f; // At 5km height, value 50
-  data3D[8][5][5] = 45.0f; // At 8km height, value 45
-
-  // Storm 2 at (y=2, x=2)
-  data3D[3][2][2] = 40.0f; // At 3km height, value 40
-  data3D[9][2][2] = 10.0f; // At 9km height, value 10
-
-  // Storm 3 at (y=7, x=7) - Checking the AGL height bounds limit
-  data3D[2][7][7]  = 20.0f; // At 2km height, value 20 (Should be max since it's < 10km AGL)
-  data3D[15][7][7] = 60.0f; // At 15km height, value 60 (Should be ignored, > 10km AGL limit)
-
-  // Initialize our test algorithm
-  auto maxAglAlg = std::make_shared<TestMaxAGLAlg>();
-
-  maxAglAlg->setTerrainData(testTerr);
-
-  // Process the volume
-  maxAglAlg->testProcess(testCube);
-
-  // Evaluate constraints
-  auto result2D = maxAglAlg->getOutputGrid();
-
-  if (result2D) {
-    auto& outData = result2D->getFloat2DRef();
-
-    float h1 = outData[5][5];
-    float h2 = outData[2][2];
-    float h3 = outData[7][7];
-    float h4 = outData[0][0]; // Should remain missing data
-
-    std::cout << "Storm 1 (Expected 50.0)    : " << h1 << std::endl;
-    std::cout << "Storm 2 (Expected 40.0)    : " << h2 << std::endl;
-    std::cout << "Storm 3 (Expected 20.0)    : " << h3 << std::endl;
-    std::cout << "Empty   (Expected Missing) : " << h4 << std::endl;
-
-    assert(h1 == 50.0f);
-    assert(h2 == 40.0f);
-    assert(h3 == 20.0f);
-    assert(h4 == Constants::MissingData);
-
-    std::cout << "SUCCESS: All tests passed!" << std::endl;
-    return 0;
-  } else {
-    std::cerr << "FAIL: No 2D grid produced." << std::endl;
-    return 1;
-  }
-} // main
-
-int
 main(int argc, char ** argv)
 {
+  RAPIORuntime::initialize();
+
   std::cout << "--- Starting MaxAGL Unit Test ---" << std::endl;
   size_t nx = 10, ny = 10, nz = 20;
 

@@ -4,7 +4,6 @@ if (Magick_FOUND)
 
   # We're building a standalone shared library
   addRAPIOModule(rapioimage SHARED
-    rImageDataTypeImp.cc
     rIOImage.cc
   )
 

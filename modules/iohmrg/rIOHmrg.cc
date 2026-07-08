@@ -80,7 +80,7 @@ IOHmrg::createDataType(const std::string& params)
   // fLogInfo("HMRG reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
 
-  gzFile fp;
+  gzFile fp = nullptr;
 
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
@@ -90,7 +90,6 @@ IOHmrg::createDataType(const std::string& params)
     fp = gzopen(url.toString().c_str(), "rb");
     if (fp == nullptr) {
       fLogSevere("HRMG reader Couldn't open local file at {}, errno is {}", url.toString(), errno);
-      gzclose(fp);
       return nullptr;
     }
     // --------------------------------------------------------------------------
@@ -146,7 +145,9 @@ IOHmrg::createDataType(const std::string& params)
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
     datatype = nullptr;
   }
-  gzclose(fp);
+  if (fp != nullptr){
+    gzclose(fp);
+  }
   return datatype;
 } // IOHmrg::createDataType
 
@@ -180,7 +181,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
   bool successful = false;
-  gzFile fp;
+  gzFile fp = nullptr;
 
   errno = 0;
   try{
@@ -190,7 +191,6 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
     fp = gzopen(filename.c_str(), "wb");
     if (fp == nullptr) {
       fLogSevere("HRMG writer Couldn't open local file at {}, errno is {}", filename, errno);
-      gzclose(fp);
       return false;
     }
 
@@ -208,7 +208,9 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   } catch (const ErrnoException& ex) {
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
-  gzclose(fp);
+  if (fp != nullptr){
+    gzclose(fp);
+  }
 
   // ----------------------------------------------------------
   // Post processing such as extra compression, ldm, etc.

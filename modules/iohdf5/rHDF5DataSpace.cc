@@ -118,7 +118,7 @@ HDF5DataSpaceBase::getRank() const
   return static_cast<size_t>(rank);
 } // end of size_t HDF5DataSpaceBase::getRank() const
 
-const std::vector<hsize_t>
+std::vector<hsize_t>
 HDF5DataSpaceBase::getDimensions(const size_t t_rank) const
 {
   std::vector<hsize_t> dimensions(t_rank, 0);

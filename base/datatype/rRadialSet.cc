@@ -115,7 +115,7 @@ public:
         slantRangeKMs = computeSlantRangeSimpleKMs(slantRangeKMs, myElevRad);
       }
 
-      double out;
+      double out = 0.0;
       int radialNo, gateNo;
 
       myProjection->getValueAtAzRange(az, slantRangeKMs, out, radialNo, gateNo);
@@ -248,6 +248,22 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
     if (warn) { }
     addFloat1D(GateWidth, "Meters", { 0 }, gateWidthMeters);
   }
+
+  // -----------------------------------------------------
+  // Enforce mutual exclusivity on read
+  if (haveNyquistArray() && myAttributes) {
+    // If the file gave us an array, scrub out any phantom legacy globals
+    // that might have piggybacked in, so we only have one source of truth.
+    myAttributes->remove("NyquistVelocity");
+    myAttributes->remove("NyquistVelocity-value");
+    myAttributes->remove("NyquistVelocity-unit");
+    myAttributes->remove("Nyquist_Vel");
+    myAttributes->remove("Nyquist_Vel-value");
+    myAttributes->remove("Nyquist_Vel-unit");
+    myAttributes->remove("Nyquist_vel");
+    myAttributes->remove("Nyquist_vel-value");
+    myAttributes->remove("Nyquist_vel-unit");
+  }
 } // RadialSet::validateArrays
 
 bool
@@ -370,4 +386,77 @@ void
 RadialSet::postWrite(std::map<std::string, std::string>& keys)
 {
   unsparseRestore();
+}
+
+float
+RadialSet::getGlobalNyquistVelocity() const
+{
+  std::string valStr;
+
+  // Check the modern standard, then the two legacy variations
+  if (getString("NyquistVelocity-value", valStr) ||
+    getString("Nyquist_Vel-value", valStr) ||
+    getString("Nyquist_vel-value", valStr))
+  {
+    try {
+      return std::stof(valStr);
+    } catch (...) {
+      return 0;
+    }
+  }
+
+  // Fallback just in case it was stored directly as a float
+  // rather than a string
+  float val;
+
+  if (getFloat("NyquistVelocity", val) || getFloat("Nyquist_Vel", val)) {
+    return val;
+  }
+
+  return 0;
+}
+
+void
+RadialSet::setGlobalNyquistVelocity(float nyquist)
+{
+  // Wipe the array if it exists
+  deleteArrayName(NyquistVelocity);
+
+  // Wipe legacy attributes to prevent collisions/confusion
+  if (myAttributes) {
+    myAttributes->remove("Nyquist_Vel-value");
+    myAttributes->remove("Nyquist_Vel-unit");
+    myAttributes->remove("Nyquist_vel-value");
+    myAttributes->remove("Nyquist_vel-unit");
+  }
+
+  // Set the new standard global attribute
+  setDataAttributeValue("NyquistVelocity", std::to_string(nyquist), "MetersPerSecond");
+}
+
+bool
+RadialSet::haveNyquistArray()
+{
+  return haveArrayName(NyquistVelocity);
+}
+
+void
+RadialSet::addNyquistArray(float initialValue)
+{
+  // Wipe global attributes to ensure the array is the single source of truth
+  if (myAttributes) {
+    myAttributes->remove("NyquistVelocity-value");
+    myAttributes->remove("NyquistVelocity-unit");
+    myAttributes->remove("Nyquist_Vel-value");
+    myAttributes->remove("Nyquist_Vel-unit");
+    myAttributes->remove("Nyquist_vel-value");
+    myAttributes->remove("Nyquist_vel-unit");
+  }
+
+  // Create the array if it doesn't exist
+  auto arr = getFloat1D(NyquistVelocity);
+
+  if (!arr) {
+    arr = addFloat1D(NyquistVelocity, "MetersPerSecond", { 0 }, initialValue);
+  }
 }

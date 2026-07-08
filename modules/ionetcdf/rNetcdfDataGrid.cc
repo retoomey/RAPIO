@@ -63,7 +63,8 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     std::vector<int> dimids;
     std::vector<std::string> dimnames;
     std::vector<size_t> dimsizes;
-    auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+    //auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+    IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
 
     // Declare dimensions in data structure
     dataGridSP->setDims(dimsizes, dimnames);
