@@ -29,6 +29,7 @@ rPreProQC::declareOptions(RAPIOOptions& o)
   // I --> input filter support default matches.
   // l --> notifier support (FAM files basically)
   // r --> realtime flag support
+  // R --> radar_name 
   // L --> LTAR reference directory
   // T --> Terrain reference directory (unused) 
   // o.setDescription("WDSS2"); // Default for WDSS2/MRMS algorithms that you intend to copyright as part of WDSS2
@@ -60,7 +61,7 @@ rPreProQC::processOptions(RAPIOOptions& o)
   terrain_dir = o.getString("T");
   apply_QC = o.getBoolean("a");
   //radar_name is required because we are using the PreProAI rapio output as 
-  // our intout
+  // our input
   radar_name = o.getString("R");
   /*
    * myTest = o.getString("T");
@@ -79,36 +80,7 @@ rPreProQC::processOptions(RAPIOOptions& o)
 void
 rPreProQC::processPreProQC()
 {
-  // We need this because RAPIO attaches the radar name to the front of the 
-  // input name, which is different from WDSSII. Eventually we'll have to choose
-  // one way rather than both
-  //
-  /*
-  // 1. Define the helper lambda right here.
-  // We use [&] to capture the class scope so it can access 'myDataMap'
-  auto find_by_suffix = [&](const std::string& suffix) -> std::shared_ptr<rapio::RadialSet> {
-      auto it = std::find_if(myDataMap.begin(), myDataMap.end(), 
-          [&suffix](const auto& pair) {
-              const std::string& key = pair.first;
-              if (key.length() >= suffix.length()) {
-                  return key.compare(key.length() - suffix.length(), suffix.length(), suffix) == 0;
-              }
-              return false;
-          });
-      
-      if (it != myDataMap.end()) {
-          return it->second;
-      }
-      return nullptr; 
-  };
-  //
-  // Check the myDataMap for azimuthal alignment
-  // Access the pointer from the map
-  std::shared_ptr<rapio::RadialSet> Ref = find_by_suffix("PreProReflectivity");
-  std::shared_ptr<rapio::RadialSet> DR  = find_by_suffix("DR");
-  */
-
-  //instead of find_by_suffix we can build the RAPIO name ourselves
+  //We can build the RAPIO name ourselves
   std::shared_ptr<rapio::RadialSet> Ref = myDataMap[radar_name + "_PreProReflectivity"];
   std::shared_ptr<rapio::RadialSet> DR  = myDataMap[radar_name + "_DR"];
   
@@ -308,7 +280,10 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
 
     // First save to a collection of radial sets for each subtype:
 
-    // The types we must have... we want 4
+    // The types we must have... we want 2
+    //
+    //Build rapio types with the radar_name out front
+    //
     string rapio_reflectivity = radar_name + "_PreProReflectivity";
     string rapio_DR = radar_name + "_DR";
     const std::vector<std::string> types = { rapio_reflectivity, rapio_DR};
@@ -319,20 +294,6 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
     if (std::find(types.begin(), types.end(), current) != types.end()) {
         type_found = true;
     }
- //
- // RAPIO adds KDDC_* to the front of the input but we want to process any
- // variables with the appropriate string name /*older for any radar codebase */
- //
- /*
-    bool type_found = std::any_of(types.begin(), types.end(), [&current](const std::string& type) {
-    // 1. Make sure 'current' is actually long enough to contain 'type'
-    if (current.length() >= type.length()) {
-        // 2. Compare the exact end of 'current' with 'type'
-        return current.compare(current.length() - type.length(), type.length(), type) == 0;
-    }
-    return false;
-});
-  */
     //
     // note we want all the types from the same elevation.
     // all data from 0.5 or all data from 1.5 deg elev don't mix elevations
@@ -380,11 +341,11 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
       // The output is adding moments (RadialSet) to the map with the "prepro" prefix:
       processPreProQC();
 
-      //   We need to output a file for each "prepro_*" subtype in the Datamap
+      //   We need to output a file for each "output_*" subtype in the Datamap
       //   use the list processing
       //   This loop gives each myDataMap entry as a pair(string, <RadialSet>)
       for (auto & ppm : myDataMap) {
-        // only output the added "prepro" radialsets
+        // only output the added "output" radialsets
         //
         //The map key is a string, we eval it and determine if it needs
         // to be output
