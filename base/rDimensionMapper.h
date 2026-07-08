@@ -47,8 +47,14 @@ public:
   void
   calculateStrides()
   {
-    for (int i = myDimensions.size() - 2; i >= 0; --i) {
-      myStrides[i] = myStrides[i + 1] * myDimensions[i + 1];
+    // Return early if there aren't enough dimensions to loop over
+    if (myDimensions.size() < 2) {
+      return;
+    }
+
+    // Iterate from size-1 down to 1 using pure size_t
+    for (size_t i = myDimensions.size() - 1; i > 0; --i) {
+      myStrides[i - 1] = myStrides[i] * myDimensions[i];
     }
   }
 

@@ -45,6 +45,7 @@ IOHDF5::~IOHDF5()
 
 // FIXME: implement into the rdump/text output
 namespace {
+#if 0
 // Function to print attributes of a given object with safety checks
 void
 print_attributes(hid_t obj_id, const char * obj_name)
@@ -145,8 +146,11 @@ print_attributes(hid_t obj_id, const char * obj_name)
     H5Aclose(attr_id);
   }
 } // print_attributes
+#endif
 
 // Enhanced callback function to list objects and their attributes
+#if 0
+// Unused currently
 herr_t
 #if H5_VERSION_GE(1, 12, 0)
 list_objects(hid_t loc_id, const char * name, const H5O_info2_t * info, void * op_data)
@@ -172,6 +176,7 @@ list_objects(hid_t loc_id, const char * name, const H5O_info_t * info, void * op
 
   return 0;
 }
+#endif
 }
 
 bool

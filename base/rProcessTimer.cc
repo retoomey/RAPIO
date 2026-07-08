@@ -75,8 +75,8 @@ ProcessTimer::getCPUTime()
   return (TimeDuration::MilliSeconds((elapsed.user + elapsed.system) / 1e6));
 }
 
-ProcessTimerSum::ProcessTimerSum(const std::string& message) : myMsg(message),
-  myCounter(0)
+ProcessTimerSum::ProcessTimerSum(const std::string& message) : myCounter(0),
+  myMsg(message)
 {
   OS::getProcessSizeKB(myVM_KB, myRSS_KB);
 

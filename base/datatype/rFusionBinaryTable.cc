@@ -203,7 +203,7 @@ FusionBinaryTable::get(float& n, float& d, short& x, short& y, short& z)
       z = myZBlock;
       // Update for the next missing, if any
       myRLECounter++;
-      if (myRLECounter >= myLengthBlock) { // overflow
+      if (myRLECounter >= static_cast<size_t>(myLengthBlock)) { // overflow
         myRLECounter = 0;
         myMissingAt++;
       }

@@ -34,7 +34,7 @@ LatLonHeightGridIterator::setOutputArray(const std::string& key)
 void
 LatLonHeightGridIterator::iterateVoxels(LatLonHeightGridCallback& callback)
 {
-  const size_t numLats   = myGrid.getNumLats();
+  // const size_t numLats   = myGrid.getNumLats();
   const size_t numLons   = myGrid.getNumLons();
   const size_t numLayers = myGrid.getNumLayers();
 
@@ -81,7 +81,7 @@ template <bool IterateUp>
 void
 LatLonHeightGridIterator::iterateColumnsImpl(LatLonHeightGridCallback& callback)
 {
-  const size_t numLats   = myGrid.getNumLats();
+  // const size_t numLats   = myGrid.getNumLats();
   const size_t numLons   = myGrid.getNumLons();
   const size_t numLayers = myGrid.getNumLayers();
 

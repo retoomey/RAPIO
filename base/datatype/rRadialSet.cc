@@ -115,7 +115,7 @@ public:
         slantRangeKMs = computeSlantRangeSimpleKMs(slantRangeKMs, myElevRad);
       }
 
-      double out;
+      double out = 0.0;
       int radialNo, gateNo;
 
       myProjection->getValueAtAzRange(az, slantRangeKMs, out, radialNo, gateNo);

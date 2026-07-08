@@ -50,48 +50,44 @@ GridCallback::handleFinalize()
 void
 GridCallback::handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny)
 {
-  std::cout << "[C++] Handle Set Lat Lon called\n";
-  // Need at least 2 in each dimension to get deltas
-  if ((nx < 2) || (ny < 2)) {
-    std::cout << "[C++] Grid too small to guess bounding box\n";
+  // Need at least 2 in each dimension to calculate deltas
+  if (nx < 2 || ny < 2) {
     return;
   }
 
-  // Degrees from wgrib
-  double minLat, minLon, maxLat, maxLon;
+  // Initialize min/max with the first element to optimize the loop
+  double minLat = lat[0];
+  double maxLat = lat[0];
+  double minLon = lon[0];
+  double maxLon = lon[0];
 
-  // Create a bounding box from the passed in wgrib2 arrays
   const size_t count = nx * ny;
-
-  for (size_t i = 0; i < count; ++i) {
-    if (i == 0) {
-      minLat = lat[0];
-      maxLat = lat[0];
-      minLon = lon[0];
-      maxLon = lon[0];
-    }
+  
+  // Start loop from index 1
+  for (size_t i = 1; i < count; ++i) {
     if (lat[i] < minLat) { minLat = lat[i]; }
-    if (lat[i] > maxLat) { maxLat = lat[i]; }
+    else if (lat[i] > maxLat) { maxLat = lat[i]; } // 'else if' saves CPU cycles
+    
     if (lon[i] < minLon) { minLon = lon[i]; }
-    if (lon[i] > maxLon) { maxLon = lon[i]; }
+    else if (lon[i] > maxLon) { maxLon = lon[i]; }
   }
 
   size_t nlon = nx;
   size_t nlat = ny;
 
-  // at top left of cell for min and max
   double dlat = (maxLat - minLat) / nlat;
   double dlon = (maxLon - minLon) / nlon;
 
-  // Our grid wants the actual outside location, so add one dlat and dlon
-  minLat -= dlat; // move over to include the final cell
+  // Adjust bounds to include the outer edge of the final cells
+  // Verify if your grid topology requires this specific asymmetric padding
+  minLat -= dlat; 
   maxLon += dlon;
-  nlon++; // and add a cell.
+  nlon++; 
   nlat++;
 
-  std::cout << "[C++] Estimating mrms lat lon coverage\n";
   myLLCoverageArea = LLCoverageArea(maxLat, minLon, minLat, maxLon, dlat, dlon, nlon, nlat);
 } // GridCallback::handleSetLatLon
+
 
 void
 GridCallback::handleGetLLCoverageArea(double * nwLat, double * nwLon,

@@ -31,19 +31,6 @@ using namespace rapio;
 namespace fs = boost::filesystem;
 // namespace pt = boost::posix_time;
 
-namespace {
-static bool
-isWSL()
-{
-  // Implement a function to detect if running in WSL
-  // You can use any method that reliably detects WSL
-  // For example, checking the existence of "/proc/sys/kernel/osrelease" file
-  // or checking for specific environment variables.
-  // Here's a simple example:
-  return std::getenv("WSL_DISTRO_NAME") != nullptr;
-}
-}
-
 const std::string&
 OS::getHostName()
 {

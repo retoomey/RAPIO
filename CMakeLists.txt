@@ -106,6 +106,9 @@ set(CMAKE_CXX_STANDARD ${CXX_STANDARD_FALLBACK})
 # Allow it to go higher to compiler default
 set(CMAKE_CXX_STANDARD_REQUIRED False)
 
+# Occasionally turn on to purge warnings
+#add_compile_options(-Wall -Werror)
+
 ###########################################################################
 # --- Fetch and configure fmt library ---
 # We have to support older c++ versions, std::format would be nice though

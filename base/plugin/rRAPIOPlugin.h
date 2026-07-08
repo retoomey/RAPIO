@@ -26,6 +26,10 @@ public:
   /** Declare plugin with unique name */
   RAPIOPlugin(const std::string& name) : myName(name), myActive(false){ }
 
+  /** Virtual for manual delete */
+  virtual
+  ~RAPIOPlugin() = default;
+
   /** Get name of plugin */
   std::string
   getName()

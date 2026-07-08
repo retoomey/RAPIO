@@ -158,10 +158,11 @@ PolarAlgorithm::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& 
   fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   // Radar center coordinates
-  const LLH center        = r->getRadarLocation();
-  const AngleDegs cLat    = center.getLatitudeDeg();
-  const AngleDegs cLon    = center.getLongitudeDeg();
-  const LengthKMs cHeight = center.getHeightKM();
+  const LLH center = r->getRadarLocation();
+
+  // const AngleDegs cLat    = center.getLatitudeDeg();
+  // const AngleDegs cLon    = center.getLongitudeDeg();
+  // const LengthKMs cHeight = center.getHeightKM();
 
   // Link to first incoming radar and moment, we will ignore any others from now on
   fLogInfo("Linking this algorithm to radar '{}' and typename '{}' since first pass we only handle 1",

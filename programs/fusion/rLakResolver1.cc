@@ -101,9 +101,6 @@ LakResolver1::create(const std::string & params)
 void
 LakResolver1::calc(VolumeValue * vvp)
 {
-  // FIXME: Make a parameter at some point
-  static const float ELEV_THRESH = .45; // -E Smoothing of w2merger
-
   // Count each value if it contributes, if masks are covered than make missing
   auto& vv        = *(VolumeValueWeightAverage *) (vvp);
   double totalWt  = 0.0;

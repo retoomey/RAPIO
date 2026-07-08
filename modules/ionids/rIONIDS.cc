@@ -222,7 +222,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
   bool successful = false;
-  FILE * fp;
+  FILE * fp = nullptr;
 
   errno = 0;
 
@@ -246,7 +246,10 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   } catch (const ErrnoException& ex) {
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
-  fclose(fp);
+
+  if (fp != nullptr){
+    fclose(fp);
+  }
 
   // ----------------------------------------------------------
   // Post processing such as extra compression, ldm, etc.

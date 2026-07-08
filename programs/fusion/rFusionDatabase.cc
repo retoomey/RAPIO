@@ -49,9 +49,9 @@ FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingco
 
     // FIXME: What if the table stored max X, Y, Z for the whole table?  Then we
     // could safely remove this check
-    if ((x >= myNumX) ||
-      (y >= myNumY) ||
-      (z >= myNumZ))
+    if ((static_cast<size_t>(x) >= myNumX) || 
+      (static_cast<size_t>(y) >= myNumY) ||
+      (static_cast<size_t>(z) >= myNumZ))
     {
       fLogSevere("Getting stage2 x,y,z values out of range of current grid: {}, {}, {} and ({}, {}, {})", x, y, z,
         myNumX, myNumY, myNumZ);
@@ -129,7 +129,7 @@ FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, 
         // So we clip global to the area we cover
         const int atX = v.x - offsetX;
         const int atY = v.y - offsetY;
-        if ((atX < 0) || (atY < 0) || (atX >= gridX) || (atY >= gridY)) {
+        if ((atX < 0) || (atY < 0) || (atX >= static_cast<int>(gridX)) || (atY >= static_cast<int>(gridY))) {
           continue;
         }
         gridtest[atY][atX] += v.v;
@@ -224,7 +224,7 @@ FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, si
         // So we clip global to the area we cover
         const int atX = v.x - offsetX;
         const int atY = v.y - offsetY;
-        if ((atX < 0) || (atY < 0) || (atX >= gridX) || (atY >= gridY)) {
+        if ((atX < 0) || (atY < 0) || (atX >= static_cast<int>(gridX)) || (atY >= static_cast<int>(gridY))) {
           continue;
         }
         /// --------------------------------------------

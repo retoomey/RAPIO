@@ -11,7 +11,7 @@ WgribFieldImp::WgribFieldImp(const URL& url,
   int fieldNumber,
   long int filePos,
   std::array<long, 3>& sec0, std::array<long, 13>& sec1) :
-  myURL(url), GribField(messageNumber, fieldNumber)
+  GribField(messageNumber, fieldNumber), myURL(url)
 {
   mySection0 = sec0;
   mySection1 = sec1;

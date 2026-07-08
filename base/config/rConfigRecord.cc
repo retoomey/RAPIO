@@ -67,7 +67,7 @@ ConfigRecord::readXML(Record& rec, const PTreeNode& item,
   // FIXME: We could break this down into helper methods
   // and be cleaner.
   try{
-    long timelong;
+    long timelong    = 0;
     float fractional = 0;
     std::vector<std::string> theParams;
     std::vector<std::string> theSelections;
@@ -105,7 +105,12 @@ ConfigRecord::readXML(Record& rec, const PTreeNode& item,
       Strings::splitWithoutEnds(fulltime, '.', &s);
       if (s.size() > 0) {
         timelong = std::stol(s[0]);
+      } else {
+        // Explicitly block corrupt/empty strings from propagating down the line
+        fLogSevere("Record has invalid or empty timestamp formatting.");
+        return false;
       }
+
       if (s.size() > 1) {
         fractional = std::stof("." + s[1]);
       }

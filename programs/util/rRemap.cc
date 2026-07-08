@@ -101,12 +101,12 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
 
   // FIXME: Maybe we should have a getNWLat, etc.
   LLH newCorner = llg->getTopLeftLocationAt(0, 0); // not centered
-  AngleDegs orgNWLatDegs      = newCorner.getLatitudeDeg();
-  AngleDegs orgNWLonDegs      = newCorner.getLongitudeDeg();
-  AngleDegs orgLatSpacingDegs = llg->getLatSpacing();
-  AngleDegs orgLonSpacingDegs = llg->getLonSpacing();
-  size_t orgNumLats = llg->getNumLats();
-  size_t orgNumLons = llg->getNumLons();
+  // AngleDegs orgNWLatDegs      = newCorner.getLatitudeDeg();
+  // AngleDegs orgNWLonDegs      = newCorner.getLongitudeDeg();
+  // AngleDegs orgLatSpacingDegs = llg->getLatSpacing();
+  // AngleDegs orgLonSpacingDegs = llg->getLonSpacing();
+  // size_t orgNumLats = llg->getNumLats();
+  // size_t orgNumLons = llg->getNumLons();
 
   // ----------------------------------------------------------------
   // Project from new to old and handle value
@@ -114,8 +114,8 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   // We're only dealing with the primary data array.  Multi raster
   // we'd need more work, right?  We'd have to add flags to specify the
   // fields to handle then in some way.
-  auto& refOut = out->getFloat2DRef();
-  auto& refIn  = llg->getFloat2DRef();
+  // auto& refOut = out->getFloat2DRef();
+  // auto& refIn  = llg->getFloat2DRef();
 
   // ----------------------------------------------------------------
   // Alpha: Remap attempt.
@@ -123,8 +123,8 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   // Basically we have to march though the lat/lon of the new grid
   // and use that to calculate the indexes into the old grid.  It's similar
   // to projection and fusion marching.  Feel like this could be made an iterator
-  const size_t numY = outg.getNumY();
-  const size_t numX = outg.getNumX();
+  // const size_t numY = outg.getNumY();
+  // const size_t numX = outg.getNumX();
 
   // ----------------------------------------------------------------
   // Make the remapper wanted
@@ -142,7 +142,7 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   }
 
   fLogInfo("Created Array Algorithm '{}' to process LatLonGrid primary array", myMode);
-  auto& r = *Remap;
+  // auto& r = *Remap;
 
   llg->RemapInto(out, Remap);
 

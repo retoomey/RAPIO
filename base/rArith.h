@@ -15,6 +15,8 @@ class Arith
 {
 public:
 
+  #if 0
+
   /** Compress a float percent to a char 0 to 100 with range clipping.
    * values are rounded down.  This is used for compression in
    * certain situations where we can use a 8 bit char instead of the
@@ -32,6 +34,8 @@ public:
     }
     return v;
   }
+
+  #endif // if 0
 
   /** Round the given number to the nearest integer. */
   static inline int

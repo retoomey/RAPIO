@@ -153,7 +153,7 @@ public:
    * @param[in] t_rank    rank (number of dimensions) in opened dataspace
    * @return vector containing size and max size of each dimension in dataspace
    *************************************************************************/
-  const std::vector<hsize_t>
+  std::vector<hsize_t>
   getDimensions(const size_t t_rank) const;
 
 protected:

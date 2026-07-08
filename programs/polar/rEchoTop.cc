@@ -189,7 +189,7 @@ public:
     bool missingMask = false;
     int radialNo, gateNo;
     double Zb;
-    double Za;
+    double Za    = DBZ_MISSING;
     bool topTilt = true;
 
     // Go down the vertical column

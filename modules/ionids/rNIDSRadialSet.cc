@@ -102,7 +102,7 @@ NIDSRadialSet::readNIDS(
   size_t num_gates = 1;
   std::vector<std::vector<float> > values;
 
-  for (int i = 0; i < num_radials; i++) {
+  for (size_t i = 0; i < num_radials; i++) {
     auto& data = r.myRadials[i].data;
 
     // ----------------------------------------------------------
@@ -252,7 +252,7 @@ NIDSRadialSet::writeNIDS(
 {
   auto radialsetp = std::dynamic_pointer_cast<RadialSet>(dt);
 
-  bool success = false;
+  //bool success = false;
   auto& rs     = *radialsetp;
 
   // ------------------------------------------------------
@@ -275,10 +275,10 @@ NIDSRadialSet::writeNIDS(
   // Matching the test file
   const uint16_t MESSAGE_CODE = 159;
   const auto info = ConfigNIDSInfo::getNIDSInfo(MESSAGE_CODE);
-  const uint16_t MESSAGE_TYPE = 16;     // Graphic radial data
-  const float minValue        = -33.0f; // dBZ;
-  const float scale        = 0.5f;
-  const uint8_t missingVal = 0;
+  //const uint16_t MESSAGE_TYPE = 16;     // Graphic radial data
+  //const float minValue        = -33.0f; // dBZ;
+  //const float scale        = 0.5f;
+  //const uint8_t missingVal = 0;
   // Use time from radialset
   short julianDate;
   int seconds;
@@ -288,10 +288,10 @@ NIDSRadialSet::writeNIDS(
   // --- 1. EXTRACT METADATA FROM RadialSet ---
   const size_t num_radials         = rs.getNumRadials();
   const size_t num_gates           = rs.getNumGates();
-  const double ELEVATION_ANGLE_DEG = rs.getElevationDegs();
-  const double GATE_SIZE_KM        = rs.getGateWidthKMs();
+  //const double ELEVATION_ANGLE_DEG = rs.getElevationDegs();
+  //const double GATE_SIZE_KM        = rs.getGateWidthKMs();
   // getDistanceToFirstGateM() returns meters, Level III uses KM for metadata description.
-  const double RANGE_TO_FIRST_GATE_KM = rs.getDistanceToFirstGateM() / 1000.0;
+  //const double RANGE_TO_FIRST_GATE_KM = rs.getDistanceToFirstGateM() / 1000.0;
 
   // Recommendation is using json perhaps for more details.  For now, just simple
   const std::string PRODUCT_DESC  = "MRMS/RAPIO";

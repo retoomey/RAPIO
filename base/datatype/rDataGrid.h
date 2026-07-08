@@ -328,7 +328,7 @@ public:
   bool
   deleteArrayName(const std::string& name)
   {
-    for (auto i = 0; i < myNodes.size(); ++i) {
+    for (size_t i = 0; i < myNodes.size(); ++i) {
       if (myNodes[i]->getName() == name) {
         myNodes[i] = myNodes.back(); // swap/pop delete
         myNodes.pop_back();

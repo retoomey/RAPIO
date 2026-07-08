@@ -170,7 +170,7 @@ void
 DefaultColorMap::toSVG(std::ostream& o, const std::string& units, const size_t width, const size_t height)
 {
   // FIXME: flag for flipping ordering or vertical/horizontal maybe
-  const int s = myColorInfo.size();
+  const size_t s = myColorInfo.size();
 
   // Create a PTree and use XML?  It might work, right?
   //

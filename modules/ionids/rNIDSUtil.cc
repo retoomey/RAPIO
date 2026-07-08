@@ -33,8 +33,8 @@ NIDSUtil::getNIDSTimeFromTime(const Time& t, short& volScanDate, int& volScanSta
 void
 NIDSUtil::getRLEColors(const std::vector<char> & src, std::vector<int> & data)
 {
-  for (int i = 0; i < (signed) src.size(); i++) {
-    unsigned int run;
+  for (size_t i = 0; i < src.size(); i++) {
+    size_t run;
     short int color;
 
     // decode the first byte
@@ -53,7 +53,7 @@ NIDSUtil::getRLEColors(const std::vector<char> & src, std::vector<int> & data)
     #endif
     // higher 4 bits are the repeat numbers
     // lower 4 bits are the color codes
-    for (int j = 0; j < (signed) run; j++) {
+    for (size_t j = 0; j < run; j++) {
       data.push_back(color);
     }
   }
@@ -183,7 +183,7 @@ NIDSUtil::colorToValueD4(
       val = thresholds[ colors[i] ];
     } else {
       const float left = thresholds[ colors[i] ];
-      if ((i + 1) >= (int) thresholds.size()) {
+      if ((i + 1) >= thresholds.size()) {
         val = left;
       } else {
         const float right = thresholds[ colors[i] + 1 ];

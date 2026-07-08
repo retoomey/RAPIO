@@ -92,7 +92,7 @@ PluginPartition::processOptions(RAPIOOptions& o)
       if (pieces.size() > 2) {
         try{
           int partNumber = std::stoi(pieces[2]);
-          if (partNumber > totalPartitions) {
+          if (partNumber > static_cast<int>(totalPartitions)) {
             fLogSevere("Partition number for '{}' given '{}' is larger than total partitions '{}'",
               myPartitionAlg, partNumber, totalPartitions);
             return;

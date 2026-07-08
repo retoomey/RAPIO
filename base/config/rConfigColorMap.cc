@@ -135,7 +135,9 @@ ConfigColorMap::readParaColorMap(const URL& find,
           bool firstPoint = true;
 
           float prev_x, prev_r, prev_g, prev_b, prev_o;
-          float lower;
+          float lower = 0.0f;
+          prev_o = prev_b = prev_g = prev_r = 0.0f;
+          (void) (prev_x); // unused for now but keep it
 
           auto points = c.getChildren("Point");
           for (auto& p: points) {

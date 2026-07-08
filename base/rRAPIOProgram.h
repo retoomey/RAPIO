@@ -21,7 +21,7 @@ class RAPIOProgram {
 public:
 
   /** Construct a stock program */
-  RAPIOProgram(const std::string& display = "Program") : myMacroApplied(false), myDisplayClass(display){ };
+  RAPIOProgram(const std::string& display = "Program") : myDisplayClass(display), myMacroApplied(false){ };
 
   /**
    * @name Public API

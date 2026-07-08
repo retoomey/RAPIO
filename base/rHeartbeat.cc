@@ -14,8 +14,6 @@ Heartbeat::Heartbeat(RAPIOProgram * prog) : myProgram(prog),
 bool
 Heartbeat::setCronList(const std::string& cronlist)
 {
-  const char * err = NULL;
-
   myParsed = false; // In case we call it again, disable current one
   try {
     // croncpp throws on bad syntax instead of using C-style error pointers

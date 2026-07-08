@@ -332,7 +332,7 @@ BlockProductDesc::decodeMethod1(std::vector<float>& a) const
 {
   fLogInfo("Threshold decode method 1, default.");
   // Fallthrough
-  for (int i = 0; i < (signed) myDataThresholds.size(); i++) {
+  for (size_t i = 0; i < myDataThresholds.size(); i++) {
     a.push_back(DecodeThresholds(myDataThresholds[i]));
   }
 }

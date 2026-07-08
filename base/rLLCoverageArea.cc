@@ -25,7 +25,7 @@ LLCoverageArea::insetRadarRange(
   LLCoverageArea out = *this;
 
   // Project range in each of four directions around the radar center
-  LengthKMs outHeightKMs;
+  // LengthKMs outHeightKMs;
   AngleDegs outDegs, north, south, east, west;
 
   // Seems slightly more accurate to use ground hugging vs the 0 angle..though it's

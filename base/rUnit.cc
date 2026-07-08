@@ -36,7 +36,7 @@ struct Key {
 std::map<Key, Unit::UnitConverter> converter_cache;
 std::map<std::string, utUnit> unit_cache;
 
-const bool
+bool
 getUtUnit(const std::string& u, utUnit& setme)
 {
   const std::string& unit = u.empty() ? "dimensionless" : u;

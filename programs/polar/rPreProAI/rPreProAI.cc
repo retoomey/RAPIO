@@ -106,7 +106,7 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
       abort = true;
     }
     //Test actual retrieved azimuths
-    for (int a = 0; a < numRadials; ++a) {
+    for (size_t a = 0; a < numRadials; ++a) {
       if (fabs(azRef[a] - azCC[a]) > 0.1) {
         fLogSevere("DQ az check failed{} AzCheck: ref: {} cc: {} ", a, (float) azRef[a], azCC[a]);
         abort = true;

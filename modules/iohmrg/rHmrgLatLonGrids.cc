@@ -84,14 +84,18 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   // "LL  " proj1=4;
 
   const int map_scale    = g.readInt();                // 41-44
-  const float lat1       = g.readScaledInt(map_scale); // 45-48
-  const float lat2       = g.readScaledInt(map_scale); // 49-52
-  const float lon        = g.readScaledInt(map_scale); // 53-56
+  //const float lat1       = g.readScaledInt(map_scale); // 45-48
+  g.readScaledInt(map_scale); // 45-48
+  //const float lat2       = g.readScaledInt(map_scale); // 49-52
+  g.readScaledInt(map_scale); // 49-52
+  //const float lon        = g.readScaledInt(map_scale); // 53-56
+  g.readScaledInt(map_scale); // 53-56
   const float lonNWDegs1 = g.readScaledInt(map_scale); // 57-60
   const float latNWDegs1 = g.readScaledInt(map_scale); // 61-64
 
   // Manually scale since scale after the values
-  const int xy_scale         = g.readInt(); // 65-68 Deprecated, used anywhere?
+  //const int xy_scale         = g.readInt(); // 65-68 Deprecated, used anywhere?
+  g.readInt(); // 65-68 Deprecated, used anywhere?
   const int temp1            = g.readInt(); // 69-72
   const int temp2            = g.readInt(); // 73-76
   const int dxy_scale        = g.readInt(); // 77-80
@@ -149,7 +153,7 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
   int numRadars = g.readInt();
   std::vector<std::string> radars;
 
-  for (size_t i = 0; i < numRadars; i++) {
+  for (int i = 0; i < numRadars; i++) {
     std::string r = g.readString(4);
     radars.push_back(r);
   }
@@ -216,13 +220,15 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
     auto array = grid.getFloat2D(Constants::PrimaryDataName);
     auto& data = array->ref();
 
+    if ((num_y > 0) && (num_x > 0)){
     // NOTE: flipped order from RadialSet array if you try to merge the code
-    for (size_t j = 0; j < num_y; ++j) {
+    for (size_t j = 0; j < static_cast<size_t>(num_y); ++j) {
       const size_t jflip = num_y - j - 1;
-      for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+      for (size_t i = 0; i < static_cast<size_t>(num_x); ++i) { // row order for the data, so read in order
         data[jflip][i] =
           IOHmrg::fromHmrgValue(rawBuffer[at++], dataUnavailable, dataMissing, dataScale);
       }
+    }
     }
     // fLogInfo("    Found {} missing values", countm);
     return latLonGridSP;
@@ -255,17 +261,19 @@ HmrgLatLonGrids::readLatLonGrids(StreamBuffer& g, const int year)
 
     // This gonna be slower than W2 because the data ordering is different
     // so we can't just directly push into memory.
+    if ((num_z > 0) && (num_x > 0) && (num_y > 0)){
     auto array = grid.getFloat3D(Constants::PrimaryDataName);
     auto& data = array->ref();
-    for (size_t z = 0; z < num_z; ++z) {
-      for (size_t j = 0; j < num_y; ++j) {
+    for (size_t z = 0; z < static_cast<size_t>(num_z); ++z) {
+      for (size_t j = 0; j < static_cast<size_t>(num_y); ++j) {
         const size_t jflip = num_y - j - 1;
-        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+        for (size_t i = 0; i < static_cast<size_t>(num_x); ++i) { // row order for the data, so read in order
           data[z][jflip][i] = IOHmrg::fromHmrgValue(rawBuffer[at++], dataUnavailable,
               dataMissing,
               dataScale);
         }
       }
+    }
     }
     fLogInfo(">>Finished reading full LatLonHeightGrid");
 
@@ -411,7 +419,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   // Write in the data from LatLonGrid
   // For now convert which eats some ram for big stuff.  I think we could
   // add the mrms binary ability to our LatLonGrid data structure to compress ram/disk
-  int count = num_x * num_y * num_z;
+  size_t count = static_cast<size_t>(num_x) * num_y * num_z;
 
   if (count == 0) {
     return true; // didn't write anything
@@ -420,7 +428,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
   // FIXME: Make configurable. Alpha: Add write block ability due to having to write pretty
   // large grids, and this avoids doubling RAM usage. Well have to test this more
   std::vector<short int> rawBuffer;
-  const size_t maxItems = 524288; // Max items to write at once, here about 1 MB per 500K items
+  const int maxItems = 524288; // Max items to write at once, here about 1 MB per 500K items
 
   if (count > maxItems) {
     count = maxItems; // trim buffer
@@ -439,15 +447,19 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     fLogInfo("HMRG writer: --LatLonGrid--");
     auto& data = llg.getFloat2DRef(Constants::PrimaryDataName);
 
+    if ((num_x > 0) && (num_y > 0)){
+     size_t ey = static_cast<size_t>(num_y) - 1;
+     size_t ex = static_cast<size_t>(num_x);
     // NOTE: flipped order from RadialSet array if you try to merge the code
-    for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-      for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+    for (size_t j = ey; j != SIZE_MAX; --j) {
+      for (size_t i = 0; i < ex; ++i) { // row order for the data, so read in order
         rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
         if (++at >= count) {
           g.writeVector(rawBuffer.data(), count * sizeof(short int));
           at = 0;
         }
       }
+    }
     }
     if (at != 0) { // final left over
       g.writeVector(rawBuffer.data(), at * sizeof(short int));
@@ -457,13 +469,17 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     fLogInfo("HMRG writer: --Multi layer N 2D layers (LLHGridN2D)--");
     auto& lln = *llnptr;
 
-    for (size_t z = 0; z < num_z; ++z) {
+    if ((num_x > 0) && (num_y > 0) && (num_z > 0)){
+     size_t ex = static_cast<size_t>(num_x);
+     size_t ey = static_cast<size_t>(num_y) - 1;
+     size_t ez = static_cast<size_t>(num_z);
+    for (size_t z = 0; z < ez; ++z) {
       // Each 3D is a 2N layer here
       auto llg = lln.get(z);
       auto& data = llg->getFloat2DRef();
 
-      for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+      for (size_t j = ey; j != SIZE_MAX; --j) {
+        for (size_t i = 0; i < ex; ++i) { // row order for the data, so read in order
           rawBuffer[at] = IOHmrg::toHmrgValue(data[j][i], dataUnavailable, dataMissing, dataScale);
           if (++at >= count) {
             g.writeVector(rawBuffer.data(), count * sizeof(short int));
@@ -471,6 +487,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
           }
         }
       }
+    }
     }
     if (at != 0) { // final left over
       g.writeVector(rawBuffer.data(), at * sizeof(short int));
@@ -482,11 +499,15 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
     // Only for the 3D implementation
     auto& data = llg.getFloat3DRef(Constants::PrimaryDataName);
 
-    for (size_t z = 0; z < num_z; ++z) {
+    if ((num_x > 0) && (num_y > 0) && (num_z > 0)){
+     size_t ex = static_cast<size_t>(num_x);
+     size_t ey = static_cast<size_t>(num_y) - 1;
+     size_t ez = static_cast<size_t>(num_z);
+    for (size_t z = 0; z < ez; ++z) {
       // NOTE: flipped order from RadialSet array if you try to merge the code
       // Same code as 2D though the data array type is different.  Could use a template method or macro
-      for (size_t j = num_y - 1; j != SIZE_MAX; --j) {
-        for (size_t i = 0; i < num_x; ++i) { // row order for the data, so read in order
+      for (size_t j = ey; j != SIZE_MAX; --j) {
+        for (size_t i = 0; i < ex; ++i) { // row order for the data, so read in order
           rawBuffer[at] = IOHmrg::toHmrgValue(data[z][j][i], dataUnavailable, dataMissing, dataScale);
           if (++at >= count) {
             g.writeVector(rawBuffer.data(), count * sizeof(short int));
@@ -494,6 +515,7 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
           }
         }
       }
+    }
     }
     if (at != 0) { // final left over
       g.writeVector(rawBuffer.data(), at * sizeof(short int));

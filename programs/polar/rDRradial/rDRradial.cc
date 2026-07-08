@@ -80,7 +80,7 @@ rDRradial::processDRradial(std::map<std::string, std::shared_ptr<RadialSet>> & D
             fLogSevere("DQ test numRadials {} test failed on cc {}, abort",  numRadials, CC->getNumRadials());
             abort = true;
         } 
-        for(int a=0; a< numRadials; ++a){
+        for(size_t a=0; a< numRadials; ++a){
             if ( fabs(azZdr[a]-azCC[a]) > 0.1) {
                 fLogSevere("DQ az check failed{} AzCheck: zdr: {} cc: {} ", a, (float) azZdr[a], azCC[a] );
                 abort = true;

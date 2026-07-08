@@ -144,7 +144,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
     // ------------------------------------------------------------
     // ARRAYS
     for (auto l:list) {
-      auto type = l->getStorageType();
+      //auto type = l->getStorageType();
 
       // Primary data is the data type of the file
       // Remember functions still take original name
@@ -155,7 +155,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
       file << " " << theName << " = \n\n";
 
       // a poor quick wrap around for moment:
-      static size_t counter = 1;
+      //static size_t counter = 1;
 
       // Conveniently use printArray so we don't have to type things
       auto anArray = dataGrid->getDataArray(orgName);

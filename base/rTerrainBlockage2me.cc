@@ -60,12 +60,12 @@ TerrainBlockage2me::calculatePercentBlocked(
   bool& hit)
 {
   AngleDegs outLatDegs, outLonDegs;
-  AngleDegs topDegs    = elevDegs + 0.5 * beamWidthDegs;
+  // AngleDegs topDegs    = elevDegs + 0.5 * beamWidthDegs;
   AngleDegs bottomDegs = elevDegs - 0.5 * beamWidthDegs;
 
   // We get back pretty the exact same height doing this, which makes me think heights are correct
   // LengthKMs height = myTerrainBlockage->getHeightKM(topDegs, centerAzDegs, rangeKMs, outLatDegs, outLonDegs);
-  LengthKMs topHeightKMs = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, topDegs);
+  // LengthKMs topHeightKMs = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, topDegs);
   LengthKMs c = Project::attenuationHeightKMs(stationHeightKMs, centerRangeKMs, elevDegs);
 
   // Need elev/range to lat lon here (FIXME: cleaner)

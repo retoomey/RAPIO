@@ -73,8 +73,6 @@ ProductInfoSet::readConfigFile()
 ProductInfo *
 ProductInfoSet::getProductInfo(const std::string& w2Name, const std::string& w2Units)
 {
-  ProductInfo * pi;
-
   for (size_t i = 0; i < myProductInfos.size(); ++i) {
     // FIXME: Should we try to match more than name and units?
     // I could see cases with strange missing/unavailable values to deal with.

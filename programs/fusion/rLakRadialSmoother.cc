@@ -5,11 +5,16 @@ using namespace rapio;
 void
 LakRadialSmoother::smooth(std::shared_ptr<RadialSet> rs, int half_size)
 {
-  RadialSet& r           = *rs;
-  const size_t radials   = r.getNumRadials();
-  const int scale_factor = half_size * 2;
-  const size_t gates     = r.getNumGates();
+  RadialSet& r               = *rs;
+  const size_t radials       = r.getNumRadials();
+  const int scale_factor_int = half_size * 2;
+  const size_t gates         = r.getNumGates();
   auto& data = r.getFloat2D()->ref();
+
+  if (scale_factor_int < 0) {
+    return;
+  }
+  const size_t scale_factor = static_cast<size_t>(scale_factor_int);
 
   // For each radial in the radial set....
   for (size_t i = 0; i < radials; ++i) {

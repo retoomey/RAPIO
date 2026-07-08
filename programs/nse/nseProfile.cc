@@ -367,10 +367,10 @@ nseProfile::getMeanValueLayer(double botHeight, double topHeight,
     return (Constants::MissingData);
   }
 
-  bool found_top  = false;
-  bool found_bot  = false;
-  size_t botIndex = 0;
-  size_t topIndex = 0;
+  bool found_top = false;
+  bool found_bot = false;
+  // size_t botIndex = 0;
+  // size_t topIndex = 0;
 
   double sum_param = 0;
 
@@ -382,11 +382,11 @@ nseProfile::getMeanValueLayer(double botHeight, double topHeight,
   for (size_t i = 0; i < (gridPoints.size() - 1); i++) {
     if ((gridPoints[i].getHeight() >= botHeight) && !found_bot) {
       found_bot = true;
-      botIndex  = i;
+      // botIndex  = i;
     }
     if ((gridPoints[i].getHeight() >= topHeight) && !found_top) {
       if (i > 0) {
-        topIndex  = i - 1;
+        // topIndex  = i - 1;
         found_top = true;
       } else {
         return (Constants::MissingData);
@@ -695,8 +695,8 @@ nseProfile::LiftParcel(nsePoint parcel,
   // return the CAPE but set a flag that warns that the calculation
   // is incomplete
 
-  bool IncompleteCalculation = false;
-  size_t i_parceltop         = nearSurfaceGridPoint;
+  // bool IncompleteCalculation = false;
+  size_t i_parceltop = nearSurfaceGridPoint;
 
   for (size_t i = nearSurfaceGridPoint; i < gridPoints.size(); ++i) {
     if (gridPoints[i].getVirtualTempK() < TVparcel[i]) { i_parceltop = i; }
@@ -715,7 +715,7 @@ nseProfile::LiftParcel(nsePoint parcel,
     // information back to the calling routine.  CAPE will be affected,
     // too.
     // FIXME: this isn't used just yet.
-    IncompleteCalculation = true;
+    // IncompleteCalculation = true;
     EL = gridPoints[i_parceltop].getHeight();
   } else {
     // find the height where the Tv difference is zero between the
@@ -1207,8 +1207,8 @@ nseProfile::getAverageParcel(double layerDepth)
   // the surface
 
   double toppres = sfcPoint.getPressure() - layerDepth;
-  double ht = Constants::MissingData;
-  size_t i_top = nearSurfaceGridPoint;
+  double ht      = Constants::MissingData;
+  // size_t i_top = nearSurfaceGridPoint;
   std::vector<double> v_temp, v_dewp, v_uwind, v_vwind;
 
   // find the height of "layerDepth" mb, and populate vectors
@@ -1220,7 +1220,7 @@ nseProfile::getAverageParcel(double layerDepth)
     {
       ht = interpVal(gridPoints[i].getHeight(), gridPoints[i + 1].getHeight(),
           gridPoints[i].getPressure(), gridPoints[i + 1].getPressure(), toppres);
-      i_top = i + 1;
+      // i_top = i + 1;
     }
   }
   for (size_t i = 0; i < gridPoints.size(); ++i) {

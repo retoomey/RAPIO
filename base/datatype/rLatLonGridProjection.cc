@@ -41,7 +41,7 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
   const double xd = (myLatNWDegs - latDegs) * myInvLatSpacing; // * faster than /
   const int x     = static_cast<int>(xd + 0.5);
 
-  if ((x < 0) || (x >= myNumLats)) {
+  if ((x < 0) || (x >= static_cast<int>(myNumLats))) {
     return Constants::DataUnavailable;
   }
 
@@ -56,7 +56,7 @@ LatLonGridProjection::getValueAtLL(double latDegs, double lonDegs)
   const double yd = (lonDegs - myLonNWDegs) * myInvLonSpacing; // * faster than /
   const int y     = static_cast<int>(yd + 0.5);
 
-  if ((y < 0) || (y >= myNumLons)) {
+  if ((y < 0) || (y >= static_cast<int>(myNumLons))) {
     return Constants::DataUnavailable;
   }
   return (*my2DLayer)[size_t(x)][size_t(y)];
