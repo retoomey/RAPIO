@@ -1,6 +1,10 @@
 ##################################################################
 # Build polarMerge
 #
+#Apply strict warnings ONLY to your code
+#target_compile_options(rLLSDPolar PRIVATE -Wall -Wextra)
+#target_include_directories(rLLSDPolar SYSTEM PRIVATE /home/john.krause/RAPIO/base )
+
 add_executable(rPolarVMax
   rPolarVMax.cc
 )
@@ -30,3 +34,4 @@ install(TARGETS rLLSDPolar
 # 3. Register Subdirectories
 add_subdirectory(rPreProAI)
 add_subdirectory(rDRradial)
+add_subdirectory(rPreProQC)
