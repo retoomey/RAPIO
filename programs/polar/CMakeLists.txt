@@ -31,6 +31,15 @@ target_include_directories(rLLSDPolar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 install(TARGETS rLLSDPolar
    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+add_executable(rPolarVIL
+  rPolarVIL.cc
+)
+target_link_libraries(rPolarVIL rapio)
+target_include_directories(rPolarVIL PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+install(TARGETS rPolarVIL
+   DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 # 3. Register Subdirectories
 add_subdirectory(rPreProAI)
 add_subdirectory(rDRradial)
