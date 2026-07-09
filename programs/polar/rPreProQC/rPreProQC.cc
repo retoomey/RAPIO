@@ -70,7 +70,7 @@ rPreProQC::processOptions(RAPIOOptions& o)
    * std::string xAsString = o.getString("x");
    * fLogInfo(" ************************x IS {} (as string {}", myX, xAsString);
    */
-  fLogInfo(" ************************T IS {}", terrain_dir);
+  fLogInfo(" ************************T IS {}", terrain_dir); //not yet implemented
   fLogInfo(" ************************L IS {}", ltar_dir);
   fLogInfo(" ************************a IS {}", apply_QC);
   fLogInfo(" ************************R IS {}", radar_name);
@@ -127,11 +127,7 @@ rPreProQC::processPreProQC()
 
   fLogInfo("---> starting processPreProQC(), past DQ step:");
   // find the minimum number of gates in the radial set and use that as our numGates
-  //
-  // Note we can test all the moments, but it's not neccessary,
-  //  the data are collected as R,V,SPW and then CC,Zdr,PhiDP on the WSR-88D
-  //
-  // Reflectivity data is often collected out to 1832 gates while CC is at 1192 gates.
+  // Reflectivity data is often collected out to 1832 gates while DR is at 1192 gates.
   // 
   size_t numGates = DR->getNumGates();
 
@@ -227,8 +223,11 @@ rPreProQC::processPreProQC()
   QCmask->setTypeName("QCmask");
   QCmask->setDataAttributeValue("ColorMap", "KMeans");
   myDataMap["output_QCmask"]    = QCmask;
-  // Can also create the ReflectivtyDPQC fields here is you wanted that......
-  if (apply_QC) {
+  // Create the ReflectivtyQC field here:
+  //    you can also create CC or Zdr or ? QC field if you send in the data
+  //    You can add the entire QC method to the PreProAI as an all-in-one
+  //    option; (ToDo: Create PreProAI_QC)
+  // 
       for (size_t a = 0; a < numRadials; ++a) {
             for (size_t g = 0; g < numGates; ++g) {
                 float QCVal = QC_data[a][g];
