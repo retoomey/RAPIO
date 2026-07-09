@@ -22,7 +22,7 @@ rPreProAI::declareOptions(RAPIOOptions& o)
   // o.setDescription("WDSS2"); // Default for WDSS2/MRMS algorithms that you intend to copyright as part of WDSS2
   o.setDescription("rPreProAI computes Kdp and DR ");
   o.setAuthors("John Krause, NSSL 2026, John.Krause@noaa.gov ");
-
+  o.require("R", "radar_name", "4 letter character ID for the radar, ex. KTLX ");
   // An optional string param...default is "Test" if not set by user
   // o.optional("T", "Test", "Test option flag");
 
@@ -41,6 +41,7 @@ rPreProAI::processOptions(RAPIOOptions& o)
   // Stick them in instance variables you can use them later in processing.
 
   //qc_option = o.getBoolean("Q");
+  radar_name = o.getString("R");
 
   /*
    * myTest = o.getString("T");
@@ -51,7 +52,7 @@ rPreProAI::processOptions(RAPIOOptions& o)
    * fLogInfo(" ************************T IS {}", myTest);
    * fLogInfo(" ************************Z IS {}", myZ);
    */
-  //fLogInfo(" ************************QZ IS {}", qc_option);
+   fLogInfo(" ************************R IS {}", radar_name);
 }
 
 void
@@ -60,10 +61,10 @@ rPreProAI::processPreProAI()
   //
   // Check the myDataMap for azimuthal alignment
   // Access the pointer from the map
-  std::shared_ptr<RadialSet> Ref = myDataMap["Reflectivity"];
-  std::shared_ptr<RadialSet> CC    = myDataMap["RhoHV"];
-  std::shared_ptr<RadialSet> Zdr   = myDataMap["Zdr"];
-  std::shared_ptr<RadialSet> PhiDP = myDataMap["PhiDP"];
+  std::shared_ptr<RadialSet> Ref = myDataMap[radar_name + "_Reflectivity"];
+  std::shared_ptr<RadialSet> CC    = myDataMap[radar_name + "_RhoHV"];
+  std::shared_ptr<RadialSet> Zdr   = myDataMap[radar_name + "_Zdr"];
+  std::shared_ptr<RadialSet> PhiDP = myDataMap[radar_name + "_PhiDP"];
 
   size_t numRadials = Ref->getNumRadials();
   auto azRef        = Ref->getAzimuthRef();
@@ -258,7 +259,11 @@ rPreProAI::processNewData(RAPIOData& d)
     // First save to a collection of radial sets for each subtype:
 
     // The types we must have... we want 4
-    const std::vector<std::string> types = { "Reflectivity", "RhoHV", "PhiDP", "Zdr" };
+    std::string rapio_ref = radar_name + "_Reflectivity";
+    std::string rapio_cc = radar_name + "_RhoHV";
+    std::string rapio_phi = radar_name + "_PhiDP";
+    std::string rapio_zdr = radar_name + "_Zdr";
+    const std::vector<std::string> types = { rapio_ref, rapio_cc, rapio_zdr, rapio_phi};
     const std::string current = data_record[1];// the current data, "Zdr"
 
     // Test if the type we have is one that we want.
