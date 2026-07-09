@@ -81,9 +81,10 @@ void
 rPreProQC::processPreProQC()
 {
   //We can build the RAPIO name ourselves
-  std::shared_ptr<rapio::RadialSet> Ref = myDataMap[radar_name + "_PreProReflectivity"];
+  std::shared_ptr<rapio::RadialSet> inRef = myDataMap[radar_name + "_PreProReflectivity"];
   std::shared_ptr<rapio::RadialSet> DR  = myDataMap[radar_name + "_DR"];
-  
+ 
+  auto Ref = inRef->Clone(); 
 
   size_t numRadials = Ref->getNumRadials();
   auto azRef        = Ref->getAzimuthRef();
@@ -201,6 +202,10 @@ rPreProQC::processPreProQC()
 
   //Now combine the different QCmasks into a single QCmask
   auto QCmask = Ref->Clone();
+  // init to good data, then knock off bad data. 
+  QCmask->getFloat2D()->fill(1.0f);
+
+  //
   auto& QC_data = QCmask->getFloat2DRef();
   auto& LTAR_QCdata = LTAR_QCmask->getFloat2DRef();
   auto& DR_QCdata = DR_QCmask->getFloat2DRef();
@@ -238,9 +243,8 @@ rPreProQC::processPreProQC()
                 }
             }
       }
-      Ref->setTypeName("PreProReflectivityQC");
-      myDataMap["output_ReflectivityQC"] = Ref;
-  } 
+   Ref->setTypeName("PreProReflectivityQC");
+   myDataMap["output_PreProReflectivityQC"] = Ref;
 
 } // rPreProQC::processPreProQC
 
