@@ -12,14 +12,22 @@ using namespace rapio;
 // Here we're part of wdssii or hmet or anc, etc.
 using namespace wdssii;
 
-/** A RAPIO Algorithm Example
- * Real time Algorithm Parameters and I/O
- * http://github.com/retoomey/RAPIO
+/** PreProQC: computes the QCmask for the input data
+ * where 0 = non-meteorological
+ * where 1 = meteorological 
  *
- * This is an example/template of creating a RAPIO algorithm.
- * I will try to enhance this example/modify it as the API evolves.
+ * Design uses independant masks that are combined
  *
- * @author Robert Toomey
+ * Current masks are:
+ *    LTAR mask removes data (0) where LTAR overpowers reflectivity
+ *    DR mask removes data (0) where DR / reflectivity suggest non-meteorological scatters
+ *    
+ *    Future Mask:
+ *    Interference mask remove data in regions where CC > 1.0, suggests interference
+ *    NBF mask, to be determined
+ *    Terrain mask, to be determined, but may be covered by LTAR
+ *
+ * @author John Krause, John.Krause@noaa.gov 
  **/
 void
 rPreProQC::declareOptions(RAPIOOptions& o)
@@ -33,7 +41,7 @@ rPreProQC::declareOptions(RAPIOOptions& o)
   // L --> LTAR reference directory
   // T --> Terrain reference directory (unused) 
   // o.setDescription("WDSS2"); // Default for WDSS2/MRMS algorithms that you intend to copyright as part of WDSS2
-  o.setDescription("rPreProQC computes QC flag for meteorological/non-meteorological data identification");
+  o.setDescription("rPreProQC computes QC mask for meteorological/non-meteorological data identification");
   o.setAuthors("John Krause, NSSL 2026, John.Krause@noaa.gov ");
 
   // An optional string param...default is "Test" if not set by user
@@ -45,8 +53,8 @@ rPreProQC::declareOptions(RAPIOOptions& o)
   // A required parameter (algorithm won't run without it).  Here there is no default since it's required, instead you can provide an example of the setting
   // o.require("Z", "method1", "Set this to anything, it's just an example");
   o.optional("L", "", "Location of the LTAR reference data as XXXX.nc, a netcdf file with dBZ values named by radarID");
-  o.optional("T", "", "Location of the Terrrain reference data as XXXX.nc, a netcdf file with ? values named by radarID");
-  o.boolean("a", "Apply the QC to the Reflectivity (and whatever else....) ");
+//  o.optional("T", "", "Location of the Terrrain reference data as XXXX.nc, a netcdf file with ? values named by radarID");
+//  o.boolean("a", "Apply the QC to the Reflectivity (and whatever else....) ");
   o.require("R", "radar_name", "4 letter character ID for the radar, ex. KTLX ");
 }
 
@@ -58,8 +66,8 @@ rPreProQC::processOptions(RAPIOOptions& o)
   // Stick them in instance variables you can use them later in processing.
 
   ltar_dir = o.getString("L");
-  terrain_dir = o.getString("T");
-  apply_QC = o.getBoolean("a");
+  //terrain_dir = o.getString("T");
+  //apply_QC = o.getBoolean("a");
   //radar_name is required because we are using the PreProAI rapio output as 
   // our input
   radar_name = o.getString("R");
@@ -70,9 +78,9 @@ rPreProQC::processOptions(RAPIOOptions& o)
    * std::string xAsString = o.getString("x");
    * fLogInfo(" ************************x IS {} (as string {}", myX, xAsString);
    */
-  fLogInfo(" ************************T IS {}", terrain_dir); //not yet implemented
+  //fLogInfo(" ************************T IS {}", terrain_dir); //not yet implemented
   fLogInfo(" ************************L IS {}", ltar_dir);
-  fLogInfo(" ************************a IS {}", apply_QC);
+  //fLogInfo(" ************************a IS {}", apply_QC);
   fLogInfo(" ************************R IS {}", radar_name);
 
 }

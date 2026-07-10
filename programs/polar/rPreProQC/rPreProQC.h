@@ -49,8 +49,8 @@ public:
 protected:
   //options
   std::string ltar_dir;
-  std::string terrain_dir;
-  bool apply_QC = false;
+  //std::string terrain_dir;
+  //bool apply_QC = false;
   std::string radar_name = "UNKN";
   //To store the LTAR data. That way we only read it once. 
   //LTAR has an elevation limit to it's applcation. 

@@ -162,7 +162,7 @@ rPreProAI::processPreProAI()
   std::shared_ptr<RadialSet> long_Kdp   = compute_triple_median_Kdp(long_PhiDP, CC, 6250.);
 
   // combine the Kdp based on a Z threshold. Use short Kdp where Z > 40;
-  // improve this by melding the data around the threshold rather than a simple step jump
+  // FIXME: improve this by melding the data around the threshold rather than a simple step jump
   std::shared_ptr<RadialSet> prepro_Kdp = combine_Kdp(short_Kdp, long_Kdp, Ref, 40.0);
 
   fLogInfo("-------> processPreProAI(), Kdp finished:");
@@ -179,6 +179,8 @@ rPreProAI::processPreProAI()
 
   // create the QC map from DR and a threshold, (Kilambi et. al. 2018)
   //  https://doi.org/10.1175/JTECH-D-17-0175.1
+  //
+  // PreProQC does a better job with LTAR and adjustments to Kilambi method. 
   std::shared_ptr<RadialSet> DR = computeDR(CC, Zdr);
 
   // this 2d median is very helpful in cleaning up the mask and eliminating
@@ -186,12 +188,12 @@ rPreProAI::processPreProAI()
   applyFast2DMedian(DR, 3, 3, 0.33);
 
   // Smoothing to reduce variability
+  // Technically Ref is a choice, but Zdr, CC, Kdp, DR are required
   applyFast2DMedian(prepro_Ref, 3, 3, 0.33);
   applyFast2DMedian(prepro_Zdr, 3, 3, 0.33);
   applyFast2DMedian(prepro_Kdp, 3, 3, 0.33);
 
   std::shared_ptr<RadialSet> prepro_CC = CC->Clone();
-
   applyFast2DMedian(prepro_CC, 3, 3, 0.33);
   fLogInfo("-------> processPreProAI(), 2D medians complete:");
 
@@ -217,7 +219,7 @@ rPreProAI::processPreProAI()
   myDataMap["prepro_Ref"]   = prepro_Ref;
   myDataMap["prepro_Zdr"]   = prepro_Zdr;
   myDataMap["prepro_CC"]    = prepro_CC;
-  myDataMap["prepro_PhiDP"] = long_PhiDP;
+  myDataMap["prepro_PhiDP"] = long_PhiDP;//note that output PhiDP is long gate smoothed
   myDataMap["prepro_Kdp"]   = prepro_Kdp;
   myDataMap["prepro_DR"]    = DR;
 

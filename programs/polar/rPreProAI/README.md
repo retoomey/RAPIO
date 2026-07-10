@@ -1,6 +1,6 @@
 # rPreProAI
 
-This is more of an example algorithm than 
+This algorithm computes the base inputs for other algorithms that use dualpol data like Zdr, RhoHV (CC), and PhiDP. It computes both DR (circular Depolarization Ratio) and Kdp (specific differential phase) for use by downstream algorithms. It corrects for horizontal attenuation in Z and Zdr.
 
 
 ## Table of Contents
@@ -79,13 +79,13 @@ rPreProAI -i /localdata/RAPIOtestbed/KDDC20200525/code_index.xml -o /localdata/R
 
 ### Expected Output
 
-RAPIO will normally output the computed DR files underneath the output_directory as:
+RAPIO will normally output the computed files underneath the output_directory as:
 ```bash
    [$radar_name]/[$product_name]/[$elev]/[$time].nc
 ```
    Output products are:
-   * Reflectivity smoothed by 3x3 median filter, output as **PreProReflectivity**
-   * Zdr smoothed by 3x3 median filter, output as **PreProZdr**
+   * Attenuation corrected Reflectivity smoothed by 3x3 median filter, output as **PreProReflectivity**
+   * Attenuation corrected Zdr smoothed by 3x3 median filter, output as **PreProZdr**
    * CC smoothed by 3x3 median filter, output as **PreProRhoHV**
    * DR  (ciruclar depolarization Ratio) computed, then smoothed by 3x3 median filter, output as **DR**
    * Kdp computed, then smoothed by 3x3 median filter, output as **Kdp**
@@ -94,7 +94,21 @@ RAPIO will normally output the computed DR files underneath the output_directory
 
 ### Scientific Reference
 
-**Depolarization Ratio Calculation** 
+**Correction for Horizontal Attenuation** <br>
+
+   Currently S-Band specific, the corretion for horizontal attenuation is a simple application based on total phase. 
+
+   * Title: Radar Polarimetry for Weather Observations
+  by Alexander V. Ryzhkov and Dušan S. Zrnić.
+ Series: Springer Atmospheric Sciences
+ Published: 2019
+  ISBN-13: 978-3030050924
+ 
+  Corrects for horizontal attenuation using a (simple)
+  formula from Ryzhkov and Zrnić pg. 172 table 6.4
+
+
+**Depolarization Ratio Calculation** <br>
   This function computes the Depolarization Ratio using Equation 6 from:
   
   * Ryzhkov, A. V., S. Matrosov, V. Melnikov, D. Zrnic, P. Zhang, Q. Cao, M. Knight, S. Troemel, and C. Simmer, 2017: Measurements of depolarization ratio using radars with simultaneous transmission/reception. J. Appl. Meteor. Climatol., 56, [page-range], https://doi.org/10.1175/JAMC-D-16-0098.1.
@@ -109,11 +123,11 @@ RAPIO will normally output the computed DR files underneath the output_directory
   kdp_long_filter_size = 6250 meters <br>
   reflectivity_threshold = 40.0 dBZ <br>
  
- This method was developed by Peng Fei Zhange and Alexander Ryzhkov at NSSL circa 2013
+This method was developed by Peng Fei Zhang and Alexander Ryzhkov at NSSL circa 2013
  <br><br>
  The methods main feature is the identification of good data -vs- bad data using a triple median of phase as the mean value in the computation of the standard deviation of phase. Large values of the std of phase ( >10.0 ) are considered "bad" data and should not be used in the Kdp computation.
  <br><br>
-  There is also a CC limit applied. CC < 0.8 is always considered "bad" data. This limit is rarley applied, but needed for instances of Non-uniform beam filling (NBF). 
+  There is also a CC limit applied. CC < 0.8 is always considered "bad" data. This limit is rarley applied, but needed for instances of non-uniform beam filling (NBF). 
  <br><br>
  The method also applies "trimming". Kdp is only computed when the full filter_length contains "good" data. This requires that data at the begining and at the end of a "good" data segment do not produce a valid Kdp result. **Note**: This is a key difference beteween the many kdp computational schemes.
 <br><br>
