@@ -1,5 +1,6 @@
 #pragma once
 #include <RAPIO.h>
+#include <rPolarAlgorithm.h>
 
 namespace rapio {
 

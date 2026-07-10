@@ -1,43 +1,61 @@
 ##################################################################
-# Build polarMerge
+# Build Object Driver programs
 #
-add_executable(rPolarVMax
-  rPolarVMax.cc
+##################################################################
+#
+add_executable(rObj_HysDriver 
+               rObj_HysDriver.cc 
+               rRadialObjectIdentifier.cc
 )
-target_link_libraries(rPolarVMax PRIVATE rapio)
-target_include_directories(rPolarVMax PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-install(TARGETS rPolarVMax
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+target_include_directories(rObj_HysDriver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(rObj_HysDriver PRIVATE -Wall -Wextra -Wshadow -pedantic -Wunused-parameter)
+#don't show me warnings in Toomeys code
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/config/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/datatype/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/image/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/index/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/notifier/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/plugin/ )
+target_include_directories(rObj_HysDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/watcher/ )
 
-add_executable(rEchoTop
-  rEchoTop.cc
-)
-target_link_libraries(rEchoTop PRIVATE rapio)
-target_include_directories(rEchoTop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-install(TARGETS rEchoTop
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+install(TARGETS rObj_HysDriver DESTINATION ${CMAKE_INSTALL_BINDIR})
+target_link_libraries(rObj_HysDriver PRIVATE rapio)
 
-add_executable(rLLSDPolar
-  rLLSDPolar.cc
+#
+add_executable(rObj_MultiThresholdDriver
+  rObj_MultiThresholdDriver.cc
+  rRadialObjectIdentifier.cc
 )
-target_link_libraries(rLLSDPolar rapio)
-target_include_directories(rLLSDPolar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-install(TARGETS rLLSDPolar
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+target_link_libraries(rObj_MultiThresholdDriver PRIVATE rapio)
+target_include_directories(rObj_MultiThresholdDriver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(rObj_MultiThresholdDriver PRIVATE -Wall -Wextra -Wshadow -pedantic -Wunused-parameter)
+#don't show me warnings in Toomeys code
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/config/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/datatype/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/image/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/index/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/notifier/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/plugin/ )
+target_include_directories(rObj_MultiThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/watcher/ )
+install(TARGETS rObj_MultiThresholdDriver DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-add_executable(rVILpolar
-  rVILpolar.cc
+#
+add_executable(rObj_SingleThresholdDriver
+  rObj_SingleThresholdDriver.cc
+  rRadialObjectIdentifier.cc
 )
-target_link_libraries(rVILpolar rapio)
-target_include_directories(rVILpolar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-install(TARGETS rVILpolar
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-# 3. Register Subdirectories
-add_subdirectory(rPreProAI)
-add_subdirectory(rDRradial)
-add_subdirectory(rObjectID)
+target_link_libraries(rObj_SingleThresholdDriver PRIVATE rapio)
+target_include_directories(rObj_SingleThresholdDriver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(rObj_SingleThresholdDriver PRIVATE -Wall -Wextra -Wshadow -pedantic -Wunused-parameter)
+#don't show me warnings in Toomeys code
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/config/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/datatype/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/image/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/index/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/notifier/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/plugin/ )
+target_include_directories(rObj_SingleThresholdDriver SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/base/watcher/ )
+install(TARGETS rObj_SingleThresholdDriver DESTINATION ${CMAKE_INSTALL_BINDIR})

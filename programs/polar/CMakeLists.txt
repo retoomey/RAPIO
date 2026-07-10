@@ -44,3 +44,4 @@ install(TARGETS rPolarVIL
 add_subdirectory(rPreProAI)
 add_subdirectory(rDRradial)
 add_subdirectory(rPreProQC)
+add_subdirectory(rObjectID)

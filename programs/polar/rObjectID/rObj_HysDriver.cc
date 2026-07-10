@@ -2,6 +2,7 @@
 #include "rRadialObjectIdentifier.h"
 #include <boost/log/trivial.hpp>
 #include <iostream>
+#include <fmt/ranges.h>
 
 using namespace rapio;
 
@@ -98,11 +99,11 @@ void Obj_HysDriver::processNewData(RAPIOData& d) {
   //  That's it! Now you have a radial set of objects
 
   // Write the output to disk/memory/next algorithm
-  if (ObjectsRS) {
+  if (ObjectRS) {
     std::map<std::string, std::string> overrides;
     // Tell the RAPIO writer to drop the fractional seconds from the filename
     overrides["FractionalTime"] = "false";
-    writeOutputProduct("Objects", ObjectsRS, overrides);
+    writeOutputProduct("Objects", ObjectRS, overrides);
   }
 }
 

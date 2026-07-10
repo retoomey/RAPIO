@@ -2,6 +2,7 @@
 #include "rRadialObjectIdentifier.h"
 #include <boost/log/trivial.hpp>
 #include <iostream>
+#include <fmt/ranges.h>
 
 using namespace rapio;
 
