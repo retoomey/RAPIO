@@ -220,12 +220,23 @@ rPreProQC::processPreProQC()
   //combine all the indifividual masks into a single mask
   for (size_t a = 0; a < numRadials; ++a) {
         for (size_t g = 0; g < numGates; ++g) {
-            QC_data[a][g] = 1; 
-            float refVal = refData[a][g];
+            float refVal = refData[a][g]; //Allows missing data and range folded data flags
             if ( Constants::isGood(refVal) ) {
+                //Combine the data in a way that allows the QMask to tell you 
+                // which mask was applied for removeal LTAR == -1; DR == -2; both LTAR and DR == -3;
                 if (LTAR_QCdata[a][g] == 0 || DR_QCdata[a][g] == 0 ) {
-                    QC_data[a][g] = 0;
-                } 
+                    if( LTAR_QCdata[a][g] == 0 && DR_QCdata[a][g] == 0 ) {
+                        QC_data[a][g] = -3;
+                    } else if ( DR_QCdata[a][g] == 0 ) {
+                        QC_data[a][g] = -2;
+                    } else if ( LTAR_QCdata[a][g] == 0 ) {
+                        QC_data[a][g] = -1;
+                    } else {
+                        QC_data[a][g] = 0;
+                    }
+                } else {
+                    QC_data[a][g] = 1;
+                }
             } else {
                 QC_data[a][g] = refVal;
             }
@@ -245,7 +256,7 @@ rPreProQC::processPreProQC()
             for (size_t g = 0; g < numGates; ++g) {
                 float QCVal = QC_data[a][g];
                 if ( Constants::isGood(refData[a][g]) ) {
-                    if (QCVal == 0 ) {
+                    if (QCVal <= 0 ) {
                         refData[a][g] = Constants::MissingData;
                     }
                 }
