@@ -245,7 +245,7 @@ rPreProQC::processPreProQC()
   
   // add this to the DataMap
   QCmask->setTypeName("QCmask");
-  QCmask->setDataAttributeValue("ColorMap", "KMeans");
+  QCmask->setDataAttributeValue("ColorMap", "QCmask");
   myDataMap["output_QCmask"]    = QCmask;
   // Create the ReflectivtyQC field here:
   //    you can also create CC or Zdr or ? QC field if you send in the data

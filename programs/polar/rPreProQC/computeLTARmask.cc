@@ -23,7 +23,7 @@ float Ref_LTAR_combination( float ref_dbz, float ltar_dbz) {
 
     if (ltar_dbz > 35.0 ) {
         return 0.0;
-    } else if (ltar_dbz > 0.0) {
+    } else if (ltar_dbz > 5.0) {
        // Calculate the dynamic threshold using the power law
        // replaceing the non-dynamic hard thresholds.....
        double threshold = 0.312 * pow(ltar_dbz, 1.287);
