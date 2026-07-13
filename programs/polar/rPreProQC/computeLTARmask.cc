@@ -23,29 +23,18 @@ float Ref_LTAR_combination( float ref_dbz, float ltar_dbz) {
 
     if (ltar_dbz > 35.0 ) {
         return 0.0;
-    } else if (ltar_dbz > 25.0 ) {
-       if ( (ref_dbz - ltar_dbz) < 20. )  {
-           return 0.0;
-       } else {
-           return 1.0;
-       }
-
-    } else if (ltar_dbz > 15.0 ) {
-       if ( (ref_dbz - ltar_dbz) < 10. )  {
-           return 0.0;
-       } else {
-           return 1.0;
-       }
-
-    } else if (ltar_dbz > 5.0 ) {
-       if ( (ref_dbz - ltar_dbz) < 0.0 )  {
-           return 0.0;
-       } else {
-           return 1.0;
-       }
-    }
-
-    return 1.0; 
+    } else if (ltar_dbz > 0.0) {
+       // Calculate the dynamic threshold using the power law
+       // replaceing the non-dynamic hard thresholds.....
+       double threshold = 0.312 * pow(ltar_dbz, 1.287);
+    
+        if ((ref_dbz - ltar_dbz) < threshold) {
+            return 0.0;
+        } else {
+            return 1.0;
+        }
+   }
+   return 1.0;
 }
 
 } //end of anonymous namespace
