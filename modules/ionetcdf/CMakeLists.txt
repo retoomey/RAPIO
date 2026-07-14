@@ -1,9 +1,9 @@
 # Hunt for netcdf package
-if (BUILD_MRMS)
+if (RAPIO_BUILD_MRMS)
   find_package(Netcdf REQUIRED)
 else()
   find_package(Netcdf QUIET)
-endif(BUILD_MRMS)
+endif(RAPIO_BUILD_MRMS)
 
 # Add conditional flag
 if (Netcdf_FOUND)
@@ -26,7 +26,7 @@ if (Netcdf_FOUND)
   target_link_libraries(rapionetcdf PRIVATE ${Netcdf_LIBRARIES})
 
   # Build tests conditionally
-  if(BUILD_TESTS)
+  if(RAPIO_BUILD_TESTS)
     add_executable(rTestNetcdf
       rTestNetcdf.cc
     )

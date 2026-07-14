@@ -23,8 +23,8 @@ ExternalProject_Add(
              -DCMAKE_C_FLAGS=-fPIC     # And have Position Independent Code
                                        # required to hard link it
              -DUSE_PNG=ON              # Use png (default on)
-             -DUSE_OpenJPEG=${USE_OPENJPEG_NCEPLIBS} # openjpeg
-             -DUSE_Jasper=${USE_JASPER_NCEPLIBS} # jasper
+             -DUSE_OpenJPEG=${RAPIO_USE_OPENJPEG} # openjpeg
+             -DUSE_Jasper=${RAPIO_USE_JASPER} # jasper
              -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
              -DCMAKE_C_FLAGS=-w        # Suppress warnings for 3rd party
   INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
@@ -137,8 +137,8 @@ target_link_libraries(rapiowgrib PRIVATE
    # Dynamic.  We'll need to deep bind load
    # Force JPEG2000 support libraries last
    png
-   $<$<BOOL:${USE_OPENJPEG_NCEPLIBS}>:openjp2>
-   $<$<BOOL:${USE_JASPER_NCEPLIBS}>:jasper>
+   $<$<BOOL:${RAPIO_USE_OPENJPEG}>:openjp2>
+   $<$<BOOL:${RAPIO_USE_JASPER}>:jasper>
 )
 
 # Install the module

@@ -26,7 +26,7 @@ install(TARGETS rMaxAGL
 
 ##################################################################
 # Build tests conditionally
-if(BUILD_TESTS)
+if(RAPIO_BUILD_TESTS)
   add_executable(rTestMaxAGL
     rTestMaxAGL.cc
   )

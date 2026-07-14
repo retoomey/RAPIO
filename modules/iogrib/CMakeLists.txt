@@ -1,5 +1,5 @@
 # Toggle for using nceplibs vs trying system 
-if(${USE_NCEPLIBS_GRIB2})
+if(${RAPIO_USE_NCEPLIBS_GRIB2})
 
   # Building our own so assume found
   set(Grib2C_FOUND TRUE)
@@ -37,8 +37,8 @@ if(${USE_NCEPLIBS_GRIB2})
                # Ok, g2c is a c library, not c++..but if it were to become one:
                #-DCMAKE_CXX_FLAGS=-fPIC
                -DUSE_PNG=ON              # Use png (default on)
-               -DUSE_OpenJPEG=${USE_OPENJPEG_NCEPLIBS}  # Use OpenJpeg
-               -DUSE_Jasper=${USE_JASPER_NCEPLIBS}  # Use Jasper 
+               -DUSE_OpenJPEG=${RAPIO_USE_OPENJPEG}  # Use OpenJpeg
+               -DUSE_Jasper=${RAPIO_USE_JASPER}  # Use Jasper 
 	       -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
   )
 
@@ -76,10 +76,10 @@ if (Grib2C_FOUND)
     addRAPIONote("      Found: GRIB2 (NCEPLIBS-g2c github)")
     target_link_libraries(rapiogrib PRIVATE NCEPLIBS-g2c)
     # Explicitly force linking openjpeg or jasper libraries to the dynamic library
-    if (USE_OPENJPEG_NCEPLIBS)
+    if (RAPIO_USE_OPENJPEG)
       target_link_libraries(rapiogrib PRIVATE openjp2)
     endif()
-    if (USE_JASPER_NCEPLIBS)
+    if (RAPIO_USE_JASPER)
       target_link_libraries(rapiogrib PRIVATE jasper)
     endif()
   else()
