@@ -77,15 +77,17 @@ public:
   inline void
   iterateRadialGates(RadialSetCallback& callback)
   {
-    auto const radials     = myRadialSet.getNumRadials();
-    auto const gates       = myRadialSet.getNumGates();
-    auto const fgMeters    = myRadialSet.getDistanceToFirstGateM();
-    auto const& azDegs     = myRadialSet.getFloat1DRef(RadialSet::Azimuth);
-    auto const& bwDegs     = myRadialSet.getFloat1DRef(RadialSet::BeamWidth);
-    auto const& gwMeters   = myRadialSet.getFloat1DRef(RadialSet::GateWidth);
-    const bool hasNyquist  = myRadialSet.haveNyquistArray();
-    const float * nyqArray = hasNyquist ? myRadialSet.getNyquistRef().data() : nullptr;
-    const float globalNyq  = hasNyquist ? 0.0f : myRadialSet.getGlobalNyquistVelocity();
+    auto const radials       = myRadialSet.getNumRadials();
+    auto const gates         = myRadialSet.getNumGates();
+    auto const fgMeters      = myRadialSet.getDistanceToFirstGateM();
+    auto const& azDegs       = myRadialSet.getFloat1DRef(RadialSet::Azimuth);
+    auto const& bwDegs       = myRadialSet.getFloat1DRef(RadialSet::BeamWidth);
+    auto const& gwMeters     = myRadialSet.getFloat1DRef(RadialSet::GateWidth);
+    const bool hasNyquist    = myRadialSet.haveNyquistArray();
+    const float * nyqArray   = hasNyquist ? myRadialSet.getNyquistRef().data() : nullptr;
+    const float globalNyq    = hasNyquist ? 0.0f : myRadialSet.getGlobalNyquistVelocity();
+    const bool hasRadialTime = myRadialSet.haveRadialTimeArray();
+    const int * rtArray      = hasRadialTime ? myRadialSet.getRadialTimeRef().data() : nullptr;
 
     callback.handleBeginLoop(this, myRadialSet);
     for (size_t r = 0; r < radials; ++r) {
@@ -103,6 +105,7 @@ public:
       myRangeMeters       = fgMeters;
       myCenterRangeMeters = fgMeters + (myGateWidthMeters * 0.5);
       myNyquistVelocity   = hasNyquist ? nyqArray[r] : globalNyq;
+      myRadialTimeDeltaMs = hasRadialTime ? rtArray[r] : 0;
 
       // FIXME: Maybe later callback.handleRayStart(this);
 
@@ -156,6 +159,15 @@ public:
   inline float
   getCurrentNyquistVelocity() const { return myNyquistVelocity; }
 
+  inline int
+  getCurrentRadialTimeDeltaMs() const { return myRadialTimeDeltaMs; }
+
+  inline Time
+  getCurrentRadialTime() const
+  {
+    return myRadialSet.getTime() + TimeDuration::MilliSeconds(myRadialTimeDeltaMs);
+  }
+
 private:
   /** Reference to our RadialSet */
   RadialSet& myRadialSet;
@@ -175,5 +187,6 @@ private:
   float myCenterRangeMeters; ///< Current center range (middle of current gate)
   float myGateWidthMeters;   ///< Current gate width in meters
   float myNyquistVelocity;   ///< Current Nyquist value or 0
+  int myRadialTimeDeltaMs;   ///< Current Radial Time dela milliseconds
 };
 }

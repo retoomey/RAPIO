@@ -35,6 +35,7 @@ public:
   static constexpr const char * GateWidth       = "GateWidth";
   static constexpr const char * AzimuthSpacing  = "AzimuthSpacing";
   static constexpr const char * NyquistVelocity = "NyquistVelocity";
+  static constexpr const char * RadialTime      = "RadialTime";
 
   /** Construct uninitialized RadialSet, usually for
    * factories.  You probably want the Create method */
@@ -271,6 +272,25 @@ public:
   /** Add a Nyquist 1D Array. This wipes any existing global Nyquist attributes. */
   void
   addNyquistArray(float initialValue = 0);
+
+  // ------------------------------------------------
+  // RadialTime optional and special.  It's a delta
+  // from the DataType time
+
+  bool
+  haveRadialTimeArray();
+
+  std::shared_ptr<Array<int, 1> >
+  getRadialTimeVector(){ return getInt1D(RadialTime); }
+
+  ArrayInt1DRef
+  getRadialTimeRef()
+  {
+    return (getInt1D(RadialTime))->ref();
+  }
+
+  void
+  addRadialTimeArray(int initialValue = 0);
 
   // ------------------------------------------------
 
