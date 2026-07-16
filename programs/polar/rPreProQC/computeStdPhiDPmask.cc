@@ -16,27 +16,23 @@ namespace {
 //  DR values below the minimum value are considered 
 //  meteorological. This sets the global min value. 
 //  
-    const float minValueDR = -17;
+    const float minValueStdPhiDP = 10;
 //
 // This anonymous namespace is good place to keep other algorithmic threshold values.
 //
-float DR_threshold( float ref_dBZ) {
-    //Linear relationship. Someone might study this more and deeper. 
-    // Kilambi suggested 12.7 but this removes hailcores. We adjust with this linear
-    //   relationship to Reflectivity.
-    //   https://doi.org/10.1175/JTECH-D-17-0175.1
+float stdPhiDP_threshold( float ref_dBZ) {
     //
-    // Ref -- DR_thresh
-    // 50     -7
-    // 40     -9.5 
-    // 30     -12
-    // 10     -17 (minValueDR -17) 
+    // Ref -- std_thresh
+    // 50     25 
+    // 40     20 
+    // 30     15 
+    // 20     10 
     //
-    float dr_thresh = 0.25*ref_dBZ - 19.5;
-    if (dr_thresh < minValueDR ) {
-        dr_thresh = minValueDR;
+    float thresh = 0 + (ref_dBZ/10.0)*5 ;
+    if (thresh < minValueStdPhiDP ) {
+        thresh = minValueStdPhiDP;
     }
-    return dr_thresh;
+    return thresh;
 }
 } //end of anonymous namespace
 //
@@ -51,16 +47,16 @@ float DR_threshold( float ref_dBZ) {
   // Note: try 5x5, but speed of 3x3 is faster? Either probably works. 
   //std::shared_ptr<rapio::RadialSet> Refsm = apply2DBlurFilter(Ref, 5, 5, 0.33);
   */
-std::shared_ptr<rapio::RadialSet> computeDRmask( std::shared_ptr<rapio::RadialSet>  & Refsm, 
-                                                 std::shared_ptr<rapio::RadialSet> & DR) {
+std::shared_ptr<rapio::RadialSet> computeStdPhiDPmask( std::shared_ptr<rapio::RadialSet>  & Refsm, 
+                                                       std::shared_ptr<rapio::RadialSet> & stdPhiDP) {
 
-  size_t numGates =   DR->getNumGates();
+  size_t numGates =   Refsm->getNumGates();
   size_t numRadials = Refsm->getNumRadials();
   auto azRefsm        = Refsm->getAzimuthRef();
-  auto azDR         = DR->getAzimuthRef();
+  auto azstdPhiDP         = stdPhiDP->getAzimuthRef();
 
-  if (DR->getNumRadials() != numRadials){
-      fLogSevere("computeDRmask: ABORT Reflectivity radials : {} and DR radials: {} do not match. ", numRadials, DR->getNumRadials());
+  if (stdPhiDP->getNumRadials() != numRadials){
+      fLogSevere("computestdPhiDPmask: ABORT Reflectivity radials : {} and stdPhiDP radials: {} do not match. ", numRadials, stdPhiDP->getNumRadials());
       return nullptr;
   }
 
@@ -71,7 +67,7 @@ std::shared_ptr<rapio::RadialSet> computeDRmask( std::shared_ptr<rapio::RadialSe
   
 
   auto QCmask = Refsm->Clone();
-  auto& DR_data = DR->getFloat2DRef();
+  auto& stdPhiDP_data = stdPhiDP->getFloat2DRef();
   auto& Z_data = Refsm->getFloat2DRef();
   auto& QCdata = QCmask->getFloat2DRef();
 
@@ -80,11 +76,11 @@ std::shared_ptr<rapio::RadialSet> computeDRmask( std::shared_ptr<rapio::RadialSe
         std::fill_n(QCdata[a].begin(), numGates, 1.0f);
         for (size_t g = 0; g < numGates; ++g) {
             float refVal = Z_data[a][g];
-            float DRval = DR_data[a][g];
+            float stdPhiDPval = stdPhiDP_data[a][g];
             float qc_val = 1.0f;
             if (Constants::isGood(refVal) ) {
-                float dr_thresh = DR_threshold(refVal);
-                if (DRval > dr_thresh) {
+                float thresh = stdPhiDP_threshold(refVal);
+                if (stdPhiDPval > thresh) {
                   qc_val = 0.0f;
                 }
             } else {

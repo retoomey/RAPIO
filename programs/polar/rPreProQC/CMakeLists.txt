@@ -3,6 +3,7 @@ add_executable(rPreProQC
                computeFilter.cc
                computeDRmask.cc
                computeLTARmask.cc
+               computeStdPhiDPmask.cc
                rPreProQC.cc)
 #Add both the local includes and all the rapio includes 
 target_include_directories(rPreProQC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

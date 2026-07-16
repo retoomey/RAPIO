@@ -147,12 +147,13 @@ DR values > DR_thresh are considered to be non-metorological
 | roads| computeLTARmask | Good | variations in LTAR based on data collection |
 | terrain | computeLTARmask | Good | |
 | sidelobe | computeLTARmask | Weak | if the sidelobe is consistent enough to be in LTAR it will be handled |
-| AP (anomolus prop) | none | none | not designed to remove AP |
+| AP (anomolus prop) | none | none | not designed to remove AP (needs module) |
 | Birds | computeDRmask | Good | flight path orientation to radar along/across beam creats Zdr detection signal  |
 | Insects | computeDRmask | Excellent | Insects are high Zdr and low CC |
 | Hail Spike (3 body) | computeDRmask| Excellent | |
 | Interference | computeDRmask | Poor | High CC values degrade performance|
 | Second Trip | none | none | Values look like the data they are |
+| NBF | none | mixed | NBF found by DR is removed from Reflectivity in error (needs module) |
 
 
    
@@ -162,6 +163,7 @@ DR values > DR_thresh are considered to be non-metorological
    * AP (anonmolus propagation) non-standard beampaths due to temperture ducting
    * Second Trip echos
    * Interference (project planned)
+   * NBF (non-uniform beam filling) removed from Reflectivity in error.
 
 
 ### Contact

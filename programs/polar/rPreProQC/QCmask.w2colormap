@@ -11,14 +11,14 @@
    <colorBin upperBound="-4.5" name="Future">
     <color value="-5" r="204" g="121" b="167" a="255" label="Future" />
    </colorBin>
-   <colorBin upperBound="-3.5" name="Future">
-    <color value="-4" r="0" g="114" b="178" a="255" label="Future" />
+   <colorBin upperBound="-3.5" name="PhiDP">
+    <color value="-4" r="0" g="114" b="178" a="255" label="StdPhiDP" />
    </colorBin>
-   <colorBin upperBound="-2.5" name="D+L">
-    <color value="-3" r="86" g="180" b="233" a="255" label="DR+LTAR[" />
+   <colorBin upperBound="-2.5" name="DR">
+    <color value="-3" r="86" g="180" b="233" a="255" label="DR" />
    </colorBin>
-   <colorBin upperBound="-1.5" name="DR">
-    <color value="-2" r="230" g="159" b="0" a="255" label="DR" />
+   <colorBin upperBound="-1.5" name="D+L">
+    <color value="-2" r="230" g="159" b="0" a="255" label="DR+LTAR" />
    </colorBin>
    <colorBin upperBound="-0.5" name="LTAR">
     <color r="213" g="94" b="0" a="255" />

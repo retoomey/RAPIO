@@ -2,9 +2,12 @@
 #include <rPreProQC.h>
 #include <computeLTARmask.h>
 #include <computeDRmask.h>
+#include <computeStdPhiDPmask.h>
 #include <boost/log/trivial.hpp>
 #include <iostream>
 #include <algorithm>
+#include <fmt/core.h>
+#include <fmt/ranges.h>
 
 using namespace rapio;
 
@@ -91,6 +94,7 @@ rPreProQC::processPreProQC()
   //We can build the RAPIO name ourselves
   std::shared_ptr<rapio::RadialSet> inRef = myDataMap[radar_name + "_PreProReflectivity"];
   std::shared_ptr<rapio::RadialSet> DR  = myDataMap[radar_name + "_DR"];
+  std::shared_ptr<rapio::RadialSet> stdPhiDP  = myDataMap[radar_name + "_StdDiffPhase"];
  
   auto Ref = inRef->Clone(); 
 
@@ -168,7 +172,7 @@ rPreProQC::processPreProQC()
         }//for g
   }//for a
   //Now clone this properly initailized QCmask
-  auto Terrain_QCmask = LTAR_QCmask->Clone();
+  auto StdPhiDP_QCmask = LTAR_QCmask->Clone();
   auto DR_QCmask = LTAR_QCmask->Clone();
 
   //See if we already have LTAR
@@ -201,12 +205,31 @@ rPreProQC::processPreProQC()
   //std::shared_ptr<rapio::RadialSet> Terrain_QCmask = computeTerrainmask(Ref, Terrain_file);
   //}
   
+  // We want to use the Refsm field in both computeDRmask and computeStdPhiDPmask so 
+  // compute it once outside and send it in.
+  //
+  //Blur the data so that the average value of the 3x3 box is 
+  //used in the DR Threshold computation. We want to compare a local average 
+  //reflectivity threshold to DR rather than a gate by gate value. The local average
+  //of reflectivity tells us if the gate value is vaild.
+  // Note: try 5x5, but speed of 3x3 is faster? Either probably works. 
+  std::shared_ptr<rapio::RadialSet> Refsm = apply2DBlurFilter(Ref, 5, 5, 0.33);
+
   // (circular) Depolarization Ratio (DR): Identifies non-meteorological targets. Based on Kilambi et al. 2018 (JTECH)
   // https://doi.org/10.1175/JTECH-D-17-0175.1 We introduce a dependance on Reflectivity, assuming that the LTAR
   // applied to the data has identified the ground returns we can focus on modifying Kilambi's thresholds to 
   // allow for detection of meteorological data inside of hail cores, where Zdr is high and CC is low.
   // 
-  DR_QCmask = computeDRmask(Ref, DR);
+ 
+  DR_QCmask = computeDRmask(Refsm, DR);
+
+  //
+  //Honestly this is where all the "work" is done. Following the Kdp procedure, we noticed that the
+  //standard deviation of differential phase was a great indicator of ground clutter and clutter
+  //in general. We match it with reflectivity minimums to make sure we don't remove too much.
+  // For lighter weight installations use just this QCmask
+  //
+  StdPhiDP_QCmask = computeStdPhiDPmask(Refsm, stdPhiDP);
 
   //Now combine the different QCmasks into a single QCmask
   auto QCmask = Ref->Clone();
@@ -217,20 +240,34 @@ rPreProQC::processPreProQC()
   auto& QC_data = QCmask->getFloat2DRef();
   auto& LTAR_QCdata = LTAR_QCmask->getFloat2DRef();
   auto& DR_QCdata = DR_QCmask->getFloat2DRef();
+  auto& StdPhiDP_QCdata = StdPhiDP_QCmask->getFloat2DRef();
   //combine all the indifividual masks into a single mask
   for (size_t a = 0; a < numRadials; ++a) {
         for (size_t g = 0; g < numGates; ++g) {
             float refVal = refData[a][g]; //Allows missing data and range folded data flags
             if ( Constants::isGood(refVal) ) {
                 //Combine the data in a way that allows the QMask to tell you 
-                // which mask was applied for removeal LTAR == -1; DR == -2; both LTAR and DR == -3;
-                if (LTAR_QCdata[a][g] == 0 || DR_QCdata[a][g] == 0 ) {
-                    if( LTAR_QCdata[a][g] == 0 && DR_QCdata[a][g] == 0 ) {
-                        QC_data[a][g] = -3;
+                //which mask was applied for removeal LTAR == -1; DR == -2; both LTAR and DR == -3;
+                //  The mask is ranked by agressiveness (subjective) where the least agressive
+                //  Treatment LTAR is followed by DR and then finally stdPhiDP. This allows the user
+                //  to select the "amount" of filtering they want. 
+                //  
+                //  Severe Weather Algs might only want LTAR and/or DR
+                //
+                //  Hydro Algs might want all of it. We can apply more filters this way in different
+                //  ways to customize the usage.
+                //
+                if (StdPhiDP_QCdata[a][g] == 0 || LTAR_QCdata[a][g] == 0 || DR_QCdata[a][g] == 0 ) {
+                    if ( LTAR_QCdata[a][g] == 0 ) {
+                        if( LTAR_QCdata[a][g] == 0 && DR_QCdata[a][g] == 0 ) {
+                            QC_data[a][g] = -2;
+                        } else {
+                            QC_data[a][g] = -1;
+                        }
                     } else if ( DR_QCdata[a][g] == 0 ) {
-                        QC_data[a][g] = -2;
-                    } else if ( LTAR_QCdata[a][g] == 0 ) {
-                        QC_data[a][g] = -1;
+                        QC_data[a][g] = -3;
+                    } else if (StdPhiDP_QCdata[a][g] == 0 ) {
+                        QC_data[a][g] = -4;
                     } else {
                         QC_data[a][g] = 0;
                     }
@@ -308,7 +345,8 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
     //
     string rapio_reflectivity = radar_name + "_PreProReflectivity";
     string rapio_DR = radar_name + "_DR";
-    const std::vector<std::string> types = { rapio_reflectivity, rapio_DR};
+    string rapio_stdPhiDP = radar_name + "_StdDiffPhase";
+    const std::vector<std::string> types = { rapio_reflectivity, rapio_DR, rapio_stdPhiDP};
     const std::string current = data_record[1];// the current data, ex. "Zdr"
 
     // Test if the type we have is one that we want.
@@ -336,7 +374,13 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
         // Warn that data might not be comming?
         // identify when to abort processing and reset the volume and current elevation.
         if ( (current_elevation != MISSING_ELEV) && (fabs(current_elevation - r->getElevationDegs()) > 0.1) ) {
-          fLogSevere("---> type_found mismatched elevations expected: {} found elev {}:", current, current_elevation);
+          fLogSevere("---> type_found unexpected elevation: expected: {} found elev {}:", current, current_elevation);
+          // 
+          std::string map_keys = "";
+          for (const auto& [key, _] : myDataMap) {
+            map_keys += key + " ";
+          }
+          fLogDebug("---> DataMap.size {} Types.size {} | Available Keys: [ {} ]", myDataMap.size(), types.size(), map_keys);
           fLogSevere("---> Data Reset. Elevation {} will not be run", current_elevation);
           myDataMap.clear();
           myDataMap[current] = r;
@@ -347,7 +391,14 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
       if ( (current_elevation != MISSING_ELEV) && (fabs(current_elevation - r->getElevationDegs()) > 0.1) ) {
         // Warn that data might not be comming?
         // identify when to abort processing and reset the volume and current elevation.
-        fLogSevere("---> type_found mismatched elevations expected: {} found elev {}:", current, current_elevation);
+        fLogSevere("---> type_found unexpected elevations expected: {} found elev {}:", current, current_elevation);
+        //fLogDebug("---> DataMap.size {} Types.size {} :", current, myDataMap.size(), types.size());
+        // 
+        std::string map_keys = "";
+        for (const auto& [key, _] : myDataMap) {
+            map_keys += key + " ";
+        }
+        fLogDebug("---> DataMap.size {} Types.size {} | Available Keys: [ {} ]", myDataMap.size(), types.size(), map_keys);
         fLogSevere("---> Data Reset. Elevation {} will not be run", current_elevation);
         myDataMap.clear();
         myDataMap[current] = r;
