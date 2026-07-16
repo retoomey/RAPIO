@@ -54,4 +54,34 @@ combine_Kdp(std::shared_ptr<RadialSet> short_Kdp,
   std::shared_ptr<RadialSet>           long_Kdp,
   std::shared_ptr<RadialSet>           Ref,
   float                                refl_thresh);
+
+/**
+ *compute_std_PhiDP: More heavily optimized to output the stdPhiDP this sub splits compute_triple_median_Kdp in half
+ * and returns the StdDiffPhase once. The StdDiffPhase is used in the QC algorithm to remove Ground Clutter
+ * and to identify locations in the following code compute_Kdp_postStd where Kdp should be computed. 
+ *
+ * @param PhiDP           The input phase
+ * @returns StdPhiDP      The standard deviation of specific differential phase 
+ */
+std::shared_ptr<RadialSet>
+compute_std_PhiDP(std::shared_ptr<RadialSet> PhiDP);
+
+/**
+ *The second half of compute_Kdp is here. We input the StdPhiDP and output the Kdp for the filter length 
+ * you specified. Performance reasons and the later need for stdPhiDP create the split in 
+ * compute_triple_median_Kdp
+ *
+ * @param PhiDP                     The input phase
+ * @param CC                        The cross correlation coeffient azimuthally aligned to phase
+ * @param StdPhiDP                  The standard deviation of specific differential phase 
+ * @param KDP_filter_length_meters, The length of the segment use to compute the slope for Kdp
+ *                                  we use meters for PAR and other non-WSR-88D radars
+ * @returns Kdp            Specific Differential Phase
+ */ 
+std::shared_ptr<RadialSet>
+compute_Kdp_postStd(std::shared_ptr<RadialSet> PhiDP,
+  std::shared_ptr<RadialSet>                   CC,
+  std::shared_ptr<RadialSet>                   stdPhiDP,
+  int                                          KDP_filter_length_meters); 
+
 } // namespace rapio

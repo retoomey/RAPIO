@@ -153,13 +153,16 @@ rPreProAI::processPreProAI()
   fLogDebug("min_system_phase {}", min_system_phase);
 
   //Compute KDP here:
-  // 9 gate on WSR-88D
+  // We want stdPhiDP as an output for QC.QC
   std::shared_ptr<RadialSet> short_PhiDP = PhiDP->Clone();
-  std::shared_ptr<RadialSet> short_Kdp   = compute_triple_median_Kdp(short_PhiDP, CC, 2250.);
-
-  // 25 gate on WSR-88D
   std::shared_ptr<RadialSet> long_PhiDP = PhiDP->Clone();
-  std::shared_ptr<RadialSet> long_Kdp   = compute_triple_median_Kdp(long_PhiDP, CC, 6250.);
+
+  //First compute stdPhiDP:
+  std::shared_ptr<RadialSet> stdPhiDP = compute_std_PhiDP(PhiDP);
+  // 9 gate on WSR-88D
+  std::shared_ptr<RadialSet> short_Kdp = compute_Kdp_postStd(short_PhiDP, stdPhiDP, CC, 2250.);
+  // 25 gate on WSR-88D
+  std::shared_ptr<RadialSet> long_Kdp = compute_Kdp_postStd(long_PhiDP, stdPhiDP, CC, 6250.);
 
   // combine the Kdp based on a Z threshold. Use short Kdp where Z > 40;
   // FIXME: improve this by melding the data around the threshold rather than a simple step jump
@@ -192,6 +195,7 @@ rPreProAI::processPreProAI()
   applyFast2DMedian(prepro_Ref, 3, 3, 0.33);
   applyFast2DMedian(prepro_Zdr, 3, 3, 0.33);
   applyFast2DMedian(prepro_Kdp, 3, 3, 0.33);
+  applyFast2DMedian(stdPhiDP, 3, 3, 0.33);
 
   std::shared_ptr<RadialSet> prepro_CC = CC->Clone();
   applyFast2DMedian(prepro_CC, 3, 3, 0.33);
@@ -222,6 +226,7 @@ rPreProAI::processPreProAI()
   myDataMap["prepro_PhiDP"] = long_PhiDP;//note that output PhiDP is long gate smoothed
   myDataMap["prepro_Kdp"]   = prepro_Kdp;
   myDataMap["prepro_DR"]    = DR;
+  myDataMap["prepro_stdPhiDP"]    = stdPhiDP;
 
 } // rPreProAI::processPreProAI
 
