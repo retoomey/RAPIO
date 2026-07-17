@@ -28,7 +28,7 @@ install(TARGETS r3DVil
 
 ##################################################################
 # Build tests conditionally
-if(BUILD_TESTS)
+if(RAPIO_BUILD_TESTS)
   add_executable(rTest3DVIL
     rTest3DVIL.cc
   )

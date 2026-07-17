@@ -16,6 +16,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
 # Can use "ccmake ." in the BUILD directory to toggle, sometimes it's
 # convenient to just modify things here
 #
+# Note: To avoid conflict with other CMAKE flags, the standard is to include
+#       the project as a prefix.  Our prefix is RAPIO_
 
 # PCH toggle (Defaulting to ON because we love speed)
 # Note: You can global disable with -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
@@ -23,7 +25,7 @@ option(RAPIO_USE_PCH "Enable Precompiled Headers to accelerate build times" ON)
 # Some things like .gz support and netcdf we're dead in the water at NSSL without
 # these, though in theory you don't strictly require them.  Setting no here
 # will increase compile chances.
-option(BUILD_MRMS "Force libraries for MRMS NSSL environment" YES)
+option(RAPIO_BUILD_MRMS "Force libraries for MRMS NSSL environment" YES)
 
 # Webserver stuff are conditional for moment. This is my imgui/emscripten
 # experiment alpha
@@ -32,25 +34,27 @@ option(BUILD_MRMS "Force libraries for MRMS NSSL environment" YES)
 # Building this oracle 9.  I'm sure on other OS it will need a ton of work
 # Turn on if you love experiments.
 #
-option(BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
+option(RAPIO_BUILD_WEB_MODULE "Build Experimental IMGU/EMSCRIPTEN Display" NO)
 # Examples with option to turn off since it will grow probably
-option(BUILD_EXAMPLES "Build example directory rexample" YES)
+option(RAPIO_BUILD_EXAMPLES "Build example directory rexample" YES)
 
 # Build rTest tests
-option(BUILD_TESTS "Build unit tests and testing tree" OFF)
+option(RAPIO_BUILD_TESTS "Build unit tests and testing tree" OFF)
 
 # These two for NSSL common data files
-option(BUILD_NETCDF_MODULE "Build netcdf module" YES)
-option(BUILD_NIDS_MODULE "Build NIDS(LevelIII) module" YES)
-option(BUILD_HDF5_MODULE "Build general hdf5 module" YES)
-option(BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
+option(RAPIO_BUILD_NETCDF_MODULE "Build netcdf module" YES)
+option(RAPIO_BUILD_NIDS_MODULE "Build NIDS(LevelIII) module" YES)
+option(RAPIO_BUILD_HDF5_MODULE "Build general hdf5 module" YES)
+option(RAPIO_BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 
-option(BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
+option(RAPIO_BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
 
-option(BUILD_GDAL_MODULE "Build GDAL module" YES)
-option(BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
-option(USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
-option(BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
+option(RAPIO_BUILD_GDAL_MODULE "Build GDAL module" YES)
+option(RAPIO_BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
+option(RAPIO_USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
+option(RAPIO_BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
+
+option(RAPIO_BUILD_RDM "Build RDM supervisor application, pulling RDM" NO)
 
 # This option is for validating all symbols in modules and that 'enough' libraries
 # have been linked. To reduce size, compile time and duplication we want this off,
@@ -269,7 +273,7 @@ else()
   set(CUSTOM_THIRDDIR "${CMAKE_INSTALL_PREFIX}")
 endif()
 
-if (BUILD_MRMS)
+if (RAPIO_BUILD_MRMS)
   addRAPIONote("Stricter build requirements for MRMS Environment: ENABLED")
 else()
   addRAPIONote("Stricter build requirements for MRMS Environment: ***DISABLED***")
@@ -291,12 +295,12 @@ append_RAPIO_HEADERS("webserver/" "server_http.hpp;asio_compatibility.hpp;mutex.
 # Create the RAPIO.h file (after all append_RAPIO_HEADER)
 configure_file(base/RAPIO.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/RAPIO.h @ONLY)
 
-# Tests are conditional based on the BUILD_TESTS flag.
+# Tests are conditional based on the RAPIO_BUILD_TESTS flag.
 # Make sure enable_testing called before any add_subdirectories that have
 # possible tests in them.
 # Use this and then run "ctest -V" in the build directory to get started.
 # ctest calls all the test binaries in the system
-if(BUILD_TESTS)
+if(RAPIO_BUILD_TESTS)
   # enable_testing() must be called at the root level so ctest works globally
   enable_testing() 
 endif()
@@ -310,9 +314,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Directories
 add_subdirectory(base)
 
-if (BUILD_EXAMPLES)
+if (RAPIO_BUILD_EXAMPLES)
   add_subdirectory(rexample)
-endif (BUILD_EXAMPLES)
+endif (RAPIO_BUILD_EXAMPLES)
 
 ###########################################################################
 # Independent module building
@@ -321,30 +325,37 @@ addRAPIONote("Loggers:")
 # We could add different logging systems
 add_subdirectory(modules/logspd)
 
+addRAPIONote("Remote Data Manager (RDM) support:")
+if (RAPIO_BUILD_RDM)
+  addRAPIONote("      ENABLED")
+else()
+  addRAPIONote("      ***DISABLED***")
+endif()
+
 addRAPIONote("File format support:")
-if (BUILD_NETCDF_MODULE)
+if (RAPIO_BUILD_NETCDF_MODULE)
   add_subdirectory(modules/ionetcdf)
-endif (BUILD_NETCDF_MODULE)
+endif (RAPIO_BUILD_NETCDF_MODULE)
 
-if (BUILD_NIDS_MODULE)
+if (RAPIO_BUILD_NIDS_MODULE)
   add_subdirectory(modules/ionids)
-endif (BUILD_NIDS_MODULE)
+endif (RAPIO_BUILD_NIDS_MODULE)
 
-if (BUILD_HDF5_MODULE)
+if (RAPIO_BUILD_HDF5_MODULE)
   add_subdirectory(modules/iohdf5)
-endif (BUILD_HDF5_MODULE)
+endif (RAPIO_BUILD_HDF5_MODULE)
 
-if (BUILD_IMAGE_MODULE)
+if (RAPIO_BUILD_IMAGE_MODULE)
   add_subdirectory(modules/ioimage)
-endif (BUILD_IMAGE_MODULE)
+endif (RAPIO_BUILD_IMAGE_MODULE)
 
-if (BUILD_GDAL_MODULE)
+if (RAPIO_BUILD_GDAL_MODULE)
   add_subdirectory(modules/iogdal)
-endif (BUILD_GDAL_MODULE)
+endif (RAPIO_BUILD_GDAL_MODULE)
 
 set(jasper OFF)
 set(openjpeg OFF)
-if (BUILD_GRIB2_MODULE)
+if (RAPIO_BUILD_GRIB2_MODULE)
 
   # Go ahead and die now...otherwise it will die when pulling external project
   find_package(PNG REQUIRED)
@@ -370,13 +381,13 @@ if (BUILD_GRIB2_MODULE)
   # Manual override if needed, only use one:
   #set(jasper ON)
   #set(openjpeg OFF)
-endif (BUILD_GRIB2_MODULE)
+endif (RAPIO_BUILD_GRIB2_MODULE)
 
 # Make sure and set once to prevent rebuilding
-set(USE_JASPER_NCEPLIBS ${jasper} CACHE BOOL "Use Jasper JPEG compression library")
-set(USE_OPENJPEG_NCEPLIBS ${openjpeg} CACHE BOOL "Use OpenJPEG JPEG compression library")
+set(RAPIO_USE_JASPER ${jasper} CACHE BOOL "Use Jasper JPEG compression library")
+set(RAPIO_USE_OPENJPEG ${openjpeg} CACHE BOOL "Use OpenJPEG JPEG compression library")
 
-if (BUILD_GRIB2_MODULE)
+if (RAPIO_BUILD_GRIB2_MODULE)
   add_subdirectory(modules/iowgrib)
   #add_subdirectory(modules/iogrib)  # deprecated
   if(jasper)
@@ -385,29 +396,29 @@ if (BUILD_GRIB2_MODULE)
   if(openjpeg)
     addRAPIONote("          -->JPEG: OpenJPEG")
   endif()
-endif (BUILD_GRIB2_MODULE)
+endif (RAPIO_BUILD_GRIB2_MODULE)
 
-if (BUILD_TEXT_MODULE)
+if (RAPIO_BUILD_TEXT_MODULE)
   add_subdirectory(modules/iotext)
-endif (BUILD_TEXT_MODULE)
+endif (RAPIO_BUILD_TEXT_MODULE)
 
 # These two currently don't require any extra libraries, so we'll just
 # build them.  Though python might at some point
 add_subdirectory(modules/iopython)
 add_subdirectory(modules/ioraw)
 
-if (BUILD_HMRG_MODULE)
+if (RAPIO_BUILD_HMRG_MODULE)
   add_subdirectory(modules/iohmrg)
-endif (BUILD_HMRG_MODULE)
+endif (RAPIO_BUILD_HMRG_MODULE)
 
 # Build subprograms.
 add_subdirectory(programs)
 
-if(BUILD_TESTS)
+if(RAPIO_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-if (BUILD_WEB_MODULE)
+if (RAPIO_BUILD_WEB_MODULE)
   ExternalProject_Add(
     rapioweb
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/programs/RESTserver
@@ -424,7 +435,7 @@ if (BUILD_WEB_MODULE)
     DEPENDS rapioweb
   )
   # Bad: add_subdirectory(RESTserver)
-endif (BUILD_WEB_MODULE)
+endif (RAPIO_BUILD_WEB_MODULE)
 
 # Install the library and headers from the base library
 # Supposedly best practice is to do it top level.

@@ -93,6 +93,13 @@ install(TARGETS rGetLegend
 )
 
 ##################################################################
+# Build the RAPIO supervisor wrapper to RDM
+#
+if (RAPIO_BUILD_RDM)
+  add_subdirectory(notify)
+endif (RAPIO_BUILD_RDM)
+
+##################################################################
 # Colormap generator (JSON)
 #
 add_executable(rGetColorMap

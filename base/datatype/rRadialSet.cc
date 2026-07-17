@@ -460,3 +460,20 @@ RadialSet::addNyquistArray(float initialValue)
     arr = addFloat1D(NyquistVelocity, "MetersPerSecond", { 0 }, initialValue);
   }
 }
+
+bool
+RadialSet::haveRadialTimeArray()
+{
+  return haveArrayName(RadialTime);
+}
+
+void
+RadialSet::addRadialTimeArray(int initialValue)
+{
+  auto arr = getInt1D(RadialTime);
+
+  if (!arr) {
+    // Adds the 1D integer array mapped to dimension 0 (Azimuth)
+    arr = addInt1D(RadialTime, "Milliseconds", { 0 }, initialValue);
+  }
+}

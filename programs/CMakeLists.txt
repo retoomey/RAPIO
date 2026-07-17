@@ -16,7 +16,7 @@ install(TARGETS rGrib2Reader
 ##################################################################
 # Make the rWebGUI here, since the RESTserver builds with em++
 # and we'll build with normal c++ compiler
-if (BUILD_WEB_MODULE)
+if (RAPIO_BUILD_WEB_MODULE)
   add_executable(rWebGUI
     RESTserver/rWebGUI.cc
   )
@@ -27,7 +27,7 @@ if (BUILD_WEB_MODULE)
 
   # Don't build anything else or comflict with em++
   #add_subdirectory(RESTserver)
-endif (BUILD_WEB_MODULE)
+endif (RAPIO_BUILD_WEB_MODULE)
 
 ##################################################################
 # Algorithms
