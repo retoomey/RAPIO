@@ -1,8 +1,10 @@
-#include "computeFilter.h" //A local file
 #include <rPreProQC.h>
+#include "computeFilter.h" 
 #include <computeLTARmask.h>
 #include <computeDRmask.h>
 #include <computeStdPhiDPmask.h>
+#include <computeCCmask.h>
+#include <NBFdetection.h>
 #include <boost/log/trivial.hpp>
 #include <iostream>
 #include <algorithm>
@@ -93,8 +95,10 @@ rPreProQC::processPreProQC()
 {
   //We can build the RAPIO name ourselves
   std::shared_ptr<rapio::RadialSet> inRef = myDataMap[radar_name + "_PreProReflectivity"];
+  std::shared_ptr<rapio::RadialSet> CC = myDataMap[radar_name + "_PreProRhoHV"];
   std::shared_ptr<rapio::RadialSet> DR  = myDataMap[radar_name + "_DR"];
   std::shared_ptr<rapio::RadialSet> stdPhiDP  = myDataMap[radar_name + "_StdDiffPhase"];
+  std::shared_ptr<rapio::RadialSet> PhiDPsm  = myDataMap[radar_name + "_SmoothedDifferentialPhase"];
  
   auto Ref = inRef->Clone(); 
 
@@ -174,6 +178,8 @@ rPreProQC::processPreProQC()
   //Now clone this properly initailized QCmask
   auto StdPhiDP_QCmask = LTAR_QCmask->Clone();
   auto DR_QCmask = LTAR_QCmask->Clone();
+  auto CC_QCmask = LTAR_QCmask->Clone();
+  auto NBF_detect = LTAR_QCmask->Clone();
 
   //See if we already have LTAR
   if (!LTAR) {
@@ -211,7 +217,8 @@ rPreProQC::processPreProQC()
   //Blur the data so that the average value of the 3x3 box is 
   //used in the DR Threshold computation. We want to compare a local average 
   //reflectivity threshold to DR rather than a gate by gate value. The local average
-  //of reflectivity tells us if the gate value is vaild.
+  //of reflectivity tells us if the gate value is vaild, because it samples an
+  //area around the gate rather than  a point target.
   // Note: try 5x5, but speed of 3x3 is faster? Either probably works. 
   std::shared_ptr<rapio::RadialSet> Refsm = apply2DBlurFilter(Ref, 5, 5, 0.33);
 
@@ -224,12 +231,26 @@ rPreProQC::processPreProQC()
   DR_QCmask = computeDRmask(Refsm, DR);
 
   //
-  //Honestly this is where all the "work" is done. Following the Kdp procedure, we noticed that the
+  //Following the Kdp procedure, we noticed that the
   //standard deviation of differential phase was a great indicator of ground clutter and clutter
   //in general. We match it with reflectivity minimums to make sure we don't remove too much.
   // For lighter weight installations use just this QCmask
   //
   StdPhiDP_QCmask = computeStdPhiDPmask(Refsm, stdPhiDP);
+
+  //
+  //CC is unusually high in regions where there is low SNR and in interference. This continously
+  //high CC is a good indicator of bad/low signal data. 
+  float cc_filter_length = 2250.0; //meters
+  CC_QCmask = computeCCmask(cc_filter_length, CC);
+
+  //NBF is a problem where data is removed that should not be. All the dualpol moments become
+  // unstable when there is excessive attenuation. This algorihtm tries to idenfity
+  // locations where the NBF is occuring, so that we can limit the removal of reflectivity data
+  // from these regions. The dualpol data is still bad in these regions, but often QPE wants
+  // R(z) here rather than anything else (ex. R(A), R(Z,Zdr)) 
+  float NBF_filter_length = 2250.0; //meters
+  NBF_detect = NBFdetection(NBF_filter_length, Refsm, PhiDPsm, LTAR_QCmask, DR_QCmask);
 
   //Now combine the different QCmasks into a single QCmask
   auto QCmask = Ref->Clone();
@@ -240,10 +261,13 @@ rPreProQC::processPreProQC()
   auto& QC_data = QCmask->getFloat2DRef();
   auto& LTAR_QCdata = LTAR_QCmask->getFloat2DRef();
   auto& DR_QCdata = DR_QCmask->getFloat2DRef();
+  auto& CC_QCdata = CC_QCmask->getFloat2DRef();
   auto& StdPhiDP_QCdata = StdPhiDP_QCmask->getFloat2DRef();
+  auto& NBF_data = NBF_detect->getFloat2DRef();
   //combine all the indifividual masks into a single mask
   for (size_t a = 0; a < numRadials; ++a) {
         for (size_t g = 0; g < numGates; ++g) {
+            bool NBF_flag = false;
             float refVal = refData[a][g]; //Allows missing data and range folded data flags
             if ( Constants::isGood(refVal) ) {
                 //Combine the data in a way that allows the QMask to tell you 
@@ -257,22 +281,39 @@ rPreProQC::processPreProQC()
                 //  Hydro Algs might want all of it. We can apply more filters this way in different
                 //  ways to customize the usage.
                 //
-                if (StdPhiDP_QCdata[a][g] == 0 || LTAR_QCdata[a][g] == 0 || DR_QCdata[a][g] == 0 ) {
-                    if ( LTAR_QCdata[a][g] == 0 ) {
-                        if( LTAR_QCdata[a][g] == 0 && DR_QCdata[a][g] == 0 ) {
-                            QC_data[a][g] = -2;
-                        } else {
-                            QC_data[a][g] = -1;
-                        }
-                    } else if ( DR_QCdata[a][g] == 0 ) {
-                        QC_data[a][g] = -3;
-                    } else if (StdPhiDP_QCdata[a][g] == 0 ) {
-                        QC_data[a][g] = -4;
+                if (StdPhiDP_QCdata[a][g] == 0 || 
+                    LTAR_QCdata[a][g] == 0 || 
+                    DR_QCdata[a][g] == 0 || 
+                    CC_QCdata[a][g] == 0 ) 
+                {
+                    if( NBF_flag ) {
+                    //once NBF is detected in the radial any 
+                    //DQ issue is due to NBF
+                        QC_data[a][g] = -6;
                     } else {
-                        QC_data[a][g] = 0;
+                        if ( LTAR_QCdata[a][g] == 0 ) {
+                            if( LTAR_QCdata[a][g] == 0 && DR_QCdata[a][g] == 0 ) {
+                                QC_data[a][g] = -2;
+                            } else {
+                                QC_data[a][g] = -1;
+                            }
+                        } else if ( DR_QCdata[a][g] == 0 ) {
+                            QC_data[a][g] = -3;
+                        } else if (StdPhiDP_QCdata[a][g] == 0 ) {
+                            QC_data[a][g] = -4;
+                        } else if (CC_QCdata[a][g] == 0 ) {
+                            QC_data[a][g] = -5;
+                        } else {
+                            QC_data[a][g] = 0;
+                        }
                     }
                 } else {
                     QC_data[a][g] = 1;
+                }
+                //QC is all well and good. NBF overides it.
+                if (NBF_data[a][g] == 1.0 ) {
+                    NBF_flag = true; //once we find NBF it's all NBF
+                    QC_data[a][g] = -6;
                 }
             } else {
                 QC_data[a][g] = refVal;
@@ -293,7 +334,7 @@ rPreProQC::processPreProQC()
             for (size_t g = 0; g < numGates; ++g) {
                 float QCVal = QC_data[a][g];
                 if ( Constants::isGood(refData[a][g]) ) {
-                    if (QCVal <= 0 ) {
+                    if (QCVal <= 0 && QCVal != -6 ) {
                         refData[a][g] = Constants::MissingData;
                     }
                 }
@@ -301,6 +342,27 @@ rPreProQC::processPreProQC()
       }
    Ref->setTypeName("PreProReflectivityQC");
    myDataMap["output_PreProReflectivityQC"] = Ref;
+
+   //non-standard outputs for development
+   bool dev_output = true;
+   if (dev_output) {
+       LTAR_QCmask->setTypeName("LTARQCmask");
+       LTAR_QCmask->setDataAttributeValue("ColorMap", "QCmask");
+       myDataMap["output_LTARQCmask"]    = LTAR_QCmask;
+
+       DR_QCmask->setTypeName("DRQCmask");
+       DR_QCmask->setDataAttributeValue("ColorMap", "QCmask");
+       myDataMap["output_DRQCmask"]    = DR_QCmask;
+
+       Refsm->setTypeName("RefsmQC");
+       myDataMap["output_RefsmQC"] = Refsm;
+
+       NBF_detect->setTypeName("NBFdetect");
+       NBF_detect->setDataAttributeValue("ColorMap", "KMeans");
+       myDataMap["output_NBFdetect"]    = NBF_detect;
+
+
+   }
 
 } // rPreProQC::processPreProQC
 
@@ -346,7 +408,9 @@ rPreProQC::processNewData(rapio::RAPIOData& d)
     string rapio_reflectivity = radar_name + "_PreProReflectivity";
     string rapio_DR = radar_name + "_DR";
     string rapio_stdPhiDP = radar_name + "_StdDiffPhase";
-    const std::vector<std::string> types = { rapio_reflectivity, rapio_DR, rapio_stdPhiDP};
+    string rapio_CC = radar_name + "_PreProRhoHV";
+    string rapio_PhiDP = radar_name + "_SmoothedDifferentialPhase";
+    const std::vector<std::string> types = { rapio_reflectivity, rapio_DR, rapio_stdPhiDP, rapio_CC, rapio_PhiDP};
     const std::string current = data_record[1];// the current data, ex. "Zdr"
 
     // Test if the type we have is one that we want.

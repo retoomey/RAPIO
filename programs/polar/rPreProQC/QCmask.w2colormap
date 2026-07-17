@@ -8,8 +8,11 @@
    </colorBin>
 
     <!-- Colorblind-safe Negative Range -->
-   <colorBin upperBound="-4.5" name="Future">
-    <color value="-5" r="204" g="121" b="167" a="255" label="Future" />
+   <colorBin upperBound="-5.5" name="NBF">
+     <color value="-6" r="240" g="228" b="66" a="255" label="NBF" />
+   </colorBin>
+   <colorBin upperBound="-4.5" name="CC">
+    <color value="-5" r="204" g="121" b="167" a="255" label="CC" />
    </colorBin>
    <colorBin upperBound="-3.5" name="PhiDP">
     <color value="-4" r="0" g="114" b="178" a="255" label="StdPhiDP" />
