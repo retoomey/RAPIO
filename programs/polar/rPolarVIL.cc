@@ -118,7 +118,7 @@ public:
             myHeights[i][g] = Project::attenuationHeightKMs(stationHeightKMs, atRangeKM, elevDegs);
             //FIXME:
             //Test that the height computed is above the Terrain Height for this location or set to 
-            // the Terrain Height. 
+            // zero ? (or the Terrain Heigh)t. 
           }
         }
       }
@@ -229,7 +229,7 @@ public:
 
 // Suggested command line for output evey 5 minutes:
 //
-// rVilPolar -i /path/to/data/code_index.xml -o /path/to/output/location -sync "0 */5 * * * *"
+// rPolarVIL -i /path/to/data/code_index.xml -o /path/to/output/location -sync "0 */5 * * * *"
 //
 // Standard RAPIO program entry point
 int main(int argc, char* argv[]) {
