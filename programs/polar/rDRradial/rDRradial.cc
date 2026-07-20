@@ -1,9 +1,14 @@
 #include <rDRradial.h>
+#include <boost/log/trivial.hpp>
 #include <iostream>
 #include "computeDR.h"
 #include <rConstants.h>
 
 using namespace rapio;
+
+// Your group/project/area for all of YOUR code.
+// Here we're part of wdssii or hmet or anc, etc.
+//using namespace wdssii
 
 /** DRradial Algorithm
  *
@@ -50,9 +55,13 @@ rDRradial::processOptions(RAPIOOptions& o)
 }
 
 void
-rDRradial::processDRradial(std::map<std::string, std::shared_ptr<RadialSet>> & DataMap)
+rDRradial::processDRradial()
 {
-// Access the pointer from the map
+// Note that myDataMap is a variable of the rDRradial class. 
+//   look at the rDrradial.h under protected.  
+//
+// Access the pointer from the map, myDataMap, which is a local class variable
+//
     std::shared_ptr<RadialSet> CC = myDataMap["RhoHV"];
     std::shared_ptr<RadialSet> Zdr = myDataMap["Zdr"];
 //
@@ -150,12 +159,12 @@ rDRradial::processDRradial(std::map<std::string, std::shared_ptr<RadialSet>> & D
     DR->setDataAttributeValue("ColorMap", "DR");
 
     //add this to the DataMap
-    myDataMap["DR"] = DR;
-    //Note the myDataMap variable boes back to processNewData()
+    myDataMap["output_DR"] = DR;
+    //Note the myDataMap variable goes back to processNewData()
 }
 
 void
-rDRradial::processNewData(RAPIOData& d)
+rDRradial::processNewData(rapio::RAPIOData& d)
 {
   // Use d.record() and d.datatype() to get your wdssii information...
   // We'll probably add more helper features in the API as it grows.
@@ -183,6 +192,19 @@ rDRradial::processNewData(RAPIOData& d)
   auto r = d.datatype<RadialSet>(); 
   
   if (r != nullptr) {
+    // A note on types:
+    //    ldm2netcdf outputs files with types "Zdr" but after rapio process a file it adds
+    //    the radar name to the front like "KTLX_Zdr" if you are mixing and matching types
+    //    if can look a little odd.
+    // 
+    // You should use the PreProAI output as your input and each of those outputs will, because
+    // they are processed by rapio have the radar_name in front. "KTLX_PreProReflectivity",
+    // "KTLX_PreProZdr", etc... 
+    //
+    // That means you have to send in your radar_name with -R so that you can append that name
+    // to the types. See rPreProQC.cc types as an example of how to do this. This example is much
+    // simpler and only uses data from ldm2netcdf and has simple/non-radar specific types. 
+    //
     // Example for processing groups of subtypes.
 
     // Say you have data incoming where you
@@ -190,7 +212,6 @@ rDRradial::processNewData(RAPIOData& d)
     // 01.80 Reflectivity and 01.80 Velocity together to process your algorithm.
 
     // First save to a collection of radial sets for each subtype:
-
     // The types we must have...
     const std::vector<std::string> types = {"RhoHV", "Zdr"}; 
     const std::string current = data_record[1];//the current data type like, "Zdr"         
@@ -245,13 +266,15 @@ rDRradial::processNewData(RAPIOData& d)
       //We have all the moments we want, now compute the result
       //The output is adding moments (RadialSet) to the map with the prepro prefix like this:
       //myDataMap["prepro_Ref"] = prepro_Ref; where prepro_Ref is the modified RadialSet
-      processDRradial( myDataMap ); 
+      processDRradial(); 
 
       //   We need to output a file for each "prepro_*" subtype in the Datamap 
       //   use the list processing
       for( auto & ppm : myDataMap) {
+          // We named the first string in output myDataMap with "output_DR", but "output_*" 
+          // is used as the flag to send the data to a file. 
           // only output the added "DR" radialsets 
-          if ((ppm.first).find("DR") != std::string::npos ) {
+          if ((ppm.first).find("output") != std::string::npos ) {
               //create output
               auto o = ppm.second; //The back half of the map 
                

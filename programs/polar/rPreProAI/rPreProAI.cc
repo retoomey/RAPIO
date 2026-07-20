@@ -20,9 +20,9 @@ rPreProAI::declareOptions(RAPIOOptions& o)
   // l --> notifier support (FAM files basically)
   // r --> realtime flag support
   // o.setDescription("WDSS2"); // Default for WDSS2/MRMS algorithms that you intend to copyright as part of WDSS2
-  o.setDescription("rPreProAI computes Kdp, DR, outputs QC'd data with -Q ");
+  o.setDescription("rPreProAI computes Kdp and DR ");
   o.setAuthors("John Krause, NSSL 2026, John.Krause@noaa.gov ");
-
+  o.require("R", "radar_name", "4 letter character ID for the radar, ex. KTLX ");
   // An optional string param...default is "Test" if not set by user
   // o.optional("T", "Test", "Test option flag");
 
@@ -31,7 +31,6 @@ rPreProAI::declareOptions(RAPIOOptions& o)
 
   // A required parameter (algorithm won't run without it).  Here there is no default since it's required, instead you can provide an example of the setting
   // o.require("Z", "method1", "Set this to anything, it's just an example");
-  o.boolean("Q", "Output moments will be QC'd (very light) with a DR threshold -11");
 }
 
 /** RAPIOAlgorithms process options on start up */
@@ -41,7 +40,8 @@ rPreProAI::processOptions(RAPIOOptions& o)
   // This is an example of how to get your algorithm parameters
   // Stick them in instance variables you can use them later in processing.
 
-  qc_option = o.getBoolean("Q");
+  //qc_option = o.getBoolean("Q");
+  radar_name = o.getString("R");
 
   /*
    * myTest = o.getString("T");
@@ -52,19 +52,19 @@ rPreProAI::processOptions(RAPIOOptions& o)
    * fLogInfo(" ************************T IS {}", myTest);
    * fLogInfo(" ************************Z IS {}", myZ);
    */
-  fLogInfo(" ************************QZ IS {}", qc_option);
+   fLogInfo(" ************************R IS {}", radar_name);
 }
 
 void
-rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & DataMap)
+rPreProAI::processPreProAI()
 {
   //
   // Check the myDataMap for azimuthal alignment
   // Access the pointer from the map
-  std::shared_ptr<RadialSet> Ref = myDataMap["Reflectivity"];
-  std::shared_ptr<RadialSet> CC    = myDataMap["RhoHV"];
-  std::shared_ptr<RadialSet> Zdr   = myDataMap["Zdr"];
-  std::shared_ptr<RadialSet> PhiDP = myDataMap["PhiDP"];
+  std::shared_ptr<RadialSet> Ref = myDataMap[radar_name + "_Reflectivity"];
+  std::shared_ptr<RadialSet> CC    = myDataMap[radar_name + "_RhoHV"];
+  std::shared_ptr<RadialSet> Zdr   = myDataMap[radar_name + "_Zdr"];
+  std::shared_ptr<RadialSet> PhiDP = myDataMap[radar_name + "_PhiDP"];
 
   size_t numRadials = Ref->getNumRadials();
   auto azRef        = Ref->getAzimuthRef();
@@ -153,16 +153,19 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
   fLogDebug("min_system_phase {}", min_system_phase);
 
   //Compute KDP here:
-  // 9 gate on WSR-88D
+  // We want stdPhiDP as an output for QC.QC
   std::shared_ptr<RadialSet> short_PhiDP = PhiDP->Clone();
-  std::shared_ptr<RadialSet> short_Kdp   = compute_triple_median_Kdp(short_PhiDP, CC, 2250.);
-
-  // 25 gate on WSR-88D
   std::shared_ptr<RadialSet> long_PhiDP = PhiDP->Clone();
-  std::shared_ptr<RadialSet> long_Kdp   = compute_triple_median_Kdp(long_PhiDP, CC, 6250.);
+
+  //First compute stdPhiDP:
+  std::shared_ptr<RadialSet> stdPhiDP = compute_std_PhiDP(PhiDP);
+  // 9 gate on WSR-88D
+  std::shared_ptr<RadialSet> short_Kdp = compute_Kdp_postStd(short_PhiDP, stdPhiDP, CC, 2250.);
+  // 25 gate on WSR-88D
+  std::shared_ptr<RadialSet> long_Kdp = compute_Kdp_postStd(long_PhiDP, stdPhiDP, CC, 6250.);
 
   // combine the Kdp based on a Z threshold. Use short Kdp where Z > 40;
-  // improve this by melding the data around the threshold rather than a simple step jump
+  // FIXME: improve this by melding the data around the threshold rather than a simple step jump
   std::shared_ptr<RadialSet> prepro_Kdp = combine_Kdp(short_Kdp, long_Kdp, Ref, 40.0);
 
   fLogInfo("-------> processPreProAI(), Kdp finished:");
@@ -179,25 +182,22 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
 
   // create the QC map from DR and a threshold, (Kilambi et. al. 2018)
   //  https://doi.org/10.1175/JTECH-D-17-0175.1
+  //
+  // PreProQC does a better job with LTAR and adjustments to Kilambi method. 
   std::shared_ptr<RadialSet> DR = computeDR(CC, Zdr);
 
   // this 2d median is very helpful in cleaning up the mask and eliminating
   // random speckling
   applyFast2DMedian(DR, 3, 3, 0.33);
 
-  // The QC map is simply DR > threshold = non-meteorological Kilambi suggests -12
-  // I think -11 works better for thunderstorms, mostly in the core where CC is low and
-  // a ZdrColumn has formed. You can make your own masks using Reflectivity or CC or 
-  // whatever.
-  std::shared_ptr<RadialSet> QCmask = computeQCmask(DR, -11.0);
-
   // Smoothing to reduce variability
+  // Technically Ref is a choice, but Zdr, CC, Kdp, DR are required
   applyFast2DMedian(prepro_Ref, 3, 3, 0.33);
   applyFast2DMedian(prepro_Zdr, 3, 3, 0.33);
   applyFast2DMedian(prepro_Kdp, 3, 3, 0.33);
+  applyFast2DMedian(stdPhiDP, 3, 3, 0.33);
 
   std::shared_ptr<RadialSet> prepro_CC = CC->Clone();
-
   applyFast2DMedian(prepro_CC, 3, 3, 0.33);
   fLogInfo("-------> processPreProAI(), 2D medians complete:");
 
@@ -219,42 +219,15 @@ rPreProAI::processPreProAI(std::map<std::string, std::shared_ptr<RadialSet> > & 
   DR->setUnits("dB");
   DR->setDataAttributeValue("ColorMap", "DR");
 
-  QCmask->setTypeName("QCmask");
-  QCmask->setUnits("none");
-  QCmask->setDataAttributeValue("ColorMap", "QCMask");
-
-  auto preproRefQC = prepro_Ref->Clone();
-  auto preproZdrQC = prepro_Zdr->Clone();
-  auto preproCCQC = prepro_CC->Clone();
-  auto preproKdpQC = prepro_Kdp->Clone();
-
-  // check the options to decide if we apply the QCmask to the data
-  // before we output it to disk.
-  fLogInfo("-------> processPreProAI(), QC option {}", qc_option);
-  if (qc_option) {
-    fLogInfo("-------> processPreProAI(), QC started:");
-    applyQCmask(preproRefQC, QCmask);
-    preproRefQC->setTypeName("PrePro" + Ref->getTypeName() + "QC");
-    myDataMap["prepro_RefQC"] = preproRefQC;
-    applyQCmask(preproZdrQC, QCmask);
-    preproZdrQC->setTypeName("PrePro" + Zdr->getTypeName() + "QC");
-    myDataMap["prepro_ZdrQC"] = preproZdrQC;
-    applyQCmask(preproCCQC, QCmask);
-    preproZdrQC->setTypeName("PrePro" + CC->getTypeName() + "QC");
-    myDataMap["prepro_CCQC"] = preproCCQC;
-    applyQCmask(preproKdpQC, QCmask);
-    preproZdrQC->setTypeName("PrePro" + prepro_Kdp->getTypeName() + "QC");
-    myDataMap["prepro_KdpQC"] = preproKdpQC;
-  }
-
   // add this to the DataMap
   myDataMap["prepro_Ref"]   = prepro_Ref;
   myDataMap["prepro_Zdr"]   = prepro_Zdr;
   myDataMap["prepro_CC"]    = prepro_CC;
-  myDataMap["prepro_PhiDP"] = long_PhiDP;
+  myDataMap["prepro_PhiDP"] = long_PhiDP;//note that output PhiDP is long gate smoothed
   myDataMap["prepro_Kdp"]   = prepro_Kdp;
   myDataMap["prepro_DR"]    = DR;
-  myDataMap["prepro_QC"]    = QCmask;
+  myDataMap["prepro_stdPhiDP"]    = stdPhiDP;
+
 } // rPreProAI::processPreProAI
 
 void
@@ -293,7 +266,11 @@ rPreProAI::processNewData(RAPIOData& d)
     // First save to a collection of radial sets for each subtype:
 
     // The types we must have... we want 4
-    const std::vector<std::string> types = { "Reflectivity", "RhoHV", "PhiDP", "Zdr" };
+    std::string rapio_ref = radar_name + "_Reflectivity";
+    std::string rapio_cc = radar_name + "_RhoHV";
+    std::string rapio_phi = radar_name + "_PhiDP";
+    std::string rapio_zdr = radar_name + "_Zdr";
+    const std::vector<std::string> types = { rapio_ref, rapio_cc, rapio_zdr, rapio_phi};
     const std::string current = data_record[1];// the current data, "Zdr"
 
     // Test if the type we have is one that we want.
@@ -309,6 +286,7 @@ rPreProAI::processNewData(RAPIOData& d)
     if (type_found) {
       fLogDebug("---> type_found {} elev {}:", current, current_elevation);
       if ((myDataMap.size() == 0) || (current_elevation == MISSING_ELEV)) {
+        //myDataMap is a private variable for the class, see rPreProAI.h
         myDataMap[current] = r;
         // Init the current elevation for dq checks
         current_elevation = r->getElevationDegs();
@@ -345,7 +323,7 @@ rPreProAI::processNewData(RAPIOData& d)
       fLogInfo("---> Full DataMap Collected: size:{} ", myDataMap.size());
       // We have all the moments we want, now compute the result
       // The output is adding moments (RadialSet) to the map with the "prepro" prefix:
-      processPreProAI(myDataMap);
+      processPreProAI();
 
       //   We need to output a file for each "prepro_*" subtype in the Datamap
       //   use the list processing
@@ -362,8 +340,8 @@ rPreProAI::processNewData(RAPIOData& d)
           // Standard echo of data to output.  Note it's the same data out as in here
           fLogDebug("--->Echoing {} {} product to output", o->getTypeName(), o->getElevationDegs() );
 
-          std::map<std::string, std::string> myOverrides;
           // myOverrides["postwrite"] = "ldm";            // Do a standard pqinsert of final data file
+          std::map<std::string, std::string> myOverrides;
           writeOutputProduct(o->getTypeName(), o, myOverrides); // Typename will be replaced by -O filters
           fLogInfo("--->Finished {} product to output", o->getTypeName());
         }
@@ -377,6 +355,9 @@ rPreProAI::processNewData(RAPIOData& d)
   }// if (r != nullptr)
 } // rPreProAI::processNewData
 
+
+/*
+
 void
 rPreProAI::processHeartbeat(const Time& n, const Time& p)
 {
@@ -385,6 +366,7 @@ rPreProAI::processHeartbeat(const Time& n, const Time& p)
   // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
   // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
 }
+*/
 
 int
 main(int argc, char * argv[])

@@ -5,6 +5,7 @@
 namespace rapio { 
 /** Create your algorithm as a subclass of RAPIOAlgorithm */
 class rDRradial : public PolarAlgorithm {
+
 public:
 
 // The basic API messages from the system
@@ -42,7 +43,7 @@ public:
    * Writing this new data is the job of processNewData()
    */
   void 
-  processDRradial(std::map<std::string, std::shared_ptr<RadialSet>> & DataMap);
+  processDRradial();
 
 protected:
 
