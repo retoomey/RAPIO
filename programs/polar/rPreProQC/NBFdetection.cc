@@ -17,9 +17,12 @@ namespace {
 //  At some point in the life of PhiDP there is so much attenuation
 //  that the dualpol moments CC and Zdr are trash (not useful). Where
 //  this point is is hard to know.  
-//  
-    const float PhiDP_threshold = 100;
-    const float Refl_threshold = 20.0; 
+// 
+//  These are just initial guess right now.
+//  --JMK 7/20/2026 
+    const float StdPhiDP_threshold = 30;
+    const float PhiDPsm_threshold = 100;
+    const float Refl_threshold = 40.0; 
 //
 // This anonymous namespace is good place to keep other algorithmic threshold values.
 //
@@ -35,7 +38,8 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
                                                 std::shared_ptr<rapio::RadialSet> & Refsm,
                                                 std::shared_ptr<rapio::RadialSet> & PhiDPsm,
                                                 std::shared_ptr<rapio::RadialSet> & LTAR_mask,
-                                                std::shared_ptr<rapio::RadialSet> & DR_mask 
+                                                std::shared_ptr<rapio::RadialSet> & DR_mask,
+                                                std::shared_ptr<rapio::RadialSet> & StdPhiDP 
                                               ) 
 {
 
@@ -48,6 +52,7 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
   auto& NBFdata = NBF_fill->getFloat2DRef(); //Ref = Reference (not Reflectivity)
   auto& LTAR_data = LTAR_mask->getFloat2DRef(); //Ref = Reference (not Reflectivity)
   auto& DR_data = DR_mask->getFloat2DRef(); //Ref = Reference (not Reflectivity)
+  auto& StdPhiDP_data = StdPhiDP->getFloat2DRef(); //Ref = Reference (not Reflectivity)
 
   if (Refsm->getNumGates() < numGates) {
       numGates = Refsm->getNumGates();
@@ -77,8 +82,9 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
         Phi_field.clear();
  
         for (size_t g = 0; g < numGates; ++g) {
-            //NOTE: Do we really need this? Isn't smoothed PhiDP already smooth?
-            Phi_field.push_back(PhiDPsm_data[a][g]);
+            //We want to linear average of StdPhiDP. AP has very high StdPhiDp over an entire 
+            // areaa, but Significant storms have much lower stdPhiDP
+            Phi_field.push_back(StdPhiDP_data[a][g]);
             if ((int) Phi_field.size() > filter_length_gates) {
             //This should keep the sample at a particular size
                 Phi_field.pop_front();
@@ -87,12 +93,15 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
             if (Constants::isGood(Refsm_data[a][g])) {
                 if (!NBF_detected && PhiDPsm_data[a][g] < EndPhiDP_value ) {
                    float Phi_sum = std::accumulate(Phi_field.begin(), Phi_field.end(), 0.0); 
-                   float PhiDPsm_field_ave = Phi_sum/(float) Phi_field.size();
+                   float StdPhiDP_field_ave = Phi_sum/(float) Phi_field.size();
                    //determine if the current filterlength is an NBF detection
-                    if (PhiDPsm_field_ave > PhiDP_threshold && 
+                    if (StdPhiDP_field_ave < StdPhiDP_threshold && 
+                        StdPhiDP_data[a][g] != 0.0 && //non-valid data has 0.0 StdPhiDP
+                        PhiDPsm_data[a][g] > PhiDPsm_threshold && 
                         Refsm_data[a][g] > Refl_threshold && 
                         LTAR_data[a][g] != 0.0 && //Don't detect in LTAR
-                        DR_data[a][g] == 0.0) { //Detect only when DR is also bad
+                        DR_data[a][g] == 0.0) //detect only where DR says non-meteorological
+                    {
                         NBF_fill_flag = 1.0;
                         NBF_detected = true; 
                         //fLogInfo("NBF detected at azimuth {} gate {} ", a, g);

@@ -29,7 +29,8 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
                                                 std::shared_ptr<rapio::RadialSet> & Refsm,
                                                 std::shared_ptr<rapio::RadialSet> & PhiDPsm,
                                                 std::shared_ptr<rapio::RadialSet> & LTAR_mask,
-                                                std::shared_ptr<rapio::RadialSet> & DR_mask 
+                                                std::shared_ptr<rapio::RadialSet> & DR_mask, 
+                                                std::shared_ptr<rapio::RadialSet> & StdPhiDP_mask 
                                               ); 
 
 }

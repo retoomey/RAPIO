@@ -250,7 +250,7 @@ rPreProQC::processPreProQC()
   // from these regions. The dualpol data is still bad in these regions, but often QPE wants
   // R(z) here rather than anything else (ex. R(A), R(Z,Zdr)) 
   float NBF_filter_length = 2250.0; //meters
-  NBF_detect = NBFdetection(NBF_filter_length, Refsm, PhiDPsm, LTAR_QCmask, DR_QCmask);
+  NBF_detect = NBFdetection(NBF_filter_length, Refsm, PhiDPsm, LTAR_QCmask, DR_QCmask, stdPhiDP);
 
   //Now combine the different QCmasks into a single QCmask
   auto QCmask = Ref->Clone();
