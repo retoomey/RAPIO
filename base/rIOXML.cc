@@ -172,24 +172,42 @@ IOXML::encodeDataType(std::shared_ptr<DataType> dt,
   // Get settings
   const bool indent = (keys["indent"] == "true");
 
-  fLogInfo("XML settings: indent: {}", indent);
-  std::string filename = keys["filename"];
+  // ----------------------------------------------------------
+  // Get the filename we should write to
+  std::string filename;
 
-  if (keys["directfile"] == "false") {
-    filename         = filename + ".xml";
-    keys["filename"] = filename;
+  if (!resolveFileName(keys, "xml", "xml-", filename)) {
+    return false;
   }
 
+  // ----------------------------------------------------------
+  // Write XML
   bool successful = false;
 
   try{
     std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
     if (xml != nullptr) {
+      xml->preWrite(keys); // maybe needed, shouldn't hurt
       writeURL(filename, xml, true, false);
+      xml->postWrite(keys);
       successful = true;
     }
   }catch (std::exception& e) {
     fLogSevere("XML create error: {} {}", filename, e.what());
   }
+
+  // ----------------------------------------------------------
+  // Post processing such as extra compression, ldm, etc.
+  if (successful) {
+    successful = postWriteProcess(filename, keys);
+  }
+
+  // Standard output
+  if (successful) {
+    std::stringstream s; // FIXME: we have fmt now
+    s << " (indent:" << indent << ")";
+    showFileInfo("XML writer: ", keys, s.str());
+  }
+
   return successful;
-}
+} // IOXML::encodeDataType

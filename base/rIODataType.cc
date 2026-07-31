@@ -254,8 +254,12 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   // PYTHON=folder,scriptname or
   // NETCDF=folder
   // Note: This means currently output folder/factory is always forced by command line
-  handleCommandParam(outputinfo, outputParams);
-  std::string folder = outputParams["outputfolder"];
+  std::string folder = outputParams["outputfolder"]; // if not empty set by caller (override)
+
+  if (folder.empty()) {
+    handleCommandParam(outputinfo, outputParams);
+  }
+  folder = outputParams["outputfolder"];
   const std::string subfolder = outputParams["outputsubfolder"];
 
   if (!subfolder.empty()) {

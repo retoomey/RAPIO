@@ -3,6 +3,7 @@
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
 #include <rRAPIOPlugin.h>
+#include <rOutputConfig.h>
 
 namespace rapio {
 class WebMessage;

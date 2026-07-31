@@ -137,24 +137,42 @@ IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
   // Get settings
   const bool indent = (keys["indent"] == "true");
 
-  fLogInfo("JSON settings: indent: {}", indent);
-  std::string filename = keys["filename"];
+  // ----------------------------------------------------------
+  // Get the filename we should write to
+  std::string filename;
 
-  if (keys["directfile"] == "false") {
-    filename         = filename + ".xml";
-    keys["filename"] = filename;
+  if (!resolveFileName(keys, "xml", "xml-", filename)) {
+    return false;
   }
 
+  // ----------------------------------------------------------
+  // Write JSON
   bool successful = false;
 
   try{
     std::shared_ptr<PTreeData> json = std::dynamic_pointer_cast<PTreeData>(dt);
     if (json != nullptr) {
+      json->preWrite(keys); // maybe needed, shouldn't hurt
       writeURL(filename, json, true, false);
+      json->postWrite(keys);
       successful = true;
     }
   }catch (const std::exception& e) {
     fLogSevere("JSON create error: {} {}", filename, e.what());
   }
+
+  // ----------------------------------------------------------
+  // Post processing such as extra compression, ldm, etc.
+  if (successful) {
+    successful = postWriteProcess(filename, keys);
+  }
+
+  // Standard output
+  if (successful) {
+    std::stringstream s; // FIXME: we have fmt now
+    s << " (indent:" << indent << ")";
+    showFileInfo("JSON writer: ", keys, s.str());
+  }
+
   return successful;
-}
+} // IOJSON::encodeDataType
