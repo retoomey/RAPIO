@@ -72,6 +72,10 @@ RAPIOProgram::writeDirectOutput(const URL& path,
   std::shared_ptr<DataType>              outputData,
   IOConfig                               & outputParams)
 {
+  if (outputData == nullptr){
+    fLogSevere("Skipping writeDirectProduct for '{}' with nullptr", path.toString());
+    return false;
+  }
   std::vector<Record> blackHole;
 
   outputParams.set("filepathmode", "direct");

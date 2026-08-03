@@ -336,6 +336,10 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType>                         outputData,
   IOConfig                                          & outputParams)
 {
+  if (outputData == nullptr){
+    fLogSevere("Skipping writeOutputProduct of '{}' with nullptr", key);
+    return;
+  }
   outputParams.set("filepathmode", "datatype");
   outputParams.set("postwrite", myPostWrite);
   outputParams.set("postfml", myPostFML);
