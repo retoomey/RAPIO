@@ -20,18 +20,18 @@ public:
   /** Read a RadialSet from NIDS data */
   virtual std::shared_ptr<DataType>
   readNIDS(
-    std::map<std::string, std::string>& keys,
-    BlockMessageHeader                & h,
-    BlockProductDesc                  & d,
-    BlockProductSymbology             & s,
-    StreamBuffer                      & z);
+    IOConfig              & config,
+    BlockMessageHeader    & h,
+    BlockProductDesc      & d,
+    BlockProductSymbology & s,
+    StreamBuffer          & z);
 
   /** Write DataType */
   virtual bool
   writeNIDS(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt,
-    StreamBuffer                      & z);
+    IOConfig                  & config,
+    std::shared_ptr<DataType> dt,
+    StreamBuffer              & z);
 
   /** Get elevation angle from product description */
   static AngleDegs

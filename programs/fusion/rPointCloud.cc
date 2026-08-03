@@ -522,9 +522,9 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
   std::copy(myZs.begin(), myZs.end(), zs.data());
 
   // No data type so generic netcdf writer
-  std::map<std::string, std::string> extraParams;
+  IOConfig extraParams;
 
-  extraParams["showfilesize"] = "yes";
+  extraParams.set("showfilesize", "yes");
   writeOutputProduct(myWriteStage2Name, myCollectedData, extraParams);
 } // RAPIOPointCloudAlg::writeCurrentData
 

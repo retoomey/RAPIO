@@ -2,42 +2,42 @@
 
 #include <rIONetcdf.h>
 #include "rDataGrid.h"
+#include <rNetcdfSpecializer.h>
 #include "rURL.h"
 
 namespace rapio {
 /** Handles the read/write of DataGrid DataType from a netcdf file.
  * @author Robert Toomey
  */
-class NetcdfDataGrid : public IOSpecializer {
+class NetcdfDataGrid : public NetcdfSpecializer {
 public:
 
-  /** Read DataType with given keys */
-  virtual std::shared_ptr<DataType>
-  read(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt)
-  override;
+  virtual
+  ~NetcdfDataGrid();
 
-  /** Write DataType with given keys */
+  /** Initial introduction to IONetcdf */
+  static void
+  introduceSelf(IONetcdf * owner);
+
+  /** Read a DataType from NETCDF */
+  virtual std::shared_ptr<DataType>
+  readNETCDF(int ncid, IOConfig& keys) override;
+
+  /** Write a DataType to NETCDF */
   virtual bool
-  write(
-    std::shared_ptr<DataType>         dt,
-    std::map<std::string, std::string>& keys)
-  override;
+  writeNETCDF(int             ncid,
+    std::shared_ptr<DataType> dt,
+    IOConfig                  & keys) override;
+
+protected:
 
   /** Lower level utility to read generically into a already created
    * DataGrid */
   virtual bool
   readDataGrid(
-    std::shared_ptr<DataGrid>         dt,
-    std::map<std::string, std::string>& keys);
-
-  virtual
-  ~NetcdfDataGrid();
-
-  /** Initial introduction of NetcdfDataGrid specializer to IONetcdf */
-  static void
-  introduceSelf(IONetcdf * owner);
+    int                       ncid,
+    std::shared_ptr<DataGrid> dt,
+    IOConfig                  & keys);
 }
 ;
 }

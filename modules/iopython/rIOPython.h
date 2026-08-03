@@ -27,7 +27,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const std::string& params) override;
+  createDataType(IOConfig& config) override;
 
   // WRITING ------------------------------------------------------------
 
@@ -41,12 +41,12 @@ public:
    * This turns the command line into the param map values */
   virtual void
   handleCommandParam(const std::string & command,
-    std::map<std::string, std::string> &outputParams) override;
+    IOConfig                           &outputParams) override;
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>     & keys
+    IOConfig                               & keys
   ) override;
 
   virtual

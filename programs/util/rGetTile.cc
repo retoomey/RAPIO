@@ -60,13 +60,13 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
 
   myColorMap = o.getString("map");
 
-  myOverride["mode"] = "tile"; // We want tile mode for output
-  myOverride["zoom"] = o.getString("zoom");
-  myOverride["cols"] = o.getString("image-width");
-  myOverride["rows"] = o.getString("image-height");
-  myOverride["centerLatDegs"] = o.getString("center-latitude");
-  myOverride["centerLonDegs"] = o.getString("center-longitude");
-  myOverride["flags"]         = o.getString("flags");
+  myOverride.set("mode", "tile"); // We want tile mode for output
+  myOverride.set("zoom", o.getString("zoom"));
+  myOverride.set("cols", o.getString("image-width"));
+  myOverride.set("rows", o.getString("image-height"));
+  myOverride.set("centerLatDegs", o.getString("center-latitude"));
+  myOverride.set("centerLonDegs", o.getString("center-longitude"));
+  myOverride.set("flags", o.getString("flags"));
 
   // Steal the normal output location as suggested cache folder
   // This will probably work unless someone deliberately tries to break it by passing
@@ -76,7 +76,7 @@ RAPIOTileAlg::processOptions(RAPIOOptions& o)
   if (cache.empty()) {
     cache = "CACHE";
   }
-  myOverride["tilecachefolder"] = cache;
+  myOverride.set("tilecachefolder", cache);
 }
 
 void
@@ -99,7 +99,7 @@ RAPIOTileAlg::processNewData(rapio::RAPIOData& d)
     // If we've gotten something for each file (kinda works for i file=1 file=2)
     if (myMulti->size() == infos.size()) {
       // Pass the MultiDataType to our helper to get a single, flattened grid
-      auto compositedGrid = DataProjection::createResampledTile(myMulti, myOverride);
+      auto compositedGrid = DataProjection::createResampledTile(myMulti, myOverride.getMapRef());
 
       // Write it out
       if (compositedGrid) {

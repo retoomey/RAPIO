@@ -27,7 +27,7 @@ IOJSON::createDataTypeFromBuffer(std::vector<char>& buffer)
 
 size_t
 IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  std::map<std::string, std::string>     & keys
+  IOConfig& keys
 )
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
@@ -60,10 +60,10 @@ IOJSON::readPTreeDataBuffer(std::vector<char>& buffer)
 
 /** Read call */
 std::shared_ptr<DataType>
-IOJSON::createDataType(const std::string& params)
+IOJSON::createDataType(IOConfig& config)
 {
   // We only read file/url
-  const URL url(params);
+  const URL url(config.getParamURL());
 
   std::shared_ptr<DataType> datatype = nullptr;
   std::vector<char> buf;
@@ -131,11 +131,11 @@ IOJSON::writeURL(
 
 bool
 IOJSON::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & keys
 )
 {
   // Get settings
-  const bool indent = (keys["indent"] == "true");
+  const bool indent = (keys.get("indent") == "true");
 
   // ----------------------------------------------------------
   // Get the filename we should write to

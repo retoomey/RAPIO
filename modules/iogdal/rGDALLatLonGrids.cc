@@ -20,11 +20,10 @@ GDALLatLonGrids::introduceSelf(IODataType * owner)
 
 std::shared_ptr<DataType>
 GDALLatLonGrids::read(
-  std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>         dt)
+  IOConfig& config)
 {
   // The parent IOGDAL factory must place the actual file path here
-  std::string filepath = keys["FilePath"];
+  std::string filepath = config.get("FilePath");
 
   if (!filepath.empty()) {
     return readGDALGrid(filepath);
@@ -184,8 +183,8 @@ GDALLatLonGrids::readGDALGrid(const std::string& filepath)
 
 bool
 GDALLatLonGrids::write(
-  std::shared_ptr<DataType>         dt,
-  std::map<std::string, std::string>& keys)
+  std::shared_ptr<DataType> dt,
+  IOConfig                  & keys)
 {
   // 1. Validate the DataType is a LatLonGrid
   auto latLonGrid = std::dynamic_pointer_cast<LatLonGrid>(dt);
@@ -196,7 +195,7 @@ GDALLatLonGrids::write(
   }
 
   // 2. Extract File Path and Driver Key
-  std::string filepath = keys["FilePath"];
+  std::string filepath = keys.get("FilePath");
 
   if (filepath.empty()) {
     fLogSevere("GdalLatLonGrids: No FilePath provided in keys.");
@@ -204,7 +203,7 @@ GDALLatLonGrids::write(
   }
 
   // Use "GTiff" as the default driver, but allow the user/config to override
-  std::string driverName = keys.count("GDAL_DRIVER") ? keys["GDAL_DRIVER"] : "GTiff";
+  std::string driverName = keys.has("GDAL_DRIVER") ? keys.get("GDAL_DRIVER") : "GTiff";
 
   // 3. Initialize GDAL and Fetch the Driver
   GDALAllRegister();

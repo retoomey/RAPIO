@@ -170,7 +170,5 @@ MaxAGL::createCallback()
 void
 MaxAGL::writeFinalProducts(RAPIOAlgorithm * writer)
 {
-  std::map<std::string, std::string> extraParams;
-
-  writer->writeOutputProduct("MaxAGL", myMaxGrid, extraParams);
+  writer->writeOutputProduct("MaxAGL", myMaxGrid);
 }

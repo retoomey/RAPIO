@@ -16,34 +16,32 @@ public:
   /** Read a DataType from the NIDS headers */
   virtual std::shared_ptr<DataType>
   readNIDS(
-    std::map<std::string, std::string>& keys,
-    BlockMessageHeader                & h,
-    BlockProductDesc                  & d,
-    BlockProductSymbology             & s,
-    StreamBuffer                      & z) = 0;
+    IOConfig              & config,
+    BlockMessageHeader    & h,
+    BlockProductDesc      & d,
+    BlockProductSymbology & s,
+    StreamBuffer          & z) = 0;
 
   /** Write DataType */
   virtual bool
   writeNIDS(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt,
-    StreamBuffer                      & z) = 0;
+    IOConfig                  & config,
+    std::shared_ptr<DataType> dt,
+    StreamBuffer              & z) = 0;
 
   // Older methods placeholder
   // @Deprecated
 
   /** Read a RadialSet with given keys */
   virtual std::shared_ptr<DataType>
-  read(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt)
+  read(IOConfig& config)
   override { return nullptr; }
 
   /** Write DataType from given ncid */
   virtual bool
   write(
-    std::shared_ptr<DataType>         dt,
-    std::map<std::string, std::string>& keys)
+    std::shared_ptr<DataType> dt,
+    IOConfig                  & keys)
   override { return false; }
 };
 }

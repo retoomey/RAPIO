@@ -375,23 +375,23 @@ public:
 
   /** Unsparse a collection of 2D array information */
   void
-  unsparse2D(size_t                   num_x,
-    size_t                            num_y,
-    std::map<std::string, std::string>& keys,
-    const std::string                 & pixelX     = "pixel_x",
-    const std::string                 & pixelY     = "pixel_y",
-    const std::string                 & pixelCount = "pixel_count");
+  unsparse2D(size_t   num_x,
+    size_t            num_y,
+    IOConfig          & keys,
+    const std::string & pixelX     = "pixel_x",
+    const std::string & pixelY     = "pixel_y",
+    const std::string & pixelCount = "pixel_count");
 
   /** Unsparse a collection of 3D array information */
   void
-  unsparse3D(size_t                   num_x,
-    size_t                            num_y,
-    size_t                            num_z,
-    std::map<std::string, std::string>& keys,
-    const std::string                 & pixelX     = "pixel_x",
-    const std::string                 & pixelY     = "pixel_y",
-    const std::string                 & pixelZ     = "pixel_z",
-    const std::string                 & pixelCount = "pixel_count");
+  unsparse3D(size_t   num_x,
+    size_t            num_y,
+    size_t            num_z,
+    IOConfig          & keys,
+    const std::string & pixelX     = "pixel_x",
+    const std::string & pixelY     = "pixel_y",
+    const std::string & pixelZ     = "pixel_z",
+    const std::string & pixelCount = "pixel_count");
 
   // We 'could' implement sparse by making a new copy of the object, which may be
   // cleaner.  Right now we hide the original data and change to look sparse for

@@ -57,21 +57,28 @@ public:
   handleEndDatasetEvent();
 
   /** Write message */
+  [[deprecated("Use writeOutputMessage taking IOConfig instead of std::map")]]
   virtual void
   writeOutputMessage(const Message    & m,
     std::map<std::string, std::string>& outputParams);
+
+  /** Write message */
+  virtual void
+  writeOutputMessage(const Message & m,
+    IOConfig                       & outputParams);
 
   /** Write message with empty overrides */
   virtual void
   writeOutputMessage(const Message& m)
   {
-    std::map<std::string, std::string> outputParams;
+    IOConfig outputParams;
 
     writeOutputMessage(m, outputParams);
   }
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
+  [[deprecated("Use writeOutputProduct taking IOConfig instead of std::map")]]
   virtual void
   writeOutputProduct(const std::string& key,
     std::shared_ptr<DataType>         outputData,
@@ -81,11 +88,18 @@ public:
    * addOutputProduct */
   virtual void
   writeOutputProduct(const std::string& key,
+    std::shared_ptr<DataType>         outputData,
+    IOConfig                          & outputParams);
+
+  /** Write data to given key.  Key must exist/match the keys from
+   * addOutputProduct */
+  virtual void
+  writeOutputProduct(const std::string& key,
     std::shared_ptr<DataType>         outputData)
   {
-    std::map<std::string, std::string> outputParams;
+    IOConfig config;
 
-    writeOutputProduct(key, outputData, outputParams);
+    writeOutputProduct(key, outputData, config);
   }
 
   /** Get the maximum history specified by user */

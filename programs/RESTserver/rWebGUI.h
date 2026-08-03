@@ -41,12 +41,11 @@ protected:
 
   /** Process web GET params pairs and update params to image writer */
   void
-  handleOverrides(const std::map<std::string, std::string>& params, std::map<std::string, std::string>& settings);
+  handleOverrides(const std::map<std::string, std::string>& params, IOConfig& settings);
 
   /** Serve a web tile image from a cache */
   void
-  serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, std::map<std::string,
-    std::string>& settings);
+  serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, IOConfig& settings);
 
   /** Process a "/UI" message */
   void
@@ -54,20 +53,20 @@ protected:
 
   /** Process a "/WMS" message */
   void
-  handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
 
   /** Process a "/TMS" message */
   void
-  handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
 
   /** Process a "/vector" message */
   void
   handlePathVectorTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
 
   void
-  handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
   void
-  handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
 
   /** Process a "/DATA" message */
   void
@@ -79,11 +78,11 @@ protected:
 
   /** Request a color map */
   void
-  handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handleColorMap(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
 
   /** Request a SVG */
   void
-  handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string, std::string>& settings);
+  handleSVG(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings);
 
   /** A proxy request from our webassembly client. Every will go though us to avoid CORS, though
    * this will require our own security measures */
@@ -97,7 +96,7 @@ protected:
   getOrLoadDataset(const std::string& layerId);
 
   /** Override output params for image output (global) */
-  std::map<std::string, std::string> myOverride;
+  IOConfig myOverride;
 
   /** Most recent datas for creating tiles */
   std::unordered_map<std::string, std::shared_ptr<DataType> > myDataCache;

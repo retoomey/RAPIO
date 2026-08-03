@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rRecord.h>
+#include <rIOConfig.h>
 
 #include <string>
 #include <vector>
@@ -26,14 +27,12 @@ class IOSpecializer {
 public:
   /** Write a given DataType */
   virtual bool
-  write(std::shared_ptr<DataType>     dt,
-    std::map<std::string, std::string>& keys) = 0;
+  write(std::shared_ptr<DataType> dt,
+    IOConfig                      & config) = 0;
 
   /** Read a DataType from given information */
   virtual std::shared_ptr<DataType>
-  read(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         optionalOriginal) = 0;
+  read(IOConfig& config) = 0;
 };
 
 /**
@@ -48,6 +47,12 @@ public:
  */
 class IODataType {
 public:
+
+  /** Create a IO DataType */
+  IODataType(){ }
+
+  /** Destroy a IO DataType */
+  virtual ~IODataType(){ }
 
   /** Introduce dynamic help */
   static std::string
@@ -140,7 +145,7 @@ protected:
    * typically but not always a file.
    */
   virtual std::shared_ptr<DataType>
-  createDataType(const std::string& params) = 0;
+  createDataType(IOConfig& config) = 0;
 
   // ------------------------------------------------------------------------------------
   // Writer stuff
@@ -157,7 +162,7 @@ public:
   write(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     std::vector<Record>              & records,
     const std::string& factory,
-    std::map<std::string, std::string>& outputParams);
+    IOConfig& outputParams);
 
   /**
    *  Write out a datatype using outputinfo and factory.
@@ -172,7 +177,7 @@ public:
   static size_t
   writeBuffer(std::shared_ptr<DataType> dt,
     std::vector<char>                   & buf,
-    std::map<std::string, std::string>  & keys,
+    IOConfig                            & keys,
     const std::string                   & factory = "");
 
   /** Handle parsing the command line param.  For example
@@ -180,30 +185,30 @@ public:
    * This turns the command line into the param map values */
   virtual void
   handleCommandParam(const std::string & command,
-    std::map<std::string, std::string> &outputParams);
+    IOConfig                           &outputParams);
 
   /** Default write out handling for files */
   virtual bool
   writeout(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     std::vector<Record>              & records,
     const std::string& factory,
-    std::map<std::string, std::string>& outputParams);
+    IOConfig& outputParams);
 
   /** Helper pre writer which resolves filenames/direct, etc. */
   bool
-  resolveFileName(std::map<std::string, std::string>& keys,
-    const std::string                               & suffixDefault,
-    const std::string                               & tempDefault,
-    std::string                                     & writeOut);
+  resolveFileName(IOConfig& keys,
+    const std::string     & suffixDefault,
+    const std::string     & tempDefault,
+    std::string           & writeOut);
 
   /** Helper utility for single written output file optional size display from keys */
   void
-  showFileInfo(const std::string& prefix, std::map<std::string, std::string>& keys, const std::string& suffix = "");
+  showFileInfo(const std::string& prefix, const IOConfig& keys, const std::string& extra = "");
 
   /** Helper post writer which does any extra compression, ldm, etc. */
   bool
-  postWriteProcess(const std::string  & outfile,
-    std::map<std::string, std::string>& keys);
+  postWriteProcess(const std::string & outfile,
+    IOConfig                         & keys);
 
 protected:
 
@@ -212,33 +217,23 @@ protected:
   write1(std::shared_ptr<DataType> dt, const std::string& outputinfo,
     std::vector<Record>              & records,
     std::string& factory,
-    std::map<std::string, std::string>& outputParams);
+    IOConfig& outputParams);
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>     & lookup
+    IOConfig                               & config
   ){ return false; }
 
   /** Subclasses that can write to a character buffer can implement this.
    * Since not everything can write to a buffer, we default to nullptr */
   virtual size_t
   encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-    std::map<std::string, std::string>     & lookup
+    IOConfig     & lookup
   )
   {
     return 0;
   }
-
-public:
-
-  /** Destroy a IO DataType */
-  virtual ~IODataType(){ }
-
-protected:
-
-  /** Create a IO DataType */
-  IODataType(){ }
 
   /** Specializers */
   std::map<std::string, std::shared_ptr<IOSpecializer> > mySpecializers;

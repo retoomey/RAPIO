@@ -123,7 +123,7 @@ LatLonHeightGrid::getProjection(const std::string& layer)
 }
 
 void
-LatLonHeightGrid::postRead(std::map<std::string, std::string>& keys)
+LatLonHeightGrid::postRead(IOConfig& keys)
 {
   // FIXME: Make it stay compressed for things like rcopy, probably
   // using a key
@@ -132,13 +132,13 @@ LatLonHeightGrid::postRead(std::map<std::string, std::string>& keys)
 } // LatLonHeightGrid::postRead
 
 void
-LatLonHeightGrid::preWrite(std::map<std::string, std::string>& keys)
+LatLonHeightGrid::preWrite(IOConfig& keys)
 {
   sparse3D(); // Standard sparse of primary data (add dimension)
 } // LatLonHeightGrid::preWrite
 
 void
-LatLonHeightGrid::postWrite(std::map<std::string, std::string>& keys)
+LatLonHeightGrid::postWrite(IOConfig& keys)
 {
   unsparseRestore();
 }

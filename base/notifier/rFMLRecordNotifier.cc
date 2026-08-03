@@ -83,21 +83,21 @@ FMLRecordNotifier::~FMLRecordNotifier()
 { }
 
 void
-FMLRecordNotifier::getOutputFolder(std::map<std::string, std::string>& outputParams,
+FMLRecordNotifier::getOutputFolder(IOConfig& outputParams,
   std::string& outputDir, std::string& indexLocation)
 {
   // Maybe we can cache this somehow for speed improvements
   // Typically the output directory will stay the same. Someone could
   // change the outputParams in theory
 
-  const std::string outputinfo = outputParams["outputfolder"];
+  const std::string outputinfo = outputParams.get("outputfolder");
 
   // We assume the outputinfo is a directory.  Override with myOutputDir if requested
   // on the notifier param line:
   outputDir = myOutputDir.empty() ? outputinfo : myOutputDir;
 
   // Now add any require subfolder to our output dir.
-  const std::string subfolder = outputParams["outputsubfolder"];
+  const std::string subfolder = outputParams.get("outputsubfolder");
 
   if (!subfolder.empty()) {
     outputDir = outputDir + "/" + subfolder;
@@ -121,7 +121,7 @@ FMLRecordNotifier::getOutputFolder(std::map<std::string, std::string>& outputPar
 } // FMLRecordNotifier::getOutputFolder
 
 void
-FMLRecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& m)
+FMLRecordNotifier::writeMessage(IOConfig& outputParams, const Message& m)
 {
   // Promote the message to a record, send it on it's way
   Record r(m);
@@ -130,7 +130,7 @@ FMLRecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams
 }
 
 void
-FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
+FMLRecordNotifier::writeRecord(IOConfig& outputParams, const Record& rec)
 {
   std::string outputDir, indexLocation;
 
@@ -182,13 +182,13 @@ FMLRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams,
   // Construct a clean set of keys for the IOPostProcessor.
   // We explicitly avoid passing outputParams so the .fml file isn't
   // accidentally compressed if the parent data file requested compression.
-  std::map<std::string, std::string> fmlKeys;
+  IOConfig fmlKeys;
 
-  fmlKeys["filename"] = outfilename;
+  fmlKeys.set("filename", outfilename);
 
   // Map 'postfml' to 'postwrite' so the pipeline recognizes it
   // and properly assigns the LDMInsertStep or SafeCommandStep.
-  fmlKeys["postwrite"] = outputParams["postfml"];
+  fmlKeys.set("postwrite", outputParams.get("postfml"));
 
   IOPostProcessor postProcessor;
 

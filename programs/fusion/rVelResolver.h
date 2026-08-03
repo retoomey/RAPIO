@@ -131,9 +131,9 @@ public:
       std::copy(myLonDegs.begin(), myLonDegs.end(), lon.data());
       std::copy(myHeightMeters.begin(), myHeightMeters.end(), ht.data());
 
-      std::map<std::string, std::string> extraParams;
-      extraParams["showfilesize"] = "yes";
-      extraParams["compression"]  = "gz";
+      IOConfig extraParams;
+      extraParams.set("showfilesize", "yes");
+      extraParams.set("compression", "gz");
       stage2->setTypeName(asName); // should already be set
       alg->writeOutputProduct("S2Netcdf", stage2, extraParams);
     }

@@ -73,7 +73,7 @@ RecordNotifier::createNotifier(const std::string& type, const std::string& param
 
 void
 RecordNotifierType::
-writeRecords(std::map<std::string, std::string>& outputParams, const std::vector<Record>& rec)
+writeRecords(IOConfig& outputParams, const std::vector<Record>& rec)
 {
   for (auto r:rec) {
     writeRecord(outputParams, r);

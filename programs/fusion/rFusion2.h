@@ -61,7 +61,7 @@ protected:
   void
   write3DLayer(const std::string      & productKey,
     const std::string                 & aTypeName,
-    std::map<std::string, std::string>& extraParams,
+    IOConfig                          & extraParams,
     Time                              & outputTime);
 
   /** Write current 2D layers */
@@ -69,7 +69,7 @@ protected:
   write2DLayers(const std::string     & productKey,
     const std::string                 & label,
     const std::string                 & aTypeName,
-    std::map<std::string, std::string>& extraParams,
+    IOConfig                          & extraParams,
     Time                              & outputTime);
 
   /** Called to merge what we have and output it */

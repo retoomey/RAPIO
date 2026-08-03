@@ -378,7 +378,7 @@ IOGrib::readGribDataType(const URL& url, int mode)
 } // IOGrib::readGribDataType
 
 std::shared_ptr<DataType>
-IOGrib::createDataType(const std::string& params)
+IOGrib::createDataType(IOConfig& config)
 {
   // Hack get rapiosetting.xml for grib
   // FIXME: We probably should generalize higher up.  This is first time I've wanted
@@ -403,12 +403,12 @@ IOGrib::createDataType(const std::string& params)
   }
 
   // virtual to static, we only handle file/url
-  return (IOGrib::readGribDataType(URL(params), mode));
+  return (IOGrib::readGribDataType(config.getParamURL(), mode));
 }
 
 bool
 IOGrib::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & params
+  IOConfig                                       & keys
 )
 {
   return false;

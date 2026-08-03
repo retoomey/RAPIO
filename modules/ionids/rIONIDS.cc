@@ -97,10 +97,10 @@ IONIDS::readHeaders(StreamBuffer& b)
 } // IONIDS::readHeaders
 
 std::shared_ptr<DataType>
-IONIDS::createDataType(const std::string& params)
+IONIDS::createDataType(IOConfig& config)
 {
   // FIXME: Do we try/catch here or higher I forget
-  URL url(params);
+  URL url(config.getParamURL());
 
   fLogInfo("NIDS reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
@@ -157,9 +157,6 @@ IONIDS::createDataType(const std::string& params)
         std::dynamic_pointer_cast<NIDSSpecializer>(fmt);
 
       if (nidsFmt != nullptr) {
-        // FIXME:Humm I thought reads came from above, maybe not
-        std::map<std::string, std::string> keys;
-
         BlockProductSymbology sym;
         if (info.getChkCompression()) {
           // char test = b.readChar();
@@ -168,14 +165,14 @@ IONIDS::createDataType(const std::string& params)
 
           MemoryStreamBuffer z = b.readBZIP2();
           sym.read(z);
-          datatype = nidsFmt->readNIDS(keys, header, desc, sym, z);
+          datatype = nidsFmt->readNIDS(config, header, desc, sym, z);
         } else {
           sym.read(b);
-          datatype = nidsFmt->readNIDS(keys, header, desc, sym, b);
+          datatype = nidsFmt->readNIDS(config, header, desc, sym, b);
         }
 
         if (datatype) {
-          datatype->postRead(keys);
+          datatype->postRead(config);
         }
         return datatype;
       }
@@ -191,7 +188,7 @@ IONIDS::createDataType(const std::string& params)
 
 bool
 IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & config
 )
 {
   fLogSevere("Writing NIDS probably not working.");
@@ -212,7 +209,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   // Get the filename we should write to
   std::string filename;
 
-  if (!resolveFileName(keys, "nids", "nids-", filename)) {
+  if (!resolveFileName(config, "nids", "nids-", filename)) {
     return false;
   }
 
@@ -222,7 +219,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
   bool successful = false;
-  FILE * fp = nullptr;
+  FILE * fp       = nullptr;
 
   errno = 0;
 
@@ -238,7 +235,7 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
     try {
       FileStreamBuffer g(fp);
       g.setDataBigEndian(); // NIDS is BigEndian
-      successful = nidsFmt->writeNIDS(keys, dt, g);
+      successful = nidsFmt->writeNIDS(config, dt, g);
     } catch (...) {
       successful = false;
       fLogSevere("Failed to write nids file for DataType.");
@@ -247,19 +244,19 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
 
-  if (fp != nullptr){
+  if (fp != nullptr) {
     fclose(fp);
   }
 
   // ----------------------------------------------------------
   // Post processing such as extra compression, ldm, etc.
   if (successful) {
-    successful = postWriteProcess(filename, keys);
+    successful = postWriteProcess(filename, config);
   }
 
   // Standard output
   if (successful) {
-    showFileInfo("NIDS (LEVELIII) writer: ", keys);
+    showFileInfo("NIDS (LEVELIII) writer: ", config);
   }
 
   return successful;

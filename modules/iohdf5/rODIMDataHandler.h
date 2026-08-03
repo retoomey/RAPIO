@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rIOHDF5.h"
+#include <rHDF5Specializer.h>
 
 #include <rHDF5Group.h>
 #include <rMultiDataType.h>
@@ -16,22 +17,8 @@ namespace rapio {
  * @auther Robert Toomey
  *    Made it a IOSpecializer for ODIM data
  */
-class ODIMDataHandler : public IOSpecializer {
+class ODIMDataHandler : public HDF5Specializer {
 public:
-
-  /** Read DataType with given keys */
-  virtual std::shared_ptr<DataType>
-  read(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt)
-  override;
-
-  /** Write DataType with given keys */
-  virtual bool
-  write(
-    std::shared_ptr<DataType>         dt,
-    std::map<std::string, std::string>& keys)
-  override;
 
   /** Destroy the specializer */
   virtual
@@ -40,6 +27,19 @@ public:
   /** Initial introduction of ODIMDataHandler specializer to IOHDF5 */
   static void
   introduceSelf(IOHDF5 * owner);
+
+  /** Read a DataType from HDF5 */
+  virtual std::shared_ptr<DataType>
+  readHDF5(hid_t hdf5id,
+    IOConfig     & keys) override;
+
+  /** Write DataType to HDF5 */
+  virtual bool
+  writeHDF5(hid_t             hdf5id,
+    std::shared_ptr<DataType> dt,
+    IOConfig                  & keys) override;
+
+protected:
 
   /** Read a ODIM SCANPVOL */
   std::shared_ptr<DataType>

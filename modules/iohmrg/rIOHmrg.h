@@ -33,7 +33,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const std::string& params) override;
+  createDataType(IOConfig& config) override;
 
   /** Convert scaled compressed int to float.  Grouping the uncompression logic here inline,
    * this 'should' optimize in compiler to inline. */
@@ -92,17 +92,17 @@ public:
 
   /** Convert keys string to gzfile pointer in generic parameter passing */
   static StreamBuffer *
-  keyToStreamBuffer(std::map<std::string, std::string>& keys);
+  keyToStreamBuffer(IOConfig& keys);
 
   /** Convert gzFile pointer to keys string in generic parameter passing */
   static void
-  StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer * b);
+  StreamBufferToKey(IOConfig& config, StreamBuffer * b);
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>     & keys
+    IOConfig                               & config
   ) override;
 
   virtual

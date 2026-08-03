@@ -23,11 +23,11 @@ public:
 
   /** Notify about this message. */
   virtual void
-  writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) override;
+  writeMessage(IOConfig& outputParams, const Message& m) override;
 
   /** Notify for a single record */
   virtual void
-  writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) override;
+  writeRecord(IOConfig& outputParams, const Record& rec) override;
 
   /** Handle params for notifier */
   virtual void

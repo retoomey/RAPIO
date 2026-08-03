@@ -54,8 +54,8 @@ IOWgrib::initialize()
 std::vector<std::string>
 IOWgrib::capture_vstdout_of_wgrib2(bool useCapture, int argc, const char * argv[])
 {
-  //using Wgrib2Ptr = int (*)(int, const char *[]);
-  //Wgrib2Ptr wgrib2_ptr = wgrib2;
+  // using Wgrib2Ptr = int (*)(int, const char *[]);
+  // Wgrib2Ptr wgrib2_ptr = wgrib2;
 
   return OS::runFunction(
     useCapture,
@@ -106,21 +106,21 @@ IOWgrib::readGribDataType(const URL& url)
 } // IOWgrib::readGribDataType
 
 std::shared_ptr<DataType>
-IOWgrib::createDataType(const std::string& params)
+IOWgrib::createDataType(IOConfig& config)
 {
   // FIXME: technically a web URL we could read if we
   // copied it locally first for wgrib2
-  URL url(params);
+  URL url(config.getParamURL());
 
   fLogInfo("wgrib2 reader: {}", url.toString());
 
   // virtual to static, we only handle file/url
-  return (IOWgrib::readGribDataType(URL(params)));
+  return (IOWgrib::readGribDataType(url));
 }
 
 bool
 IOWgrib::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & params
+  IOConfig                                        & params
 )
 {
   fLogSevere("Called wgrib2 write module correctly.  Oh yay!");

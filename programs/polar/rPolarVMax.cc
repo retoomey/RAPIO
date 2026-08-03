@@ -91,9 +91,7 @@ public:
   iter.iterateRadialGates(myCallback);
 
   // Write product
-  std::map<std::string, std::string> myOverride;
-
-  writeOutputProduct(set->getTypeName(), set, myOverride);
+  writeOutputProduct(set->getTypeName(), set);
 } // PolarVMax::processVolume
 
 int

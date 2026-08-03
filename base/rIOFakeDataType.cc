@@ -26,7 +26,7 @@ IOFakeDataType::initialize()
 
 /** Read call */
 std::shared_ptr<DataType>
-IOFakeDataType::createDataType(const std::string& params)
+IOFakeDataType::createDataType(IOConfig& config)
 {
   auto * r = Record::getCreatingRecord();
 
@@ -42,7 +42,7 @@ IOFakeDataType::createDataType(const std::string& params)
 
 bool
 IOFakeDataType::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>                     & keys
+  IOConfig                                               & config
 )
 {
   fLogSevere("Unable to write fake data directly.");

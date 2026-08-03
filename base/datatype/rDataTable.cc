@@ -2,20 +2,10 @@
 
 using namespace rapio;
 
-
-bool
-PTreeDataTable::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>            & keys)
-{
-  // We write as generic PTreeData.  Might change later
-  // if extra fields go to DataTable
-  return false;
-}
-
 std::shared_ptr<DataType>
-PTreeDataTable::read(
-  std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>         dt)
+PTreeDataTable::downcastPTreeDataType(
+  IOConfig                  & keys,
+  std::shared_ptr<DataType> dt)
 {
   // We only introduce as PTreeData
   std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);

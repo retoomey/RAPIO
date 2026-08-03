@@ -263,7 +263,17 @@ RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& de
 
 void
 RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
-  std::map<std::string, std::string>            & outputParams)
+  std::map<std::string, std::string>            & legacyIn)
+{
+  IOConfig outputParams;
+
+  outputParams.setMap(legacyIn);
+  writeOutputMessage(m_in, outputParams);
+}
+
+void
+RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
+  IOConfig                                      & outputParams)
 {
   // Try to make this a bit unique to avoid any stepping over issues from
   // other algorithms.
@@ -287,12 +297,14 @@ RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
   for (auto& w:writers) {
     // Hardset writer to one only...this requires a writer=/path in -o to work
     // For example 2D fusion forces hmrg binary by -o hmrg=/path and setting onewriter to hmrg
-    if (!outputParams["onewriter"].empty()) {
-      if (w.factory != outputParams["onewriter"]) {
+    std::string oneWriter = outputParams.get("onewriter");
+    if (!oneWriter.empty()) {
+      if (w.factory != oneWriter) {
         continue;
       }
     }
-    outputParams["outputfolder"] = w.outputinfo; // Hack: w.outputinfo is processed by handleCommandParam
+
+    outputParams.set("outputfolder", w.outputinfo); // Hack: w.outputinfo is processed by handleCommandParam
 
     // Send to each notifier.  Let the notifier promote to record if wanted
     for (auto& n:PluginNotifier::theNotifiers) {
@@ -311,11 +323,22 @@ RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
 void
 RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType>                         outputData,
-  std::map<std::string, std::string>                & outputParams)
+  std::map<std::string, std::string>                & legacyIn)
 {
-  outputParams["filepathmode"] = "datatype";
-  outputParams["postwrite"]    = myPostWrite;
-  outputParams["postfml"]      = myPostFML;
+  IOConfig config;
+
+  config.setMap(legacyIn);
+  writeOutputProduct(key, outputData, config);
+}
+
+void
+RAPIOAlgorithm::writeOutputProduct(const std::string& key,
+  std::shared_ptr<DataType>                         outputData,
+  IOConfig                                          & outputParams)
+{
+  outputParams.set("filepathmode", "datatype");
+  outputParams.set("postwrite", myPostWrite);
+  outputParams.set("postfml", myPostFML);
 
   if (isProductWanted(key)) {
     // Original typeName, which may match key or not
@@ -335,8 +358,9 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
     for (auto& w:writers) {
       // Hardset writer to one only...this requires a writer=/path in -o to work
       // For example 2D fusion forces hmrg binary by -o hmrg=/path and setting onewriter to hmrg
-      if (!outputParams["onewriter"].empty()) {
-        if (w.factory != outputParams["onewriter"]) {
+      std::string oneWriter = outputParams.get("onewriter");
+      if (!oneWriter.empty()) {
+        if (w.factory != oneWriter) {
           continue;
         }
       }

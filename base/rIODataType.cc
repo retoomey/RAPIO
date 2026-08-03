@@ -150,7 +150,9 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
 
   if (builder != nullptr) {
     // Create DataType and remember factory
-    std::shared_ptr<DataType> dt = builder->createDataType(factoryparams);
+    IOConfig config;
+    config.setParams(factoryparams);
+    std::shared_ptr<DataType> dt = builder->createDataType(config);
     checkReadFactorySet(dt, f);
     return dt;
   } else {
@@ -168,7 +170,7 @@ IODataType::write1(std::shared_ptr<DataType> dt,
   const std::string                          & outputinfo,
   std::vector<Record>                        & records,
   std::string                                & factory,
-  std::map<std::string, std::string>         & outputParams)
+  IOConfig                                   & outputParams)
 {
   bool success  = false;
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
@@ -187,7 +189,7 @@ IODataType::write(std::shared_ptr<DataType> dt,
   const std::string                         & outputinfo,
   std::vector<Record>                       & records,
   const std::string                         & factory,
-  std::map<std::string, std::string>        & outputParams)
+  IOConfig                                  & outputParams)
 {
   auto success  = false;
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
@@ -217,11 +219,11 @@ IODataType::write(std::shared_ptr<DataType> dt,
 
 void
 IODataType::handleCommandParam(const std::string& command,
-  std::map<std::string, std::string>            &outputParams)
+  IOConfig                                      &outputParams)
 {
   // The default is factory=outputfolder.  Python for example splits
   // the command param into script,outputfolder
-  outputParams["outputfolder"] = command;
+  outputParams.set("outputfolder", command);
 }
 
 bool
@@ -229,7 +231,7 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   const std::string                            & outputinfo,
   std::vector<Record>                          & records,
   const std::string                            & knownfactory,
-  std::map<std::string, std::string>           & outputParams)
+  IOConfig                                     & outputParams)
 {
   // Add any output fields not explicitly set by caller
   // Basically outputParams overrides settings from rapiosettings.xml
@@ -241,8 +243,8 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
       auto output = dfs->getChild("output");
       auto map    = output.getAttrMap();
       for (auto& x:map) {
-        if (outputParams.count(x.first) == 0) {
-          outputParams[x.first] = x.second;
+        if (!outputParams.has(x.first)) {
+          outputParams.set(x.first, x.second);
         }
       }
     }catch (const std::exception& e) {
@@ -254,13 +256,13 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   // PYTHON=folder,scriptname or
   // NETCDF=folder
   // Note: This means currently output folder/factory is always forced by command line
-  std::string folder = outputParams["outputfolder"]; // if not empty set by caller (override)
+  std::string folder = outputParams.get("outputfolder"); // if not empty set by caller (override)
 
   if (folder.empty()) {
     handleCommandParam(outputinfo, outputParams);
   }
-  folder = outputParams["outputfolder"];
-  const std::string subfolder = outputParams["outputsubfolder"];
+  folder = outputParams.get("outputfolder");
+  const std::string subfolder = outputParams.get("outputsubfolder");
 
   if (!subfolder.empty()) {
     folder = folder + "/" + subfolder;
@@ -268,13 +270,13 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
 
   // New idea, file path mode for generalizing.  I want to expand for 'other' paths like S3
   // The code for ensuring directory need to not use with S3 obviously
-  std::string filePathMode = outputParams["filepathmode"];
+  std::string filePathMode = outputParams.get("filepathmode");
   URL aURL;
   bool directFile;
   bool ensureDir = false;
 
   if (filePathMode == "datatype") { // default datatype tree pathing
-    std::string prefix = outputParams["fileprefix"];
+    std::string prefix = outputParams.get("fileprefix");
     aURL       = dt->generateFileName(folder, prefix);
     ensureDir  = true;
     directFile = false;
@@ -298,18 +300,18 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   }
 
   // Here we go right?  Chicken egg issue with suffix I think...
-  outputParams["filename"] = aURL.toString(); // base filename.  Writer determines ending unless directFile right?
+  outputParams.set("filename", aURL.toString()); // base filename.  Writer determines ending unless directFile right?
 
   // FIXME: direct files vs generated..bleh. One has suffix, one doesn't
   // I still need to 'fix' this I think
-  outputParams["directfile"] = directFile ? "true" : "false"; // don't like this right now it's a suffix flag
+  outputParams.set("directfile", directFile ? "true" : "false"); // don't like this right now it's a suffix flag
 
   // Pass map to children.  Note: children can use the map to reply back to caller as well
   bool success = encodeDataType(dt, outputParams);
 
   // Generate a notification record on successful write of output file
   if (success) {
-    const std::string finalFile = outputParams["filename"];
+    const std::string finalFile = outputParams.get("filename");
     if (!finalFile.empty()) {
       // FIXME: ok so we could not create record in first place if not wanted, right?
       // IODataType::generateRecord(dt, finalFile, knownfactory, records);
@@ -326,46 +328,44 @@ IODataType::write(std::shared_ptr<DataType> dt, const std::string& outputinfo, c
   // Called to directly write single file by system to xml/json/txt, this is writing
   // without notification, etc.
   std::vector<Record> blackHole;
-  std::map<std::string, std::string> outputParams;
+  IOConfig outputParams;
 
-  outputParams["filepathmode"] = "direct";
+  outputParams.set("filepathmode", "direct");
+
   return write(dt, outputinfo, blackHole, factory, outputParams); // Default write single file
 }
 
 size_t
 IODataType::writeBuffer(std::shared_ptr<DataType> dt,
   std::vector<char>                               & buffer,
-  std::map<std::string, std::string>              & keys,
+  IOConfig                                        & keys,
   const std::string                               & factory)
 {
   // 1. Get the factory for this output
   std::string f = factory;
   auto encoder  = getFactory(f, "", dt);
 
-  // FIXME: Pass settings?  For now just XML/JSON use I'll skip it
   if (encoder == nullptr) { return 0; }
   // 2. Output file and generate records
-  std::map<std::string, std::string> outputParams;
-
-  return (encoder->encodeDataTypeBuffer(dt, buffer, outputParams));
+  return (encoder->encodeDataTypeBuffer(dt, buffer, keys));
 }
 
 bool
 IODataType::resolveFileName(
-  std::map<std::string, std::string>& keys,
-  const std::string                 & suffixDefault,
-  const std::string                 & tempDefault,
-  std::string                       & writeOut)
+  IOConfig          & keys,
+  const std::string & suffixDefault,
+  const std::string & tempDefault,
+  std::string       & writeOut)
 {
   // Get suffix from suggested by writer, or forced from settings
-  std::string suffix = keys["suffix"];
+  std::string suffix = keys.get("suffix");
 
   if (suffix.empty()) {
     suffix = suffixDefault;
   }
 
   // Get filename from settings
-  std::string filename = keys["filename"];
+  std::string filename = keys.get("filename");
 
   if (filename.empty()) {
     fLogSevere("Need a filename to output");
@@ -373,8 +373,8 @@ IODataType::resolveFileName(
   }
 
   // If not a direct file, it's generated so we need to add suffix
-  if (keys["directfile"] == "false") {
-    keys["filename"] = filename + "." + suffix;
+  if (keys.get("directfile") == "false") {
+    keys.set("filename", filename + "." + suffix);
   }
 
   // Use temporary file to do first write
@@ -387,26 +387,27 @@ IODataType::resolveFileName(
 }
 
 void
-IODataType::showFileInfo(const std::string& prefix, std::map<std::string, std::string>& keys, const std::string& suffix)
+IODataType::showFileInfo(const std::string& prefix, const IOConfig& config, const std::string& extra)
 {
   // FIXME: OS/Strings could do this more generically with booleans
   // Optionally show the filesize
   std::string out = prefix;
 
-  if (!keys["showfilesize"].empty()) {
-    out += "(" + Strings::formatBytes(OS::getFileSize(keys["filename"])) + ") ";
+  if (!config.get("showfilesize").empty()) {
+    out += "(" + Strings::formatBytes(OS::getFileSize(config.get("filename"))) + ") ";
   }
-  // And show the final filename
-  out += keys["filename"];
-  out += suffix;
+
+  // And show the final filename (which now inherently includes .gz if compressed)
+  out += config.get("filename");
+  out += extra;
 
   fLogInfo("{}", out);
 }
 
 bool
 IODataType::postWriteProcess(
-  const std::string                 & outfile,
-  std::map<std::string, std::string>& keys)
+  const std::string & outfile,
+  IOConfig          & keys)
 {
   // The 'outfile' parameter here is the temporary file the module just wrote to.
   // keys["filename"] holds the intended final destination.

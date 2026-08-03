@@ -220,8 +220,7 @@ public:
     iter.iterateRadialGates(myCallback);
 
     // Write the resulting product to disk (or the next pipeline step)
-    std::map<std::string, std::string> myOverride;
-    writeOutputProduct(vil->getTypeName(), vil, myOverride);
+    writeOutputProduct(vil->getTypeName(), vil);
   }
 };
 

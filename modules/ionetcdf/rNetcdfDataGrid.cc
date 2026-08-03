@@ -23,26 +23,25 @@ NetcdfDataGrid::introduceSelf(IONetcdf * owner)
 }
 
 std::shared_ptr<DataType>
-NetcdfDataGrid::read(std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>                            dt)
+NetcdfDataGrid::readNETCDF(int ncid, IOConfig& keys)
 {
   // Generic make DataGrid type
   std::shared_ptr<DataGrid> dataGridSP = std::make_shared<DataGrid>();
 
-  if (readDataGrid(dataGridSP, keys)) {
+  if (readDataGrid(ncid, dataGridSP, keys)) {
     return dataGridSP;
   }
   return nullptr;
 }
 
 bool
-NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
-  std::map<std::string, std::string>                   & keys)
+NetcdfDataGrid::readDataGrid(
+  int                       ncid,
+  std::shared_ptr<DataGrid> dataGridSP,
+  IOConfig                  & keys)
 {
   try {
     DataGrid& dataGrid = *dataGridSP;
-    const int ncid     = std::stoi(keys["NETCDF_NCID"]);
-    const URL loc      = URL(keys["NETCDF_URL"]);
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -63,7 +62,7 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
     std::vector<int> dimids;
     std::vector<std::string> dimnames;
     std::vector<size_t> dimsizes;
-    //auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+    // auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
     IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
 
     // Declare dimensions in data structure
@@ -167,14 +166,15 @@ NetcdfDataGrid::readDataGrid(std::shared_ptr<DataGrid> dataGridSP,
 } // NetcdfDataGrid::read
 
 bool
-NetcdfDataGrid::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>            & keys)
+NetcdfDataGrid::writeNETCDF(int ncid,
+  std::shared_ptr<DataType>     dt,
+  IOConfig                      & keys)
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();
 
   try {
-    const int ncid = std::stoi(keys["NETCDF_NCID"]);
+    // const int ncid = std::stoi(keys.get("NETCDF_NCID"));
 
     // ------------------------------------------------------------
     // DIMENSIONS

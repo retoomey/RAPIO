@@ -7,6 +7,7 @@
 #include <rError.h>
 #include <rDataProjection.h>
 #include <rURL.h>
+#include <rIOConfig.h>
 
 #include <string>
 #include <memory>
@@ -94,15 +95,15 @@ public:
     std::vector<Record> & records);
 
   /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
-  virtual void preWrite(std::map<std::string, std::string>& keys){ }
+  virtual void preWrite(IOConfig& keys){ }
 
   /** Post DataType after writing.  This can destroy temp arrays, etc. that were made just for writing. */
-  virtual void postWrite(std::map<std::string, std::string>& keys){ }
+  virtual void postWrite(IOConfig& keys){ }
 
   // Don't see a need for a preRead ability, maybe later
 
   /** Post DataType after reading. This can unsparse a DataType fields if needed/wanted */
-  virtual void postRead(std::map<std::string, std::string>& keys){ }
+  virtual void postRead(IOConfig& keys){ }
 
   /** Get the factory used to read this in originally, if ever.
    * This can assist writers in outputting */

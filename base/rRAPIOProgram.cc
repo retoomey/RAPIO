@@ -59,11 +59,22 @@ RAPIOProgram::isWebServer(const std::string& key) const
 bool
 RAPIOProgram::writeDirectOutput(const URL& path,
   std::shared_ptr<DataType>              outputData,
-  std::map<std::string, std::string>     & outputParams)
+  std::map<std::string, std::string>     & legacyIn)
+{
+  IOConfig outputParams;
+
+  outputParams.setMap(legacyIn);
+  return writeDirectOutput(path, outputData, outputParams);
+}
+
+bool
+RAPIOProgram::writeDirectOutput(const URL& path,
+  std::shared_ptr<DataType>              outputData,
+  IOConfig                               & outputParams)
 {
   std::vector<Record> blackHole;
 
-  outputParams["filepathmode"] = "direct";
+  outputParams.set("filepathmode", "direct");
 
   return IODataType::write(outputData, path.toString(), blackHole, "", outputParams);
 }

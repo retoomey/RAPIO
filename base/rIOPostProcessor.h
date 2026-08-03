@@ -1,7 +1,8 @@
 #pragma once
 
+#include "rIOConfig.h"
+
 #include <string>
-#include <map>
 #include <vector>
 #include <memory>
 
@@ -36,8 +37,8 @@ public:
    * Returns an empty string ("") if the step fails to halt the pipeline.
    */
   virtual std::string
-  execute(const std::string           & currentFilePath,
-    std::map<std::string, std::string>& keys) = 0;
+  execute(const std::string & currentFilePath,
+    IOConfig                & keys) = 0;
 };
 
 /**
@@ -54,8 +55,8 @@ public:
   explicit CompressionStep(const std::string& compressType) : myCompressType(compressType){ }
 
   std::string
-  execute(const std::string           & currentFilePath,
-    std::map<std::string, std::string>& keys) override;
+  execute(const std::string & currentFilePath,
+    IOConfig                & keys) override;
 private:
   std::string myCompressType;
 };
@@ -67,8 +68,8 @@ private:
 class AtomicRenameStep : public PostProcessStep {
 public:
   std::string
-  execute(const std::string           & currentFilePath,
-    std::map<std::string, std::string>& keys) override;
+  execute(const std::string & currentFilePath,
+    IOConfig                & keys) override;
 };
 
 /**
@@ -87,8 +88,8 @@ public:
   explicit SafeCommandStep(const std::string& commandTemplate) : myCommandTemplate(commandTemplate){ }
 
   std::string
-  execute(const std::string           & currentFilePath,
-    std::map<std::string, std::string>& keys) override;
+  execute(const std::string & currentFilePath,
+    IOConfig                & keys) override;
 private:
   std::string myCommandTemplate;
 };
@@ -100,8 +101,8 @@ private:
 class LDMInsertStep : public PostProcessStep {
 public:
   std::string
-  execute(const std::string           & currentFilePath,
-    std::map<std::string, std::string>& keys) override;
+  execute(const std::string & currentFilePath,
+    IOConfig                & keys) override;
 
   /**
    * @brief The single source of truth for constructing the pqinsert command vector.
@@ -125,7 +126,7 @@ public:
    * @param keys The configuration keys (e.g., "compression", "postwrite") that dictate the steps.
    */
   void
-  buildPipeline(const std::map<std::string, std::string>& keys);
+  buildPipeline(const IOConfig& keys);
 
   /**
    * @brief Pushes the initial file through the assembled chain.
@@ -135,7 +136,7 @@ public:
    * @return false If any step in the pipeline failed or aborted.
    */
   bool
-  run(const std::string& initialTempFile, std::map<std::string, std::string>& keys);
+  run(const std::string& initialTempFile, IOConfig& keys);
 
 private:
   std::vector<std::unique_ptr<PostProcessStep> > myPipeline;

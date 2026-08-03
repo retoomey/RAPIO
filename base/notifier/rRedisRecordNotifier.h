@@ -26,11 +26,11 @@ public:
 
   /** Write a message object to our queue for main loop processing */
   virtual void
-  writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) override;
+  writeMessage(IOConfig& outputParams, const Message& m) override;
 
   /** Write a record object to our queue for main loop processing */
   virtual void
-  writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) override;
+  writeRecord(IOConfig& outputParams, const Record& rec) override;
 
   /** Do any initialization this plugin requires */
   virtual void

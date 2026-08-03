@@ -157,7 +157,7 @@ LLHGridN2D::fillPrimary(float value)
 }
 
 void
-LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
+LLHGridN2D::preWrite(IOConfig& keys)
 {
   // Check if sparse already...
   auto pixelptr = getFloat1D("pixel_x");
@@ -261,7 +261,7 @@ LLHGridN2D::preWrite(std::map<std::string, std::string>& keys)
 } // LLHGridN2D::makeSparse
 
 void
-LLHGridN2D::postWrite(std::map<std::string, std::string>& keys)
+LLHGridN2D::postWrite(IOConfig& keys)
 {
   unsparseRestore();
 }

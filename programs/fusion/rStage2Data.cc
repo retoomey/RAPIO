@@ -86,9 +86,9 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
   } else {
     fLogInfo("Writing {} values, with {} missing as {} (RLE)", finalSize, myAddMissingCounter, finalSize2);
 
-    std::map<std::string, std::string> extraParams;
-    extraParams["showfilesize"]    = "yes";
-    extraParams["outputsubfolder"] = mySubFolder;
+    IOConfig extraParams;
+    extraParams.set("showfilesize", "yes");
+    extraParams.set("outputsubfolder", mySubFolder);
 
     // Writing netcdf.  This is more generic readable so I like it for that reason, however
     // our I/O is so critical we tend to use a custom binary for read/write speed at the cost
@@ -148,7 +148,7 @@ Stage2Storage::send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
 
       // We 'could' return the stage2 object let the algorithm write it...but we can hide
       // it here I think for moment just in case we end up doing something different
-      extraParams["compression"] = "gz";
+      extraParams.set("compression", "gz");
       stage2->setTypeName(asName);
       alg->writeOutputProduct("S2Netcdf", stage2, extraParams);
     }

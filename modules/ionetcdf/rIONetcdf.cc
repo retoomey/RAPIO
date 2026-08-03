@@ -66,9 +66,9 @@ IONetcdf::~IONetcdf()
 { }
 
 std::shared_ptr<DataType>
-IONetcdf::createDataType(const std::string& params)
+IONetcdf::createDataType(IOConfig& config)
 {
-  URL url(params);
+  URL url(config.getParamURL());
 
   fLogInfo("Netcdf reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
@@ -108,13 +108,13 @@ IONetcdf::createDataType(const std::string& params)
         fLogInfo("No netcdf reader for DataType '{}', using generic reader", type);
         fmt = IONetcdf::getIOSpecializer("DataGrid");
       }
-      if (fmt != nullptr) {
-        std::map<std::string, std::string> keys;
-        keys["NETCDF_NCID"] = to_string(ncid);
-        keys["NETCDF_URL"]  = url.toString();
-        datatype = fmt->read(keys, nullptr);
+      std::shared_ptr<NetcdfSpecializer> netcdfFmt = // allowed on nullptr fmt
+        std::dynamic_pointer_cast<NetcdfSpecializer>(fmt);
+
+      if (netcdfFmt != nullptr) {
+        datatype = netcdfFmt->readNETCDF(ncid, config);
         if (datatype) {
-          datatype->postRead(keys);
+          datatype->postRead(config);
         }
       }
     } else {
@@ -129,7 +129,7 @@ IONetcdf::createDataType(const std::string& params)
 
 bool
 IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>               & keys
+  IOConfig                                         & keys
 )
 {
   // ----------------------------------------------------------
@@ -147,7 +147,10 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
     }
   }
 
-  if (fmt == nullptr) {
+  std::shared_ptr<NetcdfSpecializer> netcdfFmt = // allowed on nullptr fmt
+    std::dynamic_pointer_cast<NetcdfSpecializer>(fmt);
+
+  if (netcdfFmt == nullptr) {
     fLogSevere("Can't create a netcdf IO writer for datatype {}", type);
     return false;
   }
@@ -169,12 +172,12 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
   int ncflags;
 
   try{
-    ncflags = std::stoi(keys["ncflags"]);
+    ncflags = std::stoi(keys.get("ncflags"));
   }catch (const std::exception& e) {
     ncflags = NC_NETCDF4;
   }
   try{
-    IONetcdf::GZ_LEVEL = std::stoi(keys["deflate_level"]);
+    IONetcdf::GZ_LEVEL = std::stoi(keys.get("deflate_level"));
   }catch (const std::exception& e) {
     IONetcdf::GZ_LEVEL = 6;
   }
@@ -201,10 +204,10 @@ IONetcdf::encodeDataType(std::shared_ptr<DataType> dt,
 
   // Write netcdf to a disk file here
   try {
-    keys["NETCDF_NCID"] = to_string(ncid);
-    keys["MakeSparse"]  = "on";
+    // keys.set("NETCDF_NCID", to_string(ncid));
     dt->preWrite(keys);
-    successful = fmt->write(dt, keys);
+    // successful = fmt->write(dt, keys);
+    successful = netcdfFmt->writeNETCDF(ncid, dt, keys);
     dt->postWrite(keys);
   } catch (...) {
     successful = false;

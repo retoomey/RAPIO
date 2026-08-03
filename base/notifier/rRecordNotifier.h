@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rRecord.h>
+#include <rIOConfig.h>
 
 namespace rapio {
 /** Record notifier types registered
@@ -21,16 +22,16 @@ public:
 
   /** Notify about this message. */
   virtual void
-  writeMessage(std::map<std::string, std::string>& outputParams, const Message& m) = 0;
+  writeMessage(IOConfig& outputParams, const Message& m) = 0;
 
   /** Notify about this record. */
   virtual void
-  writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec) = 0;
+  writeRecord(IOConfig& outputParams, const Record& rec) = 0;
 
   /** The default implementation loops through the records,
    *  passing each to writeRecord(). */
   virtual void
-  writeRecords(std::map<std::string, std::string>& outputParams, const std::vector<Record>& rec);
+  writeRecords(IOConfig& outputParams, const std::vector<Record>& rec);
 
   /** Set the initial params this record notifier */
   virtual void

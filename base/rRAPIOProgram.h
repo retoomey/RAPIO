@@ -3,7 +3,7 @@
 #include <rRAPIOOptions.h>
 #include <rRAPIOData.h>
 #include <rRAPIOPlugin.h>
-#include <rOutputConfig.h>
+#include <rIOConfig.h>
 
 namespace rapio {
 class WebMessage;
@@ -156,6 +156,13 @@ protected:
   virtual void
   addPostLoadedHelp(RAPIOOptions& o){ };
 
+  /* Write direct using a map */
+  [[deprecated("Use writeDirectOutput taking IOConfig instead of std::map")]]
+  virtual bool
+  writeDirectOutput(const URL         & path,
+    std::shared_ptr<DataType>         outputData,
+    std::map<std::string, std::string>& outputParams);
+
   /** Write data based on suffix directly to a given file key,
    * without notification.  You normally want to call writeOutputProduct
    * which will autogenerate file names, multi-output and notify, etc.
@@ -163,9 +170,9 @@ protected:
    * functions at some point
    */
   virtual bool
-  writeDirectOutput(const URL         & path,
-    std::shared_ptr<DataType>         outputData,
-    std::map<std::string, std::string>& outputParams);
+  writeDirectOutput(const URL & path,
+    std::shared_ptr<DataType> outputData,
+    IOConfig                  & outputParams);
 
   /** Clean up plugins */
   // ~RAPIOProgram(){

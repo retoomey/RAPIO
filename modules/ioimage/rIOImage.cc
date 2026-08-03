@@ -76,7 +76,7 @@ IOImage::introduce(const std::string & name,
 // ---------------------------------------------------------
 #if HAVE_MAGICK
 static bool
-buildMagickImage(Magick::Image& i, std::shared_ptr<DataGrid> grid, std::map<std::string, std::string>& keys)
+buildMagickImage(Magick::Image& i, std::shared_ptr<DataGrid> grid, IOConfig& keys)
 {
   auto sizes = grid->getSizes();
 
@@ -92,7 +92,7 @@ buildMagickImage(Magick::Image& i, std::shared_ptr<DataGrid> grid, std::map<std:
   // Dynamic quality support
   long quality = 95;
 
-  if (keys.count("quality")) { quality = std::stol(keys["quality"]); }
+  if (keys.has("quality")) { quality = std::stol(keys.get("quality")); }
   i.quality(quality);
 
   i.modifyImage();
@@ -136,7 +136,7 @@ buildMagickImage(Magick::Image& i, std::shared_ptr<DataGrid> grid, std::map<std:
   }
 
   // --- 8-BIT INDEXED OPTIMIZATION ---
-  if (keys["indexed"] == "true") {
+  if (keys.get("indexed") == "true") {
     i.quantizeColors(256);
     i.quantizeDither(false);
     i.quantize();
@@ -210,18 +210,18 @@ IOImage::readImageDataType(const URL& url)
 } // IOImage::readImageDataType
 
 std::shared_ptr<DataType>
-IOImage::createDataType(const std::string& params)
+IOImage::createDataType(IOConfig& config)
 {
   // virtual to static
-  return (IOImage::readImageDataType(URL(params)));
+  return (IOImage::readImageDataType(config.getParamURL()));
 }
 
 bool
 IOImage::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>              & keys
+  IOConfig                                        & keys
 )
 {
-  std::string suffix = keys["suffix"];
+  std::string suffix = keys.get("suffix");
   std::string filename;
 
   // FIX: Hardcode "png" as the default fallback so Magick++ knows what to encode!
@@ -236,8 +236,8 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 
   // ADD THIS: Force fast compression for PNG tiles.  They will be bigger
   // if user doesn't request higher compression
-  if ((suffix == "png") && (keys.count("quality") == 0)) {
-    keys["quality"] = "10"; // Level 1 compression, 0 filtering
+  if ((suffix == "png") && (keys.has("quality"))) {
+    keys.set("quality", "10"); // Level 1 compression, 0 filtering
   }
 
   bool successful = false;
@@ -262,8 +262,8 @@ IOImage::encodeDataType(std::shared_ptr<DataType> dt,
 } // IOImage::encodeDataType
 
 bool
-IOImage::writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename, std::map<std::string,
-  std::string>& keys)
+IOImage::writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filename,
+  IOConfig& keys)
 {
   #if HAVE_MAGICK
   auto grid = std::dynamic_pointer_cast<DataGrid>(dt);
@@ -284,7 +284,7 @@ IOImage::writeMAGICKTile(std::shared_ptr<DataType> dt, const std::string& filena
 
 size_t
 IOImage::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  std::map<std::string, std::string>              & keys
+  IOConfig              & keys
 )
 {
   #if HAVE_MAGICK
@@ -294,7 +294,7 @@ IOImage::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& b
   Magick::Image i;
   if (!buildMagickImage(i, grid, keys)) { return 0; }
 
-  std::string format = keys["suffix"];
+  std::string format = keys.get("suffix");
   if (format.empty()) { format = "PNG"; }
   Strings::toUpper(format);
 

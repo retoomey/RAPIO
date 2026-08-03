@@ -61,8 +61,8 @@ void
 RAPIOWebGUI::processOptions(RAPIOOptions& o)
 {
   // Humm webserver should be getting these passed in, right?
-  myOverride["cols"] = "256";
-  myOverride["rows"] = "256";
+  myOverride.set("cols", "256");
+  myOverride.set("rows", "256");
 
   std::string startupFile = o.getString("i");
 
@@ -85,7 +85,7 @@ RAPIOWebGUI::processOptions(RAPIOOptions& o)
   if (cache.empty()) {
     cache = "CACHE";
   }
-  myOverride["tilecachefolder"] = cache;
+  myOverride.set("tilecachefolder", cache);
 }
 
 void
@@ -96,13 +96,16 @@ RAPIOWebGUI::processNewData(rapio::RAPIOData& d)
 } // RAPIOTileAlg::processNewData
 
 namespace {
+#if 0
 // https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#C.2FC.2B.2B
 int
 long2tilex(double lon, int z)
 {
   return (int) (floor((lon + 180.0) / 360.0 * (1 << z)));
 }
+#endif
 
+#if 0
 int
 lat2tiley(double lat, int z)
 {
@@ -110,6 +113,7 @@ lat2tiley(double lat, int z)
 
   return (int) (floor((1.0 - asinh(tan(latrad)) / M_PI) / 2.0 * (1 << z)));
 }
+#endif
 
 double
 tilex2long(int x, int z)
@@ -531,8 +535,7 @@ RAPIOWebGUI::handlePathData(WebMessage& w, std::vector<std::string>& pieces)
 }
 
 void
-RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   std::string datasetId = resolveDatasetId(w);
   auto targetData       = getOrLoadDataset(datasetId);
@@ -559,8 +562,7 @@ RAPIOWebGUI::handleColorMap(WebMessage& w, std::vector<std::string>& pieces, std
 }
 
 void
-RAPIOWebGUI::handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handleSVG(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   std::string datasetId = resolveDatasetId(w);
   auto targetData       = getOrLoadDataset(datasetId);
@@ -581,11 +583,10 @@ RAPIOWebGUI::handleSVG(WebMessage& w, std::vector<std::string>& pieces, std::map
 }
 
 void
-RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std::string& pathout, IOConfig& settings)
 {
   TilePayload payload;
-  std::string suffix = settings["suffix"];
+  std::string suffix = settings.get("suffix");
 
   // Resolve MIME type
   std::string mimeType = "image/" + suffix;
@@ -628,7 +629,7 @@ RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std:
 
   // -- VECTOR TILE GENERATION --
   if ((suffix == "pbf") || (suffix == "mvt") || (suffix == "geojson") || (suffix == "json")) {
-    std::string layerName = settings.count("layer") ? settings["layer"] : "";
+    std::string layerName = settings.has("layer") ? settings.get("layer") : "";
     auto vectorData       = getCachedVectorLayer(targetData, layerName);
 
     // If we asked for vector data but have raster data, return gracefully
@@ -641,17 +642,17 @@ RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std:
     int x = 0, y = 0, z = 0;
 
     // Extract coordinates from settings
-    if (settings.count("x") && settings.count("y") && settings.count("z")) {
-      x      = std::stoi(settings["x"]);
-      y      = std::stoi(settings["y"]);
-      z      = std::stoi(settings["z"]);
+    if (settings.has("x") && settings.has("y") && settings.has("z")) {
+      x      = std::stoi(settings.get("x"));
+      y      = std::stoi(settings.get("y"));
+      z      = std::stoi(settings.get("z"));
       minLon = tilex2long(x, z);
       maxLat = tiley2lat(y, z);
       maxLon = tilex2long(x + 1, z);
       minLat = tiley2lat(y + 1, z);
-    } else if (settings.count("BBOX")) {
+    } else if (settings.has("BBOX")) {
       std::vector<std::string> bbox;
-      Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
+      Strings::splitWithoutEnds(settings.get("BBOX"), ',', &bbox);
       if (bbox.size() == 4) {
         minLon = std::stod(bbox[0]);
         minLat = std::stod(bbox[1]);
@@ -672,7 +673,7 @@ RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std:
   }
   // -- RASTER TILE GENERATION --
   else {
-    auto tileGrid = DataProjection::createResampledTile(targetData, settings);
+    auto tileGrid = DataProjection::createResampledTile(targetData, settings.getMapRef());
 
     // If we asked for raster data but have vector data (or out of bounds), return gracefully
     if (!tileGrid) {
@@ -680,7 +681,7 @@ RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std:
       return;
     }
 
-    settings["index"] = "true";
+    settings.set("index", "true");
     size_t bytes = IODataType::writeBuffer(tileGrid, tileBuffer, settings, "image");
     if (bytes == 0) {
       w.setError(204);
@@ -712,8 +713,7 @@ RAPIOWebGUI::serveTile(WebMessage& w, std::shared_ptr<DataType> targetData, std:
 } // RAPIOWebGUI::serveTile
 
 void
-RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   // 1. Determine which dataset the frontend is requesting
   std::string datasetId = resolveDatasetId(w);
@@ -726,10 +726,10 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std:
     return;
   }
 
-  std::string cache = settings["tilecachefolder"];
+  std::string cache = settings.get("tilecachefolder");
   std::vector<std::string> bbox;
 
-  Strings::splitWithoutEnds(settings["BBOX"], ',', &bbox);
+  Strings::splitWithoutEnds(settings.get("BBOX"), ',', &bbox);
   if (bbox.size() != 4) {
     fLogSevere("Expected 4 parameters in BBOX for WMS server request, got {}", bbox.size());
     w.setError(400);
@@ -745,23 +745,22 @@ RAPIOWebGUI::handlePathWMS(WebMessage& w, std::vector<std::string>& pieces, std:
     }
   }
 
-  std::string suffix = settings["suffix"];
+  std::string suffix = settings.get("suffix");
   std::string safeDatasetName = OS::validatePathCharacters(datasetId);
 
   // 2. Build dataset-specific WMS path
   std::string pathout = cache + "/wms/" + safeDatasetName + "/T" + bbox[0] + "/T" + bbox[1] + "/T" + bbox[2] + "/T"
     + bbox[3] + "/tile." + suffix;
 
-  settings["TILETEXT"] = "";
-  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+  settings.set("TILETEXT", "");
+  if (w.getMap().count("layer")) { settings.get("layer") = w.getMap().at("layer"); }
 
   // 3. Serve with target data
   serveTile(w, targetData, pathout, settings);
 } // RAPIOWebGUI::handlePathWMS
 
 void
-RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   // 1. Determine which dataset the frontend is requesting
   std::string datasetId = resolveDatasetId(w);
@@ -782,23 +781,22 @@ RAPIOWebGUI::handlePathMVT(WebMessage& w, std::vector<std::string>& pieces, std:
     return;
   }
 
-  settings["suffix"] = "pbf";
+  settings.set("suffix", "pbf");
   // Keep caches separated by dataset!
-  std::string pathout = settings["tilecachefolder"] + "/mvt/" + datasetId + "/"
+  std::string pathout = settings.get("tilecachefolder") + "/mvt/" + datasetId + "/"
     + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".pbf";
 
-  settings["x"] = std::to_string(x);
-  settings["y"] = std::to_string(y);
-  settings["z"] = std::to_string(z);
-  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+  settings.set("x", std::to_string(x));
+  settings.set("y", std::to_string(y));
+  settings.set("z", std::to_string(z));
+  if (w.getMap().count("layer")) { settings.set("layer", w.getMap().at("layer")); }
 
   // Pass the targetData into serveTile
   serveTile(w, targetData, pathout, settings);
 } // RAPIOWebGUI::handlePathMVT
 
 void
-RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   // 1. Determine which dataset the frontend is requesting
   std::string datasetId = resolveDatasetId(w);
@@ -825,26 +823,24 @@ RAPIOWebGUI::handlePathTMS(WebMessage& w, std::vector<std::string>& pieces, std:
   // so it doesn't create weird nested folders in your cache directory.
   std::string safeDatasetName = OS::validatePathCharacters(datasetId);
 
-  std::string pathout = settings["tilecachefolder"] + "/tms/" + safeDatasetName + "/"
-    + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + "." + settings["suffix"];
+  std::string pathout = settings.get("tilecachefolder") + "/tms/" + safeDatasetName + "/"
+    + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + "." + settings.get("suffix");
 
-  settings["BBOX"] = std::to_string(minLon) + "," + std::to_string(minLat) + "," + std::to_string(maxLon) + ","
-    + std::to_string(maxLat);
-  settings["BBOXSR"] = "4326";
-  settings["x"]      = std::to_string(x);
-  settings["y"]      = std::to_string(y);
-  settings["z"]      = std::to_string(z);
+  settings.set("BBOX", std::to_string(minLon) + "," + std::to_string(minLat) + "," + std::to_string(maxLon) + "," + std::to_string(maxLat));
+  settings.set("BBOXSR", "4326");
+  settings.set("x", std::to_string(x));
+  settings.set("y", std::to_string(y));
+  settings.set("z", std::to_string(z));
 
   // Optional: If the user requested a specific sub-layer (like a GDAL raster band)
-  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+  if (w.getMap().count("layer")) { settings.set("layer", w.getMap().at("layer")); }
 
   // 4. Pass the explicitly loaded dataset into the serving logic
   serveTile(w, targetData, pathout, settings);
 } // RAPIOWebGUI::handlePathTMS
 
 void
-RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, std::map<std::string,
-  std::string>& settings)
+RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, IOConfig& settings)
 {
   // 1. Determine which dataset the frontend is requesting
   std::string datasetId = resolveDatasetId(w);
@@ -865,17 +861,17 @@ RAPIOWebGUI::handlePathGeoJSON(WebMessage& w, std::vector<std::string>& pieces, 
     return;
   }
 
-  settings["suffix"] = "geojson";
+  settings.set("suffix", "geojson");
   std::string safeDatasetName = OS::validatePathCharacters(datasetId);
 
   // 2. Build dataset-specific GeoJSON cache path
-  std::string pathout = settings["tilecachefolder"] + "/geojson/" + safeDatasetName + "/"
+  std::string pathout = settings.get("tilecachefolder") + "/geojson/" + safeDatasetName + "/"
     + std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".geojson";
 
-  settings["x"] = std::to_string(x);
-  settings["y"] = std::to_string(y);
-  settings["z"] = std::to_string(z);
-  if (w.getMap().count("layer")) { settings["layer"] = w.getMap().at("layer"); }
+  settings.set("x", std::to_string(x));
+  settings.set("y", std::to_string(y));
+  settings.set("z", std::to_string(z));
+  if (w.getMap().count("layer")) { settings.set("layer", w.getMap().at("layer")); }
 
   // 3. Serve with target data
   serveTile(w, targetData, pathout, settings);
@@ -944,25 +940,25 @@ RAPIOWebGUI::logWebMessage(const WebMessage& w)
 
 void
 RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
-  std::map<std::string, std::string>                                 & settings)
+  IOConfig                                 & settings)
 {
   // Filter web GET params into ours if needed, WMS/TMS can use
   // different strings.
   for (auto& a:params) {
-    settings[a.first] = a.second;
+    settings.set(a.first, a.second);
 
     // Leaflet WMS fields to ours...
     if (a.first == "bbox") {
-      settings["BBOX"] = a.second;
+      settings.set("BBOX", a.second);
     } else if (a.first == "height") {
-      settings["rows"] = a.second;
+      settings.set("rows", a.second);
     } else if (a.first == "width") {
-      settings["cols"] = a.second;
+      settings.set("cols", a.second);
     } else if (a.first == "srs") {   // wms source
       if (a.second == "EPSG:4326") { // lat lon
-        settings["BBOXSR"] = "4326";
+        settings.set("BBOXSR","4326");
       } else if (a.second == "EPSG:3857") {
-        settings["BBOXSR"] = "3857";
+        settings.set("BBOXSR","3857");
       }
     }
     // wms "format=image/jpeg" should probably handle it
@@ -978,15 +974,15 @@ RAPIOWebGUI::handleOverrides(const std::map<std::string, std::string>& params,
       //      else if (trimS == "application/geo+json") trimS = "geojson";
 
       Strings::removePrefix(trimS, "image/");
-      settings["suffix"] = trimS;
+      settings.set("suffix", trimS);
     } else if (a.first == "depth") {
-      settings["depth"] = a.second; // Pass the 8/16 bit depth setting along!
+      settings.set("depth", a.second); // Pass the 8/16 bit depth setting along!
     }
   }
-  if (settings["suffix"] == "") {
-    settings["suffix"] = "png";
+  if (settings.get("suffix") == "") {
+    settings.set("suffix", "png");
   }
-  if ((settings["suffix"] == "png") && (settings.count("quality") == 0)) { settings["quality"] = "10"; }
+  if ((settings.get("suffix") == "png") && (settings.has("quality") == 0)) { settings.set("quality", "10"); }
 } // RAPIOWebGUI::handleOverrides
 
 void
@@ -996,12 +992,12 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
   auto& w = *wsp;
 
   // Local settings for this call
-  std::map<std::string, std::string> settings = myOverride;
+  IOConfig settings = myOverride;
 
   // Extra debugging logging to a 'server' file
   const bool debuglog = false;
 
-  settings["debug"] = debuglog; // image write could use this for more info
+  settings.set("debug", debuglog? "true":"false"); // image write could use this for more info
   if (debuglog) {
     logWebMessage(w);
   }
@@ -1010,7 +1006,7 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
   handleOverrides(w.getMap(), settings);
 
   // Arcgis or other gis software asking for capabilities.
-  if ((settings["service"] == "WMS") && (settings["request"] == "GetCapabilities")) {
+  if ((settings.get("service") == "WMS") && (settings.get("request") == "GetCapabilities")) {
     // Arcgis earth (or others) asking for WMS capabilities.
     const URL url = Config::getConfigFile("misc/webguicapabilities.xml");
     if (url.empty()) {
@@ -1027,12 +1023,12 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
     w.setMessage(buffer.str(), "application/xml");
     return;
   } else {
-    bool service = (settings["service"] == "WMS");
+    //bool service = (settings.get("service") == "WMS");
     // fLogInfo("Settings?  {}", service);
   }
 
   // CACHE SETTING (Global/not changable)
-  std::string cache = myOverride["tilecachefolder"];
+  std::string cache = myOverride.get("tilecachefolder");
 
   // Break up the URL path first to delegate further
   std::vector<std::string> pieces;
@@ -1054,12 +1050,12 @@ RAPIOWebGUI::processWebMessage(std::shared_ptr<WebMessage> wsp)
   if (type == "wms") {
     handlePathWMS(w, pieces, settings);
   } else if (type == "wmsdata") {
-    settings["suffix"] = "mrmstile";
+    settings.set("suffix", "mrmstile");
     handlePathWMS(w, pieces, settings);
   } else if (type == "tms") {
     handlePathTMS(w, pieces, settings);
   } else if (type == "tmsdata") {
-    settings["suffix"] = "mrmstile";
+    settings.set("suffix", "mrmstile");
     handlePathTMS(w, pieces, settings);
   } else if (type == "mvt") {
     // handlePathVectorTMS(w, pieces, settings);

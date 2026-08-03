@@ -15,7 +15,7 @@ BOOST_WRAP_POP
 namespace rapio {
 std::string
 CompressionStep::execute(const std::string& currentFilePath,
-  std::map<std::string, std::string>      & keys)
+  IOConfig                                & keys)
 {
   std::shared_ptr<DataFilter> f = Factory<DataFilter>::get(myCompressType, "IO writer");
 
@@ -26,12 +26,12 @@ CompressionStep::execute(const std::string& currentFilePath,
 
   std::string tmpgz = OS::getUniqueTemporaryFile(myCompressType + "-");
 
-  if (f->applyURL(URL(currentFilePath), URL(tmpgz), keys)) {
+  if (f->applyURL(URL(currentFilePath), URL(tmpgz), keys.getMapRef())) {
     fLogDebug("Compressed {} with '{}' to {}", currentFilePath, myCompressType, tmpgz);
     OS::deleteFile(currentFilePath); // Clean up the uncompressed temp file
 
     // Append the compression suffix to the intended final target name
-    keys["filename"] = keys["filename"] + "." + myCompressType;
+    keys.set("filename", keys.get("filename") + "." + myCompressType);
     return tmpgz;
   }
 
@@ -41,9 +41,9 @@ CompressionStep::execute(const std::string& currentFilePath,
 
 std::string
 AtomicRenameStep::execute(const std::string& currentFilePath,
-  std::map<std::string, std::string>       & keys)
+  IOConfig                                 & keys)
 {
-  std::string targetFile = keys["filename"];
+  std::string targetFile = keys.get("filename");
 
   fLogDebug("Migrating {} to {}", currentFilePath, targetFile);
 
@@ -57,7 +57,7 @@ AtomicRenameStep::execute(const std::string& currentFilePath,
 
 std::string
 SafeCommandStep::execute(const std::string& currentFilePath,
-  std::map<std::string, std::string>      & keys)
+  IOConfig                                & keys)
 {
   std::vector<std::string> args;
 
@@ -90,7 +90,7 @@ LDMInsertStep::buildLdmArgs(const std::string& filepath)
 
 std::string
 LDMInsertStep::execute(const std::string& currentFilePath,
-  std::map<std::string, std::string>    & keys)
+  IOConfig                              & keys)
 {
   fLogDebug("Executing LDM insertion for: {}", currentFilePath);
 
@@ -110,36 +110,36 @@ LDMInsertStep::execute(const std::string& currentFilePath,
 }
 
 void
-IOPostProcessor::buildPipeline(const std::map<std::string, std::string>& keys)
+IOPostProcessor::buildPipeline(const IOConfig& keys)
 {
   myPipeline.clear();
 
   // 1. Compression (Opt-in based on keys)
-  auto compIt = keys.find("compression");
+  std::string comp = keys.get("compression");
 
-  if ((compIt != keys.end()) && !compIt->second.empty()) {
-    myPipeline.push_back(std::make_unique<CompressionStep>(compIt->second));
+  if (!comp.empty()) {
+    myPipeline.push_back(std::make_unique<CompressionStep>(comp));
   }
 
   // 2. Rename (Mandatory to move from temp space to final resting place)
   myPipeline.push_back(std::make_unique<AtomicRenameStep>());
 
   // 3. Post-write execution / LDM Insertion
-  auto cmdIt = keys.find("postwrite");
+  std::string postWriteCmd = keys.get("postwrite");
 
-  if ((cmdIt != keys.end()) && !cmdIt->second.empty()) {
-    if (cmdIt->second == "ldm") {
+  if (!postWriteCmd.empty()) {
+    if (postWriteCmd == "ldm") {
       // Route specifically to our LDM class
       myPipeline.push_back(std::make_unique<LDMInsertStep>());
     } else {
       // Route to the generic safe shell executor
-      myPipeline.push_back(std::make_unique<SafeCommandStep>(cmdIt->second));
+      myPipeline.push_back(std::make_unique<SafeCommandStep>(postWriteCmd));
     }
   }
 }
 
 bool
-IOPostProcessor::run(const std::string& initialTempFile, std::map<std::string, std::string>& keys)
+IOPostProcessor::run(const std::string& initialTempFile, IOConfig& keys)
 {
   std::string currentFile = initialTempFile;
 

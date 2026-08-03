@@ -99,15 +99,15 @@ IORaw::readRawDataType(const URL& url)
 } // IORaw::readRawDataType
 
 std::shared_ptr<DataType>
-IORaw::createDataType(const std::string& params)
+IORaw::createDataType(IOConfig& config)
 {
   // virtual to static
-  return (IORaw::readRawDataType(URL(params)));
+  return (IORaw::readRawDataType(config.getParamURL()));
 }
 
 bool
 IORaw::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>            & keys
+  IOConfig                                      & keys
 )
 {
   bool successful = false;
@@ -130,7 +130,7 @@ IORaw::encodeDataType(std::shared_ptr<DataType> dt,
     FILE * fp = fopen(filename.c_str(), "w");
     successful = output->writeBlock(fp); // write block is virtual
     if (!successful) {
-      fLogSevere("Failed to write raw output file: {}", keys["filename"]);
+      fLogSevere("Failed to write raw output file: {}", keys.get("filename"));
     }
     fclose(fp);
 

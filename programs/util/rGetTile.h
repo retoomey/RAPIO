@@ -26,7 +26,7 @@ public:
 protected:
 
   /** Override output params for image output (global) */
-  std::map<std::string, std::string> myOverride;
+  IOConfig myOverride;
 
   /** Manually set colormap for output */
   std::string myColorMap;

@@ -1,4 +1,5 @@
 #pragma once
+#include <rURL.h>
 
 namespace rapio {
 /** An API for specifying how to output a DataType.
@@ -12,16 +13,29 @@ namespace rapio {
  *
  * @author Robert Toomey
  */
-class OutputConfig {
+class IOConfig {
 public:
-  OutputConfig() = default;
+  IOConfig() = default;
+
+  /** Return command line parameter string as a URL */
+  URL
+  getParamURL()
+  {
+    return URL(myParams);
+  }
+
+  void
+  setParams(const std::string& p)
+  {
+    myParams = p;
+  }
 
   /** Set a special string by key.  Will be used by dynamic modules
    * to store non-standard custom values */
-  OutputConfig&
+  IOConfig&
   set(const std::string& key, const std::string& value)
   {
-    myParams[key] = value;
+    myLookup[key] = value;
     return *this;
   }
 
@@ -29,16 +43,16 @@ public:
   bool
   has(const std::string& key) const
   {
-    return myParams.find(key) != myParams.end();
+    return myLookup.find(key) != myLookup.end();
   }
 
   /** Get a key with a safe default */
   std::string
   get(const std::string& key, const std::string& defaultValue = "") const
   {
-    auto it = myParams.find(key);
+    auto it = myLookup.find(key);
 
-    if (it != myParams.end()) {
+    if (it != myLookup.end()) {
       return it->second;
     }
     return defaultValue;
@@ -48,19 +62,29 @@ public:
   const std::map<std::string, std::string>&
   toMap() const
   {
-    return myParams;
+    return myLookup;
   }
 
   /** Temp legacy code compatibility if needed */
   std::map<std::string, std::string>&
   getMapRef()
   {
-    return myParams;
+    return myLookup;
+  }
+
+  /** Temp legacy code hack */
+  void
+  setMap(std::map<std::string, std::string>& in)
+  {
+    myLookup = in;
   }
 
 private:
 
+  /** Params from command line */
+  std::string myParams;
+
   /** Generic storage */
-  std::map<std::string, std::string> myParams;
+  std::map<std::string, std::string> myLookup;
 };
 }

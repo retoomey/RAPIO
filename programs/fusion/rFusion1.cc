@@ -285,10 +285,10 @@ RAPIOFusionOneAlg::createLLHtoAzRangeElevProjection(
 void
 RAPIOFusionOneAlg::writeOutputCAPPI(std::shared_ptr<LatLonGrid> output)
 {
-  std::map<std::string, std::string> extraParams;
+  IOConfig extraParams;
 
-  extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
-  extraParams["compression"]  = "gz";
+  extraParams.set("showfilesize", "yes"); // Force compression and sizes for now
+  extraParams.set("compression", "gz");
 
   if (!myWriteSubgrid) {
     // FIXME: check grids aren't already same size or this is wasted

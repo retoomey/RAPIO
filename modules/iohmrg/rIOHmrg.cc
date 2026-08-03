@@ -73,9 +73,10 @@ IOHmrg::isMRMSValidYear(int year)
 }
 
 std::shared_ptr<DataType>
-IOHmrg::createDataType(const std::string& params)
+IOHmrg::createDataType(IOConfig& config)
 {
-  URL url(params);
+  fLogSevere("Here we at {}", __LINE__);
+  URL url(config.getParamURL());
 
   // fLogInfo("HMRG reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
@@ -119,25 +120,23 @@ IOHmrg::createDataType(const std::string& params)
 
     // --------------------------------------------------------------------------
     // Factory
-    std::map<std::string, std::string> keys;
-
     GzipFileStreamBuffer g(fp);
     g.setDataLittleEndian();
-    StreamBufferToKey(keys, &g);
+    StreamBufferToKey(config, &g);
 
     if (validASCII) {
       fLogInfo("HMRG reader: {} (Guess: MRMS Polar Binary)", url.toString());
       std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("RadialSet");
 
       std::string radarName(v.begin(), v.end());
-      keys["RadarName"] = radarName;
-      datatype = fmt->read(keys, nullptr);
+      config.set("RadarName", radarName);
+      datatype = fmt->read(config);
     } else if (validYear) {
       fLogInfo("HMRG reader: {} (Guess: MRMS Gridded Binary)", url.toString());
       std::shared_ptr<IOSpecializer> fmt = IOHmrg::getIOSpecializer("LatLonGrid");
 
-      keys["DataYear"] = to_string(firstYear);
-      datatype         = fmt->read(keys, nullptr);
+      config.set("DataYear", to_string(firstYear));
+      datatype = fmt->read(config);
     } else {
       fLogSevere("HRMG Reader: Unrecognizable radar name or valid year, can't process {}", url.toString());
     }
@@ -145,7 +144,7 @@ IOHmrg::createDataType(const std::string& params)
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
     datatype = nullptr;
   }
-  if (fp != nullptr){
+  if (fp != nullptr) {
     gzclose(fp);
   }
   return datatype;
@@ -153,7 +152,7 @@ IOHmrg::createDataType(const std::string& params)
 
 bool
 IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & config
 )
 {
   // ----------------------------------------------------------
@@ -171,7 +170,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   // Get the filename we should write to
   std::string filename;
 
-  if (!resolveFileName(keys, "hmrg.gz", "hmrg-", filename)) {
+  if (!resolveFileName(config, "hmrg.gz", "hmrg-", filename)) {
     return false;
   }
 
@@ -181,7 +180,7 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   // Clear any errno from other stuff that might have set it already
   // we could clear it in the macro..maybe best
   bool successful = false;
-  gzFile fp = nullptr;
+  gzFile fp       = nullptr;
 
   errno = 0;
   try{
@@ -198,9 +197,9 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
     try {
       GzipFileStreamBuffer g(fp);
       g.setDataLittleEndian();
-      StreamBufferToKey(keys, &g);
-      successful = fmt->write(dt, keys);
-      StreamBufferToKey(keys, nullptr);
+      StreamBufferToKey(config, &g);
+      successful = fmt->write(dt, config);
+      StreamBufferToKey(config, nullptr);
     } catch (...) {
       successful = false;
       fLogSevere("Failed to write hmrg file for DataType");
@@ -208,39 +207,39 @@ IOHmrg::encodeDataType(std::shared_ptr<DataType> dt,
   } catch (const ErrnoException& ex) {
     fLogSevere("Errno: {} {}", ex.getErrnoVal(), ex.getErrnoStr());
   }
-  if (fp != nullptr){
+  if (fp != nullptr) {
     gzclose(fp);
   }
 
   // ----------------------------------------------------------
   // Post processing such as extra compression, ldm, etc.
-  const std::string compress = keys["compression"];
+  const std::string compress = config.get("compression");
 
   if (!compress.empty()) {
     fLogDebug("Turning off compression option '{}', since hmrg uses gzip automatically", compress);
-    keys["compression"] = ""; // global for this run unless alg setting it
+    config.set("compression", ""); // global for this run unless alg setting it
   }
 
   if (successful) {
-    successful = postWriteProcess(filename, keys);
+    successful = postWriteProcess(filename, config);
   }
 
   // Standard output
   if (successful) {
-    showFileInfo("HMRG writer: ", keys);
+    showFileInfo("HMRG writer: ", config);
   }
 
   return successful;
 } // IOHmrg::encodeDataType
 
 StreamBuffer *
-IOHmrg::keyToStreamBuffer(std::map<std::string, std::string>& keys)
+IOHmrg::keyToStreamBuffer(IOConfig& keys)
 {
   StreamBuffer * sb;
 
   // Make sure enough address numbers for 128 bit machines and forever hopefully
   try{
-    unsigned long long rawPointer = std::stol(keys["BUFFER_ID"]);
+    unsigned long long rawPointer = std::stol(keys.get("BUFFER_ID"));
     sb = (StreamBuffer *) (rawPointer); // Clip down to os pointer size
   }catch (...) {                        // allow fail to nullptr
     sb = nullptr;
@@ -249,7 +248,7 @@ IOHmrg::keyToStreamBuffer(std::map<std::string, std::string>& keys)
 }
 
 void
-IOHmrg::StreamBufferToKey(std::map<std::string, std::string>& keys, StreamBuffer * sb)
+IOHmrg::StreamBufferToKey(IOConfig& keys, StreamBuffer * sb)
 {
-  keys["BUFFER_ID"] = to_string((unsigned long long) (sb));
+  keys.set("BUFFER_ID", to_string((unsigned long long) (sb)));
 }

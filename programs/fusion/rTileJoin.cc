@@ -231,7 +231,7 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
     // separate from keys.  Baby steps
     if (myTileJoinDatabase->add(l, databaseKey)) {
       myTileJoinDatabase->finalizeEntry(databaseKey, myLLGOutput);
-      std::map<std::string, std::string> myOverrides; // None for now
+      IOConfig myOverrides; // None for now
       writeOutputProduct(myLLGOutput->getTypeName(), myLLGOutput, myOverrides);
     }
 
@@ -254,7 +254,7 @@ TileJoinAlg::processHeartbeat(const Time& n, const Time& p)
   }
   for (auto databaseKey:list) {
     myTileJoinDatabase->finalizeEntry(databaseKey, myLLGOutput);
-    std::map<std::string, std::string> myOverrides; // None for now
+    IOConfig myOverrides; // None for now
     writeOutputProduct(myLLGOutput->getTypeName(), myLLGOutput, myOverrides);
   }
 }

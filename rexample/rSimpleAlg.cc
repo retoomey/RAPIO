@@ -150,8 +150,8 @@ W2SimpleAlg::processNewData(RAPIOData& d)
 
     // Standard echo of data to output.  Note it's the same data out as in here
     fLogInfo("--->Echoing {} product to output", r->getTypeName());
-    std::map<std::string, std::string> myOverrides;
-    // myOverrides["postSuccessCommand"] = "ldm";            // Do a standard pqinsert of final data file
+    IOConfig myOverrides;
+    // myOverrides.set("postSuccessCommand", "ldm");            // Do a standard pqinsert of final data file
     writeOutputProduct(r->getTypeName(), r, myOverrides); // Typename will be replaced by -O filters
     fLogInfo("--->Finished {} product to output", r->getTypeName());
   }

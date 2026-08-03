@@ -358,12 +358,12 @@ DataGrid::factoryGetRawDataPointer(const std::string& name, const std::string& u
 
 void
 DataGrid::unsparse2D(
-  size_t                            num_x,
-  size_t                            num_y,
-  std::map<std::string, std::string>& keys,
-  const std::string                 & pixelX,
-  const std::string                 & pixelY,
-  const std::string                 & pixelCount)
+  size_t            num_x,
+  size_t            num_y,
+  IOConfig          & keys,
+  const std::string & pixelX,
+  const std::string & pixelY,
+  const std::string & pixelCount)
 {
   // ------------------------------------------
   // Check if sparse array exist
@@ -473,14 +473,14 @@ DataGrid::unsparse2D(
 
 void
 DataGrid::unsparse3D(
-  size_t                            num_x,
-  size_t                            num_y,
-  size_t                            num_z,
-  std::map<std::string, std::string>& keys,
-  const std::string                 & pixelX,
-  const std::string                 & pixelY,
-  const std::string                 & pixelZ,
-  const std::string                 & pixelCount)
+  size_t            num_x,
+  size_t            num_y,
+  size_t            num_z,
+  IOConfig          & keys,
+  const std::string & pixelX,
+  const std::string & pixelY,
+  const std::string & pixelZ,
+  const std::string & pixelCount)
 {
   // ------------------------------------------
   // Check if sparse array exist

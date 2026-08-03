@@ -19,14 +19,12 @@ HmrgRadialSet::introduceSelf(IOHmrg * owner)
 }
 
 std::shared_ptr<DataType>
-HmrgRadialSet::read(
-  std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>         dt)
+HmrgRadialSet::read(IOConfig& config)
 {
-  StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
+  StreamBuffer * g = IOHmrg::keyToStreamBuffer(config);
 
   if (g != nullptr) {
-    std::string radarName = keys["RadarName"];
+    std::string radarName = config.get("RadarName");
     return readRadialSet(*g, radarName);
   } else {
     fLogSevere("Invalid stream buffer pointer, cannot read");
@@ -36,8 +34,8 @@ HmrgRadialSet::read(
 
 bool
 HmrgRadialSet::write(
-  std::shared_ptr<DataType>         dt,
-  std::map<std::string, std::string>& keys)
+  std::shared_ptr<DataType> dt,
+  IOConfig                  & keys)
 {
   bool success     = false;
   StreamBuffer * g = IOHmrg::keyToStreamBuffer(keys);
@@ -75,12 +73,12 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   Time dataTime = g.readTime();
 
   // FIXME: We can store in the newer RadialSet API now
-  //const float nyquist = g.readScaledInt(headerScale); // 45-48 
+  // const float nyquist = g.readScaledInt(headerScale); // 45-48
   g.readScaledInt(headerScale); // 45-48
-  const int vcp       = g.readInt();                  // 49-52
+  const int vcp = g.readInt();  // 49-52
 
-  //const int tiltNumber      = g.readInt();                  // 53-56
-  g.readInt();                  // 53-56
+  // const int tiltNumber      = g.readInt();                  // 53-56
+  g.readInt();                                              // 53-56
   const float elevAngleDegs = g.readScaledInt(headerScale); // 57-60
 
   const int num_radials = g.readInt(); // 61-64
@@ -173,7 +171,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
   const int dataUnavailable = -9990; // FIXME: table lookup * dataScale;
 
   for (int i = 0; i < num_radials; ++i) {
-    //float start_az = i; // Each degree
+    // float start_az = i; // Each degree
 
     // We could add each time but that might accumulate drift error
     // Adding would be faster.  Does it matter?
@@ -181,7 +179,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
     beamwidths[i] = 1; // Correct?
     // gatewidths[i] = gateSpacingMeters;
     for (int j = 0; j < num_gates; ++j) {
-      //auto old = rawBuffer[rawBufferIndex];
+      // auto old = rawBuffer[rawBufferIndex];
       data[i][j] = IOHmrg::fromHmrgValue(rawBuffer[rawBufferIndex++], dataUnavailable, dataMissing,
           dataScale);
       #if 0
@@ -201,7 +199,7 @@ HmrgRadialSet::readRadialSet(StreamBuffer& g, const std::string& radarName)
 bool
 HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radialsetp)
 {
-  //bool success    = false;
+  // bool success    = false;
   auto& radialset = *radialsetp;
 
   // ------------------------------------------------------------------
@@ -355,7 +353,7 @@ HmrgRadialSet::writeRadialSet(StreamBuffer& g, std::shared_ptr<RadialSet> radial
   g.writeInt(dataMissing); // FIXME: missing or scaled?
 
   // The placeholder.. 8 ints
-  //int fill = 0;
+  // int fill = 0;
 
   for (size_t i = 0; i < 8; i++) {
     g.writeInt(0);

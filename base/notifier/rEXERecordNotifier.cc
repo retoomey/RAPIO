@@ -57,13 +57,13 @@ EXERecordNotifier::~EXERecordNotifier()
 { }
 
 void
-EXERecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& rec)
+EXERecordNotifier::writeMessage(IOConfig& outputParams, const Message& rec)
 {
   fLogDebug("-->EXE TRYING TO WRITE MESSAGE");
 }
 
 void
-EXERecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
+EXERecordNotifier::writeRecord(IOConfig& outputParams, const Record& rec)
 {
   // const std::string outputinfo = outputParams["outputfolder"];
   auto params = rec.getParams();

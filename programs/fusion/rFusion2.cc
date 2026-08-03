@@ -279,7 +279,7 @@ void
 RAPIOFusionTwoAlg::write2DLayers(const std::string& productKey,
   const std::string                               & label,
   const std::string                               & aTypeName,
-  std::map<std::string, std::string>              & extraParams,
+  IOConfig                                        & extraParams,
   Time                                            & outputTime)
 {
   if (isProductWanted(productKey)) {
@@ -301,7 +301,7 @@ RAPIOFusionTwoAlg::write2DLayers(const std::string& productKey,
 void
 RAPIOFusionTwoAlg::write3DLayer(const std::string& productKey,
   const std::string                              & aTypeName,
-  std::map<std::string, std::string>             & extraParams,
+  IOConfig                                       & extraParams,
   Time                                           & outputTime)
 {
   if (isProductWanted(productKey)) {
@@ -356,10 +356,10 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   Time outputTime = p;
 
   // Extra params (might be better in config)
-  std::map<std::string, std::string> extraParams;
+  IOConfig extraParams;
 
-  extraParams["showfilesize"] = "yes"; // Force compression and sizes for now
-  extraParams["compression"]  = "gz";  // Force compression
+  extraParams.set("showfilesize", "yes"); // Force compression and sizes for now
+  extraParams.set("compression", "gz");  // Force compression
 
   // ---------------------------------------
   // Output 2D and/or 3D cube

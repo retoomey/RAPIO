@@ -26,7 +26,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const std::string& param) override;
+  createDataType(IOConfig& config) override;
 
   /** Do a full read from a param list */
   static std::shared_ptr<DataType>
@@ -37,7 +37,7 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>     & params
+    IOConfig                               & params
   ) override;
 
   virtual

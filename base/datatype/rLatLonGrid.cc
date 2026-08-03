@@ -339,7 +339,7 @@ LatLonGrid::getProjection(const std::string& layer)
 }
 
 void
-LatLonGrid::postRead(std::map<std::string, std::string>& keys)
+LatLonGrid::postRead(IOConfig& keys)
 {
   // For now, we always unsparse to full.  Though say in rcopy we
   // would want to keep it sparse.  FIXME: have a key control this
@@ -347,13 +347,14 @@ LatLonGrid::postRead(std::map<std::string, std::string>& keys)
 } // LatLonGrid::postRead
 
 void
-LatLonGrid::preWrite(std::map<std::string, std::string>& keys)
+LatLonGrid::preWrite(IOConfig& keys)
 {
+  // FIXME: Settings for sparse right
   sparse2D(); // Standard sparse of primary data (add dimension)
 }
 
 void
-LatLonGrid::postWrite(std::map<std::string, std::string>& keys)
+LatLonGrid::postWrite(IOConfig& keys)
 {
   unsparseRestore();
 }

@@ -29,15 +29,14 @@ TextBinaryTable::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextBinaryTable::read(std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>                             dt)
+TextBinaryTable::read(IOConfig& config)
 {
   return nullptr;
 }
 
 bool
 TextBinaryTable::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys)
+  IOConfig                                       & keys)
 {
   bool successful = false;
 

@@ -57,7 +57,7 @@ BlockRadialSet::read(StreamBuffer& b)
 
   // This is the data format used to store the set of radials
   // FIXME: Looks like we read it below
-  //bool inShorts = (myPacketCode != 16);
+  // bool inShorts = (myPacketCode != 16);
 
 
   // So we loop over the number of radials

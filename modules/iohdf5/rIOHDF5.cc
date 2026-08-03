@@ -146,17 +146,18 @@ print_attributes(hid_t obj_id, const char * obj_name)
     H5Aclose(attr_id);
   }
 } // print_attributes
-#endif
+
+#endif // if 0
 
 // Enhanced callback function to list objects and their attributes
 #if 0
 // Unused currently
 herr_t
-#if H5_VERSION_GE(1, 12, 0)
+# if H5_VERSION_GE(1, 12, 0)
 list_objects(hid_t loc_id, const char * name, const H5O_info2_t * info, void * op_data)
-#else
+# else
 list_objects(hid_t loc_id, const char * name, const H5O_info_t * info, void * op_data)
-#endif
+# endif
 {
   if (info->type == H5O_TYPE_GROUP) {
     printf("Group: %s\n", name);
@@ -176,7 +177,7 @@ list_objects(hid_t loc_id, const char * name, const H5O_info_t * info, void * op
 
   return 0;
 }
-#endif
+#endif // if 0
 }
 
 bool
@@ -205,9 +206,9 @@ IOHDF5::isHdf5File(const std::string& t_filename)
 }
 
 std::shared_ptr<DataType>
-IOHDF5::createDataType(const std::string& params)
+IOHDF5::createDataType(IOConfig& config)
 {
-  URL url(params);
+  URL url(config.getParamURL());
 
   fLogInfo("HDF5 reader: {}", url.toString());
   std::shared_ptr<DataType> datatype = nullptr;
@@ -226,14 +227,14 @@ IOHDF5::createDataType(const std::string& params)
         // FIXME: We could do a general HDF5 file DataType.  Might be nice at somo point.
         // For the moment, focusing on Opera Data Information Model (ODIM)
         std::string type = "ODIM";
-        std::shared_ptr<IOSpecializer> fmt = IOHDF5::getIOSpecializer(type);
-        if (fmt != nullptr) {
-          std::map<std::string, std::string> keys;
-          keys["HDF5_ID"]  = std::to_string(hdfid);
-          keys["HDF5_URL"] = url.toString();
-          datatype         = fmt->read(keys, nullptr);
+        std::shared_ptr<IOSpecializer> fmt       = IOHDF5::getIOSpecializer(type);
+        std::shared_ptr<HDF5Specializer> hdf5Fmt = // allowed on nullptr fmt
+          std::dynamic_pointer_cast<HDF5Specializer>(fmt);
+
+        if (hdf5Fmt != nullptr) {
+          datatype = hdf5Fmt->readHDF5(hdfid, config);
           if (datatype) {
-            datatype->postRead(keys);
+            datatype->postRead(config);
           }
         }
 
@@ -255,7 +256,7 @@ IOHDF5::createDataType(const std::string& params)
 
 bool
 IOHDF5::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & config
 )
 {
   // FIXME: Could generalize HDF5 output files?

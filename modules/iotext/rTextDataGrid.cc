@@ -19,8 +19,7 @@ TextDataGrid::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextDataGrid::read(std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>                          dt)
+TextDataGrid::read(IOConfig& config)
 {
   return nullptr;
 }
@@ -53,7 +52,7 @@ dumpAttributes(std::shared_ptr<DataAttributeList> list, const std::string& i, co
 
 bool
 TextDataGrid::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>          & keys)
+  IOConfig                                    & keys)
 {
   bool successful = false;
 
@@ -144,7 +143,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
     // ------------------------------------------------------------
     // ARRAYS
     for (auto l:list) {
-      //auto type = l->getStorageType();
+      // auto type = l->getStorageType();
 
       // Primary data is the data type of the file
       // Remember functions still take original name
@@ -155,7 +154,7 @@ TextDataGrid::write(std::shared_ptr<DataType> dt,
       file << " " << theName << " = \n\n";
 
       // a poor quick wrap around for moment:
-      //static size_t counter = 1;
+      // static size_t counter = 1;
 
       // Conveniently use printArray so we don't have to type things
       auto anArray = dataGrid->getDataArray(orgName);

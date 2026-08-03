@@ -367,7 +367,7 @@ RadialSet::initTerrain()
 }
 
 void
-RadialSet::postRead(std::map<std::string, std::string>& keys)
+RadialSet::postRead(IOConfig& keys)
 {
   // Uncompress the arrays if needed
   unsparse2D(myDims[0].size(), myDims[1].size(), keys);
@@ -377,13 +377,13 @@ RadialSet::postRead(std::map<std::string, std::string>& keys)
 } // RadialSet::postRead
 
 void
-RadialSet::preWrite(std::map<std::string, std::string>& keys)
+RadialSet::preWrite(IOConfig& keys)
 {
   sparse2D(); // Standard sparse of primary data (add dimension)
 }
 
 void
-RadialSet::postWrite(std::map<std::string, std::string>& keys)
+RadialSet::postWrite(IOConfig& keys)
 {
   unsparseRestore();
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rIONetcdf.h>
+#include <rNetcdfSpecializer.h>
 
 class NcVar;
 
@@ -10,22 +11,8 @@ class BinaryTable;
 /** Handles the construction of BinaryTable object from the netcdf data,
  *  @see IONetcdf
  */
-class NetcdfBinaryTable : public IOSpecializer {
+class NetcdfBinaryTable : public NetcdfSpecializer {
 public:
-
-  /** Write BinaryTable DataType */
-  virtual bool
-  write(
-    std::shared_ptr<DataType>         dt,
-    std::map<std::string, std::string>& keys)
-  override;
-
-  /** Read a BinaryTable DataType */
-  virtual std::shared_ptr<DataType>
-  read(
-    std::map<std::string, std::string>& keys,
-    std::shared_ptr<DataType>         dt)
-  override;
 
   /** Destroy this NetcdfBinaryTable */
   virtual
@@ -34,5 +21,16 @@ public:
   /** Initial introduction of BinaryTable specializer to IONetcdf */
   static void
   introduceSelf(IONetcdf * owner);
+
+  /** Read a BinaryTable from NETCDF */
+  virtual std::shared_ptr<DataType>
+  readNETCDF(int ncid,
+    IOConfig     & keys) override;
+
+  /** Write a DataType to NETCDF */
+  virtual bool
+  writeNETCDF(int             ncid,
+    std::shared_ptr<DataType> dt,
+    IOConfig                  & keys) override;
 };
 }

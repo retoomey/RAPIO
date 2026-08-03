@@ -45,7 +45,7 @@ RAPIONetcdfTestAlg::processNewData(RAPIOData& d)
 
   if (r != nullptr) {
     // Override output params for image output
-    std::map<std::string, std::string> flags;
+    IOConfig flags;
 
     // Prefix pattern for standard datatype/subtype/time
     const std::string prefix = DataType::DATATYPE_PREFIX;
@@ -56,27 +56,27 @@ RAPIONetcdfTestAlg::processNewData(RAPIOData& d)
 
     // -------------------------------------------------------------------------
     // Write a netcdf3 file
-    flags["ncflags"]    = "256"; // cmode for netcdf3 (see ucar netcdf docs)
-    flags["fileprefix"] = prefix + "_n3";
+    flags.set("ncflags", "256"); // cmode for netcdf3 (see ucar netcdf docs)
+    flags.set("fileprefix", prefix + "_n3");
     ProcessTimer z("");
     writeOutputProduct(key, r, flags);
     totalSums[0].add(z);
 
     // Write a xz file, curious on speed vs native netcdf compression
-    flags["compression"] = "xz";
+    flags.set("compression", "xz");
     ProcessTimer zp("");
     writeOutputProduct(key, r, flags);
     totalSums[1].add(zp);
-    flags["compression"] = "";
+    flags.set("compression", "");
 
     // ------------------------------------------------------------------------
     // Write multiple netcdf4 files with different compression settings
-    flags["ncflags"] = "4096"; // cmode for netcdf4 (see ucar netcdf docs)
+    flags.set("ncflags", "4096"); // cmode for netcdf4 (see ucar netcdf docs)
     for (size_t i = 0; i < 10; i++) {
       ProcessTimer p("writing");
       const std::string s = std::to_string(i);
-      flags["fileprefix"]    = prefix + "_n4_c" + s + "_";
-      flags["deflate_level"] = s;
+      flags.set("fileprefix", prefix + "_n4_c" + s + "_");
+      flags.set("deflate_level", s);
       //  std::this_thread::sleep_for(std::chrono::milliseconds(2400));
       writeOutputProduct(key, r, flags);
       totalSums[i + 2].add(p);

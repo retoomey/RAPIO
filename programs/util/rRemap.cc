@@ -149,9 +149,7 @@ Remap::remap(std::shared_ptr<LatLonGrid> llg)
   // ----------------------------------------------------------------
   // Write the new output
   //
-  std::map<std::string, std::string> myOverrides;
-
-  writeOutputProduct(out->getTypeName(), out, myOverrides); // Typename will be replaced by -O filters
+  writeOutputProduct(out->getTypeName(), out); // Typename will be replaced by -O filters
 } // Remap::remap
 
 void
@@ -180,9 +178,7 @@ Remap::remap(std::shared_ptr<RadialSet> rs)
   // ----------------------------------------------------------------
   // Write the new output
   //
-  std::map<std::string, std::string> myOverrides;
-
-  writeOutputProduct(out->getTypeName(), out, myOverrides); // Typename will be replaced by -O filters
+  writeOutputProduct(out->getTypeName(), out); // Typename will be replaced by -O filters
 } // Remap::remap
 
 void

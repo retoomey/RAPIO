@@ -94,7 +94,7 @@ IOPython::~IOPython()
 { }
 
 std::shared_ptr<DataType>
-IOPython::createDataType(const std::string& params)
+IOPython::createDataType(IOConfig& config)
 {
   fLogSevere("Python scripts cannot currently create DataTypes.");
   return nullptr;
@@ -127,7 +127,7 @@ IOPython::runDataProcess(const std::string& command,
     root->addNode("RAPIOOutput", fileinfo);
 
     std::vector<char> buf; // FIXME: Buffer class instead?
-    std::map<std::string, std::string> keys;
+    IOConfig keys;
     size_t aLength = IODataType::writeBuffer(theJson, buf, keys, "json");
     if (aLength < 2) { // Check for empty buffer (buffer always ends with 0)
       fLogSevere("DataGrid didn't generate JSON so aborting python call.");
@@ -246,7 +246,7 @@ IOPython::runDataProcess(const std::string& command,
 
 void
 IOPython::handleCommandParam(const std::string& command,
-  std::map<std::string, std::string>          &outputParams)
+  IOConfig                                    &outputParams)
 {
   // The default is factory=outputfolder.  Python for example splits
   // the command param into script,outputfolder
@@ -255,8 +255,8 @@ IOPython::handleCommandParam(const std::string& command,
   Strings::splitWithoutEnds(command, ',', &pieces);
   auto s = pieces.size();
 
-  outputParams["scriptname"]   = (s > 0) ? pieces[0] : "";
-  outputParams["outputfolder"] = (s > 1) ? pieces[1] : "./";
+  outputParams.set("scriptname", (s > 0) ? pieces[0] : "");
+  outputParams.set("outputfolder", (s > 1) ? pieces[1] : "./");
   if (s < 2) {
     fLogSevere("PYTHON= format should be scriptpath,outputfolder");
     fLogSevere("        Tried to parse from '{}'", command);
@@ -265,15 +265,15 @@ IOPython::handleCommandParam(const std::string& command,
 
 bool
 IOPython::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>               & keys
+  IOConfig                                         & keys
 )
 {
   // -------------------------------------------------------------------
   // Settings
-  bool outputPython = (keys["print"] == "true");
-  const std::string pythonScript = keys["scriptname"];
-  const std::string outputFolder = keys["outputfolder"];
-  std::string filename = keys["filename"];
+  bool outputPython = (keys.get("print") == "true");
+  const std::string pythonScript = keys.get("scriptname");
+  const std::string outputFolder = keys.get("outputfolder");
+  std::string filename = keys.get("filename");
 
   if (filename.empty()) {
     fLogSevere("Need a filename to output");
@@ -295,7 +295,7 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
     }
   }
 
-  auto p = keys["bin"]; // force override the python with setting.  Check for it?
+  auto p = keys.get("bin"); // force override the python with setting.  Check for it?
 
   if (!p.empty()) { python = p; }
   // -------------------------------------------------------------------
@@ -317,11 +317,11 @@ IOPython::encodeDataType(std::shared_ptr<DataType> dt,
       // We'll always use RAPIO to mark returns.  I want it to fail as soon as possible for speed
       if ((v.size() > 4) && (v[0] == 'R') && (v[1] == 'A') && (v[2] == 'P') && (v[3] == 'I') && (v[4] == 'O')) {
         if (Strings::removePrefix(v, "RAPIO_FILE_OUT:")) {
-          keys["filename"] = v;
-          haveFileBack     = true;
+          keys.set("filename", v);
+          haveFileBack = true;
           continue;
         } else if (Strings::removePrefix(v, "RAPIO_FACTORY_OUT:")) {
-          keys["factory"] = v;
+          keys.set("factory", v);
           haveFactoryBack = true;
           continue;
         }

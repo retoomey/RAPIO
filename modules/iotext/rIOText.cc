@@ -51,15 +51,15 @@ IOText::readRawDataType(const URL& url)
 } // IOText::readRawDataType
 
 std::shared_ptr<DataType>
-IOText::createDataType(const std::string& params)
+IOText::createDataType(IOConfig& config)
 {
   // virtual to static
-  return (IOText::readRawDataType(URL(params)));
+  return (IOText::readRawDataType(config.getParamURL()));
 }
 
 bool
 IOText::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & keys
 )
 {
   // ----------------------------------------------------------
@@ -83,7 +83,7 @@ IOText::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // Check if console because it's a lot simplier...
-  bool console = (!keys["console"].empty());
+  bool console = (!keys.get("console").empty());
 
   if (console) {
     theFile = &std::cout; // allowed

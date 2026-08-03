@@ -51,9 +51,7 @@ NetcdfBinaryTable::introduceSelf(IONetcdf * owner)
 }
 
 std::shared_ptr<DataType>
-NetcdfBinaryTable::read(
-  std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>         dt)
+NetcdfBinaryTable::readNETCDF(int ncid, IOConfig& keys)
 {
   fLogSevere("Unimplemented raw table, returning empty table");
 
@@ -63,15 +61,15 @@ NetcdfBinaryTable::read(
 }
 
 bool
-NetcdfBinaryTable::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>               & keys)
+NetcdfBinaryTable::writeNETCDF(int ncid,
+  std::shared_ptr<DataType>        dt,
+  IOConfig                         & keys)
 {
   try {
     std::shared_ptr<BinaryTable> pBinaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
     BinaryTable& binaryTable = *pBinaryTable;
-    const int ncid          = std::stoi(keys["NETCDF_NCID"]);
-    const float missing     = IONetcdf::MISSING_DATA; // Could be keys
-    const float rangeFolded = IONetcdf::RANGE_FOLDED;
+    const float missing      = IONetcdf::MISSING_DATA; // Could be keys
+    const float rangeFolded  = IONetcdf::RANGE_FOLDED;
 
     // Generically write a binary table's stuff to netcdf.  This uses an API
     // within the binary table to avoid coupling and to allow dynamic expansion

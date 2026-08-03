@@ -250,10 +250,12 @@ MakeTerrain::execute()
 
   fLogInfo("Writing terrain grid to {}...", myOutputFile);
 
-  std::map<std::string, std::string> keys;
+  // FIXME: wondering why we're calling write directly here
+  // Must be hole in the API still
+  IOConfig keys;
 
-  keys["filepathmode"] = "direct";
-  keys["filename"]     = myOutputFile;
+  keys.set("filepathmode","direct");
+  keys.set("filename", myOutputFile);
 
   std::vector<Record> blackHole;
 

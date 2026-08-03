@@ -28,68 +28,21 @@ NetcdfRadialSet::introduceSelf(IONetcdf * owner)
 }
 
 std::shared_ptr<DataType>
-NetcdfRadialSet::read(
-  std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>         dt)
+NetcdfRadialSet::readNETCDF(int ncid, IOConfig& keys)
 {
   std::shared_ptr<RadialSet> radialSetSP = std::make_shared<RadialSet>();
 
-  if (readDataGrid(radialSetSP, keys)) {
+  if (readDataGrid(ncid, radialSetSP, keys)) {
     return radialSetSP;
   } else {
     return nullptr;
   }
-} // NetcdfRadialSet::read
+}
 
 bool
-NetcdfRadialSet::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys)
+NetcdfRadialSet::writeNETCDF(int ncid,
+  std::shared_ptr<DataType>      dt,
+  IOConfig                       & keys)
 {
-  // FIXME: Note, we might want to validate the dimensions, etc.
-  // Two dimensions: "Azimuth", "Gate"
-  return (NetcdfDataGrid::write(dt, keys));
-} // NetcdfRadialSet::write
-
-std::shared_ptr<DataType>
-NetcdfRadialSet::getTestObject(
-  LLH    location,
-  Time   time,
-  size_t objectNumber)
-{
-  const size_t num_radials = 100;
-  const size_t num_gates   = 20;
-  const float elev         = 0.50;
-  const double elev_angle  = elev;
-  const float gate_width   = 1;
-  const float beam_width   = 2;
-
-  // float radial_time        = 1000.0; // Add a second to radial time for each
-  //                                   // radial...
-
-  // std::string nyq_unit("MetersPerSecond");
-
-  float firstGateDistanceMeters = 1000.0;
-  auto radialSetSP = RadialSet::Create("Reflectivity", "dbZ", location, time,
-      elev_angle, firstGateDistanceMeters, gate_width, num_radials, num_gates);
-  RadialSet& radialSet = *radialSetSP;
-  // radialSet.setNyquistVelocityUnit(nyq_unit);
-
-  auto& azimuths   = radialSet.getFloat1DRef(RadialSet::Azimuth);
-  auto& beamwidths = radialSet.getFloat1DRef(RadialSet::BeamWidth);
-  // auto& gatewidths = radialSet.getFloat1D(RadialSet::GateWidth);
-
-  auto& data = radialSet.getFloat2DRef(Constants::PrimaryDataName);
-
-  for (size_t i = 0; i < num_radials; ++i) {
-    float start_az = i; // Each degree
-    azimuths[i]   = start_az;
-    beamwidths[i] = beam_width;
-    // gatewidths[i] = gate_width;
-    for (size_t j = 0; j < num_gates; ++j) {
-      data[i][j] = i;
-    }
-  }
-
-  // radialSet.setDataAttributeValue("Unit", "dimensionless", "MetersPerSecond");
-  return (radialSetSP);
-} // NetcdfRadialSet::getTestObject
+  return (NetcdfDataGrid::writeNETCDF(ncid, dt, keys));
+}

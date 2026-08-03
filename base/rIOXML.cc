@@ -42,7 +42,7 @@ IOXML::createDataTypeFromBuffer(std::vector<char>& buffer)
 
 size_t
 IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  std::map<std::string, std::string>     & keys
+  IOConfig   & keys
 )
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);
@@ -80,10 +80,10 @@ IOXML::readPTreeDataBuffer(std::vector<char>& buffer)
 
 /** Read call */
 std::shared_ptr<DataType>
-IOXML::createDataType(const std::string& params)
+IOXML::createDataType(IOConfig& config)
 {
   // We only read from file/url
-  const URL url(params);
+  const URL url(config.getParamURL());
 
   std::vector<char> buf;
 
@@ -95,10 +95,10 @@ IOXML::createDataType(const std::string& params)
       try{
         auto firsttag = xml->getTree()->getFirstChildName();
         auto fmt      = getIOSpecializer(firsttag);
-        if (fmt != nullptr) {
-          std::map<std::string, std::string> keys;
-          keys["XML_URL"] = url.toString(); // Maybe some classes find useful?
-          return (fmt->read(keys, xml));
+        std::shared_ptr<PTreeDataSpecializer> pFmt = // allowed on nullptr fmt
+          std::dynamic_pointer_cast<PTreeDataSpecializer>(fmt);
+        if (pFmt != nullptr) {
+          return (pFmt->downcastPTreeDataType(config, xml));
         }
       }catch (const std::exception& e)
       {
@@ -166,11 +166,11 @@ IOXML::writeURL(
 
 bool
 IOXML::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>            & keys
+  IOConfig                                      & keys
 )
 {
   // Get settings
-  const bool indent = (keys["indent"] == "true");
+  const bool indent = (keys.get("indent") == "true");
 
   // ----------------------------------------------------------
   // Get the filename we should write to

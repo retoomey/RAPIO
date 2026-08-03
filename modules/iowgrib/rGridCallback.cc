@@ -51,7 +51,7 @@ void
 GridCallback::handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny)
 {
   // Need at least 2 in each dimension to calculate deltas
-  if (nx < 2 || ny < 2) {
+  if ((nx < 2) || (ny < 2)) {
     return;
   }
 
@@ -62,14 +62,12 @@ GridCallback::handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny)
   double maxLon = lon[0];
 
   const size_t count = nx * ny;
-  
+
   // Start loop from index 1
   for (size_t i = 1; i < count; ++i) {
-    if (lat[i] < minLat) { minLat = lat[i]; }
-    else if (lat[i] > maxLat) { maxLat = lat[i]; } // 'else if' saves CPU cycles
-    
-    if (lon[i] < minLon) { minLon = lon[i]; }
-    else if (lon[i] > maxLon) { maxLon = lon[i]; }
+    if (lat[i] < minLat) { minLat = lat[i]; } else if (lat[i] > maxLat) { maxLat = lat[i]; } // 'else if' saves CPU cycles
+
+    if (lon[i] < minLon) { minLon = lon[i]; } else if (lon[i] > maxLon) { maxLon = lon[i]; }
   }
 
   size_t nlon = nx;
@@ -80,14 +78,13 @@ GridCallback::handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny)
 
   // Adjust bounds to include the outer edge of the final cells
   // Verify if your grid topology requires this specific asymmetric padding
-  minLat -= dlat; 
+  minLat -= dlat;
   maxLon += dlon;
-  nlon++; 
+  nlon++;
   nlat++;
 
   myLLCoverageArea = LLCoverageArea(maxLat, minLon, minLat, maxLon, dlat, dlon, nlon, nlat);
 } // GridCallback::handleSetLatLon
-
 
 void
 GridCallback::handleGetLLCoverageArea(double * nwLat, double * nwLon,

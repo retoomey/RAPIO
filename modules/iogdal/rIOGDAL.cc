@@ -62,9 +62,9 @@ IOGDAL::getIOGDAL(const std::string& name)
 }
 
 std::shared_ptr<DataType>
-IOGDAL::createDataType(const std::string& params)
+IOGDAL::createDataType(IOConfig& config)
 {
-  URL url(params);
+  URL url(config.getParamURL());
   std::string filepath = url.toString();
 
   GDALAllRegister();
@@ -99,7 +99,7 @@ IOGDAL::createDataType(const std::string& params)
 
 bool
 IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & keys
 )
 {
   const std::string type = dt->getDataType();
@@ -126,7 +126,7 @@ IOGDAL::encodeDataType(std::shared_ptr<DataType> dt,
   }
 
   // The GDALLatLonGrids specializer expects the target path in the "FilePath" key
-  keys["FilePath"] = filename;
+  keys.set("FilePath", filename);
 
   bool successful = false;
 

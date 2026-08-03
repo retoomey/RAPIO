@@ -100,9 +100,9 @@ void Obj_HysDriver::processNewData(RAPIOData& d) {
 
   // Write the output to disk/memory/next algorithm
   if (ObjectRS) {
-    std::map<std::string, std::string> overrides;
+    IOConfig overrides;
     // Tell the RAPIO writer to drop the fractional seconds from the filename
-    overrides["FractionalTime"] = "false";
+    overrides.set("FractionalTime", "false");
     writeOutputProduct("Objects", ObjectRS, overrides);
   }
 }

@@ -34,7 +34,7 @@ public:
 
   /** Reader call back */
   virtual std::shared_ptr<DataType>
-  createDataType(const std::string& params) override;
+  createDataType(IOConfig& config) override;
 
 protected:
   /** Read from a buffer to a PTreeData object  */
@@ -47,13 +47,13 @@ public:
   /** Encode this data type to path given format settings */
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt,
-    std::map<std::string, std::string>     & keys
+    IOConfig                               & config
   ) override;
 
   /** Write data type to a buffer */
   virtual size_t
   encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-    std::map<std::string, std::string>     & keys
+    IOConfig     & config
   ) override;
 
   /** Write property tree to a memory buffer */

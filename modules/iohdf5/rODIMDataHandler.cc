@@ -69,13 +69,12 @@ ODIMDataHandler::introduceSelf(IOHDF5 * owner)
 }
 
 std::shared_ptr<DataType>
-ODIMDataHandler::read(std::map<std::string, std::string>& keys,
-  std::shared_ptr<DataType>                             dt)
+ODIMDataHandler::readHDF5(hid_t hdf5id,
+  IOConfig                      & keys)
 {
   // Options in RAPIO are passed by keys, allowing algs or binaries
   // to override/add ability
-  const hid_t hdf5id         = std::stoll(keys["HDF5_ID"]);
-  const std::string filename = keys["HDF5_URL"];
+  // const hid_t hdf5id         = std::stoll(keys["HDF5_ID"]);
 
   // FIXME: Hesitating to break into classes for the moment
   // I'd like to implement the CVOL as well?  Might be useful
@@ -444,15 +443,15 @@ ODIMDataHandler::readODIM_MOMENT(
   // first ray radiated in the scan: ray count - a1gate.
   // -------------------------------------------------------------------------
   // Unused currently
-  //size_t m_firstRayRadiated; //<<< 1st Ray Radiated in Sweep 
-  //m_firstRayRadiated = m_rayCount - m_a1gate;
+  // size_t m_firstRayRadiated; //<<< 1st Ray Radiated in Sweep
+  // m_firstRayRadiated = m_rayCount - m_a1gate;
 
   // -------------------------------------------------------------------------
   // First, do the 1D arrays in the RadialSet
   //
   auto& values = n->getFloat2DRef();
   auto& bw     = n->getFloat1DRef(RadialSet::BeamWidth);
-  //auto& gw     = n->getFloat1DRef(RadialSet::GateWidth);
+  // auto& gw     = n->getFloat1DRef(RadialSet::GateWidth);
 
   // We don't have special azimuth spacing by default, it's usually
   // the beamwidth.  But we can make it.
@@ -539,8 +538,9 @@ ODIMDataHandler::readODIM_MOMENT(
 } // ODIMDataHandler::readODIM_MOMENT
 
 bool
-ODIMDataHandler::write(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys)
+ODIMDataHandler::writeHDF5(hid_t hdf5id,
+  std::shared_ptr<DataType>      dt,
+  IOConfig                       & keys)
 {
   // FIXME: Should be pretty easy to say write a single RadialSet as a SCAN,
   // or other types.  Don't know if we have a use case currently though

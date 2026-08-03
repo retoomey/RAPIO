@@ -46,9 +46,9 @@ Copy::processNewData(rapio::RAPIOData& d)
       std::this_thread::sleep_for(dura);
     }
 
-    std::map<std::string, std::string> myOverrides;
+    IOConfig myOverrides;
     // Force compression
-    myOverrides["compression"] = "gz";
+    myOverrides.set("compression", "gz");
     if (myUpdateTime) {
       data->setTime(Time::CurrentTime());
     }

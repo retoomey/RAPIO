@@ -26,7 +26,7 @@ IOFile::createDataTypeFromBuffer(std::vector<char>& buffer)
 
 /** Read call */
 std::shared_ptr<DataType>
-IOFile::createDataType(const std::string& params)
+IOFile::createDataType(IOConfig& config)
 {
   return nullptr;
 } // IOFile::createDataType
@@ -36,7 +36,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   const std::string                        & outputinfo,
   std::vector<Record>                      & records,
   const std::string                        & knownfactory,
-  std::map<std::string, std::string>       & outputParams)
+  IOConfig                                 & outputParams)
 {
   // Get the proxy factory off the file name
   // knownfactory is 'file' of course, but we want to send onto our
@@ -55,7 +55,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
   std::string f = factory; // either passed in, or blank or suffix guess stuff.
 
   // We are going to proxy to another IODataType
-  outputParams["filepathmode"] = "direct";
+  outputParams.set("filepathmode", "direct");
   const bool success = write1(dt, outputinfo, records, f, outputParams);
 
   if (!success) { return false; }
@@ -69,7 +69,7 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 
 bool
 IOFile::encodeDataType(std::shared_ptr<DataType> dt,
-  std::map<std::string, std::string>             & keys
+  IOConfig                                       & config
 )
 {
   fLogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().");
@@ -78,7 +78,7 @@ IOFile::encodeDataType(std::shared_ptr<DataType> dt,
 
 size_t
 IOFile::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  std::map<std::string, std::string>             & keys
+  IOConfig & keys
 )
 {
   // FIXME: Do we do buffer stuff for file?  I don't think we need it at least for now.

@@ -298,9 +298,7 @@ EchoTop::VerticalColumnCoverage(const Time& useTime, float useElevDegs, const st
   iter.iterateRadialGates(myCallback);
 
   // Write product
-  std::map<std::string, std::string> myOverride;
-
-  writeOutputProduct(set->getTypeName(), set, myOverride);
+  writeOutputProduct(set->getTypeName(), set);
 } // EchoTop::VerticalColumnCoverage
 
 void
@@ -330,9 +328,7 @@ EchoTop::Traditional(const Time& useTime, float useElevDegs, const std::string& 
   iter.iterateRadialGates(myCallback);
 
   // Write product
-  std::map<std::string, std::string> myOverride;
-
-  writeOutputProduct(set->getTypeName(), set, myOverride);
+  writeOutputProduct(set->getTypeName(), set);
 } // EchoTop::processVolume
 
 void
@@ -410,9 +406,7 @@ EchoTop::Interpolated(const Time& useTime, float useElevDegs, const std::string&
 
   fLogSevere("-------------------->>MAX {}", MAXKMS);
   // Write product
-  std::map<std::string, std::string> myOverride;
-
-  writeOutputProduct(set->getTypeName(), set, myOverride);
+  writeOutputProduct(set->getTypeName(), set);
 } // EchoTop::Interpolated
 
 int

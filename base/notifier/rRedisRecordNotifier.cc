@@ -107,7 +107,7 @@ RedisRecordNotifier::connect()
 }
 
 void
-RedisRecordNotifier::writeMessage(std::map<std::string, std::string>& outputParams, const Message& m)
+RedisRecordNotifier::writeMessage(IOConfig& outputParams, const Message& m)
 {
   // Wrap message in a record and send
   Record r(m);
@@ -141,7 +141,7 @@ RedisRecordNotifier::publish(const std::string& payload)
 }
 
 void
-RedisRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParams, const Record& rec)
+RedisRecordNotifier::writeRecord(IOConfig& outputParams, const Record& rec)
 {
   // Construct the XML payload
   std::stringstream ss;
@@ -152,8 +152,8 @@ RedisRecordNotifier::writeRecord(std::map<std::string, std::string>& outputParam
   // if you want the path in the XML to reflect the data location
   std::string locationHint = "redis";
 
-  if (outputParams.count("outputfolder")) {
-    locationHint = outputParams["outputfolder"];
+  if (outputParams.has("outputfolder")) {
+    locationHint = outputParams.get("outputfolder");
   }
 
   ConfigRecord::constructXMLString(rec, ss, locationHint);
