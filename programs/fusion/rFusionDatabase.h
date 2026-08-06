@@ -1,8 +1,11 @@
 #pragma once
-
 #include "rLLCoverageArea.h"
 #include "rLLHGridN2D.h"
 #include "rStage2Data.h"
+#include "rWindBinaryTable.h"
+#include <array>
+#include <stdexcept>
+#include <unordered_map>
 
 // Gives 2^9-1 or 511 source/radar support
 #define SOURCE_KEY_BITS 9
@@ -28,104 +31,68 @@ namespace rapio {
  *
  * NOTE: Do not make these classes virtual unless you want to explode your RAM
  */
+
 class Observation {
 public:
-  /** Create an observation */
-  Observation(short xin, short yin, char zin, time_t tin) :
-    x(xin), y(yin), t(tin){ }
-
-  // All observations will have to forward reference the giant x,y,z tree
-  // that back-references them.
-  // Reference to XYZ Tree (to delete/modify/merge in XYZ by source)
-  // This is 5 bytes.  We 'could' use a size_t i into data, but that's 8 bytes
+  Observation(short xin, short yin, char zin, time_t tin) : x(xin), y(yin), t(tin) {}
   short x;
   short y;
-  //  char z; Pulled out into multi vector messy but saves this memory
-
-  // FIXME: We could use a short (2 bytes) and use relative time from the source,
-  // but this will require updating the relative times.  Future RAM optimization
-  time_t t; // 8 bytes (we could do 2 with relative times)
-
-  // We store range as meters (2 bytes)  Need this for dynamic nearest comparison
-  // Assuming here that meter resolution is high enough
-
-  // Ok we're gonna trust FusionRoster completely on the ranges.  If we do any
-  // trimming of the list of values per point we'll use time I think.
-  //
-  // Example: Radars A,B,C. Radar A goes down. We still have 3 radars for the point..haven't expired yet.
-  // Roster turns on radar D. We now get radar D. Now we have 4 radars worth of data since A hasn't 'quite' expired yet.
-  // So we actuallly merge 4 values instead of the 3 we set we wanted. A does expire out though so things 'fix' themselves.
-  // It's a temp issue of having more data than expected if radars toggle status a lot.
-  // However the benefit of no range is allowing faster merge and less IO sending stage2 data.
-  // Note: if we get more values and we can store we can always pick the 'newest' 3 vs range in this case
-  // short r;
+  time_t t;
 };
 
-/** Observation storing a non-missing data value */
-class VObservation : public Observation {
+template <size_t N>
+class GenericObservation : public Observation {
 public:
-  VObservation(short xin, short yin, char zin, float vin, float win, time_t tin) :
-    Observation(xin, yin, zin, tin), v(vin), w(win){ }
-
-  // Data we store for merging.  Currently simple weight average
-  float v; // 4 bytes
-  float w; // 4 bytes
+  GenericObservation(short xin, short yin, char zin, const std::array<float, N>& datain, time_t tin)
+    : Observation(xin, yin, zin, tin), data(datain) {}
+  std::array<float, N> data;
 };
 
-/** Observation storing a missing data value */
 class MObservation : public Observation {
 public:
-  MObservation(short xin, short yin, char zin, time_t tin) :
-    Observation(xin, yin, zin, tin){ }
+  MObservation(short xin, short yin, char zin, time_t tin) : Observation(xin, yin, zin, tin) {}
 };
 
-/** Store a Source Observation List.  Due to the size of output CONUS we group
- * observations by source to allow quickly updating incoming data. */
-class SourceList {
+class SourceListBase {
 public:
-  /** STL unordered map */
-  SourceList(){ }
+  SourceListBase(const std::string& n, short i) : myName(n), myID(i), myTime(0) {}
+  virtual ~SourceListBase() = default;
 
-  /** Create a source list with a number of levels. **/
-  SourceList(const std::string& n, short i, size_t levels = 35) : myName(n), myID(i), myTime(0), myLevels(levels),
-    myAObs(levels), myAMObs(levels)
-  { }
+  virtual void timePurge(time_t cutoff) = 0;
+  virtual void unionMerge(SourceListBase& newSource, Bitset1& mask, time_t cutoff, size_t& timePurged, size_t& restored) = 0;
+  virtual void addMissing(short x, short y, char z, time_t t) = 0;
 
-  /** Add observation to observation list */
-  inline void
-  addObservation(short x, short y, char z, float v, float w, time_t t)
-  {
-    myAObs[z].push_back(VObservation(x, y, z, v, w, t));
+  std::string myName;
+  unsigned short myID : SOURCE_KEY_BITS;
+  Time myTime;
+};
+
+template <size_t N>
+class PayloadSourceList : public SourceListBase {
+public:
+  PayloadSourceList(const std::string& n, short i, size_t levels = 35)
+    : SourceListBase(n, i), myLevels(levels), myObs(levels), myAMObs(levels) {}
+
+  inline void addObservation(short x, short y, char z, const std::array<float, N>& data, time_t t) {
+    myObs[z].push_back(GenericObservation<N>(x, y, z, data, t));
   }
 
-  /** Add missing to missing list */
-  inline void
-  addMissing(short x, short y, char z, time_t t)
-  {
+  virtual void addMissing(short x, short y, char z, time_t t) override {
     myAMObs[z].push_back(MObservation(x, y, z, t));
   }
 
-  /** Clear observations */
-  inline void
-  clear()
-  {
+  inline void clear() {
     for (size_t i = 0; i < myLevels; ++i) {
-      myAObs[i].clear();
+      myObs[i].clear();
       myAMObs[i].clear();
     }
   }
 
-  /** General vector time purge. We delete by swapping to the end of
-   * vector and popping. */
   template <typename T>
-  inline void
-  timePurgeV(std::vector<T>& v, time_t cutoff)
-  {
+  inline void timePurgeV(std::vector<T>& v, time_t cutoff) {
     size_t i = 0;
-
     while (i < v.size()) {
-      if (v[i].t < cutoff) { // Our epoch less than cutoff epoch
-        // Swap and pop item
+      if (v[i].t < cutoff) {
         v[i] = v.back();
         v.pop_back();
       } else {
@@ -134,224 +101,130 @@ public:
     }
   }
 
-  /** Purge time cutoff */
-  inline void
-  timePurge(time_t cutoff)
-  {
+  virtual void timePurge(time_t cutoff) override {
     for (size_t z = 0; z < myLevels; ++z) {
-      timePurgeV(myAObs[z], cutoff);
+      timePurgeV(myObs[z], cutoff);
       timePurgeV(myAMObs[z], cutoff);
     }
   }
 
-  /** Add points to a new source not marked in mask and still time valid */
   template <typename T>
-  inline void
-  unionMergeV(Bitset1& mask, size_t z, std::vector<T>& new1, std::vector<T>& old1, time_t cutoff, size_t& timePurged,
-    size_t& restored)
-  {
+  inline void unionMergeV(Bitset1& mask, size_t z, std::vector<T>& new1, std::vector<T>& old1, time_t cutoff, size_t& timePurged, size_t& restored) {
     for (auto& o: old1) {
       if (!mask.get13D(o.x, o.y, z)) {
-        if (o.t < cutoff) { // We could wait until global time purge?
+        if (o.t < cutoff) {
           timePurged++;
         } else {
           new1.push_back(o);
-          // Do we need to update mask...think we don't have to
-          // mask.set13D(o.x, o.y, z);
           restored++;
         }
       }
     }
   }
 
-  /** Add our points to a new source not marked in mask and still time valid. Marked
-   * is used to avoid duplicates and properly union the sets. */
-  inline void
-  unionMerge(SourceList& newSource, Bitset1& mask, time_t cutoff, size_t& timePurged, size_t& restored)
-  {
+  virtual void unionMerge(SourceListBase& newSourceBase, Bitset1& mask, time_t cutoff, size_t& timePurged, size_t& restored) override {
+    auto& newSource = static_cast<PayloadSourceList<N>&>(newSourceBase);
     for (size_t z = 0; z < myLevels; ++z) {
-      unionMergeV(mask, z, newSource.myAObs[z], myAObs[z], cutoff, timePurged, restored);
+      unionMergeV(mask, z, newSource.myObs[z], myObs[z], cutoff, timePurged, restored);
       unionMergeV(mask, z, newSource.myAMObs[z], myAMObs[z], cutoff, timePurged, restored);
     }
   }
 
-  // FIXME: 'maybe' we inline get/set methods when things get stable
-
-  // Meta data stored for this observation list
-  std::string myName;
-
-  // deprecated.  Think we can do everything at stage1
-  unsigned short myID : SOURCE_KEY_BITS; // needed? This will probably have to be IN the obs for fast reverse lookup
-
-  // The late 'main' time of a group of data coming in ingest.
-  // Note: Typically the observations stored in us will contain times <= this one.
-  Time myTime;
-
-  /** Number of levels we store */
   size_t myLevels;
-
-  /** Vector of value observations */
-  std::vector<std::vector<VObservation> > myAObs;
-
-  /** Vector of missing observations */
-  std::vector<std::vector<MObservation> > myAMObs;
+  std::vector<std::vector<GenericObservation<N>>> myObs;
+  std::vector<std::vector<MObservation>> myAMObs;
 };
 
-/** (AI) Handle a group of source observation lists that have unique ID keys
- * that can be back-referenced by an x,y,z array.  This allows
- * pulling meta data for observation points during merging if
- * needed. */
 template <typename T>
 class ObservationManager {
 public:
+  size_t getPayloadSize() const { return myLockedPayloadSize; }
 
-  /** Given source information, find the already created source observation list,
-   * or create a new unique one and return it */
-  std::shared_ptr<SourceList>
-  getSourceList(const std::string& name)
-  {
-    // Hunt for source list by name
-    for (auto& pair: myObservationMap) { // O(N) with hashing
+  bool lockPayloadSize(size_t incomingSize) {
+    if (myLockedPayloadSize == 0) {
+      myLockedPayloadSize = incomingSize;
+      return true;
+    }
+    return myLockedPayloadSize == incomingSize;
+  }
+
+  std::shared_ptr<SourceListBase> getSourceList(const std::string& name, size_t numZ) {
+    for (auto& pair: myObservationMap) {
       if (pair.second->myName == name) {
         return pair.second;
       }
     }
-
-    // Not found, so we create one and give it the next available key
     T newKey;
-
     if (myAvailableKeys.empty()) {
-      // No available keys, generate a new one after the current max key
       newKey = myNextKey++;
     } else {
-      // Reuse an available key.  Shifting vector to keep things kinda ordered
       newKey = *myAvailableKeys.begin();
       myAvailableKeys.erase(myAvailableKeys.begin());
     }
-    // myObservationMap[newKey] = SourceList(name, newKey);
-    myObservationMap[newKey] = std::make_shared<SourceList>(name, newKey);
 
-    // Return the reference
-    return myObservationMap.at(newKey);
+    std::shared_ptr<SourceListBase> newList;
+    if (myLockedPayloadSize == 5) {
+        newList = std::make_shared<PayloadSourceList<5>>(name, newKey, numZ);
+    } else {
+        newList = std::make_shared<PayloadSourceList<2>>(name, newKey, numZ);
+    }
+
+    myObservationMap[newKey] = newList;
+    return newList;
   }
 
-  /** Replace the reference to source list in the lookup */
-  void
-  setSourceList(const T& key, std::shared_ptr<SourceList> r)
-  {
+  void setSourceList(const T& key, std::shared_ptr<SourceListBase> r) {
     myObservationMap[key] = r;
   }
 
-  /** Remove a source list from our lookup */
-  void
-  remove(SourceList& r)
-  {
+  void remove(SourceListBase& r) {
     const auto name = r.myName;
-
     for (auto it = myObservationMap.begin(); it != myObservationMap.end(); ++it) {
-      if (it->second.myName == name) {
-        myAvailableKeys.push_back(it->second.myID);
+      if (it->second->myName == name) {
+        myAvailableKeys.push_back(it->second->myID);
         myObservationMap.erase(it);
         break;
       }
     }
-    // for (size_t i = 0; i < myAvailableKeys.size(); ++i) {
-    //  fLogInfo("Keys: {}", myAvailableKeys[i]);
-    // }
   }
 
-  /** Iterators for begin access, hiding implementation details */
-  typename std::unordered_map<T, std::shared_ptr<SourceList> >::iterator
-  begin()
-  {
-    return myObservationMap.begin();
-  }
-
-  /** Iterators for end access, hiding implementation details */
-  typename std::unordered_map<T, std::shared_ptr<SourceList> >::iterator
-  end()
-  {
-    return myObservationMap.end();
-  }
+  typename std::unordered_map<T, std::shared_ptr<SourceListBase>>::iterator begin() { return myObservationMap.begin(); }
+  typename std::unordered_map<T, std::shared_ptr<SourceListBase>>::iterator end() { return myObservationMap.end(); }
 
 protected:
-
-  /** The map of keys to Source Observation Lists */
-  std::unordered_map<T, std::shared_ptr<SourceList> > myObservationMap;
-
-  /** Old keys we can reuse */
+  std::unordered_map<T, std::shared_ptr<SourceListBase>> myObservationMap;
   std::vector<T> myAvailableKeys;
-
-  /** Key number for new ones. */
   short myNextKey = 0;
+  size_t myLockedPayloadSize = 0;
 };
 
-/** FusionDatabase maintains the collection of sources which store various types
- * of observations.  It also maintains a X,Y,Z grid that backreferences various
- * observations */
 class FusionDatabase {
 public:
-  /** The Database is for a 3D cube */
-  FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z }), myHaves({ x, y,
-                                                                                                                 z }),
-    myMissings(x * y * z)
-  {
+  FusionDatabase(size_t x, size_t y, size_t z) : myNumX(x), myNumY(y), myNumZ(z), myXYZs({ x, y, z }), myHaves({ x, y, z }), myMissings(x * y * z) {
     for (size_t i = 0; i < myMissings.size(); ++i) {
       myMissings[i] = std::numeric_limits<time_t>::min();
     }
   };
 
-  /** Ingest new stage2 data */
-  void
-  ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingcounter, size_t& points, size_t& total);
-
-  /** Get a source node for a given key */
-  // SourceList&
-  std::shared_ptr<SourceList>
-  getSourceList(const std::string& name);
-
-  /** Get a new empty source for gathering new observations. */
-  // SourceList
-  std::shared_ptr<SourceList>
-  getNewSourceList(const std::string& name)
-  {
-    // return SourceList(name, -1);
-    return std::make_shared<SourceList>(name, -1);
+  void ingestNewData(std::shared_ptr<BinaryTable> data, time_t cutoff, size_t& missingcounter, size_t& points, size_t& total);
+  
+  std::shared_ptr<SourceListBase> getSourceList(const std::string& name) {
+    return myObservationManager.getSourceList(name, myNumZ);
+  }
+  
+  std::shared_ptr<SourceListBase> getNewSourceList(const std::string& name) {
+    if (myObservationManager.getPayloadSize() == 5) return std::make_shared<PayloadSourceList<5>>(name, -1, myNumZ);
+    return std::make_shared<PayloadSourceList<2>>(name, -1, myNumZ);
   }
 
-  /** Add observation to a source list */
-  void
-  addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t);
+  void addMissing(SourceListBase& fromSource, size_t x, size_t y, size_t z, time_t time, bool dataNoMissingSet);
+  void mergeObservations(std::shared_ptr<SourceListBase> oldSourcePtr, std::shared_ptr<SourceListBase> newSourcePtr, const time_t cutoff);
+  void dumpSources();
+  void timePurge(Time atTime, TimeDuration interval);
 
-  /** Merge observations from an old source and new source with overlap reduction */
-  void
-  // mergeObservations(SourceList& oldSource, SourceList& newSource, const time_t cutoff);
-  mergeObservations(std::shared_ptr<SourceList> oldSourcePtr, std::shared_ptr<SourceList> newSourcePtr,
-    const time_t cutoff);
-
-  /** Add missing mask observation */
-  void
-  addMissing(SourceList& fromSource, size_t x, size_t y, size_t z, time_t time, bool dataNoMissingSet);
-
-  /** Debugging print out each source list and points held */
-  void
-  dumpSources();
-
-  // ----------------------------------------
-  // These are combination methods we can do with our value/weight data.
-
-  /** Weighted distance merge of given values */
-  void
-  mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY, float promise);
-
-  /** Max merge of given values */
-  void
-  maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY, float promise);
-  // ----------------------------------------
-
-  /** Attempt to purge times from database */
-  void
-  timePurge(Time atTime, TimeDuration interval);
+  ObservationManager<short>& getObservationManager() { return myObservationManager; }
+  const Bitset1& getHaves() const { return myHaves; }
+  const std::vector<time_t>& getMissings() const { return myMissings; }
 
 protected:
 
@@ -376,4 +249,5 @@ protected:
   /** My latest missing array mask */
   std::vector<time_t> myMissings;
 };
+
 }

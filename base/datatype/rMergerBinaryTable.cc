@@ -115,6 +115,53 @@ WObsBinaryTable::writeBlock(FILE * fp)
   return false;
 } // WObsBinaryTable::writeBlock
 
+// ------------------------------------------------------------------------
+// WObsBinaryTable Introspection Implementation
+// ------------------------------------------------------------------------
+
+std::vector<BinaryTable::TableInfo>
+WObsBinaryTable::getTableInfo()
+{
+  std::vector<TableInfo> info;
+
+  TableInfo dataTable;
+
+  dataTable.name        = "Data";
+  dataTable.size        = x.size();
+  dataTable.columnNames = { "X", "Y", "Z", "V", "ScaledDist", "ElevScaled" };
+  dataTable.columnTypes = { "ushort", "ushort", "ushort", "float", "ushort", "char" };
+  dataTable.columnUnits = { "index", "index", "index", "value", "w1", "w2" };
+  info.push_back(dataTable);
+
+  // We can also introspect the markedLines if needed, but for standard dumping, the primary vectors are key
+  return info;
+}
+
+std::vector<float>
+WObsBinaryTable::getFloatVector(const std::string& name)
+{
+  if (name == "V") { return newvalue; }
+  return std::vector<float>();
+}
+
+std::vector<unsigned short>
+WObsBinaryTable::getUShortVector(const std::string& name)
+{
+  if (name == "X") { return x; }
+  if (name == "Y") { return y; }
+  // Z is historically stored as unsigned short in this specific table
+  if (name == "Z") { return z; }
+  if (name == "ScaledDist") { return scaled_dist; }
+  return std::vector<unsigned short>();
+}
+
+std::vector<char>
+WObsBinaryTable::getCharVector(const std::string& name)
+{
+  if (name == "ElevScaled") { return elevWeightScaled; }
+  return std::vector<char>();
+}
+
 void
 RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
 {
@@ -177,68 +224,47 @@ RObsBinaryTable::writeBlock(FILE * fp)
   return false;
 }
 
-bool
-RObsBinaryTable::dumpToText(std::ostream& o)
+// ------------------------------------------------------------------------
+// RObsBinaryTable Introspection Implementation
+// ------------------------------------------------------------------------
+
+std::vector<BinaryTable::TableInfo>
+RObsBinaryTable::getTableInfo()
 {
-  const std::string i = "\t";
+  // Grab the parent table definition
+  std::vector<TableInfo> info = WObsBinaryTable::getTableInfo();
 
-  o << "MRMS RObsBinaryTable (Used by w2merger)\n";
+  if (info.size() > 0) {
+    // Append the extra columns that RObs tracking adds
+    info[0].columnNames.push_back("Azimuth");
+    info[0].columnTypes.push_back("ushort");
+    info[0].columnUnits.push_back("degrees");
 
-  auto& t = *this;
-
-  // ---------------------------------------------------------
-  //  RObsBinaryTable stuff...
-  o << i << "RadarName: " << t.radarName << "\n"; // RObsBinaryTable
-  o << i << "VCP: " << t.vcp << "\n";             // RObsBinaryTable
-  o << i << "Elevation: " << t.elev << "\n";      // RObsBinaryTable
-  o << i << "Units: " << t.getUnits() << "\n";    // DataType
-
-  // WObsBinaryTable.  FIXME: probably don't need multiple classes anymore?
-  o << i << "TypeName: " << t.typeName << "\n";
-  o << i << "MarkedLinesCacheFile: " << t.markedLinesCacheFile << "\n";
-  o << i << "MarkedLinesInternalSize: " << t.markedLines.size() << "\n";
-  o << i << "Latitude: " << t.lat << " Degrees.\n";
-  o << i << "Longitude: " << t.lon << " Degrees.\n";
-  o << i << "Height: " << t.ht << " Kilometers.\n";
-  o << i << "Time: " << t.data_time << " Epoch.\n";
-  o << i << "Valid Time: " << t.valid_time << " Seconds.\n";
-  o << "\n------------------------------\n";
-
-  // Marked lines for WObsBinarytable
-  size_t aSize = markedLines.size();
-
-  o << i << "Marked line array size: " << aSize << "\n";
-  if (aSize > 5) { aSize = 5; }
-  for (size_t i = 0; i < aSize; i++) {
-    o << "  Line: " << i << "(" << markedLines[i].len << ") ( " << markedLines[i].x << ","
-      << markedLines[i].y << "," << markedLines[i].z << ")\n";
+    info[0].columnNames.push_back("Epoch");
+    info[0].columnTypes.push_back("float");
+    info[0].columnUnits.push_back("seconds");
   }
 
-  // Arrays for WObsBinaryTable
-  // Ok do we dump per point, or do separate arrays like ncdump?
-  // Could be a key option passed in..
-  // RObsBinaryTable adds azimuth, aztime
-  size_t s = t.x.size();
+  return info;
+}
 
-  o << i << "Points: " << s << "\n";
-  if (s > 100) { s = 100; } // For now dump just s points for debugging
-  o << i << "Sampling first " << s << " data points:\n";
-
-  // Dumping info per point vs per array.  Having a toggle even with ncdump would
-  // be a nice ability
-  auto& x = t.x; // WObs
-  auto& y = t.y;
-  auto& z = t.z;
-
-  for (size_t j = 0; j < s; j++) {
-    o << j << ":\n";
-    o << i << x[j] << ", " << y[j] << ", " << z[j] << " (xyz)\n";
-    o << i << t.newvalue[j] << ", " << t.scaled_dist[j] << ", " << (int) t.elevWeightScaled[j] <<
-      " (value, w1-dist, w2-elev)\n";
-    // Only RObs:
-    o << i << t.azimuth[j] << ", " << t.aztime[j].epoch_sec << "." << t.aztime[j].frac_sec << ", " <<
-      "(az, aztime)\n";
+std::vector<float>
+RObsBinaryTable::getFloatVector(const std::string& name)
+{
+  // For standard visualization, convert the struct to a standard float vector
+  if (name == "Epoch") {
+    std::vector<float> times(aztime.size());
+    for (size_t i = 0; i < aztime.size(); ++i) {
+      times[i] = aztime[i].epoch_sec + aztime[i].frac_sec;
+    }
+    return times;
   }
+  return WObsBinaryTable::getFloatVector(name);
+}
 
-  return true;
-} // RObsBinaryTable::dumpToText
+std::vector<unsigned short>
+RObsBinaryTable::getUShortVector(const std::string& name)
+{
+  if (name == "Azimuth") { return azimuth; }
+  return WObsBinaryTable::getUShortVector(name);
+}

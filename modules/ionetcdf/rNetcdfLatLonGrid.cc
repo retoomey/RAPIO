@@ -36,5 +36,5 @@ NetcdfLatLonGrid::writeNETCDF(int ncid,
   std::shared_ptr<DataType>       dt,
   IOConfig                        & keys)
 {
-  return (NetcdfDataGrid::write(dt, keys));
+  return (NetcdfDataGrid::writeNETCDF(ncid, dt, keys));
 } // NetcdfLatLonGrid::write

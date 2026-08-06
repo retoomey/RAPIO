@@ -5,376 +5,214 @@
 using namespace rapio;
 
 void
-FusionDatabase::ingestNewData(Stage2Data& data, time_t cutoff, size_t& missingcounter, size_t& points, size_t& total)
+FusionDatabase::ingestNewData(std::shared_ptr<BinaryTable> data, time_t cutoff, size_t& missingcounter, size_t& points, size_t& total)
 {
   ProcessTimer timer("Ingest Source");
+  
+  auto windTable   = std::dynamic_pointer_cast<WindBinaryTable>(data);
+  auto fusionTable = std::dynamic_pointer_cast<FusionBinaryTable>(data);
 
-  // Metadata info
-  std::string name            = data.getRadarName();
-  std::string aTypeName       = data.getTypeName();
-  Time dataTime               = data.getTime();
-  const size_t xBase          = data.getXBase();
-  const size_t yBase          = data.getYBase();
-  const bool dataNoMissingSet = data.getNoMissingSet();
+  // 1. SAFELY IDENTIFY AND LOCK PAYLOAD FIRST
+  if (windTable) {
+    if (!myObservationManager.lockPayloadSize(5)) {
+        fLogSevere("Payload mismatch! Database locked to size {}, but incoming data is size 5", 
+                   myObservationManager.getPayloadSize());
+        return;
+    }
+  } else if (fusionTable) {
+    if (!myObservationManager.lockPayloadSize(2)) {
+        fLogSevere("Payload mismatch! Database locked to size {}, but incoming data is size 2", 
+                   myObservationManager.getPayloadSize());
+        return;
+    }
+  } else {
+    fLogSevere("Unrecognized BinaryTable type provided to FusionDatabase.");
+    return;
+  }
 
-  //    fLogInfo("Incoming stage2 data for {} {}", name, aTypeName);
+  // 2. NOW GRAB THE METADATA AND ALLOCATE THE MEMORY LISTS
+  std::string name;
+  std::string aTypeName;
+  data->getString("Radarname", name);
+  data->getString("Typename", aTypeName);
 
-  // Get a current source list
-  // Note: This should be a reference or you'll copy
+  Time dataTime               = data->getTime();
+  const bool dataNoMissingSet = data->getUseMissingAsUnavailable();
+
+  long xBase = 0, yBase = 0;
+  data->getLong("xBase", xBase);
+  data->getLong("yBase", yBase);
+
+  // These will now safely generate the correctly typed and correctly sized PayloadSourceList
   auto radarPtr = getSourceList(name);
   auto& radar   = *radarPtr;
-
-  radar.myTime = dataTime;
-
-  // Could store shorts and then do a move forward pass in output
+  radar.myTime  = dataTime;
   const time_t t = radar.myTime.getSecondsSinceEpoch();
 
-  // Get a brand new source list
   auto newSourcePtr = getNewSourceList("newone");
   auto& newSource   = *newSourcePtr;
-
-  // Read the source list, marking x,y,z found
   myHaves.clearAllBits();
-
-  float v, w;
-  short x, y, z;
 
   missingcounter = 0;
   points         = 0;
-  total = 0;
-  while (data.get(v, w, x, y, z)) {
-    total++;
-    x += xBase;
-    y += yBase;
+  total          = 0;
 
-    // FIXME: What if the table stored max X, Y, Z for the whole table?  Then we
-    // could safely remove this check
-    if ((static_cast<size_t>(x) >= myNumX) || 
-      (static_cast<size_t>(y) >= myNumY) ||
-      (static_cast<size_t>(z) >= myNumZ))
-    {
-      fLogSevere("Getting stage2 x,y,z values out of range of current grid: {}, {}, {} and ({}, {}, {})", x, y, z,
-        myNumX, myNumY, myNumZ);
-      break;
-    }
-    if (v == Constants::MissingData) {
-      addMissing(newSource, x, y, z, t, dataNoMissingSet); // update mask
-      missingcounter++;
-    } else {
-      addObservation(newSource, v, w, x, y, z, t);
+  // 3. INGESTION
+  if (windTable) {
+    auto payloadSource = std::static_pointer_cast<PayloadSourceList<5>>(newSourcePtr);
+    short x, y;
+    char z;
+    const size_t valSize = windTable->getValueSize();
+
+    for (size_t i = 0; i < valSize; ++i) {
+      total++;
+      x = windTable->myXs[i] + xBase;
+      y = windTable->myYs[i] + yBase;
+      z = windTable->myZs[i];
+
+      if ((static_cast<size_t>(x) >= myNumX) ||
+          (static_cast<size_t>(y) >= myNumY) ||
+          (static_cast<size_t>(z) >= myNumZ))
+      {
+        fLogSevere("Getting stage2 x,y,z values out of range of current grid: {}, {}, {} and ({}, {}, {})", 
+                   x, y, z, myNumX, myNumY, myNumZ);
+        break;
+      }
+
+      std::array<float, 5> payload = {
+        windTable->myM11[i],
+        windTable->myM22[i],
+        windTable->myM12[i],
+        windTable->myP1[i],
+        windTable->myP2[i]
+      };
+
+      payloadSource->addObservation(x, y, z, payload, t);
+      myHaves.set13D(x, y, z);
       points++;
     }
-  }
-  fLogInfo("{}", timer);
 
+    const size_t missSize = windTable->getMissingSize();
+    for (size_t i = 0; i < missSize; ++i) {
+      short startX = windTable->myXMissings[i] + xBase;
+      short startY = windTable->myYMissings[i] + yBase;
+      char startZ  = windTable->myZMissings[i];
+      short length = windTable->myLMissings[i];
+
+      // CRITICAL NEW BOUNDS CHECKS
+      if (static_cast<size_t>(startY) >= myNumY || static_cast<size_t>(startZ) >= myNumZ) {
+          continue;
+      }
+
+      for (short l = 0; l < length; ++l) {
+        short curX = startX + l;
+        if (static_cast<size_t>(curX) < myNumX) {
+          addMissing(newSource, curX, startY, startZ, t, dataNoMissingSet);
+          missingcounter++;
+        }
+      }
+    }
+
+  } else if (fusionTable) {
+    auto payloadSource = std::static_pointer_cast<PayloadSourceList<2>>(newSourcePtr);
+    float v, w;
+    short x, y, z;
+    
+    while (fusionTable->get(v, w, x, y, z)) {
+      total++;
+      x += xBase;
+      y += yBase;
+      
+      if ((static_cast<size_t>(x) >= myNumX) ||
+          (static_cast<size_t>(y) >= myNumY) ||
+          (static_cast<size_t>(z) >= myNumZ))
+      {
+        fLogSevere("Getting stage2 x,y,z values out of range of current grid: {}, {}, {} and ({}, {}, {})", 
+                   x, y, z, myNumX, myNumY, myNumZ);
+        break;
+      }
+      
+      if (v == Constants::MissingData) {
+        addMissing(newSource, x, y, z, t, dataNoMissingSet);
+        missingcounter++;
+      } else {
+        std::array<float, 2> payload = {v, w};
+        payloadSource->addObservation(x, y, z, payload, t);
+        myHaves.set13D(x, y, z);
+        points++;
+      }
+    }
+  }
+
+  fLogInfo("{}", timer);
   {
     ProcessTimer fail("Merge source");
     mergeObservations(radarPtr, newSourcePtr, cutoff);
     fLogInfo("{}", fail);
   }
-} // FusionDatabase::ingestNewData
-
-void
-FusionDatabase::mergeTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY,
-  float precision)
-{
-  ProcessTimer test("Merging XYZ tree");
-
-  cache->fillPrimary(Constants::DataUnavailable);
-
-  // Use the coordinates of the cache in case it's a subgrid/tile
-  // and not a full grid
-  const size_t gridZ = cache->getNumLayers();
-  const size_t gridY = cache->getNumLats(); // dim 0
-  const size_t gridX = cache->getNumLons(); // dim 1
-
-  // -------------------------------------------------------------
-  // Accumulation pass...add up all numerators and denominators
-  // of a weighted average sum.  Parts of which were generated by
-  // multiple rFusion1 algorithms.
-
-  // We'll still order by z, since we'll probably thread around it
-  for (size_t z = 0; z < gridZ; z++) {
-    std::shared_ptr<LatLonGrid> output = cache->get(z);
-
-    // Accumulate 2D weights
-    auto w = output->getFloat2D("weights");
-    w->fill(0);
-    auto& wa = output->getFloat2DRef("weights");
-
-    // Accumulate 2D masks (when storing per radar).
-    // auto m = output->getByte2D("masks");
-    // m->fill(0);
-    // auto& ma = output->getByte2DRef("masks");
-
-    // Accumulate 2D values (borrow final output to save RAM)
-    auto gridtestP = output->getFloat2D();
-    gridtestP->fill(0);
-    auto& gridtest = output->getFloat2DRef();
-
-    // Here's the genius, we don't care about x,y,z ordering...we accumulate
-    // the weights and values randomly...
-    for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
-      auto &r = *(it->second);
-
-      // Missing observations just set the mask flag (background)
-      // for (auto& m:r.myAMObs[z]) {
-      //  ma[m.y][m.x] = 1;
-      // }
-
-      // Value observations accumulate values and weights
-      for (auto& v:r.myAObs[z]) {
-        // Since we can be a tile/partition, shifts global to partition coordinates
-        // atX and atY are local coordinates in the partition
-        // So we clip global to the area we cover
-        const int atX = v.x - offsetX;
-        const int atY = v.y - offsetY;
-        if ((atX < 0) || (atY < 0) || (atX >= static_cast<int>(gridX)) || (atY >= static_cast<int>(gridY))) {
-          continue;
-        }
-        gridtest[atY][atX] += v.v;
-        wa[atY][atX]       += v.w;
-      }
-    }
-  }
-
-  // -------------------------------------------------------------
-  // Finialization pass, divide all values/weights and handle mask
-  for (size_t z = 0; z < gridZ; z++) {
-    std::shared_ptr<LatLonGrid> output = cache->get(z);
-    auto& wa = output->getFloat2DRef("weights");
-    // auto& ma       = output->getByte2DRef("masks");
-    auto& gridtest = output->getFloat2DRef();
-    for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
-      for (size_t y = 0; y < gridY; y++) {
-        auto& v = gridtest[y][x];
-        auto& w = wa[y][x];
-
-        if (w == 0) { // If no values hit (weight should be 0 from the init)
-          // Use the missing flag array....
-          // if (ma[y][x] > 0) {
-          // FIXME: Feel like with some ordering could skip the indexing calculation
-          // Missing here is global and we're locally scanning the tile.
-          // I'm assuming tile is not bigger than the global CONUS here
-          const size_t globalX = offsetX + x;
-          const size_t globalY = offsetY + y;
-          if (myMissings[myHaves.getIndex3D(globalX, globalY, z)] >= cutoff) {
-            v = Constants::MissingData;
-          } else {
-            v = Constants::DataUnavailable;
-          }
-          continue;
-        }
-
-        // So we have weights, values....divide them to get total
-        v /= w;
-        if (precision > 0) {
-          v = Arith::roundOff(v, precision);
-        }
-      }
-    }
-  }
-
-  fLogInfo("{}", test);
-} // FusionDatabase::mergeTo
-
-void
-FusionDatabase::maxTo(std::shared_ptr<LLHGridN2D> cache, const time_t cutoff, size_t offsetX, size_t offsetY,
-  float precision)
-{
-  // FIXME: Maybe combine common code or something with the mergeTo..though it might
-  // slow things doing that.
-  //
-  ProcessTimer test("Maxing XYZ tree");
-
-  cache->fillPrimary(Constants::DataUnavailable);
-
-  // Use the coordinates of the cache in case it's a subgrid/tile
-  // and not a full grid
-  const size_t gridZ = cache->getNumLayers();
-  const size_t gridY = cache->getNumLats(); // dim 0
-  const size_t gridX = cache->getNumLons(); // dim 1
-
-  // -------------------------------------------------------------
-  // Max pass, gather maximum values in each hit cell
-
-  // We'll still order by z, since we'll probably thread around it
-  for (size_t z = 0; z < gridZ; z++) {
-    std::shared_ptr<LatLonGrid> output = cache->get(z);
-
-    // Use weight as a 'hit' marker here
-    auto w = output->getFloat2D("weights");
-    w->fill(0);
-    auto& wa = output->getFloat2DRef("weights");
-
-    // Max values (borrow final output to save RAM)
-    auto gridtestP = output->getFloat2D();
-    gridtestP->fill(0);
-    auto& gridtest = output->getFloat2DRef();
-
-    // Here's the genius, we don't care about x,y,z ordering...we accumulate
-    // the weights and values randomly...
-    for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
-      auto &r = *(it->second);
-
-      // Value observations accumulate values and weights
-      for (auto& v:r.myAObs[z]) {
-        // Since we can be a tile/partition, shifts global to partition coordinates
-        // atX and atY are local coordinates in the partition
-        // So we clip global to the area we cover
-        const int atX = v.x - offsetX;
-        const int atY = v.y - offsetY;
-        if ((atX < 0) || (atY < 0) || (atX >= static_cast<int>(gridX)) || (atY >= static_cast<int>(gridY))) {
-          continue;
-        }
-        /// --------------------------------------------
-        // Max logic code
-        // Use weight as a 'hit' marker and just keep the max value
-        //
-        auto& hit     = wa[atY][atX];
-        auto& vref    = gridtest[atY][atX];
-        const auto rv = v.v / v.w; // Resolve value/weight to true value
-        if (hit > 0) {             // if already have a value, replace with max...
-          vref = (rv > vref) ? rv : vref;
-        } else { // ..otherwise use the first one (to avoid caring about background 0)
-          vref = rv;
-        }
-        if (precision > 0) {
-          vref = Arith::roundOff(vref, precision);
-        }
-        hit = 1;
-        /// --------------------------------------------
-      }
-    }
-  }
-
-  // -------------------------------------------------------------
-  // Finialization pass, handle mask
-  for (size_t z = 0; z < gridZ; z++) {
-    std::shared_ptr<LatLonGrid> output = cache->get(z);
-    auto& wa       = output->getFloat2DRef("weights");
-    auto& gridtest = output->getFloat2DRef();
-    for (size_t x = 0; x < gridX; x++) { // x currently LON for stage2 right..so xy swapped
-      for (size_t y = 0; y < gridY; y++) {
-        auto& hit = wa[y][x];
-
-        // if no hit in the cell...use the mask field
-        // FIXME: Generically maybe we prefill with mask values before the 'alg' we're doing.
-        // though this could be slightly slower for hit cells.
-        // prefill would allow use to share this code with mergeTo above
-        // and avoid the hit or weight checks
-        if (hit < 1) {
-          auto& vref = gridtest[y][x];
-          const size_t globalX = offsetX + x;
-          const size_t globalY = offsetY + y;
-          if (myMissings[myHaves.getIndex3D(globalX, globalY, z)] >= cutoff) {
-            vref = Constants::MissingData;
-          } else {
-            vref = Constants::DataUnavailable;
-          }
-          continue;
-        }
-      }
-    }
-  }
-
-  fLogInfo("{}", test);
-} // FusionDatabase::mergeTo
+}
 
 void
 FusionDatabase::timePurge(Time atTime, TimeDuration d)
 {
-  // Time to expire data
   const Time cutoffTime = atTime - d;
   const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
-
-  // For each source, purge times...
   for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
     it->second->timePurge(cutoff);
   }
-} // FusionDatabase::timePurge
-
-// SourceList&
-std::shared_ptr<SourceList>
-FusionDatabase::getSourceList(const std::string& name)
-{
-  return myObservationManager.getSourceList(name);
 }
 
 void
-FusionDatabase::addObservation(SourceList& list, float v, float w, size_t x, size_t y, size_t z, time_t t)
+FusionDatabase::addMissing(SourceListBase& list, size_t x, size_t y, size_t z, time_t t, bool dataNoMissingSet)
 {
-  // -----------------------------------------
-  // add to the source list
-  list.addObservation(x, y, z, v, w, t);
-
-  // Mark that we have this point
-  myHaves.set13D(x, y, z);
-}
-
-void
-FusionDatabase::addMissing(SourceList& list, size_t x, size_t y, size_t z, time_t t, bool dataNoMissingSet)
-{
-  // -----------------------------------------
-  // add to the source missing list
-  //  list.addMissing(x, y, z, t);
-  //  FIXME: So we're not using per source missing anyway now, so
-  //  we could probably deprecate/delete anything with that.
-
+  list.addMissing(x, y, z, t); 
   size_t i = myHaves.getIndex3D(x, y, z);
-
-  // If no missing set, then we only use missing to update the have array.  This means any old
-  // data in that location won't be added back into the new data, expiring it basically.
-  // However, by not adding to myMissings, no missing background will show.
   if (!dataNoMissingSet) {
-    // Add to global missing array mask
-    if (myMissings[i] < t) { // Always update to latest time from all
+    if (myMissings[i] < t) {
       myMissings[i] = t;
     }
   }
-
-  // Mark that we have this point
-  // myHaves.set13D(x, y, z); // still 'expire' old valid values replaced by missing now (moving storm)
-  myHaves.set1(i); // still 'expire' old valid values replaced by missing now (moving storm)
+  myHaves.set1(i);
 }
 
 void
-FusionDatabase::mergeObservations(std::shared_ptr<SourceList> oldSourcePtr,
-  std::shared_ptr<SourceList> newSourcePtr, const time_t cutoff)
+FusionDatabase::mergeObservations(std::shared_ptr<SourceListBase> oldSourcePtr,
+  std::shared_ptr<SourceListBase> newSourcePtr, const time_t cutoff)
 {
   auto& oldSource = *oldSourcePtr;
   auto& newSource = *newSourcePtr;
-
-  // Make list have same identifiers..
   newSource.myName = oldSource.myName;
   newSource.myID   = oldSource.myID;
-  newSource.myTime = oldSource.myTime; // deprecated
+  newSource.myTime = oldSource.myTime;
 
-  // Adding up old sizes.  This could be a running total maybe
-  // since even this takes time.
   size_t hadSize = 0;
   size_t newSize = 0;
 
-  for (size_t l = 0; l < myNumZ; ++l) {
-    hadSize += oldSource.myAObs[l].size(); // old points size
-    hadSize += oldSource.myAMObs[l].size();
-    newSize += newSource.myAObs[l].size(); // new incoming points
-    newSize += newSource.myAMObs[l].size();
+  if (myObservationManager.getPayloadSize() == 5) {
+      auto oldList = std::static_pointer_cast<PayloadSourceList<5>>(oldSourcePtr);
+      auto newList = std::static_pointer_cast<PayloadSourceList<5>>(newSourcePtr);
+      for (size_t l = 0; l < myNumZ; ++l) {
+          hadSize += oldList->myObs[l].size() + oldList->myAMObs[l].size();
+          newSize += newList->myObs[l].size() + newList->myAMObs[l].size();
+      }
+  } else {
+      auto oldList = std::static_pointer_cast<PayloadSourceList<2>>(oldSourcePtr);
+      auto newList = std::static_pointer_cast<PayloadSourceList<2>>(newSourcePtr);
+      for (size_t l = 0; l < myNumZ; ++l) {
+          hadSize += oldList->myObs[l].size() + oldList->myAMObs[l].size();
+          newSize += newList->myObs[l].size() + newList->myAMObs[l].size();
+      }
   }
 
-  // Add up sizes in the new source
   size_t oldRestore = 0;
   size_t timePurged = 0;
-
-  // Merge back old values not in new
   oldSource.unionMerge(newSource, myHaves, cutoff, timePurged, oldRestore);
-
-  // And make it the new one
+  
   myObservationManager.setSourceList(newSource.myID, newSourcePtr);
-
+  
   fLogInfo("{} Had: {} New: {} Kept: {} Expired: {} Final: {}",
     newSource.myName, hadSize, newSize, oldRestore, timePurged, newSize + oldRestore);
-} // FusionDatabase::mergeObservations
+}
 
 void
 FusionDatabase::dumpSources()
@@ -383,13 +221,12 @@ FusionDatabase::dumpSources()
   if (!wouldLogDebug()) {
     return;
   }
-
+  
   size_t counter     = 0;
   size_t mcounter    = 0;
   size_t sizeCounter = 0;
-
-  size_t obsDelta = 0;
-
+  size_t obsDelta    = 0;
+  
   // For all sources
   for (auto it = myObservationManager.begin(); it != myObservationManager.end(); ++it) {
     auto &r = *(it->second);
@@ -400,34 +237,41 @@ FusionDatabase::dumpSources()
     size_t numMObs    = 0;
     size_t numObsCap  = 0;
     size_t numMObsCap = 0;
-    for (size_t l = 0; l < myNumZ; ++l) {
-      numObs     += r.myAObs[l].size();
-      numObsCap  += r.myAObs[l].capacity();
-      numMObs    += r.myAMObs[l].size();
-      numMObsCap += r.myAMObs[l].capacity();
+
+    if (myObservationManager.getPayloadSize() == 5) {
+        auto pl = std::static_pointer_cast<PayloadSourceList<5>>(it->second);
+        for (size_t l = 0; l < myNumZ; ++l) {
+            numObs     += pl->myObs[l].size();
+            numObsCap  += pl->myObs[l].capacity();
+            numMObs    += pl->myAMObs[l].size();
+            numMObsCap += pl->myAMObs[l].capacity();
+        }
+        sizeCounter += (numObsCap * sizeof(GenericObservation<5>));
+        sizeCounter += (numMObsCap * sizeof(MObservation));
+    } else {
+        auto pl = std::static_pointer_cast<PayloadSourceList<2>>(it->second);
+        for (size_t l = 0; l < myNumZ; ++l) {
+            numObs     += pl->myObs[l].size();
+            numObsCap  += pl->myObs[l].capacity();
+            numMObs    += pl->myAMObs[l].size();
+            numMObsCap += pl->myAMObs[l].capacity();
+        }
+        sizeCounter += (numObsCap * sizeof(GenericObservation<2>));
+        sizeCounter += (numMObsCap * sizeof(MObservation));
     }
 
     fLogInfo("{}: {}: {} v. {} m. Latest: {}", static_cast<uint32_t>(r.myID), r.myName, numObs, numMObs, r.myTime);
     counter  += numObs;
     mcounter += numMObs;
-
-    // Size is the actual capacity of vector
-    sizeCounter += (numObsCap * (sizeof(VObservation)));
-    sizeCounter += (numMObsCap * (sizeof(MObservation)));
-
-    // Different in stored vs allocated 'should' be minor but checking
     obsDelta += (numObsCap - numObs);
   }
-
+  
   double vm, rssm;
-
   OS::getProcessSizeKB(vm, rssm);
   vm   *= 1024;
-  rssm *= 1024; // need bytes for memory print
-
+  rssm *= 1024;
+  
   fLogDebug("Total: {} v. {} m. ({}) ~RAM: {} {} , VWaste: {}",
     counter, mcounter, counter + mcounter,
     Strings::formatBytes(sizeCounter), Strings::formatBytes(rssm), Strings::formatBytes(obsDelta));
-  // Not sure how to guess this in new way yet
-  //  fLogInfo("X,Y,Z Coverage: {}", myXYZs.getPercentFull());
-} // FusionDatabase::dumpSources
+}

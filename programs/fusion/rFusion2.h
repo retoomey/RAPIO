@@ -3,8 +3,8 @@
 #include "rRAPIOAlgorithm.h"
 #include "rLLCoverageArea.h"
 #include "rLLHGridN2D.h"
-#include "rStage2Data.h"
 #include "rFusionDatabase.h"
+#include "rMergerStrategy.h"
 
 namespace rapio {
 /**
@@ -78,7 +78,7 @@ protected:
 
   /** Initialization done on first incoming data */
   void
-  firstDataSetup(std::shared_ptr<Stage2Data> d);
+  firstDataSetup(std::shared_ptr<BinaryTable> d);
 
   /** Create the cache of interpolated layers */
   void
@@ -105,13 +105,21 @@ protected:
   /** My database of 3D point observations */
   std::shared_ptr<FusionDatabase> myDatabase;
 
+  /** List of active strategies */
+  std::vector<std::shared_ptr<MergerStrategy>> myStrategies;
+
+  // New strategies
+  std::unique_ptr<WeightedAverageStrategy> myAverageStrategy;
+  std::unique_ptr<MaximumValueStrategy>    myMaxStrategy;
+  std::unique_ptr<WindSynthesisStrategy>   myWindStrategy;
+
   /** Precision flag for output preprocessing */
   float myPrecision;
 
   /** How many data files have come in since a process volume? */
   size_t myDirty;
 
-  // Could group this all as a 'partition info class'
+  /** Partition info for our output */
   PartitionInfo myPartitionInfo;
 };
 }

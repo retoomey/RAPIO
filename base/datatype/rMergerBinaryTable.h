@@ -79,16 +79,17 @@ public:
   virtual bool
   readBlock(const std::string& path, FILE * fp) override;
 
-  /** Send human readable output to a ostream.  This is
-   * called by iotext and rdump to view the file */
-  virtual bool
-  dumpToText(std::ostream& s) override
-  {
-    const std::string i = "\t";
-
-    s << i << "This is a WObs binary table.\n";
-    return true;
-  };
+  // ------------------------------------------------------------------------
+  // Introspection Overrides
+  // ------------------------------------------------------------------------
+  virtual std::vector<TableInfo>
+  getTableInfo() override;
+  virtual std::vector<float>
+  getFloatVector(const std::string& name) override;
+  virtual std::vector<unsigned short>
+  getUShortVector(const std::string& name) override;
+  virtual std::vector<char>
+  getCharVector(const std::string& name) override;
 };
 
 class RObsBinaryTable : public WObsBinaryTable
@@ -155,9 +156,14 @@ public:
   virtual bool
   readBlock(const std::string& path, FILE * fp) override;
 
-  /** Send human readable output to a ostream.  This is
-   * called by iotext and rdump to view the file */
-  virtual bool
-  dumpToText(std::ostream& s) override;
+  // ------------------------------------------------------------------------
+  // Introspection Overrides
+  // ------------------------------------------------------------------------
+  virtual std::vector<TableInfo>
+  getTableInfo() override;
+  virtual std::vector<float>
+  getFloatVector(const std::string& name) override;
+  virtual std::vector<unsigned short>
+  getUShortVector(const std::string& name) override;
 };
 }

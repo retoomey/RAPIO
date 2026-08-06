@@ -22,18 +22,9 @@ public:
   virtual void
   initialize() override;
 
-  // READING ------------------------------------------------------------
-  //
-
   /** Reader call back */
   virtual std::shared_ptr<DataType>
   createDataType(IOConfig& params) override;
-
-  /** Do a full read from a param list */
-  static std::shared_ptr<DataType>
-  readRawDataType(const URL& path);
-
-  // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
   virtual bool
@@ -41,6 +32,7 @@ public:
     IOConfig                               & config
   ) override;
 
+  /** Destroy a IORaw */
   virtual
   ~IORaw();
 };

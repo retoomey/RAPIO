@@ -60,7 +60,7 @@ public:
 
   /** (AI) Calculate index in the dimension space, no checking */
   size_t
-  getIndex(std::vector<size_t> indices)
+  getIndex(std::vector<size_t> indices) const
   {
     size_t index = 0;
 
@@ -74,7 +74,7 @@ public:
    * This is basically a collapsed form of the general getIndex.
    */
   inline size_t
-  getIndex3D(size_t x, size_t y, size_t z)
+  getIndex3D(size_t x, size_t y, size_t z) const
   {
     return ((z * myStrides[2]) + (y * myStrides[1]) + (x * myStrides[0]));
   }
@@ -84,7 +84,7 @@ public:
    * getOldIndex({x,y,z}) == getIndex({x,y,z}) for all values.
    */
   size_t
-  getOldIndex(std::vector<size_t> i)
+  getOldIndex(std::vector<size_t> i) const
   {
     size_t horsize = myDimensions[1] * myDimensions[2];
     size_t zsize   = myDimensions[2];
@@ -93,15 +93,15 @@ public:
   }
 
   /** Return list of dimension sizes */
-  std::vector<size_t>
-  getDimensions()
+  const std::vector<size_t>&
+  getDimensions() const
   {
     return myDimensions;
   }
 
   /** Return list of strides for debugging */
   std::vector<size_t>
-  getStrides()
+  getStrides() const
   {
     return myStrides;
   }

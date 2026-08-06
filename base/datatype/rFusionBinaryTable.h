@@ -73,11 +73,6 @@ public:
   virtual void
   getBlockLevels(std::vector<std::string>& levels) override;
 
-  /** Send human readable output to a ostream.  This is
-   * called by iotext and rdump to view the file */
-  virtual bool
-  dumpToText(std::ostream& s) override;
-
   /** Number of values stored (non-missing) */
   size_t getValueSize(){ return myValueSize; }
 
@@ -105,6 +100,18 @@ public:
   {
     myMissingMode = 1;
   }
+
+  // ------------------------------------------------------------------------
+  // Introspection Overrides
+  // ------------------------------------------------------------------------
+  virtual std::vector<TableInfo>
+  getTableInfo() override;
+  virtual std::vector<float>
+  getFloatVector(const std::string& name) override;
+  virtual std::vector<short>
+  getShortVector(const std::string& name) override;
+  virtual std::vector<char>
+  getCharVector(const std::string& name) override;
 
 protected:
   /** Current version of the Fusion Binary Table */

@@ -1,6 +1,5 @@
 #include "rFusion2.h"
 
-#include "rStage2Data.h"
 #include "rPluginPartition.h"
 #include "rProcessTimer.h"
 #include "rRecordQueue.h"
@@ -44,7 +43,10 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
 
   o.optional("p", "-1",
     "Sets a round-off precision to use. Use a value of 0.5 to round off to the nearest half. Negative value disables.");
-
+  
+  // FIXME: We'll probably make a param listing strategies or something.  There's no
+  // reason we can't run multiple off of one stage2.
+  
   // Output 2D by default and declare static product keys for what we write.
   o.setDefaultValue("O", "2D");
   declareProduct("2D", "Write N 2D layers merged values");
@@ -52,9 +54,12 @@ RAPIOFusionTwoAlg::declareOptions(RAPIOOptions& o)
   declareProduct("3D", "Write a 3D layer");
   declareProduct("3DMax", "Write a 3D max layer");
   declareProduct("S2", "Write Stage2 raw data files");
+
+  // New Wind Options
+  declareProduct("2DWind", "Write N 2D layers using Multi-Doppler Synthesis");
+  declareProduct("3DWind", "Write a 3D layer using Multi-Doppler Synthesis");
 }
 
-/** RAPIOAlgorithms process options on start up */
 void
 RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
 {
@@ -63,6 +68,11 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
   if (myPrecision > 0) {
     fLogInfo("Rounding off values to nearest {}", myPrecision);
   }
+
+  // Initialize strategies
+  myAverageStrategy = std::make_unique<WeightedAverageStrategy>();
+  myMaxStrategy     = std::make_unique<MaximumValueStrategy>();
+  myWindStrategy    = std::make_unique<WindSynthesisStrategy>();
 
   // ----------------------------------------
   // Check partition information
@@ -73,7 +83,6 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
     o.getLegacyGrid(myFullGrid);
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
     if (success) {
-      // Note: 'none' returns 1 since there is a single global partition basically
       if (myPartitionInfo.getSelectedPartitionNumber() < 1) {
         fLogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.");
         exit(1);
@@ -106,7 +115,7 @@ RAPIOFusionTwoAlg::createLLGCache(
       // Create a secondary float buffer for accumulating weights.  Crazy idea
       auto w = output->addFloat2D("weights", "Dimensionless", { 0, 1 });
       w->fill(0);
-      output->setVisible("weights", false); // Don't write to disk
+      output->setVisible("weights", false); 
 
       // Create a buffer for accumulating mask.  Tried playing with v/w to do this,
       // but it's just better separate
@@ -119,7 +128,7 @@ RAPIOFusionTwoAlg::createLLGCache(
 }
 
 void
-RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
+RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<BinaryTable> data)
 {
   static bool setup = false;
 
@@ -128,7 +137,8 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   setup = true;
   fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
-  myTypeName = data->getTypeName();
+  myTypeName = "";
+  data->getString("Typename", myTypeName);
 
   // Generate output name and units.
   // FIXME: More control flags, maybe even name options
@@ -147,7 +157,6 @@ RAPIOFusionTwoAlg::firstDataSetup(std::shared_ptr<Stage2Data> data)
   // Finally, create the point cloud database with N observations per point
   myDatabase = std::make_shared<FusionDatabase>(myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
   fLogInfo("Created XYZ array of {}*{}*{} size", myFullGrid.getNumX(), myFullGrid.getNumY(), myFullGrid.getNumZ());
-  // fLogInfo("DATABASE IS {}", (void*)(myDatabase.get()));
 } // RAPIOFusionTwoAlg::firstDataSetup
 
 void
@@ -175,6 +184,7 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
     fLogSevere("Ignoring OLD record: ({}) {}", recTime, d.getDescription());
     return;
   }
+  
   // If the queue is high we're falling behind probably.
   size_t aSize = Record::theRecordQueue->size(); // FIXME: probably hide the ->
 
@@ -183,78 +193,35 @@ RAPIOFusionTwoAlg::processNewData(rapio::RAPIOData& d)
   }
 
   ProcessTimer reading("Reading I/O file:");
-  std::shared_ptr<Stage2Data> datasp;
-
-  try{
-    datasp = Stage2Data::receive(d); // Hide internal format in the stage2 data
-  }catch (const std::exception& e) {
-    fLogSevere("Error receiving data: {}, ignoring!", e.what());
-    exit(1);
+  
+  auto incomingTable = d.datatype<BinaryTable>();
+  
+  if (!incomingTable) {
+    fLogSevere("Unrecognized data format received. Expected a BinaryTable (.raw) file.");
     return;
   }
-
   fLogInfo("{}", reading);
 
-  if (datasp) {
-    auto& data            = *datasp;
-    std::string name      = data.getRadarName();
-    std::string aTypeName = data.getTypeName();
-    Time dataTime         = data.getTime();
+  std::string name;
+  std::string aTypeName;
+  incomingTable->getString("Radarname", name);
+  incomingTable->getString("Typename", aTypeName);
 
-    fLogInfo("Incoming stage2 data for {} {}", name, aTypeName);
+  fLogInfo("Incoming stage2 data for {} {}", name, aTypeName);
 
-    // Initialize everything related to this radar
-    firstDataSetup(datasp);
+  firstDataSetup(incomingTable);
 
-    // Check if incoming moment matches our single setup, otherwise we'd need
-    // all the setup for each moment.  Which we 'could' do later maybe
-    // Ok so we have things like ReflectivityDPQC and CASSF-CorrectedRefDPQC so it's up
-    // to the user to not try to merge velocity and reflectivity, lol.
-    // FIXME:  I think we'll add a units sanity check here on the data.
-    // My concern is at some point someone will misconfigure and try to merge
-    // Reflectivity with Velocity or something and we get crazy output
-    // if (myTypeName != aTypeName) {
-    //  fLogSevere("We are linked to moment '{}', ignoring {}-{}", myTypeName, name, aTypeName);
-    //  return;
-    // }
+  ProcessTimer timer("Ingest Source");
+  size_t missingcounter = 0;
+  size_t points         = 0;
+  size_t total          = 0;
+  
+  myDatabase->ingestNewData(incomingTable, cutoff, missingcounter, points, total);
 
-    auto& db = *myDatabase;
+  fLogInfo("Final size received: {} points, {} missing.  Total: {}", points, missingcounter, total);
 
-    #if 0
-    const Time cutoffTime = Time::CurrentTime() - myMaximumHistory; // FIXME: add util to time
-    const time_t cutoff   = cutoffTime.getSecondsSinceEpoch();
-    if (radar.myTime < cutoffTime) {
-      fLogSevere("Ignoring {} OLD: {}", radar.myName, radar.myTime);
-      return;
-    }
-    #endif
-
-    ProcessTimer timer("Ingest Source");
-    size_t missingcounter = 0;
-    size_t points         = 0;
-    size_t total = 0;
-    db.ingestNewData(data, cutoff, missingcounter, points, total);
-
-    fLogInfo("Final size received: {} points, {} missing.  Total: {}", points, missingcounter, total);
-
-    //    db.dumpXYZ();
-    myDirty++;
-
-    #if 0
-    // Deprecated.  Heartbeat should now be calling processHeartbeat
-    // with record simulated time.  Leaving this code for now
-    // until fully tested.
-    //
-    // If we're realtime we'll get a heartbeat for us, if not we need to process at
-    // 'some' point for archive.  We could add more settings/controls for this later
-    // This will try to merge and output every incoming record
-    if (isArchive()) {
-      auto t = Time::CurrentTime(); // Should be archive latest time
-      mergeAndWriteOutput(t, t);
-    }
-    #endif // if 0
-  }
-} // RAPIOFusionTwoAlg::processNewData
+  myDirty++;
+} 
 
 void
 RAPIOFusionTwoAlg::processHeartbeat(const Time& n, const Time& p)
@@ -329,7 +296,7 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   }
 
   // myDatabase->dumpXYZ(); // only valid after firstDataSetup (currently)
-
+  //
   ProcessTimer timepurge("Full time purge. Can still be optimized.");
 
   // Time to expire data
@@ -345,58 +312,60 @@ RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
   myDatabase->timePurge(Time::CurrentTime(), myMaximumHistory);
   fLogInfo("{}", timepurge);
 
-  // ----------------
-  // Alpha Merge data and write... (fun times)
-  // Time, etc. needs to be added
-  // ----------------
-
-  // Write out
   auto& part = myPartitionInfo.getSelectedPartition();
-
   Time outputTime = p;
 
-  // Extra params (might be better in config)
   IOConfig extraParams;
+  extraParams.set("showfilesize", "yes"); 
+  extraParams.set("compression", "gz");  
 
-  extraParams.set("showfilesize", "yes"); // Force compression and sizes for now
-  extraParams.set("compression", "gz");  // Force compression
-
-  // ---------------------------------------
-  // Output 2D and/or 3D cube
+  // FIXME: Probably will move to a general strategy list here.  For now, keep the
+  // explicit products
   const bool wantMerge = (isProductWanted("2D") || isProductWanted("3D"));
 
   if (wantMerge) {
     const std::string typeMerged = "Fused2" + myTypeName;
-    myDatabase->mergeTo(myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
+    myLLGCache->fillPrimary(Constants::DataUnavailable);
+    myAverageStrategy->reduce(myDatabase.get(), myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
+    
     write2DLayers("2D", "Writing fused layer ", typeMerged, extraParams, outputTime);
     write3DLayer("3D", typeMerged, extraParams, outputTime);
   }
 
-  // ---------------------------------------
-  // Output 2D and/or 3D Max
   const bool wantMax = (isProductWanted("2DMax") || isProductWanted("3DMax"));
 
   if (wantMax) {
     const std::string typeMaxed = "Fused2Max" + myTypeName;
-    myDatabase->maxTo(myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
+    myLLGCache->fillPrimary(Constants::DataUnavailable);
+    myMaxStrategy->reduce(myDatabase.get(), myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
+    
     write2DLayers("2DMax", "Writing max layer ", typeMaxed, extraParams, outputTime);
     write3DLayer("3DMax", typeMaxed, extraParams, outputTime);
   }
 
-  // ---------------------------------------
-  // Output stage2 again with group
-  // -O="S2=GROUP1" I'm thinking here..
-  if (isProductWanted("S2")) { // -O="S2"
+  const bool wantWind = (isProductWanted("2DWind") || isProductWanted("3DWind"));
+
+  if (wantWind) {
+    const std::string typeWindU = "U_Wind";
+    const std::string typeWindV = "V_Wind";
+    
+    myLLGCache->fillPrimary(Constants::DataUnavailable);
+    myWindStrategy->reduce(myDatabase.get(), myLLGCache, cutoff, part.getStartX(), part.getStartY(), myPrecision);
+    
+    write2DLayers("2DWind", "Writing U/V wind layer ", "Fused2Wind", extraParams, outputTime);
+    write3DLayer("3DWind", "Fused2Wind", extraParams, outputTime);
+  }
+
+  if (isProductWanted("S2")) { 
     fLogInfo("Can't write stage2 data yet...but we will soon...");
   }
-} // RAPIOFusionTwoAlg::processHeartbeat
+} 
 
 int
 main(int argc, char * argv[])
 {
-  // Use the stream ability of binary table to avoid copying on read
   FusionBinaryTable::myStreamRead = true;
   RAPIOFusionTwoAlg alg = RAPIOFusionTwoAlg();
 
   alg.executeFromArgs(argc, argv);
-} // main
+}

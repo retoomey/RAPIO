@@ -79,6 +79,7 @@ index/rFMLIndex.cc
 index/rRedisIndex.cc
 notifier/rFMLRecordNotifier.cc
 datatype/rFusionBinaryTable.cc
+datatype/rWindBinaryTable.cc
 datatype/rGDALDataType.cc
 datatype/rGribDataType.cc
 rHeartbeat.cc

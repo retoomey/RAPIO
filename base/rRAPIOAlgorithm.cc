@@ -336,7 +336,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
   std::shared_ptr<DataType>                         outputData,
   IOConfig                                          & outputParams)
 {
-  if (outputData == nullptr){
+  if (outputData == nullptr) {
     fLogSevere("Skipping writeOutputProduct of '{}' with nullptr", key);
     return;
   }

@@ -29,7 +29,6 @@ Dump::processOptions(RAPIOOptions& o)
 void
 Dump::processNewData(rapio::RAPIOData& d)
 {
-  fLogSevere("Process called..");
   // Look for any data the system knows how to read
   auto data = d.datatype<rapio::DataType>();
 

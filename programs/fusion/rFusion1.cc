@@ -9,6 +9,7 @@
 #include "rLak2DResolver.h"
 #include "rLakResolver1.h"
 #include "rVelResolver.h"
+#include "rWindResolver.h"
 
 // Current moving average smoother, prefilter on RadialSets
 #include "rLakRadialSmoother.h"
@@ -45,6 +46,7 @@ RAPIOFusionOneAlg::declarePlugins()
   LakResolver1::introduceSelf();
   VelResolver::introduceSelf();
   Lak2DResolver::introduceSelf();
+  WindResolver::introduceSelf();
   // VolumeValueResolver::introduce("yourresolver", myResolverClass); To add your own
 
   // -------------------------------------------------------------

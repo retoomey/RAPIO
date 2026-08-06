@@ -113,7 +113,7 @@ public:
     std::vector<TableInfo> info;
     TableInfo i;
 
-    i.name = "rows"; // First 'colllection' of data called rows
+    i.name = "rows"; // First 'collection' of data called rows
     i.size = 0;      // Subclasses should fill in with data size
     info.push_back(i);
     return (info);
@@ -147,16 +147,21 @@ public:
     return (std::vector<unsigned short>());
   }
 
-  /** Send human readable output to a ostream.  This is
-   * called by iotext and rdump to view the file */
-  virtual bool
-  dumpToText(std::ostream& s)
+  /** The 'char' column type */
+  virtual std::vector<char>
+  getCharVector(const std::string& name)
   {
-    const std::string i = "\t";
+    return std::vector<char>();
+  }
 
-    s << i << "This is a binary table.\n";
-    return true;
-  };
+  /** The 'short' column type */
+  virtual std::vector<short>
+  getShortVector(const std::string& name)
+  {
+    return std::vector<short>();
+  }
+
+  virtual bool getUseMissingAsUnavailable(){ return false; }
 
 protected:
 

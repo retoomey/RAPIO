@@ -302,6 +302,7 @@ FusionBinaryTable::writeBlock(FILE * fp)
   return false;
 } // FusionBinaryTable::writeBlock
 
+#if 0
 bool
 FusionBinaryTable::dumpToText(std::ostream& o)
 {
@@ -379,3 +380,64 @@ FusionBinaryTable::dumpToText(std::ostream& o)
 
   return true;
 } // FusionBinaryTable::dumpToText
+
+#endif // if 0
+
+// ------------------------------------------------------------------------
+// Introspection Implementation
+// ------------------------------------------------------------------------
+
+std::vector<BinaryTable::TableInfo>
+FusionBinaryTable::getTableInfo()
+{
+  std::vector<TableInfo> info;
+
+  // Table 1: Valid Data
+  TableInfo dataTable;
+
+  dataTable.name        = "Data";
+  dataTable.size        = myXs.size();
+  dataTable.columnNames = { "X", "Y", "Z", "N", "D" };
+  dataTable.columnTypes = { "short", "short", "char", "float", "float" };
+  dataTable.columnUnits = { "index", "index", "index", "sum", "weight_sum" };
+  info.push_back(dataTable);
+
+  // Table 2: Missing Data (RLE)
+  TableInfo missingTable;
+
+  missingTable.name        = "MissingData";
+  missingTable.size        = myXMissings.size();
+  missingTable.columnNames = { "Xm", "Ym", "Zm", "Lm" };
+  missingTable.columnTypes = { "short", "short", "char", "short" };
+  missingTable.columnUnits = { "index", "index", "index", "run_length" };
+  info.push_back(missingTable);
+
+  return info;
+}
+
+std::vector<float>
+FusionBinaryTable::getFloatVector(const std::string& name)
+{
+  if (name == "N") { return myNums; }
+  if (name == "D") { return myDems; }
+  return std::vector<float>();
+}
+
+std::vector<short>
+FusionBinaryTable::getShortVector(const std::string& name)
+{
+  if (name == "X") { return myXs; }
+  if (name == "Y") { return myYs; }
+  if (name == "Xm") { return myXMissings; }
+  if (name == "Ym") { return myYMissings; }
+  if (name == "Lm") { return myLMissings; }
+  return std::vector<short>();
+}
+
+std::vector<char>
+FusionBinaryTable::getCharVector(const std::string& name)
+{
+  if (name == "Z") { return myZs; }
+  if (name == "Zm") { return myZMissings; }
+  return std::vector<char>();
+}

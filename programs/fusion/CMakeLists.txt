@@ -16,11 +16,12 @@ add_executable(rFusion1
   rRobertLinear1Resolver.cc
   rLak2DResolver.cc
   rLakResolver1.cc
-  rVelResolver.cc
+  rVelResolver.cc  # Gathering stuff for Wicker
+  rWindResolver.cc # Toomey new velocity conus experiment
   rLakRadialSmoother.cc
   rFusion1.cc
 )
-target_link_libraries(rFusion1 PRIVATE fusionshared rapio)
+target_link_libraries(rFusion1 PRIVATE fusionshared ZLIB::ZLIB rapio)
 install(TARGETS rFusion1
    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
@@ -30,6 +31,7 @@ install(TARGETS rFusion1
 add_executable(rFusion2
   rFusionDatabase.cc
   rFusion2.cc
+  rMergerStrategy.cc
 )
 
 target_link_libraries(rFusion2 PRIVATE fusionshared rapio)

@@ -72,7 +72,7 @@ RAPIOProgram::writeDirectOutput(const URL& path,
   std::shared_ptr<DataType>              outputData,
   IOConfig                               & outputParams)
 {
-  if (outputData == nullptr){
+  if (outputData == nullptr) {
     fLogSevere("Skipping writeDirectProduct for '{}' with nullptr", path.toString());
     return false;
   }
