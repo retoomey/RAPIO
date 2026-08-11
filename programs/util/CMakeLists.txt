@@ -114,3 +114,5 @@ install(TARGETS rGetColorMap
 # Install the makeindex script
 install_python("makeindex.py" ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_subdirectory(makeLTAR)
+
