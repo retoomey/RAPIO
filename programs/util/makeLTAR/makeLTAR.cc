@@ -215,8 +215,7 @@ LTAR::processNewData(rapio::RAPIOData& d) {
               // Standard echo of data to output.  Note it's the same data out as in here
               fLogDebug("--->Echoing {} {} product to output", o->getTypeName(), o->getElevationDegs() );
 
-              std::map<std::string, std::string> myOverrides;
-              writeOutputProduct(o->getTypeName(), o, myOverrides); // Typename will be replaced by -O filters
+              writeOutputProduct(o->getTypeName(), o); // Typename will be replaced by -O filters
               fLogInfo("--->Finished {} product to output", o->getTypeName());
              
           }

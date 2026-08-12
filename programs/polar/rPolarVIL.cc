@@ -469,8 +469,7 @@ public:
     iter.iterateRadialGates(myCallback);
 
     // Write the resulting product to disk (or the next pipeline step)
-    std::map<std::string, std::string> myOverride;
-    writeOutputProduct(vil->getTypeName(), vil, myOverride);
+    writeOutputProduct(vil->getTypeName(), vil);
 
     if (!polar_only) {
         //An additional output.........LatLonVil
@@ -513,7 +512,8 @@ public:
         targetGrid->setSubType("LatLon");
 
     // Update your fileprefix to include the {subtype} token
-        myOverride["fileprefix"] = "{source}/{datatype}/{subtype}/00.00/{time}";
+        IOConfig myOverride;
+        myOverride.set("fileprefix","{source}/{datatype}/{subtype}/00.00/{time}");
         writeOutputProduct(targetGrid->getTypeName(), targetGrid, myOverride); 
     }
   }

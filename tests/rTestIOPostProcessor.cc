@@ -28,9 +28,8 @@ BOOST_AUTO_TEST_CASE(TEST_ATOMIC_RENAME_ONLY)
   std::string tempFile  = createDummyFile("test-temp-");
   std::string finalFile = OS::getUniqueTemporaryFile("test-final-");
 
-  std::map<std::string, std::string> keys;
-
-  keys["filename"] = finalFile; // Target destination
+  IOConfig keys;
+  keys.set("filename", finalFile); // Target destination
 
   IOPostProcessor pipeline;
 
@@ -54,10 +53,8 @@ BOOST_AUTO_TEST_CASE(TEST_COMPRESSION_AND_RENAME)
   std::string tempFile      = createDummyFile("test-temp-");
   std::string finalBaseFile = OS::getUniqueTemporaryFile("test-final-");
 
-  std::map<std::string, std::string> keys;
-
-  keys["filename"]    = finalBaseFile;
-  keys["compression"] = "gz"; // Trigger the CompressionStep
+  IOConfig keys;
+  keys.set("filename", finalBaseFile).set("compression", "gz");
 
   IOPostProcessor pipeline;
 
@@ -69,7 +66,7 @@ BOOST_AUTO_TEST_CASE(TEST_COMPRESSION_AND_RENAME)
   std::string expectedFinalFile = finalBaseFile + ".gz";
 
   BOOST_CHECK(success);
-  BOOST_CHECK_EQUAL(keys["filename"], expectedFinalFile);
+  BOOST_CHECK_EQUAL(keys.get("filename"), expectedFinalFile);
   BOOST_CHECK(!OS::isRegularFile(tempFile));
   BOOST_CHECK(OS::isRegularFile(expectedFinalFile));
 
@@ -82,10 +79,10 @@ BOOST_AUTO_TEST_CASE(TEST_SAFE_COMMAND_FAILURE_ABORTS_PIPELINE)
   std::string tempFile  = createDummyFile("test-temp-");
   std::string finalFile = OS::getUniqueTemporaryFile("test-final-");
 
-  std::map<std::string, std::string> keys;
+  IOConfig keys;
 
-  keys["filename"]  = finalFile;
-  keys["postwrite"] = "some_non_existent_command %filename%";
+  keys.set("filename", finalFile);
+  keys.set("postwrite", "some_non_existent_command %filename%");
 
   IOPostProcessor pipeline;
 
@@ -131,10 +128,8 @@ BOOST_AUTO_TEST_CASE(TEST_LDM_INSERTION_FAKE_BINARY)
   std::string tempFile  = createDummyFile("test-ldm-");
   std::string finalFile = rapio::OS::getUniqueTemporaryFile("test-final-");
 
-  std::map<std::string, std::string> keys;
-
-  keys["filename"]  = finalFile;
-  keys["postwrite"] = "ldm"; // Triggers our custom LDMInsertStep
+  IOConfig keys;
+  keys.set("filename", finalFile).set("postwrite", "ldm");
 
   rapio::IOPostProcessor pipeline;
 

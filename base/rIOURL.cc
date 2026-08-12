@@ -47,9 +47,10 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
     // Use network to pull it.
     Network::read(url.toString(), buf);
   } else {
-    // Local file ingest
     // ------------------------------------------------------------
-    std::ifstream file(url.getPath());
+    // Enforce binary mode to prevent silent byte translation (e.g., CRLF) 
+    // so tellg() perfectly matches read() size.
+    std::ifstream file(url.getPath(), std::ios::in | std::ios::binary);
 
     if (file) {
       // Get size of file
@@ -57,9 +58,12 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
       std::streampos length = file.tellg();
       file.seekg(0, std::ios::beg);
 
-      // c.resize(length);
+      // Then resize to attempt to read.
       buf.resize(length);
       file.read(&buf[0], length);
+
+      // Finally, resize to the actual number of bytes read
+      buf.resize(file.gcount());
     } else {
       fLogSevere("FAILED local file read {}", url.toString());
     }

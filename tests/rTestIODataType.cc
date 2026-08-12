@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML)
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
 
-  std::map<std::string, std::string> keys;
+  IOConfig keys;
 
   IODataType::writeBuffer(outREADFILE, bufferout, keys, "xml");
   // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
@@ -130,9 +130,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_JSON)
   // 3. Write the PTreeData out to a char buffer
   std::vector<char> bufferout;
 
-  std::map<std::string, std::string> keys;
-
-  ;
+  IOConfig keys;
 
   IODataType::writeBuffer(outREADFILE, bufferout, keys, "json");
   // std::cerr << "Writing buffer to json gives -------------------------------------\n";

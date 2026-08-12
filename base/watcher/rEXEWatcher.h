@@ -39,7 +39,7 @@ public:
     {
       myConnected   = false;
       myCoutPipe[0] = myCoutPipe[1] = -1;
-      myCerrPipe[0] = myCoutPipe[1] = -1;
+      myCerrPipe[0] = myCerrPipe[1] = -1;
     }
 
     /** Spawn and connect to the exe */

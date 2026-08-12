@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rRAPIOProgram.h>
+#include <mutex>
 
 namespace rapio {
 class RAPIOWebGUI : public RAPIOProgram {
