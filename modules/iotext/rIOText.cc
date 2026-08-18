@@ -4,6 +4,7 @@
 // Default built in DataType support
 #include "rTextDataGrid.h"
 #include "rTextBinaryTable.h"
+#include "rTextTimeHeightGrid.h"
 
 #include <fstream>
 
@@ -38,6 +39,7 @@ IOText::initialize()
 {
   TextDataGrid::introduceSelf(this);
   TextBinaryTable::introduceSelf(this);
+  TextTimeHeightGrid::introduceSelf(this);
 }
 
 IOText::~IOText()

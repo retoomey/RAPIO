@@ -189,10 +189,10 @@ public:
     float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs) override;
 
   /** Can be quicker to get gates from the projection */
-  inline int getNumGates(){ return myNumGates; }
+  inline int getNumGates() const { return myNumGates; }
 
   /** Can be quicker to get radial from the projection */
-  inline int getNumRadials(){ return myNumRadials; }
+  inline int getNumRadials() const { return myNumRadials; }
 
 protected:
 

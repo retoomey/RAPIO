@@ -14,6 +14,7 @@
 #include "rNetcdfRadialSet.h"
 #include "rNetcdfLatLonGrid.h"
 #include "rNetcdfLatLonHeightGrid.h"
+#include "rNetcdfTimeHeightGrid.h"
 #include "rNetcdfBinaryTable.h"
 
 #include <netcdf_mem.h>
@@ -57,6 +58,7 @@ IONetcdf::initialize()
   NetcdfRadialSet::introduceSelf(this);
   NetcdfLatLonGrid::introduceSelf(this);
   NetcdfLatLonHeightGrid::introduceSelf(this);
+  NetcdfTimeHeightGrid::introduceSelf(this);
   NetcdfBinaryTable::introduceSelf(this);
   // Generic netcdf reader class
   NetcdfDataGrid::introduceSelf(this);

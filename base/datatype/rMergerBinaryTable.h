@@ -73,7 +73,7 @@ public:
    * to call their
    * superclass and then push back their level identifier. */
   virtual void
-  getBlockLevels(std::vector<std::string>& levels) override;
+  getBlockLevels(std::vector<std::string>& levels) const override;
 
   /** Read our block from file if it exists at current location */
   virtual bool
@@ -139,7 +139,7 @@ public:
    * to call their
    * superclass and then push back their level identifier. */
   virtual void
-  getBlockLevels(std::vector<std::string>& levels) override;
+  getBlockLevels(std::vector<std::string>& levels) const override;
 
   /** Add a raw observation. */
   inline void

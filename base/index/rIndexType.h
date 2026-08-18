@@ -43,7 +43,7 @@ public:
 
   /** Get the index label used to mark new records */
   size_t
-  getIndexLabel()
+  getIndexLabel() const
   {
     return myIndexLabel;
   }

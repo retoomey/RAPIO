@@ -4,7 +4,7 @@ using namespace rapio;
 using namespace std;
 
 LLCoverageArea
-LatLonArea::getLLCoverageArea()
+LatLonArea::getLLCoverageArea() const
 {
   const size_t aNumX     = getNumLons(); // X is east to west
   const size_t aNumY     = getNumLats(); // Y is north to south
@@ -116,7 +116,7 @@ LatLonArea::getCenterLocation() const
 }
 
 LLH
-LatLonArea::getTopLeftLocationAt(size_t i, size_t j)
+LatLonArea::getTopLeftLocationAt(size_t i, size_t j) const
 {
   if ((i == 0) && (j == 0)) { return myLocation; }
   const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * i);
@@ -126,7 +126,7 @@ LatLonArea::getTopLeftLocationAt(size_t i, size_t j)
 }
 
 LLH
-LatLonArea::getCenterLocationAt(size_t i, size_t j)
+LatLonArea::getCenterLocationAt(size_t i, size_t j) const
 {
   const double latDegs = myLocation.getLatitudeDeg() - (myLatSpacing * (i + 0.5));
   const double lonDegs = myLocation.getLongitudeDeg() + (myLonSpacing * (j + 0.5));

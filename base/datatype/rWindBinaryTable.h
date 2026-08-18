@@ -42,7 +42,7 @@ public:
 
   static size_t BLOCK_LEVEL;
   virtual void
-  getBlockLevels(std::vector<std::string>& levels) override;
+  getBlockLevels(std::vector<std::string>& levels) const override;
 
   // Introspection Overrides (Replaces dumpToText)
   virtual std::vector<TableInfo>

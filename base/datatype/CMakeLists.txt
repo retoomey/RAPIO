@@ -23,6 +23,7 @@ add_library(rapio_datatype OBJECT
   rRadialSet.cc
   rRadialSetIterator.cc
   rRadialSetProjection.cc
+  rTimeHeightGrid.cc
   rWindBinaryTable.cc
 )
 # We're only to link to rapio shared, this is a logical grouping

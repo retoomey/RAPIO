@@ -71,7 +71,7 @@ public:
 
   /** Get the block level magic vector for this class. */
   virtual void
-  getBlockLevels(std::vector<std::string>& levels) override;
+  getBlockLevels(std::vector<std::string>& levels) const override;
 
   /** Number of values stored (non-missing) */
   size_t getValueSize(){ return myValueSize; }

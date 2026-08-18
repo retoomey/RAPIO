@@ -15,7 +15,7 @@ size_t RObsBinaryTable::BLOCK_LEVEL;
 // Weighted  ----------------------------------------
 //
 void
-WObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+WObsBinaryTable::getBlockLevels(std::vector<std::string>& levels) const
 {
   // Level stack
   BinaryTable::getBlockLevels(levels);
@@ -163,7 +163,7 @@ WObsBinaryTable::getCharVector(const std::string& name)
 }
 
 void
-RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+RObsBinaryTable::getBlockLevels(std::vector<std::string>& levels) const
 {
   // Level stack
   WObsBinaryTable::getBlockLevels(levels);

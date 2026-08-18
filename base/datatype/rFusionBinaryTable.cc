@@ -24,7 +24,7 @@ FusionBinaryTable::~FusionBinaryTable()
 }
 
 void
-FusionBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+FusionBinaryTable::getBlockLevels(std::vector<std::string>& levels) const
 {
   // Level stack
   BinaryTable::getBlockLevels(levels);

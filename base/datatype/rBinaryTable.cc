@@ -21,7 +21,7 @@ BinaryTable::BinaryTable() : myLastFileVersion(0)
 }
 
 void
-BinaryTable::getBlockLevels(std::vector<std::string>& levels)
+BinaryTable::getBlockLevels(std::vector<std::string>& levels) const
 {
   // The root level...every binary file will have this
   // Subclasses should call this and then append their own unique block level
@@ -31,7 +31,7 @@ BinaryTable::getBlockLevels(std::vector<std::string>& levels)
 }
 
 size_t
-BinaryTable::getVersion()
+BinaryTable::getVersion() const
 {
   // Version number to change on major changes.  Subclasses
   // can use to verify readability.
@@ -39,7 +39,7 @@ BinaryTable::getVersion()
 }
 
 size_t
-BinaryTable::getLastFileVersion()
+BinaryTable::getLastFileVersion() const
 {
   // Version number of last read file.  Subclasses could use this
   // to handle older version for compatibility.
@@ -47,7 +47,7 @@ BinaryTable::getLastFileVersion()
 }
 
 bool
-BinaryTable::canHandleVersion(size_t version)
+BinaryTable::canHandleVersion(size_t version) const
 {
   const size_t ourVersion = getVersion();
 
@@ -58,7 +58,7 @@ BinaryTable::canHandleVersion(size_t version)
 }
 
 bool
-BinaryTable::matchBlockLevel(size_t level)
+BinaryTable::matchBlockLevel(size_t level) const
 {
   // Virtual.  Get the FULL available block level stack
   // based on current subclass we are

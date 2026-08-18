@@ -17,7 +17,7 @@ WindBinaryTable::WindBinaryTable()
 WindBinaryTable::~WindBinaryTable(){ }
 
 void
-WindBinaryTable::getBlockLevels(std::vector<std::string>& levels)
+WindBinaryTable::getBlockLevels(std::vector<std::string>& levels) const
 {
   BinaryTable::getBlockLevels(levels);
   levels.push_back("WIND");

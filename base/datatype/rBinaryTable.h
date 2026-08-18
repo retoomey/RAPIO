@@ -32,21 +32,21 @@ public:
    * to call their
    * superclass and then push back their level identifier. */
   virtual void
-  getBlockLevels(std::vector<std::string>& levels);
+  getBlockLevels(std::vector<std::string>& levels) const;
 
   /** Return the version number of binary format.  Change on a
    * major change.  This will allow backward compatibility */
   size_t
-  getVersion();
+  getVersion() const;
 
   /** Return the version number of last read file, or zero if not */
   size_t
-  getLastFileVersion();
+  getLastFileVersion() const;
 
   /** Can we handle this version?  Default handles version
    * less than or equal to current version */
   virtual bool
-  canHandleVersion(size_t version);
+  canHandleVersion(size_t version) const;
 
   // ----------------------------------------------------------------------------
   // To magic string and back...
@@ -71,7 +71,7 @@ public:
    * will match, but level 3 will not.  This means we can read data for level 1
    * and 2 only. */
   bool
-  matchBlockLevel(size_t level);
+  matchBlockLevel(size_t level) const;
 
   // ----------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ public:
 
   /** Return the number of arrays of data we will store */
   size_t
-  getArrayCount()
+  getArrayCount() const
   {
     return (0);
   }

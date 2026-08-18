@@ -70,7 +70,7 @@ public:
 
   /** Get a LLCoverageArea matching our grid */
   LLCoverageArea
-  getLLCoverageArea();
+  getLLCoverageArea() const;
 
   /** Get the top left location of a cell
    *  This is the point on the left top of cell (see X).
@@ -81,7 +81,7 @@ public:
    *  -------
    */
   LLH
-  getTopLeftLocationAt(size_t i, size_t j);
+  getTopLeftLocationAt(size_t i, size_t j) const;
 
   /** Get the center location of a cell
    *  This is the center point of the cell (see O).
@@ -92,7 +92,7 @@ public:
    *  -------
    */
   LLH
-  getCenterLocationAt(size_t i, size_t j);
+  getCenterLocationAt(size_t i, size_t j) const;
 
   /** Return the location considered the 'center' location of the datatype */
   virtual LLH

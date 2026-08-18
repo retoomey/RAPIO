@@ -17,6 +17,7 @@ if (Netcdf_FOUND)
     rNetcdfLatLonGrid.cc
     rNetcdfLatLonHeightGrid.cc
     rNetcdfDataTypeImp.cc
+    rNetcdfTimeHeightGrid.cc
   )
 
   # Include current directory headers too and netcdf
