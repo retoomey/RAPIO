@@ -48,7 +48,7 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
     Network::read(url.toString(), buf);
   } else {
     // ------------------------------------------------------------
-    // Enforce binary mode to prevent silent byte translation (e.g., CRLF) 
+    // Enforce binary mode to prevent silent byte translation (e.g., CRLF)
     // so tellg() perfectly matches read() size.
     std::ifstream file(url.getPath(), std::ios::in | std::ios::binary);
 

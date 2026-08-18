@@ -74,7 +74,8 @@ public:
   Clone();
 
   /** Get name of the array */
-  std::string getName(){ return myName; }
+  std::string
+  getName() const { return myName; }
 
   /** Set name of the array */
   void setName(const std::string& name){ myName = name; }
@@ -113,14 +114,14 @@ public:
   /** Get the DataArrayType of this data array.  Used by reader/writers
    * where separate C functions are called per type. */
   const DataArrayType&
-  getStorageType(){ return myStorageType; }
+  getStorageType() const { return myStorageType; }
 
   /** Set the DataArrayType of this data array */
   void
   setStorageType(const DataArrayType& s){ myStorageType = s; }
 
   /** Get the dimension reference */
-  std::vector<size_t>
+  const std::vector<size_t>&
   getDimIndexes(){ return myDimIndexes; }
 
   /** Set the dimension reference */

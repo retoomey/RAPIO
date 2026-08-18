@@ -72,7 +72,7 @@ public:
   /** Return true iff our found value matches one of our added suboptions.  This is
    * always true if suboptions are enforced */
   bool
-  isInSuboptions();
+  isInSuboptions() const;
 
   bool
   operator < (const Option& rhs) const;

@@ -41,7 +41,7 @@ public:
   // will give us a slight speed boost by avoiding copying.
   // Static casts don't actually make any code.
   inline float
-  getWeight()
+  getWeight() const
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
 
@@ -49,7 +49,7 @@ public:
   }
 
   inline float
-  getTerrainCBBPercent()
+  getTerrainCBBPercent() const
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
 
@@ -57,7 +57,7 @@ public:
   }
 
   inline float
-  getTerrainPBBPercent()
+  getTerrainPBBPercent() const
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
 
@@ -65,7 +65,7 @@ public:
   }
 
   inline bool
-  getTerrainBeamHitBottom()
+  getTerrainBeamHitBottom() const
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
 
@@ -74,7 +74,7 @@ public:
 
   /** RadialSets: Get beamwidth angle at the point of interest */
   inline AngleDegs
-  getBeamWidthDegs()
+  getBeamWidthDegs() const
   {
     auto * rc = static_cast<RadialSetPointerCache *>(c);
 
@@ -83,7 +83,7 @@ public:
 
   /** RadialSets: Get elevation angle */
   inline AngleDegs
-  getElevationDegs()
+  getElevationDegs() const
   {
     // For speed, no checking types here.  Should be higher
     return (static_cast<RadialSet *>(c->dt)->getElevationDegs());
@@ -117,7 +117,7 @@ public:
 
   /** Get DataTypePointerCache for layer */
   inline DataTypePointerCache *
-  getPC(Layer l)
+  getPC(Layer l) const
   {
     return pc[static_cast<int>(l)];
   }
@@ -214,38 +214,45 @@ public:
   //
 
   /** Get radar location */
-  inline LLH getRadarLocation(){ return radarLocation; }
+  inline LLH
+  getRadarLocation() const { return radarLocation; }
 
   /** Set radar location */
   inline void setRadarLocation(LLH& l){ radarLocation = l; }
 
   /** Get radar height */
-  inline float getRadarHeightKMs(){ return radarLocation.getHeightKM(); }
+  inline float
+  getRadarHeightKMs() const { return radarLocation.getHeightKM(); }
 
   /** Get radar latitude degrees */
-  inline float getRadarLatitudeDegs(){ return radarLocation.getLatitudeDeg(); }
+  inline float
+  getRadarLatitudeDegs() const { return radarLocation.getLatitudeDeg(); }
 
   /** Get radar longitude degrees */
-  inline float getRadarLongitudeDegs(){ return radarLocation.getLongitudeDeg(); }
+  inline float
+  getRadarLongitudeDegs() const { return radarLocation.getLongitudeDeg(); }
 
   // ----------------------------------------------
   // Current grid cell location or at of the data
   //
 
   /** Get access grid location */
-  inline LLH getAtLocation(){ return virtualLocation; }
+  inline LLH
+  getAtLocation() const { return virtualLocation; }
 
   /** Set access grid location */
   inline void setAtLocation(LLH& l){ virtualLocation = l; }
 
   /** Get height in kilometers at grid location */
-  inline float getAtLocationHeightKMs(){ return virtualLocation.getHeightKM(); }
+  inline float
+  getAtLocationHeightKMs() const { return virtualLocation.getHeightKM(); }
 
   /** Set height in kilometers at grid location */
   inline void setAtLocationHeightKMs(float h){ virtualLocation.setHeightKM(h); }
 
   /** Get location height in virtual grid */
-  inline float getAtHeightKMs(){ return virtualLocation.getHeightKM(); }
+  inline float
+  getAtHeightKMs() const { return virtualLocation.getHeightKM(); }
 
   /** Set Latitude and Longitude degrees at grid location */
   inline void
@@ -256,10 +263,12 @@ public:
   }
 
   /** Get location Latitude in virtual grid */
-  inline float getAtLatitudeDegs(){ return virtualLocation.getLatitudeDeg(); }
+  inline float
+  getAtLatitudeDegs() const { return virtualLocation.getLatitudeDeg(); }
 
   /** Get location Longitude in virtual grid */
-  inline float getAtLongitudeDegs(){ return virtualLocation.getLongitudeDeg(); }
+  inline float
+  getAtLongitudeDegs() const { return virtualLocation.getLongitudeDeg(); }
 
   // -----------------------------------------------
   // INPUTS for this grid cell location

@@ -54,20 +54,20 @@ public:
   setEnforcedSuboptions(const std::string& key, bool flag) = 0;
 
   virtual std::string
-  getString(const std::string& opt) = 0;
+  getString(const std::string& opt) const = 0;
   virtual bool
-  getBoolean(const std::string& opt) = 0;
+  getBoolean(const std::string& opt) const = 0;
   virtual float
-  getFloat(const std::string& opt) = 0;
+  getFloat(const std::string& opt) const = 0;
   virtual int
-  getInteger(const std::string& opt) = 0;
+  getInteger(const std::string& opt) const = 0;
 
   virtual bool
-  isInSuboptions(const std::string& key) = 0;
+  isInSuboptions(const std::string& key) const = 0;
   virtual bool
-  isParsed(const std::string& key) = 0;
+  isParsed(const std::string& key) const = 0;
   virtual bool
-  wantAdvancedHelp(const std::string& sourceopt) = 0;
+  wantAdvancedHelp(const std::string& sourceopt) const = 0;
 
   virtual void
   storeParsedArg(const std::string& name, const std::string& value, const bool enforceStrict = true,
@@ -76,7 +76,7 @@ public:
   virtual void
   setIsProcessed() = 0;
   virtual bool
-  getIsProcessed() = 0;
+  getIsProcessed() const = 0;
 
   virtual void
   setHelpFields(const std::vector<std::string>& list) = 0;

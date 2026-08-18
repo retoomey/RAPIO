@@ -14,7 +14,7 @@ RAPIOData::record() const
 }
 
 int
-RAPIOData::matchedIndexNumber()
+RAPIOData::matchedIndexNumber() const
 {
   return (rec.getIndexNumber());
 }

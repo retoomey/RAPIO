@@ -56,7 +56,7 @@ public:
 
   /** Get a value as a string */
   bool
-  getValue(const std::string& key, std::string& value)
+  getValue(const std::string& key, std::string& value) const
   {
     // Find the key in myKeys
     for (size_t i = 0; i < myKeys.size(); ++i) {
@@ -146,14 +146,14 @@ public:
 
   /** Get a string in a message, return true if found */
   bool
-  getString(const std::string& key, std::string& value)
+  getString(const std::string& key, std::string& value) const
   {
     return getValue(key, value);
   }
 
   /** Get a string in a message, return "" if not found */
   std::string
-  getString(const std::string& key)
+  getString(const std::string& key) const
   {
     std::string value;
 

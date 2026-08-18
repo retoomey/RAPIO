@@ -54,7 +54,7 @@ public:
 
   /** Stolen from the template */
   size_t
-  getNumDimensions()
+  getNumDimensions() const
   {
     return myDims.size();
   }
@@ -83,28 +83,28 @@ public:
 
   /** Convenience to get dim zero, 'X' */
   size_t
-  getX()
+  getX() const
   {
     return ((myDims.size() > 0) ? myDims[0] : 0);
   }
 
   /** Convenience to get dim one, 'Y' */
   size_t
-  getY()
+  getY() const
   {
     return ((myDims.size() > 1) ? myDims[1] : 0);
   }
 
   /** Convenience to get dim two, 'Z' */
   size_t
-  getZ()
+  getZ() const
   {
     return ((myDims.size() > 2) ? myDims[2] : 0);
   }
 
   /** Convenience to get dim four, 'K' */
   size_t
-  getK()
+  getK() const
   {
     return ((myDims.size() > 3) ? myDims[3] : 0);
   }

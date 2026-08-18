@@ -40,7 +40,8 @@ public:
   action() = 0;
 
   /** Return name of handler */
-  std::string getName(){ return myName; }
+  const std::string&
+  getName() const { return myName; }
 
   /** Called by EventHandler to request immediate action */
   void

@@ -254,7 +254,7 @@ public:
 
   /** Check if the full 1D Array exists for Nyquist Velocity */
   bool
-  haveNyquistArray();
+  haveNyquistArray() const;
 
   /** Allow reader/writer access to full vector (call be nullptr) */
   std::shared_ptr<Array<float, 1> >
@@ -376,7 +376,7 @@ public:
 
   /** Do we have valid terrain arrays? */
   inline bool
-  haveTerrain()
+  haveTerrain() const
   {
     return myHaveTerrain;
   }

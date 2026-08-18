@@ -226,12 +226,12 @@ public:
     const std::vector<size_t>& dimindexes);
 
   /** Return dimensions */
-  std::vector<DataGridDimension>
-  getDims(){ return myDims; }
+  const std::vector<DataGridDimension>&
+  getDims() const { return myDims; }
 
   /** Return size of each dimension */
-  std::vector<size_t>
-  getSizes();
+  const std::vector<size_t>
+  getSizes() const;
 
   /** Return nodes */
   std::vector<std::shared_ptr<DataArray> >
@@ -283,7 +283,7 @@ public:
 
   /** Do we have an array of given name? */
   bool
-  haveArrayName(const std::string& name)
+  haveArrayName(const std::string& name) const
   {
     for (auto i:myNodes) {
       if (i->getName() == name) {

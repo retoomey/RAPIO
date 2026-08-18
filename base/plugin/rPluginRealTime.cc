@@ -45,13 +45,13 @@ PluginRealTime::execute(RAPIOProgram * caller)
 }
 
 bool
-PluginRealTime::isDaemon()
+PluginRealTime::isDaemon() const
 {
   return ((myReadMode == "") || (myReadMode == "new") || (myReadMode == "all"));
 }
 
 bool
-PluginRealTime::isArchive()
+PluginRealTime::isArchive() const
 {
   return (myReadMode == "old") || (myReadMode == "all");
 }

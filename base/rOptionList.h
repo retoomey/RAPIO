@@ -91,31 +91,31 @@ public:
 
   /** Fetch an option as a string */
   std::string
-  getString(const std::string& opt) override;
+  getString(const std::string& opt) const override;
 
   /** Fetch an option as a boolean */
   bool
-  getBoolean(const std::string& opt) override;
+  getBoolean(const std::string& opt) const override;
 
   /** Fetch an option as a float, or 0 if invalid */
   float
-  getFloat(const std::string& opt) override;
+  getFloat(const std::string& opt) const override;
 
   /** Fetch an option as an integer, or 0 if invalid */
   int
-  getInteger(const std::string& opt) override;
+  getInteger(const std::string& opt) const override;
 
   /** Does this option match one of its suboption list? */
   bool
-  isInSuboptions(const std::string& key) override;
+  isInSuboptions(const std::string& key) const override;
 
   /** Return true if this option name is parsed */
   bool
-  isParsed(const std::string& key) override;
+  isParsed(const std::string& key) const override;
 
   /** Do we want advanced help for this option? */
   bool
-  wantAdvancedHelp(const std::string& sourceopt) override;
+  wantAdvancedHelp(const std::string& sourceopt) const override;
 
   /** Store a parsed argument value, from XML or command line */
   void
@@ -146,6 +146,10 @@ private:
     OptionFilter& a);
 
   /** Return option with this key */
+  const Option *
+  getOption(const std::string& key) const;
+
+  /** Return option with this key */
   Option *
   getOption(const std::string& key);
 
@@ -157,7 +161,7 @@ public:
 
   /** Get if processed, this allows get value methods to work */
   bool
-  getIsProcessed() override { return isProcessed; }
+  getIsProcessed() const override { return isProcessed; }
 
   void
   setHelpFields(const std::vector<std::string>& list) override;

@@ -188,10 +188,21 @@ OptionList::getOption(const std::string& opt)
   return (nullptr);
 }
 
-bool
-OptionList::isParsed(const std::string& key)
+const Option *
+OptionList::getOption(const std::string& opt) const
 {
-  Option * o = getOption(key);
+  auto i = optionMap.find(opt);
+
+  if (i != optionMap.end()) {
+    return (&i->second);
+  }
+  return (nullptr);
+}
+
+bool
+OptionList::isParsed(const std::string& key) const
+{
+  const Option * o = getOption(key);
 
   if (o != nullptr) {
     return o->parsed;
@@ -265,13 +276,13 @@ OptionList::sortOptions(std::vector<Option *>& allOptions,
 }
 
 std::string
-OptionList::getString(const std::string& key)
+OptionList::getString(const std::string& key) const
 {
   if (!isProcessed) {
     throw StartupException("Code error: Have to call processArgs before calling getString.");
   }
-  std::string s = "";
-  Option * have = getOption(key);
+  std::string s       = "";
+  const Option * have = getOption(key);
 
   if (have != nullptr) {
     if (have->parsed) {
@@ -286,7 +297,7 @@ OptionList::getString(const std::string& key)
 }
 
 bool
-OptionList::getBoolean(const std::string& opt)
+OptionList::getBoolean(const std::string& opt) const
 {
   const std::string s = getString(opt);
 
@@ -294,7 +305,7 @@ OptionList::getBoolean(const std::string& opt)
 }
 
 float
-OptionList::getFloat(const std::string& opt)
+OptionList::getFloat(const std::string& opt) const
 {
   const std::string s = getString(opt);
 
@@ -308,7 +319,7 @@ OptionList::getFloat(const std::string& opt)
 }
 
 int
-OptionList::getInteger(const std::string& opt)
+OptionList::getInteger(const std::string& opt) const
 {
   const std::string s = getString(opt);
 
@@ -332,9 +343,9 @@ OptionList::setEnforcedSuboptions(const std::string& key, bool flag)
 }
 
 bool
-OptionList::isInSuboptions(const std::string& key)
+OptionList::isInSuboptions(const std::string& key) const
 {
-  Option * have = getOption(key);
+  const Option * have = getOption(key);
 
   if (have != nullptr) {
     return have->isInSuboptions();
@@ -384,10 +395,10 @@ OptionList::setHidden(const std::string& sourceopt)
 }
 
 bool
-OptionList::wantAdvancedHelp(const std::string& sourceopt)
+OptionList::wantAdvancedHelp(const std::string& sourceopt) const
 {
-  bool want     = false;
-  Option * have = getOption(sourceopt);
+  bool want = false;
+  const Option * have = getOption(sourceopt);
 
   if (have) {
     for (auto o:myHelpOptions) {

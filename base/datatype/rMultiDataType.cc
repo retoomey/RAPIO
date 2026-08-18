@@ -43,7 +43,7 @@ MultiDataType::addDataType(std::shared_ptr<DataType> add)
 }
 
 std::shared_ptr<DataType>
-MultiDataType::getDataType(size_t i)
+MultiDataType::getDataType(size_t i) const
 {
   if (i < myDataTypes.size()) {
     return myDataTypes[i];
@@ -53,7 +53,7 @@ MultiDataType::getDataType(size_t i)
 }
 
 size_t
-MultiDataType::size()
+MultiDataType::size() const
 {
   return myDataTypes.size();
 }

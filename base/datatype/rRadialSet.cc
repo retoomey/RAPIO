@@ -435,7 +435,7 @@ RadialSet::setGlobalNyquistVelocity(float nyquist)
 }
 
 bool
-RadialSet::haveNyquistArray()
+RadialSet::haveNyquistArray() const
 {
   return haveArrayName(NyquistVelocity);
 }

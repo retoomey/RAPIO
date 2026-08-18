@@ -91,13 +91,16 @@ public:
   printPath(const std::string& prefix, const std::string& path, const struct stat * info);
 
   /** Get current directory depth of traversal */
-  size_t getDepth(){ return myDepth; }
+  size_t
+  getDepth() const { return myDepth; }
 
   /** Get current local file offset in the full file name */
-  size_t getFileOffset(){ return myFileOffset; }
+  size_t
+  getFileOffset() const { return myFileOffset; }
 
   /** Get current file number processed */
-  size_t getFileCounter(){ return myFileCounter; }
+  size_t
+  getFileCounter() const { return myFileCounter; }
 
 private:
 

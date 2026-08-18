@@ -253,7 +253,7 @@ DataType::updateGlobalAttributes(const std::string& encoded_type)
 } // DataType::updateGlobalAttributes
 
 std::string
-DataType::getColorMapName()
+DataType::getColorMapName() const
 {
   // First try the ColorMap-value attribute...Some MRMS netcdf files have this
   // if not found use the type name such as Reflectivity

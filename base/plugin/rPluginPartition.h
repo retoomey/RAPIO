@@ -38,14 +38,14 @@ public:
 
   /** The value of the command line argument */
   std::string
-  getParamValue()
+  getParamValue() const
   {
     return myPartitionAlg;
   }
 
   /** Get if we parsed correctly.  Checked by algorithm */
   bool
-  isValid()
+  isValid() const
   {
     return myValid;
   }

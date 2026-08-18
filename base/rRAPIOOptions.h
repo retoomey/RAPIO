@@ -88,49 +88,49 @@ public:
 
   /** Get a named option back as a string */
   std::string
-  getString(const std::string& opt)
+  getString(const std::string& opt) const
   {
     return myBackend->getString(opt);
   }
 
   /** Get a named option back as a boolean */
   bool
-  getBoolean(const std::string& opt)
+  getBoolean(const std::string& opt) const
   {
     return myBackend->getBoolean(opt);
   }
 
   /** Get a named option back as a float */
   float
-  getFloat(const std::string& opt)
+  getFloat(const std::string& opt) const
   {
     return myBackend->getFloat(opt);
   }
 
   /** Get a named option back as an int */
   int
-  getInteger(const std::string& opt)
+  getInteger(const std::string& opt) const
   {
     return myBackend->getInteger(opt);
   }
 
   /** Is an option in the list? */
   bool
-  isInSuboptions(const std::string& key)
+  isInSuboptions(const std::string& key) const
   {
     return myBackend->isInSuboptions(key);
   }
 
   /** This this option parsed? */
   bool
-  isParsed(const std::string& key)
+  isParsed(const std::string& key) const
   {
     return myBackend->isParsed(key);
   }
 
   /** Do we want advanced help? */
   bool
-  wantAdvancedHelp(const std::string& sourceopt)
+  wantAdvancedHelp(const std::string& sourceopt) const
   {
     return myBackend->wantAdvancedHelp(sourceopt);
   }
@@ -147,7 +147,8 @@ public:
   void setIsProcessed(){ myBackend->setIsProcessed(); }
 
   /** Have we processed all arguments */
-  bool getIsProcessed(){ return myBackend->getIsProcessed(); }
+  bool
+  getIsProcessed() const { return myBackend->getIsProcessed(); }
 
   // PROCESSING (Forwarded to Backend)
 
@@ -240,7 +241,8 @@ public:
   void setTextOnlyMacro(const std::string& macro){ myTextOnlyMacro = macro; }
 
   /** Was the macro applied on the positional args? */
-  bool isMacroApplied(){ return myMacroApplied; }
+  bool
+  isMacroApplied() const { return myMacroApplied; }
 
   std::vector<std::string>
   getPositionalArgs() const { return myBackend->getPositionalArgs(); }

@@ -40,7 +40,7 @@ public:
 
   /** Size of our queue */
   size_t
-  size(){ return myQueue.size(); }
+  size() const { return myQueue.size(); }
 
   /** Fired action.  Usually process a record from queue */
   virtual void

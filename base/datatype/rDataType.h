@@ -237,7 +237,7 @@ public:
 
   /** Get the ColorMap name for this DataType */
   virtual std::string
-  getColorMapName();
+  getColorMapName() const;
 
   /** Set the ColorMap name for this DataType */
   virtual void

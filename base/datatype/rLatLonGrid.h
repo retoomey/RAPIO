@@ -81,7 +81,7 @@ public:
 
   /** Get the layer value for given level. */
   virtual int
-  getLayerValue(size_t l) override
+  getLayerValue(size_t l) const override
   {
     // Just use the height in meters
     return myLocation.getHeightKM() * 1000.0;

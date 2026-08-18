@@ -37,7 +37,7 @@ public:
 
   /** Return matched index number in order of command line */
   int
-  matchedIndexNumber();
+  matchedIndexNumber() const;
 
   /** Return a brief description of the data that can be used in application for feedback */
   std::string

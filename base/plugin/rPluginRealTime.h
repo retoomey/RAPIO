@@ -36,11 +36,11 @@ public:
 
   /** Are we in one of the daemon (non-stopping) modes? */
   bool
-  isDaemon();
+  isDaemon() const;
 
   /** Are we in one of the archive (process all) modes? */
   bool
-  isArchive();
+  isArchive() const;
 
   /** Our read mode for how records should be handled */
   std::string myReadMode;

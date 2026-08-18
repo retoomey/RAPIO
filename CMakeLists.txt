@@ -251,27 +251,22 @@ include(CMakePackageConfigHelpers)
 # Our package modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-# My hack for a container system build.  I specify /usr in order
-# to install using system libraries and path.
-if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
-  set(RAPIO_INSTALL_LIB "/usr/${CMAKE_INSTALL_LIBDIR}")
-else()
-  # I want some absolute library paths if I'm building with a custom prefix/third party so
-  # that I don't grab the system libraries by accident
-  # Note if building with all system third party this only hurts if you want to move the
-  # binary around.  We typically have several different builds on systems with different
-  # versions of supporting libraries that have to be a particular version.  We don't
-  # want these to change if IT patches a system, etc.
-  cmake_policy(SET CMP0060 NEW)
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+# RPATH stuff (see cmake/RPathConfig.cmake) -------
+# Set the default behavior so users don't have to specify it on the command line
+set(RAPIO_RPATH_MODE "ABSOLUTE" CACHE STRING "Default to locked binaries for multiple builds")
+#set(RAPIO_RPATH_MODE "RELATIVE" CACHE STRING "Default to relative binaries using $ORIGIN")
+#set(RAPIO_RPATH_MODE "OFF" CACHE STRING "Standard CMake RPATH ripping")
 
-  set(RAPIO_INSTALL_LIB "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(RPathConfig)
+configure_custom_rpath(RAPIO)
+# -------------------------------------------------
 
-  # Give the third party build folder search location to my packages
-  # If you replace the FindNetcdf say then force the include/lib here
-  # like BOOST below
-  set(CUSTOM_THIRDDIR "${CMAKE_INSTALL_PREFIX}")
-endif()
+# Give the third party build folder search location to my packages
+# If you replace the FindNetcdf say then force the include/lib here
+# like BOOST below.  Trying to avoid building third party and just
+# sticking to system installed libraries.
+#set(CUSTOM_THIRDDIR "${CMAKE_INSTALL_PREFIX}")
 
 if (RAPIO_BUILD_MRMS)
   addRAPIONote("Stricter build requirements for MRMS Environment: ENABLED")

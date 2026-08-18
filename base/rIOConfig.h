@@ -19,7 +19,7 @@ public:
 
   /** Return command line parameter string as a URL */
   URL
-  getParamURL()
+  getParamURL() const
   {
     return URL(myParams);
   }

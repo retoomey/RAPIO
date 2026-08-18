@@ -54,9 +54,11 @@ public:
   virtual std::vector<char>
   getCharVector(const std::string& name) override;
 
-  size_t getValueSize(){ return myValueSize; }
+  size_t
+  getValueSize() const { return myValueSize; }
 
-  size_t getMissingSize(){ return myMissingSize; }
+  size_t
+  getMissingSize() const { return myMissingSize; }
 
   virtual bool
   getUseMissingAsUnavailable() override { return (myMissingMode == 1); }

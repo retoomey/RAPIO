@@ -45,7 +45,7 @@ Option::addSuboption(const std::string& opt, const std::string& description)
 }
 
 bool
-Option::isInSuboptions()
+Option::isInSuboptions() const
 {
   // This happens a LOT.  Subroutine?
   std::string value;

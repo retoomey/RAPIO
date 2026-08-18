@@ -99,8 +99,8 @@ DataGrid::getAttributes(
   return nullptr;
 }
 
-std::vector<size_t>
-DataGrid::getSizes()
+const std::vector<size_t>
+DataGrid::getSizes() const
 {
   std::vector<size_t> sizes;
 

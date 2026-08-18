@@ -58,7 +58,7 @@ public:
 
   /** Get the layer value for given level. */
   virtual int
-  getLayerValue(size_t l) = 0;
+  getLayerValue(size_t l) const = 0;
 
   /** Set the layer value for given level. */
   virtual void

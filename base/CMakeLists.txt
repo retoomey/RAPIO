@@ -33,11 +33,9 @@ image/rCressman.cc
 image/rBilinear.cc
 image/rThresholdFilter.cc
 image/rPercentFilter.cc
-datatype/rAttributeDataType.cc
 rAWS.cc
 rBimap.cc
 rBinaryIO.cc
-datatype/rBinaryTable.cc
 rBitset.cc
 rBoostConnection.cc
 rColor.cc
@@ -55,12 +53,7 @@ rConstants.cc
 rCurlConnection.cc
 rDataArray.cc
 rDataFilter.cc
-datatype/rDataGrid.cc
 rDataProjection.cc
-datatype/rMergerBinaryTable.cc
-datatype/rMultiDataType.cc
-datatype/rDataTable.cc
-datatype/rDataType.cc
 rDataTypeHistory.cc
 rDimensionMapper.cc
 rDirWalker.cc
@@ -78,13 +71,8 @@ index/rFileIndex.cc
 index/rFMLIndex.cc
 index/rRedisIndex.cc
 notifier/rFMLRecordNotifier.cc
-datatype/rFusionBinaryTable.cc
-datatype/rWindBinaryTable.cc
-datatype/rGDALDataType.cc
-datatype/rGribDataType.cc
 rHeartbeat.cc
 rIJK.cc
-datatype/rImageDataType.cc
 index/rIndexType.cc
 rIODataType.cc
 rIOFakeDataGenerator.cc
@@ -97,21 +85,12 @@ rIOURL.cc
 watcher/rIOWatcher.cc
 watcher/rRedisWatcher.cc
 rIOXML.cc
-datatype/rLatLonArea.cc
-datatype/rLatLonGrid.cc
-datatype/rLatLonGridProjection.cc
-datatype/rLatLonGridIterator.cc
-datatype/rLatLonHeightGrid.cc
-datatype/rLatLonHeightGridIterator.cc
-datatype/rLatLonHeightGridProjection.cc
 rLength.cc
 rLogger.cc
 rLL.cc
 rLLCoverageArea.cc
 rLLH.cc
-datatype/rLLHGridN2D.cc
 rNamedAny.cc
-datatype/rNetcdfDataType.cc
 rNetwork.cc
 rOption.cc
 rOptionList.cc
@@ -120,10 +99,6 @@ rPartitionInfo.cc
 rPolarAlgorithm.cc
 rProcessTimer.cc
 rProject.cc
-datatype/rPTreeData.cc
-datatype/rRadialSet.cc
-datatype/rRadialSetIterator.cc
-datatype/rRadialSetProjection.cc
 rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc
@@ -229,7 +204,8 @@ target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
 # Target: Create RAPIO shared library (for things linking to rapio code)
 #
 add_library(rapio SHARED
-    "${SOURCE_FILES}"
+     $<TARGET_OBJECTS:rapio_base>
+     $<TARGET_OBJECTS:rapio_datatype>
 )
 
 # Inject the CMake build type into the C++ preprocessor
@@ -245,11 +221,20 @@ target_link_libraries(rapio
 )
 
 ##################################################################################################
-# Precompile some 3rd party for speed
+# 1. Create a top-level OBJECT library for all the files currently in base/
+#
+add_library(rapio_base OBJECT "${SOURCE_FILES}")
+# We're going to link to rapio shared, so we need PIC
+set_target_properties(rapio_base PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(rapio_base PRIVATE RAPIO_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+target_link_libraries(rapio_base PRIVATE rapio_interface)
+
+##################################################################################################
+# 2. Precompile some 3rd party for speed
 #
 if(RAPIO_USE_PCH)
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    target_precompile_headers(rapio PRIVATE 
+    target_precompile_headers(rapio_base PRIVATE 
       $<$<COMPILE_LANGUAGE:CXX>:"${CMAKE_CURRENT_SOURCE_DIR}/rapio_pch.h">
     )
     message(STATUS "Precompiled Headers (PCH) Enabled for rapio target")
@@ -261,6 +246,11 @@ else()
 endif()
 
 ##################################################################################################
+# 3. Add any subdirectories
+#
+add_subdirectory(datatype)
+
+##################################################################################################
 # Link libraries to interface and shared targets
 #
 
@@ -268,7 +258,6 @@ endif()
 # Pretty sure boost links us to Threads::Threads, but ensure pthreads first
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 #find_package(Threads REQUIRED) target_link_libraries(binary Threads::Threads)
-
 
 # Add a dropdown option for the stacktrace backend (defaulting to 'basic')
 set(RAPIO_STACKTRACE_BACKEND "basic" CACHE STRING "Boost.Stacktrace backend to use (basic, addr2line, noop)")

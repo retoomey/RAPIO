@@ -43,7 +43,7 @@ public:
 
   /** Get number of ProcessTimers added */
   size_t
-  getCount(){ return myCounter; }
+  getCount() const { return myCounter; }
 
   /** Operator << write out a ProcessTimerSum */
   friend std::ostream&
@@ -116,36 +116,36 @@ public:
 
   /** Get virtual memory in kilobytes used/freed since beginning of timer */
   double
-  getVirtualKB();
+  getVirtualKB() const;
 
   /** Get resident memory in kilobytes used/freed since beginning of timer */
   double
-  getResidentKB();
+  getResidentKB() const;
 
   /**
    * The time this ran based on clock on the wall
    */
   TimeDuration
-  getWallTime();
+  getWallTime() const;
 
   /**
    * The CPU time spent by the user
    */
   TimeDuration
-  getUserTime();
+  getUserTime() const;
 
   /**
    * The CPU time spent by the system servicing user requests
    */
   TimeDuration
-  getSystemTime();
+  getSystemTime() const;
 
   /** The CPU time used by this process, its children and by
    *  the system on behalf of this process since the
    *  creation of this object.
    */
   TimeDuration
-  getCPUTime();
+  getCPUTime() const;
 
 protected:
 

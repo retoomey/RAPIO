@@ -44,7 +44,8 @@ public:
 
   /** Get the current write as group flag, determine how it's
    * send to writer modules */
-  bool getSendToWriterAsGroup(){ return myGroupWrite; }
+  bool
+  getSendToWriterAsGroup() const { return myGroupWrite; }
 
   /** Add a DataType to our collection */
   void
@@ -52,11 +53,11 @@ public:
 
   /** Get DataType at a given index */
   std::shared_ptr<DataType>
-  getDataType(size_t i);
+  getDataType(size_t i) const;
 
   /** Get the number of DataTypes */
   size_t
-  size();
+  size() const;
 
 protected:
 

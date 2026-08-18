@@ -26,7 +26,7 @@ ProcessTimer::reset()
 }
 
 double
-ProcessTimer::getVirtualKB()
+ProcessTimer::getVirtualKB() const
 {
   double vmkb, rsskb;
 
@@ -35,7 +35,7 @@ ProcessTimer::getVirtualKB()
 }
 
 double
-ProcessTimer::getResidentKB()
+ProcessTimer::getResidentKB() const
 {
   double vmkb, rsskb;
 
@@ -44,7 +44,7 @@ ProcessTimer::getResidentKB()
 }
 
 TimeDuration
-ProcessTimer::getWallTime()
+ProcessTimer::getWallTime() const
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
 
@@ -52,7 +52,7 @@ ProcessTimer::getWallTime()
 }
 
 TimeDuration
-ProcessTimer::getUserTime()
+ProcessTimer::getUserTime() const
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
 
@@ -60,7 +60,7 @@ ProcessTimer::getUserTime()
 }
 
 TimeDuration
-ProcessTimer::getSystemTime()
+ProcessTimer::getSystemTime() const
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
 
@@ -68,7 +68,7 @@ ProcessTimer::getSystemTime()
 }
 
 TimeDuration
-ProcessTimer::getCPUTime()
+ProcessTimer::getCPUTime() const
 {
   boost::timer::cpu_times elapsed = myTimer.elapsed();
 
