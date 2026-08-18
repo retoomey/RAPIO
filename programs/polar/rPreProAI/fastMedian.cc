@@ -82,40 +82,49 @@ applyFast2DMedian(std::shared_ptr<RadialSet> radialSet, int radialWin, int gateW
     for (size_t g = 0; g < numGates; ++g) {
       float currentVal = data[r][g];
 
-      // Local counters for radar artifacts within this specific window
-      size_t localRangeFoldedCount    = 0;
-      size_t localBelowThresholdCount = 0;
-
-      // Neighbor Collection
-      std::vector<float> window;
-      window.reserve(radialWin * gateWin);
-
-      for (int i = -rHalf; i <= rHalf; ++i) {
-        // Circular wrap-around for radials (Azimuth)
-        int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
-
-        for (int j = -gHalf; j <= gHalf; ++j) {
-          int neighborG = static_cast<int>(g) + j;
-
-          // Boundary check for gates (Range)
-          if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
-            float val = data[neighborR][neighborG];
-
-            // Categorize the neighbor
-            if (val == Constants::RangeFolded) {
-              localRangeFoldedCount++;
-            } else if (val == Constants::MissingData) {
-              localBelowThresholdCount++;
-            } else if (val != Constants::DataUnavailable) {
-              // Only real meteorological data goes into the median pool
-              window.push_back(val);
+      if ( !Constants::isGood(currentVal) ) { 
+      //our best option is to leave this value alone. 
+      //a median filter would "fill" holes" and add data if the min_good_percent is < 50%
+      //Generally adding data where there is none is bad.
+      //
+          output[r][g] = currentVal;
+      } else {
+    
+          // Local counters for radar artifacts within this specific window
+          size_t localRangeFoldedCount    = 0;
+          size_t localBelowThresholdCount = 0;
+    
+          // Neighbor Collection
+          std::vector<float> window;
+          window.reserve(radialWin * gateWin);
+    
+          for (int i = -rHalf; i <= rHalf; ++i) {
+            // Circular wrap-around for radials (Azimuth)
+            int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
+    
+            for (int j = -gHalf; j <= gHalf; ++j) {
+              int neighborG = static_cast<int>(g) + j;
+    
+              // Boundary check for gates (Range)
+              if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
+                float val = data[neighborR][neighborG];
+    
+                // Categorize the neighbor
+                if (val == Constants::RangeFolded) {
+                  localRangeFoldedCount++;
+                } else if (val == Constants::MissingData) {
+                  localBelowThresholdCount++;
+                } else if (val != Constants::DataUnavailable) {
+                  // Only real meteorological data goes into the median pool
+                  window.push_back(val);
+                }
+              }
             }
           }
-        }
+    
+          output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
+              localBelowThresholdCount);
       }
-
-      output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
-          localBelowThresholdCount);
     }
   }
 
@@ -156,34 +165,42 @@ applyFast1DMedian_alongRadial(std::shared_ptr<RadialSet> radialSet, int gateWin,
     for (size_t g = 0; g < numGates; ++g) {
       float currentVal = data[r][g];
 
-      size_t localRangeFoldedCount    = 0;
-      size_t localBelowThresholdCount = 0;
+      if ( !Constants::isGood(currentVal) ) { 
+      //our best option is to leave this value alone. 
+      //a median filter would "fill" holes" and add data if the min_good_percent is < 50%
+          output[r][g] = currentVal;
 
-      // Neighbor Collection
-      std::vector<float> window;
-      window.reserve(gateWin);
-
-      // 1D: Only iterate over the gates (j), keep radial (r) constant
-      for (int j = -gHalf; j <= gHalf; ++j) {
-        int neighborG = static_cast<int>(g) + j;
-
-        // Boundary check for gates (Range)
-        if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
-          float val = data[r][neighborG];
-
-          // Categorize the neighbor
-          if (val == Constants::RangeFolded) {
-            localRangeFoldedCount++;
-          } else if (val == Constants::MissingData) {
-            localBelowThresholdCount++;
-          } else if (val != Constants::DataUnavailable) {
-            window.push_back(val);
+      } else {
+    
+          size_t localRangeFoldedCount    = 0;
+          size_t localBelowThresholdCount = 0;
+    
+          // Neighbor Collection
+          std::vector<float> window;
+          window.reserve(gateWin);
+    
+          // 1D: Only iterate over the gates (j), keep radial (r) constant
+          for (int j = -gHalf; j <= gHalf; ++j) {
+            int neighborG = static_cast<int>(g) + j;
+    
+            // Boundary check for gates (Range)
+            if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
+              float val = data[r][neighborG];
+    
+              // Categorize the neighbor
+              if (val == Constants::RangeFolded) {
+                localRangeFoldedCount++;
+              } else if (val == Constants::MissingData) {
+                localBelowThresholdCount++;
+              } else if (val != Constants::DataUnavailable) {
+                window.push_back(val);
+              }
+            }
           }
-        }
+    
+          output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
+              localBelowThresholdCount);
       }
-
-      output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
-          localBelowThresholdCount);
     }
   }
 
@@ -223,30 +240,37 @@ applyFast1DMedian_acrossRadial(std::shared_ptr<RadialSet> radialSet, int radialW
     for (size_t g = 0; g < numGates; ++g) {
       float currentVal = data[r][g];
 
-      size_t localRangeFoldedCount    = 0;
-      size_t localBelowThresholdCount = 0;
-
-      std::vector<float> window;
-      window.reserve(radialWin);
-
-      // 1D: Iterate over the radials (i) utilizing 360-degree wrap, keep gate (g) constant
-      for (int i = -rHalf; i <= rHalf; ++i) {
-        // Circular wrap-around for radials (Azimuth)
-        int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
-
-        float val = data[neighborR][g];
-
-        if (val == Constants::RangeFolded) {
-          localRangeFoldedCount++;
-        } else if (val == Constants::MissingData) {
-          localBelowThresholdCount++;
-        } else if (val != Constants::DataUnavailable) {
-          window.push_back(val);
-        }
+      if ( !Constants::isGood(currentVal) ) { 
+      //our best option is to leave this value alone. 
+      //a median filter would "fill" holes" and add data if the min_good_percent is < 50%
+          output[r][g] = currentVal;
+      } else {
+    
+          size_t localRangeFoldedCount    = 0;
+          size_t localBelowThresholdCount = 0;
+    
+          std::vector<float> window;
+          window.reserve(radialWin);
+    
+          // 1D: Iterate over the radials (i) utilizing 360-degree wrap, keep gate (g) constant
+          for (int i = -rHalf; i <= rHalf; ++i) {
+            // Circular wrap-around for radials (Azimuth)
+            int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
+    
+            float val = data[neighborR][g];
+    
+            if (val == Constants::RangeFolded) {
+              localRangeFoldedCount++;
+            } else if (val == Constants::MissingData) {
+              localBelowThresholdCount++;
+            } else if (val != Constants::DataUnavailable) {
+              window.push_back(val);
+            }
+          }
+    
+          output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
+              localBelowThresholdCount);
       }
-
-      output[r][g] = computeMedianValue(window, min_good_num, currentVal, localRangeFoldedCount,
-          localBelowThresholdCount);
     }
   }
 
