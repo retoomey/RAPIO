@@ -165,12 +165,12 @@ Information needed:
                           This mode 'may' be quicker but you need RAM
                           for the entire file and some grib2 files are
                           fairly large say 1 GB or more.
--->
   <io names="grib" module="librapiogrib.so">
     <output bmode="0"/>
   </io>
+-->
 
-  <io names="wgrib" module="librapiowgrib.so">
+  <io names="wgrib grib" module="librapiowgrib.so">
     <output />
   </io>
 
