@@ -63,7 +63,7 @@ LatLonHeightGrid::Create(
 }
 
 std::shared_ptr<LatLonHeightGrid>
-LatLonHeightGrid::Clone()
+LatLonHeightGrid::Clone() const
 {
   auto nsp = std::make_shared<LatLonHeightGrid>();
 
@@ -72,7 +72,7 @@ LatLonHeightGrid::Clone()
 }
 
 void
-LatLonHeightGrid::deep_copy(std::shared_ptr<LatLonHeightGrid> nsp)
+LatLonHeightGrid::deep_copy(const std::shared_ptr<LatLonHeightGrid>& nsp) const
 {
   LatLonArea::deep_copy(nsp);
 

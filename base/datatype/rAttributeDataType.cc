@@ -6,7 +6,7 @@ AttributeDataType::AttributeDataType() : myAttributes(std::make_shared<DataAttri
 { }
 
 std::shared_ptr<AttributeDataType>
-AttributeDataType::Clone()
+AttributeDataType::Clone() const
 {
   auto nsp = std::make_shared<AttributeDataType>();
 
@@ -15,7 +15,7 @@ AttributeDataType::Clone()
 }
 
 void
-AttributeDataType::deep_copy(std::shared_ptr<AttributeDataType> nsp)
+AttributeDataType::deep_copy(const std::shared_ptr<AttributeDataType>& nsp) const
 {
   // Copy attributes
   auto & n = *nsp;

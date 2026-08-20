@@ -56,10 +56,12 @@ public:
   }
 
   /** Get message number we belong to */
-  size_t getMessageNumber(){ return myMessageNumber; }
+  size_t
+  getMessageNumber() const { return myMessageNumber; }
 
   /** Get field number */
-  size_t getFieldNumber(){ return myFieldNumber; }
+  size_t
+  getFieldNumber() const { return myFieldNumber; }
 
   // Database lookup names
 

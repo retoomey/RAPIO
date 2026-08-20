@@ -76,7 +76,7 @@ LatLonGrid::Create(
 }
 
 std::shared_ptr<LatLonGrid>
-LatLonGrid::Clone()
+LatLonGrid::Clone() const
 {
   auto nsp = std::make_shared<LatLonGrid>();
 
@@ -319,7 +319,7 @@ LatLonGrid::OverlayAligned(std::shared_ptr<LatLonGrid> dest)
 } // LatLonGrid::OverlayAligned
 
 void
-LatLonGrid::deep_copy(std::shared_ptr<LatLonGrid> nsp)
+LatLonGrid::deep_copy(std::shared_ptr<LatLonGrid> nsp) const
 {
   LatLonArea::deep_copy(nsp);
 

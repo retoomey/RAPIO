@@ -3,7 +3,7 @@
 using namespace rapio;
 
 std::shared_ptr<NamedAnyList>
-NamedAnyList::Clone()
+NamedAnyList::Clone() const
 {
   std::shared_ptr<NamedAnyList> clonedList = std::make_shared<NamedAnyList>();
 
@@ -21,7 +21,7 @@ NamedAnyList::index(const std::string& name) const
 {
   size_t count = 0;
 
-  for (auto i:myAttributes) {
+  for (const auto& i:myAttributes) {
     if (i.getName() == name) {
       return count; // always +
     }

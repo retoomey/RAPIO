@@ -45,7 +45,7 @@ public:
 
   /** Public API for users to clone a LatLonGrid */
   std::shared_ptr<LatLonGrid>
-  Clone();
+  Clone() const;
 
   /** Public API for users to remap a LatLonGrid into another
    * LatLonGrid of a different resolution using a sampling remapper. */
@@ -135,6 +135,6 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<LatLonGrid> n);
+  deep_copy(std::shared_ptr<LatLonGrid> n) const;
 };
 }

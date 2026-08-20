@@ -48,7 +48,7 @@ public:
    * FIXME: Tempted to make virtual here and hide as LatLonHeightGrid with
    * multiple implementations. */
   std::shared_ptr<LLHGridN2D>
-  Clone();
+  Clone() const;
 
   /** Convenience to set the units of a given array name */
   virtual void
@@ -90,7 +90,7 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<LLHGridN2D> n);
+  deep_copy(std::shared_ptr<LLHGridN2D> n) const;
 
   /** The set of LatLonGrids */
   std::vector<std::shared_ptr<LatLonGrid> > myGrids;

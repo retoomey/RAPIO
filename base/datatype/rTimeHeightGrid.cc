@@ -4,30 +4,47 @@
 using namespace rapio;
 using namespace std;
 
-TimeHeightGrid::TimeHeightGrid() {
+TimeHeightGrid::TimeHeightGrid()
+{
   setDataType("TimeHeightGrid");
 }
 
 std::shared_ptr<TimeHeightGrid>
 TimeHeightGrid::Create(const std::string& TypeName,
-                       const std::string& Units,
-                       const LLH& location,
-                       const Time& baseTime,
-                       size_t num_times,
-                       size_t num_heights) 
+  const std::string                     & Units,
+  const LLH                             & location,
+  const Time                            & baseTime,
+  size_t                                num_times,
+  size_t                                num_heights)
 {
   auto grid = std::make_shared<TimeHeightGrid>();
+
   grid->init(TypeName, Units, location, baseTime, num_times, num_heights);
   return grid;
 }
 
-bool 
+std::shared_ptr<TimeHeightGrid>
+TimeHeightGrid::Clone() const
+{
+  auto nsp = std::make_shared<TimeHeightGrid>();
+
+  TimeHeightGrid::deep_copy(nsp);
+  return nsp;
+}
+
+void
+TimeHeightGrid::deep_copy(const std::shared_ptr<TimeHeightGrid>& nsp) const
+{
+  DataGrid::deep_copy(nsp);
+}
+
+bool
 TimeHeightGrid::init(const std::string& TypeName,
-                     const std::string& Units,
-                     const LLH& location,
-                     const Time& baseTime,
-                     size_t num_times,
-                     size_t num_heights) 
+  const std::string                   & Units,
+  const LLH                           & location,
+  const Time                          & baseTime,
+  size_t                              num_times,
+  size_t                              num_heights)
 {
   // Initialize the base DataGrid with (Time, Height) dimensions
   DataGrid::init(TypeName, Units, location, baseTime, { num_times, num_heights }, { "Time", "Ht" });
@@ -37,6 +54,7 @@ TimeHeightGrid::init(const std::string& TypeName,
 
   // Setup the Time Coordinate Variable to CF-compliant standards
   std::string timeUnit = "seconds since " + baseTime.getString("%Y-%m-%d %H:%M:%S UTC");
+
   addFloat1D("Time", timeUnit, { 0 });
 
   // Setup the Height Coordinate Variable to CF-compliant standards
@@ -45,20 +63,22 @@ TimeHeightGrid::init(const std::string& TypeName,
   return true;
 }
 
-void 
-TimeHeightGrid::setTimeDelta(size_t timeIndex, float secondsSinceBase) 
+void
+TimeHeightGrid::setTimeDelta(size_t timeIndex, float secondsSinceBase)
 {
   auto array = getFloat1D("Time");
+
   if (array) {
     auto& r = array->ref();
     r[timeIndex] = secondsSinceBase;
   }
 }
 
-void 
-TimeHeightGrid::setHeightLevel(size_t heightIndex, float heightMeters) 
+void
+TimeHeightGrid::setHeightLevel(size_t heightIndex, float heightMeters)
 {
   auto array = getFloat1D("Ht");
+
   if (array) {
     auto& r = array->ref();
     r[heightIndex] = heightMeters;

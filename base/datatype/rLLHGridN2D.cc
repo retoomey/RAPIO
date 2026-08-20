@@ -52,7 +52,7 @@ LLHGridN2D::Create(
 }
 
 std::shared_ptr<LLHGridN2D>
-LLHGridN2D::Clone()
+LLHGridN2D::Clone() const
 {
   auto nsp = std::make_shared<LLHGridN2D>();
 
@@ -61,7 +61,7 @@ LLHGridN2D::Clone()
 }
 
 void
-LLHGridN2D::deep_copy(std::shared_ptr<LLHGridN2D> nsp)
+LLHGridN2D::deep_copy(std::shared_ptr<LLHGridN2D> nsp) const
 {
   LatLonHeightGrid::deep_copy(nsp);
 

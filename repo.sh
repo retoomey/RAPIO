@@ -15,12 +15,39 @@
 # of processes. 
 
 #############################################################################
-# This will install repomix say on rocky8/9 oracle 8/9
-# Set this to true to run the installation, or false to skip it
-# Personally if you have another distro or non-root just ask AI
-# what steps to do.  This works on a fresh container as root.
+# CONFIGURATION
+#############################################################################
+
+# Install repomix (true/false)
 INSTALLREPOMIX=false
 
+# Include List: Specify file extensions, specific files, or directories to INCLUDE.
+# Supports standard glob patterns.
+INCLUDE_LIST=(
+    "**/*.cc"
+    "**/*.h"
+    "**/*.txt"
+)
+
+# Exclude List: Specify file extensions, specific files, or directories to IGNORE.
+# Supports standard glob patterns. Leave empty to ignore nothing.
+EXCLUDE_LIST=(
+
+    # Things not core we usually don't care about in general questions
+    "base/croncpp.h" 
+    "modules/**" 
+    "programs/nse/**"
+
+    "container/**"
+    "modules/iogrib/**" # deprecated
+    "build/**"
+    "tests/**"
+    "**/*.log"
+)
+
+#############################################################################
+# INSTALLATION STEP
+#############################################################################
 if [ "$INSTALLREPOMIX" = true ]; then
     echo "Starting Installation..."
 
@@ -38,6 +65,9 @@ if [ "$INSTALLREPOMIX" = true ]; then
 
     echo "Installation complete."
 fi
+
+#############################################################################
+# EXECUTION
 #############################################################################
 
 # 1. Generate a timestamp
@@ -60,9 +90,38 @@ DELIVERABLES:
 CONSTRAINT: Be direct, critical, and objective. Prioritize structural flaws over minor style nitpicks.
 EOF
 
-# 3. Run Repomix.  I don't use security check since we shouldn't be putting
-# passwords in our code anyway.
-repomix --include "**/*.{cc,h,txt}" --output="$OUTPUT_FILE" --no-security-check --style markdown --remove-comments --remove-empty-lines --truncate-base64
+# 3. Process Includes and Excludes
+# Save the internal field separator and set it to a comma
+SAVE_IFS="$IFS"
+IFS=,
+
+# Initialize the repomix arguments array with the default flags
+REPOMIX_ARGS=(
+    "--output=$OUTPUT_FILE"
+    "--no-security-check"
+    "--style=markdown"
+    "--remove-comments"
+    "--remove-empty-lines"
+    "--truncate-base64"
+)
+
+# If the include list has items, join them with commas and add to args
+if [ ${#INCLUDE_LIST[@]} -gt 0 ]; then
+    INCLUDE_STR="${INCLUDE_LIST[*]}"
+    REPOMIX_ARGS+=("--include=$INCLUDE_STR")
+fi
+
+# If the exclude list has items, join them with commas and add to args (--ignore)
+if [ ${#EXCLUDE_LIST[@]} -gt 0 ]; then
+    EXCLUDE_STR="${EXCLUDE_LIST[*]}"
+    REPOMIX_ARGS+=("--ignore=$EXCLUDE_STR")
+fi
+
+# Restore the original IFS
+IFS="$SAVE_IFS"
+
+# 4. Run Repomix
+repomix "${REPOMIX_ARGS[@]}"
 
 echo "-------------------------------------------------------"
 echo "DONE!"

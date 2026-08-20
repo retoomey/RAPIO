@@ -267,7 +267,7 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<DataType> n);
+  deep_copy(std::shared_ptr<DataType> n) const;
 
   /** Time stamp of this datatype, used for writing */
   Time myTime;

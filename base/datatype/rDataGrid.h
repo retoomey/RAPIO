@@ -139,7 +139,7 @@ public:
 
   /** Public API for users to clone a DataGrid */
   std::shared_ptr<DataGrid>
-  Clone();
+  Clone() const;
 
   /** Resize existing dimensions given a vector list */
   void
@@ -415,7 +415,7 @@ protected:
 
   /** Deep copy our fields to a new DataGrid or subclass */
   void
-  deep_copy(std::shared_ptr<DataGrid> n);
+  deep_copy(const std::shared_ptr<DataGrid>& n) const;
 
   /** Extra initialization of a DataGrid */
   bool

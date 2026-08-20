@@ -43,7 +43,7 @@ RadialSet::Create(
 }
 
 std::shared_ptr<RadialSet>
-RadialSet::Clone()
+RadialSet::Clone() const
 {
   auto nsp = std::make_shared<RadialSet>();
 
@@ -171,7 +171,7 @@ RadialSet::Normalize(std::shared_ptr<RadialSet> rsIn)
 }
 
 void
-RadialSet::deep_copy(std::shared_ptr<RadialSet> nsp)
+RadialSet::deep_copy(const std::shared_ptr<RadialSet>& nsp) const
 {
   DataGrid::deep_copy(nsp);
 

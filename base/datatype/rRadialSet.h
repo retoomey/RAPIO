@@ -60,7 +60,7 @@ public:
 
   /** Public API for users to clone a RadialSet */
   std::shared_ptr<RadialSet>
-  Clone();
+  Clone() const;
 
   /** Remap to another RadialSet resolution, optionally projecting
    * slant range to ground.  Useful for polar algorithms that need to
@@ -408,7 +408,7 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<RadialSet> n);
+  deep_copy(const std::shared_ptr<RadialSet>& n) const;
 
   /** The elevation angle of radial set in degrees */
   double myElevAngleDegs;

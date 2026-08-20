@@ -24,7 +24,7 @@ DataType::DataType() : myTime(Time::CurrentTime()), myReadFactory(
 { }
 
 void
-DataType::deep_copy(std::shared_ptr<DataType> nsp)
+DataType::deep_copy(std::shared_ptr<DataType> nsp) const
 {
   AttributeDataType::deep_copy(nsp);
 

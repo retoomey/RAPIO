@@ -31,7 +31,7 @@ public:
 
   /** Public API for users to clone an AttributeDataType */
   std::shared_ptr<AttributeDataType>
-  Clone();
+  Clone() const;
 
   /** Set a single-valued attribute.
    *
@@ -116,7 +116,7 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<AttributeDataType> n);
+  deep_copy(const std::shared_ptr<AttributeDataType>& n) const;
 
   /** Global attributes for data type */
   std::shared_ptr<DataAttributeList> myAttributes;

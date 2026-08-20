@@ -140,20 +140,34 @@ public:
    * like string, float, etc. and the Array shared_ptr storage.
    */
   std::shared_ptr<NamedAnyList>
-  Clone();
+  Clone() const;
 
-  /** Allow begin to iterate through our elements */
+  /** Allow begin to iterate through our elements (mutable) */
   NamedAny *
   begin()
   {
-    return &myAttributes[0];
+    return myAttributes.data();
   }
 
-  /** Allow end to iterate through our elements */
+  /** Allow end to iterate through our elements (mutable) */
   NamedAny *
   end()
   {
-    return &myAttributes[myAttributes.size()]; // note it's one past end
+    return myAttributes.data() + myAttributes.size();
+  }
+
+  /** Allow begin to iterate through our elements  (const) */
+  const NamedAny *
+  begin() const
+  {
+    return myAttributes.data();
+  }
+
+  /** Allow end to iterate through our elements (const) */
+  const NamedAny *
+  end() const
+  {
+    return myAttributes.data() + myAttributes.size();
   }
 
   /** Return index into the storage for this name */
@@ -176,7 +190,7 @@ public:
       NamedAny g(name);
       g.set(value);
 
-      myAttributes.push_back(g);
+      myAttributes.push_back(std::move(g)); // Move to avoid copy
     }
   }
 
@@ -215,6 +229,13 @@ public:
   size() const
   {
     return myAttributes.size();
+  }
+
+  /** Are we empty? */
+  bool
+  empty() const
+  {
+    return myAttributes.empty();
   }
 
   // ----------------------------------------------

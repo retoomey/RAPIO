@@ -39,7 +39,7 @@ DataGrid::Create(const std::string& aTypeName,
 }
 
 void
-DataGrid::deep_copy(std::shared_ptr<DataGrid> nsp)
+DataGrid::deep_copy(const std::shared_ptr<DataGrid>& nsp) const
 {
   DataType::deep_copy(nsp);
 
@@ -53,7 +53,7 @@ DataGrid::deep_copy(std::shared_ptr<DataGrid> nsp)
 }
 
 std::shared_ptr<DataGrid>
-DataGrid::Clone()
+DataGrid::Clone() const
 {
   auto nsp = std::make_shared<DataGrid>();
 

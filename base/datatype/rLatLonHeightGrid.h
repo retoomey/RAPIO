@@ -50,7 +50,7 @@ public:
 
   /** Public API for users to clone a LatLonHeightGrid */
   std::shared_ptr<LatLonHeightGrid>
-  Clone();
+  Clone() const;
 
   /** Generated default string for subtype from the data */
   virtual std::string
@@ -146,6 +146,6 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<LatLonHeightGrid> n);
+  deep_copy(const std::shared_ptr<LatLonHeightGrid>& n) const;
 };
 }

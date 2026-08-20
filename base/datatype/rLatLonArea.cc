@@ -22,7 +22,7 @@ LatLonArea::getLLCoverageArea() const
 }
 
 void
-LatLonArea::deep_copy(std::shared_ptr<LatLonArea> nsp)
+LatLonArea::deep_copy(const std::shared_ptr<LatLonArea>& nsp) const
 {
   DataGrid::deep_copy(nsp);
 

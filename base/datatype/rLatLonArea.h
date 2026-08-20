@@ -115,7 +115,7 @@ protected:
 
   /** Deep copy our fields to a new subclass */
   void
-  deep_copy(std::shared_ptr<LatLonArea> n);
+  deep_copy(const std::shared_ptr<LatLonArea>& n) const;
 
   /** Latitude spacing of cells in degrees */
   AngleDegs myLatSpacing;
