@@ -118,7 +118,7 @@ RAPIOProgram::executeFromArgs(int argc, char * argv[])
     }
     const bool success = o.finalizeArgs(wantHelp);
     if (!success) {
-      throw StartupException("Option finalization failed due to unrecognized or invalid arguments.");
+      throw StartupException("Option finalization failed. Use 'help' for argument info.");
     }
 
     myMacroApplied = o.isMacroApplied();

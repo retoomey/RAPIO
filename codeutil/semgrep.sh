@@ -29,7 +29,9 @@
 # AVAILABLE COMMANDS: scan, summary, action, full, export
 # ==============================================================================
 
-REPODIR="$(cd "$(dirname "$0")" && pwd)"
+#REPODIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export REPODIR="$(cd "$SCRIPT_DIR/.." && pwd)"  # Resolves 1 level up from script dir
 SCAN_IMAGE="registry.gitlab.com/gitlab-org/security-products/analyzers/semgrep:5"
 JQ_IMAGE="docker.io/semgrep/semgrep"
 
