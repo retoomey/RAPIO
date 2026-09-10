@@ -441,6 +441,7 @@ install(TARGETS rapio rapio_interface rapio_fmt_interface fmt-header-only
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for static libs, if any
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}  # for Windows
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rapio
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(DIRECTORY "${fmt_SOURCE_DIR}/include/fmt"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/rapio"
