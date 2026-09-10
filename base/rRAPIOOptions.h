@@ -107,6 +107,13 @@ public:
     return myBackend->getFloat(opt);
   }
 
+  /** Get a named option back as a double */
+  double
+  getDouble(const std::string& opt) const
+  {
+    return myBackend->getDouble(opt);
+  }
+
   /** Get a named option back as an int */
   int
   getInteger(const std::string& opt) const

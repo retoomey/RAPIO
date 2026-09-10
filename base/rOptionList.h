@@ -101,6 +101,10 @@ public:
   float
   getFloat(const std::string& opt) const override;
 
+  /** Fetch an option as a double, or 0 if invalid */
+  double
+  getDouble(const std::string& opt) const override;
+
   /** Fetch an option as an integer, or 0 if invalid */
   int
   getInteger(const std::string& opt) const override;

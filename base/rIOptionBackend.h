@@ -59,6 +59,8 @@ public:
   getBoolean(const std::string& opt) const = 0;
   virtual float
   getFloat(const std::string& opt) const = 0;
+  virtual double
+  getDouble(const std::string& opt) const = 0;
   virtual int
   getInteger(const std::string& opt) const = 0;
 

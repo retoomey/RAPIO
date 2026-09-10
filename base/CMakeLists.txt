@@ -103,6 +103,7 @@ rRAPIOAlgorithm.cc
 rRAPIOData.cc
 rRAPIOOptions.cc
 rRAPIORuntime.cc
+rRandomForest.cc
 plugin/rRAPIOPlugin.cc
 plugin/rPluginHeartbeat.cc
 plugin/rPluginWebserver.cc

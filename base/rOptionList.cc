@@ -318,6 +318,20 @@ OptionList::getFloat(const std::string& opt) const
   }
 }
 
+double
+OptionList::getDouble(const std::string& opt) const
+{
+  const std::string s = getString(opt);
+
+  if (s.empty()) { return 0.0; }
+  try {
+    return std::stod(s);
+  } catch (const std::exception& e) {
+    // fLogSevere("Failed to parse double for option '{}': {}", opt, s);
+    return 0.0;
+  }
+}
+
 int
 OptionList::getInteger(const std::string& opt) const
 {
