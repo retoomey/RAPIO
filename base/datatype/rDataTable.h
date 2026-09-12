@@ -1,65 +1,72 @@
 #pragma once
 
 #include <rDataType.h>
-#include <rDataGrid.h>
-
-// Maybe specializer should be separate?
+#include <rPTreeData.h>
 #include <rIODataType.h>
+#include <string>
+#include <vector>
+#include <variant>
+#include <map>
+#include <memory>
+#include <stdexcept>
 
 namespace rapio {
-/** Special use in this case, we take a PTreeData
- * general object and try to specialize it into
- * something like a DataTable, etc.
- * This probably belongs somewhere else, but right
- * now we only specialize to a DataTable */
-class PTreeDataSpecializer : public IOSpecializer
-{
+
+// Lightweight wrapper for dynamic columnar growth
+class DataColumn {
 public:
+  enum class Type { Integer, Float, String };
 
-  /** Specialize a PTreeData if possible.
-   * Basically downcast to a specialized subclass */
-  virtual std::shared_ptr<DataType>
-  downcastPTreeDataType(IOConfig& config,
-    std::shared_ptr<DataType> in) = 0;
+  DataColumn(Type t);
 
-  // Unused. deprecated hopefully ----------
-  virtual std::shared_ptr<DataType>
-  read(IOConfig& config)
-  override { return nullptr; }
+  void push_back(int val);
+  void push_back(float val);
+  void push_back(const std::string& val);
 
-  virtual bool
-  write(
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys)
-  override { return false; }
+  size_t size() const;
+  Type getType() const { return myType; }
+
+  const std::vector<int>& getIntVector() const;
+  const std::vector<float>& getFloatVector() const;
+  const std::vector<std::string>& getStringVector() const;
+
+private:
+  Type myType;
+  std::variant<std::vector<int>, std::vector<float>, std::vector<std::string>> myData;
 };
 
-/** DataTable specializer for XML/JSON to datatype */
-class PTreeDataTable : public PTreeDataSpecializer
-{
+// Replaces the PTreeData-inherited table with columnar storage
+class DataTable : public DataType {
 public:
-  /** Read a DataType from given information */
+  DataTable() { myDataType = "DataTable"; }
+
+  void addColumn(const std::string& name, DataColumn::Type type);
+  
+  const std::vector<std::string>& getColumnNames() const { return myColumnOrder; }
+  DataColumn& getColumn(const std::string& name);
+
+  size_t getRowCount() const;
+  bool validateRectangularShape() const;
+
+private:
+  std::vector<std::string> myColumnOrder;
+  std::map<std::string, std::shared_ptr<DataColumn>> myColumns;
+};
+
+// Specializer for XML/JSON to downcast PTreeData to DataTable
+class PTreeDataSpecializer : public IOSpecializer {
+public:
   virtual std::shared_ptr<DataType>
-  downcastPTreeDataType(
-    IOConfig& config,
-    std::shared_ptr<DataType> in) override;
+  downcastPTreeDataType(IOConfig& config, std::shared_ptr<DataType> in) = 0;
+
+  virtual std::shared_ptr<DataType> read(IOConfig& config) override { return nullptr; }
+  virtual bool write(std::shared_ptr<DataType> dt, IOConfig& keys) override { return false; }
 };
 
-/** DataTable
- * Storage for the DataTable class from MRMS
- *
- * @author Robert Toomey */
-class DataTable : public PTreeData {
+class PTreeDataTable : public PTreeDataSpecializer {
 public:
-
-  /*** Specialize to a DataTable from a generic PTreeData */
-  // DataTable(std::shared_ptr<PTreeData> rawdata)
-  DataTable()
-  {
-    myDataType = "DataTable";
-  }
-
-  // FIXME:  Add API read/write methods to interacting with PTreeData that are
-  // special for this type
+  virtual std::shared_ptr<DataType>
+  downcastPTreeDataType(IOConfig& config, std::shared_ptr<DataType> in) override;
 };
-}
+
+} // namespace rapio

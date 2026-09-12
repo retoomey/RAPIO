@@ -85,6 +85,7 @@ Information needed:
     <file suffix="raw" io="raw"/>
     <file suffix="shp" io="gdal"/>
     <file suffix="txt" io="text"/>
+    <file suffix="csv" io="csv"/>
     <file suffix="grib2" io="wgrib"/>
     <file suffix="gb2" io="wgrib"/>
     <file suffix="grb2" io="wgrib"/>
@@ -194,6 +195,9 @@ Information needed:
      unique module for that which will generate more standard output
 -->
   <io names="text" module="librapiotext.so">
+    <output />
+  </io>
+  <io names="csv" module="librapiocsv.so">
     <output />
   </io>
 

@@ -53,6 +53,7 @@ option(RAPIO_BUILD_GDAL_MODULE "Build GDAL module" YES)
 option(RAPIO_BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
 option(RAPIO_USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
 option(RAPIO_BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
+option(RAPIO_BUILD_CSV_MODULE "Build CSV module (reading/writing CSV)" YES)
 
 option(RAPIO_BUILD_RDM "Build RDM supervisor application, pulling RDM" NO)
 
@@ -396,6 +397,10 @@ endif (RAPIO_BUILD_GRIB2_MODULE)
 if (RAPIO_BUILD_TEXT_MODULE)
   add_subdirectory(modules/iotext)
 endif (RAPIO_BUILD_TEXT_MODULE)
+
+if (RAPIO_BUILD_CSV_MODULE)
+  add_subdirectory(modules/iocsv)
+endif (RAPIO_BUILD_CSV_MODULE)
 
 # These two currently don't require any extra libraries, so we'll just
 # build them.  Though python might at some point

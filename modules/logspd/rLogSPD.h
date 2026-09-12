@@ -50,6 +50,10 @@ public:
   void
   initialize();
 
+  /** Set use stderr special case */
+  void 
+  setUseStdErr(bool useStdErr) override;
+
 private:
 
   /** Set the current spd log pattern */

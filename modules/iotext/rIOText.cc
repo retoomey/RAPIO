@@ -5,6 +5,7 @@
 #include "rTextDataGrid.h"
 #include "rTextBinaryTable.h"
 #include "rTextTimeHeightGrid.h"
+#include "rTextDataTable.h"
 
 #include <fstream>
 
@@ -40,6 +41,7 @@ IOText::initialize()
   TextDataGrid::introduceSelf(this);
   TextBinaryTable::introduceSelf(this);
   TextTimeHeightGrid::introduceSelf(this);
+  TextDataTable::introduceSelf(this);
 }
 
 IOText::~IOText()

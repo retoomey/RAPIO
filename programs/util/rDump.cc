@@ -5,6 +5,12 @@ using namespace rapio;
 void
 Dump::declareOptions(RAPIOOptions& o)
 {
+  // Logging tweaks.  Here it's early enough.
+  Log::setUseStdErr(true);
+  // We want errors ONLY to not mess up the output.  But we want to know when
+  // something fails horribly like a missing module, etc.
+  o.setDefaultValue("verbose", "severe"); 
+
   o.setDescription("Dump datatype to text tool");
   o.setHeader(""); // turn off for first pass
   o.setExample("test.netcdf // ncdump style");
@@ -16,14 +22,6 @@ Dump::declareOptions(RAPIOOptions& o)
 void
 Dump::processOptions(RAPIOOptions& o)
 {
-  // Hack:
-  // Turn logging back on if no macro (direct text on line)
-  // FIXME: We kinda need to buffer the 'special' startup logging, so we
-  // can show issues.
-  if (!isMacroApplied()) {
-    Log::restartLogging();
-    fLogInfo("Reenabling logging due to non direct text command line options.");
-  }
 }
 
 void
@@ -61,10 +59,5 @@ int
 main(int argc, char * argv[])
 {
   Dump alg = Dump();
-
-  // FIXME: Chicken egg logging issue.  If dumping text we probably only want
-  // that text...if real time we'll want standard logging.  Hack for now
-  // by turning off logging.  This doesn't affect the 'special' logging of options
-  Log::pauseLogging();
   alg.executeFromArgs(argc, argv);
 }

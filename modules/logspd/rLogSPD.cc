@@ -15,6 +15,7 @@ using namespace rapio;
 
 std::shared_ptr<spdlog::logger> LogSPD::mySpdLogger = nullptr;
 
+constexpr const char* LOGNAME = "RAPIO";
 constexpr char SPD1 = '*';
 constexpr char SPD2 = '~';
 constexpr char SPD3 = '&';
@@ -86,7 +87,7 @@ void
 LogSPD::initialize()
 {
   // Immediate create logger
-  mySpdLogger = spdlog::stdout_color_mt("RAPIO2");
+  mySpdLogger = spdlog::stdout_color_mt(LOGNAME);
 }
 
 void
@@ -199,6 +200,28 @@ LogSPD::setFlushMilliseconds(int ms)
 }
 
 void
+LogSPD::setUseStdErr(bool useStdErr) {
+  if (!mySpdLogger) return;
+
+  // Save current state
+  auto current_level = mySpdLogger->level();
+  
+  // Drop the existing logger from the spdlog registry
+  spdlog::drop(LOGNAME);
+  
+  // Recreate with the desired sink
+  if (useStdErr) {
+    mySpdLogger = spdlog::stderr_color_mt(LOGNAME);
+  } else {
+    mySpdLogger = spdlog::stdout_color_mt(LOGNAME);
+  }
+
+  // Restore state
+  mySpdLogger->set_level(current_level);
+  setSPDPattern(myPattern);
+}
+
+void
 LogSPD::log(LogLevel level, const std::string& message)
 {
   // 1. Map custom LogLevel to spdlog level
@@ -207,3 +230,4 @@ LogSPD::log(LogLevel level, const std::string& message)
   // 2. Log to spd Map custom LogLevel to spdlog level
   mySpdLogger->log(spd_level, "{}", message);
 } // LogSPD::log
+
