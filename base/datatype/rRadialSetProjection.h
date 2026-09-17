@@ -10,6 +10,59 @@ namespace rapio
 {
 class RadialSet;
 
+/**
+ * @brief Fast-path coordinate mapper for RadialSet to RadialSet resampling.
+ *
+ * Architecturally, there is an overlap here between the ImagePipeline (array math)
+ * and DataProjection (radar physics). Rather than doing full geodetic math
+ * (Dest_XY -> Lat/Lon/Elev -> Source_UV) for every gate, this mapper uses highly
+ * optimized O(1) linear scaling based on azimuth and range.
+ *
+ * @note The `projectGround` flag is a pragmatic architectural shortcut. Ideally,
+ * the ImagePipeline should be ignorant of radar physics. However, dividing by the
+ * elevation cosine here injects just enough physics to handle slant-to-ground
+ * range conversions without requiring a full, computationally expensive reprojection.
+ */
+struct RadialSetMapper {
+  double mySrcFirstGate, mySrcGateWidth;
+  double myDstFirstGate, myDstGateWidth;
+  double mySrcAzSpacing, myDstAzSpacing;
+  double mySrcStartAz, myDstStartAz;
+  bool   myProjectGround;
+  double myElevCos;
+
+  // Declaration only! No inline code here.
+  RadialSetMapper(const RadialSet& source, const RadialSet& dest, bool projectGround);
+
+  // Map Destination Radial (i) to Source Fractional Radial (u)
+  inline float
+  mapY(int destI) const
+  {
+    double destAz = myDstStartAz + (destI * myDstAzSpacing);
+
+    // Handle 360-degree wrapping for safe mapping
+    double deltaAz = destAz - mySrcStartAz;
+
+    if (deltaAz < 0.0) { deltaAz += 360.0; }
+    if (deltaAz >= 360.0) { deltaAz -= 360.0; }
+
+    return static_cast<float>(deltaAz / mySrcAzSpacing);
+  }
+
+  // Map Destination Gate (j) to Source Fractional Gate (v)
+  inline float
+  mapX(int destJ) const
+  {
+    double destRange = myDstFirstGate + (destJ * myDstGateWidth);
+
+    if (myProjectGround && (myElevCos != 0.0) ) {
+      destRange = destRange / myElevCos; // Convert ground range to slant range
+    }
+
+    return static_cast<float>((destRange - mySrcFirstGate) / mySrcGateWidth);
+  }
+};
+
 /** Bin lookup for O(1) lookup of azimuth/range to range/gate of a RadialSet.
  * Tried a few ways of doing this, this trades a bit of memory/setup for speed.
  * Lak's smart technique avoids doing OlogN sorting/searching of azimuths.

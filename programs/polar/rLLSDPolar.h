@@ -8,7 +8,7 @@
 #include <string>
 
 namespace rapio {
-class ArrayAlgorithm;
+class ArrayPipeline;
 
 /**
  * @class SpikeTracker
@@ -257,6 +257,6 @@ private:
   bool myFirstData = true;
 
   /** Stored median filter */
-  std::shared_ptr<ArrayAlgorithm> myMedianFilter;
+  std::shared_ptr<ArrayPipeline> myMedianPipeline;
 };
 } // namespace rapio

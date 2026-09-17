@@ -9,6 +9,43 @@ namespace rapio
 {
 class LatLonGrid;
 
+/**
+ * @brief Fast-path coordinate mapper for LatLonGrid to LatLonGrid resampling.
+ *
+ * Architecturally, there is an overlap here between the ImagePipeline (array math)
+ * and DataProjection (geospatial physics). Strictly speaking, mapping between grids
+ * should use full geographic projections (Dest_XY -> Lat/Lon -> Source_UV).
+ * However, executing full geodetic math for every pixel is computationally expensive.
+ *
+ * Because this mapper assumes both the source and destination share the same
+ * geometric class (LatLonGrid), it safely bypasses the heavy geographic math and
+ * uses highly optimized O(1) linear scaling.
+ */
+struct LatLonGridMapper {
+  double myInNWLat, myInNWLon, myInLatSpacing, myInLonSpacing;
+  double myOutStartLat, myOutStartLon, myOutLatSpacing, myOutLonSpacing;
+
+  // Declaration only. No inline code here!
+  LatLonGridMapper(const LatLonGrid& source, const LatLonGrid& dest);
+
+  inline float
+  mapY(int destI) const
+  {
+    double atLat = myOutStartLat - (destI * myOutLatSpacing);
+
+    return static_cast<float>((myInNWLat - atLat) / myInLatSpacing);
+  }
+
+  inline float
+  mapX(int destJ) const
+  {
+    double atLon = myOutStartLon + (destJ * myOutLonSpacing);
+
+    return static_cast<float>((atLon - myInNWLon) / myInLonSpacing);
+  }
+};
+
+
 class LatLonGridProjection : public DataProjection
 {
 public:

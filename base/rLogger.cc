@@ -329,8 +329,9 @@ Log::setHelpColors(bool useColor)
   useHelpColors = useColor;
 }
 
-void 
-Log::setUseStdErr(bool flag) {
+void
+Log::setUseStdErr(bool flag)
+{
   if (myLog) {
     myLog->setUseStdErr(flag);
   }

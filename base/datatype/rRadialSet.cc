@@ -1,6 +1,7 @@
 #include "rRadialSet.h"
 #include "rRadialSetProjection.h"
 #include "rRadialSetIterator.h"
+#include "rArrayPipeline.h"
 
 #include "rError.h"
 #include "rUnit.h"
@@ -84,60 +85,23 @@ RadialSet::Remap(const float gateWidthMeters,
       numRadials,
       numGates);
 
-  // Skip DataArray which handles dims/arrays
-  DataType::deep_copy(R);
-  // -------------------------------------------
+  DataType::deep_copy(R); // Needed?
 
-  // Fill unavailable in the new grid
   auto fullgrid = R->getFloat2D();
 
   fullgrid->fill(Constants::DataUnavailable);
 
-  // FIXME: Can't we lambda this might look cleaner?  Lamba limits
-  // the callback methods though.
-  // For each gate of the new output
-  class remapCallback : public RadialSetCallback {
-public:
-    remapCallback(std::shared_ptr<RadialSetProjection> p, double elevRad, bool flatten)
-      : myProjection(p), myElevRad(elevRad), myFlatten(flatten){ }
+  // Set up the new mapper with the ground projection flag
+  RadialSetMapper geoMapper(*this, *R, projectToGround);
 
-    virtual void
-    handleGate(RadialSetIterator * it)
-    {
-      // Would be nice to use the ArrayAlgorithm stuff, but
-      // RadialSets aren't homogeneous in space like LLG.
-      auto az = it->getCenterAzimuthDegs();
-      auto slantRangeKMs = it->getCenterRangeMeters() * .001;
+  // Create a default nearest-neighbor pipeline
+  auto pipeline = ArrayPipeline::create("nearest");
 
-      if (myFlatten) {
-        // Project from 'ground' up to slant height.
-        // This flattens the output.
-        slantRangeKMs = computeSlantRangeSimpleKMs(slantRangeKMs, myElevRad);
-      }
-
-      double out = 0.0;
-      int radialNo, gateNo;
-
-      myProjection->getValueAtAzRange(az, slantRangeKMs, out, radialNo, gateNo);
-      if ((radialNo > -1) && (gateNo > -1)) {
-        it->setValue(out);
-      }
-    }
-
-private:
-    std::shared_ptr<RadialSetProjection> myProjection;
-    double myElevRad;
-    bool myFlatten;
-  };
-
-  auto elevRad = getElevationDegs() * DEG_TO_RAD;
-  auto p       = getProjection();
-  std::shared_ptr<RadialSetProjection> radialProj = std::dynamic_pointer_cast<RadialSetProjection>(p);
-  remapCallback myCallback(radialProj, elevRad, projectToGround);
-
-  RadialSetIterator iter(*R);
-
-  iter.iterateRadialGates(myCallback);
+  if (pipeline) {
+    pipeline->remap(this->getFloat2D(), fullgrid, geoMapper);
+  } else {
+    fLogSevere("RadialSet::Remap failed to initialize ArrayPipeline.");
+  }
 
   return R;
 } // RadialSet::Remap

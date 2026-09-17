@@ -1,31 +1,31 @@
 #pragma once
-
 #include <rArrayFilter.h>
-#include <rError.h>
+#include <rConstants.h>
+#include <string>
+#include <vector>
 
 namespace rapio {
-/** A simple thresholding filter */
 class ThresholdFilter : public ArrayFilter {
 public:
-  ThresholdFilter() : ArrayFilter(){ }
-
-  ThresholdFilter(float min, float max, std::shared_ptr<ArrayAlgorithm> upstream)
-    : ArrayFilter(upstream), myMin(min), myMax(max){ }
+  /** Create a ThresholdFilter */
+  ThresholdFilter() = default;
 
   /** Introduce to factory */
   static void
   introduceSelf();
 
-  /** Parse string options in the factory */
-  virtual bool
-  parseOptions(const std::vector<std::string>& parts, std::shared_ptr<ArrayAlgorithm> upstream) override;
-
   /** Get help for us */
   virtual std::string
   getHelpString() override;
 
-  // Declares sampleAt, sampleAtIndex, and doSample
-  DECLARE_FILTER_SAMPLERS
+  /** Parse string options from the factory */
+  virtual bool
+  parseOptions(const std::vector<std::string>& parts) override;
+
+  /** Apply the filter from src to dst */
+  virtual void
+  process(std::shared_ptr<Array<float, 2> > src,
+    std::shared_ptr<Array<float, 2> >       dst) override;
 
 private:
 
@@ -35,4 +35,4 @@ private:
   /** Max value of threshold, capping to max */
   float myMax = 100.0f;
 };
-}
+} // namespace rapio

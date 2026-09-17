@@ -1,31 +1,15 @@
 #include <rThresholdFilter.h>
 #include <rFactory.h>
 #include <rError.h>
+#include <algorithm>
 
 using namespace rapio;
-using namespace std;
 
 void
 ThresholdFilter::introduceSelf()
 {
-  std::shared_ptr<ArrayFilter> newOneo = std::make_shared<ThresholdFilter>();
-  Factory<ArrayFilter>::introduce("threshold", newOneo);
-};
-
-
-/** Parse string options in the factory */
-bool
-ThresholdFilter::parseOptions(const std::vector<std::string>& parts,
-  std::shared_ptr<ArrayAlgorithm>                           upstream)
-{
-  getParam<float>(parts, 1, myMin);
-  getParam<float>(parts, 2, myMax);
-
-  if (myMin > myMax) {
-    std::swap(myMin, myMax);
-  }
-
-  return true;
+  std::shared_ptr<ArrayFilter> newOne = std::make_shared<ThresholdFilter>();
+  Factory<ArrayFilter>::introduce("threshold", newOne);
 }
 
 std::string
@@ -35,19 +19,46 @@ ThresholdFilter::getHelpString()
            myMin, myMax);
 }
 
-template <typename T>
 bool
-ThresholdFilter::doSample(T x, T y, float& out)
+ThresholdFilter::parseOptions(const std::vector<std::string>& parts)
 {
-  float val;
-
-  if (callUpstream(x, y, val)) {
-    // The threshold filter math
-    out = (val > myMax) ? myMax : (val < myMin) ? Constants::MissingData : val;
-
-    return true;
+  // getParam<float>(parts, 1, myMin);
+  // getParam<float>(parts, 2, myMax);
+  try {
+    if (parts.size() > 1) { myMin = std::stof(parts[1]); }
+    if (parts.size() > 2) { myMax = std::stof(parts[2]); }
+    if (myMin > myMax) {
+      std::swap(myMin, myMax);
+    }
+  } catch (const std::exception& e) {
+    fLogSevere("ThresholdFilter param error: {}", e.what());
+    return false;
   }
-  return false;
+  return true;
 }
 
-DEFINE_FILTER_SAMPLERS(ThresholdFilter)
+void
+ThresholdFilter::process(std::shared_ptr<Array<float, 2> > src,
+  std::shared_ptr<Array<float, 2> >                        dst)
+{
+  if (!src || !dst) { return; }
+
+  // Grab 1D views of the memory
+  auto srcData = src->refAs1D();
+  auto dstData = dst->refAs1D();
+
+  // Linearly blast through the array in a single pass
+  for (size_t i = 0; i < srcData.size(); ++i) {
+    float val = srcData[i];
+
+    if (!Constants::isGood(val)) {
+      dstData[i] = val; // Keep missing/unavailable flags intact
+    } else if (val < myMin) {
+      dstData[i] = Constants::MissingData;
+    } else if (val > myMax) {
+      dstData[i] = myMax; // Clamp to max
+    } else {
+      dstData[i] = val;
+    }
+  }
+}

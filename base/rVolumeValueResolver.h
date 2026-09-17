@@ -8,7 +8,6 @@
 #include <rVolumeValue.h>
 #include <rLLCoverageArea.h>
 #include <rPartitionInfo.h>
-#include <rArrayAlgorithm.h>
 
 namespace rapio {
 class RAPIOAlgorithm;
@@ -176,6 +175,7 @@ protected:
   // FIXME: Thinking we could do function pointers or something for different methods
   // of querying the data.
 
+  #if 0
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool
   queryMatrixLayer(VolumeValue& vv, LayerValue& l, DataTypePointerCache * c, ArrayAlgorithm * m)
@@ -212,7 +212,7 @@ protected:
         l.value = Constants::MissingData;
       }
 
-      #if 0
+      # if 0
       // Old way doing it direct to average.  I want to use the
       // ArrayAlgorithm class since this will allow plugin/changing it
       //
@@ -265,12 +265,14 @@ protected:
       } else {
         l.value = Constants::MissingData;
       }
-      #endif // if 0
+      # endif // if 0
       return true;
     }
 
     return false;
   } // queryLayer
+
+  #endif // if 0
 
   /** Query a single layer.  Inline the code since this is called a silly amount of times. */
   inline bool

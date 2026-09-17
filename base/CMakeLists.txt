@@ -25,9 +25,8 @@ FetchContent_GetProperties(simple-web-server SOURCE_DIR SWS_SRC_DIR)
 set(SOURCE_FILES
 rAlgConfigFile.cc
 rArray.cc
-rArrayAlgorithm.cc
+rArrayPipeline.cc
 rHelpFormatter.cc
-image/rArraySampler.cc
 image/rNearestNeighbor.cc
 image/rCressman.cc
 image/rBilinear.cc

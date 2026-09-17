@@ -5,7 +5,7 @@
 #include <rTime.h>
 #include <rLLCoverageArea.h>
 #include <rLatLonGridProjection.h>
-#include <rArrayAlgorithm.h>
+#include <rArrayPipeline.h>
 
 namespace rapio {
 /** Store an area of data on a uniform 2-D grid of latitude and
@@ -50,7 +50,7 @@ public:
   /** Public API for users to remap a LatLonGrid into another
    * LatLonGrid of a different resolution using a sampling remapper. */
   void
-  RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayAlgorithm> remapper);
+  RemapInto(std::shared_ptr<LatLonGrid> out, std::shared_ptr<ArrayPipeline> remapper);
 
   /** Overlay over another LatLonGrid of matching resolution.
   * Cells not hit are ignored.  This method was originally intended for

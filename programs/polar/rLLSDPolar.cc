@@ -1,5 +1,6 @@
 #include "rLLSDPolar.h"
-#include "rArrayAlgorithm.h"
+#include "rArrayPipeline.h"
+#include "rPercentFilter.h"
 #include "rStrings.h"
 
 #include <numeric>
@@ -81,12 +82,12 @@ LLSDPolar::firstTimeData()
   if (myFirstData) {
     myFirstData = false;
 
+    // Creates the pipeline and parses the "percent" filter automatically
+    myMedianPipeline = ArrayPipeline::create("percent:50:1:0.33:1");
+    
     // RadialSets usually wrap in Azimuth (X/dim 0) but not in Range (Y/dim 1)
     // so we setBoundary to wrap for X
-
-    // Initialize Median Filter: percent=50, halfX=1, minFill=0.33
-    myMedianFilter = ArrayAlgorithm::create("percent:50:1:0.33:1");
-    myMedianFilter->setBoundary(Boundary::Wrap, Boundary::None);
+    myMedianPipeline->setBoundary(Boundary::Wrap, Boundary::None);
   }
 }
 
@@ -141,7 +142,7 @@ LLSDPolar::compute(std::shared_ptr<RadialSet> inputin)
   std::map<std::string, std::shared_ptr<RadialSet> > output;
 
   output[PROD_MEDIAN] = inputin->Clone();
-  myMedianFilter->process(inputin->getFloat2D(), output[PROD_MEDIAN]->getFloat2D());
+  myMedianPipeline->process(inputin->getFloat2D(), output[PROD_MEDIAN]->getFloat2D());
   output[PROD_MEDIAN]->setTypeName(medname);
   output[PROD_MEDIAN]->setColorMapName(inputin->getColorMapName());
 

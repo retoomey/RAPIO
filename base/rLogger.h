@@ -141,7 +141,7 @@ public:
    * rdump that are expected to dump their output to terminal. This
    * will cause log messages to not be piped etc. and interfere with
    * the output */
-  virtual void setUseStdErr(bool useStdErr) {}
+  virtual void setUseStdErr(bool useStdErr){ }
 };
 
 // Forward declaration to avoid pulling in Boost.Asio or rEventTimer.h here
@@ -226,7 +226,8 @@ public:
 
   /** Pass using stderr down to logger.  This is not normal logging,
    * reserved for special programs */
-  static void setUseStdErr(bool flag);
+  static void
+  setUseStdErr(bool flag);
 
   /** The standard format string date of form [date UTC] we use for logging. */
   static constexpr const char * LOG_TIMESTAMP = "%Y %m/%d %H:%M:%S UTC";

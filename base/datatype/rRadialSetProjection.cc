@@ -5,6 +5,30 @@
 
 using namespace rapio;
 
+RadialSetMapper::RadialSetMapper(const RadialSet& source, const RadialSet& dest, bool projectGround)
+{
+  // Range (Gate) Parameters
+  mySrcFirstGate = source.getDistanceToFirstGateM();
+  mySrcGateWidth = source.getGateWidthKMs() * 1000.0;
+  myDstFirstGate = dest.getDistanceToFirstGateM();
+  myDstGateWidth = dest.getGateWidthKMs() * 1000.0;
+
+  // Azimuth (Radial) Parameters
+  mySrcAzSpacing = source.getNumRadials() > 0 ? 360.0 / source.getNumRadials() : 1.0;
+  myDstAzSpacing = dest.getNumRadials() > 0 ? 360.0 / dest.getNumRadials() : 1.0;
+
+  // Anchor to the first azimuth in the arrays
+  auto& srcAzData = source.getFloat1DRef(RadialSet::Azimuth);
+  auto& dstAzData = dest.getFloat1DRef(RadialSet::Azimuth);
+
+  mySrcStartAz = (srcAzData.size() > 0) ? srcAzData[0] : 0.0;
+  myDstStartAz = (dstAzData.size() > 0) ? dstAzData[0] : 0.0;
+
+  // Ground projection configuration
+  myProjectGround = projectGround;
+  myElevCos       = source.getElevationCos();
+}
+
 void
 RadialSetProjection ::
 initToRadialSet(RadialSet& rs)

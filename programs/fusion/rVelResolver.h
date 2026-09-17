@@ -2,7 +2,7 @@
 
 #include "rVolumeValueResolver.h"
 #include "rRAPIOAlgorithm.h"
-#include "rCressman.h"
+#include "rArrayPipeline.h"
 
 namespace rapio {
 /** Grid cell output storage for our resolver */
@@ -177,7 +177,7 @@ public:
   VelResolver()
   {
     // FIXME: Obviously params later most likely
-    myRemap = std::make_shared<Cressman>(8, 12); // radials, gates coverage of cressman
+    //myRemap = std::make_shared<Cressman>(8, 12); // radials, gates coverage of cressman
   }
 
   /** Introduce into VolumeValueResolver factory */
@@ -219,6 +219,6 @@ public:
 protected:
 
   /** Remapper for the matrix query */
-  std::shared_ptr<ArrayAlgorithm> myRemap;
+  std::shared_ptr<ArrayPipeline> myRemap;
 };
 }

@@ -4,6 +4,19 @@
 using namespace rapio;
 using namespace std;
 
+LatLonGridMapper::LatLonGridMapper(const LatLonGrid& source, const LatLonGrid& dest)
+{
+  myInNWLat      = source.getLocation().getLatitudeDeg() - (source.getLatSpacing() / 2.0);
+  myInNWLon      = source.getLocation().getLongitudeDeg() + (source.getLonSpacing() / 2.0);
+  myInLatSpacing = source.getLatSpacing();
+  myInLonSpacing = source.getLonSpacing();
+
+  myOutStartLat   = dest.getLocation().getLatitudeDeg() - (dest.getLatSpacing() / 2.0);
+  myOutStartLon   = dest.getLocation().getLongitudeDeg() + (dest.getLonSpacing() / 2.0);
+  myOutLatSpacing = dest.getLatSpacing();
+  myOutLonSpacing = dest.getLonSpacing();
+}
+
 LatLonGridProjection::LatLonGridProjection(const std::string& layer, LatLonGrid * owner) : DataProjection(layer)
 {
   // Grab everything we need from the LatLonGrid
