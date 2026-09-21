@@ -4,6 +4,8 @@
 #include <rOS.h>
 #include <rIODataType.h>
 #include <rPTreeData.h>
+#include <rDataTable.h>
+
 #include <fstream>
 #include <numeric>
 #include <algorithm>
@@ -115,70 +117,69 @@ RandomForest::xmlToForest(const std::string& rfFile)
 bool
 RandomForest::csvToForest(const std::string& rfFile)
 {
-  std::ifstream file(rfFile);
+  // 1. Read the CSV directly into a DataTable using the new iocsv module
+  auto table = IODataType::read<DataTable>(rfFile, "csv");
 
-  if (!file.is_open()) {
-    fLogSevere("Could not open RandomForest CSV file: {}", rfFile);
+  if (!table) {
+    fLogSevere("Could not open or parse RandomForest CSV file: {}", rfFile);
     return false;
   }
 
-  std::string headerLine;
+  size_t rowCount = table->getRowCount();
 
-  std::getline(file, headerLine);
-  if (!headerLine.empty() && (headerLine.back() == '\r') ) { headerLine.pop_back(); }
+  if (rowCount == 0) {
+    fLogSevere("RandomForest CSV file is empty: {}", rfFile);
+    return false;
+  }
 
-  std::vector<std::string> headers;
+  try {
+    // Grab column references once outside the loop
+    auto& treeNumCol = table->getColumn("tableNumber");
+    auto& featureCol = table->getColumn("featureName");
+    auto& leftCol    = table->getColumn("leftChild");
+    auto& rightCol   = table->getColumn("rightChild");
+    auto& threshCol  = table->getColumn("threshold");
+    auto& probCol    = table->getColumn("probability");
 
-  Strings::splitWithoutEnds(headerLine, ',', &headers);
+    std::vector<TreeNode> currentTree;
+    int currentTreeNum = -1;
 
-  std::vector<TreeNode> currentTree;
-  int currentTreeNum = -1;
+    for (size_t r = 0; r < rowCount; ++r) {
+      TreeNode node;
 
-  std::string line;
+      int treeNum         = treeNumCol.getCellAsInt(r);
+      std::string varName = featureCol.getCellAsString(r);
 
-  while (std::getline(file, line)) {
-    if (!line.empty() && (line.back() == '\r') ) { line.pop_back(); }
-    std::vector<std::string> tokens;
-    Strings::splitWithoutEnds(line, ',', &tokens);
+      node.leftChild    = leftCol.getCellAsInt(r);
+      node.rightChild   = rightCol.getCellAsInt(r);
+      node.threshold    = threshCol.getCellAsFloat(r);
+      node.probability  = probCol.getCellAsFloat(r);
+      node.isLeaf       = (varName == "leaf" || varName.empty());
+      node.featureIndex = node.isLeaf ? -1 : getOrRegisterFeature(varName);
 
-    if (tokens.size() != headers.size()) { continue; }
-
-    TreeNode node;
-    int treeNum = -1;
-    std::string varName;
-
-    for (size_t i = 0; i < tokens.size(); ++i) {
-      if (headers[i] == "tableNumber") { treeNum = std::stoi(tokens[i]); } else if (headers[i] == "featureName") {
-        varName = tokens[i];
-      } else if (headers[i] == "leftChild") {
-        node.leftChild = std::stoi(tokens[i]);
-      } else if (headers[i] == "rightChild") {
-        node.rightChild = std::stoi(tokens[i]);
-      } else if (headers[i] == "threshold") {
-        node.threshold = std::stod(tokens[i]);
-      } else if (headers[i] == "probability") { node.probability = std::stod(tokens[i]); }
-    }
-
-    node.isLeaf       = (varName == "leaf" || varName.empty());
-    node.featureIndex = node.isLeaf ? -1 : getOrRegisterFeature(varName);
-
-    if (treeNum != currentTreeNum) {
-      if (!currentTree.empty()) {
-        myTrees.push_back(currentTree);
+      // Detect tree boundaries and push completed trees
+      if (treeNum != currentTreeNum) {
+        if (!currentTree.empty()) {
+          myTrees.push_back(currentTree);
+        }
+        currentTree.clear();
+        currentTreeNum = treeNum;
       }
-      currentTree.clear();
-      currentTreeNum = treeNum;
+      currentTree.push_back(node);
     }
-    currentTree.push_back(node);
-  }
 
-  if (!currentTree.empty()) {
-    myTrees.push_back(currentTree);
-  }
+    if (!currentTree.empty()) {
+      myTrees.push_back(currentTree);
+    }
 
-  myNumberOfTrees = static_cast<int>(myTrees.size());
-  fLogInfo("Initialized Random Forest (CSV) with {} trees from {}", myNumberOfTrees, rfFile);
-  return true;
+    myNumberOfTrees = static_cast<int>(myTrees.size());
+    fLogInfo("Initialized Random Forest (CSV) with {} trees from {}", myNumberOfTrees, rfFile);
+    return true;
+  } catch (const std::exception& e) {
+    // DataTable::getColumn throws std::runtime_error if a column is missing
+    fLogSevere("RandomForest CSV is missing required columns or has a type mismatch: {}", e.what());
+    return false;
+  }
 } // RandomForest::csvToForest
 
 ForestProbability

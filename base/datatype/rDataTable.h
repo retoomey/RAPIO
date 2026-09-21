@@ -11,7 +11,13 @@
 #include <stdexcept>
 
 namespace rapio {
-// Lightweight wrapper for dynamic columnar growth
+/**
+ * @brief Lightweight wrapper for dynamic columnar growth.
+ *
+ * Encapsulates a std::variant of vectors to provide contiguous column
+ * storage for integers, floats, or strings. Use visitData() for performance-critical
+ * loops, or getCellAsX() methods for convenient, type-coerced individual access.
+ */
 class DataColumn {
 public:
   enum class Type { Integer, Float, String };
@@ -20,29 +26,95 @@ public:
 
   void
   push_back(int val);
+
   void
   push_back(float val);
+
   void
   push_back(const std::string& val);
 
   size_t
   size() const;
+
   Type
   getType() const { return myType; }
 
   const std::vector<int>&
   getIntVector() const;
+
   const std::vector<float>&
   getFloatVector() const;
+
   const std::vector<std::string>&
   getStringVector() const;
+
+  /**
+   * @brief Convenience helper to coerce a cell's value to a string.
+   * Useful for I/O and text formatting.
+   *
+   * @param row The zero-based row index.
+   * @return The string representation of the cell.
+   */
+  std::string
+  getCellAsString(size_t row) const;
+
+  /**
+   * @brief Convenience helper to safely extract a cell's value as a double.
+   * Casts numeric types and attempts to parse strings.
+   *
+   * @param row The zero-based row index.
+   * @return The float representation of the cell, or 0.0 on string parse failure.
+   */
+  float
+  getCellAsFloat(size_t row) const;
+
+  /**
+   * @brief Convenience helper to safely extract a cell's value as an integer.
+   * Casts numeric types and attempts to parse strings.
+   *
+   * @param row The zero-based row index.
+   * @return The integer representation of the cell, or 0 on string parse failure.
+   */
+  int
+  getCellAsInt(size_t row) const;
+
+  /**
+   * @brief Applies a visitor to the underlying std::variant vector (const).
+   *
+   * Enables column-level type checking (resolving the variant once)
+   * rather than row-by-row checking, eliminating loop branch overhead.
+   *
+   * @param vis A callable visitor (e.g., a generic lambda).
+   * @return The result of the visitor execution.
+   */
+  template <typename Visitor>
+  auto
+  visitData(Visitor&& vis) const
+  {
+    return std::visit(std::forward<Visitor>(vis), myData);
+  }
+
+  /**
+   * @brief Applies a visitor to the underlying std::variant vector (mutable).
+   */
+  template <typename Visitor>
+  auto
+  visitData(Visitor&& vis)
+  {
+    return std::visit(std::forward<Visitor>(vis), myData);
+  }
 
 private:
   Type myType;
   std::variant<std::vector<int>, std::vector<float>, std::vector<std::string> > myData;
 };
 
-// Replaces the PTreeData-inherited table with columnar storage
+/**
+ * @brief Replaces the PTreeData-inherited table with columnar storage.
+ *
+ * Manages a collection of DataColumns mapped by string names, ensuring
+ * rectangular data integrity for tabular datasets.
+ */
 class DataTable : public DataType {
 public:
   DataTable(){ myDataType = "DataTable"; }
@@ -58,6 +130,7 @@ public:
 
   size_t
   getRowCount() const;
+
   bool
   validateRectangularShape() const;
 
@@ -66,7 +139,9 @@ private:
   std::map<std::string, std::shared_ptr<DataColumn> > myColumns;
 };
 
-// Specializer for XML/JSON to downcast PTreeData to DataTable
+/**
+ * @brief Specializer for XML/JSON to downcast PTreeData to DataTable.
+ */
 class PTreeDataSpecializer : public IOSpecializer {
 public:
   virtual std::shared_ptr<DataType>
@@ -79,6 +154,9 @@ public:
   write(std::shared_ptr<DataType> dt, IOConfig& keys) override { return false; }
 };
 
+/**
+ * @brief Implementation of PTreeDataSpecializer specifically for DataTables.
+ */
 class PTreeDataTable : public PTreeDataSpecializer {
 public:
   virtual std::shared_ptr<DataType>

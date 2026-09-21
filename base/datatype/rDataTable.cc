@@ -37,6 +37,64 @@ DataColumn::getFloatVector() const { return std::get<std::vector<float> >(myData
 const std::vector<std::string>&
 DataColumn::getStringVector() const { return std::get<std::vector<std::string> >(myData); }
 
+std::string
+DataColumn::getCellAsString(size_t row) const
+{
+  switch (myType) {
+      case Type::String:
+        return getStringVector()[row];
+
+      case Type::Float:
+        return std::to_string(getFloatVector()[row]);
+
+      case Type::Integer:
+        return std::to_string(getIntVector()[row]);
+
+      default:
+        return "";
+  }
+}
+
+float
+DataColumn::getCellAsFloat(size_t row) const
+{
+  switch (myType) {
+      case Type::Float:
+        return getFloatVector()[row];
+
+      case Type::Integer:
+        return static_cast<float>(getIntVector()[row]);
+
+      case Type::String:
+        try { return std::stof(getStringVector()[row]);
+        } // Note: stof instead of stod
+        catch (...) { return 0.0f;
+        }
+      default:
+        return 0.0f;
+  }
+}
+
+int
+DataColumn::getCellAsInt(size_t row) const
+{
+  switch (myType) {
+      case Type::Integer:
+        return getIntVector()[row];
+
+      case Type::Float:
+        return static_cast<int>(getFloatVector()[row]);
+
+      case Type::String:
+        try { return std::stoi(getStringVector()[row]);
+        }
+        catch (...) { return 0;
+        }
+      default:
+        return 0;
+  }
+}
+
 // ---------------------------------------------------------
 // DataTable Implementation
 // ---------------------------------------------------------
