@@ -11,6 +11,8 @@
 #include <stdexcept>
 
 namespace rapio {
+using DataValue = std::variant<int, float, std::string>;
+
 /**
  * @brief Lightweight wrapper for dynamic columnar growth.
  *
@@ -125,6 +127,13 @@ public:
   const std::vector<std::string>&
   getColumnNames() const { return myColumnOrder; }
 
+  void
+  setSchema(const std::vector<std::pair<std::string, DataColumn::Type> >& schema);
+
+  void
+  addRow(const std::map<std::string, DataValue>& rowData);
+
+  // Feel like this API is dangerous.  Can lead to jagged tables
   DataColumn&
   getColumn(const std::string& name);
 

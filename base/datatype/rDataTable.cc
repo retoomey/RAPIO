@@ -98,6 +98,65 @@ DataColumn::getCellAsInt(size_t row) const
 // ---------------------------------------------------------
 // DataTable Implementation
 // ---------------------------------------------------------
+
+void
+DataTable::setSchema(const std::vector<std::pair<std::string, DataColumn::Type> >& schema)
+{
+  // Blanket replace any existing schema and data
+  myColumnOrder.clear();
+  myColumns.clear();
+
+  myColumnOrder.reserve(schema.size());
+
+  for (const auto& [name, type] : schema) {
+    myColumnOrder.push_back(name);
+    myColumns[name] = std::make_shared<DataColumn>(type);
+  }
+}
+
+void
+DataTable::addRow(const std::map<std::string, DataValue>& rowData)
+{
+  for (const auto& colName : myColumnOrder) {
+    auto& col   = *myColumns[colName];
+    auto dataIt = rowData.find(colName);
+
+    if (dataIt != rowData.end()) {
+      std::visit([&col](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+
+        // Safely route the variant value to the correct column type
+        if (col.getType() == DataColumn::Type::Float) {
+          if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ) {
+            col.push_back(static_cast<float>(arg));
+          } else if constexpr (std::is_same_v<T, int> ) { col.push_back(static_cast<float>(arg)); } else {
+            col.push_back(static_cast<float>(Constants::MissingData));
+          }
+        } else if (col.getType() == DataColumn::Type::Integer) {
+          if constexpr (std::is_same_v<T, int> ) {
+            col.push_back(arg);
+          } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ) {
+            col.push_back(static_cast<int>(arg));
+          } else { col.push_back(static_cast<int>(Constants::MissingData)); }
+        } else if (col.getType() == DataColumn::Type::String) {
+          if constexpr (std::is_same_v<T, std::string> ) { col.push_back(arg); } else {
+            col.push_back(std::to_string(arg));
+          }
+        }
+      }, dataIt->second);
+    } else {
+      // Key missing from the rowData map? Automatically pad to maintain rectangularity
+      if (col.getType() == DataColumn::Type::Float) {
+        col.push_back(static_cast<float>(Constants::MissingData));
+      } else if (col.getType() == DataColumn::Type::Integer) {
+        col.push_back(static_cast<int>(Constants::MissingData));
+      } else {
+        col.push_back(std::string("-99900"));
+      }
+    }
+  }
+} // DataTable::addRow
+
 void
 DataTable::addColumn(const std::string& name, DataColumn::Type type)
 {
