@@ -51,3 +51,7 @@ configure_file(testxml.xml testxml.xml)
 configure_file(testjson.json testjson.json)
 
 addRAPIOTest(rTestRAPIO COMMAND rTestRAPIO --log_level=test_suite)
+
+add_executable(rTestRandomForest rTestRandomForest.cc)
+target_link_libraries(rTestRandomForest PRIVATE rapio)
+addRAPIOTest(rTestRandomForest COMMAND rTestRandomForest)
