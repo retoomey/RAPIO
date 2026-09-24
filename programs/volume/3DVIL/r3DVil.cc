@@ -1,7 +1,9 @@
 #include "r3DVil.h"
 #include "rLatLonHeightGridIterator.h"
 #include "rDataTypeHistory.h"
+#include "rDataTypeGroup.h"
 #include "rLatLonGrid.h"
+#include "rDataProjection.h"
 
 using namespace rapio;
 
@@ -19,24 +21,22 @@ createRAPIOAlg(void)
 
 VIL::VIL() : VolumeAlgorithm("3DVIL")
 {
-  // Directly follow grids at moment.  Probably should call on the
-  // start up of the algorithm not at first data.
-  // FIXME: configuration at some point
-  // NSEGridHistory::followGrid("height273", "Heightof0C", 3920);
-  myHeight263 = NSEGridHistory::followGrid("height263", "Heightof-10C", 5000);
-  // NSEGridHistory::followGrid("height253", "Heightof-20C", 6200);
-  myHeight233 = NSEGridHistory::followGrid("height233", "Heightof-40C", 8600);
+  // Environment grids (NSE) are now managed locally via a DataTypeGroup 
+  // and registered with DataTypeHistory for automatic time-purging.
 }
 
 class VILCallback : public LatLonHeightGridCallback {
 public:
   VILCallback(
     const float * vilWeights,
-    int h263, int h233,
+    std::shared_ptr<DataProjection> proj263,
+    std::shared_ptr<DataProjection> proj233,
+    float def263, float def233,
     ArrayFloat2DPtr vilOut, ArrayFloat2DPtr vildOut,
     ArrayFloat2DPtr viiOut, ArrayFloat2DPtr gustOut)
     : myVilWeights(vilWeights),
-    myHeight263(h263), myHeight233(h233),
+    myProj263(proj263), myProj233(proj233),
+    myDef263(def263), myDef233(def233),
     vilgrid(vilOut), vildgrid(vildOut), viigrid(viiOut), maxgust(gustOut){ }
 
   void
@@ -49,10 +49,12 @@ public:
     float atLat = it->getCurrentLatDegs();
     float atLon = it->getCurrentLonDegs();
 
-    // This forces a projection query vs a remap to grid,
-    // so we will probably put this into VolumeAlgorithm
-    H263K = NSEGridHistory::queryGrid(myHeight263, atLat, atLon);
-    H233K = NSEGridHistory::queryGrid(myHeight233, atLat, atLon);
+    // Query projections directly, falling back to defaults if data is missing or out of bounds
+    H263K = myProj263 ? myProj263->getValueAtLL(atLat, atLon) : myDef263;
+    if (!Constants::isGood(H263K)) H263K = myDef263;
+
+    H233K = myProj233 ? myProj233->getValueAtLL(atLat, atLon) : myDef233;
+    if (!Constants::isGood(H233K)) H233K = myDef233;
   }
 
   void
@@ -132,7 +134,10 @@ public:
 private:
   const int vil_upper = 56;
   const float * myVilWeights;
-  int myHeight263, myHeight233;
+  std::shared_ptr<DataProjection> myProj263;
+  std::shared_ptr<DataProjection> myProj233;
+  float myDef263;
+  float myDef233;
   ArrayFloat2DPtr vilgrid, vildgrid, viigrid, maxgust;
 
   float vil, vii, et18;
@@ -173,43 +178,31 @@ VIL::firstDataSetup()
     myVilWeights[i] = pow(zval, puissance);
   }
 
-  #if 0
-  NSE will have special expire time in the data I think:
-  : ExpiryInterval - unit = "Minutes";
-  : ExpiryInterval - value = "1440";
-  < hda >
-  < height273 product       = "Heightof0C" default = "3920" / >
-    < height263 product     = "Heightof-10C" default = "5000" / >
-    < height253 product     = "Heightof-20C" default = "6200" / >
-    < height233 product     = "Heightof-40C" default = "8600" / >
-    < heightTerrain product = "TerrainElevation" default = "0" / >
-    < / hda >
+  // Initialize and register our NSE group using ProductGroup
+  // (ProductGroup inherently uses TypeName as the key)
+  // Note: EACH 3D plugin holds its own history of NSE independent of other
+  // 3D plugins.  We might need to add a global NSE history time higher up. Currently
+  // each plugin can do its own duration.
+  myNSEGroup = std::make_shared<ProductGroup>("VIL_NSE_Grids", TimeDuration::Minutes(60));
+  DataTypeHistory::registerForPurging(myNSEGroup);
 
-    < vilextras >
-    < slopeWE product = "Slope_WestToEast" default = "0" note = "For tilted hail/vil products" / >
-    < slopeNS product = "Slope_NorthToSouth" default = "0" note = "For tilted hail/vil products" / >
-    < meantemp500mb400mb product = "Temp500_400" default = "-15" note =
-    "For VIL of day: mean temperature between 500 and 400 mb" / >
-    < / vilextras >
-
-  #endif // if 0
-
-  #if 0
-  // the doc gives the xml infor for 'what' and a form of group.
-  // The group is maybe not neccessary.
-  // So when we 'follow' we have a default background value that
-  // it provided for the output grid.
-  Height_263K = myNSEGrid->followGrid(doc, "hda", "height263");
-  Height_233K = myNSEGrid->followGrid(doc, "hda", "height233");
-  if (doDilateTilt) {
-    SlopeWE  = myNSEGrid->followGrid(doc, "vilextras", "slopeWE");
-    SlopeNS  = myNSEGrid->followGrid(doc, "vilextras", "slopeNS");
-    MeanTemp = myNSEGrid->followGrid(doc, "vilextras", "meantemp500mb400mb");
-  }
-  #endif // if 0
-  // DataTypeHistory::followDataTypeKey("vileextras");
-  // DataTypeHistory::followDataType("hda");
+  setup = true;
 } // VIL::firstDataSetup
+
+void
+VIL::processNewData(RAPIOData& d)
+{
+  // Intercept 2D Environmental grids
+  auto llg2d = d.datatype<LatLonGrid>();
+  if (llg2d != nullptr) {
+    firstDataSetup(); // Ensure the NSE group is ready
+    myNSEGroup->addDataType(llg2d);
+    return;
+  }
+  
+  // Otherwise, pass it to the base class to handle the 3D cube
+  VolumeAlgorithm::processNewData(d);
+}
 
 void
 VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
@@ -249,46 +242,27 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
   myMaxGust->setDataAttributeValue("SubType", "");
 } // VIL::checkOutputGrids
 
-#if 0
-void
-VIL::processVolume(std::shared_ptr<LatLonHeightGrid> input, RAPIOAlgorithm * writer)
-{
-  // Terrain and Output Grids are handled before we arrive here.
-  // We just need to make sure our static weight table is initialized.
-  firstDataSetup();
-
-  auto& llg = *input;
-  const Time forTime = llg.getTime();
-
-  fLogInfo("Computing VIL at {}", forTime);
-
-  // Set up and run the callback
-  VILCallback myCallback(
-    myVilWeights, myHeight263, myHeight233,
-    myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
-    myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
-  );
-
-  this->iterate(input, myCallback, IterateMode::ColumnsDown);
-
-  // Write outputs
-  writer->writeOutputProduct(myVilGrid->getTypeName(), myVilGrid);
-  writer->writeOutputProduct(myVildGrid->getTypeName(), myVildGrid);
-  writer->writeOutputProduct(myViiGrid->getTypeName(), myViiGrid);
-  writer->writeOutputProduct(myMaxGust->getTypeName(), myMaxGust);
-} // VIL::processVolume
-
-#endif // if 0
-
-// ... [VILCallback definition remains exactly the same] ...
-
 std::unique_ptr<LatLonHeightGridCallback>
 VIL::createCallback()
 {
-  firstDataSetup(); // Ensure the static weight table is initialized
+  firstDataSetup(); // Ensure the static weight table and NSE group are initialized
+
+  std::shared_ptr<DataProjection> proj263;
+  std::shared_ptr<DataProjection> proj233;
+
+  // Extract the latest grids from the managed group
+  if (myNSEGroup) {
+      auto dt263 = myNSEGroup->getDataType("Heightof-10C");
+      if (dt263) proj263 = dt263->getProjection();
+
+      auto dt233 = myNSEGroup->getDataType("Heightof-40C");
+      if (dt233) proj233 = dt233->getProjection();
+  }
 
   return std::make_unique<VILCallback>(
-    myVilWeights, myHeight263, myHeight233,
+    myVilWeights, 
+    proj263, proj233,
+    5000.0f, 8600.0f, // Defaults
     myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
     myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
   );

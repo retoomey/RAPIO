@@ -27,6 +27,7 @@ rAlgConfigFile.cc
 rArray.cc
 rArrayPipeline.cc
 rHelpFormatter.cc
+history/rDataTypeGroup.cc
 image/rNearestNeighbor.cc
 image/rCressman.cc
 image/rBilinear.cc
@@ -53,11 +54,13 @@ rCurlConnection.cc
 rDataArray.cc
 rDataFilter.cc
 rDataProjection.cc
-rDataTypeHistory.cc
+history/rDataTypeHistory.cc
 rDimensionMapper.cc
 rDirWalker.cc
 watcher/rDirWatcher.cc
-rElevationVolume.cc
+history/rVolume.cc
+history/rVolumeOfN.cc
+history/rVolumeOf1.cc
 rError.cc
 rEventLoop.cc
 rEventTimer.cc
@@ -179,6 +182,7 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/datatype>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/history>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/index>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/notifier>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/plugin>

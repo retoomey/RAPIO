@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rRAPIOPlugin.h"
-#include <rElevationVolume.h>
+#include <rVolume.h>
 
 namespace rapio {
 class RAPIOProgram;

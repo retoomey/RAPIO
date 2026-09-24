@@ -2,7 +2,7 @@
 
 #include "rRAPIOAlgorithm.h"
 #include "rTerrainBlockage.h"
-#include "rElevationVolume.h"
+#include "rVolume.h"
 
 namespace rapio {
 /** Bin a Lat,Lon,Height point cloud into a X,Y,Z grid defined.

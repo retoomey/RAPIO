@@ -1,6 +1,7 @@
 #pragma once
 #include <rVolumeAlgorithm.h>
 #include <rLatLonHeightGrid.h>
+#include <rDataTypeGroup.h>
 #include <vector>
 
 namespace rapio {
@@ -227,6 +228,10 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
+  /** Override to intercept 2D Environmental grids */
+  virtual void 
+  processNewData(rapio::RAPIOData& d) override;
+
   /** Our iteration mode for data ordering */
   virtual IterateMode
   getIterateMode() const override { return IterateMode::ColumnsDown; }
@@ -267,10 +272,8 @@ protected:
   /** Cache for maxgustp */
   std::shared_ptr<LatLonGrid> myMaxGust;
 
-  /** Field key */
-  int myHeight263;
+  /** Group to hold environmental NSE grids automatically purged by time */
+  std::shared_ptr<DataTypeGroup> myNSEGroup;
 
-  /** Field key */
-  int myHeight233;
 };
 }

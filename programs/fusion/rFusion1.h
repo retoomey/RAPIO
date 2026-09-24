@@ -4,7 +4,7 @@
 #include "rLLCoverageArea.h"
 #include "rVolumeValueResolver.h"
 #include "rLLHGridN2D.h"
-#include "rElevationVolume.h"
+#include "rVolume.h"
 
 #include "rFusionCache.h"
 

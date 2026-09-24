@@ -3,7 +3,7 @@
 #include <rRAPIOAlgorithm.h>
 #include <rRadialSet.h>
 #include <rRadialSetIterator.h>
-#include <rElevationVolume.h>
+#include <rVolume.h>
 #include <rTerrainBlockage.h>
 
 namespace rapio {

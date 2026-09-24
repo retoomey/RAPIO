@@ -468,7 +468,7 @@ RAPIOPointCloudAlg::writeCollectedData(const Time rTime)
   }
 
   // Clear the volume for next time....
-  myElevationVolume->clearVolume();
+  myElevationVolume->clearGroup();
 
   // ----------------------------------------------------------------------------
   // Now output the final storage to a single output file.
