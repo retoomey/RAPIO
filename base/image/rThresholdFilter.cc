@@ -20,13 +20,20 @@ ThresholdFilter::getHelpString()
 }
 
 bool
-ThresholdFilter::parseOptions(const std::vector<std::string>& parts)
+ThresholdFilter::parseOptions(const std::string& params)
 {
-  // getParam<float>(parts, 1, myMin);
-  // getParam<float>(parts, 2, myMax);
+  if (params.empty()) {
+    return true; // Safely use defaults
+  }
+  std::vector<std::string> parts;
+
+  Strings::splitWithoutEnds(params, ':', &parts);
+
+  // getParam<float>(parts, 0, myMin);
+  // getParam<float>(parts, 1, myMax);
   try {
-    if (parts.size() > 1) { myMin = std::stof(parts[1]); }
-    if (parts.size() > 2) { myMax = std::stof(parts[2]); }
+    if (parts.size() > 1) { myMin = std::stof(parts[0]); }
+    if (parts.size() > 2) { myMax = std::stof(parts[1]); }
     if (myMin > myMax) {
       std::swap(myMin, myMax);
     }

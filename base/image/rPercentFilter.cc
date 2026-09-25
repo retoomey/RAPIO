@@ -13,17 +13,23 @@ PercentFilter::introduceSelf()
 }
 
 bool
-PercentFilter::parseOptions(const std::vector<std::string>& parts)
+PercentFilter::parseOptions(const std::string& params)
 {
+  if (params.empty()) { return true; }
+
+  std::vector<std::string> parts;
+
+  Strings::splitWithoutEnds(params, ':', &parts);
+
   float cutoff  = myPercentile * 100.0f;
   float minFill = 0.33f;
 
   try {
-    if (parts.size() > 1) { cutoff = std::stof(parts[1]); }
-    if (parts.size() > 2) { myHalfX = std::stoi(parts[2]); }
-    if (parts.size() > 3) { minFill = std::stof(parts[3]); }
+    if (parts.size() > 0) { cutoff = std::stof(parts[0]); }
+    if (parts.size() > 1) { myHalfX = std::stoi(parts[1]); }
+    if (parts.size() > 2) { minFill = std::stof(parts[2]); }
     myHalfY = myHalfX;
-    if (parts.size() > 4) { myHalfY = std::stoi(parts[4]); }
+    if (parts.size() > 3) { myHalfY = std::stoi(parts[3]); }
 
     myPercentile = cutoff / 100.0f;
     int totalWindowSize = (2 * myHalfX + 1) * (2 * myHalfY + 1);
@@ -33,28 +39,7 @@ PercentFilter::parseOptions(const std::vector<std::string>& parts)
     return false;
   }
   return true;
-
-  #if 0
-  // We need temporary variables for things that require math before assignment
-  float cutoff  = myPercentile * 100.0f; // Default from header
-  float minFill = 0.33f;
-
-  getParam(parts, 1, cutoff);
-  getParam(parts, 2, halfX);
-  getParam(parts, 3, minFill);
-
-  // Derived default: halfY defaults to whatever halfX is NOW.
-  halfY = halfX;
-  getParam(parts, 4, halfY); // Overwrite only if the user specifically provided it
-
-  // Apply math to final state
-  myPercentile   = cutoff / 100.0f;
-  myMinFillCount = static_cast<int>(minFill * (2 * halfX + 1) * (2 * halfY + 1) + 0.5f);
-
-  return true;
-
-  #endif // if 0
-} // PercentFilter::parseOptions
+}
 
 std::string
 PercentFilter::getHelpString()
@@ -120,24 +105,5 @@ PercentFilter::process(std::shared_ptr<Array<float, 2> > src,
   std::shared_ptr<Array<float, 2> >                      dst)
 {
   if (!src || !dst) { return; }
-
-  if (myXBoundary == Boundary::Wrap) {
-    if (myYBoundary == Boundary::Wrap) {
-      applyFilter<BoundWrap, BoundWrap>(src, dst);
-    } else if (myYBoundary == Boundary::Clamp) { applyFilter<BoundWrap, BoundClamp>(src, dst); } else {
-      applyFilter<BoundWrap, BoundNone>(src, dst);
-    }
-  } else if (myXBoundary == Boundary::Clamp) {
-    if (myYBoundary == Boundary::Wrap) {
-      applyFilter<BoundClamp, BoundWrap>(src, dst);
-    } else if (myYBoundary == Boundary::Clamp) { applyFilter<BoundClamp, BoundClamp>(src, dst); } else {
-      applyFilter<BoundClamp, BoundNone>(src, dst);
-    }
-  } else {
-    if (myYBoundary == Boundary::Wrap) {
-      applyFilter<BoundNone, BoundWrap>(src, dst);
-    } else if (myYBoundary == Boundary::Clamp) { applyFilter<BoundNone, BoundClamp>(src, dst); } else {
-      applyFilter<BoundNone, BoundNone>(src, dst);
-    }
-  }
+  RAPIO_DISPATCH_BOUNDARIES(myXBoundary, myYBoundary, applyFilter, src, dst);
 }

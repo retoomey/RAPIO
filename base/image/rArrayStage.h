@@ -18,14 +18,10 @@ public:
 
   /** Parse a param string for a stage.  All stages take the
    * form of 'name:params' */
-  bool
+  virtual bool
   parseOptions(const std::string& params)
   {
-    std::vector<std::string> parts;
-
-    Strings::splitWithoutEnds(params, ':', &parts);
-    if (parts.empty()) { return false; }
-    return parseOptions(parts);
+    return true; // Default implementation cleanly accepts empty/no params
   }
 
   /** Get the help for this sampler.  Abstract to enforce help */

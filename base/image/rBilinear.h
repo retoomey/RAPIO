@@ -44,7 +44,7 @@ public:
 
   /** Parse string options in the factory */
   virtual bool
-  parseOptions(const std::vector<std::string>& part) override;
+  parseOptions(const std::string& params) override;
 
   /** Get help for us */
   virtual std::string

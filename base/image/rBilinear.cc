@@ -13,21 +13,24 @@ Bilinear::introduceSelf()
 };
 
 bool
-Bilinear::parseOptions(const std::vector<std::string>& parts)
+Bilinear::parseOptions(const std::string& params)
 {
-  if (parts.size() < 3) {
-    // Use defaults if not enough params
+  if (params.empty()) { return true; }
+
+  std::vector<std::string> parts;
+
+  Strings::splitWithoutEnds(params, ':', &parts);
+
+  if (parts.size() < 2) {
     return true;
   }
-
   try {
-    // Handle our params
-    myWidth  = std::stoul(parts[1]);
-    myHeight = std::stoul(parts[2]);
+    myWidth  = std::stoul(parts[0]);
+    myHeight = std::stoul(parts[1]);
 
-    if (parts.size() > 3) {
+    if (parts.size() > 2) {
       fLogSevere("Warning: 'bilinear' expects 2 parameters (w:h). Ignoring extra {} args.",
-        parts.size() - 3);
+        parts.size() - 2);
     }
   } catch (const std::exception& e) {
     fLogSevere("Bilinear param error: {}", e.what());

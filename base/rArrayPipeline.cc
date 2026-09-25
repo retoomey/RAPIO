@@ -10,6 +10,8 @@
 #include <rCressman.h>
 #include <rThresholdFilter.h>
 #include <rPercentFilter.h>
+#include <rDilateFilter.h>
+#include <rDespeckleFilter.h>
 
 using namespace rapio;
 
@@ -18,12 +20,15 @@ ArrayPipeline::introduceSelf()
 {
   static bool first = true;
 
+  // FIXME: Wondering if we could go dynamic here
   if (first) {
     Bilinear::introduceSelf();
     Cressman::introduceSelf();
     NearestNeighbor::introduceSelf();
     ThresholdFilter::introduceSelf();
     PercentFilter::introduceSelf();
+    DespeckleFilter::introduceSelf();
+    DilateFilter::introduceSelf();
     first = false;
   }
 }
@@ -96,6 +101,9 @@ ArrayPipeline::create(const std::string& config)
           pipeline->mySampler     = sampler;
           pipeline->mySamplerType = type;
           //    pipeline->mySamplerArgs = parts; what?
+        } else {
+          fLogSevere("Failed to parse options for ArraySampler: {}", stage);
+          return nullptr;
         }
         continue;
       }
@@ -109,9 +117,11 @@ ArrayPipeline::create(const std::string& config)
         pipeline->myFilters.push_back(filter);
       } else {
         fLogSevere("Failed to parse options for ArrayFilter: {}", stage);
+        return nullptr;
       }
     } else {
       fLogSevere("Unknown pipeline stage or missing filter module: {}", type);
+      return nullptr;
     }
   }
 

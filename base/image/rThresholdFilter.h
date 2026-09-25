@@ -20,7 +20,7 @@ public:
 
   /** Parse string options from the factory */
   virtual bool
-  parseOptions(const std::vector<std::string>& parts) override;
+  parseOptions(const std::string& params) override;
 
   /** Apply the filter from src to dst */
   virtual void

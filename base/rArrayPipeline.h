@@ -101,25 +101,7 @@ private:
     Boundary bx = mySampler ? mySampler->getXBoundary() : Boundary::None;
     Boundary by = mySampler ? mySampler->getYBoundary() : Boundary::None;
 
-    if (bx == Boundary::Wrap) {
-      if (by == Boundary::Wrap) {
-        applySamplerT<BoundWrap, BoundWrap>(src, dst, mapper);
-      } else if (by == Boundary::Clamp) { applySamplerT<BoundWrap, BoundClamp>(src, dst, mapper); } else {
-        applySamplerT<BoundWrap, BoundNone>(src, dst, mapper);
-      }
-    } else if (bx == Boundary::Clamp) {
-      if (by == Boundary::Wrap) {
-        applySamplerT<BoundClamp, BoundWrap>(src, dst, mapper);
-      } else if (by == Boundary::Clamp) { applySamplerT<BoundClamp, BoundClamp>(src, dst, mapper); } else {
-        applySamplerT<BoundClamp, BoundNone>(src, dst, mapper);
-      }
-    } else {
-      if (by == Boundary::Wrap) {
-        applySamplerT<BoundNone, BoundWrap>(src, dst, mapper);
-      } else if (by == Boundary::Clamp) { applySamplerT<BoundNone, BoundClamp>(src, dst, mapper); } else {
-        applySamplerT<BoundNone, BoundNone>(src, dst, mapper);
-      }
-    }
+    RAPIO_DISPATCH_BOUNDARIES(bx, by, applySamplerT, src, dst, mapper);
   }
 
   void

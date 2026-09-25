@@ -28,11 +28,6 @@ rArray.cc
 rArrayPipeline.cc
 rHelpFormatter.cc
 history/rDataTypeGroup.cc
-image/rNearestNeighbor.cc
-image/rCressman.cc
-image/rBilinear.cc
-image/rThresholdFilter.cc
-image/rPercentFilter.cc
 rAWS.cc
 rBimap.cc
 rBinaryIO.cc
@@ -212,6 +207,7 @@ target_link_libraries(rapio_interface INTERFACE rapio_fmt_interface)
 add_library(rapio SHARED
      $<TARGET_OBJECTS:rapio_base>
      $<TARGET_OBJECTS:rapio_datatype>
+     $<TARGET_OBJECTS:rapio_image>
 )
 
 # Inject the CMake build type into the C++ preprocessor
@@ -255,6 +251,7 @@ endif()
 # 3. Add any subdirectories
 #
 add_subdirectory(datatype)
+add_subdirectory(image)
 
 ##################################################################################################
 # Link libraries to interface and shared targets

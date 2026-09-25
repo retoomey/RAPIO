@@ -21,13 +21,6 @@ public:
   static void
   introduceSelf();
 
-  // No parse options since we're identity pretty much
-  virtual bool
-  parseOptions(const std::vector<std::string>& part) override
-  {
-    return true;
-  }
-
   /** Get help for us */
   virtual std::string
   getHelpString() override;
