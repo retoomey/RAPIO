@@ -48,6 +48,26 @@ Project::attenuationHeightKMs(
   return heightKMs;
 }
 
+namespace {
+/**
+ * @brief Wraps an angle in degrees to the [-180.0, 180.0] range.
+ *
+ * @param angle The input angle in degrees.
+ * @return The wrapped angle in degrees.
+ */
+inline double
+Wrap180(double angle)
+{
+  while (angle > 180.0) {
+    angle -= 360.0;
+  }
+  while (angle < -180.0) {
+    angle += 360.0;
+  }
+  return angle;
+}
+}
+
 void
 Project::LatLonToAzRange(
   const AngleDegs &cLat,
@@ -55,21 +75,38 @@ Project::LatLonToAzRange(
   const AngleDegs &tLat,
   const AngleDegs &tLon,
   AngleDegs       &azDegs,
-  float           &rangeMeters) // FIXME: do more work to make units consistent
-
+  float           &rangeMeters)
 {
-  constexpr auto meterDeg = Constants::EarthRadiusM * DEG_TO_RAD; // 2nr/360 amazingly
+  // Earth radius in meters and degree-to-radian conversions from rapio::Constants
+  constexpr double meterPerDeg = Constants::EarthRadiusM * DEG_TO_RAD;
 
-  // Below equator we flip lat I think
-  auto Y = (tLat > 0) ? (tLat - cLat) * meterDeg : (cLat - tLat) * meterDeg;
-  auto X = ((tLon - cLon) * meterDeg) * cos((cLat + tLat) / 2.0 * DEG_TO_RAD);
+  // Calculate latitude difference in degrees
+  double dLatDeg = tLat - cLat;
 
-  // Final range/azimuth guess
-  rangeMeters = sqrt(X * X + Y * Y);
-  azDegs      = atan2(X, Y) * RAD_TO_DEG;
-  if (azDegs < 0) {
-    azDegs = 360.0 + azDegs;
+  // Wrap longitude difference to [-180, +180] to handle anti-meridian crossing
+  double dLonDeg = Wrap180(tLon - cLon);
+
+  // Average latitude for cosine scaling (converted to radians)
+  double avgLatRad = ((cLat + tLat) / 2.0) * DEG_TO_RAD;
+
+  // North (Y) and East (X) displacement in meters
+  // Y is strictly dLat, avoiding hemisphere flipping bugs
+  double Y = dLatDeg * meterPerDeg;
+  // X is scaled by the cosine of the average latitude
+  double X = dLonDeg * meterPerDeg * std::cos(avgLatRad);
+
+  // Range calculation (Euclidean distance)
+  rangeMeters = static_cast<float>(std::sqrt(X * X + Y * Y));
+
+  // Azimuth calculation (Clockwise from North)
+  // atan2(X, Y) maps 0 to North (+Y), +PI/2 to East (+X)
+  double az = std::atan2(X, Y) * RAD_TO_DEG;
+
+  if (az < 0.0) {
+    az += 360.0;
   }
+
+  azDegs = az;
 }
 
 namespace {

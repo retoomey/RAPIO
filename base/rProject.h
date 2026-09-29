@@ -45,10 +45,27 @@ public:
     LengthKMs rangeKMs,
     AngleDegs elevDegs);
 
-  /** Project from a lat lon to azimuth range based on earth surface */
+  /**
+   * @brief Calculates the azimuth and range between a center point and a target point.
+   *
+   * This function uses an equirectangular approximation to rapidly calculate the
+   * Euclidean distance and azimuth between two geographic coordinates. It is highly
+   * efficient and accurate for regional distances (like radar coverage areas).
+   *
+   * @note This mathematical approximation breaks down near the geographic poles (+/- 90 degrees).
+   * As the average latitude approaches the poles, the cosine scaling factor approaches zero,
+   * which incorrectly compresses the East-West (X) displacement. Furthermore, azimuths become
+   * undefined exactly at the poles. For mid-latitude weather radar applications, this is
+   * negligible, but it should not be used for global or polar-traversing trajectory tracking.
+   */
   static void
-  LatLonToAzRange(const AngleDegs &cLat, const AngleDegs &cLon,
-    const AngleDegs &tLat, const AngleDegs &tLon, AngleDegs &azDegs, float &rangeMeters);
+  LatLonToAzRange(
+    const AngleDegs &cLat,         ///< The center (origin) latitude in degrees.
+    const AngleDegs &cLon,         ///< The center (origin) longitude in degrees.
+    const AngleDegs &tLat,         ///< The target latitude in degrees.
+    const AngleDegs &tLon,         ///< The target longitude in degrees.
+    AngleDegs       &azDegs,       ///< [out] The calculated azimuth from the center to the target (0 to 360 degrees, 0 is North).
+    float           &rangeMeters); ///< [out] The calculated distance from the center to the target in meters.
 
   /** Project from a amimuth/range to a latitude longitude */
   static void
