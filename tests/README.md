@@ -4,16 +4,26 @@ Unit testing and test driven development is a great way to check that your new s
 
 # Building and executing tests in the standard build
 
+Toggle the RAPIO_BUILD_TESTS variable (You can use -DRAPIO_BUILD_TESTS if you're running cmake by hand, but if you used autogen.sh this is usually quicker)
+
 ```
-cd BUILD/tests
-make tests
-./runtests.sh
+cd BUILD/
+ccmake .
+```
+Toggle the RAPIO_BUILD_TEST and hit 'c' to configure and then 'q' to exit the ccmake gui. Make install will now build the tests as well.
+
+```
+cd BUILD/
+make install
+```
+
+To execute tests use the ctest command with -v or -V for more version output
+```
+cd BUILD/
+ctest -v
 ```
 
 # Adding a test
 
 Look at other tests like rTestArray.cc for example on creating a test, and then add your test to the CMakeLists.txt
 
-# Netcdf Dynamic Test
-
-To run the dynamic netcdf test you need to look at the runnetcdftest.sh and provide an archive you wish to use to ingest.  This test will read the input netcdf file once and output multiple times using various modes and compression settings of netcdf for comparison.

@@ -2,6 +2,7 @@
 
 #include <rDataProjection.h>
 #include <rArray.h>
+#include <rArraySampler.h>
 
 #include <string>
 
@@ -21,30 +22,30 @@ class LatLonGrid;
  * geometric class (LatLonGrid), it safely bypasses the heavy geographic math and
  * uses highly optimized O(1) linear scaling.
  */
-struct LatLonGridMapper {
+struct LatLonGridMapper : public ArrayMapper {
   double myInNWLat, myInNWLon, myInLatSpacing, myInLonSpacing;
   double myOutStartLat, myOutStartLon, myOutLatSpacing, myOutLonSpacing;
 
-  // Declaration only. No inline code here!
   LatLonGridMapper(const LatLonGrid& source, const LatLonGrid& dest);
 
-  inline float
-  mapY(int destI) const
+  void
+  map2D_Y(size_t destI_start, size_t count, float * outU) const override
   {
-    double atLat = myOutStartLat - (destI * myOutLatSpacing);
-
-    return static_cast<float>((myInNWLat - atLat) / myInLatSpacing);
+    for (size_t i = 0; i < count; ++i) {
+      double atLat = myOutStartLat - ((destI_start + i) * myOutLatSpacing);
+      outU[i] = static_cast<float>((myInNWLat - atLat) / myInLatSpacing);
+    }
   }
 
-  inline float
-  mapX(int destJ) const
+  void
+  map2D_X(size_t destJ_start, size_t count, float * outV) const override
   {
-    double atLon = myOutStartLon + (destJ * myOutLonSpacing);
-
-    return static_cast<float>((atLon - myInNWLon) / myInLonSpacing);
+    for (size_t j = 0; j < count; ++j) {
+      double atLon = myOutStartLon + ((destJ_start + j) * myOutLonSpacing);
+      outV[j] = static_cast<float>((atLon - myInNWLon) / myInLonSpacing);
+    }
   }
 };
-
 
 class LatLonGridProjection : public DataProjection
 {

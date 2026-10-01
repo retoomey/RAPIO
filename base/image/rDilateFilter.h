@@ -15,15 +15,23 @@ public:
   getHelpString() override;
   virtual bool
   parseOptions(const std::string& params) override;
-  virtual void
-  process(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >       dst) override;
 
+  // Advertises support for 2D spatial data only
+  bool
+  supportsDimensions(size_t dims) const override
+  {
+    return (dims == 2);
+  }
+
+  // Type-safe 2D execution endpoint
+  void
+  process2D(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >        & dst) override;
 private:
   template <typename BndX, typename BndY>
   void
-  applyFilter(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >           dst);
+  applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >          & dst);
 
   int mySizeX         = 3;
   int mySizeY         = 3;

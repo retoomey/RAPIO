@@ -113,6 +113,10 @@ public:
   virtual void *
   getRawDataPointer() = 0;
 
+  /** Return a const raw data pointer if possible */
+  virtual const void *
+  getRawDataPointer() const = 0;
+
   /** Convenience print of Array.  Has to print internal to get the templated method */
   virtual void
   printArray(std::ostream& out = std::cout, const std::string& indent = "    ", const std::string& divider = ", ",
@@ -220,6 +224,13 @@ public:
     return myStorage;
   }
 
+  /** Get a const reference to raw array for iteration */
+  boost::multi_array<C, N>&
+  ref() const
+  {
+    return myStorage;
+  }
+
   /** Get a pointer to raw array*/
   boost::multi_array<C, N> *
   ptr()
@@ -237,11 +248,25 @@ public:
     return (boost::multi_array_ref<C, 1>(dd.data(), boost::extents[dd.num_elements()]));
   }
 
+  /** Get a const reference to raw array as a forced 1D array. */
+  boost::const_multi_array_ref<C, 1>
+  refAs1D() const
+  {
+    return boost::const_multi_array_ref<C, 1>(myStorage.data(), boost::extents[myStorage.num_elements()]);
+  }
+
   /** Get a raw void pointer to array data. Used by reader/writers.
    * You probably don't want this, see the example algorithm.
    */
   virtual void *
   getRawDataPointer() override
+  {
+    return myStorage.data();
+  }
+
+  /** Get a const raw void pointer to array data. */
+  virtual const void *
+  getRawDataPointer() const override
   {
     return myStorage.data();
   }

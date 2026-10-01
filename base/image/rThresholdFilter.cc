@@ -45,19 +45,11 @@ ThresholdFilter::parseOptions(const std::string& params)
 }
 
 void
-ThresholdFilter::process(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                        dst)
+ThresholdFilter::processPointData(const float * srcData, float * dstData, size_t totalElements)
 {
-  if (!src || !dst) { return; }
-
-  // Grab 1D views of the memory
-  auto srcData = src->refAs1D();
-  auto dstData = dst->refAs1D();
-
   // Linearly blast through the array in a single pass
-  for (size_t i = 0; i < srcData.size(); ++i) {
+  for (size_t i = 0; i < totalElements; ++i) {
     float val = srcData[i];
-
     if (!Constants::isGood(val)) {
       dstData[i] = val; // Keep missing/unavailable flags intact
     } else if (val < myMin) {

@@ -44,8 +44,8 @@ DespeckleFilter::parseOptions(const std::string& params)
 
 template <typename BndX, typename BndY>
 void
-DespeckleFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                            dst)
+DespeckleFilter::applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                           & dst)
 {
   auto& srcData = src->ref();
   auto& dstData = dst->ref();
@@ -83,8 +83,8 @@ DespeckleFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
 } // DespeckleFilter::applyFilter
 
 void
-DespeckleFilter::process(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                        dst)
+DespeckleFilter::process2D(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                         & dst)
 {
   if (!src || !dst) { return; }
   RAPIO_DISPATCH_BOUNDARIES(myXBoundary, myYBoundary, applyFilter, src, dst);

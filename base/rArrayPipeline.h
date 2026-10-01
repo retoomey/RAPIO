@@ -1,12 +1,8 @@
 #pragma once
 
 #include <rArray.h>
-
-#include <rArrayBoundary.h>
 #include <rArrayFilter.h>
-#include <rNearestNeighbor.h>
-#include <rBilinear.h>
-#include <rCressman.h>
+#include <rArraySampler.h>
 
 #include <memory>
 #include <vector>
@@ -14,12 +10,42 @@
 
 namespace rapio {
 // A simple 1:1 mapper for discrete filters
-struct IdentityMapper {
-  inline float
-  mapY(int destI) const { return static_cast<float>(destI); }
+struct IdentityMapper : public ArrayMapper {
+  void
+  map1D(size_t destStart, size_t count, float * outU) const override
+  {
+    for (size_t i = 0; i < count; ++i) { outU[i] = static_cast<float>(destStart + i); }
+  }
 
-  inline float
-  mapX(int destJ) const { return static_cast<float>(destJ); }
+  void
+  map2D_X(size_t destJ_start, size_t count, float * outV) const override
+  {
+    for (size_t j = 0; j < count; ++j) { outV[j] = static_cast<float>(destJ_start + j); }
+  }
+
+  void
+  map2D_Y(size_t destI_start, size_t count, float * outU) const override
+  {
+    for (size_t i = 0; i < count; ++i) { outU[i] = static_cast<float>(destI_start + i); }
+  }
+
+  void
+  map3D_X(size_t destJ_start, size_t count, float * outV) const override
+  {
+    for (size_t j = 0; j < count; ++j) { outV[j] = static_cast<float>(destJ_start + j); }
+  }
+
+  void
+  map3D_Y(size_t destI_start, size_t count, float * outU) const override
+  {
+    for (size_t i = 0; i < count; ++i) { outU[i] = static_cast<float>(destI_start + i); }
+  }
+
+  void
+  map3D_Z(size_t destK_start, size_t count, float * outW) const override
+  {
+    for (size_t k = 0; k < count; ++k) { outW[k] = static_cast<float>(destK_start + k); }
+  }
 };
 
 class ArrayPipeline {
@@ -37,25 +63,23 @@ public:
   introduceHelp();
 
   // 1. Resample (+ Filter) Pipeline
-  template <typename MapperType>
   void
-  remap(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >     dst,
-    const MapperType                      & mapper)
-  {
-    if (!src || !dst) { return; }
-    dispatchSampler(src, dst, mapper);
-    executeFiltersPingPong(dst);
-  }
+  remap(const std::shared_ptr<ArrayBase>& src,
+    const std::shared_ptr<ArrayBase>    & dst,
+    const ArrayMapper                   & mapper) const;
 
   // 2. Filter-Only Pipeline (Out-of-place)
   void
-  process(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >       dst);
+  process(const std::shared_ptr<ArrayBase>& src,
+    const std::shared_ptr<ArrayBase>      & dst) const;
+
+  // Convenience for std::vector calling (works for 1D stuff)
+  void
+  process(const std::vector<float>& src, std::vector<float>& dst) const;
 
   // 3. Filter-Only Pipeline (In-place)
   void
-  processInPlace(std::shared_ptr<Array<float, 2> > data);
+  processInPlace(const std::shared_ptr<ArrayBase>& data) const;
 
   void
   setBoundary(Boundary x, Boundary y)
@@ -69,43 +93,12 @@ public:
   }
 
 private:
-
-  template <typename BndX, typename BndY, typename MapperType>
   void
-  applySamplerT(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >             dst,
-    const MapperType                              & mapper)
-  {
-    ArraySampler * rawSampler = mySampler.get();
-
-    // Bypass RTTI boundary failures by relying on the parsed string type
-    // and forcing a static_cast to the known concrete type.
-    if ((mySamplerType == "cressman") && rawSampler) {
-      static_cast<Cressman *>(rawSampler)->applySampler<BndX, BndY>(src, dst, mapper);
-    } else if ((mySamplerType == "bilinear") && rawSampler) {
-      static_cast<Bilinear *>(rawSampler)->applySampler<BndX, BndY>(src, dst, mapper);
-    } else if ((mySamplerType == "nearest") && rawSampler) {
-      static_cast<NearestNeighbor *>(rawSampler)->applySampler<BndX, BndY>(src, dst, mapper);
-    } else {
-      NearestNeighbor nn;
-      nn.applySampler<BndX, BndY>(src, dst, mapper);
-    }
-  }
-
-  template <typename MapperType>
+  executeFiltersPingPong1D(const std::shared_ptr<Array<float, 1> >& target) const;
   void
-  dispatchSampler(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >               dst,
-    const MapperType                                & mapper)
-  {
-    Boundary bx = mySampler ? mySampler->getXBoundary() : Boundary::None;
-    Boundary by = mySampler ? mySampler->getYBoundary() : Boundary::None;
-
-    RAPIO_DISPATCH_BOUNDARIES(bx, by, applySamplerT, src, dst, mapper);
-  }
-
+  executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >& target) const;
   void
-  executeFiltersPingPong(std::shared_ptr<Array<float, 2> > target);
+  executeFiltersPingPong3D(const std::shared_ptr<Array<float, 3> >& target) const;
 
   std::shared_ptr<ArraySampler> mySampler;
   std::string mySamplerType = "";

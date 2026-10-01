@@ -2,6 +2,7 @@
 
 #include <rDataProjection.h>
 #include <rArray.h>
+#include <rArraySampler.h>
 
 #include <vector>
 #include <memory>
@@ -23,7 +24,7 @@ class RadialSet;
  * elevation cosine here injects just enough physics to handle slant-to-ground
  * range conversions without requiring a full, computationally expensive reprojection.
  */
-struct RadialSetMapper {
+struct RadialSetMapper : public ArrayMapper {
   double mySrcFirstGate, mySrcGateWidth;
   double myDstFirstGate, myDstGateWidth;
   double mySrcAzSpacing, myDstAzSpacing;
@@ -31,35 +32,31 @@ struct RadialSetMapper {
   bool   myProjectGround;
   double myElevCos;
 
-  // Declaration only! No inline code here.
   RadialSetMapper(const RadialSet& source, const RadialSet& dest, bool projectGround);
 
-  // Map Destination Radial (i) to Source Fractional Radial (u)
-  inline float
-  mapY(int destI) const
+  void
+  map2D_Y(size_t destI_start, size_t count, float * outU) const override
   {
-    double destAz = myDstStartAz + (destI * myDstAzSpacing);
+    for (size_t i = 0; i < count; ++i) {
+      double destAz  = myDstStartAz + ((destI_start + i) * myDstAzSpacing);
+      double deltaAz = destAz - mySrcStartAz;
 
-    // Handle 360-degree wrapping for safe mapping
-    double deltaAz = destAz - mySrcStartAz;
+      if (deltaAz < 0.0) { deltaAz += 360.0; } else if (deltaAz >= 360.0) { deltaAz -= 360.0; }
 
-    if (deltaAz < 0.0) { deltaAz += 360.0; }
-    if (deltaAz >= 360.0) { deltaAz -= 360.0; }
-
-    return static_cast<float>(deltaAz / mySrcAzSpacing);
+      outU[i] = static_cast<float>(deltaAz / mySrcAzSpacing);
+    }
   }
 
-  // Map Destination Gate (j) to Source Fractional Gate (v)
-  inline float
-  mapX(int destJ) const
+  void
+  map2D_X(size_t destJ_start, size_t count, float * outV) const override
   {
-    double destRange = myDstFirstGate + (destJ * myDstGateWidth);
-
-    if (myProjectGround && (myElevCos != 0.0) ) {
-      destRange = destRange / myElevCos; // Convert ground range to slant range
+    for (size_t j = 0; j < count; ++j) {
+      double destRange = myDstFirstGate + ((destJ_start + j) * myDstGateWidth);
+      if (myProjectGround && (myElevCos != 0.0)) {
+        destRange = destRange / myElevCos;
+      }
+      outV[j] = static_cast<float>((destRange - mySrcFirstGate) / mySrcGateWidth);
     }
-
-    return static_cast<float>((destRange - mySrcFirstGate) / mySrcGateWidth);
   }
 };
 

@@ -44,8 +44,8 @@ DilateFilter::parseOptions(const std::string& params)
 
 template <typename BndX, typename BndY>
 void
-DilateFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                         dst)
+DilateFilter::applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                        & dst)
 {
   auto& srcData = src->ref();
   auto& dstData = dst->ref();
@@ -109,8 +109,8 @@ DilateFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
 } // DilateFilter::applyFilter
 
 void
-DilateFilter::process(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                     dst)
+DilateFilter::process2D(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                      & dst)
 {
   if (!src || !dst) { return; }
   RAPIO_DISPATCH_BOUNDARIES(myXBoundary, myYBoundary, applyFilter, src, dst);

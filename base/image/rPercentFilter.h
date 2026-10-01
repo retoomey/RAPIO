@@ -22,18 +22,25 @@ public:
   virtual bool
   parseOptions(const std::string& params) override;
 
+  // Advertises support for 2D spatial data only
+  bool
+  supportsDimensions(size_t dims) const override
+  {
+    return (dims == 2);
+  }
+
   /** Apply the filter from src to dst */
   virtual void
-  process(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >       dst) override;
+  process2D(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >        & dst) override;
 
 private:
 
   /** Template for speed */
   template <typename BndX, typename BndY>
   void
-  applyFilter(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >           dst);
+  applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >          & dst);
 
   /** Default to a Median Filter (50th percentile) */
   float myPercentile = 0.5f;

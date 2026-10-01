@@ -1,11 +1,11 @@
 #pragma once
-#include <rArrayFilter.h>
+#include <rPointFilter.h>
 #include <rConstants.h>
 #include <string>
 #include <vector>
 
 namespace rapio {
-class ThresholdFilter : public ArrayFilter {
+class ThresholdFilter : public PointFilter {
 public:
   /** Create a ThresholdFilter */
   ThresholdFilter() = default;
@@ -22,10 +22,9 @@ public:
   virtual bool
   parseOptions(const std::string& params) override;
 
-  /** Apply the filter from src to dst */
+  /** General threshold on float data */
   virtual void
-  process(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >       dst) override;
+  processPointData(const float * srcData, float * dstData, size_t totalElements) override;
 
 private:
 

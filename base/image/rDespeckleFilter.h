@@ -11,20 +11,28 @@ public:
   static void
   introduceSelf();
 
-  virtual std::string
+  std::string
   getHelpString() override;
-  // NOTE: Ensure this is the string version!
-  virtual bool
+  bool
   parseOptions(const std::string& params) override;
-  virtual void
-  process(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >       dst) override;
+
+  // Advertises support for 2D spatial data only
+  bool
+  supportsDimensions(size_t dims) const override
+  {
+    return (dims == 2);
+  }
+
+  // Type-safe 2D execution endpoint
+  void
+  process2D(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >        & dst) override;
 
 private:
   template <typename BndX, typename BndY>
   void
-  applyFilter(std::shared_ptr<Array<float, 2> > src,
-    std::shared_ptr<Array<float, 2> >           dst);
+  applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+    const std::shared_ptr<Array<float, 2> >          & dst);
 
   int myHalfSizeX     = 1;
   int myHalfSizeY     = 1;

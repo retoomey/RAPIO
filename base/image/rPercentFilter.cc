@@ -52,8 +52,8 @@ PercentFilter::getHelpString()
 // ---------------------------------------------------------
 template <typename BndX, typename BndY>
 void
-PercentFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                          dst)
+PercentFilter::applyFilter(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                         & dst)
 {
   auto& srcData = src->ref();
   auto& dstData = dst->ref();
@@ -101,8 +101,8 @@ PercentFilter::applyFilter(std::shared_ptr<Array<float, 2> > src,
 // The Runtime Dispatcher
 // ---------------------------------------------------------
 void
-PercentFilter::process(std::shared_ptr<Array<float, 2> > src,
-  std::shared_ptr<Array<float, 2> >                      dst)
+PercentFilter::process2D(const std::shared_ptr<Array<float, 2> >& src,
+  const std::shared_ptr<Array<float, 2> >                       & dst)
 {
   if (!src || !dst) { return; }
   RAPIO_DISPATCH_BOUNDARIES(myXBoundary, myYBoundary, applyFilter, src, dst);
