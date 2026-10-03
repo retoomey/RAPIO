@@ -134,7 +134,7 @@ LatLonHeightGrid::postRead(IOConfig& keys)
 void
 LatLonHeightGrid::preWrite(IOConfig& keys)
 {
-  sparse3D(); // Standard sparse of primary data (add dimension)
+  sparse3D(keys); // Standard sparse of primary data (add dimension)
 } // LatLonHeightGrid::preWrite
 
 void

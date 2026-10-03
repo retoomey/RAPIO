@@ -68,6 +68,25 @@ Information needed:
  -->
 <datatype subdirs="true"> 
 
+<!-- 
+    Global Sparse Grid Compression Settings:
+    Controls if and how DataGrids (LatLonGrid, RadialSet, etc.) are converted to a 
+    sparse run-length encoded format to save memory and file space.
+    
+    Attributes:
+    * mode: 
+        "none"  - Never use sparse encoding. Grids remain dense.
+        "guess" - Fast estimation by sampling rows. Bails out early if compression looks poor.
+        "hard"  - Calculates exact savings by counting all pixels.
+        "force" - Always sparse even if result is larger (for debugging).
+        
+    * threshold: 
+        A decimal ratio (0.0 to 1.0) representing the maximum allowed size of the sparse 
+        grid relative to the dense grid. E.g., "0.75" means the sparse data must take up 
+        less than 75% of the original space to be accepted.
+  -->
+  <sparse mode="guess" threshold="0.75" />
+
 <!-- Lookup table from file endings to io type.  Typically used with the
    file index or file output for direct read/write.  This information is
    normally in the metadata of the index.  Don't worry about compression

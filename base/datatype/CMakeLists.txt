@@ -2,6 +2,7 @@ add_library(rapio_datatype OBJECT
   rAttributeDataType.cc 
   rBinaryTable.cc 
   rDataGrid.cc
+  rDataGridSparse.cc
   rDataTable.cc
   rDataType.cc
   rFusionBinaryTable.cc

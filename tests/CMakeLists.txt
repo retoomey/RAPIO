@@ -26,6 +26,7 @@ set(RAPIO_TESTS
   rTestOptions
   rTestRandomForest
   rTestSparseVector
+  rTestSparse
   rTestTileJoin
   rTestTime
   rTestNetwork

@@ -32,6 +32,15 @@ ConfigIODataType::readSettings(std::shared_ptr<PTreeData> d)
     auto datatype = topTree.getChildOptional("datatype");
     if (datatype != nullptr) {
       // ----------------------------------------------------------
+      // <sparse>
+      auto sparseNode = datatype->getChildOptional("sparse");
+      if (sparseNode != nullptr) {
+        std::string modeStr = sparseNode->getAttr("mode", std::string(IOConfig::SPARSE_MODE_GUESS));
+        float thresh        = sparseNode->getAttr("threshold", IOConfig::getGlobalSparseThreshold());
+        IOConfig::setGlobalSparseDefaults(modeStr, thresh);
+      }
+
+      // ----------------------------------------------------------
       // <suffixes> database
       auto suffixes = datatype->getChildOptional("suffixes");
       if (suffixes != nullptr) {

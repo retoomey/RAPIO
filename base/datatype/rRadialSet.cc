@@ -343,7 +343,7 @@ RadialSet::postRead(IOConfig& keys)
 void
 RadialSet::preWrite(IOConfig& keys)
 {
-  sparse2D(); // Standard sparse of primary data (add dimension)
+  sparse2D(keys); // Standard sparse of primary data (add dimension)
 }
 
 void

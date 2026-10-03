@@ -187,8 +187,7 @@ LatLonGrid::postRead(IOConfig& keys)
 void
 LatLonGrid::preWrite(IOConfig& keys)
 {
-  // FIXME: Settings for sparse right
-  sparse2D(); // Standard sparse of primary data (add dimension)
+  sparse2D(keys); // Standard sparse of primary data (add dimension)
 }
 
 void

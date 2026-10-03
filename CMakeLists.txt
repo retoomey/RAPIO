@@ -94,7 +94,8 @@ include(CheckCXXCompilerFlag)
 
 set(CXX_STANDARD_FALLBACK 11)
 
-foreach(std 20 17 14 11)
+#foreach(std 20 17 14 11)
+foreach(std 17 14 11)
   string(CONCAT flag "-std=c++" ${std})
   check_cxx_compiler_flag(${flag} COMPILER_SUPPORTS_CXX${std})
   if(COMPILER_SUPPORTS_CXX${std})

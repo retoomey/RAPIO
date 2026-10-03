@@ -14,6 +14,7 @@ BOOST_WRAP_PUSH
 BOOST_WRAP_POP
 
 #include <vector>
+#include <array>
 #include <stdexcept>
 
 namespace rapio {
@@ -370,9 +371,6 @@ public:
   std::shared_ptr<PTreeData>
   createMetadata();
 
-  /** Default header for RAPIO */
-  static double SparseThreshold;
-
   /** Unsparse a collection of 2D array information */
   void
   unsparse2D(size_t   num_x,
@@ -401,11 +399,11 @@ public:
 
   /** Sparse a collection of 3D array information, backing up the original data. */
   bool
-  sparse3D();
+  sparse3D(IOConfig& keys);
 
   /** Sparse a collection of 2D array information, backing up the original data. */
   bool
-  sparse2D();
+  sparse2D(IOConfig& keys);
 
   /** Restore back up of original data from sparsing, make as non-sparse again */
   void
@@ -431,5 +429,14 @@ protected:
 
   /** Nodes of generic array data */
   std::vector<std::shared_ptr<DataArray> > myNodes;
+
+private:
+  template <size_t N>
+  bool
+  sparseT(IOConfig& keys);
+
+  template <size_t N>
+  void
+  unsparseT(IOConfig& keys, const std::array<std::string, N>& axisNames, const std::string& countName);
 };
 }

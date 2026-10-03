@@ -71,6 +71,7 @@ notifier/rFMLRecordNotifier.cc
 rHeartbeat.cc
 rIJK.cc
 index/rIndexType.cc
+rIOConfig.cc
 rIODataType.cc
 rIOFakeDataGenerator.cc
 rIOFakeDataType.cc
