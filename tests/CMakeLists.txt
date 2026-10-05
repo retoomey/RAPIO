@@ -56,7 +56,3 @@ target_link_libraries(rTestStage2Data PRIVATE
   ZLIB::ZLIB
 )
 addRAPIOTest(rTestStage2Data COMMAND rTestStage2Data --log_level=test_suite)
-
-# Files we need in the build folder
-configure_file(testxml.xml testxml.xml)
-configure_file(testjson.json testjson.json)
