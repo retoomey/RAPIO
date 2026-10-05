@@ -16,6 +16,7 @@ class PTreeNode {
   friend class PTreeData;
   friend class IOXML;
   friend class IOJSON;
+  friend class IOYAML;
 
 protected:
 

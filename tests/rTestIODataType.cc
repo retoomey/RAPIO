@@ -2,184 +2,208 @@
 #include "rBOOSTTest.h"
 
 #include "rIODataType.h"
+#include "rPTreeData.h"
 #include <iostream>
-#include <fstream> // g++ 13/14
+#include <fstream>
+#include <vector>
+#include <string>
 
 using namespace rapio;
 
 BOOST_AUTO_TEST_SUITE(_IODataType_)
 
-BOOST_AUTO_TEST_CASE(_IODataType_XML)
-{
-  // 1. Test reading XML from a buffer
-  // Read the raw data the hard way so we can send it
-  // to the builder to parse
-  std::ostringstream buf;
-  std::ifstream input("testxml.xml");
+// Helper function to test full IO round trips for any format
+void testFormatRoundTrip(const std::string& format, const std::string& fileExt, const std::string& rawData) {
+  std::string filename = "test_roundtrip." + fileExt;
 
-  buf << input.rdbuf();
-  std::string gotit = buf.str().c_str();
-  std::vector<char> buffer;
+  // 0. Bootstrap: Write the initial raw data to disk so we are self-contained
+  std::ofstream out(filename, std::ios::binary);
+  out.write(rawData.data(), rawData.size());
+  out.close();
 
-  for (auto x:gotit) {
-    buffer.push_back(x);
-  }
-  // Code fixes this now buffer.push_back('\0');
-  auto outREADBUFFER = IODataType::readBuffer<PTreeData>(buffer, "xml");
+  // 1. Read from file
+  auto dtFromFile = IODataType::read<PTreeData>(filename, format);
+  BOOST_REQUIRE_MESSAGE(dtFromFile != nullptr, "Failed to read " << format << " from file");
 
-  BOOST_CHECK_EQUAL((outREADBUFFER != nullptr), true);
+  // 2. Write to memory buffer
+  std::vector<char> buffer1;
+  IOConfig keys1;
+  keys1.set("suffix", fileExt);
+  size_t bytesWritten1 = IODataType::writeBuffer(dtFromFile, buffer1, keys1, format);
+  BOOST_REQUIRE_MESSAGE(bytesWritten1 > 0, "Failed to write " << format << " to buffer");
 
-  // 2. Read a URL to a PTreeData using xml parser
-  const URL loc("testxml.xml");
-  // std::cerr << loc.toString() << "\n";
-  auto outREADFILE = IODataType::read<PTreeData>(loc.toString(), "xml");
+  // 3. Read back from memory buffer
+  auto dtFromBuffer = IODataType::readBuffer<PTreeData>(buffer1, format);
+  BOOST_REQUIRE_MESSAGE(dtFromBuffer != nullptr, "Failed to read " << format << " from buffer");
 
-  BOOST_CHECK_EQUAL((outREADFILE != nullptr), true);
-  // FIXME: could check actual nodes.  If it failed it should be zero
+  // 4. Write back to file
+  IOConfig keys2;
+  keys2.set("suffix", fileExt);
+  keys2.set("filepathmode", "direct");
+  keys2.set("filename", filename);
+  bool writeSuccess = IODataType::write(dtFromBuffer, filename, format);
+  BOOST_REQUIRE_MESSAGE(writeSuccess, "Failed to write " << format << " back to file");
 
-  // 3. Write the PTreeData out to a char buffer
-  std::vector<char> bufferout;
+  // 5. Read from file AGAIN
+  auto dtFromFile2 = IODataType::read<PTreeData>(filename, format);
+  BOOST_REQUIRE_MESSAGE(dtFromFile2 != nullptr, "Failed to read " << format << " from file second time");
 
-  IOConfig keys;
+  // 6. Write to second memory buffer
+  std::vector<char> buffer2;
+  size_t bytesWritten2 = IODataType::writeBuffer(dtFromFile2, buffer2, keys2, format);
 
-  IODataType::writeBuffer(outREADFILE, bufferout, keys, "xml");
-  // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
-  // for(auto x:bufferout){
-  //  std::cerr << x;
-  // }
-  // std::cerr << "\n\n";
-  // for(auto x:buffer){
-  //  std::cerr << x;
-  // }
-  // std::cerr << "\n";
-
-  // 4. Create a new PTreeData item from the new char buffer
-  auto newone = IODataType::readBuffer<PTreeData>(bufferout, "xml");
-
-  BOOST_CHECK_EQUAL((newone != nullptr), true);
-
-  BOOST_CHECK_EQUAL((bufferout.size() > 0), true);
-  BOOST_CHECK_EQUAL((buffer.size() > 0), true);
-
-  // Write the new bufferout to disk.  Git diff will now show
-  // the difference if it happened.
-  IODataType::write(newone, "testxml.xml");
-
-  // 5. Read back URL to a PTreeData using xml parser
-  auto outREADFILE2 = IODataType::read<PTreeData>(loc.toString(), "xml");
-
-  BOOST_CHECK_EQUAL((outREADFILE2 != nullptr), true);
-  // FIXME: could check actual nodes.  If it failed it should be zero
-
-  // 6. Write the PTreeData out to a char buffer
-  std::vector<char> bufferout2;
-
-  IODataType::writeBuffer(outREADFILE2, bufferout2, keys, "xml");
-  // std::cerr << "Writing buffer to xml gives -------------------------------------\n";
-
-  // Finally check the two buffers they should be equal size and > 0
-  BOOST_CHECK_EQUAL((bufferout2.size() > 0), true);
-  BOOST_CHECK_EQUAL(bufferout.size(), bufferout2.size());
-  std::cerr << '*';
-  for (auto x:bufferout) {
-    std::cerr << x;
-  }
-  std::cerr << "*\n";
-  std::cerr << '*';
-  for (auto x:bufferout2) {
-    std::cerr << x;
-  }
-  std::cerr << "*\n";
-
-  /*
-   * BOOST_CHECK_EQUAL(t.getSecondsSinceEpoch(), 100);
-   * BOOST_CHECK(Arith::feq(t.getFractional(), 0.0));
-   * t += TimeDuration::Minutes(2);
-   * BOOST_CHECK(t.getSecondsSinceEpoch() == 220);
-   */
+  // 7. Verify buffers match (Proves serialization/deserialization is deterministic)
+  BOOST_CHECK_EQUAL(buffer1.size(), buffer2.size());
+  
+  // Clean up
+  remove(filename.c_str());
 }
 
-BOOST_AUTO_TEST_CASE(_IODataType_JSON)
+BOOST_AUTO_TEST_CASE(_IODataType_XML_RoundTrip)
 {
-  // 1. Test reading JSON from a buffer
-  // Read the raw data the hard way so we can send it
-  // to the builder to parse
-  std::ostringstream buf;
-  std::ifstream input("testjson.json");
-
-  buf << input.rdbuf();
-  std::string gotit = buf.str().c_str();
-  std::vector<char> buffer;
-
-  for (auto x:gotit) {
-    buffer.push_back(x);
-  }
-  // Code fixes this now buffer.push_back('\0');
-  auto outREADBUFFER = IODataType::readBuffer<PTreeData>(buffer, "json");
-
-  BOOST_CHECK_EQUAL((outREADBUFFER != nullptr), true);
-
-  // 2. Read a URL to a PTreeData using xml parser
-  const URL loc("testjson.json");
-  // std::cerr << loc.toString() << "\n";
-  auto outREADFILE = IODataType::read<PTreeData>(loc.toString(), "json");
-
-  BOOST_CHECK_EQUAL((outREADFILE != nullptr), true);
-  // FIXME: could check actual nodes.  If it failed it should be zero
-
-  // 3. Write the PTreeData out to a char buffer
-  std::vector<char> bufferout;
-
-  IOConfig keys;
-
-  IODataType::writeBuffer(outREADFILE, bufferout, keys, "json");
-  // std::cerr << "Writing buffer to json gives -------------------------------------\n";
-  // for(auto x:bufferout){
-  //  std::cerr << x;
-  // }
-  // std::cerr << "\n\n";
-  // for(auto x:buffer){
-  //  std::cerr << x;
-  // }
-  // std::cerr << "\n";
-
-  // 4. Create a new PTreeData item from the new char buffer
-  auto newone = IODataType::readBuffer<PTreeData>(bufferout, "json");
-
-  BOOST_CHECK_EQUAL((newone != nullptr), true);
-
-  BOOST_CHECK_EQUAL((bufferout.size() > 0), true);
-  BOOST_CHECK_EQUAL((buffer.size() > 0), true);
-
-  // Write the new bufferout to disk.  Git diff will now show
-  // the difference if it happened.
-  IODataType::write(newone, "testjson.json");
-
-  // 5. Read back URL to a PTreeData using xml parser
-  auto outREADFILE2 = IODataType::read<PTreeData>(loc.toString(), "json");
-
-  BOOST_CHECK_EQUAL((outREADFILE2 != nullptr), true);
-  // FIXME: could check actual nodes.  If it failed it should be zero
-
-  // 6. Write the PTreeData out to a char buffer
-  std::vector<char> bufferout2;
-
-  IODataType::writeBuffer(outREADFILE2, bufferout2, keys, "json");
-  // std::cerr << "Writing buffer to json gives -------------------------------------\n";
-
-  // Finally check the two buffers they should be equal size and > 0
-  BOOST_CHECK_EQUAL((bufferout2.size() > 0), true);
-  BOOST_CHECK_EQUAL(bufferout.size(), bufferout2.size());
-  // std::cerr << '*';
-  // for (auto x:bufferout) {
-  //   std::cerr << x;
-  // }
-  // std::cerr << "*\n";
-  // std::cerr << '*';
-  // for (auto x:bufferout2) {
-  //   std::cerr << x;
-  // }
-  // std::cerr << "*\n";
+  std::string xmlData = 
+    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    "<w2algxml>\n"
+    "  <program>TestProg</program>\n"
+    "  <inputs>\n"
+    "    <item><name>Reflectivity</name></item>\n"
+    "  </inputs>\n"
+    "</w2algxml>\n";
+  testFormatRoundTrip("xml", "xml", xmlData);
 }
 
-BOOST_AUTO_TEST_SUITE_END();
+BOOST_AUTO_TEST_CASE(_IODataType_JSON_RoundTrip)
+{
+  std::string jsonData = 
+    "{\n"
+    "  \"w2algxml\": {\n"
+    "    \"program\": \"TestProg\",\n"
+    "    \"inputs\": [\n"
+    "      { \"name\": \"Reflectivity\" }\n"
+    "    ]\n"
+    "  }\n"
+    "}\n";
+  testFormatRoundTrip("json", "json", jsonData);
+}
+
+BOOST_AUTO_TEST_CASE(_IODataType_YAML_RoundTrip)
+{
+  std::string yamlData = 
+    "w2algxml:\n"
+    "  program: TestProg\n"
+    "  inputs:\n"
+    "    - name: Reflectivity\n";
+  testFormatRoundTrip("yaml", "yaml", yamlData);
+}
+
+// The Ultimate Integration Test: YAML -> JSON -> XML
+BOOST_AUTO_TEST_CASE(_IODataType_CrossFormat_Translation)
+{
+  std::string yamlData = 
+    "w2algxml:\n"
+    "  program: QPE_Estimator\n"
+    "  enabled: true\n"
+    "  inputs:\n"
+    "    - name: Reflectivity\n"
+    "      folder: /data/radar\n";
+
+  // 1. Read YAML from memory
+  std::vector<char> yamlBuf(yamlData.begin(), yamlData.end());
+  yamlBuf.push_back('\0');
+  auto dtYaml = IODataType::readBuffer<PTreeData>(yamlBuf, "yaml");
+  BOOST_REQUIRE(dtYaml != nullptr);
+
+  // Verify internal structure parsed correctly
+  auto tree = dtYaml->getTree();
+  BOOST_CHECK_EQUAL(tree->get<std::string>("w2algxml.program", ""), "QPE_Estimator");
+  BOOST_CHECK_EQUAL(tree->get<std::string>("w2algxml.enabled", ""), "true");
+
+  // 2. Write tree out to JSON buffer
+  std::vector<char> jsonBuf;
+  IOConfig jsonKeys;
+  jsonKeys.set("suffix", "json");
+  jsonKeys.set("indent", "true");
+  IODataType::writeBuffer(dtYaml, jsonBuf, jsonKeys, "json");
+  BOOST_REQUIRE(jsonBuf.size() > 0);
+
+  // 3. Read JSON buffer back into a new tree
+  auto dtJson = IODataType::readBuffer<PTreeData>(jsonBuf, "json");
+  BOOST_REQUIRE(dtJson != nullptr);
+
+  // 4. Write tree out to XML buffer
+  std::vector<char> xmlBuf;
+  IOConfig xmlKeys;
+  xmlKeys.set("suffix", "xml");
+  IODataType::writeBuffer(dtJson, xmlBuf, xmlKeys, "xml");
+  BOOST_REQUIRE(xmlBuf.size() > 0);
+
+  // 5. Read XML buffer back into a final tree
+  auto dtXml = IODataType::readBuffer<PTreeData>(xmlBuf, "xml");
+  BOOST_REQUIRE(dtXml != nullptr);
+
+  // 6. Verify the final XML tree still holds the original YAML sequence data
+  auto finalTree = dtXml->getTree();
+  BOOST_CHECK_EQUAL(finalTree->get<std::string>("w2algxml.program", ""), "QPE_Estimator");
+  
+  // Verify the array mapped correctly to <item> tags in XML
+  auto inputs = finalTree->getChildOptional("w2algxml.inputs");
+  BOOST_REQUIRE(inputs != nullptr);
+  auto items = inputs->getChildren("item");
+  BOOST_REQUIRE_EQUAL(items.size(), 1);
+  BOOST_CHECK_EQUAL(items[0].get<std::string>("name", ""), "Reflectivity");
+  BOOST_CHECK_EQUAL(items[0].get<std::string>("folder", ""), "/data/radar");
+}
+
+// Test translating legacy XML into modern YAML
+BOOST_AUTO_TEST_CASE(_IODataType_XML_to_YAML_Translation)
+{
+  std::string xmlData = 
+    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    "<w2algxml>\n"
+    "  <program>QPE_Estimator</program>\n"
+    "  <inputs>\n"
+    "    <item>\n"
+    "      <name>Reflectivity</name>\n"
+    "      <folder>/data/radar/KTLX</folder>\n"
+    "    </item>\n"
+    "    <item>\n"
+    "      <name>Velocity</name>\n"
+    "      <folder>/data/radar/KTLX</folder>\n"
+    "    </item>\n"
+    "  </inputs>\n"
+    "</w2algxml>\n";
+
+  // 1. Read XML from memory
+  std::vector<char> xmlBuf(xmlData.begin(), xmlData.end());
+  xmlBuf.push_back('\0');
+  auto dtXml = IODataType::readBuffer<PTreeData>(xmlBuf, "xml");
+  BOOST_REQUIRE(dtXml != nullptr);
+
+  // 2. Write tree out to YAML buffer
+  std::vector<char> yamlBuf;
+  IOConfig yamlKeys;
+  yamlKeys.set("suffix", "yaml");
+  IODataType::writeBuffer(dtXml, yamlBuf, yamlKeys, "yaml");
+  BOOST_REQUIRE(yamlBuf.size() > 0);
+
+  // 3. Read YAML buffer back into a new tree to verify it is valid YAML
+  auto dtYaml = IODataType::readBuffer<PTreeData>(yamlBuf, "yaml");
+  BOOST_REQUIRE(dtYaml != nullptr);
+
+  // 4. Verify the data survived the XML -> YAML -> PTree roundtrip
+  auto finalTree = dtYaml->getTree();
+  BOOST_CHECK_EQUAL(finalTree->get<std::string>("w2algxml.program", ""), "QPE_Estimator");
+  
+  // Verify the array mapped correctly
+  auto inputs = finalTree->getChildOptional("w2algxml.inputs");
+  BOOST_REQUIRE(inputs != nullptr);
+  
+  // Because we read it back from YAML, our heuristic should still see them as "item"s 
+  // or array elements depending on how the YAML parsed.
+  auto items = inputs->getChildren("item");
+  BOOST_REQUIRE_EQUAL(items.size(), 2);
+  BOOST_CHECK_EQUAL(items[0].get<std::string>("name", ""), "Reflectivity");
+  BOOST_CHECK_EQUAL(items[1].get<std::string>("name", ""), "Velocity");
+}
+
+BOOST_AUTO_TEST_SUITE_END()

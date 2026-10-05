@@ -100,7 +100,7 @@ Information needed:
     <file suffix="jpg" io="image"/>
     <file suffix="mrmstile" io="image"/>
     <file suffix="xml" io="xml"/>
-    <file suffix="json" io="json"/>
+    <file suffix="json" io="yaml"/>
     <file suffix="raw" io="raw"/>
     <file suffix="shp" io="gdal"/>
     <file suffix="txt" io="text"/>
@@ -110,6 +110,8 @@ Information needed:
     <file suffix="grb2" io="wgrib"/>
     <file suffix="pal" io="file"/>
     <file suffix="nids" io="nids"/>
+    <file suffix="yaml" io="yaml"/>
+    <file suffix="yml" io="yaml"/>
   </suffixes>
 
 <!-- Settings for the built in XML reader --> 
@@ -218,6 +220,9 @@ Information needed:
   </io>
   <io names="csv" module="librapiocsv.so">
     <output />
+  </io>
+  <io names="yaml" module="librapioyaml.so">
+    <output indent="true"/>
   </io>
 
   <io names="nids" module="librapionids.so">

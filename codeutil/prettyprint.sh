@@ -90,6 +90,8 @@ EXCLUDE_LIST=(
   "**/w*.h"
   "base/croncpp.h" # Special stuff in here not our code either
   "programs/polar/**.*" # Ignore polar for now
+  "modules/ioyaml/rapidyaml.h" # Ignore yaml lib file
+  "modules/iocsv/rapidcsv.h" # Ignore csv lib file
 )
 
 # Leverage the helper to build the TARGET_FILES array

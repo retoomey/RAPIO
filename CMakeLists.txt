@@ -54,6 +54,7 @@ option(RAPIO_BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)
 option(RAPIO_USE_NCEPLIBS_GRIB2 "Use NCEPLIBS-g2c library instead of system grib2" YES)
 option(RAPIO_BUILD_TEXT_MODULE "Build Text module (writing text DataTypes)" YES)
 option(RAPIO_BUILD_CSV_MODULE "Build CSV module (reading/writing CSV)" YES)
+option(RAPIO_BUILD_YAML_MODULE "Build YAML module" YES)
 
 option(RAPIO_BUILD_RDM "Build RDM supervisor application, pulling RDM" NO)
 
@@ -350,7 +351,12 @@ if (RAPIO_BUILD_GDAL_MODULE)
   add_subdirectory(modules/iogdal)
 endif (RAPIO_BUILD_GDAL_MODULE)
 
+if (RAPIO_BUILD_YAML_MODULE)
+  add_subdirectory(modules/ioyaml)
+endif (RAPIO_BUILD_YAML_MODULE)
+
 set(jasper OFF)
+
 set(openjpeg OFF)
 if (RAPIO_BUILD_GRIB2_MODULE)
 

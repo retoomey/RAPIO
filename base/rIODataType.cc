@@ -306,6 +306,16 @@ IODataType::writeout(std::shared_ptr<DataType> dt,
   // I still need to 'fix' this I think
   outputParams.set("directfile", directFile ? "true" : "false"); // don't like this right now it's a suffix flag
 
+  // Set the suffix to the end of file name (allows modules to 'switch' based
+  // on filenames, say ioimage that can do png, jpg, etc. or ioyaml that can do .yml, .json
+  // Only set if caller didn't explicitly choose/set it.
+  if (outputParams.get("suffix").empty()) {
+    std::string ext = aURL.getSuffixLC();
+    if (!ext.empty()) {
+      outputParams.set("suffix", ext);
+    }
+  }
+
   // Pass map to children.  Note: children can use the map to reply back to caller as well
   bool success = encodeDataType(dt, outputParams);
 
