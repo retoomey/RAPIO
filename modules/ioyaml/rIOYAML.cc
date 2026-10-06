@@ -28,7 +28,7 @@ createRAPIOIO(void)
 std::string
 IOYAML::getHelpString(const std::string& key)
 {
-  return "builder for reading/writing YAML and JSON formatted data using RapidYAML.";
+  return "builder for reading/writing YAML, JSON, and GeoJSON formatted data using RapidYAML.";
 }
 
 void
@@ -82,7 +82,6 @@ rymlToPtree(ryml::NodeRef node, boost::property_tree::ptree& pt)
 static void
 ptreeToRyml(const boost::property_tree::ptree& pt, ryml::NodeRef node)
 {
-  fLogSevere("********************* CALLING PTREE TO RYML");
   if (pt.empty()) {
     // Safely copy the string into the YAML tree's memory arena and set the value.
     std::string val = pt.get_value<std::string>();
@@ -301,7 +300,7 @@ IOYAML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& bu
     Strings::toLower(suffix);
 
     std::string out;
-    if (suffix == "json") {
+    if (suffix == "json" || suffix == "geojson") {
       std::string minified = ryml::emitrs_json<std::string>(tree);
       // If they want it pretty (indent=true is stored in IOConfig by default if requested)
       if (config.get("indent") == "true") {
@@ -379,7 +378,6 @@ IOYAML::encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys)
   // Grab the suffix, default to yaml if empty
   std::string suffix = keys.get("suffix");
 
-  fLogSevere("Incoming suffix is '{}'", suffix);
   if (suffix.empty()) {
     suffix = "yaml";
   }
@@ -420,8 +418,15 @@ IOYAML::encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys)
     successful = postWriteProcess(filename, keys);
   }
   if (successful) {
-    std::string writerName = (suffix == "json") ? "JSON" : "YAML";
-    showFileInfo(writerName + " writer: ", keys);
+    std::string extra;
+    if (suffix == "json" || suffix == "geojson") {
+      bool indented = (keys.get("indent") == "true");
+      extra = fmt::format(" (mode: {} indent: {})", suffix, indented ? "true" : "false");
+    } else {
+      extra = fmt::format(" (mode: {})", suffix);
+    }
+    
+    showFileInfo("YAML writer: ", keys, extra);
   }
 
   return successful;
