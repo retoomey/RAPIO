@@ -4,6 +4,9 @@
 #include <rIOURL.h>
 #include <rStrings.h>
 
+// Default built in DataType support
+#include "rYAMLProbSevere.h"
+
 // Include the RapidYAML single header
 // We 'might' use the single cpp as well, will have
 // to check compile times, etc.
@@ -23,6 +26,29 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
+}
+
+// Using sniffers to look for fields that match a known DataType
+using PTreeSnifferFunc = bool (*)(const std::shared_ptr<rapio::PTreeData>&, std::string&);
+
+// ---------------------------------------------------------
+// Format Identifiers (Sniffers)
+// ---------------------------------------------------------
+
+bool
+checkProbSevere(const std::shared_ptr<rapio::PTreeData>& yaml, std::string& outKey)
+{
+  auto root = yaml->getTree();
+
+  if (!root) { return false; }
+
+  std::string typeId = root->get<std::string>("product", "");
+
+  if (typeId.find("ProbSevere") != std::string::npos) {
+    outKey = "ProbSevere";
+    return true;
+  }
+  return false;
 }
 
 std::string
@@ -49,6 +75,8 @@ IOYAML::initialize()
     };
 
   ryml::set_callbacks(cb);
+
+  YAMLProbSevere::introduceSelf(this);
 }
 
 // Recursive helper to map RapidYAML nodes directly into Boost Property Tree
@@ -184,21 +212,75 @@ IOYAML::createDataTypeFromBuffer(std::vector<char>& buffer)
   return readPTreeDataBuffer(buffer);
 }
 
+#if 0
 std::shared_ptr<DataType>
 IOYAML::createDataType(IOConfig& config)
 {
   const URL url(config.getParamURL());
+
+  fLogInfo("YAML reader: {}", url.toString());
   std::vector<char> buf;
 
   if (IOURL::read(url, buf) > 0) {
     std::shared_ptr<PTreeData> yaml = readPTreeDataBuffer(buf);
     if (yaml) {
+      // 1. Identify JSON payload type (based on ProbSevere format conventions)
+      std::string typeId = yaml->getTree()->get<std::string>("product", "");
+
+      // 2. See if we have a registered handler for this type
+      if (!typeId.empty()) {
+        auto fmt  = getIOSpecializer(typeId);
+        auto pFmt = std::dynamic_pointer_cast<PTreeDataSpecializer>(fmt);
+        if (pFmt) {
+          return pFmt->downcastPTreeDataType(config, yaml);
+        }
+      }
       return yaml;
     }
   }
   fLogSevere("Unable to create YAML/JSON from {}", url.toString());
   return nullptr;
 }
+
+#endif // if 0
+
+std::shared_ptr<DataType>
+IOYAML::createDataType(IOConfig& config)
+{
+  const URL url(config.getParamURL());
+
+  fLogInfo("YAML reader: {}", url.toString());
+  std::vector<char> buf;
+
+  if (IOURL::read(url, buf) > 0) {
+    std::shared_ptr<PTreeData> yaml = readPTreeDataBuffer(buf);
+    if (yaml) {
+      // 1. Ask all registered specializers if they recognize this payload
+      for (const auto& pair : mySpecializers) {
+        auto pFmt = std::dynamic_pointer_cast<PTreeDataSpecializer>(pair.second);
+        if (pFmt && pFmt->canHandle(yaml)) {
+          fLogInfo("Found a YAML specializer that can handle it");
+          return pFmt->downcastPTreeDataType(config, yaml);
+        }
+      }
+
+      // 2. Fallback: If no specializer claimed it, check if it explicitly defines a DataType
+      std::string typeId = yaml->getTree()->get<std::string>("DataType", "");
+      if (!typeId.empty()) {
+        auto fmt  = getIOSpecializer(typeId);
+        auto pFmt = std::dynamic_pointer_cast<PTreeDataSpecializer>(fmt);
+        if (pFmt) {
+          return pFmt->downcastPTreeDataType(config, yaml);
+        }
+      }
+
+      // 3. Return generic PTreeData if it's unrecognized
+      return yaml;
+    }
+  }
+  fLogSevere("Unable to create YAML/JSON from {}", url.toString());
+  return nullptr;
+} // IOYAML::createDataType
 
 #if 0
 size_t
@@ -300,7 +382,7 @@ IOYAML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& bu
     Strings::toLower(suffix);
 
     std::string out;
-    if (suffix == "json" || suffix == "geojson") {
+    if ((suffix == "json") || (suffix == "geojson")) {
       std::string minified = ryml::emitrs_json<std::string>(tree);
       // If they want it pretty (indent=true is stored in IOConfig by default if requested)
       if (config.get("indent") == "true") {
@@ -419,13 +501,13 @@ IOYAML::encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys)
   }
   if (successful) {
     std::string extra;
-    if (suffix == "json" || suffix == "geojson") {
+    if ((suffix == "json") || (suffix == "geojson")) {
       bool indented = (keys.get("indent") == "true");
       extra = fmt::format(" (mode: {} indent: {})", suffix, indented ? "true" : "false");
     } else {
       extra = fmt::format(" (mode: {})", suffix);
     }
-    
+
     showFileInfo("YAML writer: ", keys, extra);
   }
 

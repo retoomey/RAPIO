@@ -153,6 +153,9 @@ private:
  */
 class PTreeDataSpecializer : public IOSpecializer {
 public:
+  /** Can we specialize this PTreeData? */
+  virtual bool canHandle(std::shared_ptr<PTreeData> tree){ return false; }
+
   virtual std::shared_ptr<DataType>
   downcastPTreeDataType(IOConfig& config, std::shared_ptr<DataType> in) = 0;
 

@@ -21,6 +21,7 @@ add_library(rapio_datatype OBJECT
   rMultiDataType.cc
   rNetcdfDataType.cc
   rPTreeData.cc
+  rProbSevere.cc
   rRadialSet.cc
   rRadialSetIterator.cc
   rRadialSetProjection.cc

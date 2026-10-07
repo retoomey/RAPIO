@@ -6,23 +6,32 @@
 
 using namespace rapio;
 
-void TextDataTable::introduceSelf(IOText * owner) {
+void
+TextDataTable::introduceSelf(IOText * owner)
+{
   std::shared_ptr<IOSpecializer> io = std::make_shared<TextDataTable>();
+
   owner->introduce("DataTable", io);
 }
 
-std::shared_ptr<DataType> TextDataTable::read(IOConfig& config) {
-  return nullptr; 
+std::shared_ptr<DataType>
+TextDataTable::read(IOConfig& config)
+{
+  return nullptr;
 }
 
-bool TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys) {
+bool
+TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys)
+{
   auto table = std::dynamic_pointer_cast<DataTable>(dt);
+
   if (!table) {
     fLogSevere("Not a DataTable.");
     return false;
   }
 
   std::ostream& o = *IOText::theFile;
+
   o << "RAPIO DataTable Dump\n";
   o << "Rows: " << table->getRowCount() << "\n\n";
 
@@ -37,10 +46,11 @@ bool TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys) {
 
   // Pass 1: Calculate max widths for each column
   std::vector<size_t> colWidths(numCols, 0);
+
   for (size_t c = 0; c < numCols; ++c) {
     colWidths[c] = colNames[c].length();
     DataColumn& col = table->getColumn(colNames[c]);
-    
+
     for (size_t r = 0; r < numRows; ++r) {
       size_t len = 0;
       if (col.getType() == DataColumn::Type::Integer) {
@@ -55,7 +65,8 @@ bool TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys) {
   }
 
   const size_t padding = 2; // Spacing between columns
-  size_t totalWidth = 0;
+  size_t totalWidth    = 0;
+
   for (size_t c = 0; c < numCols; ++c) {
     totalWidth += colWidths[c];
   }
@@ -76,7 +87,7 @@ bool TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys) {
     for (size_t c = 0; c < numCols; ++c) {
       DataColumn& col = table->getColumn(colNames[c]);
       std::string valStr;
-      
+
       if (col.getType() == DataColumn::Type::Integer) {
         valStr = fmt::format("{}", col.getIntVector()[r]);
       } else if (col.getType() == DataColumn::Type::Float) {
@@ -84,11 +95,11 @@ bool TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys) {
       } else {
         valStr = col.getStringVector()[r];
       }
-      
+
       o << fmt::format("{:<{}}", valStr, colWidths[c] + (c < numCols - 1 ? padding : 0));
     }
     o << "\n";
   }
 
   return true;
-}
+} // TextDataTable::write

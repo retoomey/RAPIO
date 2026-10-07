@@ -4,4 +4,5 @@ addRAPIOModule(rapiotext SHARED
   rTextBinaryTable.cc
   rTextDataTable.cc
   rTextTimeHeightGrid.cc
+  rTextPTreeData.cc
 )

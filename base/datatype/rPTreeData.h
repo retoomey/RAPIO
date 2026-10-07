@@ -199,14 +199,6 @@ public:
     return myRoot;
   }
 
-  /** Move this datatype contents to another. */
-  void
-  Move(std::shared_ptr<PTreeData> to)
-  {
-    DataType::Move(to);
-    to->myRoot = myRoot;
-  }
-
 protected:
 
   /** Root of the property tree */
