@@ -8,6 +8,8 @@ namespace rapio {
 struct ProbSevereFeature {
   int             id = -1;
   float           probSevereVal = 0.0f;
+  float           u_motion      = 0.0f; // m/s
+  float           v_motion      = 0.0f; // m/s
   std::vector<LL> polygon;
 };
 
