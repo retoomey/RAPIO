@@ -4,13 +4,13 @@
 #include <string>
 
 namespace rapio {
-
 /** General CSV read/write module
  * @author Robert Toomey
  */
 class IOCSV : public IODataType {
 public:
-  virtual ~IOCSV() = default;
+  virtual
+  ~IOCSV() = default;
 
   virtual std::string
   getHelpString(const std::string& key) override;
@@ -24,5 +24,4 @@ public:
   virtual bool
   encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys) override;
 };
-
 } // namespace rapio

@@ -272,7 +272,17 @@ URL::getSuffixLC() const
   std::string suffix;
   auto pos = path.rfind('.');
 
-  if (pos != path.npos) { suffix = path.substr(pos + 1); }
+  if (pos != path.npos) {
+    suffix = path.substr(pos + 1);
+
+    // HARDEN: If the "suffix" starts with exactly 3 digits, it is the
+    // %/ms macro from the timestamp, not a real file extension.
+    if ((suffix.length() >= 3) && std::isdigit(suffix[0]) &&
+      std::isdigit(suffix[1]) && std::isdigit(suffix[2]))
+    {
+      return ""; // Reject it and return an empty suffix
+    }
+  }
   Strings::toLower(suffix);
   return (suffix);
 }
