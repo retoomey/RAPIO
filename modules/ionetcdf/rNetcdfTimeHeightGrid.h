@@ -4,10 +4,10 @@
 #include "rTimeHeightGrid.h"
 
 namespace rapio {
-
 class NetcdfTimeHeightGrid : public NetcdfDataGrid {
 public:
-  virtual ~NetcdfTimeHeightGrid();
+  virtual
+  ~NetcdfTimeHeightGrid();
 
   static void
   introduceSelf(IONetcdf * owner);
@@ -18,5 +18,4 @@ public:
   virtual bool
   writeNETCDF(int ncid, std::shared_ptr<DataType> dt, IOConfig& keys) override;
 };
-
 } // namespace rapio

@@ -45,10 +45,10 @@ foreach(TEST_NAME IN LISTS RAPIO_TESTS)
   addRAPIOTest(${TEST_NAME} COMMAND ${TEST_NAME} --log_level=test_suite)
 endforeach()
 
-# Special case for rTestStage2Data since it compiles an extra source file
+# Special case for rTestStage2Data.  It drives the underlying FusionBinaryTable
+# stream read directly, so it links only the core rapio library.
 add_executable(rTestStage2Data
   rTestStage2Data.cc
-  ../programs/fusion/rStage2Data.cc
 )
 target_link_libraries(rTestStage2Data PRIVATE
   Boost::unit_test_framework
@@ -56,3 +56,24 @@ target_link_libraries(rTestStage2Data PRIVATE
   ZLIB::ZLIB
 )
 addRAPIOTest(rTestStage2Data COMMAND rTestStage2Data --log_level=test_suite)
+
+# BinaryTable netcdf round-trip test.  This exercises the netcdf module, so it
+# only builds when netcdf is available.  The find_package results from the
+# module subdirectory are scoped there, so hunt again here.
+find_package(Netcdf QUIET)
+if(Netcdf_FOUND AND TARGET rapionetcdf)
+  add_executable(rTestBinaryTable rTestBinaryTable.cc)
+  target_include_directories(rTestBinaryTable PRIVATE
+    ${CMAKE_SOURCE_DIR}/modules/ionetcdf
+    ${Netcdf_INCLUDE_DIR}
+  )
+  target_link_libraries(rTestBinaryTable PRIVATE
+    Boost::unit_test_framework
+    rapio
+    rapionetcdf
+    ZLIB::ZLIB
+    ${Netcdf_LIBRARIES}
+  )
+  addRAPIOTest(rTestBinaryTable COMMAND rTestBinaryTable --log_level=test_suite)
+endif()
+

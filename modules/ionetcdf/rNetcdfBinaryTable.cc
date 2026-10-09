@@ -53,12 +53,102 @@ NetcdfBinaryTable::introduceSelf(IONetcdf * owner)
 std::shared_ptr<DataType>
 NetcdfBinaryTable::readNETCDF(int ncid, IOConfig& keys)
 {
-  fLogSevere("Unimplemented raw table, returning empty table");
-
   std::shared_ptr<BinaryTable> newOne = std::make_shared<BinaryTable>();
 
+  try {
+    // ------------------------------------------------------------
+    // GLOBAL ATTRIBUTES
+    // Do this first to allow subclasses to check/validate format
+    IONetcdf::getAttributes(ncid, NC_GLOBAL, newOne->getGlobalAttributes());
+
+    if (!newOne->initFromGlobalAttributes()) {
+      fLogSevere("Bad or missing global attributes in binary table.");
+      return (nullptr);
+    }
+
+    // ------------------------------------------------------------
+    // VARIABLES (columns)
+    //
+    int varcount = 0;
+
+    NETCDF(nc_inq_nvars(ncid, &varcount));
+
+    for (int i = 0; i < varcount; ++i) {
+      // Get the variable name, type, dimensions in one call
+      char name_in[NC_MAX_NAME + 1];
+      nc_type xtypep;
+      int ndimsp2;
+      int dimidsp[NC_MAX_VAR_DIMS];
+
+      NETCDF(nc_inq_var(ncid, i, name_in, &xtypep, &ndimsp2, dimidsp, nullptr));
+
+      const std::string name = name_in;
+
+      // We only support 1D columns, one per table dimension
+      if (ndimsp2 != 1) {
+        fLogSevere("Skipping netcdf binary table column '{}' since it is not 1D.", name);
+        continue;
+      }
+
+      size_t rowSize = 0;
+
+      NETCDF(nc_inq_dimlen(ncid, dimidsp[0], &rowSize));
+
+      // A units attribute is optional, defaults to dimensionless
+      std::string units = "dimensionless";
+
+      IONetcdf::getAtt(ncid, Constants::Units, units, i);
+
+      // Handle our stock types, mirroring the writer.
+      if (xtypep == NC_STRING) {
+        std::vector<char *> raw(rowSize, nullptr);
+
+        if (rowSize > 0) {
+          NETCDF(nc_get_var_string(ncid, i, &raw[0]));
+        }
+
+        std::vector<std::string> data(rowSize);
+
+        for (size_t r = 0; r < rowSize; ++r) {
+          data[r] = (raw[r] != nullptr) ? raw[r] : "";
+        }
+
+        if (rowSize > 0) {
+          nc_free_string(rowSize, &raw[0]);
+        }
+        newOne->addColumn(name, units, data);
+      } else if (xtypep == NC_FLOAT) {
+        std::vector<float> data(rowSize);
+
+        if (rowSize > 0) {
+          NETCDF(nc_get_var_float(ncid, i, &data[0]));
+        }
+        newOne->addColumn(name, units, data);
+      } else if (xtypep == NC_USHORT) {
+        std::vector<unsigned short> data(rowSize);
+
+        if (rowSize > 0) {
+          NETCDF(nc_get_var_ushort(ncid, i, &data[0]));
+        }
+        newOne->addColumn(name, units, data);
+      } else if (xtypep == NC_UBYTE) {
+        std::vector<unsigned char> data(rowSize);
+
+        if (rowSize > 0) {
+          NETCDF(nc_get_var_uchar(ncid, i, &data[0]));
+        }
+        newOne->addColumn(name, units, data);
+      } else {
+        fLogSevere(
+          "Netcdf reader, unknown binary table column type for '{}', skipping.", name);
+      }
+    }
+  } catch (const NetcdfException& ex) {
+    fLogSevere("Netcdf read error with binary table: {}", ex.getNetcdfStr());
+    return (nullptr);
+  }
   return (newOne);
-}
+} // NetcdfBinaryTable::readNETCDF
 
 bool
 NetcdfBinaryTable::writeNETCDF(int ncid,
@@ -68,8 +158,6 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
   try {
     std::shared_ptr<BinaryTable> pBinaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);
     BinaryTable& binaryTable = *pBinaryTable;
-    const float missing      = IONetcdf::MISSING_DATA; // Could be keys
-    const float rangeFolded  = IONetcdf::RANGE_FOLDED;
 
     // Generically write a binary table's stuff to netcdf.  This uses an API
     // within the binary table to avoid coupling and to allow dynamic expansion
@@ -167,13 +255,7 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
           // probably won't add many types to this...
           if (type == "string") {
             std::vector<std::string> data = binaryTable.getStringVector(name);
-            fLogSevere("Incoming string array is size {}", data.size());
             validateLength<std::string>(name, data, t.size);
-            fLogSevere("String array is now {}", data.size());
-
-            for (size_t zz = 0; zz < data.size(); zz++) {
-              fLogSevere("Value {} == {}", zz, data[zz]);
-            }
 
             // Convert c++ string array to char* fun fun. Copies so for large
             // string arrays
@@ -226,28 +308,11 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
       }
     }
 
-    // Add globals...
-    // FIXME: Binary table needs test case and work using
-    // the new arrays and attributes
-    // if (!IONetcdf::addGlobalAttr(ncid, binaryTable,
-    //  "BinaryTable")) { return (false); }
-    // Datatype and typename
-    NETCDF(IONetcdf::addAtt(ncid, Constants::TypeName, binaryTable.getTypeName()));
-    NETCDF(IONetcdf::addAtt(ncid, Constants::sDataType, "BinaryTable"));
-
-    // Space-time-ref: Latitude, Longitude, Height, Time and FractionalTime
-    Time aTime    = binaryTable.getTime();
-    LLH aLocation = binaryTable.getLocation();
-    NETCDF(IONetcdf::addAtt(ncid, Constants::Latitude, aLocation.getLatitudeDeg()));
-    NETCDF(IONetcdf::addAtt(ncid, Constants::Longitude, aLocation.getLongitudeDeg()));
-    NETCDF(IONetcdf::addAtt(ncid, Constants::Height, aLocation.getHeightKM() * 1000.0));
-    NETCDF(IONetcdf::addAtt(ncid, Constants::Time, aTime.getSecondsSinceEpoch()));
-    NETCDF(IONetcdf::addAtt(ncid, Constants::FractionalTime, aTime.getFractional()));
-
-    // float MISSING_DATA( Constants::MissingData );
-    // float RANGE_FOLDED( Constants::RangeFolded );
-    NETCDF(IONetcdf::addAtt(ncid, "MissingData", missing));
-    NETCDF(IONetcdf::addAtt(ncid, "RangeFolded", rangeFolded));
+    // Add globals using the standard attribute machinery.  This writes
+    // TypeName, DataType, space/time/reference and the missing data
+    // constants in the same way as the other netcdf writers.
+    binaryTable.updateGlobalAttributes(binaryTable.getDataType());
+    IONetcdf::setAttributes(ncid, NC_GLOBAL, binaryTable.getGlobalAttributes());
   } catch (const NetcdfException& ex) {
     fLogSevere("Netcdf write error with BinaryTable: {}", ex.getNetcdfStr());
     return (false);

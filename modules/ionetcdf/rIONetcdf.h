@@ -271,15 +271,24 @@ public:
   /** Convenience for declaring DataGrid variables */
   static
   std::vector<int>
-  declareGridVars(DataGrid& grid, const std::string& typeName,
+  declareGridVars(DataGrid& grid,
     const std::vector<int>& ncdims, int ncid);
 
-  /** Convenience for gathering dimension information.
-   * FIXME: Make object for dimension information? */
+  /** Holds the id, name and current size of each netcdf dimension. */
+  struct DimensionInfo {
+    std::vector<int>         dimids;
+    std::vector<std::string> dimnames;
+    std::vector<size_t>      dimsizes;
+
+    /** Number of dimensions */
+    size_t
+    size() const { return dimids.size(); }
+  };
+
+  /** Convenience for gathering dimension information. */
   static
-  size_t
-  getDimensions(int ncid, std::vector<int>& dimids,
-    std::vector<std::string>& dimnames, std::vector<size_t>& dimsizes);
+  DimensionInfo
+  getDimensions(int ncid);
 
   /** Get a data attribute list from a netcdf attribute list */
   static

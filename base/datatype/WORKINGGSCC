@@ -1,0 +1,308 @@
+#include "rDataGrid.h"
+#include "rConstants.h"
+#include "rError.h"
+#include "rStrings.h"
+#include "rIOConfig.h"
+
+#include <array>
+#include <algorithm>
+
+using namespace rapio;
+
+namespace {
+
+template <size_t N> struct Axes;
+template <> struct Axes<2> {
+    static std::array<std::string, 2> names() { return {{"pixel_x", "pixel_y"}}; }
+};
+template <> struct Axes<3> {
+    static std::array<std::string, 3> names() { return {{"pixel_z", "pixel_x", "pixel_y"}}; }
+};
+
+size_t countRuns(const float* d, size_t n, float bg) {
+    size_t runs = 0; 
+    float last = bg;
+    for (size_t i = 0; i < n; ++i) {
+        if (d[i] != bg && d[i] != last) {
+            runs++;
+        }
+        last = d[i];
+    }
+    return runs;
+}
+
+size_t estimateRuns(const float* d, size_t rows, size_t rowLen, float bg) {
+    const size_t stride = std::max<size_t>(1, rows / 10);
+    size_t runs = 0, sampled = 0;
+    for (size_t r = 0; r < rows; r += stride) {
+        sampled++;
+        runs += countRuns(d + r * rowLen, rowLen, bg);
+    }
+    return runs * rows / sampled;
+}
+
+template <size_t N>
+void unravel(size_t flat, const std::array<size_t, N>& sz, std::array<size_t, N>& c) {
+    for (size_t k = N; k-- > 0;) {
+        c[k] = flat % sz[k];
+        flat /= sz[k];
+    }
+}
+
+} // anonymous namespace
+
+namespace rapio {
+
+template <size_t N>
+bool DataGrid::sparseT(IOConfig& keys)
+{
+    const auto mode = keys.getSparseMode();
+    if (mode == IOConfig::SparseMode::None || getShort1D("pixel_x")) return false;
+
+    auto arr = get<Array<float, N> >(Constants::PrimaryDataName);
+    if (!arr) return false;
+    auto& ref = arr->ref();
+    const float* d = ref.data();
+    const size_t total = ref.num_elements();
+    if (total == 0) return false;
+
+    std::array<size_t, N> sz;
+    std::copy(ref.shape(), ref.shape() + N, sz.begin());
+
+    for (size_t k = 0; k < N; ++k) {
+        if (sz[k] > 32767) {
+            fLogSevere("Grid dimension {} exceeds max short (32767). Cannot sparse.", sz[k]);
+            return false;
+        }
+    }
+
+    const float bg = Constants::MissingData;
+    const float threshold = keys.getSparseThreshold();
+    const float runCost = static_cast<float>(sizeof(float) + sizeof(int) + N * sizeof(short)) / sizeof(float);
+
+    if (mode == IOConfig::SparseMode::Guess) {
+        const float est = runCost * estimateRuns(d, total / sz[N - 1], sz[N - 1], bg) / total;
+        if (est > threshold * 1.1f) {
+            fLogDebug("Guess mode aborted sparsification. Est ratio: {:.2f} > threshold {:.2f}", est, threshold);
+            return false;
+        }
+    }
+
+    const size_t runs = countRuns(d, total, bg);
+    const float ratio = runCost * runs / total;
+
+    if (mode != IOConfig::SparseMode::Force && ratio > threshold) {
+        fLogInfo("---> {}D compression rejected: {}% >= threshold {}%", N, int(0.5 + 100 * ratio), int(0.5 + 100 * threshold));
+        return false;
+    }
+
+    fLogInfo("---> {}D compression {}: {}% of original.", N, (mode == IOConfig::SparseMode::Force) ? "FORCED" : "accepted", int(0.5 + 100 * ratio));
+
+    const std::string units = getUnits();
+    myDims.push_back(DataGridDimension("pixel", runs));
+    changeArrayName(Constants::PrimaryDataName, "DisabledPrimary");
+    setVisible("DisabledPrimary", false);
+
+    size_t dimIndex = myDims.size() - 1;
+
+    float* vals = addFloat1DRef(Constants::PrimaryDataName, units, { dimIndex }).data();
+    std::array<short*, N> axis;
+    auto defaultNames = Axes<N>::names();
+    for (size_t k = 0; k < N; ++k) {
+        axis[k] = addShort1DRef(defaultNames[k], "dimensionless", { dimIndex }).data();
+    }
+    int* counts = addInt1DRef("pixel_count", "dimensionless", { dimIndex }).data();
+
+    size_t at = 0; 
+    float last = bg;
+    std::array<size_t, N> c;
+    for (size_t i = 0; i < total; ++i) {
+        const float v = d[i];
+        if (v != bg) {
+            if (v == last) { 
+                ++counts[at - 1]; 
+            } else {
+                unravel<N>(i, sz, c);
+                for (size_t k = 0; k < N; ++k) axis[k][at] = static_cast<short>(c[k]);
+                vals[at] = v; 
+                counts[at] = 1; 
+                ++at;
+            }
+        }
+        last = v;
+    }
+
+    auto pixelsDataArray = getNode(Constants::PrimaryDataName);
+    if (pixelsDataArray) {
+        pixelsDataArray->setFloat("missing_value", Constants::MissingData);
+        pixelsDataArray->setFloat("BackgroundValue", bg);
+        pixelsDataArray->setFloat("SparseGridCompression", ratio);
+        pixelsDataArray->setLong("NumValidRuns", runs);
+    }
+
+    setDataType("Sparse" + getDataType());
+    return true;
+}
+
+template <size_t N>
+void DataGrid::unsparseT(IOConfig& keys, const std::array<std::string, N>& axisNames, const std::string& countName) {
+    if (!getShort1D(axisNames[0])) return;
+
+    std::array<std::shared_ptr<Array<short, 1>>, N> axisPtrs;
+    for (size_t k = 0; k < N; ++k) {
+        axisPtrs[k] = getShort1D(axisNames[k]);
+        if (!axisPtrs[k]) {
+            fLogSevere("Expected {} array, can't find to unsparse.", axisNames[k]);
+            return;
+        }
+    }
+
+    auto countPtr = getInt1D(countName);
+    if (!countPtr) {
+        fLogSevere("Expected {} array, can't find to unsparse.", countName);
+        return;
+    }
+
+    auto valPtr = getFloat1D(Constants::PrimaryDataName);
+    if (!valPtr) {
+        fLogSevere("Expected primary data array, can't find to unsparse.");
+        return;
+    }
+
+    auto sizes = getSizes();
+    if (sizes.size() < N + 1) { 
+        fLogSevere("Grid dimensions incorrect for unsparsing.");
+        return;
+    }
+
+    size_t total = 1;
+    std::array<size_t, N> sz;
+    for (size_t k = 0; k < N; ++k) {
+        sz[k] = sizes[k];
+        total *= sz[k];
+    }
+
+    const size_t num_pixels = axisPtrs[0]->ref().size();
+    if (num_pixels > total) {
+        fLogSevere("Corrupt?: num_pixels is {} while max_size is {}", num_pixels, total);
+        return;
+    }
+
+    // All parallel arrays must agree in length or we'd read out of bounds
+    if (valPtr->ref().size() != num_pixels || countPtr->ref().size() != num_pixels) {
+        fLogSevere("Corrupt sparse data: value/count array length differs from {} ({})", axisNames[0], num_pixels);
+        return;
+    }
+    for (size_t k = 1; k < N; ++k) {
+        if (axisPtrs[k]->ref().size() != num_pixels) {
+            fLogSevere("Corrupt sparse data: {} length differs from {} ({})", axisNames[k], axisNames[0], num_pixels);
+            return;
+        }
+    }
+
+    const float * vals = valPtr->ref().data();
+    const int * counts = countPtr->ref().data();
+    std::array<const short *, N> axis;
+    for (size_t k = 0; k < N; ++k) { axis[k] = axisPtrs[k]->ref().data(); }
+
+    // Validate every run BEFORE touching the grid, so a bad file leaves us unmodified
+    // (still sparse) rather than half converted.
+    for (size_t i = 0; i < num_pixels; ++i) {
+        bool bad = (counts[i] < 0);
+        for (size_t k = 0; k < N && !bad; ++k) {
+            bad = (axis[k][i] < 0) || (static_cast<size_t>(axis[k][i]) >= sz[k]);
+        }
+        if (bad) {
+            fLogSevere("Corrupt sparse data: run {} has negative count or coordinate out of grid bounds.", i);
+            return;
+        }
+    }
+
+    fLogInfo("{}D Sparse Dimensions: {} for {} total pixels", N, num_pixels, total);
+
+    float bg = Constants::MissingData;
+    auto sparseArrayNode = getNode(Constants::PrimaryDataName);
+    if (sparseArrayNode) {
+        sparseArrayNode->getFloat("BackgroundValue", bg);
+    }
+
+    // --- commit: from here on we modify the grid ---
+    const std::string dataunits = getUnits();
+    if (!changeArrayName(Constants::PrimaryDataName, "SparseData")) {
+        fLogSevere("Unable to move sparse primary array out of the way, can't unsparse.");
+        return;
+    }
+
+    std::vector<size_t> dimIndices(N);
+    for (size_t k = 0; k < N; ++k) { dimIndices[k] = k; }
+
+    auto dstArr = add<float, N>(Constants::PrimaryDataName, dataunits, FLOAT, dimIndices, bg);
+    if (!dstArr) {
+        // Put things back the way they were
+        changeArrayName("SparseData", Constants::PrimaryDataName);
+        fLogSevere("Unable to create full {}D array, can't unsparse.", N);
+        return;
+    }
+    float * d = dstArr->ref().data();
+
+    for (size_t i = 0; i < num_pixels; ++i) {
+        size_t flat = 0;
+        for (size_t k = 0; k < N; ++k) { flat = flat * sz[k] + static_cast<size_t>(axis[k][i]); }
+
+        // Coordinates are validated, so flat < total; clamp only a run that overruns the end
+        const size_t fillCount = std::min<size_t>(static_cast<size_t>(counts[i]), total - flat);
+        std::fill_n(d + flat, fillCount, vals[i]);
+    }
+
+    std::string datatype = getDataType();
+    Strings::removePrefix(datatype, "Sparse");
+    setDataType(datatype);
+
+    deleteArrayName("SparseData");
+    for (size_t k = 0; k < N; ++k) deleteArrayName(axisNames[k]);
+    deleteArrayName(countName);
+    myDims.pop_back();
+}
+
+void DataGrid::unsparseRestore() {
+    std::string datatype = getDataType();
+    if (!Strings::beginsWith(datatype, "Sparse")) return;
+
+    // Only valid if sparse2D/3D made this sparse (it leaves the original behind).
+    // Otherwise the sparse arrays ARE the data (e.g. read from file), so deleting
+    // them would lose everything.
+    if (!haveArrayName("DisabledPrimary") || myDims.empty() || myDims.back().name() != "pixel") {
+        return;
+    }
+
+    deleteArrayName(Constants::PrimaryDataName);
+    deleteArrayName("pixel_z");
+    deleteArrayName("pixel_y");
+    deleteArrayName("pixel_x");
+    deleteArrayName("pixel_count");
+
+    myDims.pop_back();
+
+    changeArrayName("DisabledPrimary", Constants::PrimaryDataName);
+    setVisible(Constants::PrimaryDataName, true);
+
+    Strings::removePrefix(datatype, "Sparse");
+    setDataType(datatype);
+}
+
+// ----------------------------------------------------------------------
+// Instantiated Wrappers (Calling legacy unsparse versions for compatability)
+// ----------------------------------------------------------------------
+
+bool DataGrid::sparse2D(IOConfig& keys) { return sparseT<2>(keys); }
+bool DataGrid::sparse3D(IOConfig& keys) { return sparseT<3>(keys); }
+
+void DataGrid::unsparse2D(size_t num_x, size_t num_y, IOConfig& keys, const std::string& pixelX, const std::string& pixelY, const std::string& pixelCount) {
+    unsparseT<2>(keys, {{pixelX, pixelY}}, pixelCount);
+}
+
+void DataGrid::unsparse3D(size_t num_x, size_t num_y, size_t num_z, IOConfig& keys, const std::string& pixelX, const std::string& pixelY, const std::string& pixelZ, const std::string& pixelCount) {
+    unsparseT<3>(keys, {{pixelZ, pixelX, pixelY}}, pixelCount);
+}
+
+} // namespace rapio

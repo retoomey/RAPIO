@@ -241,6 +241,22 @@ public:
     return myNodes;
   }
 
+  /** Return only the visible nodes (skips arrays flagged RAPIO_HIDDEN).
+   * Used by writers so sparsed/hidden backing arrays aren't written. */
+  std::vector<std::shared_ptr<DataArray> >
+  getVisibleArrays()
+  {
+    std::vector<std::shared_ptr<DataArray> > visible;
+
+    for (auto l:myNodes) {
+      auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
+      if (!hidden) {
+        visible.push_back(l);
+      }
+    }
+    return visible;
+  }
+
   /** Add an array of given type/size */
   template <typename T, unsigned int S>
   std::shared_ptr<Array<T, S> >

@@ -385,39 +385,81 @@ IONetcdf::getAtt(int ncid,
   return (retval);
 }
 
+// Helper for safely reading a single-value attribute.  Netcdf will happily
+// write the full attribute length into the caller's buffer, so guard against
+// array attributes before reading into a scalar.
+template <typename T>
+static int
+getAttScalar(int ncid, const std::string& name, T * v, const int varid,
+  int (* getter)(int, int, const char *, T *))
+{
+  size_t aLen = 0;
+  int retval  = nc_inq_attlen(ncid, varid, name.c_str(), &aLen);
+
+  if (retval != NC_NOERR) {
+    return retval;
+  }
+
+  if (aLen != 1) {
+    fLogSevere("Attribute '{}' has length {}, expected a single value.",
+      name, aLen);
+    return NC_EINVAL;
+  }
+
+  return getter(ncid, varid, name.c_str(), v);
+}
+
+// Helper for reading a one-element numeric attribute of any netcdf type,
+// returning the value converted to a long.  Returns a netcdf return code.
+template <typename T>
+static int
+getAttNumber(int ncid, int varid, const std::string& name, long& out,
+  int (* getter)(int, int, const char *, T *))
+{
+  size_t len = 0;
+  int retval = nc_inq_attlen(ncid, varid, name.c_str(), &len);
+
+  if (retval != NC_NOERR) {
+    return retval;
+  }
+
+  if (len != 1) {
+    fLogSevere("Attribute '{}' has length {}, expected a single value.",
+      name, len);
+    return NC_EINVAL;
+  }
+
+  T value;
+
+  retval = getter(ncid, varid, name.c_str(), &value);
+
+  if (retval == NC_NOERR) {
+    out = (long) value;
+  }
+  return retval;
+}
+
 int
 IONetcdf::getAtt(int ncid,
   const std::string  & name,
   double *           v,
   const int          varid)
 {
-  // FIXME: Could crash if it's a array and not a single...check the SIZE
-  int retval;
-
-  retval = nc_get_att_double(ncid, varid, name.c_str(), v);
-  return (retval);
+  return getAttScalar(ncid, name, v, varid, nc_get_att_double);
 }
 
 int
 IONetcdf::getAtt(int ncid, const std::string& name, float * v,
   const int varid)
 {
-  // FIXME: Could crash if it's a array and not a single...check the SIZE
-  int retval;
-
-  retval = nc_get_att_float(ncid, varid, name.c_str(), v);
-  return (retval);
+  return getAttScalar(ncid, name, v, varid, nc_get_att_float);
 }
 
 int
 IONetcdf::getAtt(int ncid, const std::string& name, long * v,
   const int varid)
 {
-  // FIXME: Could crash if it's a array and not a single...check the SIZE
-  int retval;
-
-  retval = nc_get_att_long(ncid, varid, name.c_str(), v);
-  return (retval);
+  return getAttScalar(ncid, name, v, varid, nc_get_att_long);
 }
 
 int
@@ -426,28 +468,63 @@ IONetcdf::getAtt(int   ncid,
   unsigned long long * v,
   const int            varid)
 {
-  // FIXME: Could crash if it's a array and not a single...check the SIZE
-  int retval;
+  size_t aLen   = 0;
+  nc_type aType = NC_NAT;
+  int retval    = nc_inq_att(ncid, varid, name.c_str(), &aType, &aLen);
 
-  retval = nc_get_att_ulonglong(ncid, varid, name.c_str(), v);
-
-  // Try to downsample to int if it's not there (Hack for time sec out which is
-  // written out
-  // as an int..which is actually a bug)
-  // FIXME: Better way might be to query type in first place and cast for any
-  // getAtt and maybe
-  // warn.
   if (retval != NC_NOERR) {
-    int down1;
-    int retval2 = nc_get_att_int(ncid, varid, name.c_str(), &down1);
-
-    if (retval2 == NC_NOERR) {
-      *v     = (unsigned long long) (down1);
-      retval = NC_NOERR;
-    }
+    return retval;
   }
-  return (retval);
-}
+
+  if (aLen != 1) {
+    fLogSevere("Attribute '{}' has length {}, expected a single value.",
+      name, aLen);
+    return NC_EINVAL;
+  }
+
+  // Query the attribute type first and cast from the common stored types,
+  // instead of only trying unsigned long long and falling back blindly.
+  switch (aType) {
+      case NC_UINT64:
+        return nc_get_att_ulonglong(ncid, varid, name.c_str(), v);
+
+      case NC_INT64: {
+        long long tmp;
+        retval = nc_get_att_longlong(ncid, varid, name.c_str(), &tmp);
+        if (retval == NC_NOERR) { *v = (unsigned long long) tmp; }
+        return retval;
+      }
+      case NC_INT: { // also covers NC_LONG
+        int tmp;
+        retval = nc_get_att_int(ncid, varid, name.c_str(), &tmp);
+        if (retval == NC_NOERR) { *v = (unsigned long long) tmp; }
+        return retval;
+      }
+      case NC_UINT: {
+        unsigned int tmp;
+        retval = nc_get_att_uint(ncid, varid, name.c_str(), &tmp);
+        if (retval == NC_NOERR) { *v = (unsigned long long) tmp; }
+        return retval;
+      }
+      case NC_DOUBLE: {
+        double tmp;
+        retval = nc_get_att_double(ncid, varid, name.c_str(), &tmp);
+        if (retval == NC_NOERR) { *v = (unsigned long long) tmp; }
+        return retval;
+      }
+      case NC_FLOAT: {
+        float tmp;
+        retval = nc_get_att_float(ncid, varid, name.c_str(), &tmp);
+        if (retval == NC_NOERR) { *v = (unsigned long long) tmp; }
+        return retval;
+      }
+      default:
+        fLogSevere(
+          "Unhandled netcdf type {} for attribute '{}', can't read as unsigned long long.",
+          aType, name);
+        return NC_EBADTYPE;
+  }
+} // IONetcdf::getAtt
 
 int
 IONetcdf::addAtt(int ncid,
@@ -689,18 +766,17 @@ IONetcdf::netcdfToDataArrayType(const nc_type& xtype, DataArrayType& theType)
 // Maybe part of a NetcdfDataGrid class?
 std::vector<int>
 IONetcdf::declareGridVars(
-  DataGrid& grid, const std::string& typeName, const std::vector<int>& ncdims, int ncid)
+  DataGrid& grid, const std::vector<int>& ncdims, int ncid)
 {
-  auto list = grid.getArrays();
+  auto list = grid.getVisibleArrays();
+
+  // The file's data type name is used to rename the primary array
+  const std::string typeName = grid.getTypeName();
 
   // gotta be careful to write in same order as declare...
   std::vector<int> datavars;
 
   for (auto l:list) {
-    // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
-    auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
-    if (hidden) { continue; }
-
     auto theName = l->getName();
 
     // Ensure units even if missing in the DataGrid
@@ -742,45 +818,45 @@ IONetcdf::declareGridVars(
   return datavars;
 } // IONetcdf::declareGridVars
 
-size_t
-IONetcdf::getDimensions(int ncid,
-  std::vector<int>          & dimids,
-  std::vector<std::string>  & dimnames,
-  std::vector<size_t>       & dimsizes)
+IONetcdf::DimensionInfo
+IONetcdf::getDimensions(int ncid)
 {
+  DimensionInfo info;
+
   int ndimsp = -1;
 
   // Find the number of dimension ids
   NETCDF(nc_inq_ndims(ncid, &ndimsp));
   size_t numdims = ndimsp < 0 ? 0 : (size_t) (ndimsp);
 
-  // fLogSevere("Number of dimensions: {}", ndimsp);
-
   // Find the dimension ids
-  // std::vector<int> dimids;
-  dimids.resize(numdims);
-  NETCDF(nc_inq_dimids(ncid, 0, &dimids[0], 0));
+  if (numdims > 0) {
+    info.dimids.resize(numdims);
+    NETCDF(nc_inq_dimids(ncid, 0, &info.dimids[0], 0));
+  }
 
-  // Find the number of unlimited dimensions.  FIXME: Can't handle this yet
-  // FIXME: Hey if we use a class hint hint we can store more stuff right?
-  // NETCDF(nc_inq_unlimdims(ncid, &nunlim, NULL));
-  // std::vector<int> unlimids; unlimids.resize(numlim);
-  // Netcdf(nc_inq_unlimdims(ncid, &numlim, &unlimids[0]));
-  // if (nunlim > 0){ fLogSevere("Can't handle unlimited netcdf data fields at moment...");}
+  // Detect unlimited (record) dimensions.  Reading works fine since
+  // nc_inq_dim returns the current length, but callers should know a
+  // record dimension is present and may grow.
+  int nunlim = 0;
+  int unlimids[NC_MAX_DIMS];
+
+  NETCDF(nc_inq_unlimdims(ncid, &nunlim, unlimids));
+  if (nunlim > 0) {
+    fLogSevere("File has {} unlimited (record) dimension(s), RAPIO reading may be incomplete for those.",
+      nunlim);
+  }
 
   // For each dimension, get the name and size
-  dimsizes.resize(numdims);
-  dimnames.resize(numdims);
+  info.dimsizes.resize(numdims);
+  info.dimnames.resize(numdims);
   char name[NC_MAX_NAME + 1];
 
   for (size_t d = 0; d < numdims; ++d) {
-    // fLogSevere("For dim {} value is {}", d, dimids[d]);
-    // NETCDF(nc_inq_dim(ncid, dimids[d], name, &length));      // id from name
-    NETCDF(nc_inq_dim(ncid, dimids[d], name, &dimsizes[d])); // id from name
-    dimnames[d] = std::string(name);
-    // fLogSevere("--> '{}' {}", dimnames[d], dimsizes[d]);
+    NETCDF(nc_inq_dim(ncid, info.dimids[d], name, &info.dimsizes[d]));
+    info.dimnames[d] = std::string(name);
   }
-  return numdims;
+  return info;
 } // IONetcdf::getDimensions
 
 size_t
@@ -818,52 +894,91 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
     nc_type type_in;
     NETCDF(nc_inq_att(ncid, varid, name_in, &type_in, &lenp));
 
-    /** Handle some/all the netcdf types, remap to ours.
-     * FIXME: add more support */
+    /** Handle the netcdf types, remap to ours.
+     * Scalar attributes are read by type and stored as the closest RAPIO
+     * type (string, long, float or double).  Array attributes aren't
+     * supported yet and are skipped. */
     if (list != nullptr) {
       switch (type_in) {
-          case NC_BYTE:
-            fLogSevere("Unhandled NETCDF type NC_BYTE for {}, ignoring read of it.", name_in);
-            break;
-          case NC_UBYTE:
-            fLogSevere("Unhandled NETCDF type NC_UBYTE for {}, ignoring read of it.", name_in);
-            break;
+          case NC_BYTE: {
+            long aLong;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_schar) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
+          case NC_UBYTE: {
+            long aLong;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_uchar) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
           case NC_CHAR: {
             std::string aString;
             getAtt(ncid, attname, aString, varid);
             list->put<std::string>(outattname, aString);
           }
           break;
-          case NC_SHORT:
-            fLogSevere("Unhandled NETCDF type NC_SHORT for {}, ignoring read of it.", name_in);
-            break;
-          case NC_USHORT:
-            fLogSevere("Unhandled NETCDF type NC_USHORT for {}, ignoring read of it.", name_in);
-            break;
-          case NC_LONG:
+          case NC_SHORT: {
             long aLong;
-            getAtt(ncid, attname, &aLong, varid);
-            list->put<long>(outattname, aLong);
-            break; // or NC_INT
-          case NC_UINT:
-            fLogSevere("Unhandled NETCDF type NC_UINT for {}, ignoring read of it.", name_in);
-            break;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_short) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
+          case NC_USHORT: {
+            long aLong;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_ushort) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
+          case NC_INT: { // includes the deprecated NC_LONG alias
+            long aLong;
+            if (getAtt(ncid, attname, &aLong, varid) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
+          case NC_UINT: {
+            long aLong;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_uint) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
+          case NC_INT64: {
+            long aLong;
+            if (getAttNumber(ncid, varid, attname, aLong, nc_get_att_longlong) == NC_NOERR) {
+              list->put<long>(outattname, aLong);
+            }
+          }
+          break;
           case NC_FLOAT: {
             float aFloat;
-            getAtt(ncid, attname, &aFloat, varid);
-            list->put<float>(outattname, aFloat);
+            if (getAtt(ncid, attname, &aFloat, varid) == NC_NOERR) {
+              list->put<float>(outattname, aFloat);
+            }
           }
           break;
           case NC_DOUBLE: {
             double aDouble;
-            getAtt(ncid, attname, &aDouble);
-            list->put<double>(outattname, aDouble);
+            if (getAtt(ncid, attname, &aDouble) == NC_NOERR) {
+              list->put<double>(outattname, aDouble);
+            }
           }
           break;
-          case NC_STRING:
-            fLogSevere("Unhandled NETCDF type NC_STRING for {}, ignoring read of it.", name_in);
-            break;
+          case NC_STRING: {
+            char * aString = nullptr;
+            if (nc_get_att_string(ncid, varid, name_in, &aString) == NC_NOERR) {
+              list->put<std::string>(outattname, std::string(aString ? aString : ""));
+              nc_free_string(1, &aString);
+            }
+          }
+          break;
           default:
+            fLogSevere("Unhandled NETCDF type for {}, ignoring read of it.", name_in);
             break;
       }
     }
@@ -871,6 +986,19 @@ IONetcdf::getAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
 
   return 0;
 } // IONetcdf::getAttributes
+
+// Write a single attribute if the stored value matches the given type.
+template <typename T>
+static void
+writeAttributeIf(NamedAny& at, int ncid, int varid)
+{
+  if (at.is<T>()) {
+    auto field = at.get<T>();
+    if (field) {
+      NETCDF(IONetcdf::addAtt(ncid, at.getName(), *field, varid));
+    }
+  }
+}
 
 void
 IONetcdf::setAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> list)
@@ -880,27 +1008,11 @@ IONetcdf::setAttributes(int ncid, int varid, std::shared_ptr<DataAttributeList> 
     NETCDF(IONetcdf::addAtt(ncid, "MRMSWriterInfo", "RAPIO (Build: " + std::string(BUILD_DATE) + ")", varid));
   }
 
-  // For each type, write out attr...
-  // Netcdf has c functions each type so we check types...
-  // FIXME: Anyway to reduce the code in a smart way?
+  // Netcdf has separate C functions per type, so dispatch on the stored type.
   for (auto& i: *list) {
-    auto name = i.getName().c_str();
-    // NC_CHAR
-    if (i.is<std::string>()) {
-      auto field = i.get<std::string>();
-      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
-      // NC_LONG
-    } else if (i.is<long>()) {
-      auto field = i.get<long>();
-      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
-      // NC_FLOAT
-    } else if (i.is<float>()) {
-      auto field = i.get<float>();
-      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
-      // NC_DOUBLE
-    } else if (i.is<double>()) {
-      auto field = i.get<double>();
-      NETCDF(IONetcdf::addAtt(ncid, name, *field, varid));
-    }
+    writeAttributeIf<std::string>(i, ncid, varid);
+    writeAttributeIf<long>(i, ncid, varid);
+    writeAttributeIf<float>(i, ncid, varid);
+    writeAttributeIf<double>(i, ncid, varid);
   }
 }

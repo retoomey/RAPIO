@@ -59,16 +59,10 @@ NetcdfDataGrid::readDataGrid(
     // ------------------------------------------------------------
     // DIMENSIONS
     //
-    std::vector<int> dimids;
-    std::vector<std::string> dimnames;
-    std::vector<size_t> dimsizes;
-    // auto s = IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
-    IONetcdf::getDimensions(ncid, dimids, dimnames, dimsizes);
+    IONetcdf::DimensionInfo dimInfo = IONetcdf::getDimensions(ncid);
 
     // Declare dimensions in data structure
-    dataGridSP->setDims(dimsizes, dimnames);
-
-    auto dims = dataGridSP->getDims();
+    dataGridSP->setDims(dimInfo.dimsizes, dimInfo.dimnames);
 
     // ------------------------------------------------------------
     // VARIABLES (DataArrays)
@@ -77,37 +71,22 @@ NetcdfDataGrid::readDataGrid(
     NETCDF(nc_inq_nvars(ncid, &varcount));
     const size_t vsize = varcount > 0 ? varcount : 0;
     for (size_t i = 0; i < vsize; ++i) {
-      // ... get name
+      // Get the variable name, type, dimensions and attribute count in one call
       char name_in[NC_MAX_NAME + 1];
-      std::string name;
-      NETCDF(nc_inq_varname(ncid, i, &name_in[0]));
-      name = std::string(name_in);
-
-      // Now for this variable with given name
-      // ... get number of dimensions
-      int varndims = -1;
-      NETCDF(nc_inq_varndims(ncid, i, &varndims));
-
-      // ... get the varid (pass in name)
-      // This 'should' be the same as i, but we'll check
-      int varid = -1;
-      NETCDF(nc_inq_varid(ncid, name.c_str(), &varid));
-
-      // Get variable info FIXME: do we need all these functions?
       nc_type xtypep;
       int ndimsp2;
       int dimidsp[NC_MAX_VAR_DIMS];
-      int nattsp2;
-      NETCDF(nc_inq_var(ncid, i, name_in, &xtypep, &ndimsp2, dimidsp, &nattsp2));
+      NETCDF(nc_inq_var(ncid, i, name_in, &xtypep, &ndimsp2, dimidsp, nullptr));
+
+      const std::string name = name_in;
+
+      // varids are consecutive 0-based in netcdf and we're looping over them
+      const int varid = (int) i;
 
       // Convert dims/sizes to indexes for the variable
-      std::vector<int> dimindexesINT;
-      dimindexesINT.resize(varndims);
-      NETCDF(nc_inq_vardimid(ncid, varid, &dimindexesINT[0]));
-
-      std::vector<size_t> dimindexes; // BLEH
-      for (auto& dd:dimindexesINT) {
-        dimindexes.push_back(dd);
+      std::vector<size_t> dimindexes;
+      for (int dd = 0; dd < ndimsp2; ++dd) {
+        dimindexes.push_back(dimidsp[dd]);
       }
 
       // --------------------------------------------------
@@ -192,8 +171,7 @@ NetcdfDataGrid::writeNETCDF(int ncid,
     // ------------------------------------------------------------
     // VARIABLES
     //
-    auto typeName = dataGrid->getTypeName(); // FIXME: can't routine get it?
-    std::vector<int> datavars = IONetcdf::declareGridVars(*dataGrid, typeName, dimvars, ncid);
+    std::vector<int> datavars = IONetcdf::declareGridVars(*dataGrid, dimvars, ncid);
 
     // ------------------------------------------------------------
     // GLOBAL ATTRIBUTES
@@ -206,14 +184,11 @@ NetcdfDataGrid::writeNETCDF(int ncid,
     // ------------------------------------------------------------
     // ARRAYS OF DATA
     //
-    auto list = dataGrid->getArrays();
+    auto list = dataGrid->getVisibleArrays();
 
     // For netcdf3 we have to declare attributes of the arrays BEFORE enddef
     size_t count = 0;
     for (auto l:list) {
-      // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
-      auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
-      if (hidden) { continue; }
       // Put attributes for this var...
       const int varid = datavars[count];
       IONetcdf::setAttributes(ncid, varid, l->getAttributes());
@@ -227,9 +202,6 @@ NetcdfDataGrid::writeNETCDF(int ncid,
     // Now write data into each array in the data grid
     count = 0;
     for (auto l:list) {
-      // Skip hidden (FIXME: maybe getVisibleArrays to hide all this)
-      auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
-      if (hidden) { continue; }
       void * data = l->getRawDataPointer();
       if (data != nullptr) {
         // Woh...mind blown generically write everything

@@ -13,11 +13,142 @@ using namespace std;
 // creating the object.  Thus a factory.
 const size_t BinaryTable::BLOCK_LEVEL = 1;
 
-BinaryTable::BinaryTable() : myLastFileVersion(0)
+BinaryTable::BinaryTable() : myRowSize(0), myLastFileVersion(0)
 {
   setDataType("BinaryTable");
   // Current the default write for all binary tables is raw which makes sense
   setReadFactory("raw");
+}
+
+void
+BinaryTable::addColumn(const std::string& name, const std::string& units,
+  const std::vector<std::string>& data)
+{
+  GenericColumn c;
+
+  c.name    = name;
+  c.units   = units;
+  c.type    = "string";
+  c.strings = data;
+  myColumns.push_back(std::move(c));
+  if (data.size() > myRowSize) { myRowSize = data.size(); }
+}
+
+void
+BinaryTable::addColumn(const std::string& name, const std::string& units,
+  const std::vector<float>& data)
+{
+  GenericColumn c;
+
+  c.name   = name;
+  c.units  = units;
+  c.type   = "float";
+  c.floats = data;
+  myColumns.push_back(std::move(c));
+  if (data.size() > myRowSize) { myRowSize = data.size(); }
+}
+
+void
+BinaryTable::addColumn(const std::string& name, const std::string& units,
+  const std::vector<unsigned short>& data)
+{
+  GenericColumn c;
+
+  c.name    = name;
+  c.units   = units;
+  c.type    = "ushort";
+  c.ushorts = data;
+  myColumns.push_back(std::move(c));
+  if (data.size() > myRowSize) { myRowSize = data.size(); }
+}
+
+void
+BinaryTable::addColumn(const std::string& name, const std::string& units,
+  const std::vector<unsigned char>& data)
+{
+  GenericColumn c;
+
+  c.name   = name;
+  c.units  = units;
+  c.type   = "uchar";
+  c.uchars = data;
+  myColumns.push_back(std::move(c));
+  if (data.size() > myRowSize) { myRowSize = data.size(); }
+}
+
+int
+BinaryTable::findColumn(const std::string& name) const
+{
+  const size_t size = myColumns.size();
+
+  for (size_t i = 0; i < size; ++i) {
+    if (myColumns[i].name == name) { return (static_cast<int>(i)); }
+  }
+  return (-1);
+}
+
+std::vector<BinaryTable::TableInfo>
+BinaryTable::getTableInfo()
+{
+  std::vector<TableInfo> info;
+  TableInfo i;
+
+  i.name = "rows"; // First 'collection' of data called rows
+  i.size = myRowSize;
+
+  const size_t size = myColumns.size();
+
+  for (size_t c = 0; c < size; ++c) {
+    i.columnNames.push_back(myColumns[c].name);
+    i.columnUnits.push_back(myColumns[c].units);
+    i.columnTypes.push_back(myColumns[c].type);
+  }
+  info.push_back(i);
+  return (info);
+}
+
+std::vector<std::string>
+BinaryTable::getStringVector(const std::string& name)
+{
+  const int at = findColumn(name);
+
+  if ((at >= 0) && (myColumns[at].type == "string")) {
+    return (myColumns[at].strings);
+  }
+  return (std::vector<std::string>());
+}
+
+std::vector<float>
+BinaryTable::getFloatVector(const std::string& name)
+{
+  const int at = findColumn(name);
+
+  if ((at >= 0) && (myColumns[at].type == "float")) {
+    return (myColumns[at].floats);
+  }
+  return (std::vector<float>());
+}
+
+std::vector<unsigned char>
+BinaryTable::getUCharVector(const std::string& name)
+{
+  const int at = findColumn(name);
+
+  if ((at >= 0) && (myColumns[at].type == "uchar")) {
+    return (myColumns[at].uchars);
+  }
+  return (std::vector<unsigned char>());
+}
+
+std::vector<unsigned short>
+BinaryTable::getUShortVector(const std::string& name)
+{
+  const int at = findColumn(name);
+
+  if ((at >= 0) && (myColumns[at].type == "ushort")) {
+    return (myColumns[at].ushorts);
+  }
+  return (std::vector<unsigned short>());
 }
 
 void

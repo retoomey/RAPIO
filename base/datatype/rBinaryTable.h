@@ -108,44 +108,23 @@ public:
   };
 
   virtual std::vector<TableInfo>
-  getTableInfo()
-  {
-    std::vector<TableInfo> info;
-    TableInfo i;
-
-    i.name = "rows"; // First 'collection' of data called rows
-    i.size = 0;      // Subclasses should fill in with data size
-    info.push_back(i);
-    return (info);
-  }
+  getTableInfo();
 
   /** The 'string' column type */
   virtual std::vector<std::string>
-  getStringVector(const std::string& name)
-  {
-    return (std::vector<std::string>());
-  }
+  getStringVector(const std::string& name);
 
   /** The 'float' column type */
   virtual std::vector<float>
-  getFloatVector(const std::string& name)
-  {
-    return (std::vector<float>());
-  }
+  getFloatVector(const std::string& name);
 
   /** The 'uchar' column type */
   virtual std::vector<unsigned char>
-  getUCharVector(const std::string& name)
-  {
-    return (std::vector<unsigned char>());
-  }
+  getUCharVector(const std::string& name);
 
   /** The 'ushort' column type */
   virtual std::vector<unsigned short>
-  getUShortVector(const std::string& name)
-  {
-    return (std::vector<unsigned short>());
-  }
+  getUShortVector(const std::string& name);
 
   /** The 'char' column type */
   virtual std::vector<char>
@@ -161,9 +140,66 @@ public:
     return std::vector<short>();
   }
 
+  // ----------------------------------------------------------------------------
+  // Generic column storage
+  //
+  // The base BinaryTable can hold a single table of columns.  This lets a
+  // generic reader (such as the netcdf reader) build a table without needing
+  // a specialized subclass.  Subclasses with their own layout simply override
+  // the query methods above and ignore this storage.
+
+  /** Add a 'string' column to the generic table */
+  void
+  addColumn(const std::string& name, const std::string& units,
+    const std::vector<std::string>& data);
+
+  /** Add a 'float' column to the generic table */
+  void
+  addColumn(const std::string& name, const std::string& units,
+    const std::vector<float>& data);
+
+  /** Add a 'ushort' column to the generic table */
+  void
+  addColumn(const std::string& name, const std::string& units,
+    const std::vector<unsigned short>& data);
+
+  /** Add a 'uchar' column to the generic table */
+  void
+  addColumn(const std::string& name, const std::string& units,
+    const std::vector<unsigned char>& data);
+
+  /** Do we have generic columns stored? */
+  bool
+  hasGenericColumns() const
+  {
+    return (!myColumns.empty());
+  }
+
   virtual bool getUseMissingAsUnavailable(){ return false; }
 
 protected:
+
+  /** A single generic column (only the vector matching 'type' is used) */
+  struct GenericColumn {
+    std::string                 name;
+    std::string                 units;
+    std::string                 type;
+    std::vector<std::string>    strings;
+    std::vector<float>          floats;
+    std::vector<unsigned short> ushorts;
+    std::vector<unsigned char>  uchars;
+  };
+
+  /** Find a generic column by name, returning its index or -1 */
+  int
+  findColumn(const std::string& name) const;
+
+  /** Generic columns, if any, stored in order */
+  std::vector<GenericColumn> myColumns;
+
+  /** Row count of the generic table */
+  size_t myRowSize;
+
 
   /** The last magic levels of a read block call.  Levels are from a string
    * in the file of the form W2-Level2-Level3, etc.  These represent the
