@@ -3,7 +3,8 @@
 #include "rError.h"
 #include "rRecordQueue.h"
 #include "rFactory.h"
-#include "rIOFakeDataGenerator.h"
+// #include "rIOFakeDataGenerator.h"
+#include "rIOFakeDataType.h"
 
 // Watchers usually watch and send heartbeat messages.
 // We have two choices.  Make a FakeWatcher to do all the
@@ -80,15 +81,15 @@ FakeIndex::handlePoll()
 bool
 FakeIndex::generateRecord(const Time& time)
 {
-  // For the moment use the radar sim
-  auto gen = Factory<IOFakeDataGenerator>::get("radar1");
+  // FakeIndex does very little now, passing the work to IOFakeDataType
+  Record rec = IOFakeDataType::generateRecord(myParams, time);
 
-  if (gen) {
-    auto rec = gen->generateRecord(myParams, time);
+  if (rec.isData()) {
     Record::theRecordQueue->addRecord(rec);
   }
+
   return true;
-} // FakeIndex::readRemoteRecords
+}
 
 std::shared_ptr<IndexType>
 FakeIndex::createIndexType(

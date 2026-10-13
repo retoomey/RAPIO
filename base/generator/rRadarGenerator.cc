@@ -1,10 +1,17 @@
-#include "rIOFakeDataGenerator.h"
+#include "rRadarGenerator.h"
 
 #include "rConfigRadarInfo.h"
 #include "rRadialSet.h"
 #include <rFactory.h>
+#include <rStrings.h>
 
 using namespace rapio;
+
+void
+RadarGenerator::introduceSelf()
+{
+  Factory<IOFakeDataGenerator>::introduce("radar", std::make_shared<RadarGenerator>());
+}
 
 Record
 RadarGenerator::generateRecord(const std::string& params, const Time& time)
@@ -20,8 +27,20 @@ RadarGenerator::generateRecord(const std::string& params, const Time& time)
 std::shared_ptr<DataType>
 RadarGenerator::createDataType(const Record& rec)
 {
-  // Move construction logic here from rIOFakeDataType.cc
-  std::string radarName = rec.getParams()[1];
+  // Same code as ArrayPipeline
+  auto params = rec.getParams();
+  std::string fullParams = params[1];
+
+  std::string radarName;
+  std::vector<std::string> parts;
+
+  Strings::splitOnFirst(fullParams, ":", parts);
+  if (parts.size() > 1) {
+    radarName = parts[1];
+  } else {
+    radarName = fullParams;
+  }
+  fLogInfo("Radar name from params is {}", radarName);
 
   bool haveRadar = ConfigRadarInfo::haveRadar(radarName);
 
@@ -53,6 +72,7 @@ RadarGenerator::createDataType(const Record& rec)
 
   dt->getFloat2D()->fill(fill);
 
+  dt->setString("MRMSWriterNote", "Generator:radar");
   return dt;
 } // RadarGenerator::createDataType
 

@@ -73,7 +73,7 @@ rIJK.cc
 index/rIndexType.cc
 rIOConfig.cc
 rIODataType.cc
-rIOFakeDataGenerator.cc
+generator/rRadarGenerator.cc
 rIOFakeDataType.cc
 rIOFile.cc
 rIOPostProcessor.cc
@@ -184,6 +184,7 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/plugin>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/watcher>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/image>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generator>
 
   # Use the fetched directory for the web server headers
   $<BUILD_INTERFACE:${SWS_SRC_DIR}>

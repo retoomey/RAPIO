@@ -29,7 +29,6 @@ public:
   virtual std::shared_ptr<DataType>
   createDataType(IOConfig& config) override;
 
-public:
   // WRITING ------------------------------------------------------------
 
   /** Encode this data type to path given format settings */
@@ -37,5 +36,10 @@ public:
   encodeDataType(std::shared_ptr<DataType> dt,
     IOConfig                               & config
   ) override;
+
+  // Generation ---------------------------------------------------------
+  /** Generate record called by FakeIndex */
+  static Record
+  generateRecord(const std::string& fullParams, const Time& time);
 };
 }

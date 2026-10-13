@@ -50,7 +50,7 @@ HelpFormatter::printHelp(const std::vector<HelpEntry>& allOptions,
     }
 
     std::cout << std::setw(d) << std::left << "";
-    std::cout << myProgName << " ";
+    std::cout << OS::getProcessName(true) << " ";
     std::string outputRequired;
     size_t commandLength = d + myProgName.length() + 1;
 
