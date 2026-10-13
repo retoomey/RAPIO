@@ -3,7 +3,7 @@
 include(CMakeFindDependencyMacro)
 
 # Automatically find the PUBLIC dependencies required by rapio targets
-find_dependency(Boost 1.66 REQUIRED COMPONENTS system log log_setup thread filesystem serialization iostreams timer)
+find_dependency(Boost 1.66 REQUIRED COMPONENTS system log log_setup thread filesystem serialization iostreams timer stacktrace_basic)
 find_dependency(OpenSSL)
 
 include("${CMAKE_CURRENT_LIST_DIR}/rapioTargets.cmake")
