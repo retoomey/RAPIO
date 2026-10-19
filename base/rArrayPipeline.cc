@@ -3,8 +3,10 @@
 #include <rError.h>
 #include <rFactory.h>
 #include <rColorTerm.h>
+#include <rNamedAny.h>
 
 // Include the concrete implementations so we can register them
+#include <rOpenCVFilter.h>
 #include <rNearestNeighbor.h>
 #include <rBilinear.h>
 #include <rCressman.h>
@@ -37,6 +39,10 @@ ArrayPipeline::introduceSelf()
     // 1D filters
     OutlierFilter::introduceSelf();
     SavitzkyGolayFilter::introduceSelf();
+
+    // OpenCV general support
+    OpenCVFilter::introduceSelf();
+
     first = false;
   }
 }
@@ -95,9 +101,11 @@ ArrayPipeline::create(const std::string& config)
     }
     type = Strings::makeLower(type);
 
+    #if 0
     if (firstStage) {
       firstStage = false;
-      auto sampler = Factory<ArraySampler>::get(type, "ArraySampler: " + type);
+      auto factory = Factory<ArraySampler>::get(type, "ArraySampler: " + type);
+      auto sampler = factory->create();
       if (sampler) {
         if (sampler->parseOptions(params)) {
           fLogInfo("Pipeline sampler {}", type);
@@ -111,7 +119,35 @@ ArrayPipeline::create(const std::string& config)
       }
     }
 
-    auto filter = Factory<ArrayFilter>::get(type, "ArrayFilter: " + type);
+    auto factory = Factory<ArrayFilter>::get(type, "ArrayFilter: " + type);
+    #endif // if 0
+    if (firstStage) {
+      firstStage = false;
+      auto factory = Factory<ArraySampler>::get(type, "ArraySampler: " + type);
+
+      if (factory) { // <-- ADD NULL CHECK HERE
+        auto sampler = factory->create();
+        if (sampler) {
+          if (sampler->parseOptions(params)) {
+            fLogInfo("Pipeline sampler {}", type);
+            pipeline->mySampler     = sampler;
+            pipeline->mySamplerType = type;
+          } else {
+            fLogSevere("Failed to parse options for ArraySampler: {}", stage);
+            return nullptr;
+          }
+          continue;
+        }
+      }
+    }
+
+    auto factory = Factory<ArrayFilter>::get(type, "ArrayFilter: " + type);
+    if (!factory) { // <-- ADD NULL CHECK HERE
+      fLogSevere("Unknown pipeline stage or missing filter module: {}", type);
+      return nullptr;
+    }
+
+    auto filter = factory->create();
     if (filter) {
       if (filter->parseOptions(params)) {
         fLogInfo("Pipeline filter {}", type);
@@ -140,12 +176,20 @@ ArrayPipeline::remap(const std::shared_ptr<ArrayBase>& src,
   std::shared_ptr<ArraySampler> activeSampler = mySampler;
 
   if (!activeSampler) {
-    activeSampler = std::make_shared<NearestNeighbor>(); // Default fallback
+    activeSampler = std::make_shared<NearestNeighbor>();
   }
 
   if (!activeSampler->supportsDimensions(dims)) {
     fLogSevere("Sampler '{}' does not support {}D data.", mySamplerType.empty() ? "nearest" : mySamplerType, dims);
     return;
+  }
+
+  // Inject a fresh pipeline state for this specific remap execution
+  auto pipelineState = std::make_shared<NamedAnyList>();
+
+  if (activeSampler) { activeSampler->setPipelineState(pipelineState); }
+  for (auto& filter : myFilters) {
+    filter->setPipelineState(pipelineState);
   }
 
   if (dims == 1) {
@@ -164,7 +208,7 @@ ArrayPipeline::remap(const std::shared_ptr<ArrayBase>& src,
     activeSampler->remap3D(src3D, dst3D, mapper);
     executeFiltersPingPong3D(dst3D);
   }
-}
+} // ArrayPipeline::remap
 
 void
 ArrayPipeline::process(const std::shared_ptr<ArrayBase>& src,
@@ -184,11 +228,15 @@ ArrayPipeline::process(const std::shared_ptr<ArrayBase>& src,
 
   size_t dims = src->getNumDimensions();
 
+  // Inject a fresh pipeline state for this specific process execution
+  auto pipelineState = std::make_shared<NamedAnyList>();
+
   for (auto& filter : myFilters) {
     if (!filter->supportsDimensions(dims)) {
       fLogSevere("Pipeline aborted: A filter in the chain does not support {}D data.", dims);
       return;
     }
+    filter->setPipelineState(pipelineState);
   }
 
   if (dims == 1) {
@@ -236,19 +284,14 @@ ArrayPipeline::executeFiltersPingPong1D(const std::shared_ptr<Array<float, 1> >&
 
   temp->fill(0);
 
-  // Take raw pointers to the shared_ptr objects.
-  // No atomic reference counting is triggered here!
   const std::shared_ptr<Array<float, 1> > * currentSrc = &target;
   const std::shared_ptr<Array<float, 1> > * currentDst = &temp;
 
   for (auto& filter : myFilters) {
-    // Dereference the raw pointer to pass the const std::shared_ptr&
     filter->process1D(*currentSrc, *currentDst);
-    // Swap the raw pointers, not the shared_ptrs. Zero overhead.
     std::swap(currentSrc, currentDst);
   }
 
-  // If the final result ended up in the temp buffer, copy it back
   if (currentSrc == &temp) {
     auto s = (*currentSrc)->refAs1D();
     auto d = target->refAs1D();
@@ -269,7 +312,6 @@ ArrayPipeline::executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >&
 
   for (auto& filter : myFilters) {
     filter->process2D(*currentSrc, *currentDst);
-
     std::swap(currentSrc, currentDst);
   }
 
@@ -312,21 +354,21 @@ ArrayPipeline::process(const std::vector<float>& src, std::vector<float>& dst) c
     dst.resize(src.size());
   }
 
-  // Ping-pong buffers
   std::vector<float> temp(src.size());
-
   const std::vector<float> * currentSrc = &src;
   std::vector<float> * currentDst       = (&src == &dst) ? &temp : &dst;
 
+  // Inject a fresh pipeline state for this specific process execution
+  auto pipelineState = std::make_shared<NamedAnyList>();
+
   for (auto& filter : myFilters) {
+    filter->setPipelineState(pipelineState);
     filter->process1D(*currentSrc, *currentDst);
 
-    // Swap pointers for the next pass
     currentSrc = currentDst;
     currentDst = (currentDst == &dst) ? &temp : &dst;
   }
 
-  // If the final result ended up in the temp buffer, copy it to dst
   if (currentSrc == &temp) {
     std::copy(temp.begin(), temp.end(), dst.begin());
   }

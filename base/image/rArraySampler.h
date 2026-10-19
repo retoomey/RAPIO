@@ -50,6 +50,11 @@ public:
   virtual
   ~ArraySampler() = default;
 
+  /** Samplers create unique copies for the pipeline to
+   * separate state for threading or duplicated filters */
+  virtual std::shared_ptr<ArraySampler>
+  create() const { return nullptr; }
+
   /**
    * @brief Capability query: Does this sampler support 1D, 2D, or 3D data?
    */

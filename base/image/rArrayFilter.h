@@ -9,6 +9,11 @@ public:
   virtual
   ~ArrayFilter() = default;
 
+  /** Filters create unique copies for the pipeline to
+   * separate state for threading or duplicated filters */
+  virtual std::shared_ptr<ArrayFilter>
+  create() const { return nullptr; }
+
   // Original process:
   /** Array filters take action from source to destination */
   virtual void
@@ -44,6 +49,19 @@ public:
   process3D(const std::shared_ptr<Array<float, 3> >& src, const std::shared_ptr<Array<float, 3> >& dst)
   {
     fLogSevere("3D processing not supported by this filter.");
+  }
+};
+
+/** Clonable filters implement a new instance on call, this
+ * helps if threading or multiple filters of same type called
+ * in the pipeline */
+template <typename Derived>
+class CloneableFilter : public ArrayFilter {
+public:
+  std::shared_ptr<ArrayFilter>
+  create() const override
+  {
+    return std::make_shared<Derived>();
   }
 };
 }

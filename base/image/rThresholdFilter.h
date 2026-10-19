@@ -14,6 +14,13 @@ public:
   static void
   introduceSelf();
 
+  /** Return new instance of ourselves */
+  virtual std::shared_ptr<ArrayFilter>
+  create() const override
+  {
+    return std::make_shared<ThresholdFilter>();
+  }
+
   /** Get help for us */
   virtual std::string
   getHelpString() override;

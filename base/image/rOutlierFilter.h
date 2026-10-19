@@ -32,6 +32,14 @@ public:
 
   std::string
   getHelpString() override;
+
+  /** Return new instance of ourselves */
+  virtual std::shared_ptr<ArrayFilter>
+  create() const override
+  {
+    return std::make_shared<OutlierFilter>();
+  }
+
   bool
   parseOptions(const std::string& params) override;
 

@@ -2,6 +2,7 @@
 #include <rArray.h>
 #include <rStrings.h>
 #include <rArrayBoundary.h>
+#include <rNamedAny.h>
 
 #include <memory>
 #include <vector>
@@ -49,6 +50,12 @@ public:
   Boundary
   getYBoundary() const { return myYBoundary; }
 
+  void
+  setPipelineState(std::shared_ptr<NamedAnyList> state)
+  {
+    myPipelineState = state;
+  }
+
 protected:
 
   /** Default is no extra params, subclasses should add parameters */
@@ -61,5 +68,8 @@ protected:
 
   /** Boundary for the Y dimension */
   Boundary myYBoundary = Boundary::None;
+
+  /** Pipeline state information (allows optimization) */
+  std::shared_ptr<NamedAnyList> myPipelineState;
 };
 }

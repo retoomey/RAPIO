@@ -48,6 +48,7 @@ option(RAPIO_BUILD_HDF5_MODULE "Build general hdf5 module" YES)
 option(RAPIO_BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 
 option(RAPIO_BUILD_IMAGE_MODULE "Build image (GraphicsMagick) module" YES)
+option(RAPIO_BUILD_OPENCV "Build OpenCV filters/samplers" YES)
 
 option(RAPIO_BUILD_GDAL_MODULE "Build GDAL module" YES)
 option(RAPIO_BUILD_GRIB2_MODULE "Build Grib2 module (reading grib2 data)" YES)

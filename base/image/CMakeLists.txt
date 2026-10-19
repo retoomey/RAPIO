@@ -9,6 +9,7 @@ add_library(rapio_image OBJECT
   rDespeckleFilter.cc
   rSavitzkyGolayFilter.cc
   rOutlierFilter.cc
+  rOpenCVFilter.cc
 )
 # We're only to link to rapio shared, this is a logical grouping
 set_target_properties(rapio_image PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -59,6 +59,13 @@ public:
   std::string
   getHelpString() override;
 
+  /** Return new instance of ourselves */
+  virtual std::shared_ptr<ArraySampler>
+  create() const override
+  {
+    return std::make_shared<Cressman>();
+  }
+
   /** Capability query */
   bool
   supportsDimensions(size_t dims) const override

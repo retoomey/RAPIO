@@ -361,6 +361,19 @@ else()
   addRAPIONote("      Missing: Proj. Needed for some projections.")
 endif(Proj_FOUND)
 
+# OpenCV support
+if (RAPIO_BUILD_OPENCV)
+  find_package(Opencv)
+  if (Opencv_FOUND)
+    target_compile_definitions(rapio_interface INTERFACE HAVE_OPENCV)
+    target_include_directories(rapio_interface INTERFACE ${Opencv_INCLUDE_DIR})
+    target_link_libraries(rapio PRIVATE ${Opencv_LIBRARIES})
+    addRAPIONote("      Found: OpenCV")
+  else()
+    addRAPIONote("      Missing: OpenCV (filter/sampler support will be disabled)")
+  endif()
+endif()
+
 addRAPIONote("Compression support:")
 
 find_package(ZLIB REQUIRED)

@@ -213,4 +213,77 @@ BOOST_AUTO_TEST_CASE(TEST_VECTOR_1D_PATHWAY)
   BOOST_CHECK_LT(dstData[5], 100.0f);
 }
 
+BOOST_AUTO_TEST_CASE(TEST_OPENCV_BOX_BLUR)
+{
+  ArrayPipeline::introduceSelf();
+  
+  // Create a 3x3 box blur pipeline
+  auto pipeline = ArrayPipeline::create("opencv:box:3:3");
+  BOOST_REQUIRE(pipeline);
+  
+  auto src = Arrays::CreateFloat2D(5, 5);
+  src->fill(10.0f);
+  auto& data = src->ref();
+  
+  // Drop a hot pixel in the center
+  data[2][2] = 100.0f;
+  
+  pipeline->processInPlace(src);
+  
+  // If OpenCV is compiled in, the 3x3 box blur should average the center.
+  // 8 surrounding 10s + 1 center 100 = 180. 180 / 9 = 20.
+  // Note: If HAVE_OPENCV is not defined, the filter logs a warning and does nothing.
+#ifdef HAVE_OPENCV
+  BOOST_CHECK_CLOSE(data[2][2], 20.0f, 0.1f);
+  
+  // The immediate neighbors should also be pulled up by the hot pixel.
+  // A neighbor shares six 10s and one 100, but is subject to border replication,
+  // so testing the exact center is the most reliable cross-check.
+#else
+  BOOST_CHECK_EQUAL(data[2][2], 100.0f);
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(TEST_OPENCV_DILATE)
+{
+  ArrayPipeline::introduceSelf();
+  
+  // Create a 3x3 dilate pipeline, 1 iteration
+  auto pipeline = ArrayPipeline::create("opencv:dilate:3:3:1");
+  BOOST_REQUIRE(pipeline);
+  
+  auto src = Arrays::CreateFloat2D(5, 5);
+  src->fill(10.0f);
+  auto& data = src->ref();
+  
+  // Center pixel is hot
+  data[2][2] = 100.0f;
+  
+  // Set a missing data pixel nearby
+  data[1][1] = static_cast<float>(Constants::MissingData);
+  
+  pipeline->processInPlace(src);
+  
+#ifdef HAVE_OPENCV
+  // Center remains 100
+  BOOST_CHECK_CLOSE(data[2][2], 100.0f, 0.1f);
+  
+  // Immediate neighbors should dilate to 100 
+  BOOST_CHECK_CLOSE(data[1][2], 100.0f, 0.1f);
+  BOOST_CHECK_CLOSE(data[2][3], 100.0f, 0.1f);
+  BOOST_CHECK_CLOSE(data[3][3], 100.0f, 0.1f);
+  
+  // Pixels outside the 3x3 neighborhood should remain unaffected
+  BOOST_CHECK_CLOSE(data[0][0], 10.0f, 0.1f);
+  BOOST_CHECK_CLOSE(data[4][4], 10.0f, 0.1f);
+  
+  // The missing data mask should perfectly preserve the missing pixel,
+  // preventing the 100.0f dilation from overwriting it.
+  BOOST_CHECK_EQUAL(data[1][1], static_cast<float>(Constants::MissingData));
+#else
+  BOOST_CHECK_EQUAL(data[2][2], 100.0f);
+  BOOST_CHECK_EQUAL(data[1][1], static_cast<float>(Constants::MissingData));
+#endif
+}
+
 BOOST_AUTO_TEST_SUITE_END()
