@@ -353,7 +353,8 @@ BlockProductDesc:: getDecodedThresholds(std::vector<float>& a) const
   switch (decode) {
       default:
         fLogSevere("Unknown decode method {}, trying default (1)", decode);
-      // fallthrough to case 1
+        // fallthrough to case 1
+        [[fallthrough]];
       case 1: return decodeMethod1(a);
 
       case 2: return decodeMethod2(a);

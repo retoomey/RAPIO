@@ -19,6 +19,25 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
 # Note: To avoid conflict with other CMAKE flags, the standard is to include
 #       the project as a prefix.  Our prefix is RAPIO_
 
+# The John Krause Option 8)  In general we can have this on when
+# hunting down possible issues. 
+# Turning off unsed-parameter for now since that's massive, OOP code or
+# virtual interfaces trigger this everywhere, would have to mark it all
+# at some point.
+option(RAPIO_STRICT_WARNINGS "Enable strict compiler warnings" ON)
+
+if(RAPIO_STRICT_WARNINGS)
+    # Apply warnings for GCC and Clang
+    # This is the maximum complaining possible
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-Wall -Wextra -pedantic -Wno-unused-parameter)
+       # add_compile_options(-Wall -Wextra -pedantic)
+    # Placeholder if MSVC (Windows) support is ever needed
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_options(/W4)
+    endif()
+endif()
+
 # PCH toggle (Defaulting to ON because we love speed)
 # Note: You can global disable with -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
 option(RAPIO_USE_PCH "Enable Precompiled Headers to accelerate build times" ON)

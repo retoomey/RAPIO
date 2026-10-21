@@ -361,7 +361,7 @@ ConfigColorMap::readW2ColorMap(const URL& url)
       // colors
       auto colors = b.getChildren("color");
 
-      if (colors.size() < 0) {
+      if (colors.empty()) {
         fLogSevere("Missing colors in colorBin");
         return nullptr;
       }

@@ -35,7 +35,7 @@ EXEWatcher::EXEInfo::createEvents(WatcherType * w)
   buffer.resize(POLL_BUFFER_SIZE);
 
   // Could store this in class maybe
-  std::vector<pollfd> plist = { { myCoutPipe[0], POLLIN }, { myCerrPipe[0], POLLIN } };
+  std::vector<pollfd> plist = { { myCoutPipe[0], POLLIN, 0 }, { myCerrPipe[0], POLLIN, 0 } };
 
   size_t counter = 0;
   bool ended     = false;

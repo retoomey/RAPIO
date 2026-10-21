@@ -804,14 +804,14 @@ IONetcdf::declareGridVars(
     // Translate the indexes into the matching netcdf dimension
     auto ddims     = l->getDimIndexes();
     const size_t s = ddims.size();
-    int dims[s];
+    std::vector<int> dims(s);
     for (size_t i = 0; i < s; ++i) {
       dims[i] = ncdims[ddims[i]];
     }
 
     // Add the variable
     int var = -1;
-    NETCDF(addVar(ncid, theName.c_str(), theUnits.c_str(), xtype, s, dims, &var));
+    NETCDF(addVar(ncid, theName.c_str(), theUnits.c_str(), xtype, s, dims.data(), &var));
 
     datavars.push_back(var);
   }
