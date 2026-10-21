@@ -62,9 +62,50 @@ LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & Dat
 //
 //  Identify the output, to look like Z
     if (!Refl_sum ) {
-        Refl_sum = Z->Clone();
+        auto radarLocation = Z->getLocation(); 
+        auto timestamp = Z->getTime();
+        std::string typeName = "LTAR";
+        std::string units = "dBZ";
+        float elevationDegs = 0.5f;
+
+
+        size_t numRadials = 720;
+        float azSpacing   = 0.5f;     // 0.5 degrees
+        float azOffset    = 0.25f;    // 0.25 degrees offset
+
+        float firstGateDistMeters = 0.0f;
+        float gateWidthMeters     = 250.0f; // 0.250 km = 250 meters
+        size_t numGates           = static_cast<size_t>(460.0f / 0.250f); // 1840 gates
+        
+        // 3. Create the RadialSet with the strictly required 9 arguments
+        Refl_sum = RadialSet::Create(
+            typeName,
+            units,
+            radarLocation,
+            timestamp,
+            elevationDegs,
+            firstGateDistMeters,
+            gateWidthMeters,
+            numRadials,
+            numGates
+        );
+
+        // 4. Apply custom azimuths manually (0.25, 0.75, 1.25...)
+        auto& azimuths = Refl_sum->getAzimuthRef();
+        for (size_t r = 0; r < numRadials; ++r) {
+            azimuths[r] = azOffset + (static_cast<float>(r) * azSpacing);
+        }
+        
+        // Retrieve 2D reference to the primary data array
+        auto& dataBuffer = Refl_sum->getFloat2DRef(Constants::PrimaryDataName); //
+        
+        // Loop over all radials and gates to set values to zero
+        for (size_t r = 0; r < Refl_sum->getNumRadials(); ++r) {
+            for (size_t g = 0; g < Refl_sum->getNumGates(); ++g) {
+                dataBuffer[r][g] = 0.0f;
+            }
+        }
         fLogInfo("Refl_sum init complete.");
-        return;
     }
      
 //Check the data for azimuthal alignment
@@ -95,8 +136,8 @@ LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & Dat
     for (size_t a = 0; a < numRadials; ++a) {
         auto az_index = getNearestRadialIndex(*Z, azRefl_sum[a]);
         if (az_index == -1) {
-                fLogSevere("DQ az check failed{} returned {} AzCheck: z: {} refl_sum: {} ", a, az_index, (float) azZ[a], azRefl_sum[a] );
-                return; 
+                //fLogSevere("DQ az check failed{} returned {} AzCheck: z: {} refl_sum: {} ", a, az_index, (float) azZ[a], azRefl_sum[a] );
+                continue; 
         }
         for (size_t g = 0; g < numGates; ++g) {
             //Find the Z azimuth that matches the kept Refl_sum data

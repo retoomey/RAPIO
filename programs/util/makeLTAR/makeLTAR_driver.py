@@ -50,7 +50,7 @@ def main():
         # 2. Start Data Conversion (ldm2netcdf)
         ldm_cmd = [
             "ldm2netcdf",
-            "-K", "-r", "-a", "-p", "K",
+            "-K", "-r", "-a", "-p", args.radar[0],
             "-s", args.radar,
             "-o", str(netcdf_dir),
             "-i", str(raw_dir)
@@ -119,9 +119,16 @@ def main():
         # Keep the main script alive to manage subprocesses
         empty_dir_seconds = 0
         check_interval = 10  # Check the directory every 10 seconds
+        
+        # Define the trigger file path based on the raw directory
+        trigger_file_path = raw_dir / "Reflectivity_XXXX.txt"
 
         while True:
             if not args.dry_run:
+                # triggered exit 
+                if trigger_file_path.exists() and len(raw_files) == 1:
+                    print(f"\nTrigger file '{trigger_file_path.name}' detected. Shutting down...")
+                    break
                 # Count files in the raw directory
                 raw_files = [f for f in raw_dir.iterdir() if f.is_file()]
                 

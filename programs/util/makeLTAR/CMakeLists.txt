@@ -1,4 +1,8 @@
 add_executable(makeLTAR makeLTAR.cc )
+#Flags
+target_compile_options(makeLTAR PRIVATE
+    -Wall -g -fPIC -DLINUX -std=c++17 -Wextra -pedantic -Wunused-parameter
+)
 #Add both the local includes and all the rapio includes 
 target_include_directories(makeLTAR PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 #target_include_directories(makeLTAR PRIVATE "$ENV{HOME}/include/rapio")
