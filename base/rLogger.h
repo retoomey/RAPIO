@@ -356,22 +356,23 @@ private:
 
 // -----------------------------------------------------------------------
 // fmt log calls
-
-#define fLogDebug(fmtstr, ...) \
+#define fLogDebug(...) \
   do { \
     if (rapio::Log::wouldDebug) { \
-      rapio::Log::myLog->debug(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
+      rapio::Log::myLog->debug(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     } \
   } while (0)
-#define fLogInfo(fmtstr, ...) \
+
+#define fLogInfo(...) \
   do { \
     if (rapio::Log::wouldInfo) { \
-      rapio::Log::myLog->info(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
+      rapio::Log::myLog->info(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     } \
   } while (0)
-#define fLogSevere(fmtstr, ...) \
+
+#define fLogSevere(...) \
   do { \
     if (rapio::Log::wouldSevere) { \
-      rapio::Log::myLog->severe(__LINE__, __FILE__, __func__, FMT_STRING(fmtstr), ## __VA_ARGS__); \
+      rapio::Log::myLog->severe(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     } \
   } while (0)

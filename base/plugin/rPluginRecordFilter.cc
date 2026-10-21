@@ -19,8 +19,7 @@ PluginRecordFilter::declare(RAPIOProgram * owner, const std::string& name)
     owner->addPlugin(new PluginRecordFilter(name));
     once = false;
   } else {
-    fLogSevere("Code error, can only declare record filter once");
-    exit(1);
+    throw std::logic_error("Code error: can only declare record filter once");
   }
   return true;
 }

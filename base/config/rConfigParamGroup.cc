@@ -41,8 +41,9 @@ ConfigParamGroupi::process1(const std::string& param)
       protocol    = pieces[0];
       indexparams = pieces[1];
     } else {
-      fLogSevere("Format of passed index '{}' is wrong, see help i", param);
-      exit(1);
+      throw StartupException(
+              fmt::format("Format of passed index '{}' is wrong, see help i", param)
+      );
     }
   }
 
@@ -175,8 +176,9 @@ ConfigParamGroupn::process1(const std::string& param)
     protocol = pair[0];
     params   = pair[1];
   } else {
-    fLogSevere("Format of passed notifier '{}' is wrong, see help n", param);
-    exit(1);
+    throw StartupException(
+            fmt::format("Format of passed notifier '{}' is wrong, see help n", param)
+    );
   }
 
   myNotifierInfo.push_back(notifierInfo(protocol, params));

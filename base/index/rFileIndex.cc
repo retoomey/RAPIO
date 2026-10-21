@@ -154,8 +154,9 @@ FileIndex::handleUnmount(const std::string& dirname, bool willReconnect)
 {
   fLogSevere("Directory {} was unmounted or removed.", dirname);
   if (!willReconnect) {
-    fLogSevere("Stopping algorithm due to lost input directory.");
-    exit(1);
+    throw RAPIOException(
+            fmt::format("Stopping algorithm due to lost input directory: {}", dirname)
+    );
   }
 }
 

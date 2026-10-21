@@ -61,5 +61,6 @@ private:
   float lonspacing = 0;
   float zspacing   = 0;
   std::string proj;
+  bool  myFieldsProcessed = false; // Process fields once
 };
 }

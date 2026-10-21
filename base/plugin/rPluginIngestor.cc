@@ -18,8 +18,7 @@ PluginIngestor::declare(RAPIOProgram * owner, const std::string& name)
     owner->addPlugin(new PluginIngestor(name));
     once = false;
   } else {
-    fLogSevere("Code error, can only declare ingestor once");
-    exit(1);
+    throw std::logic_error("Code error: can only declare ingestor once");
   }
   return true;
 }
@@ -101,8 +100,9 @@ PluginIngestor::execute(RAPIOProgram * callerin)
 
   // Failed to connect to all needed sources...
   if (count != wanted) {
-    fLogSevere("Only connected to {} of {} data sources, ending.", count, wanted);
-    exit(1);
+    throw StartupException(
+            fmt::format("Only connected to {} of {} data sources.", count, wanted)
+    );
   }
 
   const size_t rSize = Record::theRecordQueue->size();

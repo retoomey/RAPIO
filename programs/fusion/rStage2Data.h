@@ -157,8 +157,9 @@ public:
   virtual void add(VolumeValue * vvp, short x, short y, short z, size_t partIndex) override
   {
     if (partIndex >= myStorage.size()) {
-      fLogSevere("Index is {} and storage is {}", partIndex, myStorage.size());
-      exit(1);
+      throw RAPIOException(
+        fmt::format("VolumeValueIO index {} exceeds storage partition count {}.", partIndex, myStorage.size())
+      );
     }
     myStorage[partIndex]->add(vvp, x, y, z);
   }

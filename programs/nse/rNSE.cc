@@ -126,52 +126,44 @@ NSEAlg::getModelProjectionInfo(std::string& modeltype)
 void
 NSEAlg::whichFieldsToProcess()
 {
+  if (myFieldsProcessed) {
+    return;
+  }
+  myFieldsProcessed = true;
+
   auto doc = Config::huntXML(ConfigModelInfoXML);
 
-  try
-  {
-    /* code */
-    myReadSettings = true;
-    size_t count = 0;
-    if (doc != nullptr) {
-      auto tree        = doc->getTree();
-      auto modelfields = tree->getChildOptional("modelfields");
-
-
-      if (modelfields != nullptr) {
-        auto fields = modelfields->getChildren("field");
-        for (auto& m: fields) {
-          // wget attributes
-          const auto id          = m.getAttr("id", std::string(""));
-          const auto type        = m.getAttr("type", std::string(""));
-          const auto name        = m.getAttr("name", std::string(""));
-          const auto units       = m.getAttr("unit", std::string(""));
-          const auto layer       = m.getAttr("layer", std::string(""));
-          const auto rotateWinds = m.getAttr("rotateWinds", std::string(""));
-          // std::cout << id << " " << type << " " << name << " " << units
-          //   << " " << layer << "windrot: " << rotateWinds << "\n";
-          ModelFields mf;
-          mf.id          = id;
-          mf.type        = type;
-          mf.name        = name;
-          mf.units       = units;
-          mf.layer       = layer;
-          mf.rotateWinds = rotateWinds;
-          mFields.push_back(mf);
-          count++;
-          // std::cout << "Count = " << count << "\n";
-        }
-      }
-    } else {
-      fLogSevere("{} does not exist. Exiting.", ConfigModelInfoXML);
-      exit(1);
-    }
+  if (doc == nullptr) {
+    throw StartupException(
+      fmt::format("Configuration file {} does not exist or could not be found.", ConfigModelInfoXML)
+    );
   }
 
-  catch (const std::exception& e)
-  {
-    fLogSevere("Error parsing XML from {}", ConfigModelInfoXML);
-    exit(1);
+  try {
+    myReadSettings = true;
+    size_t count = 0;
+    auto tree = doc->getTree();
+    auto modelfields = tree->getChildOptional("modelfields");
+
+    if (modelfields != nullptr) {
+      auto fields = modelfields->getChildren("field");
+      for (auto& m : fields) {
+        ModelFields mf;
+        mf.id          = m.getAttr("id", std::string(""));
+        mf.type        = m.getAttr("type", std::string(""));
+        mf.name        = m.getAttr("name", std::string(""));
+        mf.units       = m.getAttr("unit", std::string(""));
+        mf.layer       = m.getAttr("layer", std::string(""));
+        mf.rotateWinds = m.getAttr("rotateWinds", std::string(""));
+        
+        mFields.push_back(mf);
+        count++;
+      }
+    }
+  } catch (const std::exception& e) {
+    throw StartupException(
+      fmt::format("Error parsing XML from {}: {}", ConfigModelInfoXML, e.what())
+    );
   }
 } // NSEAlg::whichFieldsToProcess
 

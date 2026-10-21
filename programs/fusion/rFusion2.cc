@@ -82,16 +82,12 @@ RAPIOFusionTwoAlg::processOptions(RAPIOOptions& o)
   if (part) {
     o.getLegacyGrid(myFullGrid);
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
-    if (success) {
-      if (myPartitionInfo.getSelectedPartitionNumber() < 1) {
-        fLogSevere("Partition selection required, for example tile:2x2:1 where 1 is nw corner.");
-        exit(1);
-      }
+    if (success && (myPartitionInfo.getSelectedPartitionNumber() < 1)) {
+      throw StartupException("Partition selection required, for example tile:2x2:1 where 1 is nw corner.");
     }
   }
   if (!success) {
-    fLogSevere("Failed to load and/or parse partition information!");
-    exit(1);
+    throw StartupException("Failed to load and/or parse partition information!");
   }
 } // RAPIOFusionTwoAlg::processOptions
 

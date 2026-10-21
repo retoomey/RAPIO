@@ -53,8 +53,7 @@ PluginHeartbeat::execute(RAPIOProgram * caller)
     myHeartBeat = std::make_shared<Heartbeat>(caller);
 
     if (!myHeartBeat->setCronList(myCronList)) {
-      fLogSevere("Bad format for -{} string, aborting", myName);
-      exit(1);
+      throw StartupException(fmt::format("Bad format for -{} string.", myName));
     }
 
     // Note: Need -r to be daemon, even if using ifam in daemon mode

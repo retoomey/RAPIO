@@ -421,9 +421,10 @@ public:
   get1(size_t i) const
   {
     #if 0
-    if (i > myBits.size()) {
-      fLogSevere("BIT AT {} is GREATER {}", i, myBits.size());
-      exit(1);
+    if (i >= myBits.size()) {
+      throw std::out_of_range(
+              fmt::format("Bitset index {} out of range (size: {}).", i, myBits.size())
+      );
     }
     #endif
     return myBits[i];

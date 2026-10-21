@@ -153,9 +153,9 @@ TileJoinAlg::processOptions(RAPIOOptions& o)
     o.getLegacyGrid(myFullGrid);
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
   }
+
   if (!success) {
-    fLogSevere("Failed to load and/or parse partition information!");
-    exit(1);
+    throw StartupException("Failed to load and/or parse partition information!");
   }
   // myPartitionInfo.printTable();
 } // TileJoinAlg::processOptions

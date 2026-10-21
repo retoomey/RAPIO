@@ -48,8 +48,7 @@ MakeFakeRadarData::processOptions(RAPIOOptions& o)
   myNumRadials = 360.0 / myAzimuthalDegs;
 
   if (myDEM == nullptr) {
-    fLogSevere("Ok you need to actually have terrain for this first alpha");
-    exit(1);
+    throw StartupException("Missing required DEM terrain grid for fake radar data generation.");
   }
 }
 
@@ -556,15 +555,14 @@ MakeFakeRadarData::readTerrain()
   if (myTerrainPath.empty()) {
     fLogInfo("No terrain path provided, running without terrain information");
   } else if (myDEM == nullptr) {
-    {
-      auto d = IODataType::read<LatLonGrid>(myTerrainPath);
-      if (d != nullptr) {
-        fLogInfo("Terrain DEM read: ", myTerrainPath);
-        myDEM = d;
-      } else {
-        fLogSevere("Failed to read in Terrain DEM LatLonGrid at {}", myTerrainPath);
-        exit(1);
-      }
+    auto d = IODataType::read<LatLonGrid>(myTerrainPath);
+    if (d != nullptr) {
+      fLogInfo("Terrain DEM read: {}", myTerrainPath);
+      myDEM = d;
+    } else {
+      throw StartupException(
+        fmt::format("Failed to read in Terrain DEM LatLonGrid at {}", myTerrainPath)
+      );
     }
   }
 }

@@ -31,8 +31,7 @@ MakeTerrain::processOptions(RAPIOOptions& o)
   myOutputFile = o.getString("o");
 
   if (!OS::ensureDirectory(myCacheDir)) {
-    fLogSevere("Failed to create or access cache directory: {}", myCacheDir);
-    exit(1);
+    throw StartupException(fmt::format("Failed to create or access cache directory: {}", myCacheDir));
   }
 }
 
@@ -202,8 +201,7 @@ MakeTerrain::execute()
 
       int dimension = 0;
       if (!loaded) {
-        fLogSevere("Wasn't able to download or read a required tile after retries. Exiting.");
-        exit(1);
+        throw RAPIOException("Wasn't able to download or read a required tile after retries.");
       } else {
         if (tileData.empty()) {
           // It's an ocean/void tile. Leave dimension = 0 so we skip the pixel loop below.
@@ -212,8 +210,7 @@ MakeTerrain::execute()
         } else if (tileData.size() == 1201 * 1201) {
           dimension = 1201;
         } else {
-          fLogSevere("Corrupt SRTM file size in memory for {}. Exiting.", filename);
-          exit(1);
+          throw RAPIOException(fmt::format("Corrupt SRTM file size in memory for {}.", filename));
         }
       }
 

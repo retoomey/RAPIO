@@ -47,11 +47,12 @@ PluginVolumeValueResolver::execute(RAPIOProgram * caller)
 
   // Stubbornly refuse to run if Volume Value Resolver requested by name and not found or failed
   if (myResolver == nullptr) {
-    fLogSevere("Volume Value Resolver '{}' requested, but failed to find and/or initialize.", myResolverAlg);
-    exit(1);
-  } else {
-    fLogInfo("Using Volume Value Resolver: '{}'", myResolverAlg);
+    throw StartupException(
+            fmt::format("Volume Value Resolver '{}' requested, but failed to find and/or initialize.", myResolverAlg)
+    );
   }
+
+  fLogInfo("Using Volume Value Resolver: '{}'", myResolverAlg);
 }
 
 std::shared_ptr<VolumeValueResolver>

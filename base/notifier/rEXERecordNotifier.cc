@@ -45,8 +45,9 @@ EXERecordNotifier::initialize(const std::string& params)
   std::string checkExe = OS::validateExe(params);
 
   if (checkExe.empty()) {
-    fLogSevere("Given exe at '{}' does not exist or needs permissions.", params);
-    exit(1); // Abort or ignore?
+    throw StartupException(
+            fmt::format("Given exe at '{}' does not exist or lacks execute permissions.", params)
+    );
   }
 
   myExe = checkExe;

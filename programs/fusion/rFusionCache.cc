@@ -261,8 +261,9 @@ FusionCache::setRosterDir(const std::string& folder)
 {
   if (!OS::isDirectory(folder)) {
     if (!OS::ensureDirectory(folder)) {
-      fLogSevere("Roster folder path '{}' can't be accessed or created.", folder);
-      exit(1);
+      throw StartupException(
+        fmt::format("Roster folder path '{}' can't be accessed or created.", folder)
+      );
     }
   }
   theRosterDir = folder;

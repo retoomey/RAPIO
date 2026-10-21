@@ -44,14 +44,15 @@ RecordNotifier::createNotifiers()
   std::vector<std::shared_ptr<RecordNotifierType> > v;
   const auto& notifiers = ConfigParamGroupn::getNotifierInfo();
 
-  for (auto& ni:notifiers) {
+  for (auto& ni : notifiers) {
     auto n = createNotifier(ni.protocol, ni.params);
     if (n != nullptr) {
       fLogDebug("Added notifier: {}:{}", ni.protocol, ni.params);
       v.push_back(n);
     } else {
-      fLogSevere("Format of passed notifier '{} = {}' is wrong, see help n", ni.protocol, ni.params);
-      exit(1);
+      throw StartupException(
+              fmt::format("Format of passed notifier '{} = {}' is wrong, see help n", ni.protocol, ni.params)
+      );
     }
   }
   return v;

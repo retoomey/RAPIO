@@ -42,17 +42,16 @@ Dump::processNewData(rapio::RAPIOData& d)
   // rdump somefile.raw ---> expanded to rdump -i=FILE=somefile.raw -o=/tmp
   IOConfig myOverride;
 
+  // If the macro was expanded, we dump to screen.
+  // Otherwise, treat as normal for standard real-time ability.
   if (isMacroApplied()) {
     myOverride.set("console", "true");
-    writeOutputProduct(data->getTypeName(), data, myOverride); // Typename will be replaced by -O filters
-    // force exit in case they put -r or something which makes no sense really here
-    exit(0);
   } else {
-    // Not from macro, so treat normal for standard real time ability..
-    // rdump -i=code_index -o=/tmp  the usual of any algorithm
     myOverride.set("console", "");
-    writeOutputProduct(data->getTypeName(), data, myOverride); // Typename will be replaced by -O filters
   }
+
+  // Typename will be replaced by -O filters if applicable
+  writeOutputProduct(data->getTypeName(), data, myOverride);
 }
 
 int

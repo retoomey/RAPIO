@@ -29,8 +29,7 @@ RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
   std::string configFile = o.getString("iconfig");
 
   if (configFile.empty()) {
-    fLogSevere("FusionAlgs requires an -iconfig XML file to load its child algorithms.");
-    exit(1);
+    throw StartupException("FusionAlgs requires an -iconfig XML file to load its child algorithms.");
   }
 
   // FIXME: Maybe we do this in firstTimeData, not sure.
@@ -38,16 +37,18 @@ RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
   auto configParser = AlgConfigFile::getConfigFileForURL(configUrl);
 
   if (!configParser) {
-    fLogSevere("No configuration parser found for {}", configFile);
-    exit(1);
+    throw StartupException(
+      fmt::format("No configuration parser found for {}", configFile)
+    );
   }
 
   // 3. Extract the sub-algorithms from the same file
   std::vector<AlgConfigNode> algNodes;
 
   if (!configParser->readMultiConfigURL(configUrl, algNodes)) {
-    fLogSevere("Failed to read multi-algorithm configuration from {}", configFile);
-    exit(1);
+    throw StartupException(
+      fmt::format("Failed to read multi-algorithm configuration from {}", configFile)
+    );
   }
 
   // 4. Spin up the children

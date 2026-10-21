@@ -58,10 +58,11 @@ PluginVolume::getNewVolume(
 
   // Stubbornly refuse to run if requested by name and not found or failed
   if (myVolume == nullptr) {
-    fLogSevere("Volume '{}' requested, but failed to find and/or initialize.", myVolumeAlg);
-    exit(1);
-  } else {
-    fLogInfo("Using Volume algorithm: '{}'", myVolumeAlg);
+    throw StartupException(
+            fmt::format("Volume '{}' requested, but failed to find and/or initialize.", myVolumeAlg)
+    );
   }
+
+  fLogInfo("Using Volume algorithm: '{}'", myVolumeAlg);
   return myVolume;
 }

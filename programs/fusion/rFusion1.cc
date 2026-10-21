@@ -146,15 +146,13 @@ RAPIOFusionOneAlg::processOptions(RAPIOOptions& o)
     success = part->getPartitionInfo(myFullGrid, myPartitionInfo);
   }
   if (!success) {
-    fLogSevere("Failed to load and/or parse partition information!");
-    exit(1);
+    throw StartupException("Failed to load and/or parse partition information!");
   }
 
   myLLProjections.resize(myFullGrid.getNumZ());
   myLevelSames.resize(myFullGrid.getNumZ());
-  if (myLLProjections.size() < 1) {
-    fLogSevere("No height layers to process, exiting");
-    exit(1);
+  if (myLLProjections.empty()) {
+    throw StartupException("No height layers to process.");
   }
 
   myWriteStage2Name  = "None";          // will get from first radialset typename

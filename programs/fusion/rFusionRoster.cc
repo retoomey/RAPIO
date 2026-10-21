@@ -218,10 +218,10 @@ RAPIOFusionRosterAlg::ingest(const std::string& sourcename, const std::string& f
       info->mask = Bitset({ numX, numY, numZ }, 1);
       info->mask.clearAllBits();
     }catch (std::bad_alloc& e) {
-      fLogSevere("We ran out of memory allocating mask. This will crash.");
-      fLogSevere("ATTEMPTED: '{}' ({}) ({},{},{},{},{}) {} points.", newname, info->id,
-        startX, startY, numX, numY, numZ, numX * numY * numZ);
-      exit(1);
+      throw RAPIOException(
+        fmt::format("Memory allocation failed for mask '{}' (ID: {}). Tried allocating {}x{}x{} ({} total points).",
+                    newname, info->id, numX, numY, numZ, numX * numY * numZ)
+      );
     }
 
     fLogInfo("Added '{}' ({}) ({},{},{},{},{}) {} points.", newname, info->id,

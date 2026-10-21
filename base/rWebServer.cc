@@ -275,8 +275,9 @@ WebServer::startWebServer(const std::string& params, RAPIOProgram * prog)
   try{
     port = std::stoi(params);
   }catch (const std::exception& e) {
-    fLogSevere("Couldn't get port from '{}', exiting.", params);
-    exit(1);
+    throw StartupException(
+            fmt::format("Couldn't parse web server port from '{}': {}", params, e.what())
+    );
   }
 
   WebServer::port = port;
