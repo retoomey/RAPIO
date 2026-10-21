@@ -14,7 +14,7 @@ computeAveValue(std::vector<float>& window, size_t min_good_num, float currentVa
   size_t n = window.size();
   // Average Calculation if we meet the data threshold
   if ((n >= min_good_num) && (n > 0)) {
-    float sum = std::accumulate(window.begin(), window.end(), 0LL); 
+    float sum = std::accumulate(window.begin(), window.end(), 0.0f); 
     return sum/ (float) n;
 
   } else {
@@ -210,4 +210,96 @@ std::shared_ptr<rapio::RadialSet>  apply2DDilationFilter( std::shared_ptr<rapio:
     return radialSet;
 }
 
+//Send only 1's and 0's;
+std::shared_ptr<rapio::RadialSet>  apply2DTrimFilter( std::shared_ptr<rapio::RadialSet> & input_radialSet, int radialWin, int gateWin) {
+
+
+  auto radialSet = input_radialSet->Clone();
+
+  if (!radialSet) {
+    fLogInfo( "apply2DTrimFilter: invalid radialSet abort.");
+    return nullptr;
+  }
+
+ 
+  size_t numRadials = radialSet->getNumRadials();
+  size_t numGates   = radialSet->getNumGates();
+
+  // Access the 2D float grid
+  auto& data  = radialSet->getFloat2DRef();
+  auto output = data; 
+//
+  int rHalf = radialWin/ 2; //integer math on purpose 
+  int gHalf = gateWin/ 2;
+
+  for (size_t r = 0; r < numRadials; ++r) {
+    for (size_t g = 0; g < numGates; ++g) {
+      float currentVal = data[r][g];
+
+      for (int i = -rHalf; i <= rHalf; ++i) {
+        // Circular wrap-around for radials (Azimuth)
+        int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
+
+        for (int j = -gHalf; j <= gHalf; ++j) {
+          int neighborG = static_cast<int>(g) + j;
+
+              // Boundary check for gates (Range)
+              if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
+                  if ( currentVal <= 0 ) {
+                      output[neighborR][neighborG] = 0; 
+                  }
+              }
+        }
+      }
+    }
+    }
+    data = output;
+    return radialSet;
+}
+//Send only 1's and 0's;
+std::shared_ptr<rapio::RadialSet>  apply2DExpandFilter( std::shared_ptr<rapio::RadialSet> & input_radialSet, int radialWin, int gateWin) {
+
+
+  auto radialSet = input_radialSet->Clone();
+
+  if (!radialSet) {
+    fLogInfo( "apply2DTrimFilter: invalid radialSet abort.");
+    return nullptr;
+  }
+
+ 
+  size_t numRadials = radialSet->getNumRadials();
+  size_t numGates   = radialSet->getNumGates();
+
+  // Access the 2D float grid
+  auto& data  = radialSet->getFloat2DRef();
+  auto output = data; 
+//
+  int rHalf = radialWin/ 2; //integer math on purpose 
+  int gHalf = gateWin/ 2;
+
+  for (size_t r = 0; r < numRadials; ++r) {
+    for (size_t g = 0; g < numGates; ++g) {
+      float currentVal = data[r][g];
+
+      for (int i = -rHalf; i <= rHalf; ++i) {
+        // Circular wrap-around for radials (Azimuth)
+        int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
+
+        for (int j = -gHalf; j <= gHalf; ++j) {
+          int neighborG = static_cast<int>(g) + j;
+
+              // Boundary check for gates (Range)
+              if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
+                  if ( currentVal >= 1 )  {
+                      output[neighborR][neighborG] = 1; 
+                  }
+              }
+        }
+      }
+    }
+    }
+    data = output;
+    return radialSet;
+}
 }//rapio 

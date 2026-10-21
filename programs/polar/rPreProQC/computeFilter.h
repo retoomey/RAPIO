@@ -32,5 +32,9 @@ std::shared_ptr<RadialSet> apply2DBlurFilter( std::shared_ptr<RadialSet> & radia
 
 std::shared_ptr<RadialSet>  apply2DDilationFilter( std::shared_ptr<RadialSet> & radialSet, int radialWin, int gateWin, float min_good_percent); 
 
+std::shared_ptr<RadialSet>  apply2DTrimFilter( std::shared_ptr<RadialSet> & radialSet, int radialWin, int gateWin); 
+
+std::shared_ptr<RadialSet>  apply2DExpandFilter( std::shared_ptr<RadialSet> & radialSet, int radialWin, int gateWin); 
+
 }
 
