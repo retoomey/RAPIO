@@ -68,7 +68,8 @@ std::shared_ptr<rapio::RadialSet> readLTARData(const std::string& filepath) {
     return LTAR;
 }
 //
-std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::RadialSet>  & Ref, 
+std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::RadialSet>  & CCsm, 
+                                                   std::shared_ptr<rapio::RadialSet>  & Ref, 
                                                    std::shared_ptr<rapio::RadialSet>  & LTAR)  {
 //
 //read in the LTAR file, assume that the LTAR has already been hit by the 2DDilation Filter
@@ -83,6 +84,7 @@ std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::Radial
 
   auto QCmask = Ref->Clone();
   auto& Z_data = Ref->getFloat2DRef();
+  auto& CC_data = CCsm->getFloat2DRef();
   auto& QCdata = QCmask->getFloat2DRef();
   
   auto& azDegs   = Ref->getAzimuthRef();
@@ -109,12 +111,18 @@ std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::Radial
                 
                 // We found a spatial match!
                 float reflValue = Z_data[a][g];
-                
-                if (rapio::Constants::isGood(reflValue) && rapio::Constants::isGood(ltarValue)) {
-                    qc_value =  Ref_LTAR_combination(reflValue, ltarValue); 
-                } else {
-                    qc_value = rapio::Constants::MissingData;
-                }
+                float ccValue = CC_data[a][g];
+                    if (rapio::Constants::isGood(reflValue) && rapio::Constants::isGood(ltarValue)) {
+                        qc_value =  Ref_LTAR_combination(reflValue, ltarValue); 
+                        if (ltarValue > 15.0) {
+                        //Test CC:
+                            if (ccValue < 0.96 ) {
+                                qc_value = 0.0;
+                            } 
+                        } 
+                    } else {
+                        qc_value = rapio::Constants::MissingData;
+                    }
             } else {
                 // The Reflectivity gate falls outside the physical bounds of the LTAR data
                 qc_value = rapio::Constants::DataUnavailable;
