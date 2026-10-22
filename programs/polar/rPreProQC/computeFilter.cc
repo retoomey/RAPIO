@@ -210,7 +210,7 @@ std::shared_ptr<rapio::RadialSet>  apply2DDilationFilter( std::shared_ptr<rapio:
     return radialSet;
 }
 
-//Send only 1's and 0's;
+//Send only 1's and 0's, Constants::* are also ok;
 std::shared_ptr<rapio::RadialSet>  apply2DTrimFilter( std::shared_ptr<rapio::RadialSet> & input_radialSet, int radialWin, int gateWin) {
 
 
@@ -236,6 +236,7 @@ std::shared_ptr<rapio::RadialSet>  apply2DTrimFilter( std::shared_ptr<rapio::Rad
     for (size_t g = 0; g < numGates; ++g) {
       float currentVal = data[r][g];
 
+      if ( currentVal <= 0 ) {
       for (int i = -rHalf; i <= rHalf; ++i) {
         // Circular wrap-around for radials (Azimuth)
         int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
@@ -245,18 +246,17 @@ std::shared_ptr<rapio::RadialSet>  apply2DTrimFilter( std::shared_ptr<rapio::Rad
 
               // Boundary check for gates (Range)
               if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
-                  if ( currentVal <= 0 ) {
                       output[neighborR][neighborG] = 0; 
-                  }
               }
         }
+      }
       }
     }
     }
     data = output;
     return radialSet;
 }
-//Send only 1's and 0's;
+//Send only 1's and 0's, Constants::* are also ok;
 std::shared_ptr<rapio::RadialSet>  apply2DExpandFilter( std::shared_ptr<rapio::RadialSet> & input_radialSet, int radialWin, int gateWin) {
 
 
@@ -282,6 +282,7 @@ std::shared_ptr<rapio::RadialSet>  apply2DExpandFilter( std::shared_ptr<rapio::R
     for (size_t g = 0; g < numGates; ++g) {
       float currentVal = data[r][g];
 
+      if ( currentVal >= 1 )  {
       for (int i = -rHalf; i <= rHalf; ++i) {
         // Circular wrap-around for radials (Azimuth)
         int neighborR = (static_cast<int>(r) + i + numRadials) % numRadials;
@@ -291,11 +292,10 @@ std::shared_ptr<rapio::RadialSet>  apply2DExpandFilter( std::shared_ptr<rapio::R
 
               // Boundary check for gates (Range)
               if ((neighborG >= 0) && (neighborG < static_cast<int>(numGates))) {
-                  if ( currentVal >= 1 )  {
                       output[neighborR][neighborG] = 1; 
-                  }
               }
         }
+      }
       }
     }
     }
