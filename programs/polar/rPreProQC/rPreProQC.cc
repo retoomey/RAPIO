@@ -200,10 +200,11 @@ rPreProQC::processPreProQC()
       LTAR = apply2DDilationFilter(LTAR, 3, 3, 0.33);
   }
  
+  std::shared_ptr<rapio::RadialSet> CCsm = apply2DBlurFilter(CC, 5, 5, 0.33);
   //added a little flex to the elevation field. LTAR is collected at 0.5 you can use
   //it below that level with some issues. 
   if (LTAR && Ref->getElevationDegs() <= 0.55) { 
-      LTAR_QCmask = computeLTARmask(Ref, LTAR);
+      LTAR_QCmask = computeLTARmask(CCsm, Ref, LTAR);
   }
 
   //should be handled by LTAR, but if you do not have LTAR you might need to use Terrain
@@ -320,6 +321,41 @@ rPreProQC::processPreProQC()
             }
         }//for g
   }//for a
+  //
+  //For this mask we want to speckle filter or trim/expand to remove 
+  // small detections and then we want to expand/trim to fill small holes
+  //
+  auto Filter_QCmask = QCmask->Clone();
+  auto& Filter_QC_data = Filter_QCmask->getFloat2DRef();
+  for (size_t a = 0; a < numRadials; ++a) {
+        for (size_t g = 0; g < numGates; ++g) {
+            if ( QC_data[a][g] != 1 ) {
+                Filter_QC_data[a][g] = 0;
+            }
+        }
+  }
+  //
+  //Apply Filters.
+  //
+  //Trim small detections
+  Filter_QCmask = apply2DTrimFilter( Filter_QCmask, 2, 4);
+  Filter_QCmask = apply2DExpandFilter( Filter_QCmask, 2, 4);
+  //Fill small Holes
+  Filter_QCmask = apply2DExpandFilter( Filter_QCmask, 2, 4);
+  Filter_QCmask = apply2DTrimFilter( Filter_QCmask, 2, 4);
+  for (size_t a = 0; a < numRadials; ++a) {
+        for (size_t g = 0; g < numGates; ++g) {
+            if (QC_data[a][g] != -6 ) { //Don't filter over NBF detections
+                if ( QC_data[a][g] == 1 && Filter_QC_data[a][g] == 0 ) {
+                    QC_data[a][g] = -7;
+                }
+                if ( QC_data[a][g] < 0 && Filter_QC_data[a][g] == 1 ) {
+                    QC_data[a][g] = 2;
+                }
+            }
+        }
+  }
+     
   
   // add this to the DataMap
   QCmask->setTypeName("QCmask");
@@ -356,6 +392,9 @@ rPreProQC::processPreProQC()
 
        Refsm->setTypeName("RefsmQC");
        myDataMap["output_RefsmQC"] = Refsm;
+
+       CCsm->setTypeName("CCsmQC");
+       myDataMap["output_CCsmQC"] = CCsm;
 
        NBF_detect->setTypeName("NBFdetect");
        NBF_detect->setDataAttributeValue("ColorMap", "KMeans");

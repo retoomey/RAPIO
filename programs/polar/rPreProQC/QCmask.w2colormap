@@ -8,6 +8,9 @@
    </colorBin>
 
     <!-- Colorblind-safe Negative Range -->
+   <colorBin upperBound="-6.5" name="Trim">
+     <color value="-7" r="178" g="34" b="34" a="255" label="Trim" />
+   </colorBin>
    <colorBin upperBound="-5.5" name="NBF">
      <color value="-6" r="240" g="228" b="66" a="255" label="NBF" />
    </colorBin>
@@ -28,8 +31,11 @@
    </colorBin>
 
     <!-- Data >= 1 -->
-   <colorBin upperBound="999" name="Valid">
+   <colorBin upperBound="1.1" name="Valid">
    <color r="0" g="158" b="115" a="255" />
+   </colorBin>
+   <colorBin upperBound="2.1" name="Expand">
+   <color r="0" g="100" b="0" a="255" />
    </colorBin>
 
     <unit name="  "></unit>

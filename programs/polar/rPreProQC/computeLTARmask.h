@@ -31,7 +31,8 @@ namespace rapio {
  * @param LTAR:    The 2D dilated LTAR data, see processOptions() 
  */
 
-std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::RadialSet> & Ref,
+std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::RadialSet> & CCsm,
+                                                   std::shared_ptr<rapio::RadialSet> & Ref,
                                                    std::shared_ptr<rapio::RadialSet> & LTAR );
 
  /**
