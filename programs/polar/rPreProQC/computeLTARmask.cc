@@ -114,7 +114,13 @@ std::shared_ptr<rapio::RadialSet> computeLTARmask( std::shared_ptr<rapio::Radial
                 float ccValue = CC_data[a][g];
                     if (rapio::Constants::isGood(reflValue) && rapio::Constants::isGood(ltarValue)) {
                         qc_value =  Ref_LTAR_combination(reflValue, ltarValue); 
-                        if (ltarValue > 15.0) {
+                        //Large values of ltar can defeat the Ref-LTAR combination logic
+                        //Because of this we test the final "good" ltar value
+                        //against a background CC (5x5) value, to make sure
+                        //There is weather somewhere nearby. Even with weather
+                        //nearby, large windfarms can lower the CC enough to 
+                        //destroy the dualpol moments. 
+                        if (ltarValue > 12.5) {
                         //Test CC:
                             if (ccValue < 0.96 ) {
                                 qc_value = 0.0;
