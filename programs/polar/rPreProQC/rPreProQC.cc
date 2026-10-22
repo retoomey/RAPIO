@@ -298,7 +298,7 @@ rPreProQC::processPreProQC()
                             } else {
                                 QC_data[a][g] = -1;
                             }
-                        } else if ( DR_QCdata[a][g] == 1 ) {
+                        } else if ( DR_QCdata[a][g] == 0 ) {
                             QC_data[a][g] = -3;
                         } else if (StdPhiDP_QCdata[a][g] == 0 ) {
                             QC_data[a][g] = -4;
@@ -345,11 +345,13 @@ rPreProQC::processPreProQC()
   Filter_QCmask = apply2DTrimFilter( Filter_QCmask, 2, 4);
   for (size_t a = 0; a < numRadials; ++a) {
         for (size_t g = 0; g < numGates; ++g) {
-            if ( QC_data[a][g] == 1 && Filter_QC_data[a][g] == 0 ) {
-                QC_data[a][g] = -7;
-            }
-            if ( QC_data[a][g] < 0 && Filter_QC_data[a][g] == 1 ) {
-                QC_data[a][g] = 2;
+            if (QC_data[a][g] != -6 ) { //Don't filter over NBF detections
+                if ( QC_data[a][g] == 1 && Filter_QC_data[a][g] == 0 ) {
+                    QC_data[a][g] = -7;
+                }
+                if ( QC_data[a][g] < 0 && Filter_QC_data[a][g] == 1 ) {
+                    QC_data[a][g] = 2;
+                }
             }
         }
   }
