@@ -102,10 +102,11 @@ protected:
 
 std::shared_ptr<Logger> Log::myLog;
 
-std::mutex logMutex;
+// std::mutex logMutex;
 
-bool Log::useColors     = false;
-bool Log::useHelpColors = false;
+bool Log::useColors = false;
+std::string Log::myPatternStr = "[%TIME%] %MESSAGE%";
+bool Log::useHelpColors       = false;
 
 std::vector<int> Log::outputtokens;
 std::vector<LogToken> Log::outputtokensENUM;
@@ -202,6 +203,8 @@ Log::flush()
 void
 Log::setLogPattern(const std::string& pattern)
 {
+  myPatternStr = pattern;
+
   std::vector<std::string> tokens =
   { "%TIME%",   "%TIMEMS%", "%TIMEC%", "%MESSAGE%", "%FILE%",   "%LINE%", "%FUNCTION%",
     "%LEVEL%",
@@ -305,7 +308,7 @@ Log::setSeverityString(const std::string& level)
 }
 
 void
-Log::setLogEngine(const std::string& newengine)
+Log::setLogEngine(const std::string& /* newengine */)
 {
   // Do nothing for now.  Only spd logger
 }
@@ -321,6 +324,10 @@ void
 Log::setLogUseColors(bool useColor)
 {
   useColors = useColor;
+  // Refresh the pattern when possibly color tokens change
+  if (myLog != nullptr) {
+    setLogPattern(myPatternStr);
+  }
 }
 
 void

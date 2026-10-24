@@ -221,13 +221,14 @@ LogSPD::setUseStdErr(bool useStdErr) {
   setSPDPattern(myPattern);
 }
 
-void
-LogSPD::log(LogLevel level, const std::string& message)
+void LogSPD::log(const LogEvent& event)
 {
-  // 1. Map custom LogLevel to spdlog level
-  spdlog::level::level_enum spd_level = map_level(level);
-
-  // 2. Log to spd Map custom LogLevel to spdlog level
-  mySpdLogger->log(spd_level, "{}", message);
-} // LogSPD::log
+  // Map custom LogLevel to spdlog level
+  spdlog::level::level_enum spd_level = map_level(event.level);
+  
+  // spdlog takes over here. If you configure it for async/multithreaded mode, 
+  // it will safely copy/move the data into its background thread queue now.
+  spdlog::source_loc spd_loc{event.file, event.line, event.func};
+  mySpdLogger->log(spd_loc, spd_level, "{}", event.message);
+}
 

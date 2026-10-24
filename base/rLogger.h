@@ -20,6 +20,16 @@ enum class LogToken {
 // to add more levels.  Right now we've been keeping it simple.
 enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical, Off };
 
+/** Log event makes it a clean */
+struct LogEvent {
+  LogLevel          level;
+  const char *      file;
+  const char *      func;
+  int               line;
+  // Reference guarentees zero copying here
+  const std::string & message;
+};
+
 /**
  * Logger has the ability to write log messages.
  * Making it dynamic module so we can swap different logging libraries or
@@ -36,32 +46,7 @@ public:
 
   // The Bridge: Implemented by the DLL
   virtual void
-  log(LogLevel level, const std::string& message) = 0;
-
-  template <typename ... Args>
-  void
-  logFormatted(LogLevel level, fmt::format_string<Args...> fmtStr, Args&&... args)
-  {
-    fmt::memory_buffer buf;
-
-    #if __cplusplus >= 202002L
-    // C++20: The compiler validates fmtStr against Args... at the call site.
-    // No try/catch needed for the format string itself.
-    fmt::format_to(std::back_inserter(buf), fmtStr, std::forward<Args>(args)...);
-    #else
-    // Pre-C++20: fmt::format_string doesn't trigger compile errors.
-    // We MUST use fmt::runtime and a try/catch to prevent crashes.
-    try {
-      fmt::format_to(std::back_inserter(buf), fmt::runtime(fmtStr), std::forward<Args>(args)...);
-    } catch (const fmt::format_error& e) {
-      // If the format is bad, log the error so the dev can fix the code
-      log(LogLevel::Error, std::string("Format Error: ") + e.what());
-      return;
-    }
-    #endif // if __cplusplus >= 202002L
-
-    log(level, fmt::to_string(buf));
-  }
+  log(const LogEvent& event) = 0;
 
   /** Notify logger of token pattern change */
   virtual void
@@ -80,34 +65,41 @@ public:
   virtual void
   setFlushMilliseconds(int ms) = 0;
 
-  /** Info - Single string overload for deprecated way */
+  /** Switch logging to stderr.  This is for special programs like
+   * rdump that are expected to dump their output to terminal. This
+   * will cause log messages to not be piped etc. and interfere with
+   * the output */
+  virtual void
+  setUseStdErr(bool useStdErr) = 0;
+
+  /** Template work patching logging into the logger module */
+  template <typename ... Args>
   void
-  debugOld(int line, const char * file, const char * function, const std::string& str)
+  logFormatted(LogLevel level, const char * file, int line, const char * func, fmt::format_string<Args...> fmtStr,
+    Args&&... args)
   {
-    std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
+    fmt::memory_buffer buf;
 
-    log(LogLevel::Debug, logline);
-  }
+    #if __cplusplus >= 202002L
+    // C++20: The compiler validates fmtStr against Args... at the call site.
+    // No try/catch needed for the format string itself.
+    fmt::format_to(std::back_inserter(buf), fmtStr, std::forward<Args>(args)...);
+    #else
+    // Pre-C++20: fmt::format_string doesn't trigger compile errors.
+    // We MUST use fmt::runtime and a try/catch to prevent crashes.
+    try {
+      fmt::format_to(std::back_inserter(buf), fmt::runtime(fmtStr), std::forward<Args>(args)...);
+    } catch (const fmt::format_error& e) {
+      // If the format is bad, log the error so the dev can fix the code
+      std::string errorMsg = std::string("Format Error: ") + e.what(); // Keep on stack
+      log({ LogLevel::Error, file, func, line, errorMsg });
+      return;
+    }
+    #endif // if __cplusplus >= 202002L
 
-  /** Info - Single string overload for deprecated way */
-  void
-  infoOld(int line, const char * file, const char * function, const std::string& str)
-  {
-    // We pass "{}" as the format string and 'str' as the argument
-    // Remove the "\n" if any. Current all the LogInfos are adding \n which is bad
-    // practice.
-    std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
-
-    log(LogLevel::Info, logline);
-  }
-
-  /** Info - Single string overload for deprecated way */
-  void
-  severeOld(int line, const char * file, const char * function, const std::string& str)
-  {
-    std::string logline = (str.back() == '\n') ? str.substr(0, str.length() - 1) : str;
-
-    log(LogLevel::Error, logline);
+    // Construct the event in-place. The string is passed by reference.
+    std::string formattedMsg = fmt::to_string(buf); // Keep on stack
+    log({ level, file, func, line, formattedMsg });
   }
 
   /** Debug */
@@ -116,7 +108,7 @@ public:
   debug(int line, const char * file, const char * function,
     fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    logFormatted(LogLevel::Debug, fmtStr, std::forward<Args>(args)...);
+    logFormatted(LogLevel::Debug, file, line, function, fmtStr, std::forward<Args>(args)...);
   }
 
   /** Info */
@@ -125,7 +117,7 @@ public:
   info(int line, const char * file, const char * function,
     fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    logFormatted(LogLevel::Info, fmtStr, std::forward<Args>(args)...);
+    logFormatted(LogLevel::Info, file, line, function, fmtStr, std::forward<Args>(args)...);
   }
 
   /** Severe.  (We used severe forever, match to error) */
@@ -134,14 +126,8 @@ public:
   severe(int line, const char * file, const char * function,
     fmt::format_string<Args...> fmtStr, Args&&... args)
   {
-    logFormatted(LogLevel::Error, fmtStr, std::forward<Args>(args)...);
+    logFormatted(LogLevel::Error, file, line, function, fmtStr, std::forward<Args>(args)...);
   }
-
-  /** Switch logging to stderr.  This is for special programs like
-   * rdump that are expected to dump their output to terminal. This
-   * will cause log messages to not be piped etc. and interfere with
-   * the output */
-  virtual void setUseStdErr(bool useStdErr){ }
 };
 
 // Forward declaration to avoid pulling in Boost.Asio or rEventTimer.h here
@@ -317,6 +303,9 @@ public:
   static std::vector<std::string> fillers;
 
 private:
+
+  /** Last log pattern set */
+  static std::string myPatternStr;
 
   /** Color setting for help */
   static bool useHelpColors;

@@ -663,6 +663,8 @@ OptionList::initToSettings()
 {
   // Allow colors if possible and turned on in global config
   ColorTerm::setColors(Log::useColors && ColorTerm::haveColorSupport());
+  // Force the logger to re-parse the pattern now that ColorTerm strings are populated
+  Log::setLogUseColors(Log::useColors);
 }
 
 IOptionBackend::SeparatedArgs

@@ -27,8 +27,8 @@ namespace rapio {
 class LogSPD : public Logger {
 public:
   /** Log a message at given level */
-  void
-  log(LogLevel level, const std::string& message) override;
+  void 
+  log(const LogEvent& event) override;
 
   /** Set the logging tokens for the log line pattern */
   void

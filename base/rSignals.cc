@@ -21,15 +21,13 @@ using namespace rapio;
 static bool enabledStackTrace      = false;
 bool Signals::myCoreDumpsRequested = false;
 
-/** Designed by nobar on stackoverflow,
- * doesn't work with valgrind or when running within gdb */
 void
-Signals::printTrace()
+Signals::printTrace(const std::string& reason)
 {
   // Note: Boost allows various stacktrace levels.
   // For full listing need stacktrace_addr2line plus RelWithDebInfo
   //
-  std::cerr << "\n[RAPIO CRASH] Build: " << OS::getBuildInfo() << "\n"
+  std::cerr << "\n[RAPIO " << reason << "] Build: " << OS::getBuildInfo() << "\n"
             << "Stack trace:\n"
             <<
     boost::stacktrace::stacktrace() << "\n\n";
@@ -59,7 +57,8 @@ Signals::handleSignal(int signum)
 {
   // The exit code magic numbers are out on the web.  We'll try
   // to send the correct ones, normally it's just 1 for error 0 for success
-  int exitcode = 1;
+  int exitcode       = 1;
+  std::string reason = "CRASH";
 
   // Our safe print info on signal. It's not recommended
   // to print from signals but I find this so handy in operations
@@ -67,31 +66,37 @@ Signals::handleSignal(int signum)
       case SIGTERM: {
         PRINTSIGNAL("SIGTERM", " received.");
         exitcode = 0;
+        reason   = "TERMINATED";
       }
       break;
       case SIGSEGV: {
         PRINTSIGNAL("SIGSEGV", " received.");
         exitcode = 139;
+        reason   = "SEGFAULT";
       }
       break;
       case SIGINT: {
         PRINTSIGNAL("SIGINT", " received.");
         exitcode = 130;
+        reason   = "INTERRUPT";
       }
       break;
       case SIGILL: {
         PRINTSIGNAL("SIGILL", " received.");
         exitcode = 132;
+        reason   = "ILLEGAL INSTRUCTION";
       }
       break;
       case SIGABRT: {
         PRINTSIGNAL("SIGABRT", " received.");
         exitcode = 134;
+        reason   = "ABORT";
       }
       break;
       case SIGFPE: {
         PRINTSIGNAL("SIGFPE", " Bad math, divide by zero?");
         exitcode = 136;
+        reason   = "MATH ERROR";
       }
       break;
       default: {
@@ -116,16 +121,29 @@ Signals::handleSignal(int signum)
   // exit itself is smart enough for double call
   if (enabledStackTrace) {
     enabledStackTrace = false;
-    printTrace();
+    printTrace(reason);
   }
-  // Frustrating, still not working in docker, maybe because I'm multithreaded?
-  // possibly I'm building container entry point incorrect..but the signal is lost
-  // and algorithm refuses to die.  Exit appears to work correctly so we'll use it for now.
-  // kill(getpid(), signum);
+
+  // -------------------------------------------------------------------------
+  // In a multithreaded environment (like Docker containers running this app),
+  // POSIX signals like SIGINT or SIGTERM are delivered to whichever thread
+  // happens to be available.
   //
-  // I think the issue was that signals are caught by random threads, not always
-  // the main thread.  So instead we tell the main loop to die
+  // If a background thread catches the signal and calls standard std::exit(),
+  // C++ attempts to cleanly shut down the process (flushing I/O, running
+  // static destructors). BUT std::exit() is NOT async-signal-safe! If the
+  // main thread was holding a mutex or writing to a log when the signal hit,
+  // the shutdown sequence deadlocks, the app freezes, and Docker eventually
+  // has to resort to a hard SIGKILL.
+  //
+  // To fix this, we first flag the ASIO loop to stop (just in case).
   EventLoop::exit(exitcode);
+
+  // Then, we use std::_Exit() (capital E) to ask the OS to drop the guillotine
+  // immediately. This bypasses the C++ shutdown sequence entirely, preventing
+  // deadlocks and guaranteeing an instant, safe exit from any thread.
+  // -------------------------------------------------------------------------
+  std::_Exit(exitcode);
 } // Signals::handleSignal
 
 void

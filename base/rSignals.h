@@ -20,9 +20,9 @@ public:
   static void
   initialize(bool enableStackTrace = true, bool wantCoreDumps = false);
 
-  /** Attempt to print stack trace using gdb */
+  /** Attempt to print stack trace */
   static void
-  printTrace();
+  printTrace(const std::string& reason = "CRASH");
 
   /** Get setup message back */
   static std::string
