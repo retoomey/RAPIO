@@ -31,7 +31,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOHmrg::getHelpString(const std::string& key)
+IOHmrg::getHelpString(const std::string&)
 {
   std::string help;
 

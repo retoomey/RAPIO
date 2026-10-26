@@ -27,7 +27,7 @@ RedisIndex::~RedisIndex()
 { }
 
 std::string
-RedisIndex::getHelpString(const std::string& fkey)
+RedisIndex::getHelpString(const std::string& /*fkey*/)
 {
   #ifdef HAVE_REDIS
   return "Use a Redis channel for .fml metadata files.";
@@ -39,7 +39,7 @@ RedisIndex::getHelpString(const std::string& fkey)
 }
 
 bool
-RedisIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+RedisIndex::canHandle(const URL&, std::string& /*protocol*/, std::string& /*indexparams*/)
 {
   return false;
 } // RedisIndex::canHandle
@@ -105,7 +105,7 @@ RedisIndex::handleNewEvent(WatchEvent * event)
 
 std::shared_ptr<IndexType>
 RedisIndex::createIndexType(
-  const std::string  & protocol,
+  const std::string  & /*protocol*/,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory)
 {

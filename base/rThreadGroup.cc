@@ -4,7 +4,7 @@
 
 using namespace rapio;
 
-WriteOutputThreadTask::WriteOutputThreadTask(const std::string& key, std::shared_ptr<DataType> outputData,
+WriteOutputThreadTask::WriteOutputThreadTask(const std::string& key, std::shared_ptr<DataType> /*outputData*/,
   std::map<std::string, std::string>& outputParams) : myKey(key), myOutputParams(outputParams)
 {
   // FIXME: Will need the key, params, DataType

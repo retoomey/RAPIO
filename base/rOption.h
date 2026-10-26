@@ -87,7 +87,7 @@ class OptionFilter {
 public:
 
   virtual bool
-  show(const Option& opt)
+  show(const Option&)
   {
     return (true);
   }

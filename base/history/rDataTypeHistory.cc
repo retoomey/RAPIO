@@ -21,7 +21,7 @@ DataTypeHistory::registerForPurging(std::shared_ptr<DataTypeGroup> group)
 }
 
 void
-DataTypeHistory::processNewData(RAPIOData& d)
+DataTypeHistory::processNewData(RAPIOData&)
 {
   // NSEGridHistory::processNewData(d) used to be called here,
   // but environmental/NSE tracking has moved to local DataTypeGroups

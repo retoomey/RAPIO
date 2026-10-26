@@ -19,7 +19,7 @@ TextDataGrid::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextDataGrid::read(IOConfig& config)
+TextDataGrid::read(IOConfig&)
 {
   return nullptr;
 }
@@ -52,7 +52,7 @@ dumpAttributes(std::shared_ptr<DataAttributeList> list, const std::string& i, co
 
 bool
 TextDataGrid::write(std::shared_ptr<DataType> dt,
-  IOConfig                                    & keys)
+  IOConfig                                    &)
 {
   bool successful = false;
 

@@ -22,7 +22,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOCSV::getHelpString(const std::string& key)
+IOCSV::getHelpString(const std::string&)
 {
   return
     "builder for inputting/outputting CSV tabular data. (Use 'fastwrite=true' to bypass rapidcsv memory allocations for massive files)";

@@ -8,7 +8,7 @@ class RecordFilter
 {
 public:
   virtual bool
-  wanted(const Record& rec){ return true; }
+  wanted(const Record&){ return true; }
 };
 
 /** A filter of records using a ConfigParamGroupI */

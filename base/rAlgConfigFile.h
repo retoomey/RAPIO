@@ -59,8 +59,8 @@ public:
   /** Multi-config reader with a default fallback.  Called manual by
    * FusionAlgs and any future multi-alg algorithm */
   virtual bool
-  readMultiConfigURL(const URL& path,
-    std::vector<AlgConfigNode>& nodes){ return false; }
+  readMultiConfigURL(const URL& /*path*/,
+    std::vector<AlgConfigNode>& /*nodes*/){ return false; }
 
   /** Callback for writing a configuration at given URL location */
   virtual bool

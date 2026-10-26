@@ -66,7 +66,7 @@ public:
 
   /** Actual work of reading/checking settings */
   static bool
-  readSettings(std::shared_ptr<PTreeData> d){ return true; }
+  readSettings(std::shared_ptr<PTreeData>){ return true; }
 
   /** Check and load settings */
   static void

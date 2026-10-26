@@ -141,13 +141,13 @@ WindResolver::introduceSelf()
 }
 
 std::string
-WindResolver::getHelpString(const std::string& fkey)
+WindResolver::getHelpString(const std::string& /*fkey*/)
 {
   return "Calculates the 5 geometric/velocity components required for Multi-Doppler Least Squares wind retrieval.";
 }
 
 std::shared_ptr<VolumeValueResolver>
-WindResolver::create(const std::string & params)
+WindResolver::create(const std::string & /*params*/)
 {
   return std::make_shared<WindResolver>();
 }

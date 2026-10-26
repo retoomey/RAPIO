@@ -36,7 +36,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOWgrib::getHelpString(const std::string& key)
+IOWgrib::getHelpString(const std::string&)
 {
   std::string help;
 
@@ -119,8 +119,8 @@ IOWgrib::createDataType(IOConfig& config)
 }
 
 bool
-IOWgrib::encodeDataType(std::shared_ptr<DataType> dt,
-  IOConfig                                        & params
+IOWgrib::encodeDataType(std::shared_ptr<DataType>,
+  IOConfig                                        &
 )
 {
   fLogSevere("Called wgrib2 write module correctly.  Oh yay!");

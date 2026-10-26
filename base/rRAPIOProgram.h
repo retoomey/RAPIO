@@ -36,22 +36,22 @@ public:
 
   /** Declare extra options program will use */
   virtual void
-  declareOptions(RAPIOOptions& o){ };
+  declareOptions(RAPIOOptions&){ };
 
   /** Gather flags, etc. from the parsed options */
   virtual void
-  processOptions(RAPIOOptions& o){ };
+  processOptions(RAPIOOptions&){ };
 
   /** Callback for data ingest */
   virtual void
-  processNewMessage(const Message& m)
+  processNewMessage(const Message&)
   {
     fLogDebug("Received message callback, ignoring.");
   }
 
   /** Callback for data ingest */
   virtual void
-  processNewData(rapio::RAPIOData& d)
+  processNewData(rapio::RAPIOData&)
   {
     fLogDebug("Received data callback, ignoring.");
   }
@@ -68,7 +68,7 @@ public:
   /** Callback for web plugins. Process a web request message when
    * running with a REST webserver mode */
   virtual void
-  processWebMessage(std::shared_ptr<WebMessage> message)
+  processWebMessage(std::shared_ptr<WebMessage>)
   {
     fLogDebug("Received web callback, ignoring.");
   }
@@ -150,11 +150,11 @@ protected:
 
   /** Declare advanced help for options in declareOptions, if any. */
   virtual void
-  declareAdvancedHelp(RAPIOOptions& o){ };
+  declareAdvancedHelp(RAPIOOptions&){ };
 
   /** Post loaded help.  Algorithms should use declareAdvancedHelp */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o){ };
+  addPostLoadedHelp(RAPIOOptions&){ };
 
   /* Write direct using a map */
   [[deprecated("Use writeDirectOutput taking IOConfig instead of std::map")]]

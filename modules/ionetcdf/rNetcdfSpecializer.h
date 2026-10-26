@@ -15,22 +15,22 @@ public:
 
   /** Write DataType to NETCDF */
   virtual bool
-  writeNETCDF(int             ncid,
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys){ return false; }
+  writeNETCDF(int             /*ncid*/,
+    std::shared_ptr<DataType>,
+    IOConfig                  &){ return false; }
 
   // Unused.
 
   /** Read a RadialSet with given keys */
   virtual std::shared_ptr<DataType>
-  read(IOConfig& keys)
+  read(IOConfig&)
   override { return nullptr; }
 
   /** Write DataType from given ncid */
   virtual bool
   write(
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys)
+    std::shared_ptr<DataType>,
+    IOConfig                  &)
   override { return false; }
 };
 }

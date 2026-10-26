@@ -239,8 +239,8 @@ public:
 
   /** Project array to lat lon grid.  This isn't super generic */
   virtual void
-  toLatLonGrid(std::shared_ptr<Array<float, 2> > in,
-    std::shared_ptr<LatLonGrid> out){ };
+  toLatLonGrid(std::shared_ptr<Array<float, 2> > /*in*/,
+    std::shared_ptr<LatLonGrid> /*out*/){ };
 };
 
 /* The only subclass for now, projects using the

@@ -167,8 +167,8 @@ EXEWatcher::EXEInfo::connect()
 
 bool
 EXEWatcher::attach(const std::string & param,
-  bool                               realtime,
-  bool                               archive,
+  bool                              /*realtime*/,
+  bool                              /*archive*/,
   IOListener *                       l)
 {
   // Guess we do the connection right?

@@ -9,7 +9,7 @@ using namespace rapio;
 WgribFieldImp::WgribFieldImp(const URL& url,
   int messageNumber,
   int fieldNumber,
-  long int filePos,
+  long int /*filePos*/,
   std::array<long, 3>& sec0, std::array<long, 13>& sec1) :
   GribField(messageNumber, fieldNumber), myURL(url)
 {
@@ -96,7 +96,7 @@ WgribFieldImp::getFloat2D()
 } // WgribFieldImp::getFloat2D
 
 std::shared_ptr<Array<float, 3> >
-WgribFieldImp::getFloat3D(std::shared_ptr<Array<float, 3> > in, size_t atZ, size_t numZ)
+WgribFieldImp::getFloat3D(std::shared_ptr<Array<float, 3> >, size_t /*atZ*/, size_t /*numZ*/)
 {
   fLogSevere("getFloat3D not implemented in field class");
   return nullptr;

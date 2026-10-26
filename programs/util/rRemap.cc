@@ -35,7 +35,7 @@ Remap::declareOptions(RAPIOOptions& o)
 }
 
 void
-Remap::declareAdvancedHelp(RAPIOOptions& o)
+Remap::declareAdvancedHelp(RAPIOOptions&)
 {
   // Hook this up to ArrayPipeline::introduceHelp() if implemented
 }

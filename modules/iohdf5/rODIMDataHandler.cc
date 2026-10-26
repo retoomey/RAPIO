@@ -70,7 +70,7 @@ ODIMDataHandler::introduceSelf(IOHDF5 * owner)
 
 std::shared_ptr<DataType>
 ODIMDataHandler::readHDF5(hid_t hdf5id,
-  IOConfig                      & keys)
+  IOConfig                      &)
 {
   // Options in RAPIO are passed by keys, allowing algs or binaries
   // to override/add ability
@@ -538,9 +538,9 @@ ODIMDataHandler::readODIM_MOMENT(
 } // ODIMDataHandler::readODIM_MOMENT
 
 bool
-ODIMDataHandler::writeHDF5(hid_t hdf5id,
-  std::shared_ptr<DataType>      dt,
-  IOConfig                       & keys)
+ODIMDataHandler::writeHDF5(hid_t /*hdf5id*/,
+  std::shared_ptr<DataType>,
+  IOConfig                       &)
 {
   // FIXME: Should be pretty easy to say write a single RadialSet as a SCAN,
   // or other types.  Don't know if we have a use case currently though

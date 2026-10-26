@@ -15,7 +15,7 @@ using namespace rapio;
  * @author John Krause
  **/
 void
-rDRradial::declareOptions(RAPIOOptions& o)
+rDRradial::declareOptions(RAPIOOptions&)
 {
   // NOTE: the i, I, l, O and r options are already defined in RAPIOAlgorithm.
   // i --> input index/url support
@@ -38,7 +38,7 @@ rDRradial::declareOptions(RAPIOOptions& o)
 
 /** RAPIOAlgorithms process options on start up */
 void
-rDRradial::processOptions(RAPIOOptions& o)
+rDRradial::processOptions(RAPIOOptions&)
 {
   // This is an example of how to get your algorithm parameters
   // Stick them in instance variables you can use them later in processing.
@@ -298,7 +298,7 @@ rDRradial::processNewData(rapio::RAPIOData& d)
 } // rDRradial::processNewData
 
 void
-rDRradial::processHeartbeat(const Time& n, const Time& p)
+rDRradial::processHeartbeat(const Time& /*n*/, const Time& /*p*/)
 {
   fLogInfo("Simple alg got a heartbeat...what do you want me to do?");
   // FIXME: longer example here maybe..

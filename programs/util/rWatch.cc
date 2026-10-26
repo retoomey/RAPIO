@@ -15,7 +15,7 @@ Watch::declareOptions(RAPIOOptions& o)
 
 /** RAPIOAlgorithms process options on start up */
 void
-Watch::processOptions(RAPIOOptions& o)
+Watch::processOptions(RAPIOOptions&)
 { }
 
 void

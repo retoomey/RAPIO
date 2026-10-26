@@ -43,7 +43,7 @@ float IONetcdf::RANGE_FOLDED = Constants::RangeFolded;
 int IONetcdf::GZ_LEVEL       = 6;
 
 std::string
-IONetcdf::getHelpString(const std::string& key)
+IONetcdf::getHelpString(const std::string& /*key*/)
 {
   std::string help;
 

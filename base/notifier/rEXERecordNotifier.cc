@@ -23,7 +23,7 @@ public:
   }
 
   virtual std::string
-  getHelpString(const std::string& fkey) override
+  getHelpString(const std::string& /*fkey*/) override
   {
     return
       "Call script/program for each new record.\n  Example: exe=/test.exe to call test.exe with the record param list.\n  Combination: 'fml= exe=/test.exe fml=/copy' Two sets of fml records written, one to default and one to /copy.  Call test.exe with info on written data files.";
@@ -58,13 +58,13 @@ EXERecordNotifier::~EXERecordNotifier()
 { }
 
 void
-EXERecordNotifier::writeMessage(IOConfig& outputParams, const Message& rec)
+EXERecordNotifier::writeMessage(IOConfig&, const Message&)
 {
   fLogDebug("-->EXE TRYING TO WRITE MESSAGE");
 }
 
 void
-EXERecordNotifier::writeRecord(IOConfig& outputParams, const Record& rec)
+EXERecordNotifier::writeRecord(IOConfig& /*outputParams*/, const Record& rec)
 {
   // const std::string outputinfo = outputParams["outputfolder"];
   auto params = rec.getParams();

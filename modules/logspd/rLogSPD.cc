@@ -29,7 +29,7 @@ public:
   fmtTime(const std::string& rapioFormat) : myFormat(rapioFormat){ }
 
   void
-  format(const spdlog::details::log_msg &msg, const std::tm &a, spdlog::memory_buf_t &dest) override
+  format(const spdlog::details::log_msg &msg, const std::tm & /*a*/, spdlog::memory_buf_t &dest) override
   {
     const auto time      = Time(msg.time);
     std::string some_txt = time.getString(myFormat);
@@ -183,7 +183,7 @@ LogSPD::setSPDPattern(const std::string& pattern)
   formatter->add_flag<fmtTime>(SPD3, Log::LOG_TIMESTAMP_C);
   formatter->set_pattern(myPattern);
   mySpdLogger->set_formatter(std::move(formatter));
-  // mySpdLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
+  mySpdLogger->set_pattern(pattern);
 }
 
 void

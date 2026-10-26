@@ -46,26 +46,26 @@ public:
    * a copy is made.  Option start index in the data and length.
    * a length of 0 will go to the end.*/
   virtual bool
-  apply(std::vector<char>& input, std::vector<char>& output,
-    size_t start_index = 0,
-    size_t length      = 0)
+  apply(std::vector<char>& /*input*/, std::vector<char>& /*output*/,
+    size_t /*start_index*/ = 0,
+    size_t /*length*/      = 0)
   {
     return false;
   }
 
   /** Reverse filter back to original */
   virtual bool
-  reverse(std::vector<char>& input, std::vector<char>& output,
-    size_t start_index = 0,
-    size_t length      = 0)
+  reverse(std::vector<char>& /*input*/, std::vector<char>& /*output*/,
+    size_t /*start_index*/ = 0,
+    size_t /*length*/      = 0)
   {
     return false;
   }
 
   /** Apply filter to a given URL, write to output location */
   virtual bool
-  applyURL(const URL& infile, const URL& outfile,
-    std::map<std::string, std::string> &params){ return false; }
+  applyURL(const URL& /*infile*/, const URL& /*outfile*/,
+    std::map<std::string, std::string> & /*params*/){ return false; }
 };
 
 // ----------------------------------------------------------------------

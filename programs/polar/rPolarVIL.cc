@@ -293,7 +293,7 @@ public:
     }
   }
 
-  virtual void processHeartbeat(const rapio::Time& n, const rapio::Time& p) override {
+  virtual void processHeartbeat(const rapio::Time& /*n*/, const rapio::Time& /*p*/) override {
   
       // Grab the current tilts in the volume
       auto& tilts = myElevationVolume->getVolume();
@@ -334,7 +334,7 @@ public:
 
   // This is called automatically by PolarAlgorithm whenever a new tilt arrives (if -everytilt is set) 
   // or when the heartbeat fires.
-  virtual void processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype) override {
+  virtual void processVolume(const Time& useTime, float /*useElevDegs*/, const std::string& useSubtype) override {
     
     // Define our custom callback to handle the Az/Range iteration
     class VILCallback : public ElevationVolumeCallback {

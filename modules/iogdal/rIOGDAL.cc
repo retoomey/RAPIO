@@ -28,7 +28,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOGDAL::getHelpString(const std::string& key)
+IOGDAL::getHelpString(const std::string&)
 {
   std::string help;
 

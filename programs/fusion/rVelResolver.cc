@@ -10,13 +10,13 @@ VelResolver::introduceSelf()
 }
 
 std::string
-VelResolver::getHelpString(const std::string& fkey)
+VelResolver::getHelpString(const std::string& /*fkey*/)
 {
   return "Experimental velocity gatherer.";
 }
 
 std::shared_ptr<VolumeValueResolver>
-VelResolver::create(const std::string & params)
+VelResolver::create(const std::string & /*params*/)
 {
   return std::make_shared<VelResolver>();
 }

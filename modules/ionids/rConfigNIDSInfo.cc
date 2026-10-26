@@ -20,7 +20,7 @@ ConfigNIDSInfo::introduceSelf()
 }
 
 bool
-ConfigNIDSInfo::readSettings(std::shared_ptr<PTreeData> d)
+ConfigNIDSInfo::readSettings(std::shared_ptr<PTreeData>)
 {
   // We don't use d (tags from global rapioconfig.xml), but
   // we always have that for later for overrides, etc.

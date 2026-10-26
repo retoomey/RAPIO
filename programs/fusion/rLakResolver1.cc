@@ -87,13 +87,13 @@ LakResolver1::introduceSelf()
 }
 
 std::string
-LakResolver1::getHelpString(const std::string& fkey)
+LakResolver1::getHelpString(const std::string& /*fkey*/)
 {
   return "Based on w2merger math and paper using S-curve interpolation.";
 }
 
 std::shared_ptr<VolumeValueResolver>
-LakResolver1::create(const std::string & params)
+LakResolver1::create(const std::string & /*params*/)
 {
   return std::make_shared<LakResolver1>();
 }

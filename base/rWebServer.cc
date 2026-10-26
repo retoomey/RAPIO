@@ -243,7 +243,7 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
 namespace {
 // I 'think' this is a call back telling us actual port used for multiconnections
 void
-serverStarted(unsigned short port)
+serverStarted(unsigned short /*port*/)
 {
   // WebServer::port=port;
 };

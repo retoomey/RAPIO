@@ -31,7 +31,7 @@ public:
   /** Write the block */
   virtual void
   // write(StreamBuffer& b) = 0;
-  write(StreamBuffer& b){ };
+  write(StreamBuffer&){ };
 };
 
 /**

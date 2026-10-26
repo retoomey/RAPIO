@@ -191,7 +191,7 @@ LatLonGrid::preWrite(IOConfig& keys)
 }
 
 void
-LatLonGrid::postWrite(IOConfig& keys)
+LatLonGrid::postWrite(IOConfig&)
 {
   unsparseRestore();
 }

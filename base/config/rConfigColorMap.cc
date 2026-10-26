@@ -80,8 +80,8 @@ ConfigColorMap::readW2ColorMap(const std::string& key,
 }
 
 std::shared_ptr<ColorMap>
-ConfigColorMap::readParaColorMap(const std::string& key,
-  std::map<std::string, std::string>              & attributes)
+ConfigColorMap::readParaColorMap(const std::string& /*key*/,
+  std::map<std::string, std::string> & attributes)
 {
   const std::string rootpath = "colormaps/";
   std::string filename       = attributes["filename"];

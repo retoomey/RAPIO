@@ -21,11 +21,11 @@ public:
 
   /** Called before any loop */
   virtual void
-  handleBeginLoop(RadialSetIterator *, const RadialSet& rs){ };
+  handleBeginLoop(RadialSetIterator *, const RadialSet&){ };
 
   /** Called after any loop */
   virtual void
-  handleEndLoop(RadialSetIterator *, const RadialSet& rs){ };
+  handleEndLoop(RadialSetIterator *, const RadialSet&){ };
 };
 
 /**.

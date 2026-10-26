@@ -234,7 +234,7 @@ BoostConnection::readLocal(const std::string& url, std::vector<char>& buf, size_
 } // BoostConnection::read
 
 int
-BoostConnection::readH(const std::string& url, const std::vector<std::string>& headers,
+BoostConnection::readH(const std::string& url, const std::vector<std::string>& /*headers*/,
   std::vector<char>& buf)
 {
   fLogSevere("Not implemented boost HTTP headers.");

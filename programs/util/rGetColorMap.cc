@@ -15,7 +15,7 @@ GetColorMap::declareOptions(RAPIOOptions& o)
 }
 
 void
-GetColorMap::processOptions(RAPIOOptions& o)
+GetColorMap::processOptions(RAPIOOptions&)
 {
   // FIXME: We'll add more controls/params over time.  We need
   // to also sync with webserver probably.

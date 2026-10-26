@@ -36,8 +36,9 @@ public:
   /** Get tag from node. */
   template <class Type>
   Type
-  get(const Type & value) const
+  get(const Type & /*value*/) const
   {
+    // FIXME: double check why we don't use value here?
     return (node.get_value<Type>());
   }
 

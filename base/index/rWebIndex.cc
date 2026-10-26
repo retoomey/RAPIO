@@ -56,7 +56,7 @@ WebIndex::~WebIndex()
 { }
 
 std::string
-WebIndex::getHelpString(const std::string& fkey)
+WebIndex::getHelpString(const std::string& /*fkey*/)
 {
   return
     "Web index polls a NSSL/WG data webserver for metadata.\n  Example: iweb=//vmrms-sr20/KTLX or http://vmrms-webserv/vmrms-sr02?source=KTLX (non macro)";
@@ -228,7 +228,7 @@ WebIndex::readRemoteRecords()
 
 std::shared_ptr<IndexType>
 WebIndex::createIndexType(
-  const std::string  & protocol,
+  const std::string  & /*protocol*/,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory)
 {

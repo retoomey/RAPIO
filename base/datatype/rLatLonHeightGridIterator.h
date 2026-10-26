@@ -22,10 +22,10 @@ public:
   ~LatLonHeightGridCallback() = default;
   virtual void
   handleVoxel(LatLonHeightGridIterator * it) = 0;
-  virtual void handleBeginColumn(LatLonHeightGridIterator * it){ };
-  virtual void handleEndColumn(LatLonHeightGridIterator * it){ };
-  virtual void handleBeginLoop(LatLonHeightGridIterator *, const LatLonHeightGrid& grid){ };
-  virtual void handleEndLoop(LatLonHeightGridIterator *, const LatLonHeightGrid& grid){ };
+  virtual void handleBeginColumn(LatLonHeightGridIterator *){ };
+  virtual void handleEndColumn(LatLonHeightGridIterator *){ };
+  virtual void handleBeginLoop(LatLonHeightGridIterator *, const LatLonHeightGrid&){ };
+  virtual void handleEndLoop(LatLonHeightGridIterator *, const LatLonHeightGrid&){ };
 };
 
 /**.

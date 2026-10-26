@@ -62,10 +62,10 @@ NIDSRadialSet::setElevationAngleDegs(
 
 std::shared_ptr<DataType>
 NIDSRadialSet::readNIDS(
-  IOConfig              & config,
-  BlockMessageHeader    & h,
+  IOConfig              &,
+  BlockMessageHeader    & /*h*/,
   BlockProductDesc      & d,
-  BlockProductSymbology & s,
+  BlockProductSymbology & /*s*/,
   StreamBuffer          & z)
 {
   BlockRadialSet r;
@@ -246,7 +246,7 @@ NIDSRadialSet::readNIDS(
 
 bool
 NIDSRadialSet::writeNIDS(
-  IOConfig                  & config,
+  IOConfig                  &,
   std::shared_ptr<DataType> dt,
   StreamBuffer              & b)
 {

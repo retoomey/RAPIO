@@ -20,7 +20,7 @@ Dump::declareOptions(RAPIOOptions& o)
 }
 
 void
-Dump::processOptions(RAPIOOptions& o)
+Dump::processOptions(RAPIOOptions&)
 {
 }
 

@@ -52,7 +52,7 @@ checkProbSevere(const std::shared_ptr<rapio::PTreeData>& yaml, std::string& outK
 }
 
 std::string
-IOYAML::getHelpString(const std::string& key)
+IOYAML::getHelpString(const std::string&)
 {
   return "builder for reading/writing YAML, JSON, and GeoJSON formatted data using RapidYAML.";
 }

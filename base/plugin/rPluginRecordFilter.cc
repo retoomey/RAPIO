@@ -48,7 +48,7 @@ PluginRecordFilter::processOptions(RAPIOOptions& o)
 
 /** Execute/run the plugin */
 void
-PluginRecordFilter::execute(RAPIOProgram * caller)
+PluginRecordFilter::execute(RAPIOProgram * /*caller*/)
 {
   // Possibly could create here instead of in declare?
   // doesn't matter much in this case, maybe later it will

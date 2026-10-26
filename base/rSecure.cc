@@ -120,7 +120,7 @@ Secure::sha256(const std::string& str)
 namespace {
 // Callback for openssl error messages
 int
-opensslerror(const char * str, size_t len, void * u)
+opensslerror(const char * str, size_t /*len*/, void * /*u*/)
 {
   fLogSevere("OpenSSL error: {}", str);
   /** FIXME: Documentation can't tell what we're supposed to return here */

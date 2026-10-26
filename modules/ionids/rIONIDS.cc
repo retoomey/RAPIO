@@ -31,7 +31,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IONIDS::getHelpString(const std::string& key)
+IONIDS::getHelpString(const std::string&)
 {
   std::string help;
 

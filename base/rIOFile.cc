@@ -10,7 +10,7 @@
 using namespace rapio;
 
 std::string
-IOFile::getHelpString(const std::string & key)
+IOFile::getHelpString(const std::string & /*key*/)
 {
   std::string help;
 
@@ -19,14 +19,14 @@ IOFile::getHelpString(const std::string & key)
 }
 
 std::shared_ptr<DataType>
-IOFile::createDataTypeFromBuffer(std::vector<char>& buffer)
+IOFile::createDataTypeFromBuffer(std::vector<char>& /*buffer*/)
 {
   return nullptr;
 }
 
 /** Read call */
 std::shared_ptr<DataType>
-IOFile::createDataType(IOConfig& config)
+IOFile::createDataType(IOConfig&)
 {
   return nullptr;
 } // IOFile::createDataType
@@ -35,7 +35,7 @@ bool
 IOFile::writeout(std::shared_ptr<DataType> dt,
   const std::string                        & outputinfo,
   std::vector<Record>                      & records,
-  const std::string                        & knownfactory,
+  const std::string                        & /*knownfactory*/,
   IOConfig                                 & outputParams)
 {
   // Get the proxy factory off the file name
@@ -68,8 +68,8 @@ IOFile::writeout(std::shared_ptr<DataType> dt,
 } // IOFile::writeout
 
 bool
-IOFile::encodeDataType(std::shared_ptr<DataType> dt,
-  IOConfig                                       & config
+IOFile::encodeDataType(std::shared_ptr<DataType>,
+  IOConfig                                       &
 )
 {
   fLogSevere("File builder can't encode anything itself, nothing writes.  You should be calling IODataType::write().");
@@ -77,8 +77,8 @@ IOFile::encodeDataType(std::shared_ptr<DataType> dt,
 }
 
 size_t
-IOFile::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  IOConfig & keys
+IOFile::encodeDataTypeBuffer(std::shared_ptr<DataType>, std::vector<char>& /*buffer*/,
+  IOConfig &
 )
 {
   // FIXME: Do we do buffer stuff for file?  I don't think we need it at least for now.

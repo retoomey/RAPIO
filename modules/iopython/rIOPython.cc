@@ -78,7 +78,7 @@ safeCopyFromRegion(const boost::interprocess::mapped_region& region, void * dst,
 }
 
 std::string
-IOPython::getHelpString(const std::string& key)
+IOPython::getHelpString(const std::string&)
 {
   std::string help;
 
@@ -94,7 +94,7 @@ IOPython::~IOPython()
 { }
 
 std::shared_ptr<DataType>
-IOPython::createDataType(IOConfig& config)
+IOPython::createDataType(IOConfig&)
 {
   fLogSevere("Python scripts cannot currently create DataTypes.");
   return nullptr;

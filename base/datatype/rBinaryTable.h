@@ -128,14 +128,14 @@ public:
 
   /** The 'char' column type */
   virtual std::vector<char>
-  getCharVector(const std::string& name)
+  getCharVector(const std::string&)
   {
     return std::vector<char>();
   }
 
   /** The 'short' column type */
   virtual std::vector<short>
-  getShortVector(const std::string& name)
+  getShortVector(const std::string&)
   {
     return std::vector<short>();
   }

@@ -208,7 +208,7 @@ HDF5DataTypeBase::getNativeSize() const
 // the Attribute or Dataset being used.
 // ----------------------------------------------------------------------------
 void
-HDF5DataTypeBase::openDataType(const hid_t t_id)
+HDF5DataTypeBase::openDataType(const hid_t /*t_id*/)
 {
   // Override with Attribute...
   // const hid_t dataTypeId = H5Aget_type(t_id);

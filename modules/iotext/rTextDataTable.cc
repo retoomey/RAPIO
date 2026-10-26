@@ -15,13 +15,13 @@ TextDataTable::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextDataTable::read(IOConfig& config)
+TextDataTable::read(IOConfig&)
 {
   return nullptr;
 }
 
 bool
-TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig& keys)
+TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig&)
 {
   auto table = std::dynamic_pointer_cast<DataTable>(dt);
 

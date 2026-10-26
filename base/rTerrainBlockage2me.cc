@@ -41,7 +41,7 @@ TerrainBlockage2me::introduceSelf()
 }
 
 std::string
-TerrainBlockage2me::getHelpString(const std::string& fkey)
+TerrainBlockage2me::getHelpString(const std::string& /*fkey*/)
 {
   return "Polar terrain based on Bech Et Al 2003.";
 }

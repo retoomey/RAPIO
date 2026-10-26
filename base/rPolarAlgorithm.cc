@@ -10,7 +10,7 @@
 using namespace rapio;
 
 void
-PolarAlgorithm::ElevationVolumeCallback::handleBeginLoop(RadialSetIterator * i, const RadialSet& radial)
+PolarAlgorithm::ElevationVolumeCallback::handleBeginLoop(RadialSetIterator * /*itr*/, const RadialSet& radial)
 {
   // We need to project from ground to tilt for each radial set
   auto const numgates = radial.getNumGates();
@@ -256,7 +256,7 @@ PolarAlgorithm::createOutputRadialSet(
 } // PolarAlgorithm::createOutputRadialSet
 
 void
-PolarAlgorithm::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
+PolarAlgorithm::processVolume(const Time& /*useTime*/, float /*useElevDegs*/, const std::string& /*useSubtype*/)
 {
   fLogInfo("Base Algorithm does nothing");
 } // PolarAlgorithm::processVolume

@@ -205,7 +205,7 @@ public:
 
   /** Process a regular file */
   virtual Action
-  processRegularFile(const std::string& filePath, const struct stat * info) override
+  processRegularFile(const std::string& filePath, const struct stat * /*info*/) override
   {
     // FIXME: Let base class filter filenames?
     if (Strings::endsWith(filePath, mySuffix)) {
@@ -225,7 +225,7 @@ public:
 
   /** Process a directory */
   virtual Action
-  processDirectory(const std::string& dirPath, const struct stat * info) override
+  processDirectory(const std::string& dirPath, const struct stat * /*info*/) override
   {
     // Ok manually force single directory.  FIXME: Could let base have this ability
     // So we don't recursivity walk

@@ -16,7 +16,7 @@ public:
 
   /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
   virtual double
-  getValueAtLL(double latDegs, double lonDegs) override
+  getValueAtLL(double /*latDegs*/, double /*lonDegs*/) override
   {
     return 0;
   }
@@ -67,7 +67,7 @@ public:
 
   /** Help function, subclasses return help information. */
   virtual std::string
-  getHelpString(const std::string& fkey){ return ""; }
+  getHelpString(const std::string& /*fkey*/){ return ""; }
 
   /** Attempt to create TerrainBlockage by name.  This looks up any registered
    * classes and attempts to call the virtual create method on it.
@@ -87,12 +87,12 @@ public:
    * TerrainBlockage class. */
   virtual std::shared_ptr<TerrainBlockage>
   create(
-    const std::string & params,
-    const LLH         & radarLocation,
-    const LengthKMs   & radarRangeKMs, // Range after this is zero blockage
-    const std::string & radarName,
-    LengthKMs         minTerrainKMs,
-    AngleDegs         minAngleDegs)
+    const std::string & /*params*/,
+    const LLH         & /*radarLocation*/,
+    const LengthKMs   & /*radarRangeKMs*/, // Range after this is zero blockage
+    const std::string & /*radarName*/,
+    LengthKMs /*minTerrainKMs*/,
+    AngleDegs /*minAngleDegs*/)
   {
     return nullptr;
   }

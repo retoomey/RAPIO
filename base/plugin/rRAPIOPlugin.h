@@ -46,27 +46,27 @@ public:
 
   /** Declare options used */
   virtual void
-  declareOptions(RAPIOOptions& o)
+  declareOptions(RAPIOOptions&)
   { }
 
   /** Declare advanced help for the plugin */
   virtual void
-  addPostLoadedHelp(RAPIOOptions& o)
+  addPostLoadedHelp(RAPIOOptions&)
   { }
 
   /** Process our options */
   virtual void
-  processOptions(RAPIOOptions& o)
+  processOptions(RAPIOOptions&)
   { }
 
   /** Setup/run the plugin */
   virtual void
-  execute(RAPIOProgram * caller)
+  execute(RAPIOProgram * /*caller*/)
   { }
 
   /** Handle a post record event */
   virtual void
-  postRecordEvent(RAPIOProgram * caller, const Record& rec)
+  postRecordEvent(RAPIOProgram * /*caller*/, const Record&)
   { }
 
 protected:

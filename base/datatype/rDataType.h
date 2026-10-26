@@ -95,15 +95,15 @@ public:
     std::vector<Record> & records);
 
   /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
-  virtual void preWrite(IOConfig& keys){ }
+  virtual void preWrite(IOConfig&){ }
 
   /** Post DataType after writing.  This can destroy temp arrays, etc. that were made just for writing. */
-  virtual void postWrite(IOConfig& keys){ }
+  virtual void postWrite(IOConfig&){ }
 
   // Don't see a need for a preRead ability, maybe later
 
   /** Post DataType after reading. This can unsparse a DataType fields if needed/wanted */
-  virtual void postRead(IOConfig& keys){ }
+  virtual void postRead(IOConfig&){ }
 
   /** Get the factory used to read this in originally, if ever.
    * This can assist writers in outputting */
@@ -233,7 +233,7 @@ public:
 
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
-  getProjection(const std::string& layer = "primary"){ return nullptr; }
+  getProjection(const std::string& /*layer*/ = "primary"){ return nullptr; }
 
   /** Get the ColorMap name for this DataType */
   virtual std::string

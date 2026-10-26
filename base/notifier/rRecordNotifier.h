@@ -18,7 +18,7 @@ public:
 
   /** Help function */
   virtual std::string
-  getHelpString(const std::string& fkey){ return ""; }
+  getHelpString(const std::string& /*fkey*/){ return ""; }
 
   /** Notify about this message. */
   virtual void

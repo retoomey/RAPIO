@@ -39,7 +39,7 @@ PluginRealTime::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginRealTime::execute(RAPIOProgram * caller)
+PluginRealTime::execute(RAPIOProgram * /*caller*/)
 {
   myActive = true;
 }

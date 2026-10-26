@@ -175,7 +175,7 @@ public:
   getType() const { return mySection1[12]; }
 
   /** Get a new field from us.  This doesn't load anything */
-  virtual std::shared_ptr<GribField> getField(size_t fieldNumber){ return nullptr; }
+  virtual std::shared_ptr<GribField> getField(size_t /*fieldNumber*/){ return nullptr; }
 
   /** Print this message and N fields.  Called by base operator << virtually */
   virtual std::ostream& print(std::ostream& os){ return os; }
@@ -186,7 +186,7 @@ public:
   /** Attempt to read g2 information at a file location.  Used at low level scanning.
    * to initialize all of our class variables. */
   virtual bool
-  readG2Info(size_t messageNum, size_t fileOffsetat)
+  readG2Info(size_t /*messageNum*/, size_t /*fileOffsetat*/)
   {
     return false;
   };
@@ -221,7 +221,7 @@ class GribAction
 {
 public:
   virtual bool
-  action(std::shared_ptr<GribMessage>&, size_t fieldNumber)
+  action(std::shared_ptr<GribMessage>&, size_t /*fieldNumber*/)
   {
     return false; // Keep going?
   }

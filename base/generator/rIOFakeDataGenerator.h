@@ -15,7 +15,7 @@ public:
   ~IOFakeDataGenerator() = default;
 
   /** Parse the options for a generator */
-  virtual bool parseOptions(const std::string& params){ return true; }
+  virtual bool parseOptions(const std::string& /*params*/){ return true; }
 
   /** For FakeIndex: Generate a single record for given time */
   virtual Record

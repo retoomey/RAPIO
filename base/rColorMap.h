@@ -88,11 +88,11 @@ public:
 
   /** For the GUI experiment a JSON streamed color map format we can apply
    * client size using javascript. */
-  virtual void toJSON(std::ostream&, const std::string& units = ""){ }
+  virtual void toJSON(std::ostream&, const std::string& /*units*/ = ""){ }
 
   /** For the GUI experiment a SVG color map */
   virtual void
-  toSVG(std::ostream&, const std::string& units = "", const size_t width = 80, const size_t height = 600)
+  toSVG(std::ostream&, const std::string& /*units*/ = "", const size_t /*width*/ = 80, const size_t /*height*/ = 600)
   { }
 
 protected:

@@ -264,7 +264,7 @@ EchoTop::declareOptions(RAPIOOptions& o)
 }
 
 void
-EchoTop::processVolume(const Time& useTime, float useElevDegs, const std::string& useSubtype)
+EchoTop::processVolume(const Time& useTime, float /*useElevDegs*/, const std::string& useSubtype)
 {
   // Traditional(useTime, useElevDegs, useSubtype);
   Interpolated(useTime, 0.0, useSubtype); // Seems MRMS uses 0 degrees?

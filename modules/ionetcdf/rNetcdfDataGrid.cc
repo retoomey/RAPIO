@@ -38,7 +38,7 @@ bool
 NetcdfDataGrid::readDataGrid(
   int                       ncid,
   std::shared_ptr<DataGrid> dataGridSP,
-  IOConfig                  & keys)
+  IOConfig                  &)
 {
   try {
     DataGrid& dataGrid = *dataGridSP;
@@ -147,7 +147,7 @@ NetcdfDataGrid::readDataGrid(
 bool
 NetcdfDataGrid::writeNETCDF(int ncid,
   std::shared_ptr<DataType>     dt,
-  IOConfig                      & keys)
+  IOConfig                      &)
 {
   std::shared_ptr<DataGrid> dataGrid = std::dynamic_pointer_cast<DataGrid>(dt);
   auto dataType = dataGrid->getDataType();

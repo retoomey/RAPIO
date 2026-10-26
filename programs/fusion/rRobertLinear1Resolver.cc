@@ -10,13 +10,13 @@ RobertLinear1Resolver::introduceSelf()
 }
 
 std::string
-RobertLinear1Resolver::getHelpString(const std::string& fkey)
+RobertLinear1Resolver::getHelpString(const std::string& /*fkey*/)
 {
   return "Silly simple linear interpolation between tilts.";
 }
 
 std::shared_ptr<VolumeValueResolver>
-RobertLinear1Resolver::create(const std::string & params)
+RobertLinear1Resolver::create(const std::string & /*params*/)
 {
   return std::make_shared<RobertLinear1Resolver>();
 }

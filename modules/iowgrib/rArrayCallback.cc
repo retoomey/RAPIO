@@ -32,7 +32,7 @@ ArrayCallback::handleFinalize()
 }
 
 void
-Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
+Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * /*index*/)
 {
   myTemp2DArray = Arrays::CreateFloat2D(nlats, nlons);
   auto& output = myTemp2DArray->ref();
@@ -49,7 +49,7 @@ Array2DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned
 }
 
 void
-Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
+Array3DCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * /*index*/)
 {
   if (myLayerNumber == 0) {
     // Found first match.  Create the array.

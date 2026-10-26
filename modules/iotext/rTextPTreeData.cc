@@ -16,13 +16,13 @@ TextPTreeData::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextPTreeData::read(IOConfig& config)
+TextPTreeData::read(IOConfig&)
 {
   return nullptr; // Text reading is typically unsupported for dumps
 }
 
 bool
-TextPTreeData::write(std::shared_ptr<DataType> dt, IOConfig& keys)
+TextPTreeData::write(std::shared_ptr<DataType> dt, IOConfig&)
 {
   auto ptree = std::dynamic_pointer_cast<PTreeData>(dt);
 

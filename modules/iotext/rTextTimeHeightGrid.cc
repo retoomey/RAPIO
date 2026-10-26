@@ -18,14 +18,14 @@ TextTimeHeightGrid::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextTimeHeightGrid::read(IOConfig& config)
+TextTimeHeightGrid::read(IOConfig&)
 {
   // iotext is generally write-only for human-readable dumps via rdump
   return nullptr;
 }
 
 bool
-TextTimeHeightGrid::write(std::shared_ptr<DataType> dt, IOConfig& keys)
+TextTimeHeightGrid::write(std::shared_ptr<DataType> dt, IOConfig&)
 {
   auto thg = std::dynamic_pointer_cast<TimeHeightGrid>(dt);
 

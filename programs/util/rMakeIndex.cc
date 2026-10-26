@@ -95,7 +95,7 @@ makeIndexDirWalker::makeIndexDirWalker(const std::string& what, MakeIndex * owne
 }
 
 DirWalker::Action
-makeIndexDirWalker::processRegularFile(const std::string& filePath, const struct stat * info)
+makeIndexDirWalker::processRegularFile(const std::string& filePath, const struct stat * /*info*/)
 {
   // FIXME: Add filters, right?  Might not want everything.
 
@@ -193,7 +193,7 @@ makeIndexDirWalker::processRegularFile(const std::string& filePath, const struct
 } // makeIndexDirWalker::processRegularFile
 
 DirWalker::Action
-makeIndexDirWalker::processDirectory(const std::string& dirPath, const struct stat * info)
+makeIndexDirWalker::processDirectory(const std::string& dirPath, const struct stat * /*info*/)
 {
   // How to tell the level of directory we are at?  Should be somewhere to add to API,
   // or we check the path?

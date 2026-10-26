@@ -20,7 +20,7 @@ public:
   /** Parse a param string for a stage.  All stages take the
    * form of 'name:params' */
   virtual bool
-  parseOptions(const std::string& params)
+  parseOptions(const std::string& /*params*/)
   {
     return true; // Default implementation cleanly accepts empty/no params
   }
@@ -59,7 +59,7 @@ public:
 protected:
 
   /** Default is no extra params, subclasses should add parameters */
-  virtual bool parseOptions(const std::vector<std::string>& parts){ return true; }
+  virtual bool parseOptions(const std::vector<std::string>& /*parts*/){ return true; }
 
   // FIXME:  Why not N dimension possibility (or at least 3)
 

@@ -11,9 +11,9 @@ public:
   handlePixel(LatLonGridIterator * it) = 0;
 
   // Default empty implementations so callers only override what they need
-  virtual void handleBeginLoop(LatLonGridIterator * it, const LatLonGrid& grid){ }
+  virtual void handleBeginLoop(LatLonGridIterator *, const LatLonGrid&){ }
 
-  virtual void handleEndLoop(LatLonGridIterator * it, const LatLonGrid& grid){ }
+  virtual void handleEndLoop(LatLonGridIterator *, const LatLonGrid&){ }
 };
 
 class LatLonGridIterator {

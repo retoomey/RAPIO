@@ -21,7 +21,7 @@ StreamIndex::~StreamIndex()
 { }
 
 StreamIndex::StreamIndex(
-  const std::string  & protocol,
+  const std::string  & /*protocol*/,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory) :
   IndexType(maximumHistory), myParams(indexparams), myDFAState(0), myItemStart("<item>"), myItemEnd("</item>")
@@ -30,7 +30,7 @@ StreamIndex::StreamIndex(
 }
 
 std::string
-StreamIndex::getHelpString(const std::string& fkey)
+StreamIndex::getHelpString(const std::string& /*fkey*/)
 {
   return "Stream index watches a program, arguments separated by %.\n  Example: " + STREAMINDEX
          + "='feedme%-f%TXT' for ldm ingest of fml.";

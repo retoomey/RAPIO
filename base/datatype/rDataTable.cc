@@ -198,7 +198,7 @@ DataTable::validateRectangularShape() const
 // PTreeDataTable Implementation
 // ---------------------------------------------------------
 std::shared_ptr<DataType>
-PTreeDataTable::downcastPTreeDataType(IOConfig& keys, std::shared_ptr<DataType> dt)
+PTreeDataTable::downcastPTreeDataType(IOConfig&, std::shared_ptr<DataType> dt)
 {
   std::shared_ptr<PTreeData> xml = std::dynamic_pointer_cast<PTreeData>(dt);
 

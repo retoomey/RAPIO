@@ -35,7 +35,7 @@ PluginHeartbeat::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginHeartbeat::postRecordEvent(RAPIOProgram * caller, const Record& rec)
+PluginHeartbeat::postRecordEvent(RAPIOProgram * caller, const Record&)
 {
   // Call a heartbeat check after every record, this
   // will make archive work (no timer)

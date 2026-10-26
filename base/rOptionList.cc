@@ -620,7 +620,7 @@ OptionList::getUnrecognizedOptions() const
   return unrecognized;
 }
 
-OptionList::OptionList(const std::string& base)
+OptionList::OptionList(const std::string& /*base*/)
 {
   optional("verbose",
     "info",

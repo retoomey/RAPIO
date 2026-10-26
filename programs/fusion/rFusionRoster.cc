@@ -107,7 +107,7 @@ RAPIOFusionRosterAlg::firstTimeSetup()
 }
 
 void
-RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData& d)
+RAPIOFusionRosterAlg::processNewData(rapio::RAPIOData&)
 {
   // We won't be running this way probably
   // performRoster();

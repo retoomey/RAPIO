@@ -150,7 +150,7 @@ GZIPDataFilter::introduceSelf()
 
 bool
 GZIPDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
-  size_t startIndex, size_t length)
+  size_t /*startIndex*/, size_t /*length*/)
 {
   bi::filtering_ostream os;
 
@@ -215,7 +215,7 @@ BZIP2DataFilter::reverse(std::vector<char>& input, std::vector<char>& output,
 
 bool
 BZIP2DataFilter::applyURL(const URL& infile, const URL& outfile,
-  std::map<std::string, std::string> &params)
+  std::map<std::string, std::string> & /*params*/)
 {
   bi::filtering_streambuf<bi::output> outbuf;
 
@@ -234,7 +234,7 @@ ZLIBDataFilter::introduceSelf()
 
 bool
 ZLIBDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
-  size_t startIndex, size_t length)
+  size_t /*startIndex*/, size_t /*length*/)
 {
   bi::filtering_ostream os;
 
@@ -244,7 +244,7 @@ ZLIBDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
 
 bool
 ZLIBDataFilter::applyURL(const URL& infile, const URL& outfile,
-  std::map<std::string, std::string> &params)
+  std::map<std::string, std::string> & /*params*/)
 {
   bi::filtering_streambuf<bi::output> outbuf;
 
@@ -296,7 +296,7 @@ SnappyDataFilter::introduceSelf()
 
 bool
 SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
-  size_t startIndex, size_t length)
+  size_t /*startIndex*/, size_t /*length*/)
 {
   try {
     // Get the size of the uncompressed data for output buffer
@@ -327,7 +327,7 @@ SnappyDataFilter::apply(std::vector<char>& input, std::vector<char>& output,
 
 bool
 SnappyDataFilter::applyURL(const URL& infile, const URL& outfile,
-  std::map<std::string, std::string> &params)
+  std::map<std::string, std::string> & /*params*/)
 {
   std::vector<char> bufin;
   std::vector<char> bufout;

@@ -24,7 +24,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOHDF5::getHelpString(const std::string& key)
+IOHDF5::getHelpString(const std::string&)
 {
   std::string help;
 
@@ -255,8 +255,8 @@ IOHDF5::createDataType(IOConfig& config)
 } // IOHDF5::createDataType
 
 bool
-IOHDF5::encodeDataType(std::shared_ptr<DataType> dt,
-  IOConfig                                       & config
+IOHDF5::encodeDataType(std::shared_ptr<DataType>,
+  IOConfig                                       &
 )
 {
   // FIXME: Could generalize HDF5 output files?

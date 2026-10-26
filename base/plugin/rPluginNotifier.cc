@@ -55,7 +55,7 @@ PluginNotifier::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginNotifier::execute(RAPIOProgram * caller)
+PluginNotifier::execute(RAPIOProgram * /*caller*/)
 {
   // Let record notifier factory create them, we will hold them though
   theNotifiers = RecordNotifier::createNotifiers();

@@ -90,7 +90,7 @@ FileIndex::initialRead(bool realtime, bool archive)
 } // FileIndex::initialRead
 
 bool
-FileIndex::wantFile(const std::string& path)
+FileIndex::wantFile(const std::string& /*path*/)
 {
   return true;
 }

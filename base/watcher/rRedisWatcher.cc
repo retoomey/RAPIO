@@ -20,7 +20,7 @@ using namespace rapio;
 const std::string RedisWatcher::REDIS_WATCH = "redis";
 
 void
-RedisWatcher::RedisInfo::createEvents(WatcherType * w)
+RedisWatcher::RedisInfo::createEvents(WatcherType *)
 {
   #ifdef HAVE_HIREDIS
   if (!myConnected || !myContext) {
@@ -138,8 +138,8 @@ RedisWatcher::RedisInfo::connect()
 
 bool
 RedisWatcher::attach(const std::string & param,
-  bool                                 realtime,
-  bool                                 archive,
+  bool                                 /*realtime*/,
+  bool                                 /*archive*/,
   IOListener *                         l)
 {
   // Set up new RedisWatcher and connect

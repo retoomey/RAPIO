@@ -27,13 +27,13 @@ TextBinaryTable::introduceSelf(IOText * owner)
 }
 
 std::shared_ptr<DataType>
-TextBinaryTable::read(IOConfig& config)
+TextBinaryTable::read(IOConfig&)
 {
   return nullptr; // Read not supported for text dumps
 }
 
 bool
-TextBinaryTable::write(std::shared_ptr<DataType> dt, IOConfig & keys)
+TextBinaryTable::write(std::shared_ptr<DataType> dt, IOConfig &)
 {
   std::shared_ptr<BinaryTable> btable = std::dynamic_pointer_cast<BinaryTable>(dt);
 

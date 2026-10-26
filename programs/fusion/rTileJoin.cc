@@ -240,7 +240,7 @@ TileJoinAlg::processNewData(rapio::RAPIOData& d)
 } // TileJoinAlg::processNewData
 
 void
-TileJoinAlg::processHeartbeat(const Time& n, const Time& p)
+TileJoinAlg::processHeartbeat(const Time& /*n*/, const Time& p)
 {
   // Make sure database, etc. ready to go
   firstSetup();

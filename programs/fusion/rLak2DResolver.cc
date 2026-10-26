@@ -10,13 +10,13 @@ Lak2DResolver::introduceSelf()
 }
 
 std::string
-Lak2DResolver::getHelpString(const std::string& fkey)
+Lak2DResolver::getHelpString(const std::string& /*fkey*/)
 {
   return "Based on w2merger 2D ground projection.";
 }
 
 std::shared_ptr<VolumeValueResolver>
-Lak2DResolver::create(const std::string & params)
+Lak2DResolver::create(const std::string & /*params*/)
 {
   return std::make_shared<Lak2DResolver>();
 }

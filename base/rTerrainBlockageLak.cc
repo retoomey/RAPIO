@@ -54,7 +54,7 @@ TerrainBlockageLak::introduceSelf()
 }
 
 std::string
-TerrainBlockageLak::getHelpString(const std::string& fkey)
+TerrainBlockageLak::getHelpString(const std::string& /*fkey*/)
 {
   return "Polar terrain based on Fulton, Breidenbach, Miller and Bannon 1998 and Zhang,Jian,Gourly,Howard 2002.";
 }
@@ -83,7 +83,7 @@ TerrainBlockageLak::initialize()
 void
 TerrainBlockageLak::calculatePercentBlocked(
   // Constants in 3D space information (could be instance)
-  LengthKMs stationHeightKMs, AngleDegs beamWidthDegs,
+  LengthKMs /*stationHeightKMs*/, AngleDegs beamWidthDegs,
   // Variables in 3D space information.  Should we do center automatically?
   AngleDegs elevDegs, AngleDegs centerAzDegs, LengthKMs centerRangeKMs,
   // Cumulative beam blockage

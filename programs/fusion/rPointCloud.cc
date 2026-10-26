@@ -394,7 +394,7 @@ RAPIOPointCloudAlg::processNewData(rapio::RAPIOData& d)
 } // RAPIOPointCloudAlg::processNewData
 
 void
-RAPIOPointCloudAlg::processHeartbeat(const Time& n, const Time& p)
+RAPIOPointCloudAlg::processHeartbeat(const Time& /*n*/, const Time& p)
 {
   // If we're not writing every tilt, do it on heartbeat pulse
   if (!myEveryTilt) {

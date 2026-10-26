@@ -34,14 +34,14 @@ public:
 
   /** Read a RadialSet with given keys */
   virtual std::shared_ptr<DataType>
-  read(IOConfig& config)
+  read(IOConfig&)
   override { return nullptr; }
 
   /** Write DataType from given ncid */
   virtual bool
   write(
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys)
+    std::shared_ptr<DataType>,
+    IOConfig                  &)
   override { return false; }
 };
 }

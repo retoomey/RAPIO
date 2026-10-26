@@ -177,7 +177,7 @@ DataGrid::sparseT(IOConfig& keys)
 
 template <size_t N>
 void
-DataGrid::unsparseT(IOConfig& keys, const std::array<std::string, N>& axisNames, const std::string& countName)
+DataGrid::unsparseT(IOConfig&, const std::array<std::string, N>& axisNames, const std::string& countName)
 {
   if (!IOConfig::getGlobalDoUnsparse()) {
     fLogInfo("{}D unsparse is deactivated. Probably for direct copying.", N);

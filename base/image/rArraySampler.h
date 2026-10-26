@@ -18,24 +18,24 @@ public:
   // Batch map an entire axis of coordinates in one virtual call.
   // The 'out' arrays must be pre-allocated to 'count' size.
   virtual void
-  map1D(size_t destStart, size_t count, float * outU) const { }
+  map1D(size_t /*destStart*/, size_t /*count*/, float * /*outU*/) const { }
 
   // 2D Mapping: Map destination indices to source coordinates (u, v)
   virtual void
-  map2D_X(size_t destJ_start, size_t count, float * outV) const { }
+  map2D_X(size_t /*destJ_start*/, size_t /*count*/, float * /*outV*/) const { }
 
   virtual void
-  map2D_Y(size_t destI_start, size_t count, float * outU) const { }
+  map2D_Y(size_t /*destI_start*/, size_t /*count*/, float * /*outU*/) const { }
 
   // 3D Mapping: Map destination indices to source coordinates (u, v, w)
   virtual void
-  map3D_X(size_t destJ_start, size_t count, float * outV) const { }
+  map3D_X(size_t /*destJ_start*/, size_t /*count*/, float * /*outV*/) const { }
 
   virtual void
-  map3D_Y(size_t destI_start, size_t count, float * outU) const { }
+  map3D_Y(size_t /*destI_start*/, size_t /*count*/, float * /*outU*/) const { }
 
   virtual void
-  map3D_Z(size_t destK_start, size_t count, float * outW) const { }
+  map3D_Z(size_t /*destK_start*/, size_t /*count*/, float * /*outW*/) const { }
 };
 
 /**
@@ -59,28 +59,28 @@ public:
    * @brief Capability query: Does this sampler support 1D, 2D, or 3D data?
    */
   virtual bool
-  supportsDimensions(size_t dims) const { return false; }
+  supportsDimensions(size_t /*dims*/) const { return false; }
 
   /**
    * @brief 1D Resampling endpoint
    */
-  virtual void remap1D(std::shared_ptr<Array<float, 1> >& src,
-    std::shared_ptr<Array<float, 1> >                   & dst,
-    const ArrayMapper                                   & mapper){ }
+  virtual void remap1D(std::shared_ptr<Array<float, 1> >& /*src*/,
+    std::shared_ptr<Array<float, 1> >                   & /*dst*/,
+    const ArrayMapper                                   & /*mapper*/){ }
 
   /**
    * @brief 2D Resampling endpoint
    */
-  virtual void remap2D(std::shared_ptr<Array<float, 2> >& src,
-    std::shared_ptr<Array<float, 2> >                   & dst,
-    const ArrayMapper                                   & mapper){ }
+  virtual void remap2D(std::shared_ptr<Array<float, 2> >& /*src*/,
+    std::shared_ptr<Array<float, 2> >                   & /*dst*/,
+    const ArrayMapper                                   & /*mapper*/){ }
 
   /**
    * @brief 3D Resampling endpoint
    */
-  virtual void remap3D(std::shared_ptr<Array<float, 3> >& src,
-    std::shared_ptr<Array<float, 3> >                   & dst,
-    const ArrayMapper                                   & mapper){ }
+  virtual void remap3D(std::shared_ptr<Array<float, 3> >& /*src*/,
+    std::shared_ptr<Array<float, 3> >                   & /*dst*/,
+    const ArrayMapper                                   & /*mapper*/){ }
 
 protected:
   void

@@ -57,7 +57,7 @@ AtomicRenameStep::execute(const std::string& currentFilePath,
 
 std::string
 SafeCommandStep::execute(const std::string& currentFilePath,
-  IOConfig                                & keys)
+  IOConfig                                &)
 {
   std::vector<std::string> args;
 
@@ -90,7 +90,7 @@ LDMInsertStep::buildLdmArgs(const std::string& filepath)
 
 std::string
 LDMInsertStep::execute(const std::string& currentFilePath,
-  IOConfig                              & keys)
+  IOConfig                              &)
 {
   fLogDebug("Executing LDM insertion for: {}", currentFilePath);
 

@@ -4,6 +4,7 @@
 // and not RAPIO.h
 #include <rGDALDataType.h>
 #include <rRadialSet.h>
+#include <rTimeHeightGrid.h>
 
 #include <iostream>
 
@@ -23,7 +24,7 @@ using namespace wdssii;
  * @author Robert Toomey
  **/
 void
-W2SimpleAlg::declareOptions(RAPIOOptions& o)
+W2SimpleAlg::declareOptions(RAPIOOptions& /*o*/)
 {
   // NOTE: the i, I, l, O and r options are already defined in RAPIOAlgorithm.
   // i --> input index/url support
@@ -46,7 +47,7 @@ W2SimpleAlg::declareOptions(RAPIOOptions& o)
 
 /** RAPIOAlgorithms process options on start up */
 void
-W2SimpleAlg::processOptions(RAPIOOptions& o)
+W2SimpleAlg::processOptions(RAPIOOptions& /*o*/)
 {
   // This is an example of how to get your algorithm parameters
   // Stick them in instance variables you can use them later in processing.
@@ -77,6 +78,8 @@ W2SimpleAlg::processNewData(RAPIOData& d)
   }
   fLogInfo("{} from index {}", s, d.matchedIndexNumber());
 
+  writeTimeHeight();
+#if 0
   // Example of reading data.  Typically if you know what you want,
   // you can basically:
   // auto myData = d.datatype<TYPE>();
@@ -123,7 +126,7 @@ W2SimpleAlg::processNewData(RAPIOData& d)
     if (radialSet != nullptr) {
       fLogInfo("This is a radial set, do radial set stuff");
       auto time = radialSet->getTime();
-      time += TimeDuration::Days(18250);
+    //   time += TimeDuration::Days(18250); 2038 problem.  I'll get to it.
 
       radialSet->setTime(time);
 
@@ -155,15 +158,70 @@ W2SimpleAlg::processNewData(RAPIOData& d)
     writeOutputProduct(r->getTypeName(), r, myOverrides); // Typename will be replaced by -O filters
     fLogInfo("--->Finished {} product to output", r->getTypeName());
   }
+#endif
 } // W2SimpleAlg::processNewData
 
 void
-W2SimpleAlg::processHeartbeat(const Time& n, const Time& p)
+W2SimpleAlg::processHeartbeat(const Time& /*n*/, const Time& /*p*/)
 {
   fLogInfo("Simple alg got a heartbeat...what do you want me to do?");
   // FIXME: longer example here maybe..
   // Some RadialSet I'm holding onto/modifying over time...now I write it every N time:
   // writeOutputProduct(r->getTypeName(), r); // Typename will be replaced by -O filters
+}
+
+void
+W2SimpleAlg::writeTimeHeight()
+{
+
+  fLogInfo("Creating and writing a dummy TimeHeightGrid...");
+
+  // 1. Setup metadata for the grid
+  LLH location(35.22, -97.44, 0.3); // Example: Norman, OK
+  Time baseTime = Time::CurrentTime();
+  size_t num_times = 12;   // e.g., 1 hour of data at 5-min intervals
+  size_t num_heights = 20; // e.g., 20 vertical levels
+
+  // 2. Instantiate the TimeHeightGrid using its factory method
+  auto thGrid = TimeHeightGrid::Create(
+    "TestTimeHeight",  // TypeName
+    "dBZ",             // Units
+    location,          // Location
+    baseTime,          // Base time anchor
+    num_times,         // X-axis size
+    num_heights        // Y-axis size
+  );
+
+  // 3. Populate the CF-compliant coordinate variables (Time and Height axes)
+  for (size_t t = 0; t < num_times; ++t) {
+    // e.g., 300 seconds (5 minutes) per time step
+    thGrid->setTimeDelta(t, t * 300.0f); 
+  }
+  
+  for (size_t h = 0; h < num_heights; ++h) {
+    // e.g., 250 meters per height bin
+    thGrid->setHeightLevel(h, h * 250.0f); 
+  }
+
+  // 4. Populate the actual 2D data array
+  auto dataArray = thGrid->getFloat2D(Constants::PrimaryDataName);
+  if (dataArray) {
+    auto& dataRef = dataArray->ref();
+    
+    for (size_t t = 0; t < num_times; ++t) {
+      for (size_t h = 0; h < num_heights; ++h) {
+        // Generate some fake data (e.g., higher dBZ at lower altitudes)
+        dataRef[t][h] = 45.0f - (h * 1.5f); 
+      }
+    }
+  } else {
+    fLogSevere("Failed to retrieve the 2D array from TimeHeightGrid.");
+    return;
+  }
+
+  // 5. Write the product out using the base RAPIOAlgorithm method
+  writeOutputProduct(thGrid->getTypeName(), thGrid);
+  fLogInfo("---> Finished writing {} product to output", thGrid->getTypeName());
 }
 
 int

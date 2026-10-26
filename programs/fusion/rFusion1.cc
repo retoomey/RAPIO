@@ -619,7 +619,7 @@ RAPIOFusionOneAlg::processNewData(rapio::RAPIOData& d)
 }
 
 void
-RAPIOFusionOneAlg::processHeartbeat(const Time& n, const Time& p)
+RAPIOFusionOneAlg::processHeartbeat(const Time& /*n*/, const Time& p)
 {
   // Realtime/archive sends us pulses.  But if we're outputting every tilt
   // no need for doing it here.

@@ -18,7 +18,7 @@ SavitzkyGolayFilter::getHelpString()
 }
 
 bool
-SavitzkyGolayFilter::parseOptions(const std::string& params)
+SavitzkyGolayFilter::parseOptions(const std::string& /*params*/)
 {
   return true;
 }

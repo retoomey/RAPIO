@@ -25,7 +25,7 @@ public:
   }
 
   virtual std::string
-  getHelpString(const std::string& fkey) override
+  getHelpString(const std::string& /*fkey*/) override
   {
     #ifdef HAVE_REDIS
     return "Publish FML records to a Redis channel.\n  Example: redis=my_channel";
@@ -116,7 +116,7 @@ RedisRecordNotifier::writeMessage(IOConfig& outputParams, const Message& m)
 }
 
 void
-RedisRecordNotifier::publish(const std::string& payload)
+RedisRecordNotifier::publish([[maybe_unused]] const std::string& payload)
 {
   if (!connect()) { return; }
 

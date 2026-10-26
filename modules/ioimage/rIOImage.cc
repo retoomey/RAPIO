@@ -35,7 +35,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOImage::getHelpString(const std::string& key)
+IOImage::getHelpString(const std::string&)
 {
   std::string help;
 

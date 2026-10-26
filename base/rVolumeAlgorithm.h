@@ -96,7 +96,7 @@ public:
    * @brief Hook for subclasses to initialize or resize their output grids.
    * Automatically called by processNewData before processVolume.
    */
-  virtual void checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input){ }
+  virtual void checkOutputGrids(std::shared_ptr<LatLonHeightGrid>){ }
 
 protected:
 

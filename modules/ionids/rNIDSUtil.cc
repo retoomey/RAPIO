@@ -94,7 +94,7 @@ NIDSUtil::getGenericColors(const std::vector<char> & src,
 void
 NIDSUtil::colorToValueD1(
   const std::vector<int>   & colors,
-  const std::vector<float> & thresholds,
+  const std::vector<float> & /*thresholds*/,
   std::vector<float>       & values)
 {
   // Originally for Product 164
@@ -110,7 +110,7 @@ NIDSUtil::colorToValueD1(
 void
 NIDSUtil::colorToValueD2(
   const std::vector<int>   & colors,
-  const std::vector<float> & thresholds,
+  const std::vector<float> & /*thresholds*/,
   std::vector<float>       & values)
 {
   // Originally for Product 165, 176, 177

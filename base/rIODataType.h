@@ -134,7 +134,7 @@ protected:
   /** Subclasses that can read from a character buffer can implement this.
    * Since not everything can read from a buffer, we default to nullptr */
   virtual std::shared_ptr<DataType>
-  createDataTypeFromBuffer(std::vector<char>& buffer)
+  createDataTypeFromBuffer(std::vector<char>& /*buffer*/)
   {
     return nullptr;
   }
@@ -221,15 +221,15 @@ protected:
 
   /** Encode this data type to path given format settings */
   virtual bool
-  encodeDataType(std::shared_ptr<DataType> dt,
-    IOConfig                               & config
+  encodeDataType(std::shared_ptr<DataType>,
+    IOConfig                               &
   ){ return false; }
 
   /** Subclasses that can write to a character buffer can implement this.
    * Since not everything can write to a buffer, we default to nullptr */
   virtual size_t
-  encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-    IOConfig     & lookup
+  encodeDataTypeBuffer(std::shared_ptr<DataType>, std::vector<char>& /*buffer*/,
+    IOConfig     &
   )
   {
     return 0;

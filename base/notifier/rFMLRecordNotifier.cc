@@ -31,7 +31,7 @@ public:
 
   /** Help for created objects */
   virtual std::string
-  getHelpString(const std::string& fkey) override
+  getHelpString(const std::string& /*fkey*/) override
   {
     return
       "Write fml file to directory for each new record.\n  Example: fml=/output to have ALL writers write fml records to that directory.\n  Example: fml= Write to {OutputDir}/code_index.fam for each writer's path.  So image=myimages would write to myimages/code_index.fam and netcdf=mynetcdf would write to mynetcdf/code_index.fam";

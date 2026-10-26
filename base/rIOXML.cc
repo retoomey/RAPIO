@@ -42,7 +42,7 @@ IOXML::createDataTypeFromBuffer(std::vector<char>& buffer)
 
 size_t
 IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buffer,
-  IOConfig   & keys
+  IOConfig   &
 )
 {
   std::shared_ptr<PTreeData> ptree = std::dynamic_pointer_cast<PTreeData>(dt);

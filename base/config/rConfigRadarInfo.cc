@@ -20,7 +20,7 @@ ConfigRadarInfo::introduceSelf()
 }
 
 bool
-ConfigRadarInfo::readSettings(std::shared_ptr<PTreeData> d)
+ConfigRadarInfo::readSettings(std::shared_ptr<PTreeData>)
 {
   // We don't use d (tags from global rapioconfig.xml), but
   // we always have that for later for overrides, etc.

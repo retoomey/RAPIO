@@ -258,7 +258,7 @@ BinaryTable::magicToBlockLevels(
 }
 
 bool
-BinaryTable::readBlock(const std::string& path, FILE * fp)
+BinaryTable::readBlock(const std::string& /*path*/, FILE * fp)
 {
   // 1. Read the magic marker name...
   std::string disk_magic;

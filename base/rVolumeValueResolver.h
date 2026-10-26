@@ -28,13 +28,13 @@ public:
    * prepare to send the grid resolved values */
   virtual bool
   initForSend(
-    const std::string    & radarName,
-    const std::string    & typeName,
-    const std::string    & units,
-    const LLH            & center,
-    const bool           noMissingSet, // FIXME: Thinking general param passing
-    const PartitionInfo  & partition,
-    const LLCoverageArea &radarGrid
+    const std::string    & /*radarName*/,
+    const std::string    & /*typeName*/,
+    const std::string    & /*units*/,
+    const LLH            & /*center*/,
+    const bool /*noMissingSet*/, // FIXME: Thinking general param passing
+    const PartitionInfo  & /*partition*/,
+    const LLCoverageArea & /*radarGrid*/
   )
   {
     return false;
@@ -43,11 +43,11 @@ public:
   /** Add data to a grid cell for sending to stage2, used by stage one.
    * This is called for every grid cell. */
   virtual void
-  add(VolumeValue * vvp, short x, short y, short z, size_t partIndex){ };
+  add(VolumeValue * /*vvp*/, short /*x*/, short /*y*/, short /*z*/, size_t /*partIndex*/){ };
 
   /** Send/write stage2 data.  Give an algorithm pointer so we call do alg things if needed. */
   virtual void
-  send(RAPIOAlgorithm * alg, Time aTime, const std::string& asName)
+  send(RAPIOAlgorithm * /*alg*/, Time /*aTime*/, const std::string& /*asName*/)
   {
     fLogInfo("This resolver doesn't currently send stage2 data.");
   }
@@ -85,7 +85,7 @@ public:
 
   /** Help function, subclasses return help information. */
   virtual std::string
-  getHelpString(const std::string& fkey){ return ""; }
+  getHelpString(const std::string& /*fkey*/){ return ""; }
 
   /** Attempt to create VolumeValueResolver by name.  This looks up any registered
    * classes and attempts to call the virtual create method on it. */
@@ -98,7 +98,7 @@ public:
    * To use by name, you would override this method and return a new instance of your
    * Volume class. */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params)
+  create(const std::string & /*params*/)
   {
     return nullptr;
   }
@@ -399,7 +399,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params) override
+  create(const std::string & /*params*/) override
   {
     return std::make_shared<RangeVVResolver>();
   }
@@ -409,7 +409,7 @@ public:
 
   /** Help function, subclasses return help information. */
   virtual std::string
-  getHelpString(const std::string& fkey) override { return "Test pattern: Output range KMs from radar center."; }
+  getHelpString(const std::string& /*fkey*/) override { return "Test pattern: Output range KMs from radar center."; }
 };
 
 /** Azimuth from 0 to 360 or so of virtual */
@@ -427,7 +427,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params) override
+  create(const std::string & /*params*/) override
   {
     return std::make_shared<AzimuthVVResolver>();
   }
@@ -437,7 +437,10 @@ public:
 
   /** Help function, subclasses return help information. */
   virtual std::string
-  getHelpString(const std::string& fkey) override { return "Test pattern: Output virtual azimuth values for cells."; }
+  getHelpString(const std::string& /*fkey*/) override
+  {
+    return "Test pattern: Output virtual azimuth values for cells.";
+  }
 };
 
 /** Projected terrain blockage of lower tilt.
@@ -455,7 +458,7 @@ public:
 
   /** Create by factory */
   virtual std::shared_ptr<VolumeValueResolver>
-  create(const std::string & params) override
+  create(const std::string & /*params*/) override
   {
     return std::make_shared<TerrainVVResolver>();
   }
@@ -465,6 +468,6 @@ public:
 
   /** Help function, subclasses return help information. */
   virtual std::string
-  getHelpString(const std::string& fkey) override { return "Test pattern: Output terrain CBB% scaled by 100."; }
+  getHelpString(const std::string& /*fkey*/) override { return "Test pattern: Output terrain CBB% scaled by 100."; }
 };
 }

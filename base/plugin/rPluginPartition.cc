@@ -127,7 +127,7 @@ PluginPartition::getPartitionInfo(
 } // PluginPartition::getPartitionInfo
 
 void
-PluginPartition::execute(RAPIOProgram * caller)
+PluginPartition::execute(RAPIOProgram * /*caller*/)
 {
   // Nothing, partition information is pulled by algorithm
 }

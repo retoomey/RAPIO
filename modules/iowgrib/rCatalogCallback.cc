@@ -17,7 +17,7 @@ CatalogCallback::CatalogCallback(const URL& u, const std::string& match,
 { }
 
 void
-CatalogCallback::handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index)
+CatalogCallback::handleSetDataArray(float * /*data*/, int /*nlats*/, int /*nlons*/, unsigned int * /*index*/)
 {
   // Data and index will be empty
   myMatchCount++;

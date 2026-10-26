@@ -65,7 +65,7 @@ public:
 
   /** Handle a general watch event */
   virtual void
-  handleNewEvent(WatchEvent * event){ };
+  handleNewEvent(WatchEvent *){ };
 };
 
 class WatcherType : public EventTimer {
@@ -76,7 +76,7 @@ public:
 
   /** Attach this listener to given URL */
   virtual bool
-  attach(const std::string& dirname, bool realtime, bool archive, IOListener * l){ return false; };
+  attach(const std::string& /*dirname*/, bool /*realtime*/, bool /*archive*/, IOListener *){ return false; };
 
   /** Default action to take on timer pulse, filling and processing our queue */
   virtual void
@@ -143,11 +143,11 @@ public:
 
   /** Handle detach of this WatchInfo, return true to remove */
   virtual bool
-  handleDetach(WatcherType * owner){ return true; }
+  handleDetach(WatcherType * /*owner*/){ return true; }
 
   /** Create the events to be processed later */
   virtual void
-  createEvents(WatcherType * w){ };
+  createEvents(WatcherType *){ };
 
   /** Send poll to listener */
   void

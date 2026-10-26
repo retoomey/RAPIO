@@ -347,7 +347,7 @@ RadialSet::preWrite(IOConfig& keys)
 }
 
 void
-RadialSet::postWrite(IOConfig& keys)
+RadialSet::postWrite(IOConfig&)
 {
   unsparseRestore();
 }

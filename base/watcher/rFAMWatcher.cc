@@ -266,7 +266,7 @@ FAMWatcher::introduceSelf()
 }
 
 bool
-FAMWatcher::FAMInfo::handleDetach(WatcherType * owner)
+FAMWatcher::FAMInfo::handleDetach(WatcherType *)
 {
   int ret = inotify_rm_watch(FAMWatcher::getFAMID(), myWatchID);
 

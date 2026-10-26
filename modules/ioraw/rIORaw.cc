@@ -36,7 +36,7 @@ createRAPIOIO(void)
 class FusionBinaryTableRawSpecializer : public RawSpecializer {
 public:
   virtual std::shared_ptr<DataType>
-  readRAW(FILE * fp, const std::string& path, IOConfig& keys) override
+  readRAW(FILE * fp, const std::string& path, IOConfig&) override
   {
     auto t = std::make_shared<FusionBinaryTable>();
 
@@ -50,7 +50,7 @@ public:
 class RObsBinaryTableRawSpecializer : public RawSpecializer {
 public:
   virtual std::shared_ptr<DataType>
-  readRAW(FILE * fp, const std::string& path, IOConfig& keys) override
+  readRAW(FILE * fp, const std::string& path, IOConfig&) override
   {
     auto t = std::make_shared<RObsBinaryTable>();
 
@@ -62,7 +62,7 @@ public:
 class WObsBinaryTableRawSpecializer : public RawSpecializer {
 public:
   virtual std::shared_ptr<DataType>
-  readRAW(FILE * fp, const std::string& path, IOConfig& keys) override
+  readRAW(FILE * fp, const std::string& path, IOConfig&) override
   {
     auto t = std::make_shared<WObsBinaryTable>();
 
@@ -75,7 +75,7 @@ public:
 class WindBinaryTableRawSpecializer : public RawSpecializer {
 public:
   virtual std::shared_ptr<DataType>
-  readRAW(FILE * fp, const std::string& path, IOConfig& keys) override
+  readRAW(FILE * fp, const std::string& path, IOConfig&) override
   {
     auto t = std::make_shared<WindBinaryTable>();
 
@@ -87,7 +87,7 @@ public:
 // ----------------------------------------------------------------------------
 
 std::string
-IORaw::getHelpString(const std::string& key)
+IORaw::getHelpString(const std::string&)
 {
   std::string help;
 

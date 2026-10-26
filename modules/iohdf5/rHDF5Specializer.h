@@ -15,22 +15,22 @@ public:
 
   /** Write DataType to HDF5 */
   virtual bool
-  writeHDF5(hid_t             hdf5id,
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys){ return false; }
+  writeHDF5(hid_t             /*hdf5id*/,
+    std::shared_ptr<DataType>,
+    IOConfig                  &){ return false; }
 
   // Unused.
 
   /** Read a DataType with given keys */
   virtual std::shared_ptr<DataType>
-  read(IOConfig& config)
+  read(IOConfig&)
   override { return nullptr; }
 
   /** Write DataType from given ncid */
   virtual bool
   write(
-    std::shared_ptr<DataType> dt,
-    IOConfig                  & keys)
+    std::shared_ptr<DataType>,
+    IOConfig                  &)
   override { return false; }
 };
 }

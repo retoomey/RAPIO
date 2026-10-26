@@ -37,7 +37,7 @@ FMLIndex::getHelpString(const std::string& fkey)
 }
 
 bool
-FMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+FMLIndex::canHandle(const URL& url, std::string& protocol, std::string& /*indexparams*/)
 {
   // We'll claim any missing protocol with a .fam ending for legacy support
   if (protocol.empty()) {

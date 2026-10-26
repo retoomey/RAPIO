@@ -36,13 +36,13 @@ FakeIndex::~FakeIndex()
 { }
 
 std::string
-FakeIndex::getHelpString(const std::string& fkey)
+FakeIndex::getHelpString(const std::string& /*fkey*/)
 {
   return "Fake data generator.  Can create artifcial data sets for testing purposes.";
 }
 
 bool
-FakeIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+FakeIndex::canHandle(const URL&, std::string& /*protocol*/, std::string& /*indexparams*/)
 {
   // I think we can't read .fake or something like that.  Files don't exist
   //  if (protocol.empty() || (protocol == FAKEINDEX)) {
@@ -52,7 +52,7 @@ FakeIndex::canHandle(const URL& url, std::string& protocol, std::string& indexpa
 } // FakeIndex::canHandle
 
 bool
-FakeIndex::initialRead(bool realtime, bool archive)
+FakeIndex::initialRead(bool /*realtime*/, bool archive)
 {
   if (archive) {
     fLogInfo("Fake index archiving mode.  Generating.");
@@ -93,7 +93,7 @@ FakeIndex::generateRecord(const Time& time)
 
 std::shared_ptr<IndexType>
 FakeIndex::createIndexType(
-  const std::string  & protocol,
+  const std::string  & /*protocol*/,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory)
 {

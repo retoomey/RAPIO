@@ -22,7 +22,7 @@ YAMLProbSevere::canHandle(std::shared_ptr<PTreeData> tree)
 }
 
 std::shared_ptr<DataType>
-YAMLProbSevere::downcastPTreeDataType(IOConfig& config, std::shared_ptr<DataType> in)
+YAMLProbSevere::downcastPTreeDataType(IOConfig&, std::shared_ptr<DataType> in)
 {
   auto jsonTree = std::dynamic_pointer_cast<PTreeData>(in);
 

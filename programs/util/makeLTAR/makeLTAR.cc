@@ -55,7 +55,7 @@ LTAR::processOptions(RAPIOOptions& o)
 }
 
 void
-LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & DataMap)
+LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & /*DataMap*/)
 {
 // Access the pointer from the map
     std::shared_ptr<rapio::RadialSet> Z = myDataMap["Reflectivity"];
@@ -273,7 +273,7 @@ LTAR::processNewData(rapio::RAPIOData& d) {
 } // LTAR::processNewData
 
 void
-LTAR::processHeartbeat(const Time& n, const Time& p)
+LTAR::processHeartbeat(const Time& /*n*/, const Time& /*p*/)
 {
   fLogInfo("Simple alg got a heartbeat...what do you want me to do?");
   // FIXME: longer example here maybe..

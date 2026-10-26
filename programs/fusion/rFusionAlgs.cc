@@ -147,7 +147,7 @@ RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
 } // RAPIOFusionAlgs::processNewData
 
 void
-RAPIOFusionAlgs::processHeartbeat(const Time& n, const Time& p)
+RAPIOFusionAlgs::processHeartbeat(const Time& /*n*/, const Time& /*p*/)
 {
   if (isDaemon()) {
     fLogInfo("{}{}---Heartbeat---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());

@@ -51,7 +51,7 @@ NetcdfBinaryTable::introduceSelf(IONetcdf * owner)
 }
 
 std::shared_ptr<DataType>
-NetcdfBinaryTable::readNETCDF(int ncid, IOConfig& keys)
+NetcdfBinaryTable::readNETCDF(int ncid, IOConfig&)
 {
   std::shared_ptr<BinaryTable> newOne = std::make_shared<BinaryTable>();
 
@@ -153,7 +153,7 @@ NetcdfBinaryTable::readNETCDF(int ncid, IOConfig& keys)
 bool
 NetcdfBinaryTable::writeNETCDF(int ncid,
   std::shared_ptr<DataType>        dt,
-  IOConfig                         & keys)
+  IOConfig                         &)
 {
   try {
     std::shared_ptr<BinaryTable> pBinaryTable = std::dynamic_pointer_cast<BinaryTable>(dt);

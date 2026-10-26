@@ -24,14 +24,14 @@ XMLIndex::~XMLIndex()
 { }
 
 std::string
-XMLIndex::getHelpString(const std::string& fkey)
+XMLIndex::getHelpString(const std::string& /*fkey*/)
 {
   return
     "Reads a collection of fml records from a static file such as code_index.xml.\n  Example: /myarchive/code_index.xml";
 }
 
 bool
-XMLIndex::canHandle(const URL& url, std::string& protocol, std::string& indexparams)
+XMLIndex::canHandle(const URL& url, std::string& protocol, std::string& /*indexparams*/)
 {
   // We'll claim any missing protocal with a .fam ending for legacy support
   if (protocol.empty()) {
@@ -54,7 +54,7 @@ XMLIndex::introduceSelf()
 
 std::shared_ptr<IndexType>
 XMLIndex::createIndexType(
-  const std::string  & protocol,
+  const std::string  & /*protocol*/,
   const std::string  & indexparams,
   const TimeDuration & maximumHistory)
 {
@@ -66,7 +66,7 @@ XMLIndex::createIndexType(
 
 /** Called by RAPIOAlgorithm to gather initial records from source */
 bool
-XMLIndex::initialRead(bool realtime, bool archive)
+XMLIndex::initialRead(bool /*realtime*/, bool /*archive*/)
 {
   auto doc2 = IODataType::read<PTreeData>(myURL.toString());
 

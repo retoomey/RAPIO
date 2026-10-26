@@ -47,7 +47,7 @@ public:
    * @return A brief description of the volume subclass behavior.
    */
   virtual std::string
-  getHelpString(const std::string& fkey) override
+  getHelpString(const std::string& /*fkey*/) override
   {
     return "Stores ONLY the single latest received subtype/tilt.";
   }
@@ -60,7 +60,7 @@ public:
    */
   virtual std::shared_ptr<Volume>
   create(
-    const std::string& historyKey, const std::string & params) override
+    const std::string& historyKey, const std::string & /*params*/) override
   {
     return std::make_shared<VolumeOf1>(historyKey);
   }

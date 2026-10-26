@@ -61,12 +61,12 @@ public:
 
   /** Suggest a minimum LLCoverageArea based on grib2 extents */
   virtual void
-  handleSetLatLon(double * lat, double * lon, size_t nx, size_t ny){ };
+  handleSetLatLon(double * /*lat*/, double * /*lon*/, size_t /*nx*/, size_t /*ny*/){ };
 
   /** Fill a LLCoverageArea wanted for grid interpolation, if we handle grids. */
   virtual void
-  handleGetLLCoverageArea(double * nwLat, double * nwLon, double * seLat, double * seLon, double * dLat, double * dLon,
-    int * nLat, int * nLon){ };
+  handleGetLLCoverageArea(double * /*nwLat*/, double * /*nwLon*/, double * /*seLat*/, double * /*seLon*/, double * /*dLat*/, double * /*dLon*/,
+    int * /*nLat*/, int * /*nLon*/){ };
 
   /** Return a const char * to the stored URL, valid while we're in scope */
   const char *
@@ -80,7 +80,7 @@ public:
   handleSetFieldInfo(unsigned char ** sec, int msg_no, int submsg, long int pos);
 
   /** Called with raw data */
-  virtual void handleSetDataArray(float * data, int nlats, int nlons, unsigned int * index){ };
+  virtual void handleSetDataArray(float * /*data*/, int /*nlats*/, int /*nlons*/, unsigned int * /*index*/){ };
 
   /** Return action type for the c module */
   virtual ActionType handleGetActionType(){ return ACTION_NONE; }

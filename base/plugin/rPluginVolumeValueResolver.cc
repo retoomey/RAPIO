@@ -36,7 +36,7 @@ PluginVolumeValueResolver::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginVolumeValueResolver::execute(RAPIOProgram * caller)
+PluginVolumeValueResolver::execute(RAPIOProgram * /*caller*/)
 {
   // -------------------------------------------------------------
   // VolumeValueResolver creation

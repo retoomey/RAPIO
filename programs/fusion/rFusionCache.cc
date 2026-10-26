@@ -11,7 +11,7 @@ std::string FusionCache::theRosterDir = "/home/mrms";
 bool
 FusionCache::writeRangeFile(const std::string& filefinal, LLCoverageArea& outg,
   std::vector<std::shared_ptr<AzRanElevCache> >& myLLProjections,
-  LengthKMs maxRangeKMs)
+  LengthKMs /*maxRangeKMs*/)
 {
   bool success = true;
 

@@ -19,7 +19,7 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param){ };
+  process1(const std::string& /*param*/){ };
 
   /** Process a full param string */
   virtual void

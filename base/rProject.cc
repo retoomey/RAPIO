@@ -458,19 +458,19 @@ Project::createLatLonGrid(
 }
 
 bool
-Project::getXYCenter(double& centerXKm, double& centerYKm)
+Project::getXYCenter(double& /*centerXKm*/, double& /*centerYKm*/)
 {
   return false;
 }
 
 bool
-Project::xyToLatLon(double& x, double&y, double &lat, double&lon)
+Project::xyToLatLon(double& /*x*/, double& /*y*/, double & /*lat*/, double& /*lon*/)
 {
   return false;
 }
 
 bool
-Project::LatLonToXY(double& lat, double&lon, double &x, double&y)
+Project::LatLonToXY(double& /*lat*/, double& /*lon*/, double & /*x*/, double& /*y*/)
 {
   return false;
 }

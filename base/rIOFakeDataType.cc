@@ -12,7 +12,7 @@
 using namespace rapio;
 
 std::string
-IOFakeDataType::getHelpString(const std::string & key)
+IOFakeDataType::getHelpString(const std::string & /*key*/)
 {
   std::string help = "Fake DataType builder (Used by fake index.  Read only)";
 
@@ -58,7 +58,7 @@ IOFakeDataType::generateRecord(const std::string& fullParams, const Time& time)
 }
 
 std::shared_ptr<DataType>
-IOFakeDataType::createDataType(IOConfig& config)
+IOFakeDataType::createDataType(IOConfig&)
 {
   auto * r = Record::getCreatingRecord();
 
@@ -100,7 +100,7 @@ IOFakeDataType::createDataType(IOConfig& config)
 } // IOFakeDataType::createDataType
 
 std::shared_ptr<DataType>
-createDataType(IOConfig& config)
+createDataType(IOConfig&)
 {
   auto * r = Record::getCreatingRecord();
 
@@ -136,8 +136,8 @@ createDataType(IOConfig& config)
 } // createDataType
 
 bool
-IOFakeDataType::encodeDataType(std::shared_ptr<DataType> dt,
-  IOConfig                                               & config
+IOFakeDataType::encodeDataType(std::shared_ptr<DataType>,
+  IOConfig                                               &
 )
 {
   fLogSevere("Unable to write fake data directly.");

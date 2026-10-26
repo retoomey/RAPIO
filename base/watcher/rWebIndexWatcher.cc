@@ -24,8 +24,8 @@ WebIndexWatcher::action()
 
 bool
 WebIndexWatcher::attach(const std::string & dirname,
-  bool                                    realtime,
-  bool                                    archive,
+  bool                                   /*realtime*/,
+  bool                                   /*archive*/,
   IOListener *                            l)
 {
   std::shared_ptr<WebInfo> newWatch = std::make_shared<WebInfo>(l, dirname);

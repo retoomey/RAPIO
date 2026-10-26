@@ -68,7 +68,7 @@ public:
 
   /** Get a value at a lat lon for a given layer name (SpaceTime datatype) */
   virtual double
-  getValueAtLL(double latDegs, double lonDegs)
+  getValueAtLL(double /*latDegs*/, double /*lonDegs*/)
   {
     return Constants::DataUnavailable;
   }
@@ -97,19 +97,19 @@ public:
 
   /** Calculate Lat Lon coverage marching grid from spatial center */
   virtual bool
-  LLCoverageCenterDegree(const float degreeOut, const size_t numRows, const size_t numCols,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+  LLCoverageCenterDegree(const float /*degreeOut*/, const size_t /*numRows*/, const size_t /*numCols*/,
+    float& /*topDegs*/, float& /*leftDegs*/, float& /*deltaLatDegs*/, float& /*deltaLonDegs*/){ return false; }
 
   /** Calculate a 'full' coverage based on the data type */
   virtual bool
-  LLCoverageFull(size_t& numRows, size_t& numCols,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+  LLCoverageFull(size_t& /*numRows*/, size_t& /*numCols*/,
+    float& /*topDegs*/, float& /*leftDegs*/, float& /*deltaLatDegs*/, float& /*deltaLonDegs*/){ return false; }
 
   /** Calculate a coverage based on the tiles */
   virtual bool
-  LLCoverageTile(const size_t zoomLevel, const size_t& numRows, const size_t& numCols,
-    const float centerLatDegs, const float centerLonDegs,
-    float& topDegs, float& leftDegs, float& deltaLatDegs, float& deltaLonDegs){ return false; }
+  LLCoverageTile(const size_t /*zoomLevel*/, const size_t& /*numRows*/, const size_t& /*numCols*/,
+    const float /*centerLatDegs*/, const float /*centerLonDegs*/,
+    float& /*topDegs*/, float& /*leftDegs*/, float& /*deltaLatDegs*/, float& /*deltaLonDegs*/){ return false; }
 
 protected:
 

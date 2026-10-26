@@ -138,7 +138,7 @@ LatLonHeightGrid::preWrite(IOConfig& keys)
 } // LatLonHeightGrid::preWrite
 
 void
-LatLonHeightGrid::postWrite(IOConfig& keys)
+LatLonHeightGrid::postWrite(IOConfig&)
 {
   unsparseRestore();
 }

@@ -278,7 +278,7 @@ DataType::setColorMapName(const std::string& name)
 }
 
 std::string
-DataType::getUnits(const std::string& name)
+DataType::getUnits(const std::string& /*name*/)
 {
   // We don't care about names for global units
   std::string units;
@@ -290,7 +290,7 @@ DataType::getUnits(const std::string& name)
 }
 
 void
-DataType::setUnits(const std::string& units, const std::string& name)
+DataType::setUnits(const std::string& units, const std::string& /*name*/)
 {
   // We don't care about names for global units
   setString("Unit-value", units);

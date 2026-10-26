@@ -308,7 +308,7 @@ WindSynthesisStrategy::reduce(
     std::shared_ptr<LLHGridN2D> cache,
     const time_t cutoff,
     size_t offsetX, size_t offsetY,
-    float precision)
+    float /*precision*/)
 {
   auto& obsManager = db->getObservationManager();
   

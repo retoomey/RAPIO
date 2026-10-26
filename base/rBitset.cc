@@ -128,7 +128,7 @@ Bitset::readBits(std::ifstream& file)
 }
 
 ostream&
-rapio::operator << (ostream& os, const BitsetOutSettings& b)
+rapio::operator << (ostream& os, const BitsetOutSettings&)
 {
   // We don't actually print anything, just set flags for Bitset
   return os;

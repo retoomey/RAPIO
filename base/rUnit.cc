@@ -103,6 +103,8 @@ Unit::isValidUnit(const std::string& unit)
   return (getUtUnit(unit, u) != 0);
 
   #else
+  // Suppress unused variable warnings when compiled without UDUNITS
+  (void) unit;
   return false;
 
   #endif
@@ -148,6 +150,12 @@ Unit::getConverter(const std::string& from,
   Key insert_key(strdup(from.c_str()), strdup(to.c_str()));
 
   converter_cache[insert_key] = setme;
+  #else // if HAVE_UDUNITS
+  // Suppress unused variable warnings when compiled without UDUNITS
+  (void) from;
+  (void) to;
+  (void) setme;
+
   #endif // if HAVE_UDUNITS
   return (true);
 } // Unit::getConverter
@@ -181,6 +189,11 @@ Unit::convert(const std::string& fromUnit,
   return (true);
 
   #else // if HAVE_UDUNITS
+  // Suppress unused variable warnings when compiled without UDUNITS
+  (void) fromUnit;
+  (void) toUnit;
+  (void) fromVal;
+  (void) toVal;
   fLogSevere("Not compiled with Udunits2 support, can't convert units!");
   return false;
 

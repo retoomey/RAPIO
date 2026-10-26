@@ -195,7 +195,7 @@ public:
    * which normally will be a base-class type.
    */
   static std::shared_ptr<X>
-  get(const std::string& name, const std::string& info = "")
+  get(const std::string& name, const std::string& /*info*/ = "")
   {
     std::lock_guard<std::mutex> lock(myMutex);
 

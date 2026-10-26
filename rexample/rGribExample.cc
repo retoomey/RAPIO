@@ -27,7 +27,7 @@ GribExampleAlg::declareOptions(RAPIOOptions& o)
 }
 
 void
-GribExampleAlg::processOptions(RAPIOOptions& o)
+GribExampleAlg::processOptions(RAPIOOptions&)
 { }
 
 void

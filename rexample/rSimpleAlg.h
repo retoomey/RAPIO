@@ -39,6 +39,8 @@ public:
   virtual void
   processHeartbeat(const rapio::Time& n, const rapio::Time& p) override;
 
+  void writeTimeHeight();
+
 protected:
 
   // Keep/set your options from processOptions if you need to use them.

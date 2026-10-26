@@ -28,7 +28,7 @@ createRAPIOIO(void)
 };
 
 std::string
-IOText::getHelpString(const std::string& key)
+IOText::getHelpString(const std::string&)
 {
   std::string help;
 
@@ -50,7 +50,7 @@ IOText::~IOText()
 { }
 
 std::shared_ptr<DataType>
-IOText::readRawDataType(const URL& url)
+IOText::readRawDataType(const URL&)
 {
   fLogSevere("Reading text with IOTEXT unsupported, at least at the moment.");
   return nullptr;

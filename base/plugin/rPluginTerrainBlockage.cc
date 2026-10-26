@@ -38,7 +38,7 @@ PluginTerrainBlockage::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginTerrainBlockage::execute(RAPIOProgram * caller)
+PluginTerrainBlockage::execute(RAPIOProgram * /*caller*/)
 {
   // Nothing, a unique terrain is lazy requested with extra params
 }

@@ -34,7 +34,8 @@ namespace rapio {
 
 class Observation {
 public:
-  Observation(short xin, short yin, char zin, time_t tin) : x(xin), y(yin), t(tin) {}
+  // Interesting, we don't store z because the lists are referenced by z
+  Observation(short xin, short yin, char /*zin*/, time_t tin) : x(xin), y(yin), t(tin) {}
   short x;
   short y;
   time_t t;

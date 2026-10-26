@@ -78,7 +78,7 @@ TerrainBlockage::createTerrainBlockage(
 TerrainBlockage::TerrainBlockage(std::shared_ptr<LatLonGrid> aDEM,
   const LLH                                                  & radarLocation_in,
   const LengthKMs                                            & radarRangeKMs,
-  const std::string                                          & radarName,
+  const std::string                                          & /*radarName*/,
   LengthKMs                                                  minTerrainKMs,
   AngleDegs                                                  minAngleDegs)
   : myDEM(aDEM), myRadarLocation(radarLocation_in), myMinTerrainKMs(minTerrainKMs), myMinAngleDegs(minAngleDegs),

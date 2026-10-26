@@ -278,7 +278,7 @@ RAPIOFusionTwoAlg::write3DLayer(const std::string& productKey,
 }
 
 void
-RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& n, const Time& p)
+RAPIOFusionTwoAlg::mergeAndWriteOutput(const Time& /*n*/, const Time& p)
 {
   // Note: firstDataSetup might not be called yet...
   // so check database, etc...

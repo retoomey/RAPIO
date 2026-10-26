@@ -36,7 +36,7 @@ PluginVolume::processOptions(RAPIOOptions& o)
 }
 
 void
-PluginVolume::execute(RAPIOProgram * caller)
+PluginVolume::execute(RAPIOProgram * /*caller*/)
 {
   // Nothing, a unique terrain is lazy requested with extra params
 }

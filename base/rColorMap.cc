@@ -167,7 +167,7 @@ DefaultColorMap::toJSON(std::ostream& o, const std::string& units)
 } // DefaultColorMap::toJSON
 
 void
-DefaultColorMap::toSVG(std::ostream& o, const std::string& units, const size_t width, const size_t height)
+DefaultColorMap::toSVG(std::ostream& o, const std::string& units, const size_t width, const size_t /*height*/)
 {
   // FIXME: flag for flipping ordering or vertical/horizontal maybe
   const size_t s = myColorInfo.size();
