@@ -376,6 +376,15 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
       if (success) { // Only notify iff the file writes successfully
         // Get back the output folder for notifications
         // and notify each notifier for this writer.
+        
+        // If there is a custom Params line supplied by the user, add it to the records
+        std::string customParams;
+        if(outputData->getString("CustomFMLParams", customParams)){
+          for(auto& rec : records){
+            rec.setValue("CustomFMLParams", customParams);
+          }
+        }
+
         for (auto& n:PluginNotifier::theNotifiers) { // if any, use
           n->writeRecords(outputParams, records);
         }

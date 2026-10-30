@@ -219,21 +219,38 @@ ConfigRecord::constructXMLString(const Record& rec, std::ostream& ss, const std:
   ss << " <time fractional=\"" << t.getFractional()
      << "\"> " << t.getSecondsSinceEpoch() << " </time>\n";
 
+  // Check if the user supplied a manual override string
+  std::string customParams = "";
+  auto k = rec.getKeys();
+  auto v = rec.getValues();
+  for(size_t i = 0; i < k.size(); ++i){
+    if(k[i] == "CustomFMLParams"){
+      customParams = v[i];
+      break;
+    }
+  }
+
   // Write params/selections only if data record
   if (rec.isData()) {
     // Params tag -------------------------------------------------------
     ss << " <params>";
-    for (auto& p2:rec.getParams()) {
-      std::string p = p2;
-      // W2 uses w2merger, not raw...HACK for moment
-      //    if (p =="raw"){
-      //	    p = "w2merger";
-      //    }
-      // Replace actual index path with a marker
-      if (p == indexPath) {
-        ss << Constants::IndexPathReplace << Constants::RecordXMLSeparator;
-      } else {
-        ss << p << Constants::RecordXMLSeparator;
+
+    if(!customParams.empty()){
+      ss << customParams;
+    }
+    else{
+      for (auto& p2:rec.getParams()) {
+        std::string p = p2;
+        // W2 uses w2merger, not raw...HACK for moment
+        //    if (p =="raw"){
+        //	    p = "w2merger";
+        //    }
+        // Replace actual index path with a marker
+        if (p == indexPath) {
+          ss << Constants::IndexPathReplace << Constants::RecordXMLSeparator;
+        } else {
+          ss << p << Constants::RecordXMLSeparator;
+        }
       }
     }
     ss << "</params>\n";
@@ -252,6 +269,9 @@ ConfigRecord::constructXMLString(const Record& rec, std::ostream& ss, const std:
     auto v = rec.getValues();
     // FIXME: character filter output
     for (size_t i = 0; i < k.size(); ++i) {
+      if(k[i] == "CustomFMLParams"){
+        continue;
+      }
       ss << " <v n=\"" << k[i] << "\">" << v[i] << "</v>\n";
     }
   }
