@@ -24,14 +24,14 @@ public:
 
   // Override the writer so the unit test doesn't dump files to /tmp or the current directory
   void
-  writeOutputProduct(const std::string& key, std::shared_ptr<DataType> outputData, std::map<std::string,
-    std::string>& outputParams) override
+  writeOutputProduct(const std::string& /*key*/, std::shared_ptr<DataType> /*outputData*/, std::map<std::string,
+    std::string>& /*outputParams*/) override
   {
     // Do nothing for unit test
   }
 
   void
-  writeOutputProduct(const std::string& key, std::shared_ptr<DataType> outputData) override
+  writeOutputProduct(const std::string& /*key*/, std::shared_ptr<DataType> /*outputData*/) override
   {
     // Do nothing for unit test
   }
@@ -73,7 +73,7 @@ public:
 };
 
 int
-main(int argc, char ** argv)
+main(int /*argc*/, char ** /*argv*/)
 {
   std::cout << "--- Starting 3DVIL Unit Test ---" << std::endl;
 

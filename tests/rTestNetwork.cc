@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(NETWORK_READ)
   std::vector<char> buffer2;
   Network::read(testPath, buffer2);
   const size_t boostBuf = buffer2.size();
-  BOOST_CHECK_GT(buffer2.size(), 0);
+  BOOST_CHECK_GT(boostBuf, 0);
 
   // FIXME: Getting extra characters now on end of boost return?
   //  BOOST_CHECK_EQUAL(curlBuf, boostBuf);

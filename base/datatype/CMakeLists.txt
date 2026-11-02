@@ -2,7 +2,6 @@ add_library(rapio_datatype OBJECT
   rAttributeDataType.cc 
   rBinaryTable.cc 
   rDataGrid.cc
-  rDataGridSparse.cc
   rDataTable.cc
   rDataType.cc
   rFusionBinaryTable.cc
@@ -25,6 +24,7 @@ add_library(rapio_datatype OBJECT
   rRadialSet.cc
   rRadialSetIterator.cc
   rRadialSetProjection.cc
+  rSparseEncoder.cc
   rTimeHeightGrid.cc
   rWindBinaryTable.cc
 )

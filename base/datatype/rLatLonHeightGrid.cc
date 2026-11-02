@@ -1,5 +1,6 @@
 #include "rLatLonHeightGrid.h"
 #include "rProject.h"
+#include "rSparseEncoder.h"
 
 using namespace rapio;
 using namespace std;
@@ -128,17 +129,17 @@ LatLonHeightGrid::postRead(IOConfig& keys)
   // FIXME: Make it stay compressed for things like rcopy, probably
   // using a key
   // FIXME: I think we could allow unsparse into a N 2D implementation as well
-  unsparse3D(myDims[1].size(), myDims[2].size(), myDims[0].size(), keys);
+  SparseEncoder::unsparse3D(*this, myDims[1].size(), myDims[2].size(), myDims[0].size(), keys);
 } // LatLonHeightGrid::postRead
 
 void
 LatLonHeightGrid::preWrite(IOConfig& keys)
 {
-  sparse3D(keys); // Standard sparse of primary data (add dimension)
+  SparseEncoder::sparse3D(*this, keys); // Standard sparse of primary data (add dimension)
 } // LatLonHeightGrid::preWrite
 
 void
 LatLonHeightGrid::postWrite(IOConfig&)
 {
-  unsparseRestore();
+  SparseEncoder::unsparseRestore(*this);
 }

@@ -16,10 +16,10 @@ BOOST_AUTO_TEST_CASE(SPARSEVECTOR_CREATION)
 {
   class teststorage {
 public:
-    int somestuff;
-    int x;
-    int y;
-    int z;
+    int somestuff = 0;
+    size_t x      = 0;
+    size_t y      = 0;
+    size_t z      = 0;
   };
 
   const size_t maxSparseItems   = 10;
@@ -30,22 +30,22 @@ public:
 
   BOOST_CHECK_EQUAL(sv.getPercentFull(), 0);
   // Fill first half
-  for (int i = 0; i < maxSparseItems50; i++) {
+  for (size_t i = 0; i < maxSparseItems50; i++) {
     teststorage A;
-    A.somestuff = i;
+    A.somestuff = static_cast<int>(i);
     sv.set(i, A); // Probably copy/move here
   }
   BOOST_CHECK_EQUAL(sv.getPercentFull(), 50);
   // Fill second half
-  for (int i = maxSparseItems50; i < maxSparseItems; i++) {
+  for (size_t i = maxSparseItems50; i < maxSparseItems; i++) {
     teststorage A;
-    A.somestuff = i;
+    A.somestuff = static_cast<int>(i);
     sv.set(i, A); // Probably copy/move here if passing non-pointer
   }
   BOOST_CHECK_EQUAL(sv.getPercentFull(), 100);
-  for (int i = 0; i < maxSparseItems; i++) {
+  for (size_t i = 0; i < maxSparseItems; i++) {
     auto A = sv.get(i); // getting back handle
-    BOOST_CHECK_EQUAL(A->somestuff, i);
+    BOOST_CHECK_EQUAL(A->somestuff, static_cast<int>(i));
   }
 
   // Test a 3d array of the index

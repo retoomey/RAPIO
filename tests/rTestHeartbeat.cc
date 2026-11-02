@@ -13,7 +13,7 @@ public:
 
   // Override the callback so we know when the heartbeat fires
   void
-  processHeartbeat(const Time& n, const Time& p) override
+  processHeartbeat(const Time& /*n*/, const Time& /*p*/) override
   {
     pulseCount++;
   }

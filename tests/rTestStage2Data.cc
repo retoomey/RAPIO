@@ -2,13 +2,13 @@
 #include "rBOOSTTest.h"
 
 /** Test the fusion stage2 storage/streaming table.
-
-    Stage2Data stores its data in a FusionBinaryTable.  The table supports a
-    "stream read" mode (FusionBinaryTable::myStreamRead): readBlock only records
-    the data offset, then get() walks rows straight from the file, expanding the
-    run-length encoded missing values on the fly.  This is what keeps memory low
-    for the massive fusion grids.  Here we build a table, write it to disk, then
-    read it back in streaming mode and validate every row. */
+ *
+ *  Stage2Data stores its data in a FusionBinaryTable.  The table supports a
+ *  "stream read" mode (FusionBinaryTable::myStreamRead): readBlock only records
+ *  the data offset, then get() walks rows straight from the file, expanding the
+ *  run-length encoded missing values on the fly.  This is what keeps memory low
+ *  for the massive fusion grids.  Here we build a table, write it to disk, then
+ *  read it back in streaming mode and validate every row. */
 #include "rFusionBinaryTable.h"
 #include "rConstants.h"
 #include "rTime.h"
@@ -33,6 +33,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   FusionBinaryTable::myStreamRead = false;
 
   auto table = std::make_shared<FusionBinaryTable>();
+
   table->setString("Radarname", "KTLX");
   table->setString("Typename", "Reflectivity");
   table->setUnits("dBZ");
@@ -88,6 +89,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   // ------------------------------------------------------------
   // Write it out to disk
   FILE * fp = fopen(filename.c_str(), "wb");
+
   BOOST_REQUIRE(fp != nullptr);
   BOOST_REQUIRE(table->writeBlock(fp));
   fclose(fp);
@@ -98,6 +100,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   FusionBinaryTable::myStreamRead = true;
 
   auto read = std::make_shared<FusionBinaryTable>();
+
   fp = fopen(filename.c_str(), "rb");
   BOOST_REQUIRE(fp != nullptr);
   BOOST_REQUIRE(read->readBlock(filename, fp));
@@ -107,6 +110,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   BOOST_CHECK_EQUAL(read->getMissingSize(), numMissingRuns);
 
   std::string radarName, typeName, units;
+
   read->getString("Radarname", radarName);
   read->getString("Typename", typeName);
   units = read->getUnits();
@@ -124,7 +128,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   // expanded missing runs.
   float n, d;
   short x, y, z;
-  size_t outValueCount = 0;
+  size_t outValueCount   = 0;
   size_t outMissingCount = 0;
   bool valuesOk  = true;
   bool missingOk = true;
@@ -172,6 +176,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   // ------------------------------------------------------------
   // Introspection API should also describe the table layout
   auto info = table->getTableInfo();
+
   BOOST_REQUIRE_EQUAL(info.size(), (size_t) 2);
   BOOST_CHECK_EQUAL(info[0].name, "Data");
   BOOST_CHECK_EQUAL(info[0].size, numValues);
@@ -179,6 +184,7 @@ BOOST_AUTO_TEST_CASE(STAGE2DATA_STREAMREADWRITE)
   BOOST_CHECK_EQUAL(info[1].size, numMissingRuns);
 
   auto infoX = table->getShortVector("X");
+
   BOOST_REQUIRE_EQUAL(infoX.size(), numValues);
   BOOST_CHECK_EQUAL(infoX[0], expX[0]);
   BOOST_CHECK_EQUAL(infoX[numValues - 1], expX[numValues - 1]);

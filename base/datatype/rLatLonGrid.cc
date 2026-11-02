@@ -1,6 +1,7 @@
 #include "rLatLonGrid.h"
 #include "rLatLonGridProjection.h"
 #include "rArith.h"
+#include "rSparseEncoder.h"
 
 using namespace rapio;
 using namespace std;
@@ -181,17 +182,17 @@ LatLonGrid::postRead(IOConfig& keys)
 {
   // For now, we always unsparse to full.  Though say in rcopy we
   // would want to keep it sparse.  FIXME: have a key control this
-  unsparse2D(getNumLats(), getNumLons(), keys);
+  SparseEncoder::unsparse2D(*this, getNumLats(), getNumLons(), keys);
 } // LatLonGrid::postRead
 
 void
 LatLonGrid::preWrite(IOConfig& keys)
 {
-  sparse2D(keys); // Standard sparse of primary data (add dimension)
+  SparseEncoder::sparse2D(*this, keys); // Standard sparse of primary data (add dimension)
 }
 
 void
 LatLonGrid::postWrite(IOConfig&)
 {
-  unsparseRestore();
+  SparseEncoder::unsparseRestore(*this);
 }

@@ -29,6 +29,7 @@ BOOST_AUTO_TEST_CASE(TEST_ATOMIC_RENAME_ONLY)
   std::string finalFile = OS::getUniqueTemporaryFile("test-final-");
 
   IOConfig keys;
+
   keys.set("filename", finalFile); // Target destination
 
   IOPostProcessor pipeline;
@@ -54,6 +55,7 @@ BOOST_AUTO_TEST_CASE(TEST_COMPRESSION_AND_RENAME)
   std::string finalBaseFile = OS::getUniqueTemporaryFile("test-final-");
 
   IOConfig keys;
+
   keys.set("filename", finalBaseFile).set("compression", "gz");
 
   IOPostProcessor pipeline;
@@ -129,6 +131,7 @@ BOOST_AUTO_TEST_CASE(TEST_LDM_INSERTION_FAKE_BINARY)
   std::string finalFile = rapio::OS::getUniqueTemporaryFile("test-final-");
 
   IOConfig keys;
+
   keys.set("filename", finalFile).set("postwrite", "ldm");
 
   rapio::IOPostProcessor pipeline;

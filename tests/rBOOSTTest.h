@@ -8,7 +8,7 @@
 // 2. Trigger Boost to generate a main() function automatically.
 // We use #ifndef so individual tests can override the suite name if they want.
 #ifndef BOOST_TEST_MODULE
-#define BOOST_TEST_MODULE RAPIO_Standalone_Test
+# define BOOST_TEST_MODULE RAPIO_Standalone_Test
 #endif
 
 BOOST_WRAP_PUSH
@@ -17,9 +17,11 @@ BOOST_WRAP_POP
 
 // 3. Inject the global runtime initialization automatically
 struct GlobalRuntimeFixture {
-  GlobalRuntimeFixture() {
+  GlobalRuntimeFixture()
+  {
     rapio::RAPIORuntime::initialize();
   }
+
   ~GlobalRuntimeFixture() = default;
 };
 BOOST_TEST_GLOBAL_FIXTURE(GlobalRuntimeFixture);

@@ -18,7 +18,7 @@ using namespace rapio;
 BOOST_AUTO_TEST_SUITE(_BinaryTable_)
 
 /** Write a generic BinaryTable out to netcdf, read it back, and verify
- *  that the globals and each supported column type survive the trip. */
+*  that the globals and each supported column type survive the trip. */
 BOOST_AUTO_TEST_CASE(_BinaryTable_Netcdf_RoundTrip)
 {
   auto table = std::make_shared<BinaryTable>();
@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(_BinaryTable_Netcdf_RoundTrip)
 
   const float missing = static_cast<float>(Constants::MissingData);
 
-  std::vector<float> floats           = { 1.0f, missing, -3.5f };
+  std::vector<float> floats = { 1.0f, missing, -3.5f };
   std::vector<unsigned short> ushorts = { 10, 20, 65535 };
   std::vector<unsigned char> uchars   = { 0, 127, 255 };
   std::vector<std::string> strings    = { "alpha", "", "gamma" };
@@ -61,6 +61,7 @@ BOOST_AUTO_TEST_CASE(_BinaryTable_Netcdf_RoundTrip)
   BOOST_REQUIRE(read != nullptr);
 
   auto rt = std::dynamic_pointer_cast<BinaryTable>(read);
+
   BOOST_REQUIRE(rt != nullptr);
 
   // 3. Globals should round trip
@@ -70,6 +71,7 @@ BOOST_AUTO_TEST_CASE(_BinaryTable_Netcdf_RoundTrip)
 
   // 4. Table layout should round trip
   auto info = rt->getTableInfo();
+
   BOOST_REQUIRE_EQUAL(info.size(), (size_t) 1);
   BOOST_CHECK_EQUAL(info[0].name, "rows");
   BOOST_CHECK_EQUAL(info[0].size, floats.size());
@@ -86,9 +88,9 @@ BOOST_AUTO_TEST_CASE(_BinaryTable_Netcdf_RoundTrip)
   BOOST_CHECK_EQUAL(info[0].columnUnits[3], "text");
 
   // 5. Column data should round trip exactly
-  auto rFloats = rt->getFloatVector("FloatCol");
+  auto rFloats  = rt->getFloatVector("FloatCol");
   auto rUshorts = rt->getUShortVector("UShortCol");
-  auto rUchars = rt->getUCharVector("UCharCol");
+  auto rUchars  = rt->getUCharVector("UCharCol");
   auto rStrings = rt->getStringVector("StringCol");
 
   BOOST_REQUIRE_EQUAL(rFloats.size(), floats.size());

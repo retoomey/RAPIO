@@ -2,6 +2,7 @@
 #include "rRadialSetProjection.h"
 #include "rRadialSetIterator.h"
 #include "rArrayPipeline.h"
+#include "rSparseEncoder.h"
 
 #include "rError.h"
 #include "rUnit.h"
@@ -334,7 +335,7 @@ void
 RadialSet::postRead(IOConfig& keys)
 {
   // Uncompress the arrays if needed
-  unsparse2D(myDims[0].size(), myDims[1].size(), keys);
+  SparseEncoder::unsparse2D(*this, myDims[0].size(), myDims[1].size(), keys);
 
   // Post read/uncompress make sure no missing arrays.
   validateArrays(true, 250);
@@ -343,13 +344,13 @@ RadialSet::postRead(IOConfig& keys)
 void
 RadialSet::preWrite(IOConfig& keys)
 {
-  sparse2D(keys); // Standard sparse of primary data (add dimension)
+  SparseEncoder::sparse2D(*this, keys); // Standard sparse of primary data (add dimension)
 }
 
 void
 RadialSet::postWrite(IOConfig&)
 {
-  unsparseRestore();
+  SparseEncoder::unsparseRestore(*this);
 }
 
 float

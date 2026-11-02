@@ -121,6 +121,7 @@ protected:
  *
  * @author Robert Toomey */
 class DataGrid : public DataType {
+  friend class SparseEncoder;
 public:
 
   /** Construct uninitialized DataGrid, usually for
@@ -172,6 +173,14 @@ public:
   {
     myDims.push_back(DataGridDimension(dimname, dimsize));
   };
+
+  void
+  popDim()
+  {
+    if (!myDims.empty()) {
+      myDims.pop_back();
+    }
+  }
 
   /** Get back node so can call methods on it */
   inline std::shared_ptr<DataArray>
@@ -387,44 +396,6 @@ public:
   std::shared_ptr<PTreeData>
   createMetadata();
 
-  /** Unsparse a collection of 2D array information */
-  void
-  unsparse2D(size_t   num_x,
-    size_t            num_y,
-    IOConfig          & keys,
-    const std::string & pixelX     = "pixel_x",
-    const std::string & pixelY     = "pixel_y",
-    const std::string & pixelCount = "pixel_count");
-
-  /** Unsparse a collection of 3D array information */
-  void
-  unsparse3D(size_t   num_x,
-    size_t            num_y,
-    size_t            num_z,
-    IOConfig          & keys,
-    const std::string & pixelX     = "pixel_x",
-    const std::string & pixelY     = "pixel_y",
-    const std::string & pixelZ     = "pixel_z",
-    const std::string & pixelCount = "pixel_count");
-
-  // We 'could' implement sparse by making a new copy of the object, which may be
-  // cleaner.  Right now we hide the original data and change to look sparse for
-  // any writers.  Currently these are meant to be called by writers that then
-  // immediately undo the sparse so that the object can continued to be used for
-  // RAM operations (the algorithm may be reusing the DataType).
-
-  /** Sparse a collection of 3D array information, backing up the original data. */
-  bool
-  sparse3D(IOConfig& keys);
-
-  /** Sparse a collection of 2D array information, backing up the original data. */
-  bool
-  sparse2D(IOConfig& keys);
-
-  /** Restore back up of original data from sparsing, make as non-sparse again */
-  void
-  unsparseRestore();
-
 protected:
 
   /** Deep copy our fields to a new DataGrid or subclass */
@@ -447,6 +418,7 @@ protected:
   std::vector<std::shared_ptr<DataArray> > myNodes;
 
 private:
+#if 0
   template <size_t N>
   bool
   sparseT(IOConfig& keys);
@@ -454,5 +426,6 @@ private:
   template <size_t N>
   void
   unsparseT(IOConfig& keys, const std::array<std::string, N>& axisNames, const std::string& countName);
+#endif
 };
 }
