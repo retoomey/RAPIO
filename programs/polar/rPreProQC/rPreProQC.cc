@@ -250,8 +250,12 @@ rPreProQC::processPreProQC()
   // locations where the NBF is occuring, so that we can limit the removal of reflectivity data
   // from these regions. The dualpol data is still bad in these regions, but often QPE wants
   // R(z) here rather than anything else (ex. R(A), R(Z,Zdr)) 
-  float NBF_filter_length = 2250.0; //meters
-  NBF_detect = NBFdetection(NBF_filter_length, Refsm, PhiDPsm, LTAR_QCmask, DR_QCmask, stdPhiDP);
+  //float NBF_filter_length = 2250.0; //meters, 9 gates
+  //float NBF_filter_length = 1250.0; //meters, 5 gates
+  //Doesn't work reliably enough yet. So I've turned it off
+  //NBF_detect = NBFdetection(NBF_filter_length, Refsm, PhiDPsm, LTAR_QCmask, DR_QCmask, stdPhiDP);
+  NBF_detect->getFloat2D()->fill(0.0f);
+
 
   //Now combine the different QCmasks into a single QCmask
   auto QCmask = Ref->Clone();

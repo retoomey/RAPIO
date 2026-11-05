@@ -30,7 +30,7 @@ float DR_threshold( float ref_dBZ) {
     // 50     -7
     // 40     -9
     // 25     -12
-    // 10     -15 (minValueDR -15) 
+    // 10     -15 (minValueDR -17) 
     //
     //float dr_thresh = 0.25*ref_dBZ - 19.5;
     float dr_thresh = (0.2 * ref_dBZ) - 17;
