@@ -20,8 +20,8 @@ namespace {
 // 
 //  These are just initial guess right now.
 //  --JMK 7/20/2026 
-    const float StdPhiDP_threshold = 30;
-    const float PhiDPsm_threshold = 100;
+    const float StdPhiDP_threshold = 7; //15:might be as low as 7 or 8
+    const float PhiDPsm_threshold = 50;
     const float Refl_threshold = 40.0; 
 //
 // This anonymous namespace is good place to keep other algorithmic threshold values.
@@ -83,7 +83,7 @@ std::shared_ptr<rapio::RadialSet> NBFdetection( int filter_length_meters,
  
         for (size_t g = 0; g < numGates; ++g) {
             //We want to linear average of StdPhiDP. AP has very high StdPhiDp over an entire 
-            // areaa, but Significant storms have much lower stdPhiDP
+            // area, but Significant storms have much lower stdPhiDP
             Phi_field.push_back(StdPhiDP_data[a][g]);
             if ((int) Phi_field.size() > filter_length_gates) {
             //This should keep the sample at a particular size

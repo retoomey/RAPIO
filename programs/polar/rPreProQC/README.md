@@ -124,16 +124,16 @@ RAPIO will normally output the computed files underneath the output_directory
 
 Our adaptation is based around the idea that the computeLTARmask is removing data that is impacted by terrain, so that the DR can focus on radar signals from moving targets. As such radar returns from moving targets are more likely to be meteorological based on lower DR, but also higher Reflectivity. We modify the threshold (-12.7) proposed by Kilambi et al (2018) based on the non-local Reflectivity value 5x5 average box filter around the point of interest. This helps us keep data from hail cores inside strong thunderstorms while also eliminating insects even through they might have the same DR value. We use the following formulae to set our DR threshold. <br>
 ```
-dr_thresh = 0.25*ref_dBZ - 19.5;
+dr_thresh = 0.2*ref_dBZ - 17.0;
 ```
 DR values > DR_thresh are considered to be non-metorological
 
    | Ref (dBZ) | DR_thresh|
    |---|---|
    |50 | -7|
-   |40 | -9.5 |
+   |40 | -9 |
    |30 | -12 |
-   |10 |-17 | 
+   |10 |-15 | 
    
 (minValueDR -17) 
 
