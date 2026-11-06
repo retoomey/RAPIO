@@ -28,7 +28,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 std::string
 IONIDS::getHelpString(const std::string&)

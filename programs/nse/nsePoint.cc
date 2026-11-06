@@ -35,7 +35,7 @@ nsePoint::init()
   _VirtualTempK     = Constants::MissingData;
   _VerticalVelocity = Constants::MissingData;
   _WetBulbTempK     = Constants::MissingData;
-};
+}
 
 nsePoint::nsePoint()
 {

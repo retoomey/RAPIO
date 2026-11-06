@@ -789,5 +789,5 @@ public:
    * }
    */
 };
-};
+}
 #pragma GCC diagnostic pop

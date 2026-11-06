@@ -40,7 +40,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 namespace {
 // These put all the memory moves in one place and make them safe enough

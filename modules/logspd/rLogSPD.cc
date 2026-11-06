@@ -59,7 +59,7 @@ createRAPIOLOG(void)
 
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 namespace {
 inline spdlog::level::level_enum

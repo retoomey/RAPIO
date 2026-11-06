@@ -26,7 +26,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 // ----------------------------------------------------------------------------
 // Local Specializer Implementations

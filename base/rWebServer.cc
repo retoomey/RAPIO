@@ -246,8 +246,8 @@ void
 serverStarted(unsigned short /*port*/)
 {
   // WebServer::port=port;
-};
-};
+}
+}
 
 void
 WebServer::runningWebServer()

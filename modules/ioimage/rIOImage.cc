@@ -32,7 +32,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 std::string
 IOImage::getHelpString(const std::string&)
