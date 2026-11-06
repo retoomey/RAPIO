@@ -21,7 +21,7 @@ class WebMessage;
 class RAPIOAlgorithm : public RAPIOProgram {
 public:
   /** Construct a stock algorithm */
-  RAPIOAlgorithm(const std::string& display = "Algorithm") : RAPIOProgram(display){ };
+  RAPIOAlgorithm(std::string_view display = "Algorithm") : RAPIOProgram(display){ };
 
   /** Add a static key for the -O help.  Note that keys can be static, such as
    * '2D' to refer to a class of product, or currently you can also use the
@@ -29,12 +29,12 @@ public:
    * of your algorithm as well as name remapping in cases of multi algorithm
    * instances with different options.*/
   virtual void
-  declareProduct(const std::string& key, const std::string& help);
+  declareProduct(std::string_view key, std::string_view help);
 
   /** Should write given product key?
    * This is true if -O is "*", or "key*", or say -O="key=value" */
   virtual bool
-  isProductWanted(const std::string& key);
+  isProductWanted(std::string_view key);
 
   /** Resolve product name given a key and default name. -O allows
    * key=value pairs for filtering output names.  This is for multiple
@@ -46,7 +46,7 @@ public:
    * algorithm.
    **/
   virtual std::string
-  resolveProductName(const std::string& key, const std::string& defaultName);
+  resolveProductName(std::string_view key, std::string_view defaultName);
 
   /** Handle new record, usually from event queue */
   virtual void
@@ -80,21 +80,21 @@ public:
    * addOutputProduct */
   [[deprecated("Use writeOutputProduct taking IOConfig instead of std::map")]]
   virtual void
-  writeOutputProduct(const std::string& key,
+  writeOutputProduct(std::string_view key,
     std::shared_ptr<DataType>         outputData,
     std::map<std::string, std::string>& outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
-  writeOutputProduct(const std::string& key,
+  writeOutputProduct(std::string_view key,
     std::shared_ptr<DataType>         outputData,
     IOConfig                          & outputParams);
 
   /** Write data to given key.  Key must exist/match the keys from
    * addOutputProduct */
   virtual void
-  writeOutputProduct(const std::string& key,
+  writeOutputProduct(std::string_view key,
     std::shared_ptr<DataType>         outputData)
   {
     IOConfig config;

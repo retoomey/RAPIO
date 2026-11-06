@@ -17,8 +17,8 @@ DataGrid::DataGrid()
 }
 
 std::shared_ptr<DataGrid>
-DataGrid::Create(const std::string& aTypeName,
-  const std::string               & Units,
+DataGrid::Create(std::string_view aTypeName,
+  std::string_view                Units,
   const LLH                       & location,
   const Time                      & datatime,
   const std::vector<size_t>       & dimsizes,
@@ -57,8 +57,8 @@ DataGrid::Clone() const
 }
 
 bool
-DataGrid::init(const std::string & aTypeName,
-  const std::string              & Units,
+DataGrid::init(std::string_view  aTypeName,
+  std::string_view               Units,
   const LLH                      & location,
   const Time                     & datatime,
   const std::vector<size_t>      & dimsizes,
@@ -84,7 +84,7 @@ DataArray::getAttributes()
 
 std::shared_ptr<DataAttributeList>
 DataGrid::getAttributes(
-  const std::string& name)
+  std::string_view name)
 {
   auto node = getNode(name);
 
@@ -106,25 +106,22 @@ DataGrid::getSizes() const
 }
 
 std::shared_ptr<DataArray>
-DataGrid::getNode(const std::string& name)
+DataGrid::getNode(std::string_view name)
 {
-  size_t count = 0;
-
-  for (auto i:myNodes) {
+  for (const auto& i:myNodes) {
     if (i->getName() == name) {
       return i;
     }
-    count++;
   }
   return nullptr;
 }
 
 int
-DataGrid::getNodeIndex(const std::string& name)
+DataGrid::getNodeIndex(std::string_view name)
 {
   int count = 0;
 
-  for (auto i:myNodes) {
+  for (const auto& i:myNodes) {
     if (i->getName() == name) {
       return count;
     }
@@ -303,7 +300,7 @@ DataGrid::initFromGlobalAttributes()
 }
 
 void
-DataGrid::updateGlobalAttributes(const std::string& encoded_type)
+DataGrid::updateGlobalAttributes(std::string_view encoded_type)
 {
   // Note: Datatype updates the attributes -unit -value specials,
   // so don't add any after this
@@ -325,7 +322,7 @@ DataGrid::updateGlobalAttributes(const std::string& encoded_type)
   DeclareArrayFactoryMethodsForD(TYPE, ARRAYTYPE, 3)
 
 void *
-DataGrid::factoryGetRawDataPointer(const std::string& name, const std::string& units, const DataArrayType& type,
+DataGrid::factoryGetRawDataPointer(std::string_view name, std::string_view units, const DataArrayType& type,
   const std::vector<size_t>& dimindexes)
 {
   // A typeless factory for creating/adding and returning a working pointer to array.
@@ -352,7 +349,7 @@ DataGrid::factoryGetRawDataPointer(const std::string& name, const std::string& u
 }
 
 std::string
-DataGrid::getUnits(const std::string& name)
+DataGrid::getUnits(std::string_view name)
 {
   // Default to the global units
   std::string units = DataType::getUnits(name);
@@ -367,7 +364,7 @@ DataGrid::getUnits(const std::string& name)
 }
 
 void
-DataGrid::setUnits(const std::string& units, const std::string& name)
+DataGrid::setUnits(std::string_view units, std::string_view name)
 {
   // Only update the global units if this is primary data.
   if (name == Constants::PrimaryDataName) {

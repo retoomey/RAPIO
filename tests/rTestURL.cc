@@ -83,6 +83,63 @@ BOOST_AUTO_TEST_CASE(_URL_FIELDS_)
   BOOST_CHECK_EQUAL(file2.isLocal(), true);
 
   // getSuffixLC -- I might remove this
+
+  // Test constructing and querying URL with non-null-terminated std::string_view slices
+  std::string rawBuffer = "PREFIX_http://alice:pw123@example.org:9090/dir/item.nc?keyA=valA&keyB=valB#sec1_TRAILING_GARBAGE";
+  std::string_view urlSlice(rawBuffer.data() + 7, 72); // exact slice without trailing garbage
+  URL svUrl(urlSlice);
+
+  BOOST_CHECK_EQUAL(svUrl.getScheme(), "http");
+  BOOST_CHECK_EQUAL(svUrl.getUser(), "alice");
+  BOOST_CHECK_EQUAL(svUrl.getPassword(), "pw123");
+  BOOST_CHECK_EQUAL(svUrl.getHost(), "example.org");
+  BOOST_CHECK_EQUAL(svUrl.getPort(), 9090);
+  BOOST_CHECK_EQUAL(svUrl.getPath(), "/dir/item.nc");
+  BOOST_CHECK_EQUAL(svUrl.getFragment(), "sec1");
+  BOOST_CHECK(svUrl.hasQuery(std::string_view("keyA_EXTRA", 4)));
+  BOOST_CHECK_EQUAL(svUrl.getQuery(std::string_view("keyB_EXTRA", 4)), "valB");
+
+  // Test port fallback on invalid, out-of-range, or trailing-garbage ports
+  URL badPort1("http://example.org:99999/test");
+  BOOST_CHECK_EQUAL(badPort1.getPort(), 80);
+  URL badPort2("http://example.org:0/test");
+  BOOST_CHECK_EQUAL(badPort2.getPort(), 80);
+  URL badPort3("http://example.org:abc/test");
+  BOOST_CHECK_EQUAL(badPort3.getPort(), 80);
+  URL badPort4("http://example.org:80abc/test");
+  BOOST_CHECK_EQUAL(badPort4.getPort(), 80);
+
+  // Test user without password (no colon in userinfo)
+  URL userOnly("http://justuser@example.org/data");
+  BOOST_CHECK_EQUAL(userOnly.getUser(), "justuser");
+  BOOST_CHECK_EQUAL(userOnly.getPassword(), "");
+  BOOST_CHECK_EQUAL(userOnly.getHost(), "example.org");
+
+  // Test short strings (< 3 chars), stdin "-", empty, and nullptr
+  URL dashUrl("-");
+  BOOST_CHECK_EQUAL(dashUrl.getPath(), "-");
+  URL rootUrl("/");
+  BOOST_CHECK_EQUAL(rootUrl.getPath(), "/");
+  URL emptyUrl("");
+  BOOST_CHECK(emptyUrl.empty());
+  URL nullUrl(static_cast<const char *>(nullptr));
+  BOOST_CHECK(nullUrl.empty());
+
+  // Test self-aliasing assignment (where a string_view into the URL's own storage is assigned back)
+  class TestAliasURL : public URL {
+  public:
+    using URL::URL;
+    using URL::operator=;
+    std::string_view pathView() const { return path; }
+  };
+  TestAliasURL selfUrl("http://example.org:8080/sub/local/file.nc?foo=bar#sec");
+  selfUrl = selfUrl.pathView();
+  BOOST_CHECK_EQUAL(selfUrl.getScheme(), "");
+  BOOST_CHECK_EQUAL(selfUrl.getHost(), "");
+  BOOST_CHECK_EQUAL(selfUrl.getPort(), 0);
+  BOOST_CHECK_EQUAL(selfUrl.getPath(), "/sub/local/file.nc");
+  BOOST_CHECK(!selfUrl.hasQuery("foo"));
+  BOOST_CHECK_EQUAL(selfUrl.getFragment(), "");
 }
 
 BOOST_AUTO_TEST_SUITE_END();

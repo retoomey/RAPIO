@@ -10,6 +10,7 @@
 #include <rIOConfig.h>
 
 #include <string>
+#include <string_view>
 #include <memory>
 
 namespace rapio {
@@ -83,15 +84,15 @@ public:
   /** Generate the path for writing based upon fields within us and a token string. */
   virtual URL
   generateFileName(
-    const std::string & rootFolder,
-    const std::string & pattern);
+    std::string_view rootFolder,
+    std::string_view pattern);
 
   /** Generate a record, if any, for notification after successful write. This
    * pretty much is the FML record we write out. */
   virtual void
   generateRecord(
     const URL           & pathin,
-    const std::string   & factory,
+    std::string_view    factory,
     std::vector<Record> & records);
 
   /** Prepare DataType view for writing.  This can mean creating sparse arrays, etc. */
@@ -115,7 +116,7 @@ public:
 
   /** Set the factory used if any to create this DataType */
   void
-  setReadFactory(const std::string& d)
+  setReadFactory(std::string_view d)
   {
     myReadFactory = d;
   }
@@ -132,7 +133,7 @@ public:
 
   /** Set the data type we store */
   void
-  setDataType(const std::string& d)
+  setDataType(std::string_view d)
   {
     myDataType = d;
   }
@@ -163,7 +164,7 @@ public:
 
   /** Set the TypeName of this DataType. */
   void
-  setTypeName(const std::string& t)
+  setTypeName(std::string_view t)
   {
     myTypeName = t;
   }
@@ -174,7 +175,7 @@ public:
 
   /** Set subtype */
   void
-  setSubType(const std::string& s);
+  setSubType(std::string_view s);
 
   /** Generated subtype for outputting from empty */
   virtual std::string
@@ -215,12 +216,12 @@ public:
   /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
   virtual std::string
-  getUnits(const std::string& name = Constants::PrimaryDataName);
+  getUnits(std::string_view name = Constants::PrimaryDataName);
 
   /** Set the primary units.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
   virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName);
+  setUnits(std::string_view units, std::string_view name = Constants::PrimaryDataName);
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */
@@ -229,7 +230,7 @@ public:
 
   /** Make sure global attribute list reflects any internal variables */
   virtual void
-  updateGlobalAttributes(const std::string& encoded_type);
+  updateGlobalAttributes(std::string_view encoded_type);
 
   /** Projection for data type */
   virtual std::shared_ptr<DataProjection>
@@ -241,7 +242,7 @@ public:
 
   /** Set the ColorMap name for this DataType */
   virtual void
-  setColorMapName(const std::string& name);
+  setColorMapName(std::string_view name);
 
   /** Get the ColorMap for converting values to colors */
   virtual std::shared_ptr<ColorMap>

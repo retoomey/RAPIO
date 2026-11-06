@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rapio {
@@ -56,13 +57,13 @@ public:
 
   /** Add a group for this option.  Used for grouping in parameter printout */
   void
-  addGroup(const std::string& group);
+  addGroup(std::string_view group);
 
   // Suboptions
 
   /** Add a suboption to this option. */
   void
-  addSuboption(const std::string& opt, const std::string& description);
+  addSuboption(std::string_view opt, std::string_view description);
 
   /** Set enforced suboptions or not.  Enforced means the passed parameter must
    * match an added suboption, or blank which becomes the default suboption */
@@ -117,7 +118,7 @@ public:
 /** Filter options by given name.  Help uses this to try to find what you want advanced help for */
 class FilterName :  public OptionFilter {
 public:
-  FilterName(const std::string& name);
+  FilterName(std::string_view name);
   virtual bool
   show(const Option& opt) override;
 protected:
@@ -128,7 +129,7 @@ protected:
 /** Get list of options by group.  Used for printing out by categories */
 class FilterGroup :  public OptionFilter {
 public:
-  FilterGroup(const std::string& name, const bool showHidden = true);
+  FilterGroup(std::string_view name, const bool showHidden = true);
   virtual bool
   show(const Option& opt) override;
 protected:

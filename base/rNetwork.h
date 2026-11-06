@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <memory>
 
@@ -41,7 +42,7 @@ public:
   /** Set the network engine used such as CURL or BOOST,
    * on failure the current engine will remain unchanged. */
   static bool
-  setNetworkEngine(const std::string& key);
+  setNetworkEngine(std::string_view key);
 
   /** Static read URL ability into a buffer */
   inline static int

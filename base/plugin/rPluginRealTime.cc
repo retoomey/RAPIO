@@ -6,7 +6,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginRealTime::declare(RAPIOProgram * owner, const std::string& name)
+PluginRealTime::declare(RAPIOProgram * owner, std::string_view name)
 {
   owner->addPlugin(new PluginRealTime(name));
   return true;

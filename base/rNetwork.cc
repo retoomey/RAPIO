@@ -9,7 +9,7 @@ using namespace rapio;
 std::shared_ptr<NetworkConnection> Network::myConnection;
 
 bool
-Network::setNetworkEngine(const std::string& key)
+Network::setNetworkEngine(std::string_view key)
 {
   try{
     if (key == "CURL") {

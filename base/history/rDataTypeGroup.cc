@@ -3,11 +3,11 @@
 
 using namespace rapio;
 
-DataTypeGroup::DataTypeGroup(const std::string& k)
+DataTypeGroup::DataTypeGroup(std::string_view k)
   : myKey(k), myUseCustomWindow(false)
 { }
 
-DataTypeGroup::DataTypeGroup(const std::string& k, const TimeDuration& customWindow)
+DataTypeGroup::DataTypeGroup(std::string_view k, const TimeDuration& customWindow)
   : myKey(k), myCustomWindow(customWindow), myUseCustomWindow(true)
 { }
 
@@ -25,7 +25,7 @@ DataTypeGroup::purgeTimeWindow(const Time& currentTime)
 }
 
 std::shared_ptr<DataType>
-DataTypeGroup::getDataType(const std::string& key) const
+DataTypeGroup::getDataType(std::string_view key) const
 {
   for (const auto& item : myItems) {
     if (generateItemKey(item) == key) {
@@ -36,7 +36,7 @@ DataTypeGroup::getDataType(const std::string& key) const
 }
 
 bool
-DataTypeGroup::removeDataType(const std::string& key)
+DataTypeGroup::removeDataType(std::string_view key)
 {
   for (size_t i = 0; i < myItems.size(); ++i) {
     if (generateItemKey(myItems[i]) == key) {

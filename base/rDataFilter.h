@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 
@@ -33,12 +35,12 @@ public:
 
   /** Use this to introduce new subclasses. */
   static void
-  introduce(const std::string   & protocol,
+  introduce(std::string_view    protocol,
     std::shared_ptr<DataFilter> factory);
 
   /** Returns the data filter for this key */
   static std::shared_ptr<DataFilter>
-  getDataFilter(const std::string& type);
+  getDataFilter(std::string_view type);
 
   // Filter methods -----------------------------------------------------
 

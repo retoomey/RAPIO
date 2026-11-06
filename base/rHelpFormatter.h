@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 
@@ -31,11 +32,11 @@ struct HelpEntry {
 // The standalone formatter class
 class HelpFormatter {
 public:
-  HelpFormatter(const std::string& progName,
-    const std::string            & description,
-    const std::string            & authors,
-    const std::string            & example,
-    const std::string            & header);
+  HelpFormatter(std::string_view progName,
+    std::string_view             description,
+    std::string_view             authors,
+    std::string_view             example,
+    std::string_view             header);
 
   // Main entry point to print the help menu
   void
@@ -49,7 +50,7 @@ private:
   void
   printMetadata() const;
   void
-  printOptionGroup(const std::string& groupName,
+  printOptionGroup(std::string_view groupName,
     const std::vector<HelpEntry>    & groupOptions,
     size_t                          maxArgWidth,
     bool                            showHidden,

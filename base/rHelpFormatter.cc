@@ -10,11 +10,11 @@
 using namespace rapio;
 using namespace std;
 
-HelpFormatter::HelpFormatter(const std::string& progName,
-  const std::string                           & description,
-  const std::string                           & authors,
-  const std::string                           & example,
-  const std::string                           & header)
+HelpFormatter::HelpFormatter(std::string_view progName,
+  std::string_view                            description,
+  std::string_view                            authors,
+  std::string_view                            example,
+  std::string_view                            header)
   : myProgName(progName), myDescription(description),
   myAuthors(authors), myExample(example), myHeader(header)
 { }
@@ -122,7 +122,7 @@ HelpFormatter::printMetadata() const
 }
 
 void
-HelpFormatter::printOptionGroup(const std::string& groupName,
+HelpFormatter::printOptionGroup(std::string_view groupName,
   const std::vector<HelpEntry>                   & groupOptions,
   size_t                                         maxArgWidth,
   bool                                           showHidden,
@@ -143,7 +143,7 @@ HelpFormatter::printOptionGroup(const std::string& groupName,
 
     if (inGroup) {
       if (!hasPrintableOptions) {
-        std::cout << ColorTerm::bold(groupName.empty() ? "OPTIONS:\n" : groupName + ":\n");
+        std::cout << ColorTerm::bold(groupName.empty() ? "OPTIONS:\n" : std::string(groupName) + ":\n");
         hasPrintableOptions = true;
       }
       printSingleOption(opt, maxArgWidth, advancedHelp);

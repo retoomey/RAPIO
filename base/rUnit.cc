@@ -18,28 +18,26 @@ using namespace rapio;
 #if HAVE_UDUNITS
 namespace {
 struct Key {
-  char * from;
-  char * to;
-  Key(char * f, char * t) : from(f), to(t){ }
+  std::string_view from;
+  std::string_view to;
+  Key(std::string_view f, std::string_view t) : from(f), to(t){ }
 
   bool
   operator < (const Key& that) const
   {
-    int i = strcmp(from, that.from);
+    if (from != that.from) { return (from < that.from); }
 
-    if (i) { return (i < 0); }
-
-    return (strcmp(to, that.to) < 0);
+    return (to < that.to);
   }
 };
 
 std::map<Key, Unit::UnitConverter> converter_cache;
-std::map<std::string, utUnit> unit_cache;
+std::map<std::string, utUnit, std::less<> > unit_cache;
 
 bool
-getUtUnit(const std::string& u, utUnit& setme)
+getUtUnit(std::string_view u, utUnit& setme)
 {
-  const std::string& unit = u.empty() ? "dimensionless" : u;
+  const std::string_view unit = u.empty() ? "dimensionless" : u;
 
   // Hunt a cache of converter objects...
   auto it(unit_cache.find(unit));
@@ -49,12 +47,14 @@ getUtUnit(const std::string& u, utUnit& setme)
     return (true);
   }
 
-  if (utScan(unit.c_str(), &setme)) {
+  std::string unitStr(unit);
+
+  if (utScan(unitStr.c_str(), &setme)) {
     fLogSevere("Unit '{}' not found in the udunits database file(s) in misc.", unit);
     return (false);
   }
 
-  unit_cache[unit] = setme;
+  unit_cache[std::move(unitStr)] = setme;
   return (true);
 }
 }
@@ -95,7 +95,7 @@ Unit::initialize()
 }
 
 bool
-Unit::isValidUnit(const std::string& unit)
+Unit::isValidUnit(std::string_view unit)
 {
   #if HAVE_UDUNITS
   utUnit u;
@@ -111,15 +111,14 @@ Unit::isValidUnit(const std::string& unit)
 }
 
 bool
-Unit::getConverter(const std::string& from,
-  const std::string                 & to,
+Unit::getConverter(std::string_view from,
+  std::string_view                  to,
   UnitConverter                     & setme)
 {
   #if HAVE_UDUNITS
-  // Key holds char* rather than std::string because
+  // Key holds string_view rather than std::string because
   // lookup is 3x faster if we don't create new strings each time...
-  // FIXME: Need to investigate this
-  const Key lookup_key((char *) from.c_str(), (char *) to.c_str());
+  const Key lookup_key(from, to);
 
   auto it(converter_cache.find(lookup_key));
 
@@ -147,7 +146,7 @@ Unit::getConverter(const std::string& from,
   }
 
   // FIXME: these leaks don't hurt anything but probably make valgrind unhappy
-  Key insert_key(strdup(from.c_str()), strdup(to.c_str()));
+  Key insert_key(strdup(std::string(from).c_str()), strdup(std::string(to).c_str()));
 
   converter_cache[insert_key] = setme;
   #else // if HAVE_UDUNITS
@@ -161,8 +160,8 @@ Unit::getConverter(const std::string& from,
 } // Unit::getConverter
 
 bool
-Unit::isCompatibleUnit(const std::string& from,
-  const std::string                     & to)
+Unit::isCompatibleUnit(std::string_view from,
+  std::string_view                      to)
 {
   UnitConverter tmp;
 
@@ -170,8 +169,8 @@ Unit::isCompatibleUnit(const std::string& from,
 }
 
 bool
-Unit::convert(const std::string& fromUnit,
-  const std::string            & toUnit,
+Unit::convert(std::string_view fromUnit,
+  std::string_view             toUnit,
   double                       fromVal,
   double                       & toVal)
 {
@@ -209,8 +208,8 @@ Unit::UnitConverter::value(double d) const
 }
 
 double
-Unit::value(const std::string& from,
-  const std::string          & to,
+Unit::value(std::string_view from,
+  std::string_view           to,
   double                     val)
 {
   double d(Constants::MissingData);

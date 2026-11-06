@@ -10,7 +10,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginIngestor::declare(RAPIOProgram * owner, const std::string& name)
+PluginIngestor::declare(RAPIOProgram * owner, std::string_view name)
 {
   static bool once = true; // FIXME: could we make it multi though?
 

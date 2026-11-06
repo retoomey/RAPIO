@@ -31,8 +31,8 @@ public:
    * @return std::shared_ptr<TimeHeightGrid> A pointer to the newly allocated grid.
    */
   static std::shared_ptr<TimeHeightGrid>
-  Create(const std::string& TypeName,
-    const std::string     & Units,
+  Create(std::string_view TypeName,
+    std::string_view      Units,
     const LLH             & location,
     const Time            & baseTime,
     size_t                num_times,
@@ -88,8 +88,8 @@ protected:
    * @return true if initialization was successful, false otherwise.
    */
   bool
-  init(const std::string& TypeName,
-    const std::string   & Units,
+  init(std::string_view TypeName,
+    std::string_view    Units,
     const LLH           & location,
     const Time          & baseTime,
     size_t              num_times,

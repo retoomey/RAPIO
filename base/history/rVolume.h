@@ -54,14 +54,14 @@ public:
    * @brief Constructs a new Volume utilizing the global history window.
    * @param k The unique identifier for this volume history.
    */
-  Volume(const std::string& k) : DataTypeGroup(k){ }
+  Volume(std::string_view k) : DataTypeGroup(k){ }
 
   /**
    * @brief Constructs a new Volume with a custom expiration window.
    * @param k The unique identifier for this volume history.
    * @param customWindow The specific TimeDuration to keep data alive.
    */
-  Volume(const std::string& k, const TimeDuration& customWindow) : DataTypeGroup(k, customWindow){ }
+  Volume(std::string_view k, const TimeDuration& customWindow) : DataTypeGroup(k, customWindow){ }
 
   virtual
   ~Volume() = default;
@@ -89,7 +89,7 @@ public:
    * @param factory The Volume instance to act as a prototype.
    */
   static void
-  introduce(const std::string & key, std::shared_ptr<Volume> factory);
+  introduce(std::string_view key, std::shared_ptr<Volume> factory);
 
   /**
    * @brief Returns dynamically generated help information detailing available Volume types.
@@ -104,7 +104,7 @@ public:
    * @param o The options parser to populate.
    */
   static void
-  introduceSuboptions(const std::string& name, RAPIOOptions& o);
+  introduceSuboptions(std::string_view name, RAPIOOptions& o);
 
   /**
    * @brief Instantiates a specific Volume by querying the factory registry.
@@ -115,9 +115,9 @@ public:
    */
   static std::shared_ptr<Volume>
   createVolume(
-    const std::string & key,
-    const std::string & params,
-    const std::string & historyKey);
+    std::string_view key,
+    std::string_view params,
+    std::string_view historyKey);
 
   /**
    * @brief Retrieves the specific help string for this volume subclass.
@@ -125,7 +125,7 @@ public:
    * @return A brief description of the volume subclass behavior.
    */
   virtual std::string
-  getHelpString(const std::string& fkey) = 0;
+  getHelpString(std::string_view fkey) = 0;
 
   /**
    * @brief Factory callback implemented by subclasses to generate a new instance.
@@ -135,7 +135,7 @@ public:
    */
   virtual std::shared_ptr<Volume>
   create(
-    const std::string& historyKey, const std::string & params) = 0;
+    std::string_view historyKey, std::string_view params) = 0;
 
   /**
    * @brief Retrieves a stored DataType matching the specified subtype.
@@ -143,7 +143,7 @@ public:
    * @return A shared pointer to the DataType, or nullptr if not found.
    */
   std::shared_ptr<DataType>
-  getSubType(const std::string& subtype)
+  getSubType(std::string_view subtype)
   {
     return getDataType(subtype);
   }
@@ -154,7 +154,7 @@ public:
    * @return True if the item was found and removed, false otherwise.
    */
   bool
-  deleteSubType(const std::string& subtype)
+  deleteSubType(std::string_view subtype)
   {
     return removeDataType(subtype);
   }

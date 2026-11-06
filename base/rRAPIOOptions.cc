@@ -67,16 +67,16 @@ RAPIOOptions::processArgs(int argc, char ** argv)
   return myBackend->processArgs(args);
 } // RAPIOOptions::processArgs
 
-void RAPIOOptions::setName(const std::string& n){ myName = n; }
+void RAPIOOptions::setName(std::string_view n){ myName = n; }
 
-void RAPIOOptions::setDescription(const std::string& d){ myDescription = d; }
+void RAPIOOptions::setDescription(std::string_view d){ myDescription = d; }
 
-void RAPIOOptions::setAuthors(const std::string& a){ myAuthors = a; }
+void RAPIOOptions::setAuthors(std::string_view a){ myAuthors = a; }
 
-void RAPIOOptions::setExample(const std::string& e){ myExample = e; }
+void RAPIOOptions::setExample(std::string_view e){ myExample = e; }
 
 void
-RAPIOOptions::setHeader(const std::string& a)
+RAPIOOptions::setHeader(std::string_view a)
 {
   myHeader = a;
 
@@ -125,29 +125,31 @@ RAPIOOptions::dumpHeaderLine()
 #endif // if 0
 
 std::string
-RAPIOOptions::expandMacros(const std::string& original) const
+RAPIOOptions::expandMacros(std::string_view original) const
 {
-  std::string newString = original;
-  std::string PWD       = OS::getCurrentDirectory();
+  std::string newString(original);
 
-  Strings::replace(newString, "{PWD}", PWD);
+  if (newString.find("{PWD}") != std::string::npos) {
+    std::string PWD = OS::getCurrentDirectory();
+    Strings::replace(newString, "{PWD}", PWD);
+  }
   return newString;
 }
 
 void
-RAPIOOptions::boolean(const std::string& opt, const std::string& usage)
+RAPIOOptions::boolean(std::string_view opt, std::string_view usage)
 {
   myBackend->boolean(opt, expandMacros(usage));
 }
 
 void
-RAPIOOptions::require(const std::string& opt, const std::string& exampleArg, const std::string& usage)
+RAPIOOptions::require(std::string_view opt, std::string_view exampleArg, std::string_view usage)
 {
   myBackend->require(opt, expandMacros(exampleArg), expandMacros(usage));
 }
 
 void
-RAPIOOptions::optional(const std::string& opt, const std::string& defaultValue, const std::string& usage)
+RAPIOOptions::optional(std::string_view opt, std::string_view defaultValue, std::string_view usage)
 {
   myBackend->optional(opt, expandMacros(defaultValue), expandMacros(usage));
 }
@@ -155,7 +157,7 @@ RAPIOOptions::optional(const std::string& opt, const std::string& defaultValue, 
 namespace {
 // Moved from OptionList.cc
 bool
-allowInConfig(const std::string& o)
+allowInConfig(std::string_view o)
 {
   if (o == "iconfig") { return false; }
   if (o == "oconfig") { return false; }
@@ -165,7 +167,7 @@ allowInConfig(const std::string& o)
 }
 
 void
-RAPIOOptions::readConfigFile(const std::string& string)
+RAPIOOptions::readConfigFile(std::string_view string)
 {
   // Get config file reader for given option string
   URL aURL(string);
@@ -188,10 +190,10 @@ RAPIOOptions::readConfigFile(const std::string& string)
       if (allowInConfig(options[i])) {
         // fLogDebug("STORING {} == {}", options[i], values[i]);
         // Don't enforce declaration with HMET files, there are too many options
-        std::string arg = options[i];
+        std::string_view arg = options[i];
         // Clean up prefixes just in case
-        Strings::removePrefix(arg, "-");
-        Strings::removePrefix(arg, "-");
+        if (!arg.empty() && (arg[0] == '-')) { arg.remove_prefix(1); }
+        if (!arg.empty() && (arg[0] == '-')) { arg.remove_prefix(1); }
 
         // Inject into the backend parser!
         storeParsedArg(arg, values[i], false, true);
@@ -205,7 +207,7 @@ RAPIOOptions::readConfigFile(const std::string& string)
 } // RAPIOOptions::readConfigFile
 
 void
-RAPIOOptions::writeConfigFile(const std::string& string)
+RAPIOOptions::writeConfigFile(std::string_view string)
 {
   // Get config file reader for given option string
   URL aURL(string);
@@ -237,14 +239,14 @@ RAPIOOptions::writeConfigFile(const std::string& string)
 }
 
 void
-RAPIOOptions::grid2D(const std::string& opt, const std::string& defaultValue, const std::string& usage)
+RAPIOOptions::grid2D(std::string_view opt, std::string_view defaultValue, std::string_view usage)
 {
   optional(opt, defaultValue, usage);
   addGroup(opt, "SPACE");
 }
 
 void
-RAPIOOptions::declareLegacyGrid(const std::string& defaultGrid)
+RAPIOOptions::declareLegacyGrid(std::string_view defaultGrid)
 {
   // Legacy grid options
   optional("t", "", "The top corner of grid");
@@ -264,7 +266,7 @@ RAPIOOptions::declareLegacyGrid(const std::string& defaultGrid)
 }
 
 bool
-RAPIOOptions::getGrid(const std::string& name, LLCoverageArea& grid)
+RAPIOOptions::getGrid(std::string_view name, LLCoverageArea& grid)
 {
   std::string gridstr = getString(name);
 

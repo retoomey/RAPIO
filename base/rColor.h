@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 namespace rapio
 {
@@ -28,7 +29,7 @@ public:
 
   /** Convert hexadecimal string into RGB color values */
   static bool
-  RGBStringToColor(const std::string& s,
+  RGBStringToColor(std::string_view s,
     unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a);
 
   /** Get color into values */

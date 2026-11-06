@@ -6,7 +6,7 @@ using namespace rapio;
 using namespace std;
 
 void
-Option::addGroup(const std::string& group)
+Option::addGroup(std::string_view group)
 {
   bool found = false;
 
@@ -20,12 +20,12 @@ Option::addGroup(const std::string& group)
   }
 
   if (!found) {
-    groups.push_back(ugroup);
+    groups.push_back(std::move(ugroup));
   }
 }
 
 void
-Option::addSuboption(const std::string& opt, const std::string& description)
+Option::addSuboption(std::string_view opt, std::string_view description)
 {
   // Basically keep track of maximum suboption length for formatting purposes
   if (suboptionmax < opt.length()) {
@@ -41,21 +41,16 @@ Option::addSuboption(const std::string& opt, const std::string& description)
 
   s.opt         = opt;
   s.description = description;
-  suboptions.push_back(s);
+  suboptions.push_back(std::move(s));
 }
 
 bool
 Option::isInSuboptions() const
 {
   // This happens a LOT.  Subroutine?
-  std::string value;
+  const std::string& value = parsed ? parsedValue : defaultValue;
 
-  if (parsed) {
-    value = parsedValue;
-  } else { value = defaultValue; }
-  // ^^^
-
-  for (auto&i:suboptions) {
+  for (const auto& i:suboptions) {
     if (i.opt == value) { return true; }
   }
   return false;
@@ -129,7 +124,7 @@ FilterRequired::show(const Option& opt)
   return (opt.required && !opt.system);
 }
 
-FilterName::FilterName(const std::string& name) : myName(name)
+FilterName::FilterName(std::string_view name) : myName(name)
 { }
 
 bool
@@ -138,7 +133,7 @@ FilterName::show(const Option& opt)
   return (opt.opt == myName);
 }
 
-FilterGroup::FilterGroup(const std::string& group, const bool showHidden) : myGroup(group), myHidden(showHidden)
+FilterGroup::FilterGroup(std::string_view group, const bool showHidden) : myGroup(group), myHidden(showHidden)
 { }
 
 bool

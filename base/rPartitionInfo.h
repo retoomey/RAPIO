@@ -6,6 +6,7 @@
 #include <rLL.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rapio {
@@ -27,7 +28,7 @@ public:
 
   /** Set the partition value string */
   inline void
-  setParamValue(const std::string& s)
+  setParamValue(std::string_view s)
   {
     myParamValue = s;
   }
@@ -41,7 +42,7 @@ public:
 
   /** Set partition type from a string */
   bool
-  setPartitionType(const std::string& partTypeIn);
+  setPartitionType(std::string_view partTypeIn);
 
   /** Get the partition type */
   inline Type

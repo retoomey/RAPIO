@@ -9,7 +9,7 @@ using namespace std;
 std::vector<std::shared_ptr<RecordNotifierType> > PluginNotifier::theNotifiers;
 
 bool
-PluginNotifier::declare(RAPIOProgram * owner, const std::string& name)
+PluginNotifier::declare(RAPIOProgram * owner, std::string_view name)
 {
   static bool once = true;
 

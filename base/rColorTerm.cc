@@ -27,7 +27,7 @@ constexpr std::array<const char *, static_cast<size_t>(ColorTerm::Code::Count)> 
 void
 ColorTerm::wrapWithIndent(size_t currentIndent,
   size_t                         indent,
-  const std::string              & input,
+  std::string_view               input,
   std::ostream                   & ss)
 {
   const size_t w = getOutputWidth();

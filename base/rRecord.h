@@ -10,6 +10,7 @@
 #include <rPTreeData.h>
 
 #include <string>
+#include <string_view>
 
 #include <fmt/format.h>
 
@@ -38,31 +39,32 @@ public:
 
   /** Set a value as a string */
   void
-  setValue(const std::string& key, const std::string& value)
+  setValue(std::string_view key, std::string_view value)
   {
     // Find the key in myKeys
     for (size_t i = 0; i < myKeys.size(); ++i) {
       if (myKeys[i] == key) {
         // If the key is found, replace its value
-        myValues[i] = value; // Convert the value to string
-        return;              // Exit after replacing the value
+        myValues[i].assign(value); // Convert the value to string
+        return;                    // Exit after replacing the value
       }
     }
 
     // If the key is not found, add a new key-value pair
-    myKeys.push_back(key);
-    myValues.push_back(value);
+    myKeys.emplace_back(key);
+    myValues.emplace_back(value);
   }
 
   /** Get a value as a string */
   bool
-  getValue(const std::string& key, std::string& value) const
+  getValue(std::string_view key, std::string& value) const
   {
     // Find the key in myKeys
     for (size_t i = 0; i < myKeys.size(); ++i) {
       if (myKeys[i] == key) {
         // If the key is found, replace its value
         value = myValues[i];
+        return true;
       }
     }
     return false;
@@ -115,12 +117,12 @@ public:
   setIndexNumber(size_t i){ myIndexNumber = i; }
 
   /** Get the optional source */
-  std::string
+  const std::string&
   getSourceName() const { return mySourceName; }
 
   /** Set the optional source */
   void
-  setSourceName(const std::string& s){ mySourceName = s; }
+  setSourceName(std::string_view s){ mySourceName = s; }
 
   /** Get the process id for meta data. */
   static const std::string&
@@ -132,28 +134,28 @@ public:
   /** Set a process id for meta data.  It is not per record and we don't want that
    * because records take up memory. */
   static void
-  setProcessName(const std::string& pname)
+  setProcessName(std::string_view pname)
   {
     theProcessName = pname;
   }
 
   /** Set a string in a message */
   void
-  setString(const std::string& key, const std::string& value)
+  setString(std::string_view key, std::string_view value)
   {
     setValue(key, value);
   }
 
   /** Get a string in a message, return true if found */
   bool
-  getString(const std::string& key, std::string& value) const
+  getString(std::string_view key, std::string& value) const
   {
     return getValue(key, value);
   }
 
   /** Get a string in a message, return "" if not found */
   std::string
-  getString(const std::string& key) const
+  getString(std::string_view key) const
   {
     std::string value;
 
@@ -228,10 +230,10 @@ public:
   // directly.  We could create message or non message here I think.
   /** Create a record with given time, parameters and selections.  */
   Record(const std::vector<std::string>& params,
-    const std::string                  & builder,
+    std::string_view                   builder,
     const rapio::Time                  & productTime,
-    const std::string                  & dataType,
-    const std::string                  & subType);
+    std::string_view                   dataType,
+    std::string_view                   subType);
 
   /**
    * Create the object referenced by this record.

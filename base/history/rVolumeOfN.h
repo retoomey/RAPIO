@@ -23,14 +23,14 @@ public:
    * @brief Constructs a new VolumeOfN utilizing the global history window.
    * @param k The unique identifier for this volume history.
    */
-  VolumeOfN(const std::string& k) : Volume(k){ }
+  VolumeOfN(std::string_view k) : Volume(k){ }
 
   /**
    * @brief Constructs a new VolumeOfN with a custom expiration window.
    * @param k The unique identifier for this volume history.
    * @param customWindow The specific TimeDuration to keep data alive.
    */
-  VolumeOfN(const std::string& k, const TimeDuration& customWindow) : Volume(k, customWindow){ }
+  VolumeOfN(std::string_view k, const TimeDuration& customWindow) : Volume(k, customWindow){ }
 
   /**
    * @brief Initializes and registers this subclass with the central Factory.
@@ -48,7 +48,7 @@ public:
    * @return A brief description of the volume subclass behavior.
    */
   virtual std::string
-  getHelpString(const std::string& /*fkey*/) override
+  getHelpString(std::string_view /*fkey*/) override
   {
     return "Stores all unique subtypes/tilts (Note: VCP ignored, virtual volume).";
   }
@@ -61,7 +61,7 @@ public:
    */
   virtual std::shared_ptr<Volume>
   create(
-    const std::string& historyKey, const std::string & /*params*/) override
+    std::string_view historyKey, std::string_view /*params*/) override
   {
     return std::make_shared<VolumeOfN>(historyKey);
   }

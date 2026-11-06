@@ -14,11 +14,11 @@ class PluginProductOutputFilter : public RAPIOPlugin
 public:
 
   /** Create a record filter plugin */
-  PluginProductOutputFilter(const std::string& name) : RAPIOPlugin(name){ }
+  PluginProductOutputFilter(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "O");
+  declare(RAPIOProgram * owner, std::string_view name = "O");
 
   /** Declare options for the plugin */
   virtual void
@@ -36,19 +36,19 @@ public:
    * '2D' to refer to a class of product, or currently you can also use the
    * DataType typename as a dynamic key. */
   virtual void
-  declareProduct(const std::string& key, const std::string& help)
+  declareProduct(std::string_view key, std::string_view help)
   {
-    myKeys.push_back(key);
-    myKeyHelp.push_back(help);
+    myKeys.emplace_back(key);
+    myKeyHelp.emplace_back(help);
   }
 
   /** Is product with this key wanted? */
   virtual bool
-  isProductWanted(const std::string& key);
+  isProductWanted(std::string_view key);
 
   /** Resolve product name from the -O Key=Resolved pairs.*/
   virtual std::string
-  resolveProductName(const std::string& key, const std::string& defaultName);
+  resolveProductName(std::string_view key, std::string_view defaultName);
 
 protected:
 

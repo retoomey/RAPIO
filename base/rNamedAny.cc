@@ -17,7 +17,7 @@ NamedAnyList::Clone() const
 };
 
 int
-NamedAnyList::index(const std::string& name) const
+NamedAnyList::index(std::string_view name) const
 {
   size_t count = 0;
 

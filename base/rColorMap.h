@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <map>
+#include <string_view>
 
 namespace rapio
 {
@@ -18,7 +19,7 @@ namespace rapio
  * */
 class ColorBin {
 public:
-  ColorBin(bool l, const std::string& label,
+  ColorBin(bool l, std::string_view label,
     double l_, double u_,
     unsigned char& r_, unsigned char& g_, unsigned char& b_, unsigned char& a_,
     unsigned char& r2_, unsigned char& g2_, unsigned char& b2_, unsigned char& a2_
@@ -57,7 +58,7 @@ public:
 
   /** Get/load a color map from a key */
   static std::shared_ptr<ColorMap>
-  getColorMap(const std::string& key);
+  getColorMap(std::string_view key);
 
   /** Given a value, return data color for it.  This ignores special data values like missing, etc. and
    * treats those values as data, which you normally don't want. */
@@ -84,15 +85,15 @@ public:
 
   /** Set special colors from parsable strings */
   void
-  setSpecialColorStrings(const std::string& missing, const std::string& unavailable);
+  setSpecialColorStrings(std::string_view missing, std::string_view unavailable);
 
   /** For the GUI experiment a JSON streamed color map format we can apply
    * client size using javascript. */
-  virtual void toJSON(std::ostream&, const std::string& /*units*/ = ""){ }
+  virtual void toJSON(std::ostream&, std::string_view /*units*/ = ""){ }
 
   /** For the GUI experiment a SVG color map */
   virtual void
-  toSVG(std::ostream&, const std::string& /*units*/ = "", const size_t /*width*/ = 80, const size_t /*height*/ = 600)
+  toSVG(std::ostream&, std::string_view /*units*/ = "", const size_t /*width*/ = 80, const size_t /*height*/ = 600)
   { }
 
 protected:
@@ -120,15 +121,15 @@ public:
   /** For the GUI experiment a JSON streamed color map format we can apply
    * client size using javascript. */
   virtual void
-  toJSON(std::ostream&, const std::string& units) override;
+  toJSON(std::ostream&, std::string_view units) override;
 
   /** Create SVG format */
   virtual void
-  toSVG(std::ostream&, const std::string& units = "", const size_t width = 80, const size_t height = 600) override;
+  toSVG(std::ostream&, std::string_view units = "", const size_t width = 80, const size_t height = 600) override;
 
   /** Add a bin to us */
   virtual void
-  addBin(bool linear, const std::string& label, double u, double l,
+  addBin(bool linear, std::string_view label, double u, double l,
     unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_,
     unsigned char r2_, unsigned char g2_, unsigned char b2_, unsigned char a2_);
 

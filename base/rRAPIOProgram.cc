@@ -46,7 +46,7 @@ RAPIOProgram::finalizeOptions(RAPIOOptions& o)
 }
 
 bool
-RAPIOProgram::isWebServer(const std::string& key) const
+RAPIOProgram::isWebServer(std::string_view key) const
 {
   for (auto p: myPlugins) {
     if (p->getName() == key) {
@@ -164,7 +164,7 @@ RAPIOProgram::addPlugin(RAPIOPlugin * p)
 }
 
 void
-RAPIOProgram::removePlugin(const std::string& name)
+RAPIOProgram::removePlugin(std::string_view name)
 {
   for (size_t i = 0; i < myPlugins.size(); ++i) {
     if (myPlugins[i]->getName() == name) {

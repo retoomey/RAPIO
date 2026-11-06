@@ -14,11 +14,11 @@ class PluginNotifier : public RAPIOPlugin
 public:
 
   /** Create a notifier plugin */
-  PluginNotifier(const std::string& name) : RAPIOPlugin(name){ }
+  PluginNotifier(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "n");
+  declare(RAPIOProgram * owner, std::string_view name = "n");
 
   /** Declare options for the plugin */
   virtual void

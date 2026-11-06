@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 class PTreeNode;
@@ -39,7 +40,7 @@ public:
 
   /** Introduce subclass into factories */
   static void
-  introduce(const std::string      & protocol,
+  introduce(std::string_view       protocol,
     std::shared_ptr<AlgConfigFile> factory);
 
   /** Return an algorthm config file for given URL */
@@ -48,7 +49,7 @@ public:
 
   /** Return an algorithm config file reader/writer for given type */
   static std::shared_ptr<AlgConfigFile>
-  getConfigFile(const std::string& type);
+  getConfigFile(std::string_view type);
 
   /** Callback for reading a configuration at given URL location */
   virtual bool
@@ -65,7 +66,7 @@ public:
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
-    const std::string       & program,
+    std::string_view        program,
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) = 0;
 
@@ -96,7 +97,7 @@ public:
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
-    const std::string       & program,
+    std::string_view        program,
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) override;
 
@@ -126,7 +127,7 @@ public:
   /** Callback for writing a configuration at given URL location */
   virtual bool
   writeConfigURL(const URL  & path,
-    const std::string       & program,
+    std::string_view        program,
     std::vector<std::string>& options, // deliberately avoiding maps
     std::vector<std::string>& values) override;
 };

@@ -11,11 +11,11 @@ class PluginWebserver : public RAPIOPlugin {
 public:
 
   /** Create a web server plugin */
-  PluginWebserver(const std::string& name) : RAPIOPlugin(name){ }
+  PluginWebserver(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "web");
+  declare(RAPIOProgram * owner, std::string_view name = "web");
 
   /** Declare options for the plugin */
   virtual void

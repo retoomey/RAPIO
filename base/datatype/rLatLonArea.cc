@@ -79,7 +79,7 @@ LatLonArea::initFromGlobalAttributes()
 } // LatLonArea::initFromGlobalAttributes
 
 void
-LatLonArea::updateGlobalAttributes(const std::string& encoded_type)
+LatLonArea::updateGlobalAttributes(std::string_view encoded_type)
 {
   // Note: Datatype updates the attributes -unit -value specials,
   // so don't add any after this

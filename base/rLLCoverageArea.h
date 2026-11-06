@@ -2,6 +2,8 @@
 
 #include <rConstants.h>
 
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include <fmt/format.h>
@@ -44,20 +46,20 @@ public:
   /** Lookup a string such as "NMQWD" and return the incr/upto lists used
    * to generate a height list */
   bool
-  lookupIncrUpto(const std::string& key, std::vector<int>& incr, std::vector<int>& upto);
+  lookupIncrUpto(std::string_view key, std::vector<int>& incr, std::vector<int>& upto);
 
   /** Parse the heights from parameter information such as "ne" and "55, -130" */
   bool
-  parseHeights(const std::string& label, const std::string& list, std::vector<double>& heightsMs);
+  parseHeights(std::string_view label, std::string_view list, std::vector<double>& heightsMs);
 
   /** Parse a pair of degrees, used for nw, se, and spacing functions */
   bool
-  parseDegrees(const std::string& label, const std::string& p, AngleDegs& lat, AngleDegs& lon);
+  parseDegrees(std::string_view label, std::string_view p, AngleDegs& lat, AngleDegs& lon);
 
   /** Parse from strings, used to generate from command line options.  This supports
    * the legacy -t -b -s and the combined cleaner -grid option */
   bool
-  parse(const std::string& grid, const std::string& t = "", const std::string& b = "", const std::string& s = "");
+  parse(std::string_view grid, std::string_view t = "", std::string_view b = "", std::string_view s = "");
 
   /** Inset our grid to a given radar center and range */
   LLCoverageArea

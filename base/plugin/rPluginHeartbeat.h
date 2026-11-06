@@ -12,11 +12,11 @@ class PluginHeartbeat : public RAPIOPlugin {
 public:
 
   /** Create a heartbeat plugin */
-  PluginHeartbeat(const std::string& name) : RAPIOPlugin(name){ }
+  PluginHeartbeat(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "sync");
+  declare(RAPIOProgram * owner, std::string_view name = "sync");
 
   /** Declare options for the plugin */
   virtual void

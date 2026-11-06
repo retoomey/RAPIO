@@ -18,8 +18,8 @@ LatLonHeightGrid::LatLonHeightGrid()
 
 std::shared_ptr<LatLonHeightGrid>
 LatLonHeightGrid::Create(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
 
   // Projection information (metadata of the each 2D)
   const LLH   & location,
@@ -41,8 +41,8 @@ LatLonHeightGrid::Create(
 
 std::shared_ptr<LatLonHeightGrid>
 LatLonHeightGrid::Create(
-  const std::string    & TypeName,
-  const std::string    & Units,
+  std::string_view     TypeName,
+  std::string_view     Units,
   const Time           & time,
   const LLCoverageArea & g)
 {
@@ -82,8 +82,8 @@ LatLonHeightGrid::deep_copy(const std::shared_ptr<LatLonHeightGrid>& nsp) const
 
 bool
 LatLonHeightGrid::init(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
 
   // Projection information (metadata of the each 2D)
   const LLH   & location,

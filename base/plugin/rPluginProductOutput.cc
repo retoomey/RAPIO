@@ -8,7 +8,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginProductOutput::declare(RAPIOProgram * owner, const std::string& name)
+PluginProductOutput::declare(RAPIOProgram * owner, std::string_view name)
 {
   owner->addPlugin(new PluginProductOutput(name));
   return true;

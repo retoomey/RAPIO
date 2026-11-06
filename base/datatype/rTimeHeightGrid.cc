@@ -10,8 +10,8 @@ TimeHeightGrid::TimeHeightGrid()
 }
 
 std::shared_ptr<TimeHeightGrid>
-TimeHeightGrid::Create(const std::string& TypeName,
-  const std::string                     & Units,
+TimeHeightGrid::Create(std::string_view TypeName,
+  std::string_view                      Units,
   const LLH                             & location,
   const Time                            & baseTime,
   size_t                                num_times,
@@ -39,8 +39,8 @@ TimeHeightGrid::deep_copy(const std::shared_ptr<TimeHeightGrid>& nsp) const
 }
 
 bool
-TimeHeightGrid::init(const std::string& TypeName,
-  const std::string                   & Units,
+TimeHeightGrid::init(std::string_view TypeName,
+  std::string_view                    Units,
   const LLH                           & location,
   const Time                          & baseTime,
   size_t                              num_times,

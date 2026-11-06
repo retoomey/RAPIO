@@ -19,14 +19,14 @@ LatLonGrid::LatLonGrid()
 
 bool
 LatLonGrid::init(
-  const std::string & TypeName,
-  const std::string & Units,
-  const LLH         & location,
-  const Time        & datatime,
-  const float       lat_spacing,
-  const float       lon_spacing,
-  size_t            num_lats,
-  size_t            num_lons
+  std::string_view TypeName,
+  std::string_view Units,
+  const LLH        & location,
+  const Time       & datatime,
+  const float      lat_spacing,
+  const float      lon_spacing,
+  size_t           num_lats,
+  size_t           num_lons
 )
 {
   DataGrid::init(TypeName, Units, location, datatime, { num_lats, num_lons }, { "Lat", "Lon" });
@@ -42,8 +42,8 @@ LatLonGrid::init(
 
 std::shared_ptr<LatLonGrid>
 LatLonGrid::Create(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
 
   // Projection information (metadata of the 2D)
   const LLH   & location,
@@ -64,8 +64,8 @@ LatLonGrid::Create(
 
 std::shared_ptr<LatLonGrid>
 LatLonGrid::Create(
-  const std::string    & TypeName,
-  const std::string    & Units,
+  std::string_view     TypeName,
+  std::string_view     Units,
   const Time           & time,
   const LLCoverageArea & g)
 {

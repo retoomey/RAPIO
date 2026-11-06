@@ -9,7 +9,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginProductOutputFilter::declare(RAPIOProgram * owner, const std::string& name)
+PluginProductOutputFilter::declare(RAPIOProgram * owner, std::string_view name)
 {
   owner->addPlugin(new PluginProductOutputFilter(name));
   return true;
@@ -47,7 +47,7 @@ PluginProductOutputFilter::processOptions(RAPIOOptions& o)
 }
 
 bool
-PluginProductOutputFilter::isProductWanted(const std::string& key)
+PluginProductOutputFilter::isProductWanted(std::string_view key)
 {
   const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
 
@@ -64,10 +64,10 @@ PluginProductOutputFilter::isProductWanted(const std::string& key)
 }
 
 std::string
-PluginProductOutputFilter::resolveProductName(const std::string& key,
-  const std::string                                            & productName)
+PluginProductOutputFilter::resolveProductName(std::string_view key,
+  std::string_view                                             productName)
 {
-  std::string newProductName = productName;
+  std::string newProductName(productName);
 
   const auto& outputs = ConfigParamGroupO::getProductOutputInfo();
 

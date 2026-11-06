@@ -3,6 +3,8 @@
 #include <iostream>
 #include <array>
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 namespace rapio {
 /** Handles colors and terminal pretty printing abilities for terminal.
@@ -47,7 +49,7 @@ public:
   static void
   wrapWithIndent(size_t currentIndent,
     size_t              indent,
-    const std::string   & input,
+    std::string_view    input,
     std::ostream        & ss = std::cout);
 
   /** Turn on/off color output */
@@ -150,14 +152,19 @@ public:
 
   /** Simple quick bold string wrapper */
   static inline std::string
-  bold(const std::string& text)
+  bold(std::string_view text)
   {
     if (myUseColors) {
       // Bold off seems to fail on some terminals.
       // So we use normal.
-      return fBold + text + fNormal;
+      std::string res;
+      res.reserve(fBold.size() + text.size() + fNormal.size());
+      res.append(fBold);
+      res.append(text);
+      res.append(fNormal);
+      return res;
     } else {
-      return text;
+      return std::string(text);
     }
   }
 
@@ -170,14 +177,19 @@ public:
 
   /** Simple quick underline string wrapper */
   static inline std::string
-  underline(const std::string& text)
+  underline(std::string_view text)
   {
     if (myUseColors) {
       // Underline off seems to fail on some terminals.
       // So we use normal.
-      return fUnderline + text + fNormal;
+      std::string res;
+      res.reserve(fUnderline.size() + text.size() + fNormal.size());
+      res.append(fUnderline);
+      res.append(text);
+      res.append(fNormal);
+      return res;
     } else {
-      return text;
+      return std::string(text);
     }
   }
 

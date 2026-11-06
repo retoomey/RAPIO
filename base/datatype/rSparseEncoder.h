@@ -24,7 +24,7 @@ public:
 
   static void
   unsparse3D(DataGrid& grid, size_t num_x, size_t num_y, size_t num_z, IOConfig& keys,
-    const std::string& pixelX = "pixel_x", const std::string& pixelY = "pixel_y",
+    const std::string& pixelX     = "pixel_x", const std::string& pixelY = "pixel_y",
     const std::string& pixelZ     = "pixel_z",
     const std::string& pixelCount = "pixel_count");
 

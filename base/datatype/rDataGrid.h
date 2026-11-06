@@ -16,16 +16,17 @@ BOOST_WRAP_POP
 #include <vector>
 #include <array>
 #include <stdexcept>
+#include <string_view>
 
 namespace rapio {
 /* Exception for calling any Ref function that is assuming an array exists */
 class ArrayRefException : public std::exception
 {
 public:
-  ArrayRefException(const std::string& typeString, int dimension, const std::string& name)
-    : myMessage("Array does not exist to reference: TYPE=" + typeString
+  ArrayRefException(std::string_view typeString, int dimension, std::string_view name)
+    : myMessage("Array does not exist to reference: TYPE=" + std::string(typeString)
       + ", DIMENSION=" + std::to_string(dimension)
-      + ", NAME=" + name){ }
+      + ", NAME=" + std::string(name)){ }
 
   virtual const char *
   what() const noexcept override
@@ -42,12 +43,12 @@ protected:
  */
 #define DeclareArrayMethodsForD(TYPESTRING, TYPE, ARRAYTYPE, DIMENSION) \
   inline std::shared_ptr<Array<TYPE, DIMENSION> > \
-  get ## TYPESTRING ## DIMENSION ## D(const std::string& name = Constants::PrimaryDataName) const \
+  get ## TYPESTRING ## DIMENSION ## D(std::string_view name = Constants::PrimaryDataName) const \
   { \
     return get<Array<TYPE, DIMENSION> >(name); \
   } \
   inline boost::multi_array<TYPE, DIMENSION>& \
-  get ## TYPESTRING ## DIMENSION ## DRef(const std::string& name = Constants::PrimaryDataName) const \
+  get ## TYPESTRING ## DIMENSION ## DRef(std::string_view name = Constants::PrimaryDataName) const \
   { \
     auto temp = get<Array<TYPE, DIMENSION> >(name); \
     if (!temp) { \
@@ -58,19 +59,19 @@ protected:
     } \
   } \
   inline boost::multi_array<TYPE, DIMENSION> * \
-    get ## TYPESTRING ## DIMENSION ## DPtr(const std::string& name = Constants::PrimaryDataName) const \
+    get ## TYPESTRING ## DIMENSION ## DPtr(std::string_view name = Constants::PrimaryDataName) const \
   { \
     auto temp = get<Array<TYPE, DIMENSION> >(name); \
     return (temp ? temp->ptr() : nullptr); \
   } \
   std::shared_ptr<Array<TYPE, DIMENSION> > \
-  add ## TYPESTRING ## DIMENSION ## D(const std::string& name, const std::string& units, \
+  add ## TYPESTRING ## DIMENSION ## D(std::string_view name, std::string_view units, \
     const std::vector<size_t>& dimindexes, TYPE fillValue = TYPE()) \
   { \
     return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes, fillValue); \
   } \
   inline boost::multi_array<TYPE, DIMENSION>& \
-  add ## TYPESTRING ## DIMENSION ## DRef(const std::string& name, const std::string& units, \
+  add ## TYPESTRING ## DIMENSION ## DRef(std::string_view name, std::string_view units, \
     const std::vector<size_t>& dimindexes, TYPE fillValue = TYPE()) \
   { \
     return add<TYPE, DIMENSION>(name, units, ARRAYTYPE, dimindexes, fillValue)->ref(); \
@@ -87,21 +88,21 @@ protected:
  * curiously like a netcdf dimension. */
 class DataGridDimension {
 public:
-  DataGridDimension(const std::string& name, size_t aSize) : myName(name), mySize(aSize){ }
+  DataGridDimension(std::string_view name, size_t aSize) : myName(name), mySize(aSize){ }
 
   /** Return the number of dimensions */
   size_t
   size() const { return mySize; }
 
   /** Get the name of this dimension */
-  std::string
+  const std::string&
   name() const { return myName; }
 
   /** Set the size of the dimension */
   void setSize(size_t s){ mySize = s; }
 
   /** Set the name of the dimension */
-  void setName(const std::string& n){ myName = n; }
+  void setName(std::string_view n){ myName = n; }
 
 protected:
 
@@ -132,8 +133,8 @@ public:
    * usually you create a subclass like RadialSet.  This is
    * used if you need to create generic array data. */
   static std::shared_ptr<DataGrid>
-  Create(const std::string         & aTypeName,
-    const std::string              & Units,
+  Create(std::string_view          aTypeName,
+    std::string_view               Units,
     const LLH                      & location,
     const Time                     & datatime,
     const std::vector<size_t>      & dimsizes,
@@ -169,9 +170,9 @@ public:
    * This shouldn't need to change current arrays since it's adding
    */
   void
-  addDim(const std::string& dimname, size_t dimsize)
+  addDim(std::string_view dimname, size_t dimsize)
   {
-    myDims.push_back(DataGridDimension(dimname, dimsize));
+    myDims.emplace_back(dimname, dimsize);
   };
 
   void
@@ -184,24 +185,24 @@ public:
 
   /** Get back node so can call methods on it */
   inline std::shared_ptr<DataArray>
-  getDataArray(const std::string& name = Constants::PrimaryDataName)
+  getDataArray(std::string_view name = Constants::PrimaryDataName)
   {
     return getNode(name);
   }
 
   /** Update global attribute list for RadialSet */
   virtual void
-  updateGlobalAttributes(const std::string& encoded_type) override;
+  updateGlobalAttributes(std::string_view encoded_type) override;
 
   /** Return a units for this DataType for a given key.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
   virtual std::string
-  getUnits(const std::string& name = Constants::PrimaryDataName) override;
+  getUnits(std::string_view name = Constants::PrimaryDataName) override;
 
   /** Set the primary units.  Some DataTypes have subfields,
    * subarrays that have multiple unit types */
   virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
+  setUnits(std::string_view units, std::string_view name = Constants::PrimaryDataName) override;
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */
@@ -232,7 +233,7 @@ public:
   DeclareArrayMethods(Double, double, DOUBLE)
 
   /** Low level generic array creator for readers, you probably don't want this */
-  void * factoryGetRawDataPointer(const std::string& name, const std::string& units, const DataArrayType& type,
+  void * factoryGetRawDataPointer(std::string_view name, std::string_view units, const DataArrayType& type,
     const std::vector<size_t>& dimindexes);
 
   /** Return dimensions */
@@ -257,7 +258,7 @@ public:
   {
     std::vector<std::shared_ptr<DataArray> > visible;
 
-    for (auto l:myNodes) {
+    for (const auto& l:myNodes) {
       auto hidden = l->getAttribute<std::string>("RAPIO_HIDDEN");
       if (!hidden) {
         visible.push_back(l);
@@ -269,7 +270,7 @@ public:
   /** Add an array of given type/size */
   template <typename T, unsigned int S>
   std::shared_ptr<Array<T, S> >
-  add(const std::string& name, const std::string& units, const DataArrayType& type,
+  add(std::string_view name, std::string_view units, const DataArrayType& type,
     const std::vector<size_t>& dimindexes, T fillValue = T())
   {
     // Map indexes to actual dimension sizes (generically)
@@ -309,9 +310,9 @@ public:
 
   /** Do we have an array of given name? */
   bool
-  haveArrayName(const std::string& name) const
+  haveArrayName(std::string_view name) const
   {
-    for (auto i:myNodes) {
+    for (const auto& i:myNodes) {
       if (i->getName() == name) {
         return true;
       }
@@ -321,16 +322,16 @@ public:
 
   /** Change name of a stored array.  Used for sparse/non-sparse array swapping */
   bool
-  changeArrayName(const std::string& name, const std::string& newname)
+  changeArrayName(std::string_view name, std::string_view newname)
   {
-    for (auto i:myNodes) {
+    for (const auto& i:myNodes) {
       if (i->getName() == newname) {
         fLogSevere("Cannot change array from {} to {} since {} already exists!",
           name, newname, newname);
         return false;
       }
     }
-    for (auto i:myNodes) {
+    for (const auto& i:myNodes) {
       if (i->getName() == name) {
         i->setName(newname);
         return true;
@@ -341,9 +342,9 @@ public:
 
   /** Mark hidden  Used for sparse/non-sparse array swapping */
   void
-  setVisible(const std::string& name, bool flag)
+  setVisible(std::string_view name, bool flag)
   {
-    for (auto i:myNodes) {
+    for (const auto& i:myNodes) {
       if (i->getName() == name) {
         flag ? i->removeAttribute("RAPIO_HIDDEN") : i->putAttribute<std::string>("RAPIO_HIDDEN", "yes");
       }
@@ -352,7 +353,7 @@ public:
 
   /** Delete a stored array.  Used for sparse/non-sparse array swapping */
   bool
-  deleteArrayName(const std::string& name)
+  deleteArrayName(std::string_view name)
   {
     for (size_t i = 0; i < myNodes.size(); ++i) {
       if (myNodes[i]->getName() == name) {
@@ -367,9 +368,9 @@ public:
   /** Get node for this key */
   template <typename T>
   std::shared_ptr<T>
-  get(const std::string& name) const
+  get(std::string_view name) const
   {
-    for (auto i:myNodes) {
+    for (const auto& i:myNodes) {
       if (i->getName() == name) {
         // Ok we have to cast the general interface to the specific template class
         std::shared_ptr<T> derived = std::dynamic_pointer_cast<T>(i->getArray());
@@ -381,16 +382,16 @@ public:
 
   /** Get node for this key */
   std::shared_ptr<DataArray>
-  getNode(const std::string& name);
+  getNode(std::string_view name);
 
   /** Get index of node or -1 */
   int
-  getNodeIndex(const std::string& name);
+  getNodeIndex(std::string_view name);
 
   /** Return attribute pointer for readers/writers */
   std::shared_ptr<DataAttributeList>
   getAttributes(
-    const std::string& name);
+    std::string_view name);
 
   /** Create metadata Ptree for sending to python */
   std::shared_ptr<PTreeData>
@@ -404,8 +405,8 @@ protected:
 
   /** Extra initialization of a DataGrid */
   bool
-  init(const std::string           & aTypeName,
-    const std::string              & Units,
+  init(std::string_view            aTypeName,
+    std::string_view               Units,
     const LLH                      & location,
     const Time                     & datatime,
     const std::vector<size_t>      & dimsizes,
@@ -418,7 +419,7 @@ protected:
   std::vector<std::shared_ptr<DataArray> > myNodes;
 
 private:
-#if 0
+  #if 0
   template <size_t N>
   bool
   sparseT(IOConfig& keys);
@@ -426,6 +427,6 @@ private:
   template <size_t N>
   void
   unsparseT(IOConfig& keys, const std::array<std::string, N>& axisNames, const std::string& countName);
-#endif
+  #endif
 };
 }

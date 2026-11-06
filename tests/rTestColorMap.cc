@@ -142,4 +142,27 @@ BOOST_AUTO_TEST_CASE(TEST_PARA_COLORMAP_PARSING)
   OS::deleteFile(tempParaFile);
 }
 
+BOOST_AUTO_TEST_CASE(TEST_RGB_STRING_TO_COLOR)
+{
+  unsigned char r = 0, g = 0, b = 0, a = 0;
+
+  BOOST_CHECK(Color::RGBStringToColor("#123456", r, g, b, a));
+  BOOST_CHECK_EQUAL(r, 0x12);
+  BOOST_CHECK_EQUAL(g, 0x34);
+  BOOST_CHECK_EQUAL(b, 0x56);
+  BOOST_CHECK_EQUAL(a, 0xFF);
+
+  BOOST_CHECK(Color::RGBStringToColor("#12345678", r, g, b, a));
+  BOOST_CHECK_EQUAL(r, 0x12);
+  BOOST_CHECK_EQUAL(g, 0x34);
+  BOOST_CHECK_EQUAL(b, 0x56);
+  BOOST_CHECK_EQUAL(a, 0x78);
+
+  // Invalid / partial hex or malformed strings should return false
+  BOOST_CHECK(!Color::RGBStringToColor("#0G0000", r, g, b, a));
+  BOOST_CHECK(!Color::RGBStringToColor("#FFF", r, g, b, a));
+  BOOST_CHECK(!Color::RGBStringToColor("invalid", r, g, b, a));
+  BOOST_CHECK(!Color::RGBStringToColor("", r, g, b, a));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

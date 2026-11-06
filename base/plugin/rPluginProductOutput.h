@@ -12,11 +12,11 @@ class PluginProductOutput : public RAPIOPlugin
 public:
 
   /** Create a output plugin */
-  PluginProductOutput(const std::string& name) : RAPIOPlugin(name){ }
+  PluginProductOutput(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "o");
+  declare(RAPIOProgram * owner, std::string_view name = "o");
 
   /** Declare options for the plugin */
   virtual void

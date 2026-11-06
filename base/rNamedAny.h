@@ -11,6 +11,7 @@ BOOST_WRAP_POP
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <memory>
 
 namespace rapio {
@@ -109,7 +110,7 @@ class NamedAny : public Any
 {
 public:
   /** Create a named object */
-  NamedAny(const std::string& name) : myName(name)
+  NamedAny(std::string_view name) : myName(name)
   { }
 
   /** Get the name of this named any */
@@ -118,7 +119,7 @@ public:
 
   /** Set the name of this named any */
   void
-  setName(const std::string& s){ myName = s; }
+  setName(std::string_view s){ myName = s; }
 
 protected:
 
@@ -172,23 +173,22 @@ public:
 
   /** Return index into the storage for this name */
   int
-  index(const std::string& name) const;
+  index(std::string_view name) const;
 
   /** Add something with given key */
   template <typename T>
   void
-  put(const std::string& name, const T& value)
+  put(std::string_view name, T value)
   {
     int i = index(name);
 
     // Either set the old one to new data....
     if (i != -1) {
-      myAttributes[i].setName(name);
-      myAttributes[i].set(value);
+      myAttributes[i].set(std::move(value));
     } else {
       // Or add a new node ...
       NamedAny g(name);
-      g.set(value);
+      g.set(std::move(value));
 
       myAttributes.push_back(std::move(g)); // Move to avoid copy
     }
@@ -196,7 +196,7 @@ public:
 
   /** Remove something with given key */
   void
-  remove(const std::string& name)
+  remove(std::string_view name)
   {
     int i = index(name);
 
@@ -214,7 +214,7 @@ public:
    */
   template <typename T>
   boost::optional<T>
-  get(const std::string& name) const
+  get(std::string_view name) const
   {
     int i = index(name);
 
@@ -245,7 +245,7 @@ public:
 
   /** Get a string */
   inline bool
-  getString(const std::string& name, std::string& out) const
+  getString(std::string_view name, std::string& out) const
   {
     auto s = get<std::string>(name);
 
@@ -255,14 +255,14 @@ public:
 
   /** Set a string */
   inline void
-  setString(const std::string& name, const std::string& in)
+  setString(std::string_view name, std::string_view in)
   {
-    put<std::string>(name, in);
+    put<std::string>(name, std::string(in));
   }
 
   /** Get a double, flexible on casting */
   inline bool
-  getDouble(const std::string& name, double& out) const
+  getDouble(std::string_view name, double& out) const
   {
     const auto at = index(name);
 
@@ -286,14 +286,14 @@ public:
 
   /** Set a double */
   inline void
-  setDouble(const std::string& name, double in)
+  setDouble(std::string_view name, double in)
   {
     put<double>(name, in);
   }
 
   /** Get a float, flexible on casting */
   inline bool
-  getFloat(const std::string& name, float& out) const
+  getFloat(std::string_view name, float& out) const
   {
     const auto at = index(name);
 
@@ -317,14 +317,14 @@ public:
 
   /** Set a float */
   inline void
-  setFloat(const std::string& name, float in)
+  setFloat(std::string_view name, float in)
   {
     put<float>(name, in);
   }
 
   /** Get a long, flexible on casting */
   inline bool
-  getLong(const std::string& name, long& out) const
+  getLong(std::string_view name, long& out) const
   {
     const auto at = index(name);
 
@@ -344,7 +344,7 @@ public:
 
   /** Set a long in global attributes */
   inline void
-  setLong(const std::string& name, long in)
+  setLong(std::string_view name, long in)
   {
     put<long>(name, in);
   }

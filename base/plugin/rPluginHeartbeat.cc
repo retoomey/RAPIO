@@ -8,7 +8,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginHeartbeat::declare(RAPIOProgram * owner, const std::string& name)
+PluginHeartbeat::declare(RAPIOProgram * owner, std::string_view name)
 {
   owner->addPlugin(new PluginHeartbeat(name));
   return true;

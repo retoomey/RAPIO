@@ -227,7 +227,7 @@ RAPIOAlgorithm::handleEndDatasetEvent()
 }
 
 void
-RAPIOAlgorithm::declareProduct(const std::string& key, const std::string& help)
+RAPIOAlgorithm::declareProduct(std::string_view key, std::string_view help)
 {
   // Use the plugin if we have it
   auto p = getPlugin<PluginProductOutputFilter>("O");
@@ -238,7 +238,7 @@ RAPIOAlgorithm::declareProduct(const std::string& key, const std::string& help)
 }
 
 bool
-RAPIOAlgorithm::isProductWanted(const std::string& key)
+RAPIOAlgorithm::isProductWanted(std::string_view key)
 {
   // Use the plugin if we have it
   auto p = getPlugin<PluginProductOutputFilter>("O");
@@ -250,7 +250,7 @@ RAPIOAlgorithm::isProductWanted(const std::string& key)
 }
 
 std::string
-RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& defaultName)
+RAPIOAlgorithm::resolveProductName(std::string_view key, std::string_view defaultName)
 {
   // Use the plugin if we have it
   auto p = getPlugin<PluginProductOutputFilter>("O");
@@ -258,7 +258,7 @@ RAPIOAlgorithm::resolveProductName(const std::string& key, const std::string& de
   if (p) {
     return p->resolveProductName(key, defaultName);
   }
-  return defaultName;
+  return std::string(defaultName);
 }
 
 void
@@ -321,7 +321,7 @@ RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
 } // RAPIOAlgorithm::writeOutputMessage
 
 void
-RAPIOAlgorithm::writeOutputProduct(const std::string& key,
+RAPIOAlgorithm::writeOutputProduct(std::string_view key,
   std::shared_ptr<DataType>                         outputData,
   std::map<std::string, std::string>                & legacyIn)
 {
@@ -332,7 +332,7 @@ RAPIOAlgorithm::writeOutputProduct(const std::string& key,
 }
 
 void
-RAPIOAlgorithm::writeOutputProduct(const std::string& key,
+RAPIOAlgorithm::writeOutputProduct(std::string_view key,
   std::shared_ptr<DataType>                         outputData,
   IOConfig                                          & outputParams)
 {

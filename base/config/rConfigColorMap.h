@@ -3,7 +3,9 @@
 #include <rConfig.h>
 #include <rColorMap.h>
 
+#include <functional>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 /** Does the work of reading in color map configurations */
@@ -12,7 +14,7 @@ public:
 
   /** Get/load a color map from a key, usually DataType */
   static std::shared_ptr<ColorMap>
-  getColorMap(const std::string& key);
+  getColorMap(std::string_view key);
 
   /** Read color config for a single colormap record
    * We could fully cache the colormap configuration stuff, but this is
@@ -23,7 +25,7 @@ public:
    * themselves do cache so we do this once per product type.
    */
   static bool
-  read1ColorConfig(const std::string& key, std::map<std::string, std::string> & attributes);
+  read1ColorConfig(std::string_view key, std::map<std::string, std::string> & attributes);
 
   // PAL Color map -----------------------------------
 
@@ -33,7 +35,7 @@ public:
 
   /** Read a colormap from a .pal file */
   static std::shared_ptr<ColorMap>
-  readPalColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+  readPalColorMap(std::string_view key, std::map<std::string, std::string>& attributes);
 
   // W2 Color map ------------------------------------
 
@@ -43,7 +45,7 @@ public:
 
   /** Read a W2 Color map */
   static std::shared_ptr<ColorMap>
-  readW2ColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+  readW2ColorMap(std::string_view key, std::map<std::string, std::string>& attributes);
 
   // Paraview Color map ------------------------------
 
@@ -53,11 +55,11 @@ public:
 
   /** Read a Paraview Color map */
   static std::shared_ptr<ColorMap>
-  readParaColorMap(const std::string& key, std::map<std::string, std::string>& attributes);
+  readParaColorMap(std::string_view key, std::map<std::string, std::string>& attributes);
 
 private:
 
   /** Cache of keys to color maps */
-  static std::map<std::string, std::shared_ptr<ColorMap> > myColorMaps;
+  static std::map<std::string, std::shared_ptr<ColorMap>, std::less<> > myColorMaps;
 };
 }

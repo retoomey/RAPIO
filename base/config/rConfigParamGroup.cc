@@ -16,7 +16,7 @@ std::vector<ConfigParamGroupO::productOutputInfo> ConfigParamGroupO::myProductOu
 std::vector<ConfigParamGroupn::notifierInfo> ConfigParamGroupn::myNotifierInfo;
 
 void
-ConfigParamGroupi::process1(const std::string& param)
+ConfigParamGroupi::process1(std::string_view param)
 {
   // We don't actually create an index here...we wait until execute.
   fLogDebug("Adding source index:'{}'", param);
@@ -51,7 +51,7 @@ ConfigParamGroupi::process1(const std::string& param)
 }
 
 void
-ConfigParamGroupI::process1(const std::string& param)
+ConfigParamGroupI::process1(std::string_view param)
 {
   // inputs will be like this:
   // Reflectivity:00.50 VIL:00.50 etc.
@@ -64,7 +64,7 @@ ConfigParamGroupI::process1(const std::string& param)
 }
 
 void
-ConfigParamGroupO::process1(const std::string& param)
+ConfigParamGroupO::process1(std::string_view param)
 {
   // Outputs will be like this:
   // Reflectivity:00.50 VIL:00.50 etc.
@@ -132,7 +132,7 @@ ConfigParamGroupO::process1(const std::string& param)
 } // ConfigParamGroupO::process1
 
 void
-ConfigParamGroupo::process1(const std::string& param)
+ConfigParamGroupo::process1(std::string_view param)
 {
   std::vector<std::string> pair;
 
@@ -152,7 +152,7 @@ ConfigParamGroupo::process1(const std::string& param)
 }
 
 void
-ConfigParamGroupn::process1(const std::string& param)
+ConfigParamGroupn::process1(std::string_view param)
 {
   std::vector<std::string> pair;
 
@@ -185,7 +185,7 @@ ConfigParamGroupn::process1(const std::string& param)
 }
 
 void
-ConfigParamGroupn::process(const std::string& param)
+ConfigParamGroupn::process(std::string_view param)
 {
   if (param == "disable") {
     fLogInfo("Notifiers disabled");
@@ -197,7 +197,7 @@ ConfigParamGroupn::process(const std::string& param)
 }
 
 void
-ConfigParamGroup::process(const std::string& param)
+ConfigParamGroup::process(std::string_view param)
 {
   // All the -i, -I, -O, -n, etc. all split first on ' '
   std::vector<std::string> pieces;

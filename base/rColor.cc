@@ -1,6 +1,8 @@
 #include "rColor.h"
+#include <charconv>
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <iostream>
 #include "rError.h"
 
@@ -21,7 +23,7 @@ Color::getRGBColorString() const
 }
 
 bool
-Color::RGBStringToColor(const std::string& s,
+Color::RGBStringToColor(std::string_view s,
   unsigned char& r, unsigned char& g, unsigned char& b, unsigned char& a)
 {
   bool failed = false;
@@ -32,25 +34,27 @@ Color::RGBStringToColor(const std::string& s,
     if (l > 0) {
       // Marked color format
       if (s[0] == '#') {
-        errno = 0;
+        auto parseHex = [](std::string_view sub, unsigned char& out) -> bool {
+            unsigned int val = 0;
+
+            auto [ptr, ec] = std::from_chars(sub.data(), sub.data() + sub.size(), val, 16);
+            out = static_cast<unsigned char>(val);
+            return (ec != std::errc()) || (ptr != sub.data() + sub.size());
+          };
         if (l >= 7) { // "#FF00FF"
-          std::string t = "0x" + s.substr(1, 2);
-          r       = strtol(t.c_str(), NULL, 0);
-          failed |= errno;
-          t       = "0x" + s.substr(3, 2);
-          g       = strtol(t.c_str(), NULL, 0);
-          failed |= errno;
-          t       = "0x" + s.substr(5, 2);
-          b       = strtol(t.c_str(), NULL, 0);
-          failed |= errno;
+          failed |= parseHex(s.substr(1, 2), r);
+          failed |= parseHex(s.substr(3, 2), g);
+          failed |= parseHex(s.substr(5, 2), b);
           if (l >= 9) {
-            t       = "0x" + s.substr(7, 2);
-            a       = strtol(t.c_str(), NULL, 0);
-            failed |= errno;
+            failed |= parseHex(s.substr(7, 2), a);
           } else {
             a = 255;
           }
+        } else {
+          failed = true;
         }
+      } else {
+        failed = true;
       }
     }
   } else {

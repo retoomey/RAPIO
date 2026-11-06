@@ -4,6 +4,7 @@
 #include <rLLCoverageArea.h>
 
 #include <string>
+#include <string_view>
 #include <memory>
 #include <vector>
 
@@ -26,60 +27,60 @@ public:
 
   /** Create a boolean argument */
   void
-  boolean(const std::string& opt,
-    const std::string      & usage);
+  boolean(std::string_view opt,
+    std::string_view       usage);
 
   /** Create a required argument */
   void
-  require(const std::string& opt,
-    const std::string      & exampleArg,
-    const std::string      & usage);
+  require(std::string_view opt,
+    std::string_view       exampleArg,
+    std::string_view       usage);
 
   /** Create an optional argument.  Optional have default values */
   void
-  optional(const std::string& opt,
-    const std::string       & defaultValue,
-    const std::string       & usage);
+  optional(std::string_view opt,
+    std::string_view        defaultValue,
+    std::string_view        usage);
 
   /** Set a default value for an optional argument */
   void
-  setDefaultValue(const std::string& opt, const std::string& defaultValue)
+  setDefaultValue(std::string_view opt, std::string_view defaultValue)
   {
     myBackend->setDefaultValue(opt, defaultValue);
   }
 
   /** Add an option to a group in help */
   void
-  addGroup(const std::string& sourceopt, const std::string& group)
+  addGroup(std::string_view sourceopt, std::string_view group)
   {
     myBackend->addGroup(sourceopt, group);
   }
 
   /** Add a choice to the suboption list of an option */
   void
-  addSuboption(const std::string& sourceopt,
-    const std::string& opt, const std::string& description)
+  addSuboption(std::string_view sourceopt,
+    std::string_view opt, std::string_view description)
   {
     myBackend->addSuboption(sourceopt, opt, description);
   }
 
   /** Make this option hidden in help unless explicitly asked for */
   void
-  setHidden(const std::string& sourceopt)
+  setHidden(std::string_view sourceopt)
   {
     myBackend->setHidden(sourceopt);
   }
 
   /** Add advanced longer help for an option */
   void
-  addAdvancedHelp(const std::string& sourceopt, const std::string& help)
+  addAdvancedHelp(std::string_view sourceopt, std::string_view help)
   {
     myBackend->addAdvancedHelp(sourceopt, help);
   }
 
   /** Turn on if we enforce suboption choices only */
   void
-  setEnforcedSuboptions(const std::string& key, bool flag)
+  setEnforcedSuboptions(std::string_view key, bool flag)
   {
     myBackend->setEnforcedSuboptions(key, flag);
   }
@@ -88,63 +89,63 @@ public:
 
   /** Get a named option back as a string */
   std::string
-  getString(const std::string& opt) const
+  getString(std::string_view opt) const
   {
     return myBackend->getString(opt);
   }
 
   /** Get a named option back as a boolean */
   bool
-  getBoolean(const std::string& opt) const
+  getBoolean(std::string_view opt) const
   {
     return myBackend->getBoolean(opt);
   }
 
   /** Get a named option back as a float */
   float
-  getFloat(const std::string& opt) const
+  getFloat(std::string_view opt) const
   {
     return myBackend->getFloat(opt);
   }
 
   /** Get a named option back as a double */
   double
-  getDouble(const std::string& opt) const
+  getDouble(std::string_view opt) const
   {
     return myBackend->getDouble(opt);
   }
 
   /** Get a named option back as an int */
   int
-  getInteger(const std::string& opt) const
+  getInteger(std::string_view opt) const
   {
     return myBackend->getInteger(opt);
   }
 
   /** Is an option in the list? */
   bool
-  isInSuboptions(const std::string& key) const
+  isInSuboptions(std::string_view key) const
   {
     return myBackend->isInSuboptions(key);
   }
 
   /** This this option parsed? */
   bool
-  isParsed(const std::string& key) const
+  isParsed(std::string_view key) const
   {
     return myBackend->isParsed(key);
   }
 
   /** Do we want advanced help? */
   bool
-  wantAdvancedHelp(const std::string& sourceopt) const
+  wantAdvancedHelp(std::string_view sourceopt) const
   {
     return myBackend->wantAdvancedHelp(sourceopt);
   }
 
   /** Store an argument directly */
   void
-  storeParsedArg(const std::string& name, const std::string& value, const bool enforceStrict = true,
+  storeParsedArg(std::string_view name, std::string_view value, const bool enforceStrict = true,
     const bool fromiconfig = false)
   {
     myBackend->storeParsedArg(name, value, enforceStrict, fromiconfig);
@@ -171,27 +172,27 @@ public:
 
   /** Read an xml configuration file into the options */
   void
-  readConfigFile(const std::string& filename);
+  readConfigFile(std::string_view filename);
 
   /** Write an xml configuration file with options from all sources */
   void
-  writeConfigFile(const std::string& filename);
+  writeConfigFile(std::string_view filename);
 
   // Grid methods ---------------------
 
   /** Create a grid argument.  Grids are special 2d or 3d coordinates for
    * clipping or determining bounds. */
   void
-  grid2D(const std::string& opt, const std::string& defaultValue, const std::string& usage);
+  grid2D(std::string_view opt, std::string_view defaultValue, std::string_view usage);
 
   /** Legacy grid using the t, b, and s options.  This is for backward
    * compatibility with older WDSS2 algorithms */
   void
-  declareLegacyGrid(const std::string& defaultGrid = "nw(37, -100) se(30.5, -93) h(0.5,20,NMQWD) s(0.01, 0.01)");
+  declareLegacyGrid(std::string_view defaultGrid = "nw(37, -100) se(30.5, -93) h(0.5,20,NMQWD) s(0.01, 0.01)");
 
   /** Convenience get a 2D or 3D grid information from a grid option */
   bool
-  getGrid(const std::string& name, LLCoverageArea& grid);
+  getGrid(std::string_view name, LLCoverageArea& grid);
 
   /** Read the legacy grid t, b, and s, options from options.  Note,
    * declareLegacyGrid should be called in declareOptions */
@@ -199,45 +200,45 @@ public:
   getLegacyGrid(LLCoverageArea& grid);
 
   /** Get the module name */
-  std::string
+  const std::string&
   getName() const { return myName; }
 
   /** Set the module name or program name */
   void
-  setName(const std::string& name);
+  setName(std::string_view name);
 
   /** Get algorithm description */
-  std::string
+  const std::string&
   getDescription() const { return myDescription; }
 
   /** If set, shows the description field for algorithm */
   void
-  setDescription(const std::string& description);
+  setDescription(std::string_view description);
 
   /** Get the author list */
-  std::string
+  const std::string&
   getAuthors() const { return myAuthors; }
 
   /** If set, shows the authors field for algorithm */
   void
-  setAuthors(const std::string& authors);
+  setAuthors(std::string_view authors);
 
   /** Get the example */
-  std::string
+  const std::string&
   getExample() const { return myExample; }
 
   /** If set, adds another example */
   void
-  setExample(const std::string& e);
+  setExample(std::string_view e);
 
   /** Get the header */
-  std::string
+  const std::string&
   getHeader() const { return myHeader; }
 
   /** If set, shows copyright or algorithm information header,
    *  default is RAPIO header. */
   void
-  setHeader(const std::string& header);
+  setHeader(std::string_view header);
 
   /** Draw a dash line */
   // void
@@ -245,7 +246,7 @@ public:
 
   /** Sets a macro replacement for 'just text', using a '%s',
    * for example for an alg that just takes a string */
-  void setTextOnlyMacro(const std::string& macro){ myTextOnlyMacro = macro; }
+  void setTextOnlyMacro(std::string_view macro){ myTextOnlyMacro = macro; }
 
   /** Was the macro applied on the positional args? */
   bool
@@ -266,7 +267,7 @@ private:
   std::unique_ptr<IOptionBackend> myBackend;
 
   std::string
-  expandMacros(const std::string& original) const;
+  expandMacros(std::string_view original) const;
 
   std::string myTextOnlyMacro;
 

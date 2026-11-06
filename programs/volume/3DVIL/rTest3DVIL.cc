@@ -24,14 +24,14 @@ public:
 
   // Override the writer so the unit test doesn't dump files to /tmp or the current directory
   void
-  writeOutputProduct(const std::string& /*key*/, std::shared_ptr<DataType> /*outputData*/, std::map<std::string,
+  writeOutputProduct(std::string_view /*key*/, std::shared_ptr<DataType> /*outputData*/, std::map<std::string,
     std::string>& /*outputParams*/) override
   {
     // Do nothing for unit test
   }
 
   void
-  writeOutputProduct(const std::string& /*key*/, std::shared_ptr<DataType> /*outputData*/) override
+  writeOutputProduct(std::string_view /*key*/, std::shared_ptr<DataType> /*outputData*/) override
   {
     // Do nothing for unit test
   }

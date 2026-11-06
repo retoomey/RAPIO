@@ -100,7 +100,7 @@ public:
 
   /** Update global attribute list */
   virtual void
-  updateGlobalAttributes(const std::string& encoded_type) override;
+  updateGlobalAttributes(std::string_view encoded_type) override;
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */

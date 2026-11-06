@@ -1,5 +1,5 @@
 #define BOOST_TEST_MODULE RandomForestTestSuite
-#include <boost/test/included/unit_test.hpp>
+#include "rBOOSTTest.h"
 
 #include <rRAPIORuntime.h>
 #include <rRandomForest.h>

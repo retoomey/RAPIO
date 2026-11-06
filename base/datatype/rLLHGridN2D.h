@@ -26,8 +26,8 @@ public:
   /** Public API for users to create a single band LLHGridN2D quickly */
   static std::shared_ptr<LLHGridN2D>
   Create(
-    const std::string& TypeName,
-    const std::string& Units,
+    std::string_view TypeName,
+    std::string_view Units,
     const Time       & gridtime,
     const LLH        & northwest,
     float            lat_spacing,
@@ -39,8 +39,8 @@ public:
   /** Public API for users to create a single band LLHGridN2D quickly */
   static std::shared_ptr<LLHGridN2D>
   Create(
-    const std::string    & TypeName,
-    const std::string    & Units,
+    std::string_view     TypeName,
+    std::string_view     Units,
     const Time           & gridtime,
     const LLCoverageArea & grid);
 
@@ -52,7 +52,7 @@ public:
 
   /** Convenience to set the units of a given array name */
   virtual void
-  setUnits(const std::string& units, const std::string& name = Constants::PrimaryDataName) override;
+  setUnits(std::string_view units, std::string_view name = Constants::PrimaryDataName) override;
 
   /** Return grid number i, lazy creation */
   std::shared_ptr<LatLonGrid>
@@ -78,8 +78,8 @@ protected:
   /** Initialize a LLHGridN2D */
   bool
   init(
-    const std::string& TypeName,
-    const std::string& Units,
+    std::string_view TypeName,
+    std::string_view Units,
     const LLH        & northwest,
     const Time       & gridtime,
     float            lat_spacing,

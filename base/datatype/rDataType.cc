@@ -42,17 +42,18 @@ DataType::deep_copy(std::shared_ptr<DataType> nsp) const
 
 URL
 DataType::generateFileName(
-  const std::string & rootFolder,
-  const std::string & basepatternin)
+  std::string_view rootFolder,
+  std::string_view basepatternin)
 {
-  const std::string basepattern = basepatternin.empty() ? DataType::DATATYPE_PREFIX : basepatternin;
-  const rapio::Time rsTime      = getTime();
-  const std::string dataType    = getTypeName();
-  const std::string subType     = getSubType();
+  const std::string_view basepattern =
+    basepatternin.empty() ? std::string_view(DataType::DATATYPE_PREFIX) : basepatternin;
+  const rapio::Time rsTime   = getTime();
+  const std::string dataType = getTypeName();
+  const std::string subType  = getSubType();
 
   // Get absolute path in input, make sure it's in directory format
   // This might break for non-existent paths need to check
-  URL forFull = URL(rootFolder + "/up");
+  URL forFull = URL(std::string(rootFolder) + "/up");
 
   std::string dirbase = forFull.getDirName();
 
@@ -88,7 +89,7 @@ DataType::generateFileName(
 void
 DataType::generateRecord(
   const URL           & pathin,
-  const std::string   & factory,
+  std::string_view    factory,
   std::vector<Record> & records
 )
 {
@@ -105,7 +106,7 @@ DataType::generateRecord(
   std::vector<std::string> params;
 
   // Always add the builder/factory
-  params.push_back(factory);
+  params.emplace_back(factory);
 
   // MRMS breaks it up with '/' but I don't think we actually need to do that
   // I think I'll modify MRMS to handle our records as one line if needed,
@@ -158,7 +159,7 @@ DataType::getSubType() const
 }
 
 void
-DataType::setSubType(const std::string& s)
+DataType::setSubType(std::string_view s)
 {
   if ((s.empty()) || (s == "file")) { // From file index
     setDataAttributeValue("SubType", getGeneratedSubtype());
@@ -211,7 +212,7 @@ DataType::initFromGlobalAttributes()
 } // DataType::initFromGlobalAttributes
 
 void
-DataType::updateGlobalAttributes(const std::string& encoded_type)
+DataType::updateGlobalAttributes(std::string_view encoded_type)
 {
   setString(Constants::TypeName, getTypeName());
 
@@ -272,13 +273,13 @@ DataType::getColorMap()
 }
 
 void
-DataType::setColorMapName(const std::string& name)
+DataType::setColorMapName(std::string_view name)
 {
   setDataAttributeValue(Constants::ColorMap, name);
 }
 
 std::string
-DataType::getUnits(const std::string& /*name*/)
+DataType::getUnits(std::string_view /*name*/)
 {
   // We don't care about names for global units
   std::string units;
@@ -290,7 +291,7 @@ DataType::getUnits(const std::string& /*name*/)
 }
 
 void
-DataType::setUnits(const std::string& units, const std::string& /*name*/)
+DataType::setUnits(std::string_view units, std::string_view /*name*/)
 {
   // We don't care about names for global units
   setString("Unit-value", units);

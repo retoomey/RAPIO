@@ -26,8 +26,8 @@ public:
    * you'll fill it in and it wastes time to double fill it. */
   static std::shared_ptr<LatLonGrid>
   Create(
-    const std::string& TypeName,
-    const std::string& Units,
+    std::string_view TypeName,
+    std::string_view Units,
     const LLH        & northwest,
     const Time       & gridtime,
     float            lat_spacing,
@@ -38,8 +38,8 @@ public:
   /** Public API for users to create a single band LatLonGrid quickly */
   static std::shared_ptr<LatLonGrid>
   Create(
-    const std::string    & TypeName,
-    const std::string    & Units,
+    std::string_view     TypeName,
+    std::string_view     Units,
     const Time           & gridtime,
     const LLCoverageArea & grid);
 
@@ -123,14 +123,14 @@ protected:
   /** Initialize a LatLonGrid post create */
   bool
   init(
-    const std::string & TypeName,
-    const std::string & Units,
-    const LLH         & northwest,
-    const Time        & gridtime,
-    float             lat_spacing,
-    float             lon_spacing,
-    size_t            num_lats,
-    size_t            num_lons
+    std::string_view TypeName,
+    std::string_view Units,
+    const LLH        & northwest,
+    const Time       & gridtime,
+    float            lat_spacing,
+    float            lon_spacing,
+    size_t           num_lats,
+    size_t           num_lons
   );
 
   /** Deep copy our fields to a new subclass */

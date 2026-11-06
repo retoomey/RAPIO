@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 /**
@@ -25,14 +26,14 @@ public:
    * @brief Construct a new DataType Group using the global algorithm time window.
    * @param k The unique key identifying this group.
    */
-  DataTypeGroup(const std::string& k);
+  DataTypeGroup(std::string_view k);
 
   /**
    * @brief Construct a new DataType Group with a custom time window override.
    * @param k The unique key identifying this group.
    * @param customWindow The specific TimeDuration to keep data alive.
    */
-  DataTypeGroup(const std::string& k, const TimeDuration& customWindow);
+  DataTypeGroup(std::string_view k, const TimeDuration& customWindow);
 
   virtual
   ~DataTypeGroup() = default;
@@ -65,7 +66,7 @@ public:
    * @return Shared pointer to the DataType, or nullptr if not found.
    */
   std::shared_ptr<DataType>
-  getDataType(const std::string& key) const;
+  getDataType(std::string_view key) const;
 
   /**
    * @brief Removes a stored DataType matching the specified key.
@@ -73,7 +74,7 @@ public:
    * @return True if the item was found and removed, false otherwise.
    */
   bool
-  removeDataType(const std::string& key);
+  removeDataType(std::string_view key);
 
   /**
    * @brief Clears all items from the group.
@@ -113,9 +114,9 @@ protected:
  */
 class ProductGroup : public DataTypeGroup {
 public:
-  ProductGroup(const std::string& k) : DataTypeGroup(k){ }
+  ProductGroup(std::string_view k) : DataTypeGroup(k){ }
 
-  ProductGroup(const std::string& k, const TimeDuration& customWindow) : DataTypeGroup(k, customWindow){ }
+  ProductGroup(std::string_view k, const TimeDuration& customWindow) : DataTypeGroup(k, customWindow){ }
 
   virtual std::string
   generateItemKey(const std::shared_ptr<DataType>& dt) const override;

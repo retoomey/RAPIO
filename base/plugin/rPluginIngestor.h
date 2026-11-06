@@ -14,11 +14,11 @@ class PluginIngestor : public RAPIOPlugin
 public:
 
   /** Create an ingestor plugin */
-  PluginIngestor(const std::string& name) : RAPIOPlugin(name){ }
+  PluginIngestor(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "I");
+  declare(RAPIOProgram * owner, std::string_view name = "I");
 
   /** Declare options for the plugin */
   virtual void

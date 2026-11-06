@@ -38,7 +38,7 @@ namespace {
  * are treated.
  **/
 bool
-isArgument(const std::string& s)
+isArgument(std::string_view s)
 {
   auto l     = s.length();
   bool isArg = false;
@@ -60,25 +60,34 @@ trimArgument(std::string& arg)
   Strings::removePrefix(arg, "-");
   Strings::removePrefix(arg, "-");
 }
+
+std::string_view
+trimArgumentView(std::string_view arg)
+{
+  if (!arg.empty() && (arg.front() == '-')) { arg.remove_prefix(1); }
+  if (!arg.empty() && (arg.front() == '-')) { arg.remove_prefix(1); }
+  return arg;
+}
 }
 
 OptionList::OptionList() : isProcessed(false)
 { }
 
-void
-OptionList::addOption(const Option& o)
+Option *
+OptionList::addOption(Option o)
 {
-  const std::string opt = o.opt;
-
-  optionMap[opt] = o;
-
-  if (opt.length() > max_arg_width) {
-    max_arg_width = opt.length();
+  if (o.opt.length() > max_arg_width) {
+    max_arg_width = o.opt.length();
   }
 
   if (o.name.length() > max_name_width) {
     max_name_width = o.name.length();
   }
+
+  std::string key = o.opt;
+
+  auto [it, _] = optionMap.insert_or_assign(std::move(key), std::move(o));
+  return (&it->second);
 }
 
 Option *
@@ -86,10 +95,10 @@ OptionList::makeOption(
   bool             required,
   bool             boolean,
   bool             system,
-  const std::string& opt,
-  const std::string& name,
-  const std::string& usage,
-  const std::string& extraIn
+  std::string_view opt,
+  std::string_view name,
+  std::string_view usage,
+  std::string_view extraIn
 )
 {
   Option * have = getOption(opt);
@@ -118,45 +127,42 @@ OptionList::makeOption(
     o.usage[0] = toupper(o.usage[0]);
     o.usage    = "--" + o.usage;
   }
-  std::string extra = extraIn;
 
   // Maybe this field could be shared..?
   if (required) {
-    if (extra == "") {
+    if (extraIn.empty()) {
       o.example = "???";
     } else {
-      o.example = extra; // Required have an example given
+      o.example = extraIn; // Required have an example given
     }
   } else {
-    o.defaultValue = extra; // Optionals always have a default value
+    o.defaultValue = extraIn; // Optionals always have a default value
   }
   o.parsedValue  = "";
   o.parsed       = false;
   o.suboptionmax = 0;
 
-  addOption(o);
-
-  return (&optionMap[opt]);
+  return addOption(std::move(o));
 } // OptionList::makeOption
 
 void
-OptionList::require(const std::string& opt,
-  const std::string& exampleArg, const std::string& usage)
+OptionList::require(std::string_view opt,
+  std::string_view exampleArg, std::string_view usage)
 {
   makeOption(true, false, false, opt, "", usage, exampleArg);
 }
 
 void
-OptionList::optional(const std::string& opt,
-  const std::string                   & defaultValue,
-  const std::string                   & usage)
+OptionList::optional(std::string_view opt,
+  std::string_view                    defaultValue,
+  std::string_view                    usage)
 {
   makeOption(false, false, false, opt, "", usage, defaultValue);
 }
 
 void
-OptionList::setDefaultValue(const std::string& opt,
-  const std::string                          & defaultValue)
+OptionList::setDefaultValue(std::string_view opt,
+  std::string_view                           defaultValue)
 {
   Option * op = getOption(opt);
 
@@ -171,14 +177,14 @@ OptionList::setDefaultValue(const std::string& opt,
 
 /** Declare a boolean algorithm variable */
 void
-OptionList::boolean(const std::string& opt,
-  const std::string                  & usage)
+OptionList::boolean(std::string_view opt,
+  std::string_view                   usage)
 {
   makeOption(false, true, false, opt, "", usage, "false");
 }
 
 Option *
-OptionList::getOption(const std::string& opt)
+OptionList::getOption(std::string_view opt)
 {
   auto i = optionMap.find(opt);
 
@@ -189,7 +195,7 @@ OptionList::getOption(const std::string& opt)
 }
 
 const Option *
-OptionList::getOption(const std::string& opt) const
+OptionList::getOption(std::string_view opt) const
 {
   auto i = optionMap.find(opt);
 
@@ -200,7 +206,7 @@ OptionList::getOption(const std::string& opt) const
 }
 
 bool
-OptionList::isParsed(const std::string& key) const
+OptionList::isParsed(std::string_view key) const
 {
   const Option * o = getOption(key);
 
@@ -211,7 +217,7 @@ OptionList::isParsed(const std::string& key) const
 }
 
 void
-OptionList::storeParsedArg(const std::string& arg, const std::string& value, const bool enforceStrict,
+OptionList::storeParsedArg(std::string_view arg, std::string_view value, const bool enforceStrict,
   const bool fromiconfig)
 {
   // Store the option...
@@ -255,9 +261,10 @@ OptionList::storeParsedArg(const std::string& arg, const std::string& value, con
     o2.suboptionmax      = 0;
 
     if (enforceStrict) {
-      unusedOptionMap[arg] = o2;
+      std::string key = o2.opt;
+      unusedOptionMap.insert_or_assign(std::move(key), std::move(o2));
     } else {
-      addOption(o2);
+      addOption(std::move(o2));
     }
   }
 } // OptionList::storeParsedArg
@@ -276,28 +283,23 @@ OptionList::sortOptions(std::vector<Option *>& allOptions,
 }
 
 std::string
-OptionList::getString(const std::string& key) const
+OptionList::getString(std::string_view key) const
 {
   if (!isProcessed) {
     throw StartupException("Code error: Have to call processArgs before calling getString.");
   }
-  std::string s       = "";
   const Option * have = getOption(key);
 
   if (have != nullptr) {
-    if (have->parsed) {
-      s = have->parsedValue;
-    } else {
-      s = have->defaultValue;
-    }
+    return have->parsed ? have->parsedValue : have->defaultValue;
   } else {
     fLogSevere("WARNING - Trying to read uninitialized parameter \"{}\"", key);
   }
-  return (s);
+  return "";
 }
 
 bool
-OptionList::getBoolean(const std::string& opt) const
+OptionList::getBoolean(std::string_view opt) const
 {
   const std::string s = getString(opt);
 
@@ -305,7 +307,7 @@ OptionList::getBoolean(const std::string& opt) const
 }
 
 float
-OptionList::getFloat(const std::string& opt) const
+OptionList::getFloat(std::string_view opt) const
 {
   const std::string s = getString(opt);
 
@@ -319,7 +321,7 @@ OptionList::getFloat(const std::string& opt) const
 }
 
 double
-OptionList::getDouble(const std::string& opt) const
+OptionList::getDouble(std::string_view opt) const
 {
   const std::string s = getString(opt);
 
@@ -333,7 +335,7 @@ OptionList::getDouble(const std::string& opt) const
 }
 
 int
-OptionList::getInteger(const std::string& opt) const
+OptionList::getInteger(std::string_view opt) const
 {
   const std::string s = getString(opt);
 
@@ -347,7 +349,7 @@ OptionList::getInteger(const std::string& opt) const
 }
 
 void
-OptionList::setEnforcedSuboptions(const std::string& key, bool flag)
+OptionList::setEnforcedSuboptions(std::string_view key, bool flag)
 {
   Option * have = getOption(key);
 
@@ -357,7 +359,7 @@ OptionList::setEnforcedSuboptions(const std::string& key, bool flag)
 }
 
 bool
-OptionList::isInSuboptions(const std::string& key) const
+OptionList::isInSuboptions(std::string_view key) const
 {
   const Option * have = getOption(key);
 
@@ -368,8 +370,8 @@ OptionList::isInSuboptions(const std::string& key) const
 }
 
 void
-OptionList::addSuboption(const std::string& sourceopt, const std::string& opt,
-  const std::string& description)
+OptionList::addSuboption(std::string_view sourceopt, std::string_view opt,
+  std::string_view description)
 {
   Option * have = getOption(sourceopt);
 
@@ -383,7 +385,7 @@ OptionList::addSuboption(const std::string& sourceopt, const std::string& opt,
 }
 
 void
-OptionList::addGroup(const std::string& sourceopt, const std::string& group)
+OptionList::addGroup(std::string_view sourceopt, std::string_view group)
 {
   Option * have = getOption(sourceopt);
 
@@ -396,7 +398,7 @@ OptionList::addGroup(const std::string& sourceopt, const std::string& group)
 }
 
 void
-OptionList::setHidden(const std::string& sourceopt)
+OptionList::setHidden(std::string_view sourceopt)
 {
   Option * have = getOption(sourceopt);
 
@@ -409,13 +411,13 @@ OptionList::setHidden(const std::string& sourceopt)
 }
 
 bool
-OptionList::wantAdvancedHelp(const std::string& sourceopt) const
+OptionList::wantAdvancedHelp(std::string_view sourceopt) const
 {
   bool want = false;
   const Option * have = getOption(sourceopt);
 
   if (have) {
-    for (auto o:myHelpOptions) {
+    for (const auto& o:myHelpOptions) {
       if (o == have->opt) {
         want = true;
         break;
@@ -426,8 +428,8 @@ OptionList::wantAdvancedHelp(const std::string& sourceopt) const
 }
 
 void
-OptionList::addAdvancedHelp(const std::string& sourceopt,
-  const std::string                          & help)
+OptionList::addAdvancedHelp(std::string_view sourceopt,
+  std::string_view                           help)
 {
   if (help.empty()) {
     return;
@@ -596,8 +598,8 @@ OptionList::getInvalidSuboptions() const
     const Option& o = pair.second;
     // Assuming your FilterBadSuboption logic here:
     if (!o.suboptions.empty() && o.enforceSuboptions) {
-      std::string val = o.parsed ? o.parsedValue : o.defaultValue;
-      bool found      = false;
+      const std::string& val = o.parsed ? o.parsedValue : o.defaultValue;
+      bool found = false;
       for (const auto& sub : o.suboptions) {
         if (sub.opt == val) { found = true; break; }
       }
@@ -620,7 +622,7 @@ OptionList::getUnrecognizedOptions() const
   return unrecognized;
 }
 
-OptionList::OptionList(const std::string& /*base*/)
+OptionList::OptionList(std::string_view /*base*/)
 {
   optional("verbose",
     "info",
@@ -674,25 +676,21 @@ OptionList::separateArguments(const std::vector<std::string>& args) const
   bool foundHelpRequest = false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    auto& at = args[i];
-    auto n   = (i == args.size() - 1) ? "" : args[i + 1];
+    const auto& at        = args[i];
+    std::string_view n    = (i == args.size() - 1) ? std::string_view() : std::string_view(args[i + 1]);
     const bool helpString = ((at == "help") || (at == "--help"));
 
     if (isArgument(at) && !helpString) {
       result.flags.push_back(at); // It's a flag
-      std::vector<std::string> twoargs;
-      Strings::splitOnFirst(at, "=", twoargs);
-      if (twoargs.size() == 1) {
+      if (at.find('=') == std::string::npos) {
         // --- NEW LOGIC: Check if it's a boolean ---
-        std::string stripped = at;
-        trimArgument(stripped);
+        std::string_view stripped = trimArgumentView(at);
         auto it     = optionMap.find(stripped);
         bool isBool = (it != optionMap.end() && it->second.boolean);
 
         bool consumesNext = !isBool;
         if (isBool) {
-          std::string nLower = n;
-          Strings::toLower(nLower);
+          std::string nLower = Strings::makeLower(n);
           if ((nLower == "true") || (nLower == "false") ) {
             consumesNext = true; // explicitly passed boolean value
           }
@@ -700,7 +698,7 @@ OptionList::separateArguments(const std::vector<std::string>& args) const
         // ------------------------------------------
 
         if (consumesNext && !isArgument(n) && !n.empty()) {
-          result.flags.push_back(n); // It's the value for the flag
+          result.flags.emplace_back(n); // It's the value for the flag
           i++;
         }
       }
@@ -726,8 +724,8 @@ OptionList::expandArgs(const std::vector<std::string>& args)
   bool foundHelpRequest = false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    auto& at = args[i];
-    auto n   = (i == args.size() - 1) ? "" : args[i + 1];
+    const auto& at        = args[i];
+    std::string_view n    = (i == args.size() - 1) ? std::string_view() : std::string_view(args[i + 1]);
     const bool helpString = ((at == "help") || (at == "--help"));
 
     if (isArgument(at) && !helpString) {
@@ -740,15 +738,13 @@ OptionList::expandArgs(const std::vector<std::string>& args)
         expanded.push_back(at);
 
         // --- NEW LOGIC: Check if it's a boolean ---
-        std::string stripped = at;
-        trimArgument(stripped);
+        std::string_view stripped = trimArgumentView(at);
         Option * opt = getOption(stripped);
         bool isBool  = (opt != nullptr && opt->boolean);
 
         bool consumesNext = !isBool;
         if (isBool) {
-          std::string nLower = n;
-          Strings::toLower(nLower);
+          std::string nLower = Strings::makeLower(n);
           if ((nLower == "true") || (nLower == "false") ) {
             consumesNext = true;
           }
@@ -758,7 +754,7 @@ OptionList::expandArgs(const std::vector<std::string>& args)
         if (!consumesNext || isArgument(n) || n.empty()) {
           expanded.push_back("");
         } else {
-          expanded.push_back(n);
+          expanded.emplace_back(n);
           i++;
         }
       }

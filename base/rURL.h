@@ -1,7 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 /**
@@ -30,31 +32,39 @@ public:
 
   /** Guess a default port for a given scheme, return 0 if not known */
   static int
-  defaultPort(const std::string& scheme);
+  defaultPort(std::string_view scheme);
 
   /** Convert a string to one with HTTP url encoded */
   static std::string
-  encodeURL(const std::string& in);
+    encodeURL(std::string_view in);
 
   URL() : port(0){ }
 
   ~URL(){ }
 
-  // URL(const char * s)
-  // {
-  //   *this = s;
-  // }
-
-  URL(const std::string& s)
+  URL(std::string_view s)
   {
     *this = s;
   }
 
+  URL(const std::string& s) : URL(std::string_view(s))
+  { }
+
+  URL(const char * s) : URL(std::string_view(s ? s : ""))
+  { }
+
   // Operator functions
+
+  /** Set URL from a std::string_view */
+  URL      &
+  operator = (std::string_view);
 
   /** Set URL from a std::string */
   URL      &
-  operator = (const std::string&);
+  operator = (const std::string& s)
+  {
+    return (*this = std::string_view(s));
+  }
 
   /** Set URL from a const char * */
   URL      &
@@ -77,7 +87,7 @@ public:
 
   /** Add string to a URL */
   URL       &
-  operator += (const std::string& add);
+  operator += (std::string_view add);
 
   /**
    * Returns a GET string form of the URL.
@@ -94,7 +104,7 @@ public:
 
   /** Parse subpart of a URL string */
   void
-  parseAfterHost(const std::string& url_fragment);
+  parseAfterHost(std::string_view url_fragment);
 
   /** Return the scheme part of URL, if any */
   std::string
@@ -102,7 +112,7 @@ public:
 
   /** Set the scheme of the URL, passing true trys to set port if scheme matches known. */
   void
-  setScheme(const std::string& s, bool tryPort = true);
+  setScheme(std::string_view s, bool tryPort = true);
 
   /** Return the user part of URL, if any */
   std::string
@@ -110,7 +120,7 @@ public:
 
   /** Set the user part of URL */
   void
-  setUser(const std::string& u);
+  setUser(std::string_view u);
 
   /** Return the password part of URL, if any */
   std::string
@@ -118,7 +128,7 @@ public:
 
   /** Set the password part of URL */
   void
-  setPassword(const std::string& p);
+  setPassword(std::string_view p);
 
   /** Return the host part of URL, if any */
   std::string
@@ -126,7 +136,7 @@ public:
 
   /** Set the host of URL */
   void
-  setHost(const std::string& p);
+  setHost(std::string_view p);
 
   /** Return the port of URL */
   unsigned short
@@ -142,7 +152,7 @@ public:
 
   /** Set the path of URL */
   void
-  setPath(const std::string& p);
+  setPath(std::string_view p);
 
   /** Return the fragment of URL, if any */
   std::string
@@ -150,17 +160,17 @@ public:
 
   /** Set the fragment of URL */
   void
-  setFragment(const std::string& f);
+  setFragment(std::string_view f);
 
   // Query functions
 
   /** Get a query key */
   std::string
-  getQuery(const std::string& key) const;
+  getQuery(std::string_view key) const;
 
   /** Set a query key to string */
   void
-  setQuery(const std::string& key, const std::string& val);
+  setQuery(std::string_view key, std::string_view val);
 
   /** Clear all query items */
   void
@@ -168,7 +178,7 @@ public:
 
   /** Do we have this query key? */
   bool
-  hasQuery(const std::string& key) const;
+  hasQuery(std::string_view key) const;
 
   /** Is this URL empty? */
   bool
@@ -235,6 +245,6 @@ protected:
   std::string fragment;
 
   /** Arguments to be passed along when accessing the URL */
-  std::map<std::string, std::string> query;
+  std::map<std::string, std::string, std::less<> > query;
 };
 }

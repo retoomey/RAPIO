@@ -10,10 +10,10 @@
 
 using namespace rapio;
 
-std::map<std::string, std::shared_ptr<ColorMap> > ConfigColorMap::myColorMaps;
+std::map<std::string, std::shared_ptr<ColorMap>, std::less<> > ConfigColorMap::myColorMaps;
 
 bool
-ConfigColorMap::read1ColorConfig(const std::string& key,
+ConfigColorMap::read1ColorConfig(std::string_view key,
   std::map<std::string, std::string>              & attributes)
 {
   const std::string config = "colormaps/colorconfig.xml";
@@ -50,7 +50,7 @@ ConfigColorMap::read1ColorConfig(const std::string& key,
 } // ColorMap::read1ColorConfig
 
 std::shared_ptr<ColorMap>
-ConfigColorMap::readW2ColorMap(const std::string& key,
+ConfigColorMap::readW2ColorMap(std::string_view key,
   std::map<std::string, std::string>            & attributes)
 {
   std::shared_ptr<ColorMap> colormap;
@@ -64,7 +64,9 @@ ConfigColorMap::readW2ColorMap(const std::string& key,
     filename = rootpath + filename;
   } else {
     // Fall back to trying the key as a W2 colormap lookup name...
-    filename = rootpath + key + ".xml";
+    filename = rootpath;
+    filename.append(key);
+    filename += ".xml";
   }
 
   // Now try to read it
@@ -80,7 +82,7 @@ ConfigColorMap::readW2ColorMap(const std::string& key,
 }
 
 std::shared_ptr<ColorMap>
-ConfigColorMap::readParaColorMap(const std::string& /*key*/,
+ConfigColorMap::readParaColorMap(std::string_view /*key*/,
   std::map<std::string, std::string> & attributes)
 {
   const std::string rootpath = "colormaps/";
@@ -190,7 +192,7 @@ ConfigColorMap::readParaColorMap(const URL& find,
 
 // Function for reading in .pal files
 std::shared_ptr<ColorMap>
-ConfigColorMap::readPalColorMap(const std::string& key,
+ConfigColorMap::readPalColorMap(std::string_view key,
   std::map<std::string, std::string>             & attributes)
 {
   std::shared_ptr<ColorMap> colormap;
@@ -205,7 +207,9 @@ ConfigColorMap::readPalColorMap(const std::string& key,
     std::cout << "filename1: " << filename << "\n";
   } else {
     // Fall back to trying the key as a W2 colormap lookup name...
-    filename = rootpath + key + ".xml";
+    filename = rootpath;
+    filename.append(key);
+    filename += ".xml";
   }
 
   // This find step is copied over from the other palette reader functions
@@ -427,7 +431,7 @@ ConfigColorMap::readW2ColorMap(const URL& url)
 } // ColorMap::readW2ColorMap
 
 std::shared_ptr<ColorMap>
-ConfigColorMap::getColorMap(const std::string& key)
+ConfigColorMap::getColorMap(std::string_view key)
 {
   std::shared_ptr<ColorMap> colormap;
 
@@ -472,7 +476,7 @@ ConfigColorMap::getColorMap(const std::string& key)
     }
 
     // Cache this color map so we don't hunt for it again
-    myColorMaps[key] = colormap;
+    myColorMaps[std::string(key)] = colormap;
     colormap->myName = key;
   } else {
     colormap = lookup->second;

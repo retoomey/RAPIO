@@ -242,14 +242,14 @@ LLCoverageArea::set(AngleDegs north, AngleDegs west, AngleDegs south, AngleDegs 
 namespace {
 /** Add t or b or s parameters to the cooresponding grid language */
 std::string
-addTBS(const std::string& in, const std::string& prefix, std::string& heightList)
+addTBS(std::string_view in, std::string_view prefix, std::string& heightList)
 {
   std::vector<std::string> p;
   std::string out;
 
   Strings::split(in, &p);
   if (p.size() >= 2) { // at least two such as "55 -130"
-    out = prefix + p[0] + "," + p[1] + ")";
+    out = std::string(prefix) + p[0] + "," + p[1] + ")";
     if (p.size() > 2) { // One more..so height value specified such as t = "55 -130 20"
       heightList = heightList.empty() ? "h(" + p[2] : heightList + "," + p[2];
     }
@@ -259,7 +259,7 @@ addTBS(const std::string& in, const std::string& prefix, std::string& heightList
 }
 
 bool
-LLCoverageArea::parseDegrees(const std::string& label, const std::string& p, AngleDegs& lat, AngleDegs& lon)
+LLCoverageArea::parseDegrees(std::string_view label, std::string_view p, AngleDegs& lat, AngleDegs& lon)
 {
   bool failed = false;
   std::vector<std::string> pieces;
@@ -316,7 +316,7 @@ generateHeightList(double low, double high, std::vector<int>& incr, std::vector<
 }
 
 bool
-LLCoverageArea::lookupIncrUpto(const std::string& key, std::vector<int>& incr, std::vector<int>& upto)
+LLCoverageArea::lookupIncrUpto(std::string_view key, std::vector<int>& incr, std::vector<int>& upto)
 {
   // ---------------------------------------
   // In WDSS2 we have the w2merger.xml file with the various
@@ -349,7 +349,7 @@ LLCoverageArea::lookupIncrUpto(const std::string& key, std::vector<int>& incr, s
 }
 
 bool
-LLCoverageArea::parseHeights(const std::string& label, const std::string& list, std::vector<double>& heightsMs)
+LLCoverageArea::parseHeights(std::string_view label, std::string_view list, std::vector<double>& heightsMs)
 {
   bool failed = false;
 
@@ -432,7 +432,7 @@ LLCoverageArea::parseHeights(const std::string& label, const std::string& list, 
 } // LLCoverageArea::parseHeights
 
 bool
-LLCoverageArea::parse(const std::string& grid, const std::string& t, const std::string& b, const std::string& s)
+LLCoverageArea::parse(std::string_view grid, std::string_view t, std::string_view b, std::string_view s)
 {
   // --------------------------------------------------
   // Convert t, b, s to the grid language if they exist (legacy support)

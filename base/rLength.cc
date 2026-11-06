@@ -8,7 +8,7 @@ using namespace rapio;
 
 namespace {
 bool
-unitIsKM(const std::string& unit)
+unitIsKM(std::string_view unit)
 {
   return (unit == "Kilometers" ||
          unit == "Kilometer" ||
@@ -17,13 +17,13 @@ unitIsKM(const std::string& unit)
 }
 }
 
-Length::Length(double val, const std::string& unit)
+Length::Length(double val, std::string_view unit)
 {
   km = unitIsKM(unit) ? val : Unit::value(unit, "kilometers", val);
 }
 
 double
-Length::value(const std::string& unit)
+Length::value(std::string_view unit)
 {
   return (unitIsKM(unit) ? km : Unit::value("kilometers", unit, km));
 }

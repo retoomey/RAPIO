@@ -13,7 +13,7 @@
 using namespace rapio;
 
 void
-ColorMap::setSpecialColorStrings(const std::string& missing, const std::string& unavailable)
+ColorMap::setSpecialColorStrings(std::string_view missing, std::string_view unavailable)
 {
   unsigned char r, g, b, a;
 
@@ -31,7 +31,7 @@ ColorMap::setSpecialColorStrings(const std::string& missing, const std::string& 
 }
 
 std::shared_ptr<ColorMap>
-ColorMap::getColorMap(const std::string& key)
+ColorMap::getColorMap(std::string_view key)
 {
   // Delegate to the Config
   return ConfigColorMap::getColorMap(key);
@@ -92,7 +92,7 @@ NullColorMap::getColor(double v, unsigned char& r, unsigned char& g, unsigned ch
 }
 
 void
-DefaultColorMap::toJSON(std::ostream& o, const std::string& units)
+DefaultColorMap::toJSON(std::ostream& o, std::string_view units)
 {
   std::shared_ptr<PTreeData> theJson = std::make_shared<PTreeData>();
   auto tree = theJson->getTree();
@@ -167,7 +167,7 @@ DefaultColorMap::toJSON(std::ostream& o, const std::string& units)
 } // DefaultColorMap::toJSON
 
 void
-DefaultColorMap::toSVG(std::ostream& o, const std::string& units, const size_t width, const size_t /*height*/)
+DefaultColorMap::toSVG(std::ostream& o, std::string_view units, const size_t width, const size_t /*height*/)
 {
   // FIXME: flag for flipping ordering or vertical/horizontal maybe
   const size_t s = myColorInfo.size();
@@ -352,7 +352,7 @@ DefaultColorMap::toSVG(std::ostream& o, const std::string& units, const size_t w
 } // DefaultColorMap::toSVG
 
 void
-DefaultColorMap::addBin(bool linear, const std::string& label, double u, double l,
+DefaultColorMap::addBin(bool linear, std::string_view label, double u, double l,
   unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_,
   unsigned char r2_, unsigned char g2_, unsigned char b2_, unsigned char a2_)
 {

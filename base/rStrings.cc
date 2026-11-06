@@ -14,33 +14,37 @@ using namespace rapio;
 using namespace std;
 
 bool
-Strings::beginsWith(const std::string& str, const std::string& prefix)
+Strings::beginsWith(std::string_view str, std::string_view prefix)
 {
-  return (boost::algorithm::starts_with(str, prefix));
+  return (str.size() >= prefix.size()) &&
+         (str.compare(0, prefix.size(), prefix) == 0);
 }
 
 bool
-Strings::removePrefix(std::string& str, const std::string& prefix)
+Strings::removePrefix(std::string& str, std::string_view prefix)
 {
-  std::string original = str;
-
-  str = boost::algorithm::replace_first_copy(str, prefix, "");
-  return (original != str);
+  if (!prefix.empty() && beginsWith(str, prefix)) {
+    str.erase(0, prefix.size());
+    return true;
+  }
+  return false;
 }
 
 bool
-Strings::endsWith(const std::string& str, const std::string& suffix)
+Strings::endsWith(std::string_view str, std::string_view suffix)
 {
-  return (boost::algorithm::ends_with(str, suffix));
+  return (str.size() >= suffix.size()) &&
+         (str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
 
 bool
-Strings::removeSuffix(std::string& str, const std::string& suffix)
+Strings::removeSuffix(std::string& str, std::string_view suffix)
 {
-  std::string original = str;
-
-  str = boost::algorithm::replace_last_copy(str, suffix, "");
-  return (original != str);
+  if (!suffix.empty() && endsWith(str, suffix)) {
+    str.erase(str.size() - suffix.size());
+    return true;
+  }
+  return false;
 }
 
 void
@@ -50,9 +54,12 @@ Strings::toUpper(std::string& s)
 }
 
 std::string
-Strings::makeUpper(const std::string& in)
+Strings::makeUpper(std::string_view in)
 {
-  return boost::algorithm::to_upper_copy(in);
+  std::string s(in);
+
+  boost::algorithm::to_upper(s);
+  return s;
 }
 
 void
@@ -62,66 +69,84 @@ Strings::toLower(std::string& s)
 }
 
 std::string
-Strings::makeLower(const std::string& in)
+Strings::makeLower(std::string_view in)
 {
-  return boost::algorithm::to_lower_copy(in);
+  std::string s(in);
+
+  boost::algorithm::to_lower(s);
+  return s;
 }
 
 size_t
-Strings::split(const std::string& in, std::vector<std::string> * setme)
+Strings::split(std::string_view in, std::vector<std::string> * setme)
 {
   // Split greedy on space here
-  std::string s3 = boost::algorithm::trim_copy(in);
+  while (!in.empty() && std::isspace(static_cast<unsigned char>(in.front()))) {
+    in.remove_prefix(1);
+  }
+  while (!in.empty() && std::isspace(static_cast<unsigned char>(in.back()))) {
+    in.remove_suffix(1);
+  }
 
-  boost::split(*setme, s3, boost::is_any_of(" "), boost::token_compress_on);
+  boost::split(*setme, in, boost::is_any_of(" "), boost::token_compress_on);
   return setme->size();
 }
 
 size_t
-Strings::splitWithoutEnds(const std::string & in,
-  char                                      delimiter,
-  std::vector<std::string> *                setme)
+Strings::splitWithoutEnds(std::string_view in,
+  char                                     delimiter,
+  std::vector<std::string> *               setme)
 {
-  auto test = [&delimiter](char c){
-      return (c == delimiter);
-    };
+  while (!in.empty() && (in.front() == delimiter)) {
+    in.remove_prefix(1);
+  }
+  while (!in.empty() && (in.back() == delimiter)) {
+    in.remove_suffix(1);
+  }
 
-  std::string s3 = boost::algorithm::trim_copy_if(in, test);
+  const std::string_view delimView(&delimiter, 1);
 
-  boost::split(*setme, s3, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
+  boost::split(*setme, in, boost::is_any_of(delimView), boost::token_compress_on);
   return setme->size();
 }
 
 size_t
-Strings::split(const std::string & in,
-  char                           delimiter,
-  std::vector<std::string> *     setme)
+Strings::split(std::string_view in,
+  char                          delimiter,
+  std::vector<std::string> *    setme)
 {
   if (in.empty()) { return (0); } // Not sure this is needed
-  boost::split(*setme, in, boost::is_any_of(std::string(1, delimiter)), boost::token_compress_on);
+  const std::string_view delimView(&delimiter, 1);
+
+  boost::split(*setme, in, boost::is_any_of(delimView), boost::token_compress_on);
   return (setme->size());
 }
 
 bool
-Strings::splitOnFirst(const std::string& in, const std::string delimiter, std::vector<std::string>& setme)
+Strings::splitOnFirst(std::string_view in, std::string_view delimiter, std::vector<std::string>& setme)
 {
-  setme.clear();
   size_t pos = in.find(delimiter);
 
-  if (pos != std::string::npos) {
-    setme.push_back(in.substr(0, pos));                 // Prefix
-    setme.push_back(in.substr(pos + delimiter.size())); // Suffix
+  if (pos != std::string_view::npos) {
+    std::string prefix(in.substr(0, pos));
+    std::string suffix(in.substr(pos + delimiter.size()));
+    setme.clear();
+    setme.push_back(std::move(prefix));
+    setme.push_back(std::move(suffix));
     return true;
   }
 
-  setme.push_back(in); // No delimiter found, return full input
+  std::string full(in);
+
+  setme.clear();
+  setme.push_back(std::move(full)); // No delimiter found, return full input
   return false;
 }
 
 void
 Strings::replace(std::string & in,
-  const std::string          & from,
-  const std::string          & to)
+  std::string_view           from,
+  std::string_view           to)
 {
   boost::replace_all(in, from, to);
 }
@@ -185,7 +210,7 @@ Strings::trim(std::string& s)
  */
 
 std::string
-Strings::removeANSII(const std::string& input)
+Strings::removeANSII(std::string_view input)
 {
   size_t curpos = 0;
   size_t state  = 0;
@@ -193,7 +218,7 @@ Strings::removeANSII(const std::string& input)
   std::string nbuffer;
 
   while (curpos < input.length()) {
-    char at = input.at(curpos);
+    char at = input[curpos];
 
     switch (at) {
         // Recognize ANSII sequence...
@@ -232,7 +257,7 @@ Strings::removeANSII(const std::string& input)
 } // Strings::removeANSII
 
 std::string
-Strings::removeNonNumber(const std::string& input)
+Strings::removeNonNumber(std::string_view input)
 {
   std::string output;
   bool decimalPointSeen = false;
@@ -264,10 +289,10 @@ Strings::removeNonNumber(const std::string& input)
  * than width.
  * The StartupOptions uses this to format command line option output */
 size_t
-Strings::wrap(const std::string & inputin,
-  std::vector<std::string> *    setme,
-  size_t                        restwidth,
-  size_t                        firstwidth)
+Strings::wrap(std::string_view input,
+  std::vector<std::string> *   setme,
+  size_t                       restwidth,
+  size_t                       firstwidth)
 {
   size_t curpos = 0;
   size_t count  = 0;
@@ -286,16 +311,15 @@ Strings::wrap(const std::string & inputin,
   size_t currentWidth = 0;
 
   // Real width is logical width..
-  size_t realWidth  = 0;
-  size_t width      = firstwidth;
-  size_t space      = 0;
-  size_t spacepos   = 0;
-  bool haveSpace    = false;
-  size_t start      = 0;
-  std::string input = inputin;
+  size_t realWidth = 0;
+  size_t width     = firstwidth;
+  size_t space     = 0;
+  size_t spacepos  = 0;
+  bool haveSpace   = false;
+  size_t start     = 0;
 
   while (curpos < input.length()) {
-    char at = input.at(curpos);
+    char at = input[curpos];
 
     switch (at) {
         // Recognize ANSII sequence...
@@ -352,11 +376,11 @@ Strings::wrap(const std::string & inputin,
                                                    // increase width then..
       // haveSpace = false;
       if (haveSpace) {
-        setme->push_back(input.substr(start, space));
+        setme->emplace_back(input.substr(start, space));
         start  = spacepos + 1;
         curpos = spacepos; // Move 'back' to space...
       } else {             // No space, break the string where it's at.
-        setme->push_back(input.substr(start, realWidth));
+        setme->emplace_back(input.substr(start, realWidth));
         start = curpos + 1;
       }
       count++;
@@ -385,8 +409,8 @@ Strings::wrap(const std::string & inputin,
 } // Strings::wrap
 
 bool
-Strings::matchPattern(const std::string& pattern,
-  const std::string                    & tocheck,
+Strings::matchPattern(std::string_view pattern,
+  std::string_view                     tocheck,
   std::string                          & star)
 {
   // "*"    "Velocity" YES "Velocity"
@@ -408,8 +432,8 @@ Strings::matchPattern(const std::string& pattern,
       starFound = true;
       match     = true;
 
-      if (cm > i) { star = tocheck.substr(i); } break;
-    } else if (pattern[i] != tocheck[i]) { // character mismatch
+      if (cm > i) { star.assign(tocheck.substr(i)); } break;
+    } else if ((i >= cm) || (pattern[i] != tocheck[i])) { // character mismatch
       match = false;
       break;
     }
@@ -480,7 +504,7 @@ Strings::splitSignedXMLFile(const std::string& signedxml,
 
 void
 Strings::TokenScan(
-  const std::string       & pattern,
+  std::string_view        pattern,
   std::vector<std::string>& tokens,
   std::vector<int>        & outputtokens,
   std::vector<std::string>& outputfillers
@@ -556,7 +580,7 @@ Strings::TokenScan(
 } // Strings::TokenScan
 
 std::string
-Strings::peel(std::string& s, const std::string& delimiter)
+Strings::peel(std::string& s, std::string_view delimiter)
 {
   // Edge case: if delimiter is empty, return the whole string and clear source
   if (delimiter.empty()) {
@@ -584,9 +608,33 @@ Strings::peel(std::string& s, const std::string& delimiter)
   return token;
 }
 
+std::string_view
+Strings::peel(std::string_view& s, std::string_view delimiter)
+{
+  if (delimiter.empty()) {
+    std::string_view token = s;
+    s = std::string_view();
+    return token;
+  }
+
+  size_t p = s.find(delimiter);
+
+  if (p == std::string_view::npos) {
+    std::string_view token = s;
+    s = std::string_view();
+    return token;
+  }
+
+  std::string_view token = s.substr(0, p);
+
+  s.remove_prefix(p + delimiter.length());
+
+  return token;
+}
+
 std::string
 Strings::replaceGroup(
-  const std::string             & pattern,
+  std::string_view              pattern,
   const std::vector<std::string>& froms,
   std::vector<std::string>      & tos
 )
@@ -675,16 +723,17 @@ Strings::formatBytes(long long bytesin, bool plusSign)
 }
 
 void
-Strings::splitKeyParam(const std::string& commandline, std::string& key, std::string& params)
+Strings::splitKeyParam(std::string_view commandline, std::string& key, std::string& params)
 {
-  std::vector<std::string> twoparams;
+  size_t pos = commandline.find(',');
 
-  Strings::splitOnFirst(commandline, ",", twoparams);
-  if (twoparams.size() > 1) {
-    key    = twoparams[0];
-    params = twoparams[1];
+  if (pos != std::string_view::npos) {
+    std::string newKey(commandline.substr(0, pos));
+    std::string newParams(commandline.substr(pos + 1));
+    key    = std::move(newKey);
+    params = std::move(newParams);
   } else {
-    key    = commandline;
-    params = "";
+    key.assign(commandline);
+    params.clear();
   }
 }

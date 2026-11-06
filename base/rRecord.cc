@@ -35,14 +35,11 @@ Record::getIDString() const
 
   // If data record, use the selection fields
   if (isData()) {
-    const std::vector<std::string>& s = getSelections();
-    for (size_t i = 1; i < s.size(); ++i) {
-      id << '_' << s[i];
-    }
+    id << '_' << myDataType << '_' << mySubType;
   }
 
   // Add sourcename to avoid data stomping with multi-radar output
-  const std::string sourceName = getSourceName();
+  const std::string& sourceName = getSourceName();
 
   if (!sourceName.empty()) {
     id << '_' << sourceName;
@@ -68,17 +65,14 @@ Record::Record()
 }
 
 Record::Record(const std::vector<std::string> & params,
-  const std::string                           & builder,
+  std::string_view                            builder,
   const rapio::Time                           & productTime,
-  const std::string                           & dataType,
-  const std::string                           & subType)
-  : myParams(params)
+  std::string_view                            dataType,
+  std::string_view                            subType)
+  : myParams(params), myBuilder(builder), myDataType(dataType), mySubType(subType)
 {
   setTime(productTime);
   setIndexNumber(0);
-  myBuilder  = builder;
-  myDataType = dataType;
-  mySubType  = subType;
 
   // For moment make sure selections matches.
   // mySelections.push_back(myTime.getString(RECORD_TIMESTAMP));
@@ -118,8 +112,8 @@ operator < (const Record& a, const Record& b)
 
   // two data records ... If you have Reflectivity:01.50 and Velocity:00.50
   // the Velocity should come first if they have the same time
-  auto a_st = a.getSubType();
-  auto b_st = b.getSubType();
+  const std::string& a_st = a.getSubType();
+  const std::string& b_st = b.getSubType();
 
   if (a_st != b_st) {
     return (a_st < b_st);

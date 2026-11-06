@@ -12,11 +12,11 @@ class PluginRecordFilter : public RAPIOPlugin
 public:
 
   /** Create a record filter plugin */
-  PluginRecordFilter(const std::string& name) : RAPIOPlugin(name){ }
+  PluginRecordFilter(std::string_view name) : RAPIOPlugin(name){ }
 
   /** Declare plugin. */
   static bool
-  declare(RAPIOProgram * owner, const std::string& name = "I");
+  declare(RAPIOProgram * owner, std::string_view name = "I");
 
   /** Declare options for the plugin */
   virtual void

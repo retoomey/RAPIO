@@ -22,7 +22,7 @@ class RAPIOProgram {
 public:
 
   /** Construct a stock program */
-  RAPIOProgram(const std::string& display = "Program") : myDisplayClass(display), myMacroApplied(false){ };
+  RAPIOProgram(std::string_view display = "Program") : myDisplayClass(display), myMacroApplied(false){ };
 
   /**
    * @name Public API
@@ -94,12 +94,12 @@ public:
 
   /** Remove a plugin (called by RAPIOPlugin to deregister) */
   void
-  removePlugin(const std::string& name);
+  removePlugin(std::string_view name);
 
   /** Get back a plugin type for use or nullptr if plugin doesn't exist. */
   template <typename T>
   T *
-  getPlugin(const std::string& name) const
+  getPlugin(std::string_view name) const
   {
     for (RAPIOPlugin * p:myPlugins) {
       if (p->getName() == name) {
@@ -118,7 +118,7 @@ public:
 
   /** Are we running a web server? */
   bool
-  isWebServer(const std::string& key = "web") const;
+  isWebServer(std::string_view key = "web") const;
 
   /** Are we a daemon algorithm? For example, waiting on realtime data. */
   virtual bool

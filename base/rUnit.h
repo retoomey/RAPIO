@@ -4,6 +4,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 /** Simple check of udunit configuration files, udunits will actually load these.
@@ -46,8 +47,8 @@ public:
    * Get a UnitConverter that converts from one unit to another.
    */
   static bool
-  getConverter(const std::string& from,
-    const std::string           & to,
+  getConverter(std::string_view from,
+    std::string_view            to,
     UnitConverter               & setme);
 
   /** Convert a value using a UnitConverter */
@@ -65,7 +66,7 @@ public:
 
   /* Test a unit string's validity */
   static bool
-  isValidUnit(const std::string& unit);
+  isValidUnit(std::string_view unit);
 
   /* Test two units' compatability.
    * NOTE: this is as expensive as the conversion itself,
@@ -73,15 +74,15 @@ public:
    * call the four-argument version of value() and check its
    * success flag return value. */
   static bool
-  isCompatibleUnit(const std::string& from,
-    const std::string               & to);
+  isCompatibleUnit(std::string_view from,
+    std::string_view                to);
 
   /**
    * Convert a value from one unit to another.
    */
   static double
-  value(const std::string& from,
-    const std::string    & to,
+  value(std::string_view from,
+    std::string_view     to,
     double               fromValue);
 
   /**
@@ -90,8 +91,8 @@ public:
    * know whether or not the conversion was successful.
    */
   static bool
-  convert(const std::string& from,
-    const std::string      & to,
+  convert(std::string_view from,
+    std::string_view       to,
     double                 fromValue,
     double                 & setmeToValue);
 
@@ -100,7 +101,7 @@ public:
   Unit() : myValue(0){ }
 
   /** Build a Unit object given a value along with its unit name. */
-  Unit(double v, const std::string& s) : myValue(v), myUnitStr(s){ }
+  Unit(double v, std::string_view s) : myValue(v), myUnitStr(s){ }
 
   /**
    * Convert the current Unit's value into other units.
@@ -108,7 +109,7 @@ public:
    * callers know whether or not the conversion was successful.
    */
   bool
-  value(const std::string& units, double& setme) const
+  value(std::string_view units, double& setme) const
   {
     return (convert(myUnitStr, units, myValue, setme));
   }

@@ -4,15 +4,39 @@
 #include "rError.h"
 #include "rOS.h"
 
+#include <charconv>
 #include <cstring>  // strlen()
 #include <libgen.h> // dirname
 
 using namespace rapio;
 
 void
-URL::parseAfterHost(const std::string& url_fragment)
+URL::parseAfterHost(std::string_view url_fragment)
 {
-  auto w(url_fragment);
+  std::string selfCopy;
+  auto aliasesStr = [url_fragment](const std::string& str) {
+      if (url_fragment.empty() || str.empty()) { return false; }
+      std::less<const char *> lessPtr;
+
+      return !lessPtr(url_fragment.data(), str.data()) &&
+             lessPtr(url_fragment.data(), str.data() + str.size());
+    };
+  bool isAliased = aliasesStr(path) || aliasesStr(fragment);
+
+  if (!isAliased) {
+    for (const auto& [k, v] : query) {
+      if (aliasesStr(k) || aliasesStr(v)) {
+        isAliased = true;
+        break;
+      }
+    }
+  }
+  if (isAliased) {
+    selfCopy.assign(url_fragment);
+    url_fragment = selfCopy;
+  }
+
+  std::string_view w(url_fragment);
 
   path = Strings::peel(w, "?");
 
@@ -26,34 +50,34 @@ URL::parseAfterHost(const std::string& url_fragment)
   }
 
   // query
-  std::string q(Strings::peel(w, "#"));
+  std::string_view q = Strings::peel(w, "#");
 
   while (!q.empty()) {
     auto first = Strings::peel(q, "&");
     auto key   = Strings::peel(first, "=");
     auto val   = first;
-    query[key] = val;
+    setQuery(key, val);
   }
 
   // fragment
   fragment = w;
-}
+} // URL::parseAfterHost
 
 URL&
 URL::operator = (const char * s)
 {
-  return (*this = std::string(s ? s : ""));
+  return (*this = std::string_view(s ? s : ""));
 }
 
 URL&
-URL::operator += (const std::string& s)
+URL::operator += (std::string_view s)
 {
   this->path += s;
   return (*this);
 }
 
 int
-URL::defaultPort(const std::string& scheme)
+URL::defaultPort(std::string_view scheme)
 {
   if (scheme == "http") { return (80); }
 
@@ -67,7 +91,7 @@ URL::defaultPort(const std::string& scheme)
 }
 
 std::string
-URL::encodeURL(const std::string& in)
+URL::encodeURL(std::string_view in)
 {
   // RFC 3986
   // https://en.wikipedia.org/wiki/Percent-encoding
@@ -89,8 +113,32 @@ URL::encodeURL(const std::string& in)
 }
 
 URL&
-URL::operator = (const std::string& s)
+URL::operator = (std::string_view s)
 {
+  // Guard against self-aliasing (e.g., assigning a string_view that points into one of this URL's own strings)
+  std::string selfCopy;
+  auto aliasesStr = [s](const std::string& str) {
+      if (s.empty() || str.empty()) { return false; }
+      std::less<const char *> lessPtr;
+
+      return !lessPtr(s.data(), str.data()) && lessPtr(s.data(), str.data() + str.size());
+    };
+  bool isAliased = aliasesStr(scheme) || aliasesStr(user) || aliasesStr(pass) ||
+    aliasesStr(host) || aliasesStr(path) || aliasesStr(fragment);
+
+  if (!isAliased) {
+    for (const auto& [k, v] : query) {
+      if (aliasesStr(k) || aliasesStr(v)) {
+        isAliased = true;
+        break;
+      }
+    }
+  }
+  if (isAliased) {
+    selfCopy.assign(s);
+    s = selfCopy;
+  }
+
   // reset all the fields
   query.clear();
   scheme = user = pass = host = path = fragment = "";
@@ -99,18 +147,19 @@ URL::operator = (const std::string& s)
   if (s.empty())
   { } else if (s == "-") { // stdin
     path = s;
-  } else if (s.find("://") != std::string::npos) { // this is a url
-    auto w(s);                                     // Lots of copying of strings going on, we could do string_view or something
+  } else if (s.find("://") != std::string_view::npos) { // this is a url
+    std::string_view w(s);
 
     // Grab scheme first
     scheme = Strings::peel(w, "://");
 
     // Grab username:password@host:port
-    auto p         = w.find("/");
+    auto p         = w.find('/');
     auto authority = w.substr(0, p); // could be until the end of the string right?
-    if (authority.find('@') != std::string::npos) {
-      pass = Strings::peel(authority, "@");
-      user = Strings::peel(pass, ":");
+    if (authority.find('@') != std::string_view::npos) {
+      std::string_view userpass = Strings::peel(authority, "@");
+      user = Strings::peel(userpass, ":");
+      pass = userpass;
     }
     host = Strings::peel(authority, ":");
 
@@ -118,28 +167,26 @@ URL::operator = (const std::string& s)
     if (authority.empty()) {
       port = URL::defaultPort(scheme);
     } else {
-      try {
-        int parsed_port = std::stoi(authority);
-        // Ports must be strictly between 1 and 65535
-        if ((parsed_port > 0) && (parsed_port <= 65535)) {
-          port = static_cast<unsigned short>(parsed_port);
-        } else {
-          port = URL::defaultPort(scheme); // Out of bounds, fallback
-        }
-      } catch (const std::exception& e) {
-        // Caught std::invalid_argument or std::out_of_range
-        port = URL::defaultPort(scheme);
+      int parsed_port = 0;
+      auto [ptr, ec] = std::from_chars(authority.data(), authority.data() + authority.size(), parsed_port);
+      // Ports must be strictly between 1 and 65535 and consume the entire port string
+      if ((ec == std::errc()) && (ptr == authority.data() + authority.size()) &&
+        (parsed_port > 0) && (parsed_port <= 65535))
+      {
+        port = static_cast<unsigned short>(parsed_port);
+      } else {
+        port = URL::defaultPort(scheme); // Out of bounds or invalid, fallback
       }
     }
 
-    w = p == std::string::npos ? "" : w.substr(p);
+    w = p == std::string_view::npos ? std::string_view() : w.substr(p);
     parseAfterHost(w);
-  } else if (isalpha(s[0]) && (s[1] == ':') && ((s[2] == '\\') || (s[2] == '/'))) {
+  } else if ((s.size() >= 3) && isalpha(s[0]) && (s[1] == ':') && ((s[2] == '\\') || (s[2] == '/'))) {
     parseAfterHost(s);
   } else if (s[0] == '/') { // this is a local file format in Unix
     parseAfterHost(s);
   } else { // treat it as a file with a relative path...
-    *this = OS::getCurrentDirectory() + "/" + s;
+    *this = OS::getCurrentDirectory() + "/" + std::string(s);
   }
 
   if (((host == "xml") || (host == "webindex")) &&
@@ -239,19 +286,24 @@ URL::toString() const
 } // URL::toString
 
 std::string
-URL::getQuery(const std::string& key) const
+URL::getQuery(std::string_view key) const
 {
-  std::string val;
   auto it = query.find(key);
 
-  if (it != query.end()) { val = query.find(key)->second; }
-  return (val);
+  if (it != query.end()) { return it->second; }
+  return "";
 }
 
 void
-URL::setQuery(const std::string& key, const std::string& val)
+URL::setQuery(std::string_view key, std::string_view val)
 {
-  query[key] = val;
+  auto it = query.find(key);
+
+  if (it != query.end()) {
+    it->second.assign(val);
+  } else {
+    query.emplace(key, val);
+  }
 }
 
 void
@@ -261,7 +313,7 @@ URL::clearQuery()
 }
 
 bool
-URL::hasQuery(const std::string& key) const
+URL::hasQuery(std::string_view key) const
 {
   return (query.find(key) != query.end());
 }
@@ -349,7 +401,7 @@ URL::getScheme() const
 }
 
 void
-URL::setScheme(const std::string& s, bool tryPort)
+URL::setScheme(std::string_view s, bool tryPort)
 {
   scheme = s;
   if (tryPort) {
@@ -365,7 +417,7 @@ URL::getUser() const
 }
 
 void
-URL::setUser(const std::string& u)
+URL::setUser(std::string_view u)
 {
   // Going to assume can't have empty user with a password
   if (u.empty()) {
@@ -383,7 +435,7 @@ URL::getPassword() const
 }
 
 void
-URL::setPassword(const std::string& p)
+URL::setPassword(std::string_view p)
 {
   pass = p;
 }
@@ -395,7 +447,7 @@ URL::getHost() const
 }
 
 void
-URL::setHost(const std::string& p)
+URL::setHost(std::string_view p)
 {
   host = p;
 }
@@ -419,7 +471,7 @@ URL::getPath() const
 }
 
 void
-URL::setPath(const std::string& p)
+URL::setPath(std::string_view p)
 {
   path = p;
 }
@@ -431,7 +483,7 @@ URL::getFragment() const
 }
 
 void
-URL::setFragment(const std::string& f)
+URL::setFragment(std::string_view f)
 {
   fragment = f;
 }

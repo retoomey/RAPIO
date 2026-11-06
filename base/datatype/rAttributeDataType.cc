@@ -25,9 +25,9 @@ AttributeDataType::deep_copy(const std::shared_ptr<AttributeDataType>& nsp) cons
 
 void
 AttributeDataType::setDataAttributeValue(
-  const std::string& key,
-  const std::string& value,
-  const std::string& unit
+  std::string_view key,
+  std::string_view value,
+  std::string_view unit
 )
 {
   // Don't allow empty keys or values
@@ -36,9 +36,11 @@ AttributeDataType::setDataAttributeValue(
   }
 
   // Stick as a pair into attributes.
-  auto one = key + "-unit";
-  auto two = key + "-value";
+  std::string attrName(key);
 
-  setString(one, unit);
-  setString(two, value);
+  attrName += "-unit";
+  setString(attrName, unit);
+
+  attrName.replace(key.size(), 5, "-value");
+  setString(attrName, value);
 }

@@ -10,8 +10,8 @@ using namespace rapio;
 using namespace std;
 
 void
-AlgConfigFile::introduce(const string & protocol,
-  std::shared_ptr<AlgConfigFile>      factory)
+AlgConfigFile::introduce(std::string_view protocol,
+  std::shared_ptr<AlgConfigFile>          factory)
 {
   Factory<AlgConfigFile>::introduce(protocol, factory);
 }
@@ -56,7 +56,7 @@ AlgConfigFile::getConfigFileForURL(const URL& path)
 }
 
 std::shared_ptr<AlgConfigFile>
-AlgConfigFile::getConfigFile(const std::string& type)
+AlgConfigFile::getConfigFile(std::string_view type)
 {
   std::shared_ptr<AlgConfigFile> d = Factory<AlgConfigFile>::get(type);
 
@@ -153,7 +153,7 @@ AlgXMLConfigFile::readMultiConfigURL(const URL& path, std::vector<AlgConfigNode>
 
 bool
 AlgXMLConfigFile::writeConfigURL(const URL& path,
-  const std::string                       & program,
+  std::string_view                        program,
   std::vector<std::string>                & optionlist,
   std::vector<std::string>                & valuelist)
 {
@@ -221,7 +221,7 @@ AlgFLATConfigFile::readConfigURL(const URL& path,
 
 bool
 AlgFLATConfigFile::writeConfigURL(const URL& path,
-  const std::string                        & program,
+  std::string_view                         program,
   std::vector<std::string>                 & optionlist,
   std::vector<std::string>                 & valuelist)
 {

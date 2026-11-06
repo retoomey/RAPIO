@@ -4,6 +4,7 @@
 #include <rLLH.h>
 #include <rTime.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rapio {
@@ -54,8 +55,8 @@ public:
 
   /** Convert a magic string such as "W2-W-R" to block levels "W2, "W", "R" */
   static void
-  magicToBlockLevels(const std::string & magic,
-    std::vector<std::string>           & blocks);
+  magicToBlockLevels(std::string_view magic,
+    std::vector<std::string>          & blocks);
 
   /** Get the full block magic string for files we write, it is the levels
    * appended together.  So "W2", "W", "R" becomes "W2-W-R" */
@@ -150,22 +151,22 @@ public:
 
   /** Add a 'string' column to the generic table */
   void
-  addColumn(const std::string& name, const std::string& units,
+  addColumn(std::string_view name, std::string_view units,
     const std::vector<std::string>& data);
 
   /** Add a 'float' column to the generic table */
   void
-  addColumn(const std::string& name, const std::string& units,
+  addColumn(std::string_view name, std::string_view units,
     const std::vector<float>& data);
 
   /** Add a 'ushort' column to the generic table */
   void
-  addColumn(const std::string& name, const std::string& units,
+  addColumn(std::string_view name, std::string_view units,
     const std::vector<unsigned short>& data);
 
   /** Add a 'uchar' column to the generic table */
   void
-  addColumn(const std::string& name, const std::string& units,
+  addColumn(std::string_view name, std::string_view units,
     const std::vector<unsigned char>& data);
 
   /** Do we have generic columns stored? */
@@ -192,7 +193,7 @@ protected:
 
   /** Find a generic column by name, returning its index or -1 */
   int
-  findColumn(const std::string& name) const;
+  findColumn(std::string_view name) const;
 
   /** Generic columns, if any, stored in order */
   std::vector<GenericColumn> myColumns;

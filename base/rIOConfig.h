@@ -43,7 +43,7 @@ public:
   }
 
   void
-  setParams(const std::string& p)
+  setParams(std::string_view p)
   {
     myParams = p;
   }
@@ -51,7 +51,7 @@ public:
   /** Set a special string by key.  Will be used by dynamic modules
    * to store non-standard custom values */
   IOConfig&
-  set(const std::string& key, const std::string& value)
+  set(const std::string& key, std::string_view value)
   {
     myLookup[key] = value;
     return *this;
@@ -66,14 +66,14 @@ public:
 
   /** Get a key with a safe default */
   std::string
-  get(const std::string& key, const std::string& defaultValue = "") const
+  get(const std::string& key, std::string_view defaultValue = "") const
   {
     auto it = myLookup.find(key);
 
     if (it != myLookup.end()) {
       return it->second;
     }
-    return defaultValue;
+    return std::string(defaultValue);
   }
 
   /** Return map for backward compatibility for now */
@@ -92,7 +92,7 @@ public:
 
   /** Temp legacy code hack */
   void
-  setMap(std::map<std::string, std::string>& in)
+  setMap(const std::map<std::string, std::string>& in)
   {
     myLookup = in;
   }
@@ -123,14 +123,12 @@ public:
 
     if (modeStr.empty()) { return getGlobalSparseMode(); }
 
-    std::string lowerMode = modeStr;
+    for (char& c : modeStr) { c = static_cast<char>(std::tolower(static_cast<unsigned char>(c))); }
 
-    for (char& c : lowerMode) { c = std::tolower(c); }
-
-    if (lowerMode == SPARSE_MODE_NONE) { return SparseMode::None; }
-    if (lowerMode == SPARSE_MODE_GUESS) { return SparseMode::Guess; }
-    if (lowerMode == SPARSE_MODE_HARD) { return SparseMode::Hard; }
-    if (lowerMode == SPARSE_MODE_FORCE) { return SparseMode::Force; }
+    if (modeStr == SPARSE_MODE_NONE) { return SparseMode::None; }
+    if (modeStr == SPARSE_MODE_GUESS) { return SparseMode::Guess; }
+    if (modeStr == SPARSE_MODE_HARD) { return SparseMode::Hard; }
+    if (modeStr == SPARSE_MODE_FORCE) { return SparseMode::Force; }
 
     return getGlobalSparseMode();
   }
@@ -150,9 +148,11 @@ public:
   float
   getSparseThreshold() const
   {
-    if (has(KEY_SPARSE_THRESH)) {
+    auto it = myLookup.find(KEY_SPARSE_THRESH);
+
+    if (it != myLookup.end()) {
       try {
-        return std::stof(get(KEY_SPARSE_THRESH));
+        return std::stof(it->second);
       } catch (...) { }
     }
     return getGlobalSparseThreshold();
@@ -160,7 +160,7 @@ public:
 
   /** Called by rConfigDataType only to set system default by string */
   static void
-  setGlobalSparseDefaults(const std::string& modeStr, float threshold);
+  setGlobalSparseDefaults(std::string_view modeStr, float threshold);
 
   /** Get global default sparse mode from configuration */
   static SparseMode

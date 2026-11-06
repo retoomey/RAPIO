@@ -2,6 +2,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <string_view>
 #include <rArith.h>
 
 #include <fmt/format.h>
@@ -26,7 +27,7 @@ public:
 
   /** Build a Length object given a string as its unit. */
   Length(double      value,
-    const std::string& unit);
+    std::string_view unit);
 
   // -------------------------
   //   Named Constructors
@@ -96,7 +97,7 @@ public:
    * @return value as double
    */
   double
-  value(const std::string& unitStr);
+  value(std::string_view unitStr);
 
   /** Return cenimeters. */
   double

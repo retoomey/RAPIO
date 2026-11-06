@@ -9,11 +9,9 @@ float IOConfig::ourDefaultSparseThreshold = 0.75f;
 bool IOConfig::ourDoUnsparse = true; // You want this on
 
 void
-IOConfig::setGlobalSparseDefaults(const std::string& modeStr, float threshold)
+IOConfig::setGlobalSparseDefaults(std::string_view modeStr, float threshold)
 {
-  std::string lowerMode = modeStr;
-
-  Strings::toLower(lowerMode);
+  std::string lowerMode = Strings::makeLower(modeStr);
 
   if (lowerMode == SPARSE_MODE_NONE) {
     ourDefaultSparseMode = SparseMode::None;

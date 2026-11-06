@@ -27,14 +27,14 @@ using namespace std;
 std::vector<URL> Config::mySearchPaths;
 
 void
-Config::introduce(const std::string & name,
-  std::shared_ptr<ConfigType>       new_subclass)
+Config::introduce(std::string_view name,
+  std::shared_ptr<ConfigType>      new_subclass)
 {
   Factory<ConfigType>::introduce(name, new_subclass);
 }
 
 URL
-Config::getAbsoluteForRelative(const std::string& relativePath)
+Config::getAbsoluteForRelative(std::string_view relativePath)
 {
   URL testMe;
   bool found = false;
@@ -93,7 +93,7 @@ Config::addSearchPath(const URL& absolutePath)
 }
 
 void
-Config::addSearchFromString(const std::string& pathgroup)
+Config::addSearchFromString(std::string_view pathgroup)
 {
   std::vector<std::string> paths;
 
@@ -113,7 +113,7 @@ Config::addSearchFromString(const std::string& pathgroup)
 }
 
 URL
-Config::getConfigFile(const std::string& l)
+Config::getConfigFile(std::string_view l)
 {
   bool is_absolute = !l.empty() && l[0] == '/';
 
@@ -136,9 +136,9 @@ Config::introduceSelf()
 namespace {
 // Simple add / to directory if not there
 std::string
-enforceLastSlash(const std::string& str)
+enforceLastSlash(std::string_view str)
 {
-  auto out = str;
+  std::string out(str);
 
   if (str.length() > 0) {
     if (str.back() != '/') {
@@ -242,7 +242,7 @@ Config::initialize()
 } // Config::initialize
 
 std::shared_ptr<PTreeData>
-Config::huntXML(const std::string& pathName)
+Config::huntXML(std::string_view pathName)
 {
   const URL loc(getAbsoluteForRelative(pathName));
 

@@ -113,8 +113,8 @@ applyBOOSTOstreamNew(
 }
 
 void
-DataFilter::introduce(const string & protocol,
-  std::shared_ptr<DataFilter>      factory)
+DataFilter::introduce(std::string_view protocol,
+  std::shared_ptr<DataFilter>          factory)
 {
   Factory<DataFilter>::introduce(protocol, factory);
 }
@@ -135,7 +135,7 @@ DataFilter::introduceSelf()
 }
 
 std::shared_ptr<DataFilter>
-DataFilter::getDataFilter(const std::string& name)
+DataFilter::getDataFilter(std::string_view name)
 {
   return (Factory<DataFilter>::get(name, "DataFilter"));
 }

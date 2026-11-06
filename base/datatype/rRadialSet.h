@@ -48,8 +48,8 @@ public:
    * you'll fill it in and it wastes time to double fill it. */
   static std::shared_ptr<RadialSet>
   Create(
-    const std::string& TypeName,
-    const std::string& Units,
+    std::string_view TypeName,
+    std::string_view Units,
     const LLH        & center,
     const Time       & datatime,
     const float      elevationDegrees,
@@ -187,7 +187,7 @@ public:
 
   /** Set the radar name for this radial set */
   void
-  setRadarName(const std::string& aName)
+  setRadarName(std::string_view aName)
   {
     setDataAttributeValue("radarName", aName, "dimensionless");
   }
@@ -325,7 +325,7 @@ public:
 
   /** Update global attribute list for RadialSet */
   virtual void
-  updateGlobalAttributes(const std::string& encoded_type) override;
+  updateGlobalAttributes(std::string_view encoded_type) override;
 
   /** Sync any internal stuff to data from current attribute list,
    * return false on fail. */
@@ -339,8 +339,8 @@ public:
   /** Initialize a RadialSet to given parameters */
   bool
   init(
-    const std::string& TypeName,
-    const std::string& Units,
+    std::string_view TypeName,
+    std::string_view Units,
     const LLH        & center,
     const Time       & datatime,
     const float      elevationDegrees,

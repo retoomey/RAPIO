@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include "rHelpFormatter.h" // Requires the HelpEntry DTO
 
@@ -35,44 +36,44 @@ public:
   getPositionalArgs() const = 0;
 
   virtual void
-  boolean(const std::string& opt, const std::string& usage) = 0;
+  boolean(std::string_view opt, std::string_view usage) = 0;
   virtual void
-  require(const std::string& opt, const std::string& exampleArg, const std::string& usage) = 0;
+  require(std::string_view opt, std::string_view exampleArg, std::string_view usage) = 0;
   virtual void
-  optional(const std::string& opt, const std::string& defaultValue, const std::string& usage) = 0;
+  optional(std::string_view opt, std::string_view defaultValue, std::string_view usage) = 0;
   virtual void
-  setDefaultValue(const std::string& opt, const std::string& defaultValue) = 0;
+  setDefaultValue(std::string_view opt, std::string_view defaultValue) = 0;
   virtual void
-  addGroup(const std::string& sourceopt, const std::string& group) = 0;
+  addGroup(std::string_view sourceopt, std::string_view group) = 0;
   virtual void
-  addSuboption(const std::string& sourceopt, const std::string& opt, const std::string& description) = 0;
+  addSuboption(std::string_view sourceopt, std::string_view opt, std::string_view description) = 0;
   virtual void
-  setHidden(const std::string& sourceopt) = 0;
+  setHidden(std::string_view sourceopt) = 0;
   virtual void
-  addAdvancedHelp(const std::string& sourceopt, const std::string& help) = 0;
+  addAdvancedHelp(std::string_view sourceopt, std::string_view help) = 0;
   virtual void
-  setEnforcedSuboptions(const std::string& key, bool flag) = 0;
+  setEnforcedSuboptions(std::string_view key, bool flag) = 0;
 
   virtual std::string
-  getString(const std::string& opt) const = 0;
+  getString(std::string_view opt) const = 0;
   virtual bool
-  getBoolean(const std::string& opt) const = 0;
+  getBoolean(std::string_view opt) const = 0;
   virtual float
-  getFloat(const std::string& opt) const = 0;
+  getFloat(std::string_view opt) const = 0;
   virtual double
-  getDouble(const std::string& opt) const = 0;
+  getDouble(std::string_view opt) const = 0;
   virtual int
-  getInteger(const std::string& opt) const = 0;
+  getInteger(std::string_view opt) const = 0;
 
   virtual bool
-  isInSuboptions(const std::string& key) const = 0;
+  isInSuboptions(std::string_view key) const = 0;
   virtual bool
-  isParsed(const std::string& key) const = 0;
+  isParsed(std::string_view key) const = 0;
   virtual bool
-  wantAdvancedHelp(const std::string& sourceopt) const = 0;
+  wantAdvancedHelp(std::string_view sourceopt) const = 0;
 
   virtual void
-  storeParsedArg(const std::string& name, const std::string& value, const bool enforceStrict = true,
+  storeParsedArg(std::string_view name, std::string_view value, const bool enforceStrict = true,
     const bool fromiconfig = false) = 0;
 
   virtual void

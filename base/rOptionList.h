@@ -4,7 +4,9 @@
 #include <rOption.h>
 #include <rHelpFormatter.h>
 
+#include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 
@@ -29,7 +31,7 @@ public:
   OptionList();
 
   /** Construct default options */
-  OptionList(const std::string& base = "Program");
+  OptionList(std::string_view base = "Program");
 
   /** Destroy an option list */
   ~OptionList(){ }
@@ -38,20 +40,20 @@ public:
 
   /** Create a boolean argument */
   void
-  boolean(const std::string& opt,
-    const std::string      & usage) override;
+  boolean(std::string_view opt,
+    std::string_view       usage) override;
 
   /** Create a required argument */
   void
-  require(const std::string& opt,
-    const std::string      & exampleArg,
-    const std::string      & usage) override;
+  require(std::string_view opt,
+    std::string_view       exampleArg,
+    std::string_view       usage) override;
 
   /** Create an optional argument.  Optional have default values */
   void
-  optional(const std::string& opt,
-    const std::string       & defaultValue,
-    const std::string       & usage) override;
+  optional(std::string_view opt,
+    std::string_view        defaultValue,
+    std::string_view        usage) override;
 
   /** Turn a required into an optional by providing a default value.
    * This can be called in declareOptions in order to turn a required value
@@ -59,90 +61,90 @@ public:
    * The other way to do it could be a larger algorithm/program class tree.
    * We can also replace the default value of an optional too. */
   void
-  setDefaultValue(const std::string& opt,
-    const std::string              & defaultValue) override;
+  setDefaultValue(std::string_view opt,
+    std::string_view               defaultValue) override;
 
   /** Add a group to option.  */
   void
-  addGroup(const std::string& sourceopt,
-    const std::string       & group) override;
+  addGroup(std::string_view sourceopt,
+    std::string_view        group) override;
 
   /** Add a suboption.  Once added, ONLY these values are allowed to be passed
    * in.  */
   void
-  addSuboption(const std::string& sourceopt,
-    const std::string           & opt,
-    const std::string           & description) override;
+  addSuboption(std::string_view sourceopt,
+    std::string_view            opt,
+    std::string_view            description) override;
 
   /** Set hidden on an option */
   void
-  setHidden(const std::string& sourceopt) override;
+  setHidden(std::string_view sourceopt) override;
 
   /** Add advanced help to an option.  */
   void
-  addAdvancedHelp(const std::string& sourceopt,
-    const std::string              & help) override;
+  addAdvancedHelp(std::string_view sourceopt,
+    std::string_view               help) override;
 
   /** Make this option enforce suboptions or not */
   void
-  setEnforcedSuboptions(const std::string& key, bool flag) override;
+  setEnforcedSuboptions(std::string_view key, bool flag) override;
 
   // Retrieval --------------------------------------------------
 
   /** Fetch an option as a string */
   std::string
-  getString(const std::string& opt) const override;
+  getString(std::string_view opt) const override;
 
   /** Fetch an option as a boolean */
   bool
-  getBoolean(const std::string& opt) const override;
+  getBoolean(std::string_view opt) const override;
 
   /** Fetch an option as a float, or 0 if invalid */
   float
-  getFloat(const std::string& opt) const override;
+  getFloat(std::string_view opt) const override;
 
   /** Fetch an option as a double, or 0 if invalid */
   double
-  getDouble(const std::string& opt) const override;
+  getDouble(std::string_view opt) const override;
 
   /** Fetch an option as an integer, or 0 if invalid */
   int
-  getInteger(const std::string& opt) const override;
+  getInteger(std::string_view opt) const override;
 
   /** Does this option match one of its suboption list? */
   bool
-  isInSuboptions(const std::string& key) const override;
+  isInSuboptions(std::string_view key) const override;
 
   /** Return true if this option name is parsed */
   bool
-  isParsed(const std::string& key) const override;
+  isParsed(std::string_view key) const override;
 
   /** Do we want advanced help for this option? */
   bool
-  wantAdvancedHelp(const std::string& sourceopt) const override;
+  wantAdvancedHelp(std::string_view sourceopt) const override;
 
   /** Store a parsed argument value, from XML or command line */
   void
-  storeParsedArg(const std::string& name,
-    const std::string             & value,
+  storeParsedArg(std::string_view name,
+    std::string_view              value,
     const bool                    enforceStrict = true,
     const bool                    fromiconfig   = false) override;
 
 private:
 
   /** Force add given option to map */
-  void
-  addOption(const Option& o);
+  Option *
+  addOption(Option o);
 
   /** Make an option */
   Option *
   makeOption(bool    required,
     bool             boolean,
     bool             system,
-    const std::string& opt,
-    const std::string& name,
-    const std::string& usage,
-    const std::string& extra);
+    std::string_view opt,
+    std::string_view name,
+    std::string_view usage,
+    std::string_view extra);
 
   /** Return sorted options */
   void
@@ -151,11 +153,11 @@ private:
 
   /** Return option with this key */
   const Option *
-  getOption(const std::string& key) const;
+  getOption(std::string_view key) const;
 
   /** Return option with this key */
   Option *
-  getOption(const std::string& key);
+  getOption(std::string_view key);
 
 public:
 
@@ -216,11 +218,11 @@ protected:
   bool isProcessed;
 
   /** Collection of stored valid options by name */
-  std::map<std::string, Option> optionMap;
+  std::map<std::string, Option, std::less<> > optionMap;
 
   /** Collection of stored invalid options by name.  Should this
    * functionality be here or somewhere else? */
-  std::map<std::string, Option> unusedOptionMap;
+  std::map<std::string, Option, std::less<> > unusedOptionMap;
 
   /** Keep track of maximum argument width */
   static unsigned int max_arg_width;

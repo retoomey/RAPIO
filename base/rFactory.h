@@ -1,7 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
+#include <string_view>
 #include <rError.h>
 #include <rOS.h>
 
@@ -29,7 +31,7 @@ public:
     FactoryLookup(){ };
 
     /** Construct with default keys */
-    FactoryLookup(const std::string& m, const std::string& mname)
+    FactoryLookup(std::string_view m, std::string_view mname)
       : module(m), methodname(mname), loaded(false), stored(nullptr)
     { }
 
@@ -52,11 +54,11 @@ public:
 private:
 
   /** Lookup storing key to actual object */
-  using MapType = std::map<std::string, std::shared_ptr<X> >;
+  using MapType = std::map<std::string, std::shared_ptr<X>, std::less<> >;
   static MapType myLookup;
 
   /** Lookup storing dyanmic strings to objects */
-  using MapType2 = std::map<std::string, FactoryLookup<X> >;
+  using MapType2 = std::map<std::string, FactoryLookup<X>, std::less<> >;
   static MapType2 myDynamicInfo;
 
   /** Mutex for thread safety */
@@ -95,12 +97,12 @@ public:
 
   /** Introduce new X to the rest of the system. */
   static void
-  introduce(const std::string& name, std::shared_ptr<X> instance)
+  introduce(std::string_view name, std::shared_ptr<X> instance)
   {
     std::lock_guard<std::mutex> lock(myMutex);
 
     if (instance != nullptr) {
-      myLookup[name] = instance;
+      myLookup[std::string(name)] = instance;
     } else {
       fLogSevere("invalid instance pointer for '{}'", name);
     }
@@ -108,28 +110,33 @@ public:
 
   /** Introduce new X to the rest of the system as dynamic loadable module. */
   static void
-  introduceLazy(const std::string& name, const std::string& libname, const std::string& methodname)
+  introduceLazy(std::string_view name, std::string_view libname, std::string_view methodname)
   {
     // FIXME: Not checking double calls or anything at moment
     // Look for an existing record of this lazy loader...
     std::lock_guard<std::mutex> lock(myMutex);
-    std::string key = libname + ":" + methodname;
-    auto cur        = myDynamicInfo.find(key);
+    std::string key;
+
+    key.reserve(libname.size() + 1 + methodname.size());
+    key.append(libname);
+    key.push_back(':');
+    key.append(methodname);
+    auto cur = myDynamicInfo.find(key);
 
     if (cur != myDynamicInfo.end()) {
       auto& f = cur->second;
-      f.alias.push_back(name);
+      f.alias.emplace_back(name);
 
       // Edge Case: If the module is ALREADY loaded when we add a new alias,
       // we must manually add this new alias to myLookup now, because
       // ensureLoaded won't run again for this module.
       if (f.loaded && f.stored) {
-        myLookup[name] = f.stored;
+        myLookup[std::string(name)] = f.stored;
       }
     } else {
       auto z = FactoryLookup<X>(libname, methodname);
-      z.alias.push_back(name);
-      myDynamicInfo[key] = z;
+      z.alias.emplace_back(name);
+      myDynamicInfo[std::move(key)] = std::move(z);
     }
   }
 
@@ -158,12 +165,12 @@ public:
 
   /** Is this type known to the factory? */
   static bool
-  exists(const std::string& name)
+  exists(std::string_view name)
   {
     std::lock_guard<std::mutex> lock(myMutex);
 
     // 1. Check if it is already created/loaded
-    if (myLookup.count(name) != 0) { return true; }
+    if (myLookup.find(name) != myLookup.end()) { return true; }
 
     // 2. Check if it is a known lazy alias (iterate because keys are lib paths)
     for (const auto& pair : myDynamicInfo) {
@@ -183,7 +190,7 @@ public:
     std::lock_guard<std::mutex> lock(myMutex);
     std::vector<std::shared_ptr<X> > myList;
 
-    for (auto ele: myLookup) {
+    for (const auto& ele: myLookup) {
       names.push_back(ele.first);
       myList.push_back(ele.second);
     }
@@ -195,11 +202,11 @@ public:
    * which normally will be a base-class type.
    */
   static std::shared_ptr<X>
-  get(const std::string& name, const std::string& /*info*/ = "")
+  get(std::string_view name, std::string_view /*info*/ = "")
   {
     std::lock_guard<std::mutex> lock(myMutex);
 
-    typename MapType::const_iterator cur = myLookup.find(name);
+    auto cur = myLookup.find(name);
 
     if (cur != myLookup.end()) { // Normally fairly quick...
       return cur->second;
@@ -208,7 +215,7 @@ public:
     // Hunt in the dynamic lazy loader list...
     for (auto& ele: myDynamicInfo) {
       auto& f = ele.second;
-      for (auto& s:f.alias) {
+      for (const auto& s:f.alias) {
         // if asked for key is in our alias list...
         if (s == name) {
           ensureLoaded(f, true);

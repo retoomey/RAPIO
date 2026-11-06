@@ -7,8 +7,8 @@ using namespace std;
 
 std::shared_ptr<LLHGridN2D>
 LLHGridN2D::Create(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
   const Time       & time,
 
   // Projection information
@@ -30,8 +30,8 @@ LLHGridN2D::Create(
 
 std::shared_ptr<LLHGridN2D>
 LLHGridN2D::Create(
-  const std::string    & TypeName,
-  const std::string    & Units,
+  std::string_view     TypeName,
+  std::string_view     Units,
   const Time           & time,
   const LLCoverageArea & g)
 {
@@ -74,8 +74,8 @@ LLHGridN2D::deep_copy(std::shared_ptr<LLHGridN2D> nsp) const
 
 bool
 LLHGridN2D::init(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
 
   // Projection information
   const LLH   & location,
@@ -107,7 +107,7 @@ LLHGridN2D::init(
 }
 
 void
-LLHGridN2D::setUnits(const std::string& units, const std::string& name)
+LLHGridN2D::setUnits(std::string_view units, std::string_view name)
 {
   DataGrid::setUnits(units, name);
 

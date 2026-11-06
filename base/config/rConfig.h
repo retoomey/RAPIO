@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace rapio {
 /** Config types are registered with config, they handle a particular
@@ -27,7 +28,7 @@ public:
 
   /** Read configuration information from a command line string */
   virtual bool
-  readString(const std::string& /*param*/){ return true; };
+  readString(std::string_view /*param*/){ return true; };
 };
 
 /**
@@ -65,19 +66,19 @@ public:
    * @return empty url if the file doesn't exist in the search paths.
    */
   static URL
-  getConfigFile(const std::string& pathToFile);
+  getConfigFile(std::string_view pathToFile);
 
   /** Finds the absolute path of the given relative path. */
   static URL
-  getAbsoluteForRelative(const std::string& relativePath);
+  getAbsoluteForRelative(std::string_view relativePath);
 
   /* Read from a string, hunt in config */
   static std::shared_ptr<PTreeData>
-  huntXML(const std::string& pathname);
+  huntXML(std::string_view pathname);
 
   /** Use this to introduce new subclasses. */
   static void
-  introduce(const std::string   & name,
+  introduce(std::string_view    name,
     std::shared_ptr<ConfigType> new_subclass);
 
   /** Virtual destructor. */
@@ -101,7 +102,7 @@ private:
 
   /** Parse a collection of paths separated by : */
   static void
-  addSearchFromString(const std::string& pathgroup);
+  addSearchFromString(std::string_view pathgroup);
 
   /** the order of search. The first match wins. */
   static std::vector<URL> mySearchPaths;

@@ -9,7 +9,7 @@ using namespace rapio;
 using namespace std;
 
 void
-Volume::introduce(const std::string & key, std::shared_ptr<Volume> factory)
+Volume::introduce(std::string_view key, std::shared_ptr<Volume> factory)
 {
   Factory<Volume>::introduce(key, factory);
 }
@@ -32,7 +32,7 @@ Volume::introduceHelp()
 }
 
 void
-Volume::introduceSuboptions(const std::string& name, RAPIOOptions& o)
+Volume::introduceSuboptions(std::string_view name, RAPIOOptions& o)
 {
   auto e = Factory<Volume>::getAll();
 
@@ -43,9 +43,9 @@ Volume::introduceSuboptions(const std::string& name, RAPIOOptions& o)
 
 std::shared_ptr<Volume>
 Volume::createVolume(
-  const std::string & key,
-  const std::string & params,
-  const std::string & historyKey)
+  std::string_view key,
+  std::string_view params,
+  std::string_view historyKey)
 {
   auto f = Factory<Volume>::get(key);
 

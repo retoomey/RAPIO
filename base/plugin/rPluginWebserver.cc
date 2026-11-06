@@ -7,7 +7,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginWebserver::declare(RAPIOProgram * owner, const std::string& name)
+PluginWebserver::declare(RAPIOProgram * owner, std::string_view name)
 {
   owner->addPlugin(new PluginWebserver(name));
   return true;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rapio {
@@ -27,19 +28,19 @@ public:
 
   /** Does the string begin with the given prefix? */
   static bool
-  beginsWith(const std::string& str, const std::string& prefix);
+  beginsWith(std::string_view str, std::string_view prefix);
 
   /** Does the string begin with prefix, and remove it */
   static bool
-  removePrefix(std::string& str, const std::string& suffix);
+  removePrefix(std::string& str, std::string_view prefix);
 
   /** Does the string end with the given suffix? */
   static bool
-  endsWith(const std::string& str, const std::string& suffix);
+  endsWith(std::string_view str, std::string_view suffix);
 
   /** Does the string end with suffix, and remove it */
   static bool
-  removeSuffix(std::string& str, const std::string& suffix);
+  removeSuffix(std::string& str, std::string_view suffix);
 
   /** Convert to upper case. */
   static void
@@ -47,7 +48,7 @@ public:
 
   /** Get a new upper case string  */
   static std::string
-  makeUpper(const std::string& in);
+    makeUpper(std::string_view in);
 
   /** Convert to lower case. */
   static void
@@ -55,7 +56,7 @@ public:
 
   /** Get a new lower case string  */
   static std::string
-  makeLower(const std::string& in);
+    makeLower(std::string_view in);
 
   /**
    * Split a string on whitespace and put the pieces into a vector.
@@ -64,7 +65,7 @@ public:
    * @return number of strings added to `setme'
    */
   static size_t
-  split(const std::string         & in,
+    split(std::string_view         in,
     std::vector<std::string> * setme);
 
   /** Split a string on a character and put the pieces into a vector.
@@ -80,8 +81,8 @@ public:
    *  @see split
    */
   static size_t
-  splitWithoutEnds(const std::string & in,
-    char                       delimiter,
+    splitWithoutEnds(std::string_view in,
+    char delimiter,
     std::vector<std::string> * setme);
 
   /** Split a string on a character and put the pieces into a vector.
@@ -97,8 +98,8 @@ public:
    *  @see splitWithoutEnds to avoid getting these empty strings
    */
   static size_t
-  split(const std::string         & in,
-    char                       delimiter,
+    split(std::string_view         in,
+    char delimiter,
     std::vector<std::string> * setme);
 
   /** Splits the string,s, on the first occurence of the
@@ -110,15 +111,15 @@ public:
    *  @return true on a match
    */
   static bool
-  splitOnFirst(const std::string & in,
-    const std::string        delimiter,
+    splitOnFirst(std::string_view in,
+    std::string_view delimiter,
     std::vector<std::string> & setme);
 
   /** Replace all occurences of `from' with `to' in string `s'. */
   static void
     replace(std::string & in,
-    const std::string & from,
-    const std::string & to);
+    std::string_view from,
+    std::string_view to);
 
   /**  *bl?h.* matches Goopblah.jpg for example... */
   // static bool
@@ -127,23 +128,23 @@ public:
 
   /** Remove ANSII formatting from a string */
   static std::string
-  removeANSII(const std::string& input);
+  removeANSII(std::string_view input);
 
   /** Remove non-number characters from a string, prepping for number conversion */
   static std::string
-  removeNonNumber(const std::string& input);
+  removeNonNumber(std::string_view input);
 
   /** Split a string based on a width into words */
   static size_t
-  wrap(const std::string       & inputin,
+  wrap(std::string_view        inputin,
     std::vector<std::string> * setme,
     size_t                     restwidth,
     size_t                     firstwidth = 0);
 
   /** Simple * based pattern match */
   static bool
-  matchPattern(const std::string& pattern,
-    const std::string           & tocheck,
+  matchPattern(std::string_view pattern,
+    std::string_view            tocheck,
     std::string                 & star);
 
   /** Split an XML file that contains a \<signed\> signature
@@ -160,14 +161,18 @@ public:
    * @param outputtokens A number list where each number references the token number, or -1 if a filler string (non token match)
    * @param outputfillers A list of non-matched strings represented by the ordered -1s in the outputtoken list */
   static void
-  TokenScan(const std::string & pattern,
-    std::vector<std::string>  & tokens,
-    std::vector<int>          & outputtokens,
-    std::vector<std::string>  & outputfillers);
+  TokenScan(std::string_view pattern,
+    std::vector<std::string> & tokens,
+    std::vector<int>         & outputtokens,
+    std::vector<std::string> & outputfillers);
 
   /** Remove up to a prefix off a source string */
   static std::string
-  peel(std::string& s, const std::string& delimiter);
+  peel(std::string& s, std::string_view delimiter);
+
+  /** Remove up to a prefix off a source string_view (zero-copy) */
+  static std::string_view
+  peel(std::string_view& s, std::string_view delimiter);
 
   /** Scan a single string for a give list of replacement strings
    * @param pattern The string we are scanning.
@@ -175,7 +180,7 @@ public:
    * @param tos The list of strings to replace with.
    */
   static std::string
-  replaceGroup(const std::string   & pattern,
+  replaceGroup(std::string_view    pattern,
     const std::vector<std::string> & froms,
     std::vector<std::string>       & tos);
 
@@ -187,7 +192,7 @@ public:
   /** Used for param lines --param=key,stuff to split the
    * string key,stuff into pieces */
   static void
-  splitKeyParam(const std::string& commandline, std::string& key, std::string& params);
+  splitKeyParam(std::string_view commandline, std::string& key, std::string& params);
 };
 
 /** A class for DFA parsing a word/token by character */
@@ -196,7 +201,7 @@ class DFAWord
 public:
 
   /** Create a word to parse */
-  DFAWord(const std::string& t) : at(0), text(t)
+  DFAWord(std::string_view t) : at(0), text(t)
   { }
 
   /** Parse another character */

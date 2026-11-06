@@ -7,7 +7,7 @@ using namespace std;
 
 
 bool
-PartitionInfo::setPartitionType(const std::string& partTypeIn)
+PartitionInfo::setPartitionType(std::string_view partTypeIn)
 {
   std::string partType = Strings::makeLower(partTypeIn);
 

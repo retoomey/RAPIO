@@ -21,7 +21,7 @@ BinaryTable::BinaryTable() : myRowSize(0), myLastFileVersion(0)
 }
 
 void
-BinaryTable::addColumn(const std::string& name, const std::string& units,
+BinaryTable::addColumn(std::string_view name, std::string_view units,
   const std::vector<std::string>& data)
 {
   GenericColumn c;
@@ -35,7 +35,7 @@ BinaryTable::addColumn(const std::string& name, const std::string& units,
 }
 
 void
-BinaryTable::addColumn(const std::string& name, const std::string& units,
+BinaryTable::addColumn(std::string_view name, std::string_view units,
   const std::vector<float>& data)
 {
   GenericColumn c;
@@ -49,7 +49,7 @@ BinaryTable::addColumn(const std::string& name, const std::string& units,
 }
 
 void
-BinaryTable::addColumn(const std::string& name, const std::string& units,
+BinaryTable::addColumn(std::string_view name, std::string_view units,
   const std::vector<unsigned short>& data)
 {
   GenericColumn c;
@@ -63,7 +63,7 @@ BinaryTable::addColumn(const std::string& name, const std::string& units,
 }
 
 void
-BinaryTable::addColumn(const std::string& name, const std::string& units,
+BinaryTable::addColumn(std::string_view name, std::string_view units,
   const std::vector<unsigned char>& data)
 {
   GenericColumn c;
@@ -77,7 +77,7 @@ BinaryTable::addColumn(const std::string& name, const std::string& units,
 }
 
 int
-BinaryTable::findColumn(const std::string& name) const
+BinaryTable::findColumn(std::string_view name) const
 {
   const size_t size = myColumns.size();
 
@@ -244,7 +244,7 @@ BinaryTable::blockLevelsToMagic(
 
 void
 BinaryTable::magicToBlockLevels(
-  const std::string       & source,
+  std::string_view        source,
   std::vector<std::string>& blocks)
 {
   // We might read a bad file and have some crazy string...so we'll

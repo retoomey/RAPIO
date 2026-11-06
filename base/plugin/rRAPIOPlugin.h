@@ -3,6 +3,7 @@
 #include <rRecord.h>
 
 #include <string>
+#include <string_view>
 
 namespace rapio {
 class RAPIOProgram;
@@ -24,7 +25,7 @@ class RAPIOPlugin {
 public:
 
   /** Declare plugin with unique name */
-  RAPIOPlugin(const std::string& name) : myName(name), myActive(false){ }
+  RAPIOPlugin(std::string_view name) : myName(name), myActive(false){ }
 
   /** Virtual for manual delete */
   virtual

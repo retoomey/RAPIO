@@ -2,6 +2,7 @@
 
 #include <rConfig.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rapio {
@@ -19,11 +20,11 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& /*param*/){ };
+  process1(std::string_view /*param*/){ };
 
   /** Process a full param string */
   virtual void
-  process(const std::string& param);
+  process(std::string_view param);
 
   /** We don't read from XML, algorithm will send us a string from command line */
   virtual bool
@@ -31,7 +32,7 @@ public:
 
   /** Read configuration information from a command line string */
   virtual bool
-  readString(const std::string& param) override { process(param); return true; };
+  readString(std::string_view param) override { process(param); return true; };
 };
 
 /** The -i param and information stored from it */
@@ -41,7 +42,7 @@ public:
   class indexInputInfo {
 public:
     /* Constructor to make sure no fields missed */
-    indexInputInfo(const std::string& p, const std::string& i) : protocol(p), indexparams(i){ }
+    indexInputInfo(std::string_view p, std::string_view i) : protocol(p), indexparams(i){ }
 
     std::string protocol;
     std::string indexparams;
@@ -51,7 +52,7 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param) override;
+  process1(std::string_view param) override;
 
   /** Get index info database */
   static const std::vector<indexInputInfo>&
@@ -71,7 +72,7 @@ public:
   class productInputInfo {
 public:
     /* Constructor to make sure no fields missed */
-    productInputInfo(const std::string& n, const std::string& s)
+    productInputInfo(std::string_view n, std::string_view s)
       : name(n), subtype(s){ }
 
     std::string name;
@@ -86,7 +87,7 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param) override;
+  process1(std::string_view param) override;
 
 protected:
   /** Database of added input products we want from any index */
@@ -102,7 +103,7 @@ public:
   class outputInfo {
 public:
     /* Constructor to make sure no fields missed */
-    outputInfo(const std::string& f, const std::string& o)
+    outputInfo(std::string_view f, std::string_view o)
       : factory(f), outputinfo(o){ }
 
     std::string factory;
@@ -113,7 +114,7 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param) override;
+  process1(std::string_view param) override;
 
   /** Get output info database */
   static const std::vector<outputInfo>&
@@ -133,8 +134,8 @@ public:
   class productOutputInfo {
 public:
     /* Constructor to make sure no fields missed */
-    productOutputInfo(const std::string& p, const std::string& s,
-      const std::string& toP, const std::string& toS)
+    productOutputInfo(std::string_view p, std::string_view s,
+      std::string_view toP, std::string_view toS)
       : product(p), subtype(s), toProduct(toP), toSubtype(toS){ }
 
     /** The product key matcher such as '*', "Reflectivity*" */
@@ -158,7 +159,7 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param) override;
+  process1(std::string_view param) override;
 protected:
   /** Database of added output products we can generate */
   static std::vector<productOutputInfo> myProductOutputInfo;
@@ -173,7 +174,7 @@ public:
   class notifierInfo {
 public:
     /* Constructor to make sure no fields missed */
-    notifierInfo(const std::string& proto, const std::string& p)
+    notifierInfo(std::string_view proto, std::string_view p)
       : protocol(proto), params(p){ }
 
     std::string protocol;
@@ -188,11 +189,11 @@ public:
 
   /** Process a single part of param string */
   virtual void
-  process1(const std::string& param) override;
+  process1(std::string_view param) override;
 
   /** Process a full param string */
   virtual void
-  process(const std::string& param) override;
+  process(std::string_view param) override;
 
 protected:
   /** Database of notifier info */

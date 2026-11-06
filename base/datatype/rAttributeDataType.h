@@ -3,6 +3,7 @@
 #include <rNamedAny.h>
 
 #include <string>
+#include <string_view>
 #include <memory>
 
 namespace rapio {
@@ -40,9 +41,9 @@ public:
    */
   void
   setDataAttributeValue(
-    const std::string& key,
-    const std::string& value,
-    const std::string& unit = "dimensionless"
+    std::string_view key,
+    std::string_view value,
+    std::string_view unit = "dimensionless"
   );
 
   /** Global attributes, used by reader/writers */
@@ -58,56 +59,56 @@ public:
 
   /** Get a string */
   inline bool
-  getString(const std::string& name, std::string& out) const
+  getString(std::string_view name, std::string& out) const
   {
     return myAttributes->getString(name, out);
   }
 
   /** Set a string */
   inline void
-  setString(const std::string& name, const std::string& in)
+  setString(std::string_view name, std::string_view in)
   {
     return myAttributes->setString(name, in);
   }
 
   /** Get a double, flexible on casting */
   inline bool
-  getDouble(const std::string& name, double& out) const
+  getDouble(std::string_view name, double& out) const
   {
     return myAttributes->getDouble(name, out);
   }
 
   /** Set a double */
   inline void
-  setDouble(const std::string& name, double in)
+  setDouble(std::string_view name, double in)
   {
     return myAttributes->setDouble(name, in);
   }
 
   /** Get a float, flexible on casting */
   inline bool
-  getFloat(const std::string& name, float& out) const
+  getFloat(std::string_view name, float& out) const
   {
     return myAttributes->getFloat(name, out);
   }
 
   /** Set a float */
   inline void
-  setFloat(const std::string& name, float in)
+  setFloat(std::string_view name, float in)
   {
     return myAttributes->setFloat(name, in);
   }
 
   /** Get a long, flexible on casting */
   inline bool
-  getLong(const std::string& name, long& out) const
+  getLong(std::string_view name, long& out) const
   {
     return myAttributes->getLong(name, out);
   }
 
   /** Set a long in global attributes */
   inline void
-  setLong(const std::string& name, long in)
+  setLong(std::string_view name, long in)
   {
     return myAttributes->setLong(name, in);
   }

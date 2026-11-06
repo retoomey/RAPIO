@@ -27,8 +27,8 @@ RadialSet::RadialSet() : myElevAngleDegs(0), myElevCos(1), myElevTan(0), myFirst
 
 std::shared_ptr<RadialSet>
 RadialSet::Create(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
   const LLH        & center,
   const Time       & datatime,
   const float      elevationDegrees,
@@ -233,8 +233,8 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
 
 bool
 RadialSet::init(
-  const std::string& TypeName,
-  const std::string& Units,
+  std::string_view TypeName,
+  std::string_view Units,
   const LLH        & center,
   const Time       & datatime,
   const float      elevationDegrees,
@@ -287,7 +287,7 @@ RadialSet::initFromGlobalAttributes()
 } // RadialSet::initFromGlobalAttributes
 
 void
-RadialSet::updateGlobalAttributes(const std::string& encoded_type)
+RadialSet::updateGlobalAttributes(std::string_view encoded_type)
 {
   // Note: Datatype updates the attributes -unit -value specials,
   // so don't add any after this

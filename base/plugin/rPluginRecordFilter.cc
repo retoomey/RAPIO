@@ -8,7 +8,7 @@ using namespace rapio;
 using namespace std;
 
 bool
-PluginRecordFilter::declare(RAPIOProgram * owner, const std::string& name)
+PluginRecordFilter::declare(RAPIOProgram * owner, std::string_view name)
 {
   static bool once = true;
 
