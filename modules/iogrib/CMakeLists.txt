@@ -32,10 +32,10 @@ if(${RAPIO_USE_NCEPLIBS_GRIB2})
     PREFIX ${ROOT_DIRECTORY}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROOT_DIRECTORY}
                -DBUILD_SHARED_LIBS=OFF   # Build the libg2c.a
-               -DCMAKE_C_FLAGS=-fPIC     # And have Position Independent Code
+               "-DCMAKE_C_FLAGS=-fPIC -w" # And have Position Independent Code and suppress warnings
                                          # required to hard link it
                # Ok, g2c is a c library, not c++..but if it were to become one:
-               #-DCMAKE_CXX_FLAGS=-fPIC
+               #"-DCMAKE_CXX_FLAGS=-fPIC -w"
                -DUSE_PNG=ON              # Use png (default on)
                -DUSE_OpenJPEG=${RAPIO_USE_OPENJPEG}  # Use OpenJpeg
                -DUSE_Jasper=${RAPIO_USE_JASPER}  # Use Jasper 

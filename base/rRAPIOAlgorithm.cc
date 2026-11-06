@@ -307,8 +307,8 @@ RAPIOAlgorithm::writeOutputMessage(const Message& m_in,
     outputParams.set("outputfolder", w.outputinfo); // Hack: w.outputinfo is processed by handleCommandParam
 
     // Send to each notifier.  Let the notifier promote to record if wanted
-    for (auto& n:PluginNotifier::theNotifiers) {
-      n->writeMessage(outputParams, m);
+    for (auto& notifier:PluginNotifier::theNotifiers) {
+      notifier->writeMessage(outputParams, m);
     }
 
     // Path with datatype, setting outputfolder per output info:

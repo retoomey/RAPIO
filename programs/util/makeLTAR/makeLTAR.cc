@@ -153,9 +153,9 @@ LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & /*D
     num_elevs += 1;     
     fLogInfo("Number of elevations: {}", num_elevs);
     //compute the LTAR output for this time step
-    std::shared_ptr<rapio::RadialSet> LTAR = Refl_sum->Clone();
+    std::shared_ptr<rapio::RadialSet> ltar = Refl_sum->Clone();
 
-    auto & ltar_data = LTAR->getFloat2DRef();
+    auto & ltar_data = ltar->getFloat2DRef();
 
     //the Clone process keeps the summation data we only need
     // to divide each gate by the number of elevations
@@ -173,12 +173,12 @@ LTAR::processLTAR(std::map<std::string, std::shared_ptr<rapio::RadialSet>> & /*D
     }
     
     // Set the TypeName for your new product
-    LTAR->setTypeName("LTAR");
-    LTAR->setUnits("dBz");
-    LTAR->setDataAttributeValue("ColorMap", "Reflectivity");
-    LTAR->setTime(Z->getTime());
+    ltar->setTypeName("LTAR");
+    ltar->setUnits("dBz");
+    ltar->setDataAttributeValue("ColorMap", "Reflectivity");
+    ltar->setTime(Z->getTime());
     //add this to the DataMap
-    myDataMap["LTAR"] = LTAR;
+    myDataMap["LTAR"] = ltar;
     //Note the myDataMap variable boes back to processNewData()
 }
 

@@ -12,7 +12,7 @@ FetchContent_Declare(
 set(RDM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 # Make RDM targets available (rdmcore, rdmnetsunrpc, rdmstorepq)
-FetchContent_MakeAvailable(rdm)
+rapioFetchContentMakeAvailable(rdm)
 
 # Build the RAPIO wrapper algorithm
 add_executable(rNotify
@@ -25,7 +25,7 @@ target_include_directories(rNotify PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Ensure we can find the RDM core headers
 # FetchContent populates rdm_SOURCE_DIR
-target_include_directories(rNotify PRIVATE ${rdm_SOURCE_DIR}/core)
+target_include_directories(rNotify SYSTEM PRIVATE ${rdm_SOURCE_DIR}/core)
 
 install(TARGETS rNotify
     DESTINATION ${CMAKE_INSTALL_BINDIR}

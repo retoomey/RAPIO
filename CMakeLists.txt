@@ -30,8 +30,8 @@ if(RAPIO_STRICT_WARNINGS)
     # Apply warnings for GCC and Clang
     # This is the maximum complaining possible
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        add_compile_options(-Wall -Wextra -pedantic -Wno-unused-parameter)
-       # add_compile_options(-Wall -Wextra -pedantic)
+       # add_compile_options(-Wall -Wextra -pedantic -Wno-unused-parameter)
+        add_compile_options(-Wall -Wextra -pedantic -Wshadow)
     # Placeholder if MSVC (Windows) support is ever needed
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         add_compile_options(/W4)
@@ -137,6 +137,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED False)
 #add_compile_options(-Wall -Werror)
 
 ###########################################################################
+# Helper macro to pull FetchContent external projects with all compiler warnings disabled
+macro(rapioFetchContentMakeAvailable)
+  get_directory_property(_rapio_saved_compile_options COMPILE_OPTIONS)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set_directory_properties(PROPERTIES COMPILE_OPTIONS "-w")
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set_directory_properties(PROPERTIES COMPILE_OPTIONS "/w")
+  endif()
+  FetchContent_MakeAvailable(${ARGN})
+  set_directory_properties(PROPERTIES COMPILE_OPTIONS "${_rapio_saved_compile_options}")
+endmacro()
+
 # --- Fetch and configure fmt library ---
 # We have to support older c++ versions, std::format would be nice though
 #
@@ -148,9 +160,10 @@ FetchContent_Declare(
   GIT_TAG        ${FMT_GIT_TAG} # see cmake/dependencies.cmake
 )
 
-FetchContent_MakeAvailable(fmt)
+rapioFetchContentMakeAvailable(fmt)
 add_library(rapio_fmt_interface INTERFACE)
 target_link_libraries(rapio_fmt_interface INTERFACE fmt::fmt-header-only)
+target_include_directories(rapio_fmt_interface SYSTEM INTERFACE $<BUILD_INTERFACE:${fmt_SOURCE_DIR}/include>)
 ###########################################################################
 
 # A function to do the basics of a dynamic module setup

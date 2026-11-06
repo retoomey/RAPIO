@@ -315,20 +315,20 @@ DefaultColorMap::toSVG(std::ostream& o, std::string_view units, const size_t wid
   // for (size_t i = 0; i < s; ++i) {
   for (size_t i = s; i-- > 0;) {
     auto& c = myColorInfo[i];
-    PTreeNode text;
-    text.putAttr("text-anchor", "middle");
-    text.putAttr("x", LabelOffsetX);
-    text.putAttr("y", y);
-    text.putAttr("font-family", "Arial");
-    text.putAttr("font-weight", "bold");
-    text.putAttr("font-size", "13");
+    PTreeNode labelText;
+    labelText.putAttr("text-anchor", "middle");
+    labelText.putAttr("x", LabelOffsetX);
+    labelText.putAttr("y", y);
+    labelText.putAttr("font-family", "Arial");
+    labelText.putAttr("font-weight", "bold");
+    labelText.putAttr("font-size", "13");
     // The black outline over white text we use in wg
     // text.putAttr("stroke", "black");
     // text.putAttr("fill", "white");
     // text.putAttr("stroke-width", "");
-    text.put("", c.myLabel);
+    labelText.put("", c.myLabel);
 
-    svg.addNode("text", text);
+    svg.addNode("text", labelText);
 
     y += BoxHeight;
   }

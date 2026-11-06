@@ -612,7 +612,7 @@ OS::moveFile(const std::string& from, const std::string& to, bool quiet)
     // since 'maybe' it would be faster.
     fs::rename(fromPath, toPath);
     ok = true;
-  }catch (const fs::filesystem_error &e)
+  }catch (const fs::filesystem_error &)
   {
     try {
       const std::string to2 = to + "_TMP";

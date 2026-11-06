@@ -63,7 +63,7 @@ public:
 
   /** Add a suboption to this option. */
   void
-  addSuboption(std::string_view opt, std::string_view description);
+  addSuboption(std::string_view subopt, std::string_view description);
 
   /** Set enforced suboptions or not.  Enforced means the passed parameter must
    * match an added suboption, or blank which becomes the default suboption */

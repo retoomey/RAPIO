@@ -271,7 +271,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
   // This would be good for our data types to avoid having to track everything ourselves
   // size_t at = 0;
 
-  for (size_t r = 0; r < radials; ++r) {
+  for (size_t radial = 0; radial < radials; ++radial) {
     LengthKMs distanceKMs = firstGateKMs;
     for (size_t g = 0; g < gates; ++g) {
       LengthKMs oHtKMs;
@@ -281,7 +281,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       // --------------------------------------------
       // Any non-good values, we skip...
       //
-      auto& v = data[r][g];
+      auto& v = data[radial][g];
       if (!Constants::isGood(v)) {
         continue;
       }
@@ -290,7 +290,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       // Any gates where beam bottom hits terrain, we skip
       // I'm just making this assumption from fusion
       //
-      const bool beamHitBottom = haveTerrain ? (rad.getTerrainBeamBottomHitRef()[r][g] != 0) : 0.0;
+      const bool beamHitBottom = haveTerrain ? (rad.getTerrainBeamBottomHitRef()[radial][g] != 0) : 0.0;
       if (beamHitBottom) {
         continue;
       }
@@ -306,7 +306,7 @@ RAPIOPointCloudAlg::processRadialSet(std::shared_ptr<RadialSet> r)
       // FIXME: Make a cached version of this to improve sampling speed
       // since I'm sure the math duplicates some with same station
       Project::BeamPath_AzRangeToLatLon(stationLatDegs, stationLonDegs,
-        azs[r],      // azimuth degs
+        azs[radial], // azimuth degs
         distanceKMs, // rangeKMs
         elevDegs,
         oHtKMs,

@@ -25,11 +25,11 @@ Option::addGroup(std::string_view group)
 }
 
 void
-Option::addSuboption(std::string_view opt, std::string_view description)
+Option::addSuboption(std::string_view subopt, std::string_view description)
 {
   // Basically keep track of maximum suboption length for formatting purposes
-  if (suboptionmax < opt.length()) {
-    suboptionmax = opt.length();
+  if (suboptionmax < subopt.length()) {
+    suboptionmax = subopt.length();
 
     if (suboptionmax > 50) {
       suboptionmax = 50; // I mean, really?
@@ -39,7 +39,7 @@ Option::addSuboption(std::string_view opt, std::string_view description)
   // FIXME: Should check for already existing and returning, we're duplicating
   Suboption s;
 
-  s.opt         = opt;
+  s.opt         = subopt;
   s.description = description;
   suboptions.push_back(std::move(s));
 }

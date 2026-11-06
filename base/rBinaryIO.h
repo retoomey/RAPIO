@@ -158,17 +158,17 @@ public:
   /** Take ownership of a passed in std::vector<char>.  This
    * allows us to avoid copying in certain cases */
   explicit MemoryStreamBuffer(std::vector<char>&& data)
-    : data(std::move(data)), marker(0){ }
+    : myData(std::move(data)), myMarker(0){ }
 
   /** Create an empry MemoryStreamBuffer, typically for
    * writing/appending to */
-  explicit MemoryStreamBuffer() : marker(0){ }
+  explicit MemoryStreamBuffer() : myMarker(0){ }
 
   /** Check overflow of memory buffer during read operations */
   inline void
   ensureAvailable(size_t bytes) const
   {
-    if (marker + bytes > data.size()) {
+    if (myMarker + bytes > myData.size()) {
       throw std::out_of_range("Not enough space in memory buffer");
     }
   }
@@ -178,11 +178,11 @@ public:
   makeSpace(size_t size)
   {
     // Calculate the required new size (current marker + bytes to write)
-    size_t requiredSize = marker + size;
+    size_t requiredSize = myMarker + size;
 
     // If the required size exceeds the current capacity, resize the vector
-    if (requiredSize > data.size()) {
-      data.resize(requiredSize);
+    if (requiredSize > myData.size()) {
+      myData.resize(requiredSize);
     }
   }
 
@@ -261,14 +261,14 @@ public:
   tell() const override;
 
   /** Memory buffer only, get reference to the data */
-  std::vector<char> * getData(){ return &data; }
+  std::vector<char> * getData(){ return &myData; }
 
 private:
   /** Reference to buffer passed in by caller */
-  std::vector<char> data;
+  std::vector<char> myData;
 
   /** Location in the vector we're at */
-  size_t marker;
+  size_t myMarker;
 };
 
 /** Wrap a FILE*
@@ -375,7 +375,7 @@ private:
  */
 class GzipFileStreamBuffer : public StreamBuffer {
 public:
-  explicit GzipFileStreamBuffer(gzFile gzfile) : gzfile(gzfile){ }
+  explicit GzipFileStreamBuffer(gzFile gzfilein) : gzfile(gzfilein){ }
 
   /** Reads an integer from the stream buffer */
   int

@@ -13,7 +13,7 @@ FetchContent_Declare(
     GIT_TAG        ${SIMPLE_WEB_SERVER_GIT_TAG} # From dependencies.cmake
 )
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(simple-web-server)
+rapioFetchContentMakeAvailable(simple-web-server)
 FetchContent_GetProperties(simple-web-server SOURCE_DIR SWS_SRC_DIR)
 
 # Set variable of all sources we use
@@ -186,15 +186,17 @@ target_include_directories(rapio_interface INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/image>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generator>
 
-  # Use the fetched directory for the web server headers
-  $<BUILD_INTERFACE:${SWS_SRC_DIR}>
-
   # Get the generated config.h
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
  
   # GUNInstall uses INCLUDEDIR not INCLUDE_DIR like everything else
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/rapio>
+)
+
+# Use the fetched directory for the web server headers as SYSTEM so 3rd-party warnings are suppressed
+target_include_directories(rapio_interface SYSTEM INTERFACE
+  $<BUILD_INTERFACE:${SWS_SRC_DIR}>
 )
 
 # Definition for rapio_interface

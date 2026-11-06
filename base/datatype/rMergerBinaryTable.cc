@@ -51,7 +51,6 @@ WObsBinaryTable::readBlock(const std::string& path, FILE * fp)
     fLogInfo("RAW INFO: {}/{},{},{},{},{},{}", typeName, unit, lat, lon, ht, data_time, valid_time);
     // Handle the marked lines reading in...
     BinaryIO::read_string8(markedLinesCacheFile, fp);
-    std::vector<Line> markedLines;
     if (markedLinesCacheFile == "") {
       BinaryIO::read_vector(markedLines, fp);
     } else {

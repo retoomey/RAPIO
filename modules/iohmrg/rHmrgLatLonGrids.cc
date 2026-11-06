@@ -474,8 +474,8 @@ HmrgLatLonGrids::writeLatLonGrids(StreamBuffer& g, std::shared_ptr<LatLonArea> l
       size_t ez = static_cast<size_t>(num_z);
       for (size_t z = 0; z < ez; ++z) {
         // Each 3D is a 2N layer here
-        auto llg = lln.get(z);
-        auto& data = llg->getFloat2DRef();
+        auto layerGrid = lln.get(z);
+        auto& data = layerGrid->getFloat2DRef();
 
         for (size_t j = ey; j != SIZE_MAX; --j) {
           for (size_t i = 0; i < ex; ++i) { // row order for the data, so read in order

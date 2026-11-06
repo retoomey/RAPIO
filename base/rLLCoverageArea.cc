@@ -492,12 +492,12 @@ LLCoverageArea::parse(std::string_view grid, std::string_view t, std::string_vie
 
   // --------------------------------------------------
   // Parse the grid function/param list
-  AngleDegs nwLatDegs  = 55.0;
-  AngleDegs nwLonDegs  = -130.0;
-  AngleDegs seLatDegs  = 20.0;
-  AngleDegs seLonDegs  = -60.0;
-  AngleDegs latSpacing = 0.01;
-  AngleDegs lonSpacing = 0.01;
+  AngleDegs nwLatDegs      = 55.0;
+  AngleDegs nwLonDegs      = -130.0;
+  AngleDegs seLatDegs      = 20.0;
+  AngleDegs seLonDegs      = -60.0;
+  AngleDegs latSpacingDegs = 0.01;
+  AngleDegs lonSpacingDegs = 0.01;
   bool failed = false;
   bool haveNW = false;
   bool haveSE = false;
@@ -519,7 +519,7 @@ LLCoverageArea::parse(std::string_view grid, std::string_view t, std::string_vie
     } else if (f == "se") {
       haveSE = !parseDegrees(f, p, seLatDegs, seLonDegs);
     } else if (f == "s") {
-      haveS = !parseDegrees(f, p, latSpacing, lonSpacing);
+      haveS = !parseDegrees(f, p, latSpacingDegs, lonSpacingDegs);
     } else if (f == "h") {
       haveH = !parseHeights(f, p, theHeightsKM);
     } else {
@@ -562,16 +562,16 @@ LLCoverageArea::parse(std::string_view grid, std::string_view t, std::string_vie
   }
 
   // Ok calculate the GRID dimensions, we do the x y first and get any spacing from that
-  int x = (seLonDegs - nwLonDegs) / lonSpacing;
+  int x = (seLonDegs - nwLonDegs) / lonSpacingDegs;
 
   if (x < 0) { x = -x; }
-  int y = (nwLatDegs - seLatDegs) / latSpacing;
+  int y = (nwLatDegs - seLatDegs) / latSpacingDegs;
 
   if (y < 0) { y = -y; }
 
   set(nwLatDegs, nwLonDegs,
     seLatDegs, seLonDegs,
-    latSpacing, lonSpacing,
+    latSpacingDegs, lonSpacingDegs,
     x,
     y);
   heightsKM = theHeightsKM;

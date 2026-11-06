@@ -19,11 +19,12 @@ namespace rapio
  * */
 class ColorBin {
 public:
-  ColorBin(bool l, std::string_view label,
+  ColorBin(bool linear, std::string_view label,
     double l_, double u_,
     unsigned char& r_, unsigned char& g_, unsigned char& b_, unsigned char& a_,
     unsigned char& r2_, unsigned char& g2_, unsigned char& b2_, unsigned char& a2_
-  ) : myLabel(label), myIsLinear(l), l(l_), u(u_), r(r_), g(g_), b(b_), a(a_), r2(r2_), g2(g2_), b2(b2_), a2(a2_), d(std::abs(
+  ) : myLabel(label), myIsLinear(linear), l(l_), u(u_), r(r_), g(g_), b(b_), a(a_), r2(r2_), g2(g2_), b2(b2_), a2(a2_),
+    d(std::abs(
         u_ - l_)){ };
 
   std::string myLabel;

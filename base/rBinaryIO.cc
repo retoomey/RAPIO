@@ -26,10 +26,10 @@ GzipFileStreamBuffer::seek(size_t position)
 bool
 MemoryStreamBuffer::seek(size_t position)
 {
-  if (position > data.size()) {
+  if (position > myData.size()) {
     return false;
   }
-  marker = position;
+  myMarker = position;
   return true;
 }
 
@@ -48,7 +48,7 @@ GzipFileStreamBuffer::tell() const
 size_t
 MemoryStreamBuffer::tell() const
 {
-  return marker;
+  return myMarker;
 }
 
 void
@@ -96,7 +96,7 @@ GzipFileStreamBuffer::backward(size_t count)
 void
 MemoryStreamBuffer::backward(size_t count)
 {
-  marker -= count;
+  myMarker -= count;
 }
 
 void
@@ -136,7 +136,7 @@ GzipFileStreamBuffer::forward(size_t count)
 void
 MemoryStreamBuffer::forward(size_t count)
 {
-  marker += count;
+  myMarker += count;
 }
 
 int
@@ -290,8 +290,8 @@ MemoryStreamBuffer::readInt()
   ensureAvailable(sizeof(int));
   int temp;
 
-  std::memcpy(&temp, &data[marker], sizeof(int));
-  marker += sizeof(int);
+  std::memcpy(&temp, &myData[myMarker], sizeof(int));
+  myMarker += sizeof(int);
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   return temp;
 }
@@ -304,8 +304,8 @@ MemoryStreamBuffer::writeInt(int i)
   int temp = i;
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
-  std::memcpy(&data[marker], &temp, sizeof(int));
-  marker += sizeof(int);
+  std::memcpy(&myData[myMarker], &temp, sizeof(int));
+  myMarker += sizeof(int);
 }
 
 short
@@ -314,8 +314,8 @@ MemoryStreamBuffer::readShort()
   ensureAvailable(sizeof(short));
   short temp;
 
-  std::memcpy(&temp, &data[marker], sizeof(short));
-  marker += sizeof(short);
+  std::memcpy(&temp, &myData[myMarker], sizeof(short));
+  myMarker += sizeof(short);
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
 
   return temp;
@@ -327,8 +327,8 @@ MemoryStreamBuffer::readFloat()
   ensureAvailable(sizeof(float));
   float temp;
 
-  std::memcpy(&temp, &data[marker], sizeof(float));
-  marker += sizeof(float);
+  std::memcpy(&temp, &myData[myMarker], sizeof(float));
+  myMarker += sizeof(float);
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
 
   return temp;
@@ -342,8 +342,8 @@ MemoryStreamBuffer::writeFloat(float f)
   float temp = f;
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
-  std::memcpy(&data[marker], &temp, sizeof(float));
-  marker += sizeof(float);
+  std::memcpy(&myData[myMarker], &temp, sizeof(float));
+  myMarker += sizeof(float);
 }
 
 void
@@ -354,8 +354,8 @@ MemoryStreamBuffer::writeShort(short s)
   short temp = s;
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
-  std::memcpy(&data[marker], &temp, sizeof(short));
-  marker += sizeof(short);
+  std::memcpy(&myData[myMarker], &temp, sizeof(short));
+  myMarker += sizeof(short);
 }
 
 char
@@ -511,7 +511,7 @@ char
 MemoryStreamBuffer::readChar()
 {
   ensureAvailable(sizeof(char));
-  char ch = data[marker++];
+  char ch = myData[myMarker++];
 
   return ch;
 }
@@ -520,24 +520,24 @@ void
 MemoryStreamBuffer::writeChar(char c)
 {
   makeSpace(sizeof(char));
-  data[marker++] = c;
+  myData[myMarker++] = c;
 }
 
 std::string
 MemoryStreamBuffer::readString(size_t length)
 {
   // Check if there is enough data left to read
-  if (marker + length > data.size()) {
+  if (myMarker + length > myData.size()) {
     throw std::out_of_range("Not enough data in memory buffer to read string");
   }
 
   // Read `length` bytes from the memory buffer
   std::string result(length + 1, '\0'); // Create a string with space for `length` bytes + null terminator
 
-  std::memcpy(&result[0], &data[marker], length);
+  std::memcpy(&result[0], &myData[myMarker], length);
 
   // Advance the marker
-  marker += length;
+  myMarker += length;
 
   // Find the first occurrence of '\0' within the read portion
   auto pos = std::find(result.begin(), result.begin() + length, '\0');
@@ -562,17 +562,17 @@ MemoryStreamBuffer::writeString(const std::string& c, size_t length)
 
   // 2. Copy the string content
   if (toCopy > 0) {
-    std::memcpy(&data[marker], c.data(), toCopy);
+    std::memcpy(&myData[myMarker], c.data(), toCopy);
   }
 
   // 3. Pad with null characters if the string is shorter than 'length'
   if (toCopy < length) {
     size_t padding = length - toCopy;
-    std::memset(&data[marker + toCopy], '\0', padding);
+    std::memset(&myData[myMarker + toCopy], '\0', padding);
   }
 
   // 4. Advance the marker by the fixed length
-  marker += length;
+  myMarker += length;
 }
 
 void
@@ -581,10 +581,10 @@ MemoryStreamBuffer::readVector(void * data, size_t size)
   ensureAvailable(size); // Check if 'size' bytes are available for reading
 
   // Copy 'size' bytes from the memory buffer at 'marker' to the external buffer 'data'
-  std::memcpy(data, &this->data[marker], size);
+  std::memcpy(data, &myData[myMarker], size);
 
   // Advance the marker
-  marker += size;
+  myMarker += size;
 }
 
 void
@@ -593,10 +593,10 @@ MemoryStreamBuffer::writeVector(const void * data, size_t size)
   makeSpace(size); // Check if we have space to write 'size' bytes
 
   // Copy 'size' bytes from the external buffer 'data' to the memory buffer at 'marker'
-  std::memcpy(&this->data[marker], data, size);
+  std::memcpy(&myData[myMarker], data, size);
 
   // Advance the marker
-  marker += size;
+  myMarker += size;
 }
 
 // FIXME: We could generalize to take a passed filter
@@ -607,7 +607,7 @@ MemoryStreamBuffer::readBZIP2()
 
   try{
     BZIP2DataFilter bz2;
-    bz2.apply(data, destination, tell(), 0);
+    bz2.apply(myData, destination, tell(), 0);
     // fLogInfo("Destination size {} to {}", data.size(), destination.size());
   }catch (std::exception& e) {
     fLogSevere("BZIP2 uncompress Failed: {}", e.what());
@@ -625,7 +625,7 @@ MemoryStreamBuffer::writeBZIP2()
 
   try{
     BZIP2DataFilter bz2;
-    bz2.reverse(data, destination, 0, 0);
+    bz2.reverse(myData, destination, 0, 0);
     // fLogInfo("Source size {} and {}", data.size(), destination.size());
   }catch (std::exception& e) {
     fLogSevere("BZIP2 compression failed: {}", e.what());

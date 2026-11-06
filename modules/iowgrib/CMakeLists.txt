@@ -20,13 +20,11 @@ ExternalProject_Add(
              # Wgrib2 links to g2c:g2c target so we need dynamic and shared
              -DBUILD_SHARED_LIBS=ON   # Build the libg2c.so  (wgrib2 calls g2c:g2c not g2c_static)
              -DBUILD_STATIC_LIBS=OFF   # Build the libg2c.a.  wgrib2 won't use it currently
-             -DCMAKE_C_FLAGS=-fPIC     # And have Position Independent Code
-                                       # required to hard link it
+             "-DCMAKE_C_FLAGS=-fPIC -w" # Position Independent Code and suppress warnings for 3rd party
              -DUSE_PNG=ON              # Use png (default on)
              -DUSE_OpenJPEG=${RAPIO_USE_OPENJPEG} # openjpeg
              -DUSE_Jasper=${RAPIO_USE_JASPER} # jasper
              -DBUILD_TESTING:BOOL=OFF  # Build the tst_ binaries
-             -DCMAKE_C_FLAGS=-w        # Suppress warnings for 3rd party
   INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
   # This prevents CMake from failing if the file doesn't exist yet
   BUILD_BYPRODUCTS "${G2C_LIB_FILE}"

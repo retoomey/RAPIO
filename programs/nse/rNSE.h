@@ -41,10 +41,10 @@ public:
 
   /** convert winds from grid-relatite to earth-relative */
   virtual void
-  convertWinds(std::shared_ptr<LatLonGrid> ugrid,
-    std::shared_ptr<LatLonGrid> vgrid,
-    std::shared_ptr<LatLonGrid> &uwind,
-    std::shared_ptr<LatLonGrid> &vwind,
+  convertWinds(std::shared_ptr<LatLonGrid> inUGrid,
+    std::shared_ptr<LatLonGrid> inVGrid,
+    std::shared_ptr<LatLonGrid> &outUWind,
+    std::shared_ptr<LatLonGrid> &outVWind,
     float lat, float lon);
 protected:
 

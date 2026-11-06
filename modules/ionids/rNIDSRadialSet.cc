@@ -161,9 +161,9 @@ NIDSRadialSet::readNIDS(
         const float * p = mvalues.data();
         NIDSUtil::valueToColorD3(decoded, p, mvalues.size(), colors2);
 
-        for (size_t i = 0; i < colors2.size(); i++) {
-          if (color_codes[i] != colors2[i]) {
-            fLogSevere("Mismatch at {} G: {} != {}", i, color_codes[i], colors2[i]);
+        for (size_t j = 0; j < colors2.size(); j++) {
+          if (color_codes[j] != colors2[j]) {
+            fLogSevere("Mismatch at {} G: {} != {}", j, color_codes[j], colors2[j]);
           }
         }
         // -------

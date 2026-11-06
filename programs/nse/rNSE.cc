@@ -264,8 +264,8 @@ NSEAlg::processNewData(RAPIOData& d)
             std::vector<std::string> windinfo;
             Strings::split(mFields[i].rotateWinds, ':', &windinfo);
             fLogInfo("windinfo:  ");
-            for (size_t i = 0; i < windinfo.size(); i++) {
-              fLogInfo("{}:\"{}\"", i, windinfo[i]);
+            for (size_t j = 0; j < windinfo.size(); j++) {
+              fLogInfo("{}:\"{}\"", j, windinfo[j]);
             }
             fLogInfo("");
             if (windinfo.size() > 0) {
@@ -375,33 +375,33 @@ NSEAlg::processNewData(RAPIOData& d)
 } // NSEAlg::processNewData
 
 void
-NSEAlg::convertWinds(std::shared_ptr<LatLonGrid> ugrid,
-  std::shared_ptr<LatLonGrid> vgrid,
-  std::shared_ptr<LatLonGrid> &uwind,
-  std::shared_ptr<LatLonGrid> &vwind,
+NSEAlg::convertWinds(std::shared_ptr<LatLonGrid> inUGrid,
+  std::shared_ptr<LatLonGrid> inVGrid,
+  std::shared_ptr<LatLonGrid> &outUWind,
+  std::shared_ptr<LatLonGrid> &outVWind,
   float xlat1, float cenlon)
 {
-  uwind = ugrid->Clone();
-  vwind = vgrid->Clone();
+  outUWind = inUGrid->Clone();
+  outVWind = inVGrid->Clone();
 
   float DTR    = 3.1415926 / 180.0;
   float cocon  = sin(xlat1 * DTR);
-  auto& ugrid_ = ugrid->getFloat2DRef();
-  auto& vgrid_ = vgrid->getFloat2DRef();
-  auto& uwind_ = uwind->getFloat2DRef();
-  auto& vwind_ = vwind->getFloat2DRef();
+  auto& ugrid_ = inUGrid->getFloat2DRef();
+  auto& vgrid_ = inVGrid->getFloat2DRef();
+  auto& uwind_ = outUWind->getFloat2DRef();
+  auto& vwind_ = outVWind->getFloat2DRef();
   // order here is vwind[lat][lon]
-  LLH nwcorner = ugrid->getLocation();
+  LLH nwcorner = inUGrid->getLocation();
 
-  for (size_t j = 0; j < ugrid->getNumLats(); j++) {   // lat
-    for (size_t i = 0; i < ugrid->getNumLons(); i++) { // lon
+  for (size_t j = 0; j < inUGrid->getNumLats(); j++) {   // lat
+    for (size_t i = 0; i < inUGrid->getNumLons(); i++) { // lon
       // this needs to be its own function
       // based on EMC code (FORTRAN subroutine W3FC03)
       // https://www.emc.ncep.noaa.gov/mmb/rreanl/w3fc03.f
       // also see this, as the code may not be relevant in the
       // S. hemisphere and at the poles (needs to be checked)
       // https://www.lib.ncep.noaa.gov/ncepofficenotes/files/014082A4.pdf
-      LLH llhs    = ugrid->getCenterLocationAt(j, i);
+      LLH llhs    = inUGrid->getCenterLocationAt(j, i);
       float slon  = llhs.getLongitudeDeg();
       float angle = cocon * (slon - cenlon) * DTR;
       float a     = cos(angle);

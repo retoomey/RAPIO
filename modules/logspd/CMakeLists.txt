@@ -6,7 +6,7 @@ FetchContent_Declare(
     GIT_TAG        ${SPDLOG_GIT_TAG} # see cmake/dependencies.cmake
 )
 
-FetchContent_MakeAvailable(spdlog)
+rapioFetchContentMakeAvailable(spdlog)
 
 # Force spdlog to be PIC (shared library friendly)
 set_target_properties(spdlog PROPERTIES
