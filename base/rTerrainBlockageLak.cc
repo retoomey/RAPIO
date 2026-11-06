@@ -12,7 +12,7 @@ namespace
 {
 const size_t NUM_RAYS = 7200;
 const float ANGULAR_RESOLUTION = 360.0 / NUM_RAYS;
-};
+}
 
 std::shared_ptr<TerrainBlockage>
 TerrainBlockageLak::create(const std::string & params,

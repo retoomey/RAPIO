@@ -25,7 +25,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 std::string
 IOGDAL::getHelpString(const std::string&)

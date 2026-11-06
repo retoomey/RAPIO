@@ -33,7 +33,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 std::string
 IOWgrib::getHelpString(const std::string&)

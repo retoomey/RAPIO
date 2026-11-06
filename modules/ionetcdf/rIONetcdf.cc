@@ -36,7 +36,7 @@ createRAPIOIO(void)
   z->initialize();
   return reinterpret_cast<void *>(z);
 }
-};
+}
 
 float IONetcdf::MISSING_DATA = Constants::MissingData;
 float IONetcdf::RANGE_FOLDED = Constants::RangeFolded;

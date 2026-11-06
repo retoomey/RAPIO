@@ -14,7 +14,7 @@ NamedAnyList::Clone() const
     clonedList->myAttributes.push_back(std::move(c));
   }
   return clonedList;
-};
+}
 
 int
 NamedAnyList::index(std::string_view name) const

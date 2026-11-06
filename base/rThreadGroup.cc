@@ -17,7 +17,7 @@ WriteOutputThreadTask::execute()
   // Will need the app pointer.
   //  app->writeOutputProduct(myProductKey, myDataType, myExtraParams);
   markDone();
-};
+}
 
 ThreadGroup::ThreadGroup(size_t maxWorkers, size_t maxQueueSize)
   : myMaxWorkers(maxWorkers), myMaxQueueSize(maxQueueSize), myStop(false)
