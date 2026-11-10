@@ -27,7 +27,7 @@ public:
   virtual std::string
   getHelpString(const std::string& /*fkey*/) override
   {
-    #ifdef HAVE_REDIS
+    #ifdef HAVE_HIREDIS
     return "Publish FML records to a Redis channel.\n  Example: redis=my_channel";
 
     #else
@@ -123,8 +123,10 @@ RedisRecordNotifier::publish([[maybe_unused]] const std::string& payload)
   #ifdef HAVE_REDIS
   redisContext * c = (redisContext *) myContext;
 
-  // PUBLISH channel message
-  redisReply * reply = (redisReply *) redisCommand(c, "PUBLISH %s %s", myChannel.c_str(), payload.c_str());
+  // PUBLISH channel message safely as binary data to handle spaces and newlines in XML
+  redisReply * reply =
+    (redisReply *) redisCommand(c, "PUBLISH %s %b", myChannel.c_str(), payload.data(),
+      static_cast<size_t>(payload.size()));
 
   if (reply == nullptr) {
     fLogSevere("Redis PUBLISH failed, lost connection?");

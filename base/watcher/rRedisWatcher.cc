@@ -20,7 +20,7 @@ using namespace rapio;
 const std::string RedisWatcher::REDIS_WATCH = "redis";
 
 void
-RedisWatcher::RedisInfo::createEvents(WatcherType *)
+RedisWatcher::RedisInfo::createEvents([[maybe_unused]] WatcherType * w)
 {
   #ifdef HAVE_HIREDIS
   if (!myConnected || !myContext) {
@@ -114,7 +114,7 @@ RedisWatcher::RedisInfo::connect()
 
   // 2. Set to NON-BLOCKING mode
   // Hiredis handles the fcntl(O_NONBLOCK) logic internally via this call
-  redisSetTimeout(c, (struct timeval){ 0, 0 });
+  redisSetTimeout(c, timeval{ 0, 0 });
   // int flags = fcntl(c->fd, F_GETFL, 0);
   // fcntl(c->fd, F_SETFL, flags | O_NONBLOCK);
 

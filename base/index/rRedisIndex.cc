@@ -29,7 +29,7 @@ RedisIndex::~RedisIndex()
 std::string
 RedisIndex::getHelpString(const std::string& /*fkey*/)
 {
-  #ifdef HAVE_REDIS
+  #ifdef HAVE_HIREDIS
   return "Use a Redis channel for .fml metadata files.";
 
   #else
