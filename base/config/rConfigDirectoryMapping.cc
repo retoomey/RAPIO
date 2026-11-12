@@ -30,6 +30,9 @@ ConfigDirectoryMapping::readInSettings()
         // Snag attributes
         const auto from = r.getAttr("from", std::string(""));
         const auto to   = r.getAttr("to", std::string(""));
+        if (!from.empty()) {
+          myMappings[from] = to;
+        }
       }
     }
   }catch (const std::exception& e) {

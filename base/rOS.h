@@ -282,19 +282,24 @@ public:
     if (library == NULL) {
       fLogSevere("Cannot load requested module: {}:{}", module, dlerror());
     } else {
-      // dlerror(); // why this here?
+      dlerror(); // Clear any existing error state
       fLogInfo("Loaded requested module: {}", module);
       typedef T * create_h ();
       create_h * create_handler = (create_h *)  dlsym(library, function.c_str());
       const char * dlsym_error  = dlerror();
       if (dlsym_error) {
         fLogSevere("Missing {} routine in module {}", function, module);
+        dlclose(library);
       } else {
         T * working = create_handler();
         if (working != nullptr) {
-          std::shared_ptr<T> newOne(working);
+          std::shared_ptr<T> newOne(working, [library](T * ptr) {
+            delete ptr;
+            dlclose(library);
+              });
           return newOne;
         }
+        dlclose(library);
       }
     }
     return nullptr;

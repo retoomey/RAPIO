@@ -62,6 +62,9 @@ public:
   VolumeValueResolver() : myGlobalWeight(1.0), myVarianceWeight(1.0 / 62500.0), myMissing(Constants::MissingData),
     myUnavailable(Constants::DataUnavailable){ }
 
+  virtual
+  ~VolumeValueResolver() = default;
+
   /** Use this to introduce default built-in RAPIO VolumeValueResolver subclasses.
    * Note: You don't have to use this ability, it's not called by default algorithm.
    * To use it, call VolumeValueResolver::introduceSelf()

@@ -69,8 +69,11 @@ applyBOOSTOstream(std::vector<char>& input, std::vector<char>& output, bi::filte
     os.push(bi::back_inserter(output));
     bi::write(os, input.data(), input.size());
     os.flush(); // _HAVE_ to do this or data's clipped, not online anywhere lol
-  }catch (const bi::gzip_error& e) {
+  }catch (const std::exception& e) {
     fLogSevere("Filter failure on stream: {}", e.what()); // Let caller notify?
+    return false;
+  }catch (...) {
+    fLogSevere("Unknown filter failure on stream");
     return false;
   }
   return true;
@@ -104,8 +107,11 @@ applyBOOSTOstreamNew(
     os.push(bi::back_inserter(output));
     bi::write(os, start_ptr, length);
     os.flush();
-  }catch (const bi::gzip_error& e) {
+  }catch (const std::exception& e) {
     fLogSevere("Filter failure on stream: {}", e.what());
+    return false;
+  }catch (...) {
+    fLogSevere("Unknown filter failure on stream");
     return false;
   }
   return true;
@@ -265,7 +271,7 @@ LZMADataFilter::introduceSelf()
 
 bool
 LZMADataFilter::apply(std::vector<char>& input, std::vector<char>& output,
-  size_t startIndex, size_t length)
+  size_t /*startIndex*/, size_t /*length*/)
 {
   bi::filtering_ostream os;
 
@@ -275,7 +281,7 @@ LZMADataFilter::apply(std::vector<char>& input, std::vector<char>& output,
 
 bool
 LZMADataFilter::applyURL(const URL& infile, const URL& outfile,
-  std::map<std::string, std::string> &params)
+  std::map<std::string, std::string> & /*params*/)
 {
   bi::filtering_streambuf<bi::output> outbuf;
 

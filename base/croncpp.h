@@ -353,7 +353,7 @@ namespace cron
          }
       }
 
-      static std::string replace_ordinals(
+      [[maybe_unused]] static std::string replace_ordinals(
          std::string text,
          std::vector<std::string> const & replacement)
       {

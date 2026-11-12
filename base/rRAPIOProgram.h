@@ -24,6 +24,9 @@ public:
   /** Construct a stock program */
   RAPIOProgram(std::string_view display = "Program") : myDisplayClass(display), myMacroApplied(false){ };
 
+  virtual
+  ~RAPIOProgram() = default;
+
   /**
    * @name Public API
    * Methods you typically override in order to create you own program/algorithm

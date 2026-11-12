@@ -27,6 +27,9 @@ public:
   /** Default create a DataFilter */
   DataFilter(){ }
 
+  virtual
+  ~DataFilter() = default;
+
   // Registering of classes ---------------------------------------------
 
   /** Introduce self into factories */

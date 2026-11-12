@@ -23,6 +23,9 @@ public:
   /** Construct a stock algorithm */
   RAPIOAlgorithm(std::string_view display = "Algorithm") : RAPIOProgram(display){ };
 
+  virtual
+  ~RAPIOAlgorithm() = default;
+
   /** Add a static key for the -O help.  Note that keys can be static, such as
    * '2D' to refer to a class of product, or currently you can also use the
    * DataType typename as a dynamic key. This allows turning on/off products
