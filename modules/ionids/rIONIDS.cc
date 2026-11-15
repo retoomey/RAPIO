@@ -3,7 +3,14 @@
 #include "rBinaryIO.h"
 
 // Default built in DataType support
+#include "rNIDSHailIndexTable.h"
+#include "rNIDSMesoDetectionTable.h"
+#include "rNIDSMesoTable.h"
 #include "rNIDSRadialSet.h"
+#include "rNIDSSTITable.h"
+#include "rNIDSStormCellTable.h"
+#include "rNIDSStormStructureTable.h"
+#include "rNIDSTVSTable.h"
 
 #include "rConfigNIDSInfo.h"
 
@@ -44,6 +51,13 @@ IONIDS::initialize()
 {
   // Add the default classes we handle...
   NIDSRadialSet::introduceSelf(this);
+  NIDSHailIndexTable::introduceSelf(this);
+  NIDSMesoDetectionTable::introduceSelf(this);
+  NIDSMesoTable::introduceSelf(this);
+  NIDSSTITable::introduceSelf(this);
+  NIDSStormCellTable::introduceSelf(this);
+  NIDSStormStructureTable::introduceSelf(this);
+  NIDSTVSTable::introduceSelf(this);
 }
 
 IONIDS::~IONIDS()
@@ -130,10 +144,16 @@ IONIDS::createDataType(IOConfig& config)
     header.dump();
     const auto expectedSize = header.getMsgLength();
 
-    // Check the length given by message matches the full byte size.
-    // This is the number minus the headers of course
-    if (expectedSize == dataSize) {
+    // Check that the buffer contains at least the message length reported by the header.
+    // Trailing bytes (e.g. WMO footers or LDM padding) are allowed.
+    if (dataSize == expectedSize) {
       fLogInfo("NIDS header/size match: {} bytes.", expectedSize);
+    } else if (dataSize > expectedSize) {
+      fLogInfo(
+        "NIDS message size {} bytes, buffer has {} bytes ({} trailing padding bytes).",
+        expectedSize,
+        dataSize,
+        dataSize - expectedSize);
     } else {
       fLogSevere("Expected {} bytes, but we have {}", expectedSize, dataSize);
       throw(std::runtime_error("Invalid NIDS data size."));

@@ -93,9 +93,9 @@ NIDSUtil::getGenericColors(const std::vector<char> & src,
 
 void
 NIDSUtil::colorToValueD1(
-  const std::vector<int>   & colors,
+  const std::vector<int> & colors,
   const std::vector<float> & /*thresholds*/,
-  std::vector<float>       & values)
+  std::vector<float>     & values)
 {
   // Originally for Product 164
   // Took 165 and 177 out since scaling by 10 seems to mess it up as per Steve Honey @ WSI
@@ -109,9 +109,9 @@ NIDSUtil::colorToValueD1(
 
 void
 NIDSUtil::colorToValueD2(
-  const std::vector<int>   & colors,
+  const std::vector<int> & colors,
   const std::vector<float> & /*thresholds*/,
-  std::vector<float>       & values)
+  std::vector<float>     & values)
 {
   // Originally for Product 165, 176, 177
 
@@ -134,7 +134,11 @@ NIDSUtil::colorToValueD3(
   /* this is for FSI compatability with AWIPS,
    * which doesn't use averaging for this product */
   for (size_t i = 0; i < colors.size(); ++i) {
-    values.push_back(thresholds[ colors[i] ]);
+    if ((colors[i] < 0) || (static_cast<size_t>(colors[i]) >= thresholds.size())) {
+      values.push_back(Constants::MissingData);
+    } else {
+      values.push_back(thresholds[ colors[i] ]);
+    }
   }
 }
 
@@ -148,8 +152,9 @@ NIDSUtil::valueToColorD3(
   // Originally for Product
   // 94, 99, 153, 154, 155, 159, 161, 163
 
-  const bool m = (values[0] == Constants::MissingData);
-  const bool r = (values[1] == Constants::RangeFolded);
+  const bool m        = (!thresholds.empty()) && (thresholds[0] == Constants::MissingData);
+  const bool r        = (thresholds.size() > 1) && (thresholds[1] == Constants::RangeFolded);
+  const size_t offset = (m ? 1 : 0) + (r ? 1 : 0);
 
   /* this is for FSI compatability with AWIPS,
    * which doesn't use averaging for this product */
@@ -161,7 +166,7 @@ NIDSUtil::valueToColorD3(
     } else if (values[i] == Constants::RangeFolded) {
       color = r ? 1 : 0;
     } else {
-      auto it = std::upper_bound(thresholds.begin(), thresholds.end(), values[i]);
+      auto it = std::upper_bound(thresholds.begin() + offset, thresholds.end(), values[i]);
       color = (it - thresholds.begin()) - 1;
     }
     colors.push_back(color);
@@ -176,17 +181,21 @@ NIDSUtil::colorToValueD4(
 {
   // Fallback for products
   for (size_t i = 0; i < colors.size(); ++i) {
+    const int c = colors[i];
+    if ((c < 0) || (static_cast<size_t>(c) >= thresholds.size())) {
+      values.push_back(Constants::MissingData);
+      continue;
+    }
+
     double val;
-    if ( (!thresholds.empty()) &&
-      (thresholds [ colors[i] ] <= -99900 ) )
-    {
-      val = thresholds[ colors[i] ];
+    if (thresholds[c] <= -99900) {
+      val = thresholds[c];
     } else {
-      const float left = thresholds[ colors[i] ];
-      if ((i + 1) >= thresholds.size()) {
+      const float left = thresholds[c];
+      if (static_cast<size_t>(c + 1) >= thresholds.size()) {
         val = left;
       } else {
-        const float right = thresholds[ colors[i] + 1 ];
+        const float right = thresholds[c + 1];
         val = ( left + right ) / 2.0;
       }
     }

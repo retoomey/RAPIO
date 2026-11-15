@@ -60,6 +60,10 @@ public:
   /** Get the number of radials */
   size_t getNumRadials(){ return myNumRadials; }
 
+  /** Whether this block contained a Packet 1 null product */
+  bool
+  isNullPacket() const { return myIsNullPacket; }
+
   /** Get the write size of this block.  Most are static. */
   size_t
   size() const
@@ -84,12 +88,13 @@ public:
 public:
   // protected:
 
-  short myPacketCode;     ///< Packet Type x'AF1F' or 16 or 28
-  short myIndexFirstBin;  ///< Index of first range bin
-  short myNumRangeBin;    ///< Number of range bins comprising a radial
-  short myCenterOfSweepI; ///< I coordinate of center of sweep
-  short myCenterOfSweepJ; ///< J coordinate of center of sweep
-  short myScaleFactor;    ///< Number of pixels per range bin
-  short myNumRadials;     ///< Total number of radials in products
+  short myPacketCode;          ///< Packet Type x'AF1F' or 16 or 28
+  short myIndexFirstBin;       ///< Index of first range bin
+  short myNumRangeBin;         ///< Number of range bins comprising a radial
+  short myCenterOfSweepI;      ///< I coordinate of center of sweep
+  short myCenterOfSweepJ;      ///< J coordinate of center of sweep
+  short myScaleFactor;         ///< Number of pixels per range bin
+  short myNumRadials;          ///< Total number of radials in products
+  bool myIsNullPacket = false; ///< True when packet code 1 (null product) is encountered
 };
 }

@@ -150,6 +150,55 @@ NIDSInfo::getGateWidthMeters() const
   }
 }
 
+AngleDegs
+NIDSInfo::getBeamWidthDegs() const
+{
+  const size_t xPos = myResolution.find('x');
+
+  if ((xPos == std::string::npos) || ((xPos + 1) >= myResolution.size())) {
+    return 1.0f;
+  }
+
+  try {
+    const float value = std::stof(myResolution.substr(xPos + 1));
+    return (value > 0.0f) ? value : 1.0f;
+  }catch (const std::exception&) {
+    return 1.0f;
+  }
+}
+
+size_t
+NIDSInfo::getNullProductNumGates() const
+{
+  if (myRange <= 0) {
+    return 1;
+  }
+
+  const size_t xPos = myResolution.find('x');
+  const std::string depthStr =
+    (xPos == std::string::npos) ? myResolution : myResolution.substr(0, xPos);
+
+  if (depthStr.empty()) {
+    return 1;
+  }
+
+  float depth = 0.0f;
+
+  try {
+    depth = std::stof(depthStr);
+  }catch (const std::exception&) {
+    return 1;
+  }
+
+  if (depth <= 0.0f) {
+    return 1;
+  }
+
+  const float gates = (static_cast<float>(myRange) / depth) + 0.5f;
+
+  return (gates >= 1.0f) ? static_cast<size_t>(gates) : 1;
+}
+
 std::ostream&
 rapio::operator << (std::ostream& os, const NIDSInfo& n)
 {

@@ -12,6 +12,47 @@
 using namespace rapio;
 using namespace std;
 
+namespace {
+std::shared_ptr<RadialSet>
+createNullRadialSet(
+  const NIDSInfo   & info,
+  BlockProductDesc & d,
+  AngleDegs        elevAngleDegs)
+{
+  AngleDegs width = info.getBeamWidthDegs();
+
+  if (width <= 0.0f) {
+    width = 1.0f;
+  }
+  const size_t out_num_radials = static_cast<size_t>((360.0f / width) + 0.5f);
+  const size_t num_gates       = info.getNullProductNumGates();
+  const LengthMs gate_width    = info.getGateWidthMeters();
+  const LengthMs firstGateDistanceMeters = gate_width;
+
+  auto radialSetSP = RadialSet::Create(info.getProductName(), info.getUnits(),
+      d.getLocation(), d.getVolumeStartTime(), elevAngleDegs,
+      firstGateDistanceMeters, gate_width, out_num_radials, num_gates);
+
+  radialSetSP->setVCP(d.getVCP());
+
+  ArrayFloat2DPtr myOutputArray = radialSetSP->getFloat2DPtr();
+  ArrayFloat1DPtr bwDegs        = radialSetSP->getFloat1DPtr(RadialSet::BeamWidth);
+  ArrayFloat1DPtr azDegs        = radialSetSP->getFloat1DPtr(RadialSet::Azimuth);
+  ArrayFloat1DPtr gwMeters      = radialSetSP->getFloat1DPtr(RadialSet::GateWidth);
+
+  for (size_t i = 0; i < out_num_radials; ++i) {
+    (*azDegs)[i]   = static_cast<float>(i) * width;
+    (*bwDegs)[i]   = width;
+    (*gwMeters)[i] = gate_width;
+    for (size_t gate = 0; gate < num_gates; ++gate) {
+      (*myOutputArray)[i][gate] = Constants::MissingData;
+    }
+  }
+
+  return radialSetSP;
+} // createNullRadialSet
+} // namespace
+
 NIDSRadialSet::~NIDSRadialSet()
 { }
 
@@ -31,22 +72,19 @@ AngleDegs
 NIDSRadialSet::getElevationAngleDegs(
   BlockProductDesc & d)
 {
-  // Put Desc class or not?  Since it's only
-  // for RadialSets we'll keep here.
+  // For precipitation accumulation / null-capable products, dep[3] holds
+  // the null product flag rather than an elevation angle.
+  const int code = d.getProductCode();
+
+  if ((code == 31) || (code == 169) || (code == 170) ||
+    (code == 171) || (code == 172) || (code == 173) || (code == 175))
+  {
+    return 0.0f;
+  }
 
   const auto a = d.getDep(3);
 
-  #if 0
-  AngleDegs elevAngleDegs;
-  if (d.getProductCode() == 84) { // not scaled
-    elevAngleDegs = a;
-  } else {
-    elevAngleDegs = a * 0.1;
-  }
-  return elevAngleDegs;
-
-  #endif
-  return (d.getProductCode() == 84) ? a : a *0.1;
+  return (code == 84) ? a : a * 0.1;
 }
 
 void
@@ -64,24 +102,38 @@ std::shared_ptr<DataType>
 NIDSRadialSet::readNIDS(
   IOConfig              &,
   BlockMessageHeader    & /*h*/,
-  BlockProductDesc      & d,
+  BlockProductDesc & d,
   BlockProductSymbology & /*s*/,
-  StreamBuffer          & z)
+  StreamBuffer     & z)
 {
+  // Product code and null-product state check
+  const int product = d.getProductCode();
+  const auto info   = ConfigNIDSInfo::getNIDSInfo(product);
+
+  short nullFlag = d.getDep(3);
+
+  if (product == 173) {
+    nullFlag &= 0x00FF;
+  }
+
+  const bool isNullState = (info.isNullProduct() && (nullFlag != 0));
+
+  if (isNullState) {
+    fLogInfo("Null product state (nullFlag={}) for product {}, returning MissingData RadialSet",
+      nullFlag, product);
+    return createNullRadialSet(info, d, 0.0f);
+  }
+
   BlockRadialSet r;
 
   r.read(z);
   r.dump();
 
-  // Product code and packet code
-  int product     = d.getProductCode();
-  const auto info = ConfigNIDSInfo::getNIDSInfo(product);
-
-  // Check to see if this is a null product.
-  if (info.isNullProduct()) {
-    // FIXME: handle null product.
-    fLogSevere("Null product not handled, product number: {}", product);
-    return nullptr;
+  if (r.isNullPacket()) {
+    fLogInfo("Packet 1 null product encountered for product {}, returning MissingData RadialSet",
+      product);
+    const AngleDegs elevAngleDegs = info.isNullProduct() ? 0.0f : getElevationAngleDegs(d);
+    return createNullRadialSet(info, d, elevAngleDegs);
   }
 
   // Grab the decoded thresholds if needed by product
@@ -97,12 +149,19 @@ NIDSRadialSet::readNIDS(
     d.getDecodedThresholds(decoded);
   }
 
-  const size_t num_radials = r.getNumRadials();
+  const size_t num_radials   = r.getNumRadials();
+  const bool skipFirstRadial =
+    ((product == 33) || (product == 78) || (product == 79) || (product == 80)) &&
+    (num_radials > 0);
+  const size_t startRadial     = skipFirstRadial ? 1 : 0;
+  const size_t out_num_radials = num_radials - startRadial;
   int packet       = r.getPacketCode();
   size_t num_gates = 1;
   std::vector<std::vector<float> > values;
 
-  for (size_t i = 0; i < num_radials; i++) {
+  values.reserve(out_num_radials);
+
+  for (size_t i = startRadial; i < num_radials; i++) {
     auto& data = r.myRadials[i].data;
 
     // ----------------------------------------------------------
@@ -122,14 +181,12 @@ NIDSRadialSet::readNIDS(
     // FIXME: Question is, does this form of color code switch
     // occur in other datatypes and do we store it in the info table?
     std::vector<int> color_codes;
-    if ((packet != 16) && (packet != 28)) {
-      NIDSUtil::getRLEColors(data, color_codes);
+    if ((product == 176) || ((packet != 16) && (packet != -20705))) {
+      NIDSUtil::getGenericColors(data, color_codes);
+    } else if (packet == 16) {
+      NIDSUtil::getColors(data, color_codes);
     } else {
-      if (packet == 16) {
-        NIDSUtil::getColors(data, color_codes);
-      } else { // packet  176
-        NIDSUtil::getGenericColors(data, color_codes);
-      }
+      NIDSUtil::getRLEColors(data, color_codes);
     }
 
     // ----------------------------------------------------------
@@ -146,8 +203,10 @@ NIDSRadialSet::readNIDS(
       // Breaking down the various decoded methods
       if (product == 164) {
         NIDSUtil::colorToValueD1(color_codes, decoded, mvalues);
-      } else if ( ( product == 165) || ( product == 176) || ( product == 177)) {
+      } else if ( ( product == 165) || ( product == 177)) {
         NIDSUtil::colorToValueD2(color_codes, decoded, mvalues);
+      } else if (product == 176) {
+        NIDSUtil::colorToValueD3(color_codes, decoded, mvalues);
       } else if ( (product == 94) || (product == 99) ||
         (product == 153) || (product == 154) || (product == 155) ||
         (product == 159) || (product == 161) || (product == 163) )
@@ -211,7 +270,7 @@ NIDSRadialSet::readNIDS(
   fLogInfo("Name is {}", aTypename);
 
   auto radialSetSP = RadialSet::Create(aTypename, units, location, time,
-      elevAngleDegs, firstGateDistanceMeters, gate_width, num_radials, num_gates);
+      elevAngleDegs, firstGateDistanceMeters, gate_width, out_num_radials, num_gates);
 
   // Nyquist vel? todo
   radialSetSP->setVCP(d.getVCP());
@@ -225,17 +284,28 @@ NIDSRadialSet::readNIDS(
   ArrayFloat1DPtr azDegs        = rs.getFloat1DPtr(RadialSet::Azimuth);
   ArrayFloat1DPtr gwMeters      = rs.getFloat1DPtr(RadialSet::GateWidth);
 
-  for (size_t radial = 0; radial < num_radials; radial++) {
-    auto& radialLayer = r.myRadials[radial];
-    auto& value       = values[radial];
-    (*gwMeters)[radial] = gate_width;              // Gatewidth
-    (*azDegs)[radial]   = radialLayer.start_angle; // Azimuth
-    (*bwDegs)[radial]   = radialLayer.delta_angle; // Beamwidth
+  const bool isSuperRes         = (product == 153) || (product == 154) || (product == 155);
+  ArrayFloat1DPtr azSpacingDegs = nullptr;
+
+  if (isSuperRes) {
+    rs.addFloat1D(RadialSet::AzimuthSpacing, "Degrees", { 0 });
+    azSpacingDegs = rs.getFloat1DPtr(RadialSet::AzimuthSpacing);
+  }
+
+  for (size_t outRadial = 0; outRadial < out_num_radials; outRadial++) {
+    auto& radialLayer = r.myRadials[outRadial + startRadial];
+    auto& value       = values[outRadial];
+    (*gwMeters)[outRadial] = gate_width;                                  // Gatewidth
+    (*azDegs)[outRadial]   = radialLayer.start_angle;                     // Azimuth
+    (*bwDegs)[outRadial]   = isSuperRes ? 1.0f : radialLayer.delta_angle; // Beamwidth
+    if (azSpacingDegs) {
+      (*azSpacingDegs)[outRadial] = radialLayer.delta_angle;
+    }
     for (size_t gate = 0; gate < num_gates; gate++) {
-      if (radial < value.size()) {
-        (*myOutputArray)[radial][gate] = value[gate];
+      if (gate < value.size()) {
+        (*myOutputArray)[outRadial][gate] = value[gate];
       } else {
-        (*myOutputArray)[radial][gate] = Constants::MissingData;
+        (*myOutputArray)[outRadial][gate] = Constants::MissingData;
       }
     }
   }

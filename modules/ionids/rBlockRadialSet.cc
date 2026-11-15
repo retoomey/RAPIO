@@ -7,6 +7,7 @@ void
 BlockRadialSet::read(StreamBuffer& b)
 {
   fLogInfo("Reading Radial block");
+  myIsNullPacket = false;
   checkDivider(b);
 
   // Check data length
@@ -25,9 +26,13 @@ BlockRadialSet::read(StreamBuffer& b)
   switch (myPacketCode) {
       case 1: {
         // Skip rest for null product
-        size_t length = lengthOfDataLayer - sizeof(myPacketCode);
-        b.forward(length);
-        throw std::runtime_error("Product code 1 - NULL product unimplemented.");
+        if (lengthOfDataLayer > static_cast<int>(sizeof(myPacketCode))) {
+          const size_t length = static_cast<size_t>(lengthOfDataLayer) - sizeof(myPacketCode);
+          b.forward(length);
+        }
+        myIsNullPacket = true;
+        myNumRadials   = 0;
+        return;
       }
       break;
       case 28:
@@ -76,12 +81,13 @@ BlockRadialSet::read(StreamBuffer& b)
 
     // So I guess individual radials can store differently?
     tempShort     = b.readShort();
-    r.inShorts    = tempShort;
+    r.inShorts    = (myPacketCode == -20705);
     r.delta_angle = static_cast<float>(tempShort * 0.1);
 
     // Data might be just per char, or double char (big endian shorts)
     // FIXME readChar(length) or vector maybe?
-    for (short j = 0; j < numChunks; j++) {
+    const int numBytes = r.inShorts ? (static_cast<int>(numChunks) * 2) : static_cast<int>(numChunks);
+    for (int j = 0; j < numBytes; j++) {
       r.data.push_back(b.readChar());
     }
   }

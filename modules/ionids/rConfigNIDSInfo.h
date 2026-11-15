@@ -122,6 +122,14 @@ public:
   LengthMs
   getGateWidthMeters() const;
 
+  /** Get azimuthal beam width in degrees parsed from resolution (default 1.0) */
+  AngleDegs
+  getBeamWidthDegs() const;
+
+  /** Get number of gates for a null product from range and resolution (default 1) */
+  size_t
+  getNullProductNumGates() const;
+
   /** Operator << write out a NIDSInfo */
   friend std::ostream&
   operator << (std::ostream& os, const NIDSInfo&);
