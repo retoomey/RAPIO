@@ -209,8 +209,6 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
           }
 
           // Create and push back the new nc var
-          // int shuffle = NC_SHUFFLE; needs chunk size array in var_chunking..
-          const int shuffle       = NC_CONTIGUOUS;
           const int deflate       = 1;
           const int deflate_level = IONetcdf::GZ_LEVEL;
 
@@ -218,13 +216,13 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
           NETCDF(nc_def_var(ncid, name.c_str(), aNcType, 1, &dims[i], &varid));
 
           // Compression for variable
-          NETCDF(nc_def_var_chunking(ncid, varid, 0, 0));
+          size_t chunkSize = t.size > 0 ? t.size : 1;
+          NETCDF(nc_def_var_chunking(ncid, varid, NC_CHUNKED, &chunkSize));
 
           // shuffle == control the HDF5 shuffle filter
           // default == turn on deflate for variable
           // deflate_level 0 no compression and 9 (max compression)
-          NETCDF(nc_def_var_deflate(ncid, varid, shuffle, deflate,
-            deflate_level));
+          NETCDF(nc_def_var_deflate(ncid, varid, 0, deflate, deflate_level));
 
           vars.push_back(varid);
         }

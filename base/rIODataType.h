@@ -106,6 +106,19 @@ public:
     return nullptr;
   }
 
+  /** Read from a given factory and IOConfig */
+  template <class T = DataType> static std::shared_ptr<T>
+  read(const std::string& factory, IOConfig& config)
+  {
+    std::shared_ptr<DataType> dt = readDataType(factory, config);
+
+    if (dt != nullptr) {
+      std::shared_ptr<T> dr = std::dynamic_pointer_cast<T>(dt);
+      return dr;
+    }
+    return nullptr;
+  }
+
   /** Attempt to read from given factory from a buffer in memory.
    * Note here you have to provide the factory always, we can't guess from chars */
   template <class T> static std::shared_ptr<T>
@@ -124,6 +137,10 @@ public:
   /** Create a new DataType object based on parameters and factory */
   static std::shared_ptr<DataType>
   readDataType(const std::string& factoryparams, const std::string& factory = "");
+
+  /** Create a new DataType object based on IOConfig and factory */
+  static std::shared_ptr<DataType>
+  readDataType(const std::string& factory, IOConfig& config);
 
 protected:
 

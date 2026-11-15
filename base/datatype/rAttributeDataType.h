@@ -61,7 +61,8 @@ public:
   inline bool
   getString(std::string_view name, std::string& out) const
   {
-    return myAttributes->getString(name, out);
+    if (myAttributes->getString(name, out)) { return true; }
+    return myAttributes->getString(std::string(name) + "-value", out);
   }
 
   /** Set a string */
@@ -75,7 +76,8 @@ public:
   inline bool
   getDouble(std::string_view name, double& out) const
   {
-    return myAttributes->getDouble(name, out);
+    if (myAttributes->getDouble(name, out)) { return true; }
+    return myAttributes->getDouble(std::string(name) + "-value", out);
   }
 
   /** Set a double */
@@ -89,7 +91,8 @@ public:
   inline bool
   getFloat(std::string_view name, float& out) const
   {
-    return myAttributes->getFloat(name, out);
+    if (myAttributes->getFloat(name, out)) { return true; }
+    return myAttributes->getFloat(std::string(name) + "-value", out);
   }
 
   /** Set a float */
@@ -103,7 +106,8 @@ public:
   inline bool
   getLong(std::string_view name, long& out) const
   {
-    return myAttributes->getLong(name, out);
+    if (myAttributes->getLong(name, out)) { return true; }
+    return myAttributes->getLong(std::string(name) + "-value", out);
   }
 
   /** Set a long in global attributes */

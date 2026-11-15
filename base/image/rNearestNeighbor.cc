@@ -40,11 +40,11 @@ NearestNeighbor::applyFilter(std::shared_ptr<Array<float, 2> >& src,
 
   for (size_t i = 0; i < dstW; ++i) {
     float u      = uCoords[i];
-    int mapped_i = static_cast<int>(u + 0.5f);
+    int mapped_i = static_cast<int>(std::floor(u + 0.5f));
 
     for (size_t j = 0; j < dstH; ++j) {
       float v      = vCoords[j];
-      int mapped_j = static_cast<int>(v + 0.5f);
+      int mapped_j = static_cast<int>(std::floor(v + 0.5f));
 
       int memX = mapped_i;
       int memY = mapped_j;

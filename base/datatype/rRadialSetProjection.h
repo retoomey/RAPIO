@@ -25,27 +25,20 @@ class RadialSet;
  * range conversions without requiring a full, computationally expensive reprojection.
  */
 struct RadialSetMapper : public ArrayMapper {
-  double mySrcFirstGate, mySrcGateWidth;
-  double myDstFirstGate, myDstGateWidth;
-  double mySrcAzSpacing, myDstAzSpacing;
-  double mySrcStartAz, myDstStartAz;
-  bool   myProjectGround;
-  double myElevCos;
+  double           mySrcFirstGate, mySrcGateWidth;
+  double           myDstFirstGate, myDstGateWidth;
+  double           mySrcAzSpacing, myDstAzSpacing;
+  double           mySrcStartAz, myDstStartAz;
+  bool             myProjectGround;
+  double           myElevCos;
+  int              myAccuracy    = 1000;
+  int              myAccuracy360 = 360000;
+  std::vector<int> myAzToRadialNum;
 
   RadialSetMapper(const RadialSet& source, const RadialSet& dest, bool projectGround);
 
   void
-  map2D_Y(size_t destI_start, size_t count, float * outU) const override
-  {
-    for (size_t i = 0; i < count; ++i) {
-      double destAz  = myDstStartAz + ((destI_start + i) * myDstAzSpacing);
-      double deltaAz = destAz - mySrcStartAz;
-
-      if (deltaAz < 0.0) { deltaAz += 360.0; } else if (deltaAz >= 360.0) { deltaAz -= 360.0; }
-
-      outU[i] = static_cast<float>(deltaAz / mySrcAzSpacing);
-    }
-  }
+  map2D_Y(size_t destI_start, size_t count, float * outU) const override;
 
   void
   map2D_X(size_t destJ_start, size_t count, float * outV) const override

@@ -227,7 +227,6 @@ IONIDS::encodeDataType(std::shared_ptr<DataType> dt,
     fp = fopen(filename.c_str(), "wb");
     if (fp == nullptr) {
       fLogSevere("NIDS writer Couldn't open local file at {}, errno is {}", filename, errno);
-      fclose(fp);
       return false;
     }
 

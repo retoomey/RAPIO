@@ -161,6 +161,22 @@ IODataType::readDataType(const std::string& factoryparams, const std::string& fa
   return nullptr;
 }
 
+std::shared_ptr<DataType>
+IODataType::readDataType(const std::string& factory, IOConfig& config)
+{
+  std::string f = factory;
+  auto builder  = getFactory(f, config.getParamURL().toString(), nullptr);
+
+  if (builder != nullptr) {
+    std::shared_ptr<DataType> dt = builder->createDataType(config);
+    checkReadFactorySet(dt, f);
+    return dt;
+  } else {
+    fLogSevere("No builder IO module loaded for type '{}'", f);
+  }
+  return nullptr;
+}
+
 // -----------------------------------------------------------------------------------------
 // Writer stuff
 //

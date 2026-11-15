@@ -63,6 +63,8 @@ option(RAPIO_BUILD_TESTS "Build unit tests and testing tree" OFF)
 # These two for NSSL common data files
 option(RAPIO_BUILD_NETCDF_MODULE "Build netcdf module" YES)
 option(RAPIO_BUILD_NIDS_MODULE "Build NIDS(LevelIII) module" YES)
+option(RAPIO_BUILD_NEXRAD_MODULE "Build NEXRAD(Level II) module" YES)
+option(RAPIO_BUILD_TDWR_MODULE "Build TDWR module" YES)
 option(RAPIO_BUILD_HDF5_MODULE "Build general hdf5 module" YES)
 option(RAPIO_BUILD_HMRG_MODULE "Build HMRG module (reading MRMS binary grids)" YES)
 
@@ -371,6 +373,14 @@ endif (RAPIO_BUILD_NETCDF_MODULE)
 if (RAPIO_BUILD_NIDS_MODULE)
   add_subdirectory(modules/ionids)
 endif (RAPIO_BUILD_NIDS_MODULE)
+
+if (RAPIO_BUILD_TDWR_MODULE)
+  add_subdirectory(modules/iotdwr)
+endif (RAPIO_BUILD_TDWR_MODULE)
+
+if (RAPIO_BUILD_NEXRAD_MODULE)
+  add_subdirectory(modules/ionexrad)
+endif ()
 
 if (RAPIO_BUILD_HDF5_MODULE)
   add_subdirectory(modules/iohdf5)

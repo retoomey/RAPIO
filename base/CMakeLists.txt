@@ -84,6 +84,7 @@ watcher/rIOWatcher.cc
 watcher/rRedisWatcher.cc
 rIOXML.cc
 rLength.cc
+rLDMStreamReader.cc
 rLogger.cc
 rLL.cc
 rLLCoverageArea.cc

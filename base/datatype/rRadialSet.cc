@@ -104,6 +104,52 @@ RadialSet::Remap(const float gateWidthMeters,
     fLogSevere("RadialSet::Remap failed to initialize ArrayPipeline.");
   }
 
+  if (haveNyquistArray()) {
+    R->addNyquistArray(0.0f);
+    auto srcNyq = getFloat1DPtr(NyquistVelocity);
+    auto dstNyq = R->getFloat1DPtr(NyquistVelocity);
+    if (srcNyq && dstNyq) {
+      for (size_t i = 0; i < numRadials; ++i) {
+        float u = 0.0f;
+        geoMapper.map2D_Y(i, 1, &u);
+        if (u >= 0.0f) {
+          size_t srcIdx = static_cast<size_t>(std::round(u));
+          if (srcIdx >= srcNyq->size()) {
+            srcIdx = srcNyq->size() - 1;
+          }
+          (*dstNyq)[i] = (*srcNyq)[srcIdx];
+        } else {
+          (*dstNyq)[i] = 0.0f;
+        }
+      }
+    }
+  }
+
+  if (haveArrayName(RadialTime)) {
+    R->addRadialTimeArray(0);
+    auto srcTime = getInt1DPtr(RadialTime);
+    auto dstTime = R->getInt1DPtr(RadialTime);
+    if (srcTime && dstTime) {
+      for (size_t i = 0; i < numRadials; ++i) {
+        float u = 0.0f;
+        geoMapper.map2D_Y(i, 1, &u);
+        if (u >= 0.0f) {
+          size_t srcIdx = static_cast<size_t>(std::round(u));
+          if (srcIdx >= srcTime->size()) {
+            srcIdx = srcTime->size() - 1;
+          }
+          (*dstTime)[i] = (*srcTime)[srcIdx];
+        } else {
+          (*dstTime)[i] = 0;
+        }
+      }
+    }
+  }
+
+  if (haveArrayName(AzimuthSpacing)) {
+    R->addFloat1D(AzimuthSpacing, "Degrees", { 0 }, (numRadials > 0) ? (360.0f / numRadials) : 1.0f);
+  }
+
   return R;
 } // RadialSet::Remap
 
@@ -171,17 +217,16 @@ RadialSet::validateArrays(bool warn, float gateWidthMeters)
   auto az      = getAzimuthVector();
 
   if (az == nullptr) {
-    if (warn) {
-      fLogSevere("Radial set missing Azimuths, guessing from number of radials");
-    }
+    // Missing azimuth array will corrupt physical geolocation downstream;
+    // log severe error unconditionally as this is a last-resort fallback for corrupted Message 31 data.
+    fLogSevere("Radial set missing Azimuths, guessing from number of radials");
+
     /** Azimuth per radial */
     auto a = addFloat1D(Azimuth, "Degrees", { 0 });
     auto num_radials = getNumRadials();
 
-    // For a missing azimuth, let's divide a circle by the number of radials
-    // and calculate beamwidth based on that for each radial.  Obvious this is
-    // just a simple default.  Anyone doing advanced stuff would probably fill
-    // in this data themselves.
+    // Last-resort fallback for corrupted Message 31 data: divide a circle by the number of radials
+    // and calculate beamwidth based on that for each radial.
     auto& azimuths = a->ref();
     bwDegs = num_radials > 0 ? (360.0 / num_radials) : 1.0;
     float at = 0.0;
@@ -361,7 +406,9 @@ RadialSet::getGlobalNyquistVelocity() const
   // Check the modern standard, then the two legacy variations
   if (getString("NyquistVelocity-value", valStr) ||
     getString("Nyquist_Vel-value", valStr) ||
-    getString("Nyquist_vel-value", valStr))
+    getString("Nyquist_vel-value", valStr) ||
+    getString("Nyquist_Vel", valStr) ||
+    getString("NyquistVelocity", valStr))
   {
     try {
       return std::stof(valStr);
@@ -378,8 +425,15 @@ RadialSet::getGlobalNyquistVelocity() const
     return val;
   }
 
+  if (haveNyquistArray()) {
+    auto ptr = getFloat1DPtr(NyquistVelocity);
+    if (ptr && (ptr->size() > 0)) {
+      return (*ptr)[0];
+    }
+  }
+
   return 0;
-}
+} // RadialSet::getGlobalNyquistVelocity
 
 void
 RadialSet::setGlobalNyquistVelocity(float nyquist)
@@ -387,16 +441,24 @@ RadialSet::setGlobalNyquistVelocity(float nyquist)
   // Wipe the array if it exists
   deleteArrayName(NyquistVelocity);
 
-  // Wipe legacy attributes to prevent collisions/confusion
+  // Wipe legacy and modern attributes to prevent collisions/confusion
   if (myAttributes) {
+    myAttributes->remove("NyquistVelocity");
+    myAttributes->remove("NyquistVelocity-value");
+    myAttributes->remove("NyquistVelocity-unit");
+    myAttributes->remove("Nyquist_Vel");
     myAttributes->remove("Nyquist_Vel-value");
     myAttributes->remove("Nyquist_Vel-unit");
+    myAttributes->remove("Nyquist_vel");
     myAttributes->remove("Nyquist_vel-value");
     myAttributes->remove("Nyquist_vel-unit");
   }
 
-  // Set the new standard global attribute
-  setDataAttributeValue("NyquistVelocity", std::to_string(nyquist), "MetersPerSecond");
+  // Set the global attribute
+  std::string nyqStr = std::to_string(nyquist);
+
+  setString("Nyquist_Vel", nyqStr);
+  setDataAttributeValue("Nyquist_Vel", nyqStr, "MetersPerSecond");
 }
 
 bool
@@ -410,10 +472,13 @@ RadialSet::addNyquistArray(float initialValue)
 {
   // Wipe global attributes to ensure the array is the single source of truth
   if (myAttributes) {
+    myAttributes->remove("NyquistVelocity");
     myAttributes->remove("NyquistVelocity-value");
     myAttributes->remove("NyquistVelocity-unit");
+    myAttributes->remove("Nyquist_Vel");
     myAttributes->remove("Nyquist_Vel-value");
     myAttributes->remove("Nyquist_Vel-unit");
+    myAttributes->remove("Nyquist_vel");
     myAttributes->remove("Nyquist_vel-value");
     myAttributes->remove("Nyquist_vel-unit");
   }

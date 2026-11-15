@@ -110,6 +110,7 @@ Information needed:
     <file suffix="grb2" io="wgrib"/>
     <file suffix="pal" io="file"/>
     <file suffix="nids" io="nids"/>
+    <file suffix="ar2v" io="ar2v"/>
     <file suffix="yaml" io="yaml"/>
     <file suffix="yml" io="yaml"/>
   </suffixes>
@@ -226,6 +227,14 @@ Information needed:
   </io>
 
   <io names="nids" module="librapionids.so">
+    <output />
+  </io>
+
+  <io names="nexrad ar2v" module="librapionexrad.so">
+    <output />
+  </io>
+
+  <io names="tdwr" module="librapiotdwr.so">
     <output />
   </io>
 </datatype>

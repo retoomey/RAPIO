@@ -6,6 +6,9 @@
 using namespace rapio;
 
 RadialSetMapper::RadialSetMapper(const RadialSet& source, const RadialSet& dest, bool projectGround)
+  : myAccuracy(1000),
+  myAccuracy360(360 * 1000),
+  myAzToRadialNum(367 * 1000 + 1, -1)
 {
   // Range (Gate) Parameters
   mySrcFirstGate = source.getDistanceToFirstGateM();
@@ -18,15 +21,92 @@ RadialSetMapper::RadialSetMapper(const RadialSet& source, const RadialSet& dest,
   myDstAzSpacing = dest.getNumRadials() > 0 ? 360.0 / dest.getNumRadials() : 1.0;
 
   // Anchor to the first azimuth in the arrays
-  auto& srcAzData = source.getFloat1DRef(RadialSet::Azimuth);
-  auto& dstAzData = dest.getFloat1DRef(RadialSet::Azimuth);
+  auto srcAzPtr = source.getFloat1DPtr(RadialSet::Azimuth);
+  auto dstAzPtr = dest.getFloat1DPtr(RadialSet::Azimuth);
 
-  mySrcStartAz = (srcAzData.size() > 0) ? srcAzData[0] : 0.0;
-  myDstStartAz = (dstAzData.size() > 0) ? dstAzData[0] : 0.0;
+  mySrcStartAz = (srcAzPtr && srcAzPtr->size() > 0) ? (*srcAzPtr)[0] : 0.0;
+  myDstStartAz = (dstAzPtr && dstAzPtr->size() > 0) ? (*dstAzPtr)[0] : 0.0;
 
   // Ground projection configuration
   myProjectGround = projectGround;
   myElevCos       = source.getElevationCos();
+
+  const size_t num_radials = source.getNumRadials();
+
+  if (num_radials > 0) {
+    const auto * azimuths   = source.getFloat1DPtr(RadialSet::Azimuth);
+    const auto * azimuthsSP = source.getFloat1DPtr(RadialSet::BeamWidth);
+    const int maxSize       = static_cast<int>(myAzToRadialNum.size());
+    const int fullCircle    = myAccuracy360;
+
+    for (size_t i = 0; i < num_radials; ++i) {
+      float az = (azimuths && i < azimuths->size()) ? (*azimuths)[i] : static_cast<float>(i * mySrcAzSpacing);
+      const size_t nexti = (i == num_radials - 1) ? 0 : i + 1;
+      float nextAzF      =
+        (azimuths && nexti < azimuths->size()) ? (*azimuths)[nexti] : static_cast<float>(nexti * mySrcAzSpacing);
+      float bw = (azimuthsSP && i < azimuthsSP->size()) ? (*azimuthsSP)[i] : static_cast<float>(mySrcAzSpacing);
+
+      int minaz  = static_cast<int>(myAccuracy * az);
+      int maxaz  = static_cast<int>(myAccuracy * (bw + az) + 0.5f);
+      int nextaz = static_cast<int>(myAccuracy * nextAzF);
+
+      if (nextaz < minaz) {
+        nextaz += fullCircle;
+      }
+
+      if ((maxaz > minaz) && (nextaz > maxaz) && ((nextaz - maxaz) < myAccuracy)) {
+        maxaz = nextaz;
+      }
+
+      if ((minaz < 0) || (minaz >= maxSize) || (maxaz < 0) || (maxaz >= maxSize)) {
+        continue;
+      }
+
+      if (maxaz > minaz) {
+        for (int j = minaz; j < maxaz; ++j) {
+          myAzToRadialNum[j] = static_cast<int>(i);
+        }
+      } else {
+        for (int j = maxaz; j < minaz; ++j) {
+          myAzToRadialNum[j] = static_cast<int>(i);
+        }
+      }
+    }
+
+    for (size_t i = fullCircle; i < myAzToRadialNum.size(); ++i) {
+      if (myAzToRadialNum[i] >= 0) {
+        myAzToRadialNum[i - fullCircle] = myAzToRadialNum[i];
+      }
+    }
+  }
+}
+
+void
+RadialSetMapper::map2D_Y(size_t destI_start, size_t count, float * outU) const
+{
+  for (size_t i = 0; i < count; ++i) {
+    double destAz = (destI_start + i) * myDstAzSpacing;
+    while (destAz < 0.0) {
+      destAz += 360.0;
+    }
+    while (destAz >= 360.0) {
+      destAz -= 360.0;
+    }
+
+    int azNo = static_cast<int>(destAz * myAccuracy) % myAccuracy360;
+    if (azNo < 0) { azNo += myAccuracy360; }
+
+    int radialNo = -1;
+    if ((azNo >= 0) && (azNo < static_cast<int>(myAzToRadialNum.size()))) {
+      radialNo = myAzToRadialNum[azNo];
+    }
+
+    if (radialNo < 0) {
+      outU[i] = -1.0f;
+    } else {
+      outU[i] = static_cast<float>(radialNo);
+    }
+  }
 }
 
 void
@@ -48,21 +128,24 @@ initToRadialSet(RadialSet& rs)
   myDistToFirstGateM = rs.getDistanceToFirstGateM();
   myDistToLastGateM  = myDistToFirstGateM + (myNumGates * myGateWidthM);
 
-  const auto& azimuths   = rs.getFloat1DRef(RadialSet::Azimuth);
-  const auto& azimuthsSP = rs.getFloat1DRef(RadialSet::BeamWidth);
-  const int maxSize      = int(myAzToRadialNum.size());
-  const int fullCircle   = 360 * myAccuracy;
+  const auto * azimuths   = rs.getFloat1DPtr(RadialSet::Azimuth);
+  const auto * azimuthsSP = rs.getFloat1DPtr(RadialSet::BeamWidth);
+  const int maxSize       = int(myAzToRadialNum.size());
+  const int fullCircle    = 360 * myAccuracy;
+  float defaultBw         = (num_radials > 0) ? (360.0f / num_radials) : 1.0f;
 
   myAccuracy360 = fullCircle;
 
   // For each radial in the source RadialSet...
   for (size_t i = 0; i < num_radials; ++i) {
-    const float az     = azimuths[i];
+    const float az     = (azimuths && i < azimuths->size()) ? (*azimuths)[i] : (i * defaultBw);
     const size_t nexti = (i == num_radials - 1) ? 0 : i + 1; // circular wrap next i
 
-    const int minaz = int(myAccuracy * az);                         // current azimuth
-    int maxaz       = int(myAccuracy * (azimuthsSP[i] + az) + 0.5); // next azimuth using spacing
-    int nextaz      = int(myAccuracy * azimuths[nexti]);            // next azimuth
+    const float bw  = (azimuthsSP && i < azimuthsSP->size()) ? (*azimuthsSP)[i] : defaultBw;
+    const int minaz = int(myAccuracy * az);              // current azimuth
+    int maxaz       = int(myAccuracy * (bw + az) + 0.5); // next azimuth using spacing
+    int nextaz      =
+      int(myAccuracy * ((azimuths && nexti < azimuths->size()) ? (*azimuths)[nexti] : (nexti * defaultBw)));
 
     // Next azimuth probably crosses the zero, so add 360 basically to make it bigger
     // This is assuming clockwise radar.
