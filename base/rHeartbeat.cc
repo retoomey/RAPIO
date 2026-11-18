@@ -44,17 +44,67 @@ Heartbeat::checkForPulse()
   time_t next = cron::cron_next(myCronExpr, cur);
   Time pulse(next);
 
-  if (pulse != myLastPulseTime) {
+  if (pulse != myNextPulseTime) {
     if (myFirstPulse) {
       // ignore first one, it's 0
-      myFirstPulse = false;
+      myFirstPulse    = false;
+      myPrevPulseTime = n;
     } else {
-      myProgram->processHeartbeat(n, myLastPulseTime);
+      myProgram->processHeartbeat(n, myPrevPulseTime);
+      myPrevPulseTime = myNextPulseTime;
     }
-    myLastPulseTime = pulse;
+    myNextPulseTime = pulse;
     // fLogSevere("PULSE: {} --- {}", n, pulse);
   }
 } // Heartbeat::checkForPulse
+
+void
+Heartbeat::advanceToTime(const Time& recordTime)
+{
+  if (!myParsed) {
+    return;
+  }
+
+  time_t recSec = recordTime.getSecondsSinceEpoch();
+
+  if (myFirstPulse) {
+    myFirstPulse    = false;
+    myPrevPulseTime = recordTime;
+    // Floor to the minute/cron boundary before or at recordTime?
+    // cron_next(recSec) finds the first cron tick strictly > recSec.
+    // Subtracting 1 second ensures that if the first record is at 22:04:00,
+    // the first scheduled pulse is 22:04:00 rather than skipping to 22:06:00.
+    myNextPulseTime = Time(cron::cron_next(myCronExpr, recSec > 0 ? recSec - 1 : 0));
+    return;
+  }
+
+  // Step through every scheduled cron boundary strictly before recordTime
+  // BEFORE the new record is ingested.
+  while (myNextPulseTime < recordTime) {
+    Time firedPulse = myNextPulseTime;
+    Time::setLatestDataTime(firedPulse);
+    myProgram->processHeartbeat(firedPulse, myPrevPulseTime);
+    myPrevPulseTime = firedPulse;
+    myNextPulseTime = Time(cron::cron_next(myCronExpr, firedPulse.getSecondsSinceEpoch()));
+  }
+} // Heartbeat::advanceToTime
+
+void
+Heartbeat::finalizeArchive()
+{
+  if (!myParsed || myFirstPulse) {
+    return;
+  }
+
+  // Trigger one final heartbeat at the end of the archive to flush
+  // any remaining data accumulated after the last cron boundary.
+  Time firedPulse = myNextPulseTime;
+
+  Time::setLatestDataTime(firedPulse);
+  myProgram->processHeartbeat(firedPulse, myPrevPulseTime);
+  myPrevPulseTime = firedPulse;
+  myNextPulseTime = Time(cron::cron_next(myCronExpr, firedPulse.getSecondsSinceEpoch()));
+} // Heartbeat::finalizeArchive
 
 HeartbeatTimer::HeartbeatTimer(std::shared_ptr<Heartbeat> h, size_t milliseconds) : EventTimer(milliseconds,
     "HeartbeatTimer"),

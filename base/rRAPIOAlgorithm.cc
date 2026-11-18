@@ -180,6 +180,11 @@ RAPIOAlgorithm::execute()
 void
 RAPIOAlgorithm::handleRecordEvent(const Record& rec)
 {
+  // First, notify plugins with prerecord event
+  for (auto p: myPlugins) {
+    p->preRecordEvent(this, rec);
+  }
+
   // Always just keep the latest data time as 'current time'
   // for archive.  Or real clock in real time.
   Time::setLatestDataTime(rec.getTime());
@@ -209,11 +214,15 @@ RAPIOAlgorithm::handleRecordEvent(const Record& rec)
   for (auto p: myPlugins) {
     p->postRecordEvent(this, rec);
   }
-}
+} // RAPIOAlgorithm::handleRecordEvent
 
 void
 RAPIOAlgorithm::handleEndDatasetEvent()
 {
+  // Notify plugins of end of data set
+  for (auto p: myPlugins) {
+    p->endDatasetEvent(this);
+  }
   if (!isDaemon()) {
     // Archive empty means end it all
     // FIXME: maybe just end event loop here, do a shutdown

@@ -65,9 +65,19 @@ public:
   execute(RAPIOProgram * /*caller*/)
   { }
 
+  /** Handle a pre record event */
+  virtual void
+  preRecordEvent(RAPIOProgram * /*caller*/, const Record&)
+  { }
+
   /** Handle a post record event */
   virtual void
   postRecordEvent(RAPIOProgram * /*caller*/, const Record&)
+  { }
+
+  /** Handle a end of data set archive event */
+  virtual void
+  endDatasetEvent(RAPIOProgram * /*caller*/)
   { }
 
 protected:

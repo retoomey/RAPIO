@@ -34,9 +34,17 @@ public:
   virtual void
   execute(RAPIOProgram * caller) override;
 
+  /** Handle a pre record event */
+  virtual void
+  preRecordEvent(RAPIOProgram * /*caller*/, const Record&) override;
+
   /** Handle a post record event */
   virtual void
   postRecordEvent(RAPIOProgram * caller, const Record& rec) override;
+
+  /** Handle a end of data set archive event */
+  virtual void
+  endDatasetEvent(RAPIOProgram * /*caller*/) override;
 
 protected:
 

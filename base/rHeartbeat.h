@@ -35,13 +35,24 @@ public:
   void
   checkForPulse();
 
+  /** Advance to the time of the given record time */
+  void
+  advanceToTime(const Time& recordTime);
+
+  /** Do final firing of events at end of an archive */
+  void
+  finalizeArchive();
+
 protected:
 
   /** The program we send events to */
   RAPIOProgram * myProgram;
 
-  /** Last pulse time (the pinned time) */
-  Time myLastPulseTime;
+  /** Hold the next scheduled pulse time */
+  Time myNextPulseTime;
+
+  /** Hold the previous cron tick passed in */
+  Time myPrevPulseTime;
 
   /** Set for first pulse of system */
   bool myFirstPulse;

@@ -72,14 +72,14 @@ ProbSevere::parseFeatures()
     auto properties = feature.getChildOptional("properties");
     if (properties) {
       psDet.id = properties->get<int>("ID", -1);
-      psDet.probSevereVal = properties->get<float>("PS", 0.0f);
+      psDet.probSevereVal = properties->get<float>("ProbSevere", properties->get<float>("PS", 0.0f));
 
       // Extract environmental storm motion vectors and convert from knots to m/s
       float motionEast  = properties->get<float>("MOTION_EAST", 0.0f);
       float motionSouth = properties->get<float>("MOTION_SOUTH", 0.0f);
 
-      psDet.u_motion = motionEast / 1.944f;
-      psDet.v_motion = -motionSouth / 1.944f;
+      psDet.u_motion = motionEast; // M/S
+      psDet.v_motion = -motionSouth;
     }
 
     auto geometry = feature.getChildOptional("geometry");

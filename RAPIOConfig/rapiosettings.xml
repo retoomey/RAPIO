@@ -222,7 +222,7 @@ Information needed:
   <io names="csv" module="librapiocsv.so">
     <output />
   </io>
-  <io names="yaml" module="librapioyaml.so">
+  <io names="yaml json geojson" module="librapioyaml.so">
     <output indent="true"/>
   </io>
 
