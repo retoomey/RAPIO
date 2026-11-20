@@ -357,6 +357,86 @@ Time::putString(const std::string& value,
   return true;
 } // Time::putString
 
+std::string
+Time::getEpochString() const
+{
+  time_t sec = getSecondsSinceEpoch();
+  int ms     = static_cast<int>(1000.0 * getFractional() + 0.5);
+
+  if (ms >= 1000) {
+    sec += 1;
+    ms   = 0;
+  } else if (ms < 0) {
+    ms = 0;
+  }
+
+  return fmt::format("{}.{:03d}", sec, ms);
+}
+
+bool
+Time::setEpochString(const std::string& value)
+{
+  std::string s = value;
+
+  Strings::trim(s);
+  if (s.empty()) {
+    return false;
+  }
+
+  size_t dotPos        = s.find('.');
+  std::string secPart  = (dotPos == std::string::npos) ? s : s.substr(0, dotPos);
+  std::string fracPart = (dotPos == std::string::npos) ? "" : s.substr(dotPos + 1);
+
+  if (secPart.empty()) {
+    return false;
+  }
+
+  size_t startIdx = (secPart[0] == '-') ? 1 : 0;
+
+  if (startIdx >= secPart.size()) {
+    return false;
+  }
+  for (size_t i = startIdx; i < secPart.size(); ++i) {
+    if (!std::isdigit(static_cast<unsigned char>(secPart[i]))) {
+      return false;
+    }
+  }
+
+  time_t sec = 0;
+
+  try {
+    sec = static_cast<time_t>(std::stoll(secPart));
+  } catch (...) {
+    return false;
+  }
+
+  int ms = 0;
+
+  if (dotPos != std::string::npos) {
+    if (fracPart.empty()) {
+      return false;
+    }
+    for (char ch : fracPart) {
+      if (!std::isdigit(static_cast<unsigned char>(ch))) {
+        return false;
+      }
+    }
+    if (fracPart.size() == 3) {
+      ms = std::stoi(fracPart);
+    } else if (fracPart.size() < 3) {
+      std::string padded = fracPart;
+      padded.append(3 - padded.size(), '0');
+      ms = std::stoi(padded);
+    } else {
+      ms = std::stoi(fracPart.substr(0, 3));
+    }
+  }
+
+  myTimepoint  = std::chrono::system_clock::from_time_t(sec);
+  myTimepoint += std::chrono::milliseconds(ms);
+  return true;
+} // Time::setEpochString
+
 Time::Time(const std::string& value, const std::string& format)
 {
   if (!putString(value, format)) {

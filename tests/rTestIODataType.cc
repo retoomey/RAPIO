@@ -240,26 +240,28 @@ BOOST_AUTO_TEST_CASE(_IODataType_XML_to_YAML_Translation)
 
 BOOST_AUTO_TEST_CASE(_IODataType_CSV_Typed_Headers_RoundTrip)
 {
-  // 1. Build the DataTable programmatically with all 3 supported types
+  // 1. Build the DataTable programmatically with all 3 supported types and a timestamp
   auto dt = std::make_shared<DataTable>();
+  const Time expectedTime = Time::SecondsSinceEpoch(1700000000, 0) + TimeDuration::MilliSeconds(123);
 
+  dt->setTime(expectedTime);
   dt->addColumn("ID", DataColumn::Type::Integer);
-  dt->addColumn("Value", DataColumn::Type::Float);
+  dt->addColumn("Temp (C)", DataColumn::Type::Float);
   dt->addColumn("JSONData", DataColumn::Type::String);
 
   // Inject Row 0
   dt->getColumn("ID").push_back(1);
-  dt->getColumn("Value").push_back(3.14f);
+  dt->getColumn("Temp (C)").push_back(3.14f);
   dt->getColumn("JSONData").push_back(R"({"type": "Polygon", "coord": [1, 2]})");
 
   // Inject Row 1
   dt->getColumn("ID").push_back(2);
-  dt->getColumn("Value").push_back(-99.9f);
+  dt->getColumn("Temp (C)").push_back(-99.9f);
   dt->getColumn("JSONData").push_back("Simple \"Quote\" Test, with comma");
 
   // Inject Row 2 (Missing Data Boundary Check)
   dt->getColumn("ID").push_back(static_cast<int>(Constants::MissingData));
-  dt->getColumn("Value").push_back(static_cast<float>(Constants::MissingData));
+  dt->getColumn("Temp (C)").push_back(static_cast<float>(Constants::MissingData));
   dt->getColumn("JSONData").push_back("Missing Values");
 
   // Loop through both write engines to ensure parity
@@ -280,27 +282,40 @@ BOOST_AUTO_TEST_CASE(_IODataType_CSV_Typed_Headers_RoundTrip)
     bool writeSuccess = IODataType::write(dt, filename, dummyRecords, "csv", keys);
     BOOST_REQUIRE_MESSAGE(writeSuccess, "Failed to write csv to file with fastwrite=" << fwMode);
 
+    // 2b. Verify raw CSV header line contains the new "(type, time)" and "(type)" format
+    {
+      std::ifstream in(filename);
+      std::string headerLine;
+      BOOST_REQUIRE(std::getline(in, headerLine));
+      BOOST_CHECK(headerLine.find("ID (int, 1700000000.123)") != std::string::npos);
+      BOOST_CHECK(headerLine.find("Temp (C) (float)") != std::string::npos);
+      BOOST_CHECK(headerLine.find("JSONData (str)") != std::string::npos);
+    }
+
     // 3. Read the newly created CSV file back into memory
     auto dtFromFile = IODataType::read<DataTable>(filename, "csv");
     BOOST_REQUIRE_MESSAGE(dtFromFile != nullptr, "Failed to read csv from file with fastwrite=" << fwMode);
 
-    // 4. Verify Schema
+    // 4. Verify Time and Schema
+    BOOST_CHECK_EQUAL(dtFromFile->getTime().getEpochString(), expectedTime.getEpochString());
+    BOOST_CHECK(dtFromFile->getTime() == expectedTime);
+
     auto& colNames = dtFromFile->getColumnNames();
     BOOST_REQUIRE_EQUAL(colNames.size(), 3);
     BOOST_REQUIRE_EQUAL(dtFromFile->getRowCount(), 3);
 
     BOOST_CHECK_EQUAL(colNames[0], "ID");
-    BOOST_CHECK_EQUAL(colNames[1], "Value");
+    BOOST_CHECK_EQUAL(colNames[1], "Temp (C)");
     BOOST_CHECK_EQUAL(colNames[2], "JSONData");
 
     // 5. Verify Explicit Types
     BOOST_CHECK(dtFromFile->getColumn("ID").getType() == DataColumn::Type::Integer);
-    BOOST_CHECK(dtFromFile->getColumn("Value").getType() == DataColumn::Type::Float);
+    BOOST_CHECK(dtFromFile->getColumn("Temp (C)").getType() == DataColumn::Type::Float);
     BOOST_CHECK(dtFromFile->getColumn("JSONData").getType() == DataColumn::Type::String);
 
     // 6. Verify Data (including escaped quotes, commas, and constants)
     auto& idCol   = dtFromFile->getColumn("ID");
-    auto& valCol  = dtFromFile->getColumn("Value");
+    auto& valCol  = dtFromFile->getColumn("Temp (C)");
     auto& jsonCol = dtFromFile->getColumn("JSONData");
 
     // Row 0
@@ -322,9 +337,9 @@ BOOST_AUTO_TEST_CASE(_IODataType_CSV_Typed_Headers_RoundTrip)
     remove(filename.c_str());
   }
 
-  // 7. Verify the Fallback Guessing Logic
+  // 7. Verify the Fallback Guessing Logic (including untyped parens and colons)
   std::string fallbackCsvData =
-    "UntypedInt,UntypedFloat,Unrecognized:Data\n"
+    "UntypedInt,Temp (C),Unrecognized:Data\n"
     "42,3.14159,Normal String\n";
 
   std::string fallbackFilename = "test_csv_fallback.csv";
@@ -338,7 +353,7 @@ BOOST_AUTO_TEST_CASE(_IODataType_CSV_Typed_Headers_RoundTrip)
   BOOST_REQUIRE(dtFallback != nullptr);
 
   BOOST_CHECK(dtFallback->getColumn("UntypedInt").getType() == DataColumn::Type::Integer);
-  BOOST_CHECK(dtFallback->getColumn("UntypedFloat").getType() == DataColumn::Type::Float);
+  BOOST_CHECK(dtFallback->getColumn("Temp (C)").getType() == DataColumn::Type::Float);
   BOOST_CHECK(dtFallback->getColumn("Unrecognized:Data").getType() == DataColumn::Type::String);
 
   remove(fallbackFilename.c_str());
@@ -372,38 +387,59 @@ BOOST_AUTO_TEST_CASE(_IODataType_CSV_Phantom_Column_Regression)
 
 BOOST_AUTO_TEST_CASE(_IODataType_CSV_Empty_Table)
 {
-  auto dt = std::make_shared<DataTable>();
+  const Time t1 = Time::SecondsSinceEpoch(1700000000, 0) + TimeDuration::MilliSeconds(250);
+  const Time t2 = Time::SecondsSinceEpoch(1700000060, 0) + TimeDuration::MilliSeconds(750);
 
-  // We do NOT manually add "str:" or "float:" here.
-  // The writer handles the schema serialization automatically!
-  dt->addColumn("EmptyA", DataColumn::Type::String);
-  dt->addColumn("EmptyB", DataColumn::Type::Float);
+  auto dt1 = std::make_shared<DataTable>();
+  dt1->setTime(t1);
+  dt1->addColumn("EmptyA", DataColumn::Type::String);
+  dt1->addColumn("EmptyB", DataColumn::Type::Float);
 
-  std::string filename = "test_csv_empty.csv";
-  IOConfig keys;
+  auto dt2 = std::make_shared<DataTable>();
+  dt2->setTime(t2);
+  dt2->addColumn("EmptyA", DataColumn::Type::String);
+  dt2->addColumn("EmptyB", DataColumn::Type::Float);
 
-  keys.set("suffix", "csv");
-  keys.set("filepathmode", "direct");
-  keys.set("header", "true");
-  keys.set("filename", filename);
+  std::string filename1 = "test_csv_empty_1.csv";
+  std::string filename2 = "test_csv_empty_2.csv";
 
-  std::vector<Record> dummyRecords;
-  bool writeSuccess = IODataType::write(dt, filename, dummyRecords, "csv", keys);
+  auto writeEmpty = [](std::shared_ptr<DataTable> table, const std::string& filename) {
+    IOConfig keys;
+    keys.set("suffix", "csv");
+    keys.set("filepathmode", "direct");
+    keys.set("header", "true");
+    keys.set("filename", filename);
+    std::vector<Record> dummyRecords;
+    return IODataType::write(table, filename, dummyRecords, "csv", keys);
+  };
 
-  BOOST_REQUIRE(writeSuccess);
+  BOOST_REQUIRE(writeEmpty(dt1, filename1));
+  BOOST_REQUIRE(writeEmpty(dt2, filename2));
 
-  auto dtFromFile = IODataType::read<DataTable>(filename, "csv");
+  // Verify the two empty CSV files have distinct content (prevents LDM duplicate rejection)
+  auto readAll = [](const std::string& filename) {
+    std::ifstream in(filename);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  };
+  std::string raw1 = readAll(filename1);
+  std::string raw2 = readAll(filename2);
+  BOOST_CHECK(raw1 != raw2);
+  BOOST_CHECK(raw1.find("EmptyA (str, 1700000000.250)") != std::string::npos);
+  BOOST_CHECK(raw2.find("EmptyA (str, 1700000060.750)") != std::string::npos);
 
+  auto dtFromFile = IODataType::read<DataTable>(filename1, "csv");
   BOOST_REQUIRE(dtFromFile != nullptr);
 
   // Verify it didn't throw out of bounds or invent rows
   BOOST_CHECK_EQUAL(dtFromFile->getRowCount(), 0);
   BOOST_CHECK_EQUAL(dtFromFile->getColumnNames().size(), 2);
+  BOOST_CHECK(dtFromFile->getTime() == t1);
 
-  // Verify the empty headers retained their explicit typing prefixes during the round trip
+  // Verify the empty headers retained their explicit typing metadata during the round trip
   BOOST_CHECK(dtFromFile->getColumn("EmptyB").getType() == DataColumn::Type::Float);
   BOOST_CHECK(dtFromFile->getColumn("EmptyA").getType() == DataColumn::Type::String);
 
-  remove(filename.c_str());
+  remove(filename1.c_str());
+  remove(filename2.c_str());
 }
 BOOST_AUTO_TEST_SUITE_END()

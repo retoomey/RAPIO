@@ -35,9 +35,92 @@ IOCSV::initialize()
 }
 
 namespace {
-constexpr const char * PREFIX_INT    = "int:";
-constexpr const char * PREFIX_FLOAT  = "float:";
-constexpr const char * PREFIX_STRING = "str:";
+/** Format a column header with RAPIO metadata:
+ *  First column:  "ColumnName (type, epoch.mmm)"
+ *  Other columns: "ColumnName (type)"
+ */
+std::string
+formatHeaderName(const std::string& colName, DataColumn::Type type, bool isFirstCol, const Time& tableTime)
+{
+  std::string meta = DataColumn::typeToString(type);
+
+  if (isFirstCol) {
+    meta += ", " + tableTime.getEpochString();
+  }
+  return colName + " (" + meta + ")";
+}
+
+/** Parse RAPIO metadata from a trailing "(type)" or "(type, epoch.mmm)" suffix.
+ *  If valid metadata is found, strips it from colName, sets colType (and outTime
+ *  when present on the first column), and returns true.
+ */
+bool
+parseHeaderMetadata(std::string& colName, DataColumn::Type& colType, bool isFirstCol, Time& outTime, bool& hasTime)
+{
+  hasTime = false;
+  std::string trimmed = colName;
+
+  Strings::trim_right(trimmed);
+
+  if (trimmed.empty() || (trimmed.back() != ')')) {
+    return false;
+  }
+
+  size_t openPos = trimmed.rfind('(');
+
+  if ((openPos == std::string::npos) || (openPos == 0)) {
+    return false;
+  }
+
+  std::string baseName = trimmed.substr(0, openPos);
+
+  Strings::trim_right(baseName);
+  if (baseName.empty()) {
+    return false;
+  }
+
+  std::string inner = trimmed.substr(openPos + 1, trimmed.size() - openPos - 2);
+
+  Strings::trim(inner);
+  if (inner.empty()) {
+    return false;
+  }
+
+  std::string typeToken;
+  std::string timeToken;
+  size_t commaPos = inner.find(',');
+
+  if (commaPos == std::string::npos) {
+    typeToken = inner;
+  } else {
+    typeToken = inner.substr(0, commaPos);
+    timeToken = inner.substr(commaPos + 1);
+    Strings::trim(typeToken);
+    Strings::trim(timeToken);
+  }
+
+  DataColumn::Type parsedType;
+
+  if (!DataColumn::stringToType(typeToken, parsedType)) {
+    return false;
+  }
+
+  if (commaPos != std::string::npos) {
+    if (!isFirstCol) {
+      return false;
+    }
+    Time parsedTime;
+    if (!parsedTime.setEpochString(timeToken)) {
+      return false;
+    }
+    outTime = parsedTime;
+    hasTime = true;
+  }
+
+  colName = baseName;
+  colType = parsedType;
+  return true;
+} // parseHeaderMetadata
 
 // Used only by the "fastwrite" mode
 std::string
@@ -109,20 +192,12 @@ IOCSV::createDataType(IOConfig& config)
     for (size_t c = 0; c < colCount; ++c) {
       std::string colName      = colNames[c];
       DataColumn::Type colType = DataColumn::Type::String;
-      bool typeForced = false;
+      Time parsedTime;
+      bool hasTime    = false;
+      bool typeForced = parseHeaderMetadata(colName, colType, (c == 0), parsedTime, hasTime);
 
-      if (Strings::beginsWith(colName, PREFIX_INT)) {
-        colType = DataColumn::Type::Integer;
-        Strings::removePrefix(colName, PREFIX_INT);
-        typeForced = true;
-      } else if (Strings::beginsWith(colName, PREFIX_FLOAT)) {
-        colType = DataColumn::Type::Float;
-        Strings::removePrefix(colName, PREFIX_FLOAT);
-        typeForced = true;
-      } else if (Strings::beginsWith(colName, PREFIX_STRING)) {
-        colType = DataColumn::Type::String;
-        Strings::removePrefix(colName, PREFIX_STRING);
-        typeForced = true;
+      if (hasTime) {
+        table->setTime(parsedTime);
       }
 
       if (!typeForced && (doc.GetRowCount() > 0)) {
@@ -234,13 +309,7 @@ IOCSV::encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys)
         std::string headerName = colNames[c];
 
         if (typedHeaders) {
-          if (dataCol.getType() == DataColumn::Type::Integer) {
-            headerName = std::string(PREFIX_INT) + headerName;
-          } else if (dataCol.getType() == DataColumn::Type::Float) {
-            headerName = std::string(PREFIX_FLOAT) + headerName;
-          } else {
-            headerName = std::string(PREFIX_STRING) + headerName;
-          }
+          headerName = formatHeaderName(headerName, dataCol.getType(), (c == 0), table->getTime());
         }
 
         std::vector<std::string> stringifiedCol;
@@ -283,13 +352,7 @@ IOCSV::encodeDataType(std::shared_ptr<DataType> dt, IOConfig& keys)
             std::string headerName = colNames[i];
             if (typedHeaders) {
               DataColumn& dataCol = table->getColumn(colNames[i]);
-              if (dataCol.getType() == DataColumn::Type::Integer) {
-                headerName = std::string(PREFIX_INT) + headerName;
-              } else if (dataCol.getType() == DataColumn::Type::Float) {
-                headerName = std::string(PREFIX_FLOAT) + headerName;
-              } else {
-                headerName = std::string(PREFIX_STRING) + headerName;
-              }
+              headerName = formatHeaderName(headerName, dataCol.getType(), (i == 0), table->getTime());
             }
             out << escapeCSVField(headerName);
             if (i < colNames.size() - 1) { out << ","; }

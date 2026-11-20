@@ -196,6 +196,14 @@ public:
   bool
   putString(const std::string& value, const std::string& pattern);
 
+  /** Get epoch seconds with 3-digit fractional milliseconds (e.g. "1700000000.123") */
+  std::string
+  getEpochString() const;
+
+  /** Set time from an epoch string with optional fractional seconds (e.g. "1700000000.123") */
+  bool
+  setEpochString(const std::string& value);
+
   // Get part of a time object routines -----
 
   /** Return the seconds since epoch 0 */

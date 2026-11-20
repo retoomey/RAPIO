@@ -172,4 +172,41 @@ BOOST_AUTO_TEST_CASE(_Time_Current_)
   BOOST_CHECK(t4.getSecondsSinceEpoch() == 1562292000);
 }
 
+BOOST_AUTO_TEST_CASE(_Time_EpochString_)
+{
+  Time t = Time::SecondsSinceEpoch(1700000000, 0) + TimeDuration::MilliSeconds(123);
+
+  BOOST_CHECK_EQUAL(t.getEpochString(), "1700000000.123");
+
+  Time parsed;
+  BOOST_CHECK(parsed.setEpochString("1700000000.123"));
+  BOOST_CHECK_EQUAL(parsed.getSecondsSinceEpoch(), 1700000000);
+  BOOST_CHECK_EQUAL(parsed.getEpochString(), "1700000000.123");
+  BOOST_CHECK(parsed == t);
+
+  // Leading zero milliseconds
+  Time tSmall = Time::SecondsSinceEpoch(1700000000, 0) + TimeDuration::MilliSeconds(5);
+  BOOST_CHECK_EQUAL(tSmall.getEpochString(), "1700000000.005");
+  BOOST_CHECK(parsed.setEpochString("1700000000.005"));
+  BOOST_CHECK(parsed == tSmall);
+
+  // Zero epoch
+  Time tZero;
+  BOOST_CHECK_EQUAL(tZero.getEpochString(), "0.000");
+  BOOST_CHECK(parsed.setEpochString("0.000"));
+  BOOST_CHECK(parsed == tZero);
+
+  // Integer-only epoch string
+  BOOST_CHECK(parsed.setEpochString("1700000000"));
+  BOOST_CHECK_EQUAL(parsed.getEpochString(), "1700000000.000");
+
+  // Invalid inputs should fail
+  BOOST_CHECK(!parsed.setEpochString(""));
+  BOOST_CHECK(!parsed.setEpochString("not_a_time"));
+  BOOST_CHECK(!parsed.setEpochString("1700000000."));
+  BOOST_CHECK(!parsed.setEpochString(".123"));
+  BOOST_CHECK(!parsed.setEpochString("1700000000.12.3"));
+  BOOST_CHECK(!parsed.setEpochString("1700000000abc"));
+}
+
 BOOST_AUTO_TEST_SUITE_END();

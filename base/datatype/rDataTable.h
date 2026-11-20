@@ -24,6 +24,16 @@ class DataColumn {
 public:
   enum class Type { Integer, Float, String };
 
+  static constexpr const char * TYPE_INT    = "int";
+  static constexpr const char * TYPE_FLOAT  = "float";
+  static constexpr const char * TYPE_STRING = "str";
+
+  static std::string
+  typeToString(Type t);
+
+  static bool
+  stringToType(const std::string& str, Type& outType);
+
   DataColumn(Type t);
 
   void
@@ -40,6 +50,9 @@ public:
 
   Type
   getType() const { return myType; }
+
+  std::string
+  getTypeString() const { return typeToString(myType); }
 
   const std::vector<int>&
   getIntVector() const;

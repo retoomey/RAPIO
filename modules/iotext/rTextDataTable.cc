@@ -30,9 +30,12 @@ TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig&)
     return false;
   }
 
-  std::ostream& o = *IOText::theFile;
+  std::ostream& o      = *IOText::theFile;
+  const Time tableTime = table->getTime();
 
   o << "RAPIO DataTable Dump\n";
+  o << "Time: " << tableTime.getString("%Y %m/%d %H:%M:%S.%/ms UTC")
+    << " (" << tableTime.getEpochString() << ")\n";
   o << "Rows: " << table->getRowCount() << "\n\n";
 
   const auto& colNames = table->getColumnNames();
@@ -44,12 +47,14 @@ TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig&)
     return true;
   }
 
-  // Pass 1: Calculate max widths for each column
+  // Pass 1: Build formatted column headers with types and calculate max widths
+  std::vector<std::string> colHeaders(numCols);
   std::vector<size_t> colWidths(numCols, 0);
 
   for (size_t c = 0; c < numCols; ++c) {
-    colWidths[c] = colNames[c].length();
     DataColumn& col = table->getColumn(colNames[c]);
+    colHeaders[c] = colNames[c] + " (" + col.getTypeString() + ")";
+    colWidths[c]  = colHeaders[c].length();
 
     for (size_t r = 0; r < numRows; ++r) {
       size_t len = 0;
@@ -75,7 +80,7 @@ TextDataTable::write(std::shared_ptr<DataType> dt, IOConfig&)
   // Pass 2: Output with dynamic padding
   // Print Header
   for (size_t c = 0; c < numCols; ++c) {
-    o << fmt::format("{:<{}}", colNames[c], colWidths[c] + (c < numCols - 1 ? padding : 0));
+    o << fmt::format("{:<{}}", colHeaders[c], colWidths[c] + (c < numCols - 1 ? padding : 0));
   }
   o << "\n";
 

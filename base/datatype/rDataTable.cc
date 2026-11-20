@@ -7,6 +7,40 @@ using namespace rapio;
 // ---------------------------------------------------------
 // DataColumn Implementation
 // ---------------------------------------------------------
+std::string
+DataColumn::typeToString(Type t)
+{
+  switch (t) {
+      case Type::Integer:
+        return TYPE_INT;
+
+      case Type::Float:
+        return TYPE_FLOAT;
+
+      case Type::String:
+      default:
+        return TYPE_STRING;
+  }
+}
+
+bool
+DataColumn::stringToType(const std::string& str, Type& outType)
+{
+  if (str == TYPE_INT) {
+    outType = Type::Integer;
+    return true;
+  }
+  if (str == TYPE_FLOAT) {
+    outType = Type::Float;
+    return true;
+  }
+  if (str == TYPE_STRING) {
+    outType = Type::String;
+    return true;
+  }
+  return false;
+}
+
 DataColumn::DataColumn(Type t) : myType(t)
 {
   if (t == Type::Integer) { myData = std::vector<int>(); } else if (t == Type::Float) {
