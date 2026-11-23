@@ -254,20 +254,27 @@ public:
     // Create and start the reader thread
     std::thread reader_thread(reader_func, pipefd[0], std::ref(voutput));
 
+    auto cleanup = [&]() {
+        fflush(stdout);
+        dup2(stdout_copy, STDOUT_FILENO);
+        close(stdout_copy);
+        if (reader_thread.joinable()) {
+          reader_thread.join();
+        }
+        Log::restartLogging();
+      };
+
     // 4. Run the Callable Object (The 'Writer')
     // Uses std::forward to correctly handle lvalues/rvalues for arguments
-    std::forward<Func>(func)(std::forward<Args>(args)...);
-
-    // 5. Restore and Cleanup
-    fflush(stdout);
-    dup2(stdout_copy, STDOUT_FILENO);
-    close(stdout_copy);
-
-    if (reader_thread.joinable()) {
-      reader_thread.join();
+    try {
+      std::forward<Func>(func)(std::forward<Args>(args)...);
+    } catch (...) {
+      cleanup();
+      throw;
     }
 
-    Log::restartLogging();
+    // 5. Restore and Cleanup
+    cleanup();
     return voutput;
   } // runFunction
 

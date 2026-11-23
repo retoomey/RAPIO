@@ -35,7 +35,7 @@ class Message {
 public:
 
   /** Create empty message. */
-  Message() : myTime(Time::CurrentTime()){ }
+  Message() : myTime(Time::CurrentTime()), myIndexNumber(0){ }
 
   /** Set a value as a string */
   void

@@ -171,5 +171,8 @@ protected:
 
   /** Store terrain blockage */
   std::shared_ptr<TerrainBlockage> myTerrainBlockage;
+
+  /** Track whether first-data setup has run for this instance */
+  bool mySetupDone = false;
 };
 }

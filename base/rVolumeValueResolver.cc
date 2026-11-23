@@ -32,8 +32,10 @@ TerrainVVResolver::calc(VolumeValue * vvp)
   // bool haveLower = queryLayer(vv, VolumeValueResolver::lower);
   auto& vv = *vvp;
 
-  // bool haveLower = queryLower(vv);
-  queryLower(vv);
+  if (!queryLower(vv)) {
+    vv.dataValue = Constants::DataUnavailable;
+    return;
+  }
 
   // vv.dataValue = vv.lLayer.beamHitBottom ? 1.0: 0.0;
   // vv.dataValue = vv.lLayer.terrainPBBPercent;

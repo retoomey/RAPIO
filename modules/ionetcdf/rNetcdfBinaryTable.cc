@@ -215,14 +215,16 @@ NetcdfBinaryTable::writeNETCDF(int ncid,
           // New var.  Use '1' here because we create a vector variable
           NETCDF(nc_def_var(ncid, name.c_str(), aNcType, 1, &dims[i], &varid));
 
-          // Compression for variable
-          size_t chunkSize = t.size > 0 ? t.size : 1;
-          NETCDF(nc_def_var_chunking(ncid, varid, NC_CHUNKED, &chunkSize));
+          // Compression for variable (NetCDF-4 rejects filters on variable-length NC_STRING)
+          if (aNcType != NC_STRING) {
+            size_t chunkSize = t.size > 0 ? t.size : 1;
+            NETCDF(nc_def_var_chunking(ncid, varid, NC_CHUNKED, &chunkSize));
 
-          // shuffle == control the HDF5 shuffle filter
-          // default == turn on deflate for variable
-          // deflate_level 0 no compression and 9 (max compression)
-          NETCDF(nc_def_var_deflate(ncid, varid, 0, deflate, deflate_level));
+            // shuffle == control the HDF5 shuffle filter
+            // default == turn on deflate for variable
+            // deflate_level 0 no compression and 9 (max compression)
+            NETCDF(nc_def_var_deflate(ncid, varid, 0, deflate, deflate_level));
+          }
 
           vars.push_back(varid);
         }

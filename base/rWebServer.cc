@@ -60,27 +60,32 @@ WebMessageQueue::addRecord(std::shared_ptr<WebMessage> record)
 void
 WebMessageQueue::action()
 {
-  myQueueLock.lock();
-  if (!myQueue.empty()) {
-    auto r = myQueue.front();
-    myQueue.pop();
-    myQueueLock.unlock();
+  std::shared_ptr<WebMessage> r;
 
-    // Process the heavy tile generation, etc. outside the lock
-    if (r) {
-      myProgram->processWebMessage(r);
-
-      // We promised to fill in the data when handled, the web thread is waiting
-      // for us.
-      r->result.set_value(true);
+  {
+    std::unique_lock<std::mutex> lock(myQueueLock);
+    if (!myQueue.empty()) {
+      r = myQueue.front();
+      myQueue.pop();
     }
   }
 
-  // process another web message when we can
-  myQueueLock.lock();
-  bool is_empty = myQueue.empty();
+  // Process the heavy tile generation, etc. outside the lock
+  if (r) {
+    myProgram->processWebMessage(r);
 
-  myQueueLock.unlock();
+    // We promised to fill in the data when handled, the web thread is waiting
+    // for us.
+    r->result.set_value(true);
+  }
+
+  // process another web message when we can
+  bool is_empty = true;
+
+  {
+    std::unique_lock<std::mutex> lock(myQueueLock);
+    is_empty = myQueue.empty();
+  }
 
   if (!is_empty) {
     setReady();
@@ -193,9 +198,9 @@ WebServer::handleGET(std::shared_ptr<HttpServer::Response> response,
     theFields[f.first] = f.second;
   }
   auto web = std::make_shared<WebMessage>(request->path, theFields);
+  auto fut = web->result.get_future();
 
   WebMessageQueue::theWebMessageQueue->addRecord(web);
-  auto fut = web->result.get_future();
 
   // FIXME: We could do a proper timeout here and handle accordingly I think..
   try{

@@ -449,6 +449,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     if (region3.get_size() < aLength) {
       fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
         aLength, region3.get_size());
+      shared_memory_object::remove(jsonName.c_str());
       return std::vector<std::string>(); // Fail safely
     }
     std::copy(buf.begin(), buf.begin() + aLength, at2);
@@ -461,6 +462,7 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     auto dataptr = datagrid->getFloat2D(Constants::PrimaryDataName);
     if (dataptr == nullptr) {
       fLogSevere("Python call only allowed on 2D LatLonGrid and RadialSet at moment :(");
+      shared_memory_object::remove(jsonName.c_str());
       return std::vector<std::string>();
     }
     auto x       = theDims[0].size();
@@ -482,6 +484,8 @@ OS::runDataProcess(const std::string& command, std::shared_ptr<DataGrid> datagri
     if (region2.get_size() < memsize) {
       fLogSevere("Shared memory region too small for copy! Expected {} but got {}",
         memsize, region2.get_size());
+      shared_memory_object::remove(jsonName.c_str());
+      shared_memory_object::remove(key.c_str());
       return std::vector<std::string>(); // Fail safely
     }
     std::copy(ref2.data(), ref2.data() + size, at); // std::copy respects float type
@@ -520,19 +524,23 @@ OS::getProcessSizeKB(double& vm_usage, double& resident_set)
     tpgid, flags, minflt, cminflt, majflt, cmajflt,
     utime, stime, cutime, cstime, priority, nice, O, itrealvalue, starttime;
 
-  unsigned long vsize;
-  long rss;
+  unsigned long vsize = 0;
+  long rss = 0;
 
   stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
   >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
   >> utime >> stime >> cutime >> cstime >> priority >> nice
   >> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
+  bool ok = static_cast<bool>(stat_stream);
+
   stat_stream.close();
 
-  long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
+  if (ok) {
+    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
 
-  vm_usage     = vsize / 1024.0;
-  resident_set = rss * page_size_kb;
+    vm_usage     = vsize / 1024.0;
+    resident_set = rss * page_size_kb;
+  }
 }
 
 namespace {

@@ -359,6 +359,13 @@ rLDMStreamReader::processStreamBuffer(bool isFlushing)
         myStreamReadPos += nullBytes;
         streamAvail     -= nullBytes;
         curPtr += nullBytes;
+      } else if ((streamAvail >= 7) &&
+        (curPtr[4] == 'B') && (curPtr[5] == 'Z') && (curPtr[6] == 'h'))
+      {
+        // Four zero length bytes immediately precede a BZh stream header; skip the 4 zero bytes
+        myStreamReadPos += 4;
+        streamAvail     -= 4;
+        curPtr += 4;
       }
       if ((streamAvail < 4) && std::all_of(curPtr, curPtr + streamAvail, [](char c) {
           return c == 0;

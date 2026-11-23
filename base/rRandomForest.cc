@@ -335,18 +335,26 @@ RandomForest::getForestProbability(
 
   if (missingCount) { *missingCount = missing; }
 
-  // If internal imputation vector is not yet loaded, temporarily backfill from imputationValues map
+  // Enforce the missing-data safety gate before applying any fallback imputation values
+  if (!fv.hasSufficientData(myMinDataRatio)) {
+    fLogSevere("Over 50% of predictors missing ({}/{} set). Assigning 0.0 probability.",
+      fv.getSetCount(), fv.size());
+    return ForestProbability();
+  }
+
+  // If internal imputation vector is not yet loaded, backfill missing features in the local FeatureVector
   if (myImputationVector.empty() && !imputationValues.empty()) {
-    const_cast<RandomForest *>(this)->readImputation(""); // Initialize vector
     for (size_t i = 0; i < myFeatureIndexToName.size(); ++i) {
-      const std::string& fName = myFeatureIndexToName[i];
-      auto impIt = imputationValues.find(fName);
-      if (impIt != imputationValues.end()) {
-        const_cast<RandomForest *>(this)->myImputationVector[i] = impIt->second;
+      if (!fv.isSet(i)) {
+        const std::string& fName = myFeatureIndexToName[i];
+        auto impIt = imputationValues.find(fName);
+        if (impIt != imputationValues.end()) {
+          fv.set(i, impIt->second);
+        }
       }
     }
   }
 
   return getForestProbability(fv);
-}
+} // RandomForest::getForestProbability
 } // namespace rapio

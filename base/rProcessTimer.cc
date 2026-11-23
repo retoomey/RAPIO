@@ -76,7 +76,7 @@ ProcessTimer::getCPUTime() const
 }
 
 ProcessTimerSum::ProcessTimerSum(const std::string& message) : myCounter(0),
-  myMsg(message)
+  myCPU(0.0f), myMsg(message)
 {
   OS::getProcessSizeKB(myVM_KB, myRSS_KB);
 

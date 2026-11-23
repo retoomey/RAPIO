@@ -225,6 +225,7 @@ target_link_libraries(rapio
   # Explicitly add public dlsys for any binaries c
   # calling dynamic loading methods.  rMakeIndex calls factory creation
   PUBLIC dl
+  PUBLIC stdc++fs # GCC 8 std::filesystem
 )
 
 ##################################################################################################

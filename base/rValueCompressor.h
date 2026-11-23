@@ -108,6 +108,9 @@ public:
   {
     std::vector<double> stuff = uncompressVector(bytes);
 
+    if (stuff.empty()) {
+      return 0.0;
+    }
     return stuff[0];
   }
 
@@ -117,11 +120,15 @@ public:
   {
     std::vector<double> values;
 
+    if (myBytesNeeded <= 0) {
+      return values;
+    }
+
     values.reserve(bytes.size() / myBytesNeeded);
 
     const int mini = myMinVal * myMultiplier;
 
-    for (std::size_t i = 0; i < bytes.size(); i += myBytesNeeded) {
+    for (std::size_t i = 0; i + static_cast<std::size_t>(myBytesNeeded) <= bytes.size(); i += myBytesNeeded) {
       int normalized = 0;
       for (int j = myBytesNeeded - 1; j >= 0; --j) {
         normalized  = (normalized << 8);

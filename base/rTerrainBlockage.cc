@@ -135,8 +135,8 @@ getHeightKM(const AngleDegs elevDegs,
     outLonDegs += 360;
   }
 
-  if (outLatDegs > 180) {
-    outLatDegs -= 360;
+  if (outLonDegs > 180) {
+    outLonDegs -= 360;
   }
 
   // Add radar height location to raise beam to correct height

@@ -37,6 +37,28 @@ processData(void * ptr, size_t sz, size_t n, void * obj)
  */
 }
 
+namespace {
+struct CurlGlobalGuard {
+  CURLcode code;
+  CurlGlobalGuard() : code(curl_global_init(CURL_GLOBAL_ALL)){ }
+
+  ~CurlGlobalGuard()
+  {
+    if (code == CURLE_OK) {
+      curl_global_cleanup();
+    }
+  }
+};
+
+CURLcode
+ensureCurlGlobalInit()
+{
+  static CurlGlobalGuard guard;
+
+  return guard.code;
+}
+}
+
 CurlConnection::CurlConnection()
 {
   if (!init()) {
@@ -47,8 +69,8 @@ CurlConnection::CurlConnection()
 bool
 CurlConnection::init()
 {
-  // Global init of curl and a curl connection
-  myCurlCode = curl_global_init(CURL_GLOBAL_ALL);
+  // Thread-safe one-time global init of libcurl
+  myCurlCode = ensureCurlGlobalInit();
   myCurl     = 0;
 
   bool ok = (myCurlCode == 0);
@@ -76,10 +98,7 @@ CurlConnection::~CurlConnection()
 {
   if (myCurl != 0) {
     curl_easy_cleanup(myCurl);
-  }
-
-  if (myCurlCode == 0) {
-    curl_global_cleanup();
+    myCurl = 0;
   }
 }
 
@@ -137,10 +156,16 @@ CurlConnection::readH(const std::string& url, const std::vector<std::string>& he
     curl_easy_setopt(myCurl, CURLOPT_WRITEDATA, &buf);
 
     // Run CURL request
-    curl_easy_perform(myCurl); // Perform
+    CURLcode ret = curl_easy_perform(myCurl); // Perform
 
     if (httpHeaders != NULL) {
+      curl_easy_setopt(myCurl, CURLOPT_HTTPHEADER, nullptr);
+      curl_easy_setopt(myCurl, CURLOPT_HEADER, 0L);
       curl_slist_free_all(httpHeaders);
+    }
+    if (ret != CURLE_OK) {
+      fLogSevere("Reading {} failed with err={}", url, (int) ret);
+      return -1;
     }
     return (buf.size());
   }

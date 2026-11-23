@@ -24,7 +24,7 @@ public:
   enum class Type { none, tile, tree };
 
   /** Create a partition info */
-  PartitionInfo() : myPartitionNumber(0){ }
+  PartitionInfo() : myParamType(Type::none), myPartitionNumber(0){ }
 
   /** Set the partition value string */
   inline void

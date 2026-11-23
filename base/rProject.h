@@ -258,6 +258,10 @@ public:
   /** Destroy a project lib */
   ~ProjLibProject();
 
+  ProjLibProject(const ProjLibProject&) = delete;
+  ProjLibProject&
+  operator = (const ProjLibProject&) = delete;
+
   /** Initialize the projection system */
   virtual bool
   initialize() override;

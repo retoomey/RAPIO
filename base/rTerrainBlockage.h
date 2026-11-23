@@ -151,10 +151,10 @@ public:
   getPowerDensity(float dist)
   {
     // FIXME: what units?
-    float x = M_PI * 1.27 * dist;
+    float x = std::fabs(static_cast<float>(M_PI * 1.27) * dist);
 
-    if (x < 0.01) {
-      x = 0.01; // avoid divide-by-zero
+    if (x < 0.01f) {
+      x = 0.01f; // avoid divide-by-zero
     }
     float wt = (1 - exp(-x * x / 8.5)) / (x * x);
 

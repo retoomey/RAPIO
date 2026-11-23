@@ -328,7 +328,7 @@ class Bitset : public StaticVector {
 public:
 
   /** Empty constructor */
-  Bitset(){ }
+  Bitset() : myNumValues(0), myNumBitsPerValue(0){ }
 
   /** Construct a bitset of using N values of B given size in bits each */
   Bitset(size_t numValues, size_t bitsPerValue) : StaticVector(numValues),
@@ -411,7 +411,7 @@ public:
     // Pull big endian first (human reading order)
     for (int j = myNumBitsPerValue - 1; j >= 0; j--) {
       bool bit = myBits[base++];
-      y |= bit << j;
+      y |= static_cast<size_t>(bit) << j;
     }
     return y;
   }

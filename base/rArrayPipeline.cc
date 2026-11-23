@@ -201,7 +201,7 @@ ArrayPipeline::remap(const std::shared_ptr<ArrayBase>& src,
     auto src2D = std::dynamic_pointer_cast<Array<float, 2> >(src);
     auto dst2D = std::dynamic_pointer_cast<Array<float, 2> >(dst);
     activeSampler->remap2D(src2D, dst2D, mapper);
-    executeFiltersPingPong2D(dst2D);
+    executeFiltersPingPong2D(dst2D, pipelineState);
   } else if (dims == 3) {
     auto src3D = std::dynamic_pointer_cast<Array<float, 3> >(src);
     auto dst3D = std::dynamic_pointer_cast<Array<float, 3> >(dst);
@@ -257,7 +257,7 @@ ArrayPipeline::process(const std::shared_ptr<ArrayBase>& src,
       auto d = dst2D->refAs1D();
       std::copy(s.begin(), s.end(), d.begin());
     }
-    executeFiltersPingPong2D(dst2D);
+    executeFiltersPingPong2D(dst2D, pipelineState);
   } else if (dims == 3) {
     auto src3D = std::dynamic_pointer_cast<Array<float, 3> >(src);
     auto dst3D = std::dynamic_pointer_cast<Array<float, 3> >(dst);
@@ -300,7 +300,8 @@ ArrayPipeline::executeFiltersPingPong1D(const std::shared_ptr<Array<float, 1> >&
 }
 
 void
-ArrayPipeline::executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >& target) const
+ArrayPipeline::executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >& target,
+  const std::shared_ptr<NamedAnyList>                                          & pipelineState) const
 {
   if (myFilters.empty()) { return; }
   auto temp = std::make_shared<Array<float, 2> >(target->getSizes());
@@ -310,9 +311,15 @@ ArrayPipeline::executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >&
   const std::shared_ptr<Array<float, 2> > * currentSrc = &target;
   const std::shared_ptr<Array<float, 2> > * currentDst = &temp;
 
+  size_t stageIdx = 0;
+
   for (auto& filter : myFilters) {
+    if (pipelineState) {
+      pipelineState->put<size_t>("pipeline_stage", stageIdx);
+    }
     filter->process2D(*currentSrc, *currentDst);
     std::swap(currentSrc, currentDst);
+    ++stageIdx;
   }
 
   if (currentSrc == &temp) {
@@ -338,7 +345,7 @@ ArrayPipeline::executeFiltersPingPong3D(const std::shared_ptr<Array<float, 3> >&
     std::swap(currentSrc, currentDst);
   }
 
-  if (currentSrc != &temp) {
+  if (currentSrc == &temp) {
     auto s = (*currentSrc)->refAs1D();
     auto d = target->refAs1D();
     std::copy(s.begin(), s.end(), d.begin());

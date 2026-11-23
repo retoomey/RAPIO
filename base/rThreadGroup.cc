@@ -80,8 +80,8 @@ ThreadGroup::workerThread()
 ThreadGroup::~ThreadGroup()
 {
   {
-    // Lock the mutex to safely modify shared data
-    std::unique_lock<std::mutex> lock(myStopMutex);
+    // Lock the task queue mutex to safely modify shared stop flag for myCondition
+    std::unique_lock<std::mutex> lock(myTaskQueueMutex);
     // Set the stop flag to true to signal threads to stop
     myStop = true;
   } // End of inner scope: mutex is automatically unlocked when leaving this scope

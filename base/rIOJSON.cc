@@ -41,14 +41,17 @@ IOJSON::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& bu
 std::shared_ptr<PTreeData>
 IOJSON::readPTreeDataBuffer(std::vector<char>& buffer)
 {
+  if (buffer.empty()) {
+    return nullptr;
+  }
   try{
     std::shared_ptr<PTreeData> d = std::make_shared<PTreeData>();
     auto& n = d->getTree()->node;
     // To keep sizes correct, only add a 0 iff there isn't one there already
-    if ((buffer.size() > 0) && (buffer[buffer.size() - 1] != 0)) {
+    if (buffer.back() != 0) {
       buffer.push_back('\0');
     }
-    std::istringstream is(&buffer.front());
+    std::istringstream is(buffer.data());
     boost::property_tree::read_json(is, n);
     return d;
   }catch (const std::exception& e) { // pt::xml_parser::xml_parser_error

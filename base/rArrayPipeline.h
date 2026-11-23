@@ -96,7 +96,8 @@ private:
   void
   executeFiltersPingPong1D(const std::shared_ptr<Array<float, 1> >& target) const;
   void
-  executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >& target) const;
+  executeFiltersPingPong2D(const std::shared_ptr<Array<float, 2> >& target,
+    const std::shared_ptr<NamedAnyList>                           & pipelineState = nullptr) const;
   void
   executeFiltersPingPong3D(const std::shared_ptr<Array<float, 3> >& target) const;
 

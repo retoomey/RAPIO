@@ -25,19 +25,18 @@ Secure::sign(const std::string& key, const std::string& message)
   #if HAVE_OPENSSL
 
   # ifdef EVP_MAX_MD_SIZE
-  unsigned int result_len = -1;
+  unsigned int result_len = 0;
   unsigned char result[EVP_MAX_MD_SIZE];
   // FIXME: Seems to be handling utf8 conversion...python did this
   // explicitly.  How to check?
-  HMAC(EVP_sha256(),
+  if (HMAC(EVP_sha256(),
     key.c_str(), key.size(),
     (const unsigned char *) message.c_str(), message.size(),
-    result, &result_len);
-
-  //  out = std::string(result);
-
-  for (size_t i = 0; i < result_len; i++) {
-    out += result[i];
+    result, &result_len) != nullptr)
+  {
+    out.assign(reinterpret_cast<const char *>(result), result_len);
+  } else {
+    fLogSevere("HMAC computation failed.");
   }
   # else // ifdef EVP_MAX_MD_SIZE
   // FIXME: Complain?
@@ -141,6 +140,7 @@ Secure::validateSigned(
   // Memory stuff
   EVP_MD_CTX * mdctx = NULL;
   BIO * bufio        = NULL;
+  EVP_PKEY * evp_key = NULL;
 
   bool error = true;
   bool pass  = false;
@@ -148,8 +148,7 @@ Secure::validateSigned(
   while (1) { // break on error/success
     bufio = BIO_new_mem_buf((void *) hold, publickey.size());
     if (bufio == NULL) { break; }
-    // Don't free this one (will cause double free)
-    EVP_PKEY * evp_key = PEM_read_bio_PUBKEY(bufio, NULL, NULL, NULL);
+    evp_key = PEM_read_bio_PUBKEY(bufio, NULL, NULL, NULL);
     if (evp_key == NULL) {
       fLogSevere("Invalid public key for signature checking");
       break;
@@ -167,6 +166,9 @@ Secure::validateSigned(
 
     // Check signature context
     mdctx = EVP_MD_CTX_create();
+    if (mdctx == NULL) {
+      break;
+    }
 
     const EVP_MD * md = EVP_sha256();
     int ret = EVP_DigestVerifyInit(mdctx, NULL, md, NULL, evp_key);
@@ -190,7 +192,11 @@ Secure::validateSigned(
         outvec.push_back(signature[i]);
       }
     }
-    uint8_t * ubuf  = (uint8_t *) (&(outvec[0]));
+    if (outvec.empty()) {
+      fLogSevere("Empty or invalid signature passed.");
+      break;
+    }
+    uint8_t * ubuf  = outvec.data();
     size_t ubufsize = outvec.size();
 
     ret = EVP_DigestVerifyFinal(mdctx, ubuf, ubufsize);
@@ -211,8 +217,15 @@ Secure::validateSigned(
   }
 
   // Memory clean up
-  EVP_MD_CTX_destroy(mdctx);
-  BIO_free(bufio);
+  if (mdctx != NULL) {
+    EVP_MD_CTX_destroy(mdctx);
+  }
+  if (evp_key != NULL) {
+    EVP_PKEY_free(evp_key);
+  }
+  if (bufio != NULL) {
+    BIO_free(bufio);
+  }
 
   return pass;
 

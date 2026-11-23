@@ -56,14 +56,18 @@ IOURL::readRaw(const URL& url, std::vector<char>& buf)
       // Get size of file
       file.seekg(0, std::ios::end);
       std::streampos length = file.tellg();
+      if (length <= 0) {
+        buf.clear();
+        return 0;
+      }
       file.seekg(0, std::ios::beg);
 
       // Then resize to attempt to read.
-      buf.resize(length);
-      file.read(&buf[0], length);
+      buf.resize(static_cast<size_t>(length));
+      file.read(buf.data(), length);
 
       // Finally, resize to the actual number of bytes read
-      buf.resize(file.gcount());
+      buf.resize(static_cast<size_t>(file.gcount()));
     } else {
       fLogSevere("FAILED local file read {}", url.toString());
     }

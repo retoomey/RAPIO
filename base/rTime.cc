@@ -193,7 +193,11 @@ std::string
 Time::getString(const std::string& pattern) const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) {
+    return "";
+  }
 
   const size_t MAXLENGTH = 512;
   char buf[MAXLENGTH];
@@ -257,7 +261,9 @@ int
 Time::getYear() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 1970; }
 
   return a.tm_year + 1900;
 }
@@ -266,7 +272,9 @@ int
 Time::getMonth() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 1; }
 
   return a.tm_mon + 1;
 }
@@ -275,7 +283,9 @@ int
 Time::getDay() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 1; }
 
   return a.tm_mday;
 }
@@ -284,7 +294,9 @@ int
 Time::getHour() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 0; }
 
   return a.tm_hour;
 }
@@ -293,7 +305,9 @@ int
 Time::getMinute() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 0; }
 
   return a.tm_min;
 }
@@ -302,7 +316,9 @@ int
 Time::getSecond() const
 {
   const time_t t = std::chrono::system_clock::to_time_t(myTimepoint);
-  tm a = *gmtime(&t);
+  tm a = { };
+
+  if (gmtime_r(&t, &a) == nullptr) { return 0; }
 
   return a.tm_sec;
 }

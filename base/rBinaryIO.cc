@@ -259,7 +259,7 @@ GzipFileStreamBuffer::readShort()
 void
 GzipFileStreamBuffer::writeShort(short s)
 {
-  int temp = s;
+  short temp = s;
 
   ON_ENDIAN_DIFF(myDataBigEndian, OS::byteswap(temp));
   ERRNO(gzwrite(gzfile, &temp, sizeof(short)));

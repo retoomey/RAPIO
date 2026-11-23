@@ -481,22 +481,25 @@ public:
     const size_t BUFSIZE = 128 * 1024;
     unsigned char temp_buffer[BUFSIZE];
 
-    z_stream strm;
+    z_stream strm = { };
 
-    strm.zalloc    = 0;
-    strm.zfree     = 0;
-    strm.next_in   = reinterpret_cast<unsigned char *>(&input[0]);
+    strm.next_in   = input.empty() ? nullptr : reinterpret_cast<unsigned char *>(input.data());
     strm.avail_in  = in_data_size;
     strm.next_out  = temp_buffer;
     strm.avail_out = BUFSIZE;
 
-    deflateInit(&strm, Z_BEST_COMPRESSION);
+    if (deflateInit(&strm, Z_BEST_COMPRESSION) != Z_OK) {
+      return false;
+    }
 
     while (strm.avail_in != 0) {
       int res = deflate(&strm, Z_NO_FLUSH);
 
       // assert(res == Z_OK);
-      if (res != Z_OK) { return (false); }
+      if (res != Z_OK) {
+        deflateEnd(&strm);
+        return false;
+      }
 
       if (strm.avail_out == 0) {
         buffer.insert(buffer.end(), temp_buffer, temp_buffer + BUFSIZE);
@@ -517,7 +520,11 @@ public:
     }
 
     // assert(deflate_res == Z_STREAM_END);
-    if (deflate_res != Z_STREAM_END) { return (false); } buffer.insert(
+    if (deflate_res != Z_STREAM_END) {
+      deflateEnd(&strm);
+      return false;
+    }
+    buffer.insert(
       buffer.end(), temp_buffer, temp_buffer + BUFSIZE - strm.avail_out);
     deflateEnd(&strm);
 

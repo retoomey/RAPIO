@@ -52,7 +52,7 @@ LLCoverageArea::insetRadarRange(
     } else {
       out.numY = 0; // Too far away
     }
-    out.nwLat = out.nwLat - (out.startY * out.latSpacing);
+    out.nwLat = out.nwLat - (deltaY * out.latSpacing);
   }
 
   if (west > nwLon) { // Inset the left
@@ -63,7 +63,7 @@ LLCoverageArea::insetRadarRange(
     } else {
       out.numX = 0; // Too far away
     }
-    out.nwLon = out.nwLon + (out.startX * out.lonSpacing);
+    out.nwLon = out.nwLon + (deltaX * out.lonSpacing);
   }
 
   if (south > seLat) {                                             // Inset the bottom
@@ -134,7 +134,6 @@ LLCoverageArea::tile(
   // For example 700/150 => 4.66.  But 4*150 = 600, leaving us 100 extra cells to distribute.
   // We then add 1 to the first 100 partitions to distribute them all.
   // So we end up with 100 partitions of 5 and 50 of size 4 for a total of 150 partitions.
-  size_t extraX = numX % x;
   size_t extraY = numY % y;
 
   size_t cellY = 0;
@@ -150,7 +149,8 @@ LLCoverageArea::tile(
     const AngleDegs newNWLatDegs = nwLat - cellY * latSpacing; // moving down lat degrees per cell
     const AngleDegs newSELatDegs = newNWLatDegs - cellYSize * latSpacing;
 
-    size_t cellX = 0;
+    size_t extraX = numX % x;
+    size_t cellX  = 0;
     for (size_t atX = 0; atX < x; ++atX) { // delta lon east to west
       // The cell size in the X (lon) for this tile, add extra if needed (round off)
       size_t cellXSize = xBaseSize;
@@ -194,8 +194,8 @@ LLCoverageArea::sync()
   // We're using ground at moment which differs from w2merger which
   // uses air height straight view distance.  Don't think it matters
   // but we can check it later.
-  const AngleDegs midLat = (nwLat - seLat) / 2.0;
-  const AngleDegs midLon = (seLon - nwLon) / 2.0;
+  const AngleDegs midLat = (nwLat + seLat) / 2.0;
+  const AngleDegs midLon = (seLon + nwLon) / 2.0;
   LL midTop(nwLat, midLon);
   LL midBot(seLat, midLon);
   LL leftMid(midLat, nwLon);
@@ -204,8 +204,8 @@ LLCoverageArea::sync()
   LengthKMs d1 = midTop.getSurfaceDistanceToKMs(midBot);
   LengthKMs d2 = leftMid.getSurfaceDistanceToKMs(rightMid);
 
-  latKMPerPixel = fabs(d1 / numY);
-  lonKMPerPixel = fabs(d2 / numX);
+  latKMPerPixel = (numY > 0) ? fabs(d1 / numY) : 0.0;
+  lonKMPerPixel = (numX > 0) ? fabs(d2 / numX) : 0.0;
 }
 
 void

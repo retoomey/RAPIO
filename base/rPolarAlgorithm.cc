@@ -141,7 +141,9 @@ PolarAlgorithm::processRadialSet(std::shared_ptr<RadialSet> r)
   }
 
   // Always add to our elevation volume (the virtual volume)
-  myElevationVolume->addDataType(r);
+  if (myElevationVolume) {
+    myElevationVolume->addDataType(r);
+  }
 
   return true;
 } // PolarAlgorithm::processRadialSet
@@ -150,11 +152,9 @@ void
 PolarAlgorithm::firstDataSetup(std::shared_ptr<RadialSet> r, const std::string& radarName,
   const std::string& typeName)
 {
-  static bool setup = false;
+  if (mySetupDone) { return; }
 
-  if (setup) { return; }
-
-  setup = true;
+  mySetupDone = true;
   fLogInfo("{}{}---Initial Startup---{}", ColorTerm::green(), ColorTerm::bold(), ColorTerm::reset());
 
   // Radar center coordinates

@@ -317,7 +317,9 @@ void
 Log::setLogFlushMilliSeconds(int newflush)
 {
   myFlushMS = newflush;
-  myLog->setFlushMilliseconds(newflush);
+  if (myLog != nullptr) {
+    myLog->setFlushMilliseconds(newflush);
+  }
 }
 
 void

@@ -587,6 +587,11 @@ ProjLibProject::initialize()
 
   #if HAVE_PROJLIB
 
+  if (myP != nullptr) {
+    proj_destroy(myP);
+    myP = nullptr;
+  }
+
   /* NOTE: the use of PROJ strings to describe CRS is strongly discouraged
    * in PROJ 6, as PROJ strings are a poor way of describing a CRS, and
    * more precise its geodetic datum.
@@ -614,6 +619,7 @@ ProjLibProject::initialize()
     PJ * P_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, myP);
     if (0 == P_for_GIS) {
       proj_destroy(myP);
+      myP     = nullptr;
       success = false;
     } else {
       proj_destroy(myP);

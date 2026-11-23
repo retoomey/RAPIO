@@ -58,15 +58,18 @@ IOXML::encodeDataTypeBuffer(std::shared_ptr<DataType> dt, std::vector<char>& buf
 std::shared_ptr<PTreeData>
 IOXML::readPTreeDataBuffer(std::vector<char>& buffer)
 {
+  if (buffer.empty()) {
+    return nullptr;
+  }
   try{
     std::shared_ptr<PTreeData> d = std::make_shared<PTreeData>();
     auto& n = d->getTree()->node;
     // To keep sizes correct, only add a 0 iff there isn't one there already
-    if ((buffer.size() > 0) && (buffer[buffer.size() - 1] != 0)) {
+    if (buffer.back() != 0) {
       buffer.push_back('\0');
     }
 
-    std::istringstream is(&buffer.front());
+    std::istringstream is(buffer.data());
     // Need to trim white space, or when we write we gets tons of blank lines.
     // Bug in boost or rapidxml I think.
     boost::property_tree::read_xml(is, n, boost::property_tree::xml_parser::trim_whitespace);
