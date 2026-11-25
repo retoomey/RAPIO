@@ -1,6 +1,7 @@
 #include "rFusionAlgs.h"
 #include "rColorTerm.h"
 #include "rAlgConfigFile.h"
+#include "rDataTypeHistory.h"
 #include "rOS.h"
 
 using namespace rapio;
@@ -51,7 +52,11 @@ RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
     );
   }
 
-  // 4. Spin up the children
+  // 4. Initialize shared NSE group for all child VolumeAlgorithms
+  myNSEGroup = std::make_shared<ProductGroup>("FusionAlgs_NSE_Grids", TimeDuration::Minutes(60));
+  DataTypeHistory::registerForPurging(myNSEGroup);
+
+  // 5. Spin up the children
   for (const auto& node : algNodes) {
     fLogInfo("Loading dynamic child '{}' from '{}'", node.name, node.library);
 
@@ -66,9 +71,14 @@ RAPIOFusionAlgs::processOptions(RAPIOOptions& o)
         scopedOptions.storeParsedArg(node.options[i], node.values[i], false, true);
       }
 
+      if (node.configNode) {
+        scopedOptions.setConfigNode(node.configNode);
+      }
+
       scopedOptions.setIsProcessed();
 
       volumeAlg->processOptions(scopedOptions);
+      volumeAlg->setNSEGroup(myNSEGroup);
       myLoadedAlgorithms.push_back(volumeAlg);
     } else {
       fLogSevere("Failed to load or cast child algorithm '{}'", node.name);
@@ -84,6 +94,17 @@ void
 RAPIOFusionAlgs::processNewData(rapio::RAPIOData& d)
 {
   // firstDataSetup();
+
+  // Route incoming 2D Environmental (NSE) grids into the shared NSE group
+  auto llg2d = d.datatype<rapio::LatLonGrid>();
+  if (llg2d != nullptr) {
+    if (!myNSEGroup) {
+      myNSEGroup = std::make_shared<ProductGroup>("FusionAlgs_NSE_Grids", TimeDuration::Minutes(60));
+      DataTypeHistory::registerForPurging(myNSEGroup);
+    }
+    myNSEGroup->addDataType(llg2d);
+    return;
+  }
 
   auto llg = d.datatype<rapio::LatLonHeightGrid>();
 

@@ -21,7 +21,7 @@ createRAPIOAlg(void)
 
 VIL::VIL() : VolumeAlgorithm("3DVIL")
 {
-  // Environment grids (NSE) are now managed locally via a DataTypeGroup 
+  // Environment grids (NSE) are now managed locally via a DataTypeGroup
   // and registered with DataTypeHistory for automatic time-purging.
 }
 
@@ -51,10 +51,10 @@ public:
 
     // Query projections directly, falling back to defaults if data is missing or out of bounds
     H263K = myProj263 ? myProj263->getValueAtLL(atLat, atLon) : myDef263;
-    if (!Constants::isGood(H263K)) H263K = myDef263;
+    if (!Constants::isGood(H263K)) { H263K = myDef263; }
 
     H233K = myProj233 ? myProj233->getValueAtLL(atLat, atLon) : myDef233;
-    if (!Constants::isGood(H233K)) H233K = myDef233;
+    if (!Constants::isGood(H233K)) { H233K = myDef233; }
   }
 
   void
@@ -151,13 +151,21 @@ VIL::declareOptions(RAPIOOptions& o)
 
   o.setDescription(
     "RAPIO 3D VIL. Runs on 3D cubes.");
-  o.setAuthors("MRMS");
+  o.setAuthors("Robert Toomey, Valliappa Lakshmanan (Lak)");
+  o.optional("h263name", "Heightof-10C", "NSE product name for 263K (-10C) height in meters");
+  o.optional("h233name", "Heightof-40C", "NSE product name for 233K (-40C) height in meters");
+  o.optional("def263", "5000.0", "Default 263K (-10C) height in meters if NSE grid is unavailable");
+  o.optional("def233", "8600.0", "Default 233K (-40C) height in meters if NSE grid is unavailable");
 }
 
 void
 VIL::processOptions(RAPIOOptions& o)
 {
   VolumeAlgorithm::processOptions(o); // Gets terrain, general volume alg stuff.
+  myH263Name = o.getString("h263name");
+  myH233Name = o.getString("h233name");
+  myDef263   = o.getFloat("def263");
+  myDef233   = o.getFloat("def233");
 }
 
 void
@@ -178,31 +186,8 @@ VIL::firstDataSetup()
     myVilWeights[i] = pow(zval, puissance);
   }
 
-  // Initialize and register our NSE group using ProductGroup
-  // (ProductGroup inherently uses TypeName as the key)
-  // Note: EACH 3D plugin holds its own history of NSE independent of other
-  // 3D plugins.  We might need to add a global NSE history time higher up. Currently
-  // each plugin can do its own duration.
-  myNSEGroup = std::make_shared<ProductGroup>("VIL_NSE_Grids", TimeDuration::Minutes(60));
-  DataTypeHistory::registerForPurging(myNSEGroup);
-
   setup = true;
 } // VIL::firstDataSetup
-
-void
-VIL::processNewData(RAPIOData& d)
-{
-  // Intercept 2D Environmental grids
-  auto llg2d = d.datatype<LatLonGrid>();
-  if (llg2d != nullptr) {
-    firstDataSetup(); // Ensure the NSE group is ready
-    myNSEGroup->addDataType(llg2d);
-    return;
-  }
-  
-  // Otherwise, pass it to the base class to handle the 3D cube
-  VolumeAlgorithm::processNewData(d);
-}
 
 void
 VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
@@ -245,24 +230,16 @@ VIL::checkOutputGrids(std::shared_ptr<LatLonHeightGrid> input)
 std::unique_ptr<LatLonHeightGridCallback>
 VIL::createCallback()
 {
-  firstDataSetup(); // Ensure the static weight table and NSE group are initialized
+  firstDataSetup(); // Ensure the static weight table is initialized
 
-  std::shared_ptr<DataProjection> proj263;
-  std::shared_ptr<DataProjection> proj233;
-
-  // Extract the latest grids from the managed group
-  if (myNSEGroup) {
-      auto dt263 = myNSEGroup->getDataType("Heightof-10C");
-      if (dt263) proj263 = dt263->getProjection();
-
-      auto dt233 = myNSEGroup->getDataType("Heightof-40C");
-      if (dt233) proj233 = dt233->getProjection();
-  }
+  // Extract the latest NSE projections from the base VolumeAlgorithm's myNSEGroup
+  auto proj263 = getNSEProjection(myH263Name);
+  auto proj233 = getNSEProjection(myH233Name);
 
   return std::make_unique<VILCallback>(
-    myVilWeights, 
+    myVilWeights,
     proj263, proj233,
-    5000.0f, 8600.0f, // Defaults
+    myDef263, myDef233, // Defaults
     myVilGrid->getFloat2DPtr(), myVildGrid->getFloat2DPtr(),
     myViiGrid->getFloat2DPtr(), myMaxGust->getFloat2DPtr()
   );

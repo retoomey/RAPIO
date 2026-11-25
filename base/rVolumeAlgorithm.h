@@ -5,9 +5,13 @@
 #include <rLatLonGrid.h>
 #include <rLatLonGridProjection.h>
 #include <rLatLonHeightGridIterator.h>
+#include <rDataTypeGroup.h>
+#include <rDataProjection.h>
+#include <rTimeDuration.h>
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <map>
 #include <mutex>
 
@@ -31,7 +35,7 @@ enum class IterateMode {
  *
  * We implement some common ability for the 3D grids.
  * 1.  Optional terrain file reading/processing
- * 2.  NSE value support (to do)
+ * 2.  NSE 2D environmental grid support via managed DataTypeGroup (myNSEGroup)
  *
  * @author Robert Toomey
  * @ingroup rapio_algorithm
@@ -41,7 +45,8 @@ enum class IterateMode {
 class VolumeAlgorithm : public RAPIOAlgorithm {
 public:
   VolumeAlgorithm(const std::string& display = "Volume Algorithm")
-    : RAPIOAlgorithm(display){ }
+    : RAPIOAlgorithm(display),
+    myNSEGroupName(display + "_NSE_Grids"){ }
 
   virtual
   ~VolumeAlgorithm() = default;
@@ -88,6 +93,22 @@ public:
   /** Do we have valid terrain? */
   bool haveTerrain(){ return (myTerrainProj != nullptr); }
 
+  /** Add a 2D environmental (NSE) grid into this algorithm's managed NSE group. */
+  void
+  addNSEGrid(std::shared_ptr<LatLonGrid> grid);
+
+  /** Set a shared NSE DataTypeGroup (e.g., injected by FusionAlgs across child algorithms). */
+  void
+  setNSEGroup(std::shared_ptr<DataTypeGroup> group);
+
+  /** Get the managed NSE DataTypeGroup (may be nullptr if no NSE grids have been received). */
+  std::shared_ptr<DataTypeGroup>
+  getNSEGroup() const { return myNSEGroup; }
+
+  /** Look up an NSE grid by product name and return its DataProjection, or nullptr if unavailable. */
+  std::shared_ptr<DataProjection>
+  getNSEProjection(std::string_view productName) const;
+
   /** Iterate a callback for our grid in a particular order */
   void
   iterate(std::shared_ptr<LatLonHeightGrid> input, LatLonHeightGridCallback& callback, IterateMode mode);
@@ -99,6 +120,10 @@ public:
   virtual void checkOutputGrids(std::shared_ptr<LatLonHeightGrid>){ }
 
 protected:
+
+  /** Lazily initialize and register myNSEGroup with DataTypeHistory for time-purging. */
+  void
+  ensureNSEGroup();
 
   /** @brief Utility method to check for grid changes between calls */
   bool
@@ -113,6 +138,15 @@ protected:
 
   /** Remember the last coverage area for changes */
   LLCoverageArea myCachedCoverage;
+
+  /** Managed group holding incoming 2D environmental (NSE) grids, purged by time */
+  std::shared_ptr<DataTypeGroup> myNSEGroup;
+
+  /** Name used when creating a local ProductGroup for NSE grids */
+  std::string myNSEGroupName;
+
+  /** Time window for expiring NSE grids (default 60 minutes) */
+  TimeDuration myNSEWindow = TimeDuration::Minutes(60);
 
 private:
   /** Name of the terrain file */

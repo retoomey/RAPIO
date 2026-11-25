@@ -228,10 +228,6 @@ public:
   virtual void
   processOptions(rapio::RAPIOOptions& o) override;
 
-  /** Override to intercept 2D Environmental grids */
-  virtual void 
-  processNewData(rapio::RAPIOData& d) override;
-
   /** Our iteration mode for data ordering */
   virtual IterateMode
   getIterateMode() const override { return IterateMode::ColumnsDown; }
@@ -272,8 +268,10 @@ protected:
   /** Cache for maxgustp */
   std::shared_ptr<LatLonGrid> myMaxGust;
 
-  /** Group to hold environmental NSE grids automatically purged by time */
-  std::shared_ptr<DataTypeGroup> myNSEGroup;
-
+  /** Configurable NSE product names and fallback defaults (meters) */
+  std::string myH263Name = "Heightof-10C";
+  std::string myH233Name = "Heightof-40C";
+  float myDef263         = 5000.0f;
+  float myDef233         = 8600.0f;
 };
 }

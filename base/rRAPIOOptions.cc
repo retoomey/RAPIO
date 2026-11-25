@@ -180,8 +180,8 @@ RAPIOOptions::readConfigFile(std::string_view string)
   std::vector<std::string> options;
   std::vector<std::string> values;
 
-  // Get the option/value pairs from the configuration file...
-  if (config->readConfigURL(aURL, options, values)) {
+  // Get the option/value pairs (and optional structured XML subtree) from the configuration file...
+  if (config->readConfigURL(aURL, options, values, &myConfigNode)) {
     if (options.size() != values.size()) {
       throw StartupException(fmt::format("Configuration parse error in {}: Options and values size mismatch.", string));
     }

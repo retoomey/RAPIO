@@ -100,5 +100,8 @@ protected:
 
   /** Algorithm module/programs loaded dynamically */
   std::vector<std::shared_ptr<VolumeAlgorithm> > myLoadedAlgorithms;
+
+  /** Shared NSE grid group injected into all loaded child VolumeAlgorithms */
+  std::shared_ptr<DataTypeGroup> myNSEGroup;
 };
 } // namespace rapio

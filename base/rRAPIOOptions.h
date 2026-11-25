@@ -9,6 +9,8 @@
 #include <vector>
 
 namespace rapio {
+class PTreeNode;
+
 /* RAPIOOptions handles parsing the information from a command line
  * for parameters in/out of the stock algorithm, and printing them
  * to command line.
@@ -174,6 +176,18 @@ public:
   void
   readConfigFile(std::string_view filename);
 
+  /** Attach a structured XML config node (e.g. <w2algxml> subtree) from -iconfig or FusionAlgs */
+  void
+  setConfigNode(std::shared_ptr<PTreeNode> node){ myConfigNode = std::move(node); }
+
+  /** Get the structured XML config node if available (nullptr if not loaded from XML) */
+  std::shared_ptr<PTreeNode>
+  getConfigNode() const { return myConfigNode; }
+
+  /** True if a structured XML config node is attached */
+  bool
+  hasConfigNode() const { return myConfigNode != nullptr; }
+
   /** Write an xml configuration file with options from all sources */
   void
   writeConfigFile(std::string_view filename);
@@ -287,5 +301,8 @@ private:
 
   /** Header of this module/algorithm, used for copyright, etc. */
   std::string myHeader;
+
+  /** Optional structured XML node loaded from -iconfig or passed by FusionAlgs */
+  std::shared_ptr<PTreeNode> myConfigNode;
 };
 }

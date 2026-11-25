@@ -1,17 +1,143 @@
-<!-- An example of running volume algorithms from rFusionAlgs.
-     We might make all algorithms modules at some point -->
-<w2algxml>
-    <!-- Options for rFusionAlgs.  Remember command line overrides -->
-    <option letter="threads" value="8" />
-    <option letter="verbose" value="debug" />
+<!-- =========================================================================
+     RAPIO Fusion Stage-3 (rFusionAlgs) Master Template Configuration
+     =========================================================================
+     Usage:
+       rFusionAlgs -iconfig RAPIOConfig/fusionalgs.xml -i <input> -o <output>
 
-    <!-- Options for programs/volume modules
-         Library loaded is librapioalg+'program'+.so -->
+     How it works:
+       - Top-level <option> tags configure rFusionAlgs itself (CLI flags override).
+       - Each nested <w2algxml program="Name"> dynamically loads librapioalg<Name>.so.
+       - All loaded volume plugins share a single spatial-threaded ColumnsDown pass
+         over each incoming 3D LatLonHeightGrid, a single shared NSE ProductGroup
+         for incoming 2D LatLonGrid environmental fields, and a statically cached
+         terrain DEM grid.
+       - Comment out or remove any <w2algxml program="..."> block you do not need.
+       - Any single <w2algxml program="..."> block can also be copied into its own
+         file and passed via -iconfig to the corresponding standalone binary
+         (r3DVil, r3DHDA, r3DColumnStats, r3DLayerAverage, r3DSCIT).
+     ========================================================================= -->
+<w2algxml>
+
+    <!-- Global rFusionAlgs options (command-line arguments override these) -->
+    <option letter="threads" value="8" />
+    <option letter="verbose" value="info" />
+
+    <!-- =====================================================================
+         1. 3D VIL (librapioalgVIL.so / standalone: r3DVil)
+            Legacy w2merger equivalent: vol_VIL
+            Outputs: VIL, VIL_Density, VII, MaxGustEstimate
+            Uses incoming 2D NSE grids for -10C (263K) and -40C (233K) heights,
+            falling back to def263 / def233 (meters) when NSE is unavailable.
+         ===================================================================== -->
     <w2algxml program="VIL">
+        <option letter="h263name" value="Heightof-10C" />
+        <option letter="def263" value="5000.0" />
+        <option letter="h233name" value="Heightof-40C" />
+        <option letter="def233" value="8600.0" />
     </w2algxml>
 
-    <w2algxml program="MaxAGL">
-        <option letter="topaglkm" value="6.0" />
+    <!-- =====================================================================
+         2. 3D HDA (librapioalgHDA.so / standalone: r3DHDA)
+            Legacy w2merger equivalent: vol_HDA
+            Outputs: SHI, POSH, MESH (plus *_tilted when tilt=true)
+            Uses incoming 2D NSE grids for 0C (273K), -20C (253K), and terrain
+            (or the 'terrain' DEM option), falling back to def273 / def253 (meters).
+         ===================================================================== -->
+    <w2algxml program="HDA">
+        <option letter="h273name" value="Heightof0C" />
+        <option letter="def273" value="3920.0" />
+        <option letter="h253name" value="Heightof-20C" />
+        <option letter="def253" value="6200.0" />
+        <option letter="terrainname" value="TerrainElevation" />
+        <option letter="tilt" value="false" />
+    </w2algxml>
+
+    <!-- =====================================================================
+         3. 3D ColumnStats (librapioalgColumnStats.so / standalone: r3DColumnStats)
+            Legacy w2merger equivalents:
+              max    -> vol_VerticalMaximum  (<TypeName>Composite, or MaxAGL when topaglkm > 0)
+              min    -> vol_VerticalMinimum  (<TypeName>CompositeMin, or MinAGL)
+              absmax -> vol_VerticalAbsMax   (<TypeName>CompositeAbsMax, or AbsMaxAGL)
+              avg    -> vol_VerticalAverage  (<TypeName>Average, or AvgAGL)
+              depth  -> vol_VerticalDepth    (<TypeName>Depth, or DepthAGL; layers >= threshold)
+              lowht  -> vol_LowHtRefl        (LowHtRefl, or LowHtAGL; lowest layer >= threshold)
+              all    -> enables all six operations
+
+            You can include multiple ColumnStats blocks (e.g. one uncapped
+            full-column composite and one terrain-relative AGL slab).
+         ===================================================================== -->
+
+    <!-- 3a. Full-column vertical reductions (uncapped: topaglkm <= 0) -->
+    <w2algxml program="ColumnStats">
+        <option letter="ops" value="max,min,absmax,avg,depth,lowht" />
+        <option letter="threshold" value="55.0" />
+    </w2algxml>
+
+    <!-- 3b. Terrain-relative AGL window (replaces retired rMaxAGL / MaxAGL).
+             Set bottomaglkm > 0 for elevated slabs (e.g. 1.0-4.0km AGL). -->
+    <w2algxml program="ColumnStats">
+        <option letter="ops" value="max" />
+        <option letter="bottomaglkm" value="0.0" />
+        <option letter="topaglkm" value="4.0" />
         <option letter="terrain" value="/data/dem_highres.nc" />
     </w2algxml>
+
+    <!-- =====================================================================
+         4. 3D LayerAverage (librapioalgLayerAverage.so / standalone: r3DLayerAverage)
+            Legacy w2merger equivalent: vol_LayerAverage
+            Supported operations: at, avg, max, min, lowestalt, depth, echotop, cloudtop
+            <layeraverage> blocks can be embedded directly here (recommended)
+            or loaded from an external file via <option letter="config" value="..." />.
+         ===================================================================== -->
+    <w2algxml program="LayerAverage">
+        <!-- Isotherms & layer reflectivity products -->
+        <layeraverage nameof3dgrid="*refl*" unit="dBZ" colormap="Reflectivity">
+            <product name="Reflectivity_-20C" operation="at">
+                <height product="Heightof-20C" default="6200" />
+            </product>
+            <product name="Reflectivity_-10C" operation="at">
+                <height product="Heightof-10C" default="5000" />
+            </product>
+            <product name="Reflectivity_0C" operation="at">
+                <height product="Heightof0C" default="3920" />
+            </product>
+            <product name="LayerAverageReflectivity_-20_0" operation="avg">
+                <height product="Heightof0C" default="3920" />
+                <height product="Heightof-20C" default="6200" />
+            </product>
+            <product name="ReflectivityAtLowestAltitude" operation="lowestalt" outputheight="HeightReflectivityAtLowestAltitude">
+                <height product="NoSuchProduct" default="-0.5" />
+                <height product="NoSuchProduct" default="25000" />
+            </product>
+            <product name="CompositeReflectivity" operation="max" outputheight="HeightCompositeReflectivity">
+                <height product="NoSuchProduct" default="-0.5" />
+                <height product="NoSuchProduct" default="50000.5" />
+            </product>
+        </layeraverage>
+
+        <!-- Echo top depth above isotherms -->
+        <layeraverage nameof3dgrid="*refl*" unit="km" colormap="H50_Above_H273">
+            <product name="H50_Above_0C" operation="depth" threshold="50">
+                <height product="Heightof0C" default="3920" />
+            </product>
+        </layeraverage>
+
+        <!-- Standard EchoTop & CloudTop -->
+        <layeraverage nameof3dgrid="*refl*" unit="km" colormap="EchoTop">
+            <product name="EchoTop_18" operation="echotop" threshold="18" />
+            <product name="EchoTop_30" operation="echotop" threshold="30" />
+            <product name="EchoTop_50" operation="echotop" threshold="50" />
+            <product name="SimpleCloudTop" operation="cloudtop" />
+        </layeraverage>
+    </w2algxml>
+
+    <!-- =====================================================================
+         5. 3D SCIT (librapioalgSCIT.so / standalone: r3DSCIT)
+            Legacy w2merger equivalent: vol_SCIT
+            Outputs: Scit2D (DataTable of 2D/3D storm cell features)
+         ===================================================================== -->
+    <w2algxml program="SCIT">
+        <option letter="minarea" value="15.0" />
+    </w2algxml>
+
 </w2algxml>

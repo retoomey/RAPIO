@@ -1,6 +1,7 @@
 #include "rVolumeAlgorithm.h"
 #include "rLatLonHeightGrid.h"
 #include "rIODataType.h"
+#include "rDataTypeHistory.h"
 
 using namespace rapio;
 
@@ -35,8 +36,53 @@ VolumeAlgorithm::setupVolumeProcessing(std::shared_ptr<LatLonHeightGrid> llg)
 }
 
 void
+VolumeAlgorithm::ensureNSEGroup()
+{
+  if (!myNSEGroup) {
+    myNSEGroup = std::make_shared<ProductGroup>(myNSEGroupName, myNSEWindow);
+    DataTypeHistory::registerForPurging(myNSEGroup);
+  }
+}
+
+void
+VolumeAlgorithm::addNSEGrid(std::shared_ptr<LatLonGrid> grid)
+{
+  if (!grid) {
+    return;
+  }
+  ensureNSEGroup();
+  myNSEGroup->addDataType(std::move(grid));
+}
+
+void
+VolumeAlgorithm::setNSEGroup(std::shared_ptr<DataTypeGroup> group)
+{
+  myNSEGroup = std::move(group);
+}
+
+std::shared_ptr<DataProjection>
+VolumeAlgorithm::getNSEProjection(std::string_view productName) const
+{
+  if (!myNSEGroup || productName.empty()) {
+    return nullptr;
+  }
+  if (auto dt = myNSEGroup->getDataType(productName)) {
+    return dt->getProjection();
+  }
+  return nullptr;
+}
+
+void
 VolumeAlgorithm::processNewData(RAPIOData& d)
 {
+  // Intercept 2D Environmental (NSE) grids into the managed NSE group
+  auto llg2d = d.datatype<LatLonGrid>();
+
+  if (llg2d != nullptr) {
+    addNSEGrid(llg2d);
+    return;
+  }
+
   auto llg = d.datatype<LatLonHeightGrid>();
 
   if (llg != nullptr) {

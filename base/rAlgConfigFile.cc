@@ -99,15 +99,27 @@ AlgFLATConfigFile::introduceSelf()
 bool
 AlgXMLConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>               & optionlist,
-  std::vector<std::string>               & valuelist)
+  std::vector<std::string>               & valuelist,
+  std::shared_ptr<PTreeNode> *           outConfigNode)
 {
   bool success = false;
   auto conf    = IODataType::read<PTreeData>(path.toString());
 
   try {
-    if (conf != nullptr) {
-      auto rootTree = conf->getTree()->getChild("w2algxml");
-      success = parseOptionsFromNode(rootTree, optionlist, valuelist);
+    if ((conf != nullptr) && (conf->getTree() != nullptr)) {
+      auto rootTree = conf->getTree()->getChildOptional("w2algxml");
+      if (rootTree != nullptr) {
+        success = parseOptionsFromNode(*rootTree, optionlist, valuelist);
+        if (outConfigNode != nullptr) {
+          *outConfigNode = rootTree;
+        }
+      } else if (auto w2Root = conf->getTree()->getChildOptional("w2merger")) {
+        // Allow legacy <w2merger> files to be passed to -iconfig as structured config
+        success = true;
+        if (outConfigNode != nullptr) {
+          *outConfigNode = w2Root;
+        }
+      }
     }
   } catch (const std::exception& e) {
     fLogSevere("Error parsing XML from {}, {}", path.toString(), e.what());
@@ -120,7 +132,7 @@ AlgXMLConfigFile::readMultiConfigURL(const URL& path, std::vector<AlgConfigNode>
 {
   auto conf = IODataType::read<PTreeData>(path.toString());
 
-  if (conf == nullptr) { return false; }
+  if ((conf == nullptr) || (conf->getTree() == nullptr)) { return false; }
 
   try {
     auto tree     = conf->getTree();
@@ -138,12 +150,76 @@ AlgXMLConfigFile::readMultiConfigURL(const URL& path, std::vector<AlgConfigNode>
           node.library = "librapioalg" + node.name + ".so";
         }
 
-        // Parse the options inside this specific child block
+        // Parse the flat <option> tags inside this specific child block
         parseOptionsFromNode(alg, node.options, node.values);
 
-        nodes.push_back(node);
+        // Preserve the full XML subtree so plugins (e.g. LayerAverage) can query nested tags
+        node.configNode = std::make_shared<PTreeNode>(alg);
+
+        nodes.push_back(std::move(node));
       }
       return true;
+    }
+
+    // Fallback: translate legacy <w2merger> XML into AlgConfigNodes
+    if (auto w2Root = tree->getChildOptional("w2merger")) {
+      auto addOpt = [](AlgConfigNode& n, const std::string& k, const std::string& v) {
+          if (!v.empty()) {
+            n.options.push_back(k);
+            n.values.push_back(v);
+          }
+        };
+
+      // 1. <layeraverage> -> LayerAverage plugin with the <w2merger> subtree attached
+      if (!w2Root->getChildren("layeraverage").empty()) {
+        AlgConfigNode node;
+        node.name       = "LayerAverage";
+        node.library    = "librapioalgLayerAverage.so";
+        node.configNode = w2Root;
+        nodes.push_back(std::move(node));
+      }
+
+      // 2. <hda> (+ optional <hdaextras>) -> HDA plugin, and VIL plugin if 263K/233K present
+      if (auto hdaNode = w2Root->getChildOptional("hda")) {
+        AlgConfigNode hda;
+        hda.name       = "HDA";
+        hda.library    = "librapioalgHDA.so";
+        hda.configNode = hdaNode;
+
+        if (auto h273 = hdaNode->getChildOptional("height273")) {
+          addOpt(hda, "h273name", h273->getAttr("product", std::string("")));
+          addOpt(hda, "def273", h273->getAttr("default", std::string("")));
+        }
+        if (auto h253 = hdaNode->getChildOptional("height253")) {
+          addOpt(hda, "h253name", h253->getAttr("product", std::string("")));
+          addOpt(hda, "def253", h253->getAttr("default", std::string("")));
+        }
+        if (auto hTerr = hdaNode->getChildOptional("heightTerrain")) {
+          addOpt(hda, "terrainname", hTerr->getAttr("product", std::string("")));
+        }
+        nodes.push_back(std::move(hda));
+
+        // VIL uses height263 (-10C) and height233 (-40C) from <hda>
+        auto h263 = hdaNode->getChildOptional("height263");
+        auto h233 = hdaNode->getChildOptional("height233");
+        if (h263 || h233) {
+          AlgConfigNode vil;
+          vil.name       = "VIL";
+          vil.library    = "librapioalgVIL.so";
+          vil.configNode = hdaNode;
+          if (h263) {
+            addOpt(vil, "h263name", h263->getAttr("product", std::string("")));
+            addOpt(vil, "def263", h263->getAttr("default", std::string("")));
+          }
+          if (h233) {
+            addOpt(vil, "h233name", h233->getAttr("product", std::string("")));
+            addOpt(vil, "def233", h233->getAttr("default", std::string("")));
+          }
+          nodes.push_back(std::move(vil));
+        }
+      }
+
+      return !nodes.empty();
     }
   } catch (const std::exception& e) {
     fLogSevere("Error parsing multi-algorithm XML from {}, {}", path.toString(), e.what());
@@ -179,7 +255,8 @@ AlgXMLConfigFile::writeConfigURL(const URL& path,
 bool
 AlgFLATConfigFile::readConfigURL(const URL& path,
   std::vector<std::string>                & optionlist, // deliberately avoiding maps
-  std::vector<std::string>                & valuelist)
+  std::vector<std::string>                & valuelist,
+  std::shared_ptr<PTreeNode>              * /*outConfigNode*/)
 {
   // HMET flat configuration file reader
   // 1. Anything after a // is a comment

@@ -12,10 +12,11 @@ class PTreeNode;
 
 /** Structure to hold a single child algorithm's configuration */
 struct AlgConfigNode {
-  std::string              name;
-  std::string              library;
-  std::vector<std::string> options;
-  std::vector<std::string> values;
+  std::string                name;
+  std::string                library;
+  std::vector<std::string>   options;
+  std::vector<std::string>   values;
+  std::shared_ptr<PTreeNode> configNode; ///< Optional structured XML subtree (e.g. <w2algxml> block)
 };
 
 /** Base class for reading/writing parameter configuration class.
@@ -53,9 +54,10 @@ public:
 
   /** Callback for reading a configuration at given URL location */
   virtual bool
-  readConfigURL(const URL   & path,
-    std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values) = 0;
+  readConfigURL(const URL        & path,
+    std::vector<std::string>     & options, // deliberately avoiding maps
+    std::vector<std::string>     & values,
+    std::shared_ptr<PTreeNode> * outConfigNode = nullptr) = 0;
 
   /** Multi-config reader with a default fallback.  Called manual by
    * FusionAlgs and any future multi-alg algorithm */
@@ -85,9 +87,10 @@ public:
 
   /** Callback for reading a configuration at given URL location */
   virtual bool
-  readConfigURL(const URL   & path,
-    std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values) override;
+  readConfigURL(const URL        & path,
+    std::vector<std::string>     & options, // deliberately avoiding maps
+    std::vector<std::string>     & values,
+    std::shared_ptr<PTreeNode> * outConfigNode = nullptr) override;
 
   /** Callback for reading a multiple/nested configuration at given URL location */
   virtual bool
@@ -120,9 +123,10 @@ public:
 
   /** Callback for reading a configuration at given URL location */
   virtual bool
-  readConfigURL(const URL   & path,
-    std::vector<std::string>& options, // deliberately avoiding maps
-    std::vector<std::string>& values) override;
+  readConfigURL(const URL        & path,
+    std::vector<std::string>     & options, // deliberately avoiding maps
+    std::vector<std::string>     & values,
+    std::shared_ptr<PTreeNode> * outConfigNode = nullptr) override;
 
   /** Callback for writing a configuration at given URL location */
   virtual bool
